@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::gate::{GateCtx, GateError, Report};
 use xtask::toml_text::{array, quote};
 
 use vyre_foundation::optimizer::pass_catalog::{
@@ -14,19 +14,7 @@ use vyre_foundation::optimizer::{registered_pass_registrations, PassMetadata};
 /// Holds the optimizer pass reference to the passes the source declares.
 pub struct OptimizationDocs;
 
-impl Gate for OptimizationDocs {
-    fn name(&self) -> &'static str {
-        "optimization-docs"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold docs/generated/optimizer-passes.toml to the passes the source declares; --write regenerates it"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl xtask::gate::GateBehavior for OptimizationDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let body = build().map_err(|error| {
             GateError::new(
@@ -38,7 +26,7 @@ impl Gate for OptimizationDocs {
         inspection.generates_text(PASSES_PATH, body);
         Ok(xtask::artifact_gate::settle_inspection(
             ctx,
-            self.name(),
+            ctx.gate_name()?,
             inspection,
         ))
     }

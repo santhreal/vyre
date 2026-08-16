@@ -41,9 +41,7 @@
 
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::validate::validate;
-use vyre_libs::fixpoint::persistent_fixpoint::{
-    persistent_fixpoint, persistent_fixpoint_grid,
-};
+use vyre_libs::fixpoint::persistent_fixpoint::{persistent_fixpoint, persistent_fixpoint_grid};
 use vyre_libs::graph::persistent_bfs::{
     persistent_bfs, persistent_bfs_batch, persistent_bfs_batch_with_density,
     persistent_bfs_with_density,

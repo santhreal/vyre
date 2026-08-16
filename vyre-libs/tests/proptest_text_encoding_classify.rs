@@ -4,9 +4,7 @@
 
 use proptest::prelude::*;
 use vyre_libs::text::reference_byte_histogram;
-use vyre_libs::text::{
-    classify_from_histogram, ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8,
-};
+use vyre_libs::text::{classify_from_histogram, ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
 
 fn weighted_byte_strategy() -> impl Strategy<Value = u8> {
     prop_oneof![

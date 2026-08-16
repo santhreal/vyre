@@ -20,7 +20,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::math::givens_rotate_pair::givens_rotate_pair_region;
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::jacobi_apply_rotation";
+pub const OP_ID: &str = "vyre-libs::math::jacobi_apply_rotation";
 
 /// `row * n + col` flat index for an `n`-column row-major matrix.
 fn cell(row: &Expr, n: u32, col: &Expr) -> Expr {

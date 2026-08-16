@@ -1,4 +1,3 @@
-use vyre_foundation::ir::{Node, Program};
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::graph::{
     adjustment_set::{backdoor_descendants_check, backdoor_descendants_check_cpu},
@@ -43,6 +42,7 @@ use crate::graph::{
     union_find::{find_root_body, union_find_program, union_roots_body},
 };
 use crate::math::tensor_scc::{cpu_ref as tensor_scc_cpu_ref, tensor_scc_fixpoint};
+use vyre_foundation::ir::{Node, Program};
 
 fn approx_eq(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-8 * (1.0 + a.abs() + b.abs())
@@ -66,25 +66,25 @@ fn program_builders_emit_expected_structural_primitives() {
         program_generator(&sum_product_evaluate(
             "k", "off", "cnt", "ch", "w", "leaf", "out", 3, 2
         )),
-        "vyre-primitives::graph::sum_product_evaluate"
+        "vyre-libs::graph::sum_product_evaluate"
     );
     assert_eq!(
         program_generator(&matroid_exchange_bfs_step(
             "fin", "adj", "vis", "fout", "changed", 3
         )),
-        "vyre-primitives::graph::matroid_exchange_bfs_step"
+        "vyre-libs::graph::matroid_exchange_bfs_step"
     );
     assert_eq!(
         program_generator(&monoidal_compose("f", "g", "out", 2, 2, 2)),
-        "vyre-primitives::graph::monoidal_compose"
+        "vyre-libs::graph::monoidal_compose"
     );
     assert_eq!(
         program_generator(&tensor_flow_forward(shape, "tin", "tout", 2, 2, 1)),
-        "vyre-primitives::graph::tensor_flow_forward"
+        "vyre-libs::graph::tensor_flow_forward"
     );
     assert_eq!(
         program_generator(&functor_apply("src", "map", "dst", 3)),
-        "vyre-primitives::graph::functor_apply"
+        "vyre-libs::graph::functor_apply"
     );
     assert_eq!(
         program_generator(&persistent_bfs_batch(
@@ -97,67 +97,67 @@ fn program_builders_emit_expected_structural_primitives() {
             1,
             2
         )),
-        "vyre-primitives::graph::persistent_bfs_batch"
+        "vyre-libs::graph::persistent_bfs_batch"
     );
     assert_eq!(
         program_generator(&dominator_frontier(4, 4, 4, "seed", "out")),
-        "vyre-primitives::graph::dominator_frontier"
+        "vyre-libs::graph::dominator_frontier"
     );
     assert_eq!(
         program_generator(&ddnnf_evaluate(
             "kind", "var", "off", "cnt", "ch", "assign", "out", 3, 2, 2
         )),
-        "vyre-primitives::graph::ddnnf_evaluate"
+        "vyre-libs::graph::ddnnf_evaluate"
     );
     assert_eq!(
         program_generator(&frontier_to_queue("frontier", "queue", "len", 4, 4)),
-        "vyre-primitives::graph::frontier_to_queue"
+        "vyre-libs::graph::frontier_to_queue"
     );
     assert_eq!(
         program_generator(&csr_queue_forward_traverse(
             "queue", "len", "off", "target", "kind", "out", 4, 3, 4, 1
         )),
-        "vyre-primitives::graph::csr_queue_forward_traverse"
+        "vyre-libs::graph::csr_queue_forward_traverse"
     );
     assert_eq!(
         program_generator(&csr_backward_traverse(shape, "fin", "fout", 1)),
-        "vyre-primitives::graph::csr_backward_traverse"
+        "vyre-libs::graph::csr_backward_traverse"
     );
     assert_eq!(
         program_generator(&csr_backward_or_changed_parallel(
             shape, "frontier", "changed", 1
         )),
-        "vyre-primitives::graph::csr_backward_or_changed"
+        "vyre-libs::graph::csr_backward_or_changed"
     );
     assert_eq!(
         program_generator(&chebyshev_filter("l", "x", "c", "y", "scratch", 2, 1)),
-        "vyre-primitives::graph::chebyshev_filter"
+        "vyre-libs::graph::chebyshev_filter"
     );
     assert_eq!(
         program_generator(&sheaf_diffusion_step("s", "r", "d", "out", 2, 2)),
-        "vyre-primitives::graph::sheaf_diffusion_step"
+        "vyre-libs::graph::sheaf_diffusion_step"
     );
     assert_eq!(
         program_generator(&backdoor_descendants_check("z", "d", "v", 4)),
-        "vyre-primitives::graph::backdoor_descendants_check"
+        "vyre-libs::graph::backdoor_descendants_check"
     );
     assert_eq!(
         program_generator(&do_intervention_delete_incoming("a", "m", "out", 2)),
-        "vyre-primitives::graph::do_intervention_delete_incoming"
+        "vyre-libs::graph::do_intervention_delete_incoming"
     );
     assert_eq!(
         program_generator(&do_rule2_reverse_incoming("a", "m", "out", 2)),
-        "vyre-primitives::graph::do_rule2_reverse_incoming"
+        "vyre-libs::graph::do_rule2_reverse_incoming"
     );
     assert_eq!(
         program_generator(&do_rule3_subgraph(
             "a", "m", "reduced", "kept", "kept_len", 2
         )),
-        "vyre-primitives::graph::do_rule3_subgraph"
+        "vyre-libs::graph::do_rule3_subgraph"
     );
     assert_eq!(
         program_generator(&tensor_scc_fixpoint("rows", "seed", "group", "out", 4, 8)),
-        "vyre-primitives::math::tensor_scc"
+        "vyre-libs::math::tensor_scc"
     );
 }
 
@@ -170,20 +170,20 @@ fn composed_programs_and_bodies_are_non_empty() {
     let ifds = build_ifds_csr_program(1, 2, 2, 1, 0, 1, 0, 4);
     assert_eq!(
         program_generator(&ifds),
-        "vyre-primitives::graph::exploded_build_ifds_csr"
+        "vyre-libs::graph::exploded_build_ifds_csr"
     );
 
     let batched = batched_path_reconstruct(3, 4);
     assert_eq!(
         program_generator(&batched),
-        "vyre-primitives::graph::batched_path_reconstruct"
+        "vyre-libs::graph::batched_path_reconstruct"
     );
 
     assert!(!find_root_body("parent", "id", "root", "scratch", 4).is_empty());
     assert!(!union_roots_body("parent", "a", "b", "edge", 4).is_empty());
     assert_eq!(
         program_generator(&union_find_program("parent", "a", "b", 4, 2)),
-        "vyre-primitives::graph::union_find"
+        "vyre-libs::graph::union_find"
     );
 }
 

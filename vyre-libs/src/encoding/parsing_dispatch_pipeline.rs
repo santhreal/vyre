@@ -6,7 +6,6 @@
 //! and AST constant-fold wave construction all route through
 //! `vyre-primitives::parsing` rather than duplicating layout rules here.
 
-use vyre_foundation::ir::{Expr, Node};
 use crate::parsing::{
     ast_cse_constant_fold::{ast_cse_constant_fold, OP_ID as AST_CSE_CONSTANT_FOLD_PRIMITIVE_ID},
     bytecode_dispatch_table_pack::{
@@ -14,10 +13,11 @@ use crate::parsing::{
         PackError,
     },
 };
+use vyre_foundation::ir::{Expr, Node};
 
 /// Stable primitive id for the bytecode dispatch-table packing contract.
 pub const BYTECODE_DISPATCH_TABLE_PACK_PRIMITIVE_ID: &str =
-    "vyre-primitives::parsing::bytecode_dispatch_table_pack";
+    "vyre-libs::parsing::bytecode_dispatch_table_pack";
 
 /// Primitive ids consumed by the self-hosted parsing dispatch pipeline.
 pub const PARSING_DISPATCH_PIPELINE_PRIMITIVES: [&str; 2] = [

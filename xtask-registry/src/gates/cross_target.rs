@@ -41,7 +41,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 /// The crates every backend and the runtime link. Compiling these compiles the
 /// whole product dependency graph; the benchmark and evidence crates link
@@ -70,31 +70,24 @@ const MAX_SOURCE_BYTES: u64 = 2_097_152;
 /// Compiles the product crates for every platform the source declares an arm for.
 pub struct CrossTarget;
 
-impl Gate for CrossTarget {
-    fn name(&self) -> &'static str {
-        "cross-target"
-    }
-
-    fn help(&self) -> &'static str {
-        "Compile the product crates for every target_os the source declares a cfg arm for"
-    }
-
+impl xtask::gate::GateBehavior for CrossTarget {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let root = xtask::checkout::checkout_root();
         let declared = declared_target_oses(&root);
         if declared.len() < 2 {
             return Err(GateError::new(
                 format!(
-                    "cross-target found {} target_os arm(s) in the workspace, which means the scan \
-                     found nothing rather than a tree with one platform",
-                    declared.len()
-                ),
+                "cross-target found {} target_os arm(s) in the workspace, which means the scan \
+                 found nothing rather than a tree with one platform",
+                declared.len()
+            ),
                 "run it inside a checkout of the workspace",
             ));
         }
 
         let recorded: BTreeMap<&str, &str> = TRIPLE_FOR_OS.iter().copied().collect();
         let mut report = Report::clean();
+        report.cover_complete("target platforms", declared.len());
         let mut checked = 0usize;
 
         for (os, origin) in &declared {
@@ -106,8 +99,8 @@ impl Gate for CrossTarget {
                     ),
                     format!(
                         "add (\"{os}\", \"<triple>\") to TRIPLE_FOR_OS in \
-                         xtask-registry/src/gates/cross_target.rs, or drop the cfg arm; an \
-                         unrecorded platform is a claim nothing compiles"
+                     xtask-registry/src/gates/cross_target.rs, or drop the cfg arm; an \
+                     unrecorded platform is a claim nothing compiles"
                     ),
                 ));
                 continue;
@@ -119,8 +112,8 @@ impl Gate for CrossTarget {
                     return Err(GateError::new(
                         format!(
                             "cross-target cannot check {triple}, so target_os = \"{os}\" went \
-                             unjudged; a gate that silently checks fewer triples than the tree \
-                             declares is the defect it exists to remove"
+                         unjudged; a gate that silently checks fewer triples than the tree \
+                         declares is the defect it exists to remove"
                         ),
                         format!("rustup target add {triple}"),
                     ))
@@ -129,18 +122,18 @@ impl Gate for CrossTarget {
                     origin.as_ref(),
                     format!("target {triple} does not compile: {detail}"),
                     "a build script that picks a C or assembly path off the target triple needs \
-                     that target's toolchain; take the dependency's pure-Rust feature, or move it \
-                     behind a host-only crate"
+                 that target's toolchain; take the dependency's pure-Rust feature, or move it \
+                 behind a host-only crate"
                         .to_string(),
                 )),
                 TripleResult::Unmeasured(missing) => report.find(located(
                     origin.as_ref(),
                     format!(
                         "target {triple} was not measured: the build named `{missing}`, which the \
-                         build directory does not carry"
+                     build directory does not carry"
                     ),
                     "run the gate again against an intact build directory; a compile whose own \
-                     inputs were deleted under it says nothing about the target it was pointed at"
+                 inputs were deleted under it says nothing about the target it was pointed at"
                         .to_string(),
                 )),
             }
@@ -186,10 +179,7 @@ enum TripleResult {
 /// declares in its own configuration or the answer is about a build nobody runs.
 fn check_triple(root: &Path, triple: &str) -> TripleResult {
     let mut command = xtask::cargo_runner::command(root);
-    command
-        .arg("check")
-        .arg("--target")
-        .arg(triple);
+    command.arg("check").arg("--target").arg(triple);
     for crate_name in PRODUCT_CRATES {
         command.arg("-p").arg(crate_name);
     }

@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use xtask::gate::{Gate, GateCtx};
+use xtask::gate::{GateBehavior, GateCtx};
 use xtask::gates::public_api::{roster, PublicApiSnapshot};
 use xtask::gates::scan::Tree;
 
@@ -18,7 +18,10 @@ fn git_init(root: &Path) {
         .current_dir(root)
         .status()
         .expect("Fix: git must be available to build a fixture checkout");
-    assert!(status.success(), "Fix: git init must succeed in the fixture");
+    assert!(
+        status.success(),
+        "Fix: git init must succeed in the fixture"
+    );
 }
 
 /// The roster the gate is taken over, as `(directory, package)` pairs.

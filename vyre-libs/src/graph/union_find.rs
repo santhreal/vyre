@@ -9,7 +9,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical operation id for one union-find merge pass.
-pub const OP_ID: &str = "vyre-primitives::graph::union_find";
+pub const OP_ID: &str = "vyre-libs::graph::union_find";
 /// One lane per union edge in a batch.
 pub const UNION_FIND_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

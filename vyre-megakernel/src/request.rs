@@ -105,6 +105,7 @@ pub struct CompileRequest {
     pub(crate) device: DeviceFacts,
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
+    representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
 }
 
 impl CompileRequest {
@@ -123,7 +124,18 @@ impl CompileRequest {
             device,
             search_budget,
             max_artifact_bytes,
+            representative_inputs: BTreeMap::new(),
         }
+    }
+
+    /// Supply representative workload input bytes for finalist measurement.
+    #[must_use]
+    pub fn with_representative_inputs(
+        mut self,
+        representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
+    ) -> Self {
+        self.representative_inputs = representative_inputs;
+        self
     }
 
     /// Validate topology, programs, device facts, external facts, and bounds.
@@ -163,27 +175,32 @@ impl CompileRequest {
                 "supply a structurally valid acyclic ProgramGraph",
             )
         })?;
-        // The cut runs before every consumer of the graph: device admission,
-        // binding validation, IR validation, and schedule search all see a graph
-        // with no hoistable whole-grid fence left in a node body. A graph without
-        // a fence is returned untouched, so the artifact digest is unchanged.
+        // A device without cooperative launch needs every hoistable grid fence
+        // lowered to launch boundaries before capability admission. A cooperative
+        // device keeps the original fenced node: cutting it would manufacture a
+        // retained host input for backend-allocated in-place pipeline storage,
+        // and direct cooperative dispatch already provides the required fence.
         //
-        // Device admission reads the cut graph on purpose. A fence the cut
-        // removes becomes one node per segment ordered through retained state, so
-        // the launch boundary satisfies it and no cooperative launch is needed;
-        // judging the submitted graph instead would refuse work the compiler
-        // completes. A fence under conditional control flow is copied verbatim
-        // because hoisting it would change which invocations reach it, and that
-        // is the fence still present in what compilation consumes, so that is the
-        // one admission refuses on a device with no cooperative launch.
-        let graph = grid_sync::split_graph(self.graph)?;
+        // An uncuttable fence survives the non-cooperative cut and is refused by
+        // `validate_device_support`; a cuttable fence becomes ordered segments.
+        let graph = if self.device.supports_cooperative_launch() {
+            self.graph
+        } else {
+            grid_sync::split_graph(self.graph)?
+        };
         validate_node_programs(&graph, self.device.capabilities)?;
         validate_device_support(&graph, self.device)?;
         validate_bindings(&graph, &self.facts.symbolic_bindings)?;
         validate_constant_identities(&graph, &self.facts.constant_identities)?;
+        validate_representative_inputs(
+            &graph,
+            &self.representative_inputs,
+            &self.facts.symbolic_bindings,
+        )?;
         Ok(ValidatedCompileRequest {
             graph,
             facts: self.facts,
+            representative_inputs: self.representative_inputs,
             device: self.device,
             search_budget: self.search_budget,
             max_artifact_bytes: self.max_artifact_bytes,
@@ -224,6 +241,7 @@ pub struct ValidatedCompileRequest {
     pub(crate) device: DeviceFacts,
     pub(crate) search_budget: SearchBudget,
     pub(crate) max_artifact_bytes: u64,
+    representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
 }
 
 impl ValidatedCompileRequest {
@@ -237,6 +255,12 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn facts(&self) -> &ExternalFacts {
         &self.facts
+    }
+
+    /// Borrow the validated representative workload used for finalist measurement.
+    #[must_use]
+    pub const fn representative_inputs(&self) -> &BTreeMap<GraphValueId, Vec<u8>> {
+        &self.representative_inputs
     }
 
     /// Return the explicit bounded-search policy.
@@ -321,6 +345,46 @@ fn validate_constant_identities(
             "constant identity names a non-constant or missing graph value",
             "remove stale identities and key constant content by GraphValueId",
         ));
+    }
+    Ok(())
+}
+
+fn validate_representative_inputs(
+    graph: &ProgramGraph,
+    representative_inputs: &BTreeMap<GraphValueId, Vec<u8>>,
+    bindings: &BTreeMap<String, u64>,
+) -> Result<(), CompileError> {
+    let graph_inputs: BTreeMap<GraphValueId, &vyre_foundation::ir::ProgramGraphValue> = graph
+        .values()
+        .iter()
+        .filter(|value| value.producer.is_none())
+        .map(|value| (value.id, value))
+        .collect();
+
+    for (id, bytes) in representative_inputs {
+        let Some(value) = graph_inputs.get(id) else {
+            return Err(failure(
+                CompilerFailureKind::UnknownRepresentativeInput,
+                format!("request.representative_inputs.{}", id.0),
+                "representative input names an unknown or graph-produced value",
+                "remove stale representative inputs and key inputs by external GraphValueId",
+            ));
+        };
+
+        let expected_byte_count = crate::resource_records::value_byte_count(value, bindings)?;
+        let actual_byte_count = bytes.len() as u64;
+        if actual_byte_count != expected_byte_count {
+            return Err(failure(
+                CompilerFailureKind::RepresentativeInputLengthMismatch,
+                format!("request.representative_inputs.{}", id.0),
+                format!(
+                    "representative input for value `{}` has {} bytes, but graph declaration requires {expected_byte_count} bytes",
+                    value.name,
+                    bytes.len()
+                ),
+                "supply representative input bytes matching the static shape and element type",
+            ));
+        }
     }
     Ok(())
 }

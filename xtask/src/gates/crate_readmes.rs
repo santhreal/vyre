@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 
 use toml::Value;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::crate_registry::{self, CrateRecord};
 use crate::gates::scan::Tree;
 
@@ -40,23 +40,12 @@ const FIX: &str = "run `xtask crate-readmes --write`";
 /// The generated contract section in every crate README.
 pub struct CrateReadmes;
 
-impl Gate for CrateReadmes {
-    fn name(&self) -> &'static str {
-        "crate-readmes"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the generated contract section of every crate README to the manifests, the ownership registry, the release train and the crate guides; --write regenerates it"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for CrateReadmes {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let records = crate_registry::load_registry(&tree, &mut report)?;
+        report.cover_complete("crate readmes", records.len());
         let guides = load_guides(&tree, &records, &mut report)?;
         let versions = release_versions(&tree, &mut report)?;
 
@@ -70,6 +59,16 @@ impl Gate for CrateReadmes {
                 records.len()
             ));
             return Ok(report);
+        }
+
+        if ctx.write {
+            let cli_report = crate::docs::cli_docs::refresh_readmes(ctx)?;
+            report.findings.extend(cli_report.findings);
+            report.notes.extend(cli_report.notes);
+            report.coverage.extend(cli_report.coverage);
+            if !report.findings.is_empty() {
+                return Ok(report);
+            }
         }
 
         let mut written = 0usize;
@@ -86,12 +85,12 @@ impl Gate for CrateReadmes {
                 continue;
             };
             let manifest = tree.read_toml(format!("{}/Cargo.toml", record.path))?;
-            let Some(status) =
-                guides.release_status(record, &manifest, &versions, &mut report)
+            let Some(status) = guides.release_status(record, &manifest, &versions, &mut report)
             else {
                 continue;
             };
             let relative = format!("{}/README.md", record.path);
+            report.produced(&relative);
             let existing = read_readme(&ctx.root, &relative)?;
             let contract = render_contract(
                 record,
@@ -101,8 +100,13 @@ impl Gate for CrateReadmes {
                 &runnable_example(&tree, record, &manifest),
                 &mut report,
             );
-            let Some(expected) = compose(&existing, &record.package, &contract, &relative, &mut report)
-            else {
+            let Some(expected) = compose(
+                &existing,
+                &record.package,
+                &contract,
+                &relative,
+                &mut report,
+            ) else {
                 continue;
             };
             // A retired claim inside the generated region means an authority is
@@ -213,7 +217,10 @@ impl Guides {
         if template.is_empty() {
             report.find(Finding::in_file(
                 METADATA,
-                format!("the release_status override for `{}` is empty", record.package),
+                format!(
+                    "the release_status override for `{}` is empty",
+                    record.package
+                ),
                 "write the claim, or delete the override and take the default",
             ));
             return None;
@@ -299,7 +306,9 @@ fn load_guides(
                     if empty {
                         report.find(Finding::in_file(
                             METADATA,
-                            format!("the override for `{package}` declares an empty `error_behavior`"),
+                            format!(
+                                "the override for `{package}` declares an empty `error_behavior`"
+                            ),
                             "state what the crate does with an unsupported input, or drop the key",
                         ));
                     }
@@ -412,13 +421,17 @@ fn retired_claim(text: &str) -> Option<String> {
             .checked_sub(1)
             .is_some_and(|index| bytes[index].is_ascii_digit() || bytes[index] == b'.');
         let mut end = start + 4;
-        let digits = bytes[end..].iter().take_while(|byte| byte.is_ascii_digit()).count();
+        let digits = bytes[end..]
+            .iter()
+            .take_while(|byte| byte.is_ascii_digit())
+            .count();
         end += digits;
-        while bytes.get(end) == Some(&b'.')
-            && bytes.get(end + 1).is_some_and(u8::is_ascii_digit)
-        {
+        while bytes.get(end) == Some(&b'.') && bytes.get(end + 1).is_some_and(u8::is_ascii_digit) {
             end += 1;
-            end += bytes[end..].iter().take_while(|byte| byte.is_ascii_digit()).count();
+            end += bytes[end..]
+                .iter()
+                .take_while(|byte| byte.is_ascii_digit())
+                .count();
         }
         let after_is_word = bytes.get(end).is_some_and(u8::is_ascii_alphanumeric);
         if digits > 0 && !before_is_word && !after_is_word {
@@ -575,7 +588,8 @@ fn render_contract(
         "## Crate contract".to_string(),
         String::new(),
         format!("This section is generated by `{WRITE_COMMAND}` from"),
-        "the crate manifest, release train, ownership registry, and crate-guide metadata.".to_string(),
+        "the crate manifest, release train, ownership registry, and crate-guide metadata."
+            .to_string(),
         String::new(),
         "### Purpose".to_string(),
         String::new(),
@@ -698,7 +712,9 @@ fn compose(
             .to_string()
     };
     let body = if body.is_empty() {
-        format!("# `{package}`\n\nUse this crate through the contract and checked-in example below.")
+        format!(
+            "# `{package}`\n\nUse this crate through the contract and checked-in example below."
+        )
     } else {
         body
     };
@@ -716,7 +732,10 @@ mod tests {
     /// train; the same digits inside another train's version are not.
     #[test]
     fn a_retired_release_claim_is_recognized_only_at_a_boundary() {
-        assert_eq!(retired_claim("vyre 0.4.12 ships"), Some("0.4.12".to_string()));
+        assert_eq!(
+            retired_claim("vyre 0.4.12 ships"),
+            Some("0.4.12".to_string())
+        );
         assert_eq!(retired_claim("version 10.4.2"), None);
         assert_eq!(retired_claim("build 1.0.4.2"), None);
         assert_eq!(retired_claim("0.4.2.1"), Some("0.4.2.1".to_string()));

@@ -15,7 +15,7 @@
 use std::fs;
 use std::path::Path;
 
-use structure_gate::source_scan::{ModuleRoute, gating_features, module_routes};
+use structure_gate::source_scan::{gating_features, module_routes, ModuleRoute};
 
 fn write(path: &Path, text: &str) {
     fs::create_dir_all(path.parent().expect("Fix: fixture path must have a parent"))
@@ -38,7 +38,10 @@ fn route<'a>(routes: &'a [ModuleRoute], suffix: &str) -> Option<&'a ModuleRoute>
 fn a_nested_declaration_joins_the_gates_above_it() {
     let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
     let src = dir.path().join("src");
-    write(&src.join("lib.rs"), "#[cfg(feature = \"encoding\")]\npub mod encoding;\n");
+    write(
+        &src.join("lib.rs"),
+        "#[cfg(feature = \"encoding\")]\npub mod encoding;\n",
+    );
     write(
         &src.join("encoding/mod.rs"),
         "#[cfg(any(\n    feature = \"nn-linear\",\n    feature = \"nn-attention\"\n))]\npub mod paging;\n",
@@ -76,7 +79,34 @@ fn a_test_gated_module_file_is_not_on_any_route() {
     assert!(
         route(&routes, "region_tests.rs").is_none(),
         "a cfg(test) module is test source: {:?}",
-        routes.iter().map(|route| route.path.clone()).collect::<Vec<_>>()
+        routes
+            .iter()
+            .map(|route| route.path.clone())
+            .collect::<Vec<_>>()
+    );
+}
+
+/// A test-only child stays test-only when its parent carries a production
+/// feature. The inherited feature must not erase the child's test predicate.
+#[test]
+fn a_test_child_of_a_feature_gated_parent_has_no_route() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let src = dir.path().join("src");
+    write(
+        &src.join("lib.rs"),
+        "#[cfg(feature = \"math\")]\npub mod math;\n",
+    );
+    write(
+        &src.join("math/mod.rs"),
+        "#[cfg(test)]\nmod region_tests;\n",
+    );
+    write(&src.join("math/region_tests.rs"), "fn helper() {}\n");
+
+    let routes = module_routes(&src);
+
+    assert!(
+        route(&routes, "math/region_tests.rs").is_none(),
+        "a parent feature does not make its cfg(test) child production source: {routes:?}"
     );
 }
 
@@ -149,7 +179,10 @@ fn a_test_predicate_beside_a_feature_still_compiles() {
 fn a_module_excluded_from_a_test_build_is_production_source() {
     let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
     let src = dir.path().join("src");
-    write(&src.join("lib.rs"), "#[cfg(not(test))]\npub mod platform;\n");
+    write(
+        &src.join("lib.rs"),
+        "#[cfg(not(test))]\npub mod platform;\n",
+    );
     write(&src.join("platform.rs"), "pub fn run() {}\n");
 
     let routes = module_routes(&src);
@@ -184,7 +217,10 @@ fn a_symlinked_cycle_reads_each_file_once() {
         routes.len(),
         2,
         "the cycle must be read once: {:?}",
-        routes.iter().map(|route| route.path.clone()).collect::<Vec<_>>()
+        routes
+            .iter()
+            .map(|route| route.path.clone())
+            .collect::<Vec<_>>()
     );
 }
 

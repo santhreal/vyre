@@ -525,6 +525,7 @@ pub fn ratchet(tree: &Tree, rule: &Rule<'_>) -> Result<crate::gate::Report, Gate
         hits = retain_by_statement(tree, hits, predicate)?;
     }
     let mut report = Report::clean();
+    report.cover_complete("source files in rule scope", files.len());
     if let Some(note) = tree.absence_note() {
         report.note(note);
     }

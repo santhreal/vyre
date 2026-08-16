@@ -4,9 +4,7 @@
 #![cfg(all(feature = "math", feature = "cpu-parity"))]
 
 use vyre_foundation::ir::{Expr, Node};
-use vyre_libs::math::conv1d::{
-    conv1d_program, pack_params, MAX_RADIUS, OP_ID as CONV1D_OP_ID,
-};
+use vyre_libs::math::conv1d::{conv1d_program, pack_params, MAX_RADIUS, OP_ID as CONV1D_OP_ID};
 use vyre_libs::math::prefix_scan::{cpu_ref as prefix_scan_cpu_ref, ScanKind};
 use vyre_libs::math::stream_compact::cpu_ref as stream_compact_cpu_ref;
 use vyre_libs::math::tensor_scc::cpu_ref as tensor_scc_cpu_ref;

@@ -108,13 +108,13 @@ fn refusal_reason_kind_tags_are_stable() {
 
     let effect = RefusalReason::EffectLatticeViolation {
         producer: "vyre-libs::dataflow::reaching",
-        consumer: "vyre-primitives::reduce::scan",
+        consumer: "vyre-libs::reduce::scan",
         suggested_fix: "insert MemoryOrdering::GridSync between arms",
     };
     assert_eq!(effect.kind(), "effect_lattice_violation");
 
     let wire = RefusalReason::WireContractViolation {
-        detail: "op_id drift detected: vyre-primitives::math::add became vyre::add",
+        detail: "op_id drift detected: vyre-libs::math::add became vyre::add",
     };
     assert_eq!(wire.kind(), "wire_contract_violation");
 

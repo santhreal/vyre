@@ -1,7 +1,7 @@
 //! `whitespace_classify_word`  -  word-at-a-time whitespace classification
 //! emitting a per-word bitmap of "is-whitespace" lanes.
 //!
-//! Op id: `vyre-primitives::parsing::whitespace_classify_word`. Soundness:
+//! Op id: `vyre-libs::parsing::whitespace_classify_word`. Soundness:
 //! `Exact` over the JSON / CSV / structural-parser whitespace set
 //! `{0x20 SP, 0x09 TAB, 0x0A LF, 0x0D CR}`. The Reference oracle at the
 //! bottom of this file is the contract; the GPU `Program` matches it
@@ -48,7 +48,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::parsing::whitespace_classify_word";
+pub const OP_ID: &str = "vyre-libs::parsing::whitespace_classify_word";
 
 /// Canonical binding index for the input byte stream.
 pub const BINDING_BYTES_IN: u32 = 0;
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn op_id_is_canonical_and_stable() {
-        assert_eq!(OP_ID, "vyre-primitives::parsing::whitespace_classify_word");
+        assert_eq!(OP_ID, "vyre-libs::parsing::whitespace_classify_word");
     }
 
     #[test]

@@ -13,7 +13,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id for the Tier 2.5 primitive.
-pub const BRACKET_MATCH_OP_ID: &str = "vyre-primitives::matching::bracket_match";
+pub const BRACKET_MATCH_OP_ID: &str = "vyre-libs::matching::bracket_match";
 /// Workgroup size for the uncapped parallel parser-bracket path.
 pub const BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

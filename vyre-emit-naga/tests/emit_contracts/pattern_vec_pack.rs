@@ -1,9 +1,9 @@
 //! `vec_pack` pattern analysis contracts.
 
-use vyre_foundation::ir::BinOp;
-use vyre_lower::analyses::AccessKind;
 use vyre_emit_naga::patterns::vec_pack::*;
+use vyre_foundation::ir::BinOp;
 use vyre_foundation::ir::DataType;
+use vyre_lower::analyses::AccessKind;
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, op};
 use vyre_lower::{BindingSlot, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 
@@ -11,11 +11,7 @@ fn binding(slot: u32) -> BindingSlot {
     global_rw(slot, DataType::F32, &format!("buf{slot}"))
 }
 
-fn k(
-    slots: Vec<BindingSlot>,
-    ops: Vec<KernelOp>,
-    literals: Vec<LiteralValue>,
-) -> KernelDescriptor {
+fn k(slots: Vec<BindingSlot>, ops: Vec<KernelOp>, literals: Vec<LiteralValue>) -> KernelDescriptor {
     descriptor("k")
         .slots(slots)
         .dispatch(64, 1, 1)

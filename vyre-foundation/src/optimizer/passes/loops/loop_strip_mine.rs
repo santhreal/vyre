@@ -193,19 +193,32 @@ fn collect_names(nodes: &[Node], out: &mut Vec<Ident>) {
             }
             Node::Block(body) => collect_names(body, out),
             Node::Region { body, .. } => collect_names(body, out),
-            Node::TileElementwise { out: name, inputs, body } => {
+            Node::TileElementwise {
+                out: name,
+                inputs,
+                body,
+            } => {
                 out.push(name.clone());
                 out.extend(inputs.iter().cloned());
                 collect_names(body, out);
             }
-            Node::TileLoad { tile, buffer, origin, .. } => {
+            Node::TileLoad {
+                tile,
+                buffer,
+                origin,
+                ..
+            } => {
                 out.push(tile.clone());
                 out.push(buffer.clone());
                 for e in origin {
                     collect_names_in_expr(e, out);
                 }
             }
-            Node::TileStore { buffer, origin, tile } => {
+            Node::TileStore {
+                buffer,
+                origin,
+                tile,
+            } => {
                 out.push(buffer.clone());
                 out.push(tile.clone());
                 for e in origin {
@@ -217,7 +230,9 @@ fn collect_names(nodes: &[Node], out: &mut Vec<Ident>) {
                 out.push(a.clone());
                 out.push(b.clone());
             }
-            Node::TileReduce { out: name, tile, .. } => {
+            Node::TileReduce {
+                out: name, tile, ..
+            } => {
                 out.push(name.clone());
                 out.push(tile.clone());
             }

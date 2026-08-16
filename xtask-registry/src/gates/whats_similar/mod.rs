@@ -44,7 +44,7 @@
 //! - `pair_facts` what a pair shares: contract, family, tier
 //! - `report` the duplicate family report written as JSON
 
-use xtask::gate::{Gate, GateCtx, GateError, Report};
+use xtask::gate::{GateCtx, GateError, Report};
 
 use crate::gates::lego_audit::collect_ops;
 
@@ -59,19 +59,9 @@ mod report;
 /// Reports registered operations that duplicate each other by IR shape.
 pub struct WhatsSimilar;
 
-impl Gate for WhatsSimilar {
-    fn name(&self) -> &'static str {
-        "whats-similar"
-    }
-
-    fn help(&self) -> &'static str {
-        "Report duplicate operations by IR shape across the whole registry; --op-id ID narrows to one"
-    }
-
+impl xtask::gate::GateBehavior for WhatsSimilar {
     fn usage(&self) -> &'static [&'static str] {
-        &[
-            "--op-id ID narrows the comparison to one registered operation",
-        ]
+        &["--op-id ID narrows the comparison to one registered operation"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -87,6 +77,8 @@ impl Gate for WhatsSimilar {
             )
         })?;
         let mut report = Report::clean();
+        let ops = vyre_registry_link::operation::live_operation_registry();
+        report.cover_complete("registered operations", ops.iter().count());
         let ops = collect_ops(&mut report);
         match &cli.mode {
             Mode::Target(op_id) => run_target_query(

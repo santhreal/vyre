@@ -12,7 +12,7 @@ use std::path::Path;
 
 use toml::Value;
 
-use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::gate::{GateCtx, GateError, Report};
 use crate::manifest_walk::MAX_MANIFEST_BYTES;
 
 /// What an upward edge or an unclaimed layer costs the reader.
@@ -63,15 +63,7 @@ const LAYER_ORDER: &[&str] = &[
 /// Holds every crate to the layer it declares and to the layers below it.
 pub struct CheckTierDeps;
 
-impl Gate for CheckTierDeps {
-    fn name(&self) -> &'static str {
-        "check-tier-deps"
-    }
-
-    fn help(&self) -> &'static str {
-        "Reject upward layer dependencies, undeclared production edges, incomplete crate ownership and generated crate-documentation drift"
-    }
-
+impl crate::gate::GateBehavior for CheckTierDeps {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
         let members = workspace_members(root);
@@ -119,6 +111,7 @@ impl Gate for CheckTierDeps {
         validate_cross_crate_promotion_contract(root, &mut failures);
 
         let mut report = Report::from_messages(failures, FIX);
+        report.cover_complete("workspace members", members.len());
         report.note(format!(
             "{} workspace members across {} declared layers",
             members.len(),

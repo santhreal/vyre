@@ -5,9 +5,9 @@
 //!
 //! Used by Muon optimizer. This is a multi-pass matmul composition.
 
+use crate::math::preconditioner::newton_schulz_poly5_f32;
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
-use crate::math::preconditioner::newton_schulz_poly5_f32;
 
 const OP_ID: &str = "vyre-libs::optim::newton_schulz_5step";
 

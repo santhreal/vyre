@@ -75,7 +75,8 @@ pub enum LoopError {
 pub fn production_session(
     backend: &'static BackendRegistration,
     program: &Program,
+    representative_inputs: &[&[u8]],
 ) -> Result<ProductionSession, LoopError> {
-    ProductionSession::compile(program, backend)
+    ProductionSession::compile_with_representative_inputs(program, representative_inputs, backend)
         .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))
 }

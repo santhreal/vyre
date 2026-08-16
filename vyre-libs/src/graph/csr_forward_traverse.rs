@@ -22,9 +22,9 @@ use crate::graph::csr_frontier_step::{
 use crate::graph::program_graph::ProgramGraphShape;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::csr_forward_traverse";
+pub const OP_ID: &str = "vyre-libs::graph::csr_forward_traverse";
 /// Canonical op id for a forward step that excludes selected source nodes.
-pub const EXCLUDING_OP_ID: &str = "vyre-primitives::graph::csr_forward_traverse_excluding";
+pub const EXCLUDING_OP_ID: &str = "vyre-libs::graph::csr_forward_traverse_excluding";
 
 pub use crate::graph::csr_frontier_step::{
     csr_frontier_step_dispatch_grid as csr_forward_traverse_dispatch_grid,

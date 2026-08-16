@@ -33,7 +33,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::conformal_threshold";
+pub const OP_ID: &str = "vyre-libs::math::conformal_threshold";
 
 /// Compute the conformal threshold q̂ given pre-sorted calibration
 /// scores and target rank `k = ⌈(1 - α)(n + 1)⌉`. Single-lane primitive

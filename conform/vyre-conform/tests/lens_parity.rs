@@ -150,6 +150,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
         expected_output: None,
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+        source_file: file!(),
     };
 
     let backend = build_registered_backend();

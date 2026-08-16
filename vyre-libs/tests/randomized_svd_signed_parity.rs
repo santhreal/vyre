@@ -18,9 +18,9 @@
 #![cfg(feature = "math")]
 
 use vyre_libs::math::randomized_svd::randomized_projection_step;
-use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 
 /// Exact u32 16.16 oracle for `Y(m×l) = A(m×n) · Ω(n×l)`.
 fn project_fixed(a: &[u32], omega: &[u32], m: usize, n: usize, l: usize) -> Vec<u32> {

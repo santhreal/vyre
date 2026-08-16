@@ -605,6 +605,19 @@ covers = ["conform/README.md", "conform/vyre-conform/src/**"]
 nav = true
 
 [[page]]
+path = "design/geometry-lowering.md"
+title = "Launch geometry is a lowering decision"
+status = "current"
+audience = "contributor"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture and ownership"
+authority = "self"
+generation = "manual"
+covers = ["vyre-foundation/src/geometry/**", "vyre-foundation/src/operation.rs", "vyre-driver/src/device_profile.rs"]
+nav = true
+
+[[page]]
 path = "extending/backend.md"
 title = "Add a backend"
 status = "current"

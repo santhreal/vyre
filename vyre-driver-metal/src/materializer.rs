@@ -5,8 +5,8 @@ mod native {
     use std::sync::Arc;
 
     use vyre_driver::materialize::{
-        self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance,
-        MaterializerDevice, ResidentInstance,
+        self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
+        ResidentInstance,
     };
     use vyre_driver::{
         ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DispatchConfig, Resource,
@@ -66,7 +66,7 @@ mod native {
             Ok(Box::new(MetalArtifactInstance {
                 core: self
                     .descriptor
-                    .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
+                    .instance(artifact, payload, materialize::NEUTRAL_MESSAGES)?,
                 backend: Arc::clone(&self.backend),
                 modules,
             }))

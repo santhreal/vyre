@@ -101,6 +101,8 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `resident_output_contracts` | `vyre-driver-wgpu/tests/resident_output_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_output_contracts` |
 | `test` | `resident_timed_outputs` | `vyre-driver-wgpu/tests/resident_timed_outputs.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_timed_outputs` |
 | `test` | `resident_work_queue_emit` | `vyre-driver-wgpu/tests/resident_work_queue_emit.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_work_queue_emit` |
+| `test` | `runtime_indirect_contracts` | `vyre-driver-wgpu/tests/runtime_indirect_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test runtime_indirect_contracts` |
+| `test` | `runtime_router_contracts` | `vyre-driver-wgpu/tests/runtime_router_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test runtime_router_contracts` |
 | `test` | `same_width_store_parity` | `vyre-driver-wgpu/tests/same_width_store_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test same_width_store_parity` |
 | `test` | `self_optimizer_canonicalize_e2e` | `vyre-driver-wgpu/tests/self_optimizer_canonicalize_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test self_optimizer_canonicalize_e2e` |
 | `test` | `self_optimizer_const_fold_e2e` | `vyre-driver-wgpu/tests/self_optimizer_const_fold_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test self_optimizer_const_fold_e2e` |
@@ -112,6 +114,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `signed_int_op_parity` | `vyre-driver-wgpu/tests/signed_int_op_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test signed_int_op_parity` |
 | `test` | `signed_modulo_parity` | `vyre-driver-wgpu/tests/signed_modulo_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test signed_modulo_parity` |
 | `test` | `sinkhorn_iterate_contract` | `vyre-driver-wgpu/tests/sinkhorn_iterate_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test sinkhorn_iterate_contract` |
+| `test` | `spirv_backend_contracts` | `vyre-driver-wgpu/tests/spirv_backend_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test spirv_backend_contracts` |
 | `test` | `stream_shard_public_error_contracts` | `vyre-driver-wgpu/tests/stream_shard_public_error_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test stream_shard_public_error_contracts` |
 | `test` | `subgroup_detection` | `vyre-driver-wgpu/tests/subgroup_detection.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test subgroup_detection` |
 | `test` | `subgroup_reporting_honesty` | `vyre-driver-wgpu/tests/subgroup_reporting_honesty.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test subgroup_reporting_honesty` |

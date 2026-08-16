@@ -9,8 +9,6 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::matching::{
     bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
     BRACKET_KIND_OTHER,
@@ -22,6 +20,8 @@ use crate::matching::{
     dfa_compile, dfa_compile_with_budget, dfa_fingerprint, dfa_wire_bytes, nfa_to_dfa, CompiledDfa,
     DfaCompileError, DfaDedupBatch, DfaDedupResult, DfaDedupTable, NfaTables, NfaToDfaError,
 };
+use crate::plumbing::host::scratch::reserve_vec_capacity;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::wire::pack_u32_slice;
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -521,7 +521,7 @@ mod tests {
                         u32_slice_to_le_bytes(&primitive_bracket_match(&kinds, depth_words as u32)),
                     ])
                 }
-                "vyre-primitives::matching::region::region_sort" => {
+                "vyre-libs::matching::region::region_sort" => {
                     // Six input-consuming buffers: pids/starts/ends ReadOnly(0-2) + the three
                     // plain-ReadWrite outputs pids_out/starts_out/ends_out(3-5, zero-filled).
                     assert_eq!(
@@ -547,7 +547,7 @@ mod tests {
                         u32_slice_to_le_bytes(&ends),
                     ])
                 }
-                "vyre-primitives::matching::region::dedup_regions_flag" => {
+                "vyre-libs::matching::region::dedup_regions_flag" => {
                     // Three input-consuming buffers: pids/starts/ends ReadOnly(0-2). `survivors` is
                     // WriteOnly(3) (backend-allocated, no input slot).
                     assert_eq!(

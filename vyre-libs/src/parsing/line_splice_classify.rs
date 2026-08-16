@@ -1,7 +1,7 @@
 //! `line_splice_classify`  -  per-byte "is-kept" mask for C translation
 //! phase 2 (`\<newline>` deletion).
 //!
-//! Op id: `vyre-primitives::parsing::line_splice_classify`. Soundness:
+//! Op id: `vyre-libs::parsing::line_splice_classify`. Soundness:
 //! `Exact` against the C11 phase-2 spec (and the existing Reference oracle
 //! `c_translation_phase_line_splice` in higher-level preprocessing
 //! compositions). The Reference oracle at the bottom of this file is the
@@ -27,7 +27,7 @@
 //!   - `kept_mask_out`  -  `DataType::U32`, one entry per input byte. `1`
 //!     if the byte survives phase-2 splice deletion; `0` if it is part of
 //!     a `\<newline>` sequence and must be dropped. Composes with
-//!     `vyre-primitives::math::stream_compact` to produce the post-phase-2
+//!     `vyre-libs::math::stream_compact` to produce the post-phase-2
 //!     byte stream and the original-offset map in two further dispatches.
 //!
 //! ## Why per-byte and not word-at-a-time
@@ -41,10 +41,11 @@
 //! made in-bounds explicitly, not left to a backend's OOB clamp, which not
 //! every backend performs).
 
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::parsing::line_splice_classify";
+pub const OP_ID: &str = "vyre-libs::parsing::line_splice_classify";
 
 /// Canonical binding index for the input byte stream.
 pub const BINDING_BYTES_IN: u32 = 0;
@@ -278,9 +279,8 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
             .with_count(byte_count.max(1)),
         ],
         LINE_SPLICE_CLASSIFY_WORKGROUP_SIZE,
-        body,
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
-    .with_entry_op_id(OP_ID)
 }
 
 // ---------- reference oracle contract ----------
@@ -510,7 +510,7 @@ mod tests {
 
     #[test]
     fn op_id_is_canonical_and_stable() {
-        assert_eq!(OP_ID, "vyre-primitives::parsing::line_splice_classify");
+        assert_eq!(OP_ID, "vyre-libs::parsing::line_splice_classify");
     }
 
     #[test]

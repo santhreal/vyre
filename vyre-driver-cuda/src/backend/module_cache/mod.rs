@@ -18,7 +18,7 @@ pub(crate) use cache_key::{ModuleCacheKey, PtxSourceCacheKey};
 pub(crate) use driver_module::{load_cuda_module_data, unload_cuda_module};
 pub(crate) use module_registry::{CudaModuleCache, ModuleGlobals};
 pub(crate) use ptx_source_cache::CudaPtxSourceCache;
-pub(crate) use trap_sidecar::TrapSidecar;
+pub(crate) use trap_sidecar::{declares_trap_sidecar, TrapSidecar};
 
 /// Snapshot of the CUDA PTX source cache used before driver module loading.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]

@@ -6,10 +6,10 @@
 //! encoders program equality keys on, so the wire fingerprint and
 //! `Program::eq` cannot disagree about what a buffer declares.
 
+use crate::ir_inner::model::op_signature::DataType;
 use crate::ir_inner::model::program::{
     BufferDecl, CacheLocality, LinearType, MemoryKind, ShapePredicate,
 };
-use crate::ir_inner::model::op_signature::DataType;
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{put_u32, put_u8, MAX_SHAPE_PREDICATE_DEPTH};
 use crate::serial::wire::tags::access_tag::access_tag;

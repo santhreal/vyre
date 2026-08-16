@@ -1,18 +1,7 @@
-# Pinned finding count of every registered gate, written by
-# `xtask gates --write-baseline`.
+# Baseline findings for the gate suite.
 #
-# One row per registered gate, and the sweep fails on a gate with no row
-# or a row with no gate. More findings than the pin fails; fewer is
-# reported so the pin can be lowered here, and the pin only ever moves
-# down. A gate that cannot run at all fails outright: no row makes a
-# failing gate legal, and the writer refuses to record one.
-#
-# Every pin below is 0 because the registry was rebuilt against the gate
-# contract and no gate had run under it yet. Zero is the only pin that
-# cannot excuse a finding, so a gate that reports one fails until the
-# number here is recorded from a real run. Record them all at once with
-# `xtask gates --write-baseline`, which refuses to write while any gate
-# cannot run.
+# Every gate registered in `xtask` is represented here with its pinned finding
+# count. Every pin is hard 0; non-zero baselines are rejected.
 
 [[gate]]
 name = "abstraction-gate"
@@ -39,15 +28,15 @@ name = "bench-coverage"
 findings = 0
 
 [[gate]]
-name = "bench-smoke-runtime"
-findings = 0
-
-[[gate]]
 name = "bench-crossback"
 findings = 0
 
 [[gate]]
 name = "bench-release"
+findings = 0
+
+[[gate]]
+name = "bench-smoke-runtime"
 findings = 0
 
 [[gate]]
@@ -67,11 +56,11 @@ name = "ci-registry"
 findings = 0
 
 [[gate]]
-name = "ci-steps"
+name = "ci-required"
 findings = 0
 
 [[gate]]
-name = "ci-required"
+name = "ci-steps"
 findings = 0
 
 [[gate]]
@@ -87,11 +76,7 @@ name = "conformance-matrix"
 findings = 0
 
 [[gate]]
-name = "crate-pages"
-findings = 0
-
-[[gate]]
-name = "cross-target"
+name = "contract-in-source"
 findings = 0
 
 [[gate]]
@@ -99,19 +84,15 @@ name = "crate-ownership"
 findings = 0
 
 [[gate]]
+name = "crate-pages"
+findings = 0
+
+[[gate]]
 name = "crate-readmes"
 findings = 0
 
 [[gate]]
-name = "testing-guides"
-findings = 0
-
-[[gate]]
-name = "test-material-placement"
-findings = 0
-
-[[gate]]
-name = "dep-drift"
+name = "cross-target"
 findings = 0
 
 [[gate]]
@@ -119,19 +100,7 @@ name = "cuda-parity"
 findings = 0
 
 [[gate]]
-name = "metal-parity"
-findings = 0
-
-[[gate]]
-name = "spirv-parity"
-findings = 0
-
-[[gate]]
-name = "wire-determinism"
-findings = 0
-
-[[gate]]
-name = "contract-in-source"
+name = "dep-drift"
 findings = 0
 
 [[gate]]
@@ -171,11 +140,11 @@ name = "feature-isolation"
 findings = 0
 
 [[gate]]
-name = "feature-msrv"
+name = "feature-matrix"
 findings = 0
 
 [[gate]]
-name = "feature-matrix"
+name = "feature-msrv"
 findings = 0
 
 [[gate]]
@@ -187,11 +156,11 @@ name = "frozen-contracts"
 findings = 0
 
 [[gate]]
-name = "gate1"
+name = "gate-canon"
 findings = 0
 
 [[gate]]
-name = "gate-canon"
+name = "gate1"
 findings = 0
 
 [[gate]]
@@ -247,19 +216,59 @@ name = "invariant-paths"
 findings = 0
 
 [[gate]]
-name = "layering"
-findings = 0
-
-[[gate]]
 name = "launch-state"
 findings = 0
 
 [[gate]]
-name = "lego-audit"
+name = "layering"
+findings = 0
+
+[[gate]]
+name = "lego-composability"
+findings = 0
+
+[[gate]]
+name = "lego-composition-chains"
+findings = 0
+
+[[gate]]
+name = "lego-composition-depth"
+findings = 0
+
+[[gate]]
+name = "lego-cross-dialect"
+findings = 0
+
+[[gate]]
+name = "lego-exemption-liveness"
+findings = 0
+
+[[gate]]
+name = "lego-name-stems"
+findings = 0
+
+[[gate]]
+name = "lego-no-reinvention"
+findings = 0
+
+[[gate]]
+name = "lego-operand-shapes"
+findings = 0
+
+[[gate]]
+name = "lego-primitive-coverage"
 findings = 0
 
 [[gate]]
 name = "lego-quick"
+findings = 0
+
+[[gate]]
+name = "lego-semantic-organization"
+findings = 0
+
+[[gate]]
+name = "lego-trend"
 findings = 0
 
 [[gate]]
@@ -288,6 +297,10 @@ findings = 0
 
 [[gate]]
 name = "metadata-matrix"
+findings = 0
+
+[[gate]]
+name = "metal-parity"
 findings = 0
 
 [[gate]]
@@ -344,10 +357,6 @@ findings = 0
 
 [[gate]]
 name = "platform-consumer-docs"
-findings = 0
-
-[[gate]]
-name = "primitive-admission-gate"
 findings = 0
 
 [[gate]]
@@ -427,6 +436,18 @@ name = "source-reachability"
 findings = 0
 
 [[gate]]
+name = "spirv-parity"
+findings = 0
+
+[[gate]]
+name = "test-material-placement"
+findings = 0
+
+[[gate]]
+name = "testing-guides"
+findings = 0
+
+[[gate]]
 name = "trace-f32"
 findings = 0
 
@@ -448,6 +469,10 @@ findings = 0
 
 [[gate]]
 name = "whats-similar"
+findings = 0
+
+[[gate]]
+name = "wire-determinism"
 findings = 0
 
 [[gate]]

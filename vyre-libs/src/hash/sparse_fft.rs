@@ -35,7 +35,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::hash::sparse_fft_bin_hash";
+pub const OP_ID: &str = "vyre-libs::hash::sparse_fft_bin_hash";
 
 /// Hash each frequency index `f` into one of `b` bins via a linear
 /// hash `bin = (a · f + c) mod b`. Accumulate the signal's `f`-th

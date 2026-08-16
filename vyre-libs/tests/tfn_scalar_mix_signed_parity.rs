@@ -17,9 +17,9 @@
 #![cfg(feature = "geom")]
 
 use vyre_libs::geom::tfn::tfn_scalar_mix;
-use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 
 /// Exact u32 16.16 oracle: `out[i*c_out + co] = Σ_ci weights[co*c_in + ci]·features[i*c_in + ci]`.
 fn tfn_mix_fixed(

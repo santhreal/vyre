@@ -74,9 +74,19 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
     // matched ids alone left that crate registering nothing.
     let mut registering: BTreeSet<String> = BTreeSet::new();
     let mut directories: BTreeMap<String, String> = BTreeMap::new();
+    let test_gated = structure_gate::cfg_test::test_gated_module_files(root);
     for member in members(root, errors) {
         directories.insert(member.name.clone(), member.path.clone());
         for module in module_routes(&root.join(&member.path).join("src")) {
+            let site_path = module
+                .path
+                .strip_prefix(root)
+                .unwrap_or(&module.path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            if test_gated.contains(&site_path) {
+                continue;
+            }
             let raw = match read_capped(&module.path) {
                 Ok(raw) => raw,
                 Err(reason) => {
@@ -93,12 +103,7 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
             }
             let site = Site {
                 crate_name: member.name.clone(),
-                path: module
-                    .path
-                    .strip_prefix(root)
-                    .unwrap_or(&module.path)
-                    .to_string_lossy()
-                    .replace('\\', "/"),
+                path: site_path,
                 features,
             };
             let declared: BTreeSet<String> = if text.contains("OperationRegistration") {

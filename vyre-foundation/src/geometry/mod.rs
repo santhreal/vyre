@@ -223,14 +223,25 @@ pub enum GeometryLoweringError {
 impl std::fmt::Display for GeometryLoweringError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnsatisfiableRequirements(msg) => write!(f, "unsatisfiable geometry requirements: {msg}"),
+            Self::UnsatisfiableRequirements(msg) => {
+                write!(f, "unsatisfiable geometry requirements: {msg}")
+            }
             Self::ExceedsWorkgroupLimits { requested, max } => {
-                write!(f, "requested workgroup size {requested} exceeds target maximum {max}")
+                write!(
+                    f,
+                    "requested workgroup size {requested} exceeds target maximum {max}"
+                )
             }
             Self::ExceedsSharedMemoryLimits { requested, max } => {
-                write!(f, "requested shared memory {requested} bytes exceeds target maximum {max}")
+                write!(
+                    f,
+                    "requested shared memory {requested} bytes exceeds target maximum {max}"
+                )
             }
-            Self::UnsupportedCooperativeWidth { requested, admitted } => {
+            Self::UnsupportedCooperativeWidth {
+                requested,
+                admitted,
+            } => {
                 write!(f, "requested cooperative width {requested} is not admitted by target (max {admitted})")
             }
         }
@@ -259,7 +270,8 @@ pub trait GeometryStrategy: Send + Sync {
             .next()
             .ok_or_else(|| {
                 GeometryLoweringError::UnsatisfiableRequirements(
-                    "no admitting geometry candidate found for requirements on this target".to_string(),
+                    "no admitting geometry candidate found for requirements on this target"
+                        .to_string(),
                 )
             })
     }

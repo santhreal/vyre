@@ -461,6 +461,12 @@ impl WgpuBackend {
         &self,
         config: &vyre_driver::DispatchConfig,
     ) -> Result<(), vyre_driver::BackendError> {
+        if config.cooperative && !<Self as vyre_driver::VyreBackend>::supports_grid_sync(self) {
+            return Err(vyre_driver::BackendError::UnsupportedFeature {
+                name: "wgpu cooperative grid dispatch".to_string(),
+                backend: <Self as vyre_driver::VyreBackend>::id(self).to_string(),
+            });
+        }
         if matches!(config.speculation, Some(SpeculationMode::Force))
             && !<Self as vyre_driver::VyreBackend>::supports_speculation(self)
         {

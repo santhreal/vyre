@@ -7,8 +7,8 @@
 #![cfg(feature = "math-succinct")]
 #![allow(deprecated)]
 mod wire_words;
-use wire_words::{decode_u32_words, u32_bytes};
 use vyre_reference::value::Value;
+use wire_words::{decode_u32_words, u32_bytes};
 
 // ---------------------------------------------------------------------------
 // Rank1 superblocks  -  specific value contracts

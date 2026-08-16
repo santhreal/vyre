@@ -42,7 +42,11 @@ static CUDA_DEVICE_WAIT_TIMEOUT: LazyLock<Duration> = LazyLock::new(|| {
 
 /// Whole positive seconds in `value`, or `None` for anything else.
 fn parse_device_wait_timeout_secs(value: &str) -> Option<u64> {
-    value.trim().parse::<u64>().ok().filter(|seconds| *seconds > 0)
+    value
+        .trim()
+        .parse::<u64>()
+        .ok()
+        .filter(|seconds| *seconds > 0)
 }
 
 pub(crate) fn cuda_stage_trace_enabled() -> bool {

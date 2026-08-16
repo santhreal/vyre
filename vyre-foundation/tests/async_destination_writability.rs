@@ -42,7 +42,9 @@ fn access_modes() -> Vec<BufferAccess> {
             )
         })
         .1;
-    let listed = listed.split_once(" at line ").map_or(listed, |(head, _)| head);
+    let listed = listed
+        .split_once(" at line ")
+        .map_or(listed, |(head, _)| head);
     listed
         .split(", ")
         .map(|name| name.trim_matches(['`', ' ', '.']))
@@ -172,10 +174,7 @@ fn an_async_store_destination_carries_the_same_rule_as_an_async_load() {
         "a store transfer writes its destination exactly as a load transfer does"
     );
     assert!(
-        !reports_v134(
-            vec![declaration("target", &BufferAccess::ReadWrite)],
-            entry
-        ),
+        !reports_v134(vec![declaration("target", &BufferAccess::ReadWrite)], entry),
         "a writable destination is accepted"
     );
 }
@@ -198,8 +197,7 @@ fn a_read_only_source_is_not_a_finding() {
         !reports_v134(
             vec![
                 BufferDecl::read("cold", 0, DataType::U32).with_count(8),
-                BufferDecl::storage("hot", 1, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(8),
+                BufferDecl::storage("hot", 1, BufferAccess::ReadWrite, DataType::U32).with_count(8),
             ],
             vec![
                 Node::AsyncLoad {

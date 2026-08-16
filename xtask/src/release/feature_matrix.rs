@@ -183,14 +183,16 @@ fn collect_package_blockers(
             }
         }
     }
-    if package.name == "vyre-driver-cuda" && !package.features.iter().any(|feature| feature == "cuda")
+    if package.name == "vyre-driver-cuda"
+        && !package.features.iter().any(|feature| feature == "cuda")
     {
         record(
             "vyre-driver-cuda is missing explicit `cuda` release feature".to_string(),
             format!("Declare a `cuda` feature in {}.", package.manifest),
         );
     }
-    if package.name == "vyre-driver-wgpu" && !package.features.iter().any(|feature| feature == "wgpu")
+    if package.name == "vyre-driver-wgpu"
+        && !package.features.iter().any(|feature| feature == "wgpu")
     {
         record(
             "vyre-driver-wgpu is missing explicit `wgpu` fallback release feature".to_string(),
@@ -317,5 +319,53 @@ fn release_policy(name: &str) -> &'static str {
         }
         "vyre-driver-wgpu" => "WGPU backend crate keeps default empty as fallback path",
         _ => "feature definitions are syntactically valid and have an explicit default policy",
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unresolved_feature_members_and_release_policy_are_enforced() {
+        let mut features_table = toml::Table::new();
+        features_table.insert(
+            "default".to_string(),
+            toml::Value::Array(vec![
+                toml::Value::String("cuda".to_string()),
+                toml::Value::String("dep:optional_dep".to_string()),
+                toml::Value::String("unresolved_feature".to_string()),
+            ]),
+        );
+
+        let features = vec!["cuda".to_string(), "default".to_string()];
+        let dependencies = vec!["required_dep".to_string()];
+        let optional_dependencies = vec!["optional_dep".to_string()];
+
+        let unresolved = unresolved_feature_members(
+            Some(&features_table),
+            &features,
+            &dependencies,
+            &optional_dependencies,
+        );
+
+        assert_eq!(unresolved, vec!["default:unresolved_feature".to_string()]);
+
+        let mut inspection = Inspection::new();
+        let mut blockers = Vec::new();
+        let bad_driver = PackageFeatures {
+            name: "vyre-driver-cuda".to_string(),
+            manifest: "vyre-driver-cuda/Cargo.toml".to_string(),
+            feature_count: 2,
+            has_default_feature: true,
+            default_feature_members: vec!["cuda".to_string()],
+            features: vec!["cuda".to_string(), "default".to_string()],
+            malformed_features: Vec::new(),
+            unresolved_feature_members: Vec::new(),
+            release_policy: release_policy("vyre-driver-cuda"),
+        };
+        collect_package_blockers(&bad_driver, &mut inspection, &mut blockers);
+        assert!(blockers
+            .iter()
+            .any(|b| b.contains("vyre-driver-cuda default feature set must stay empty")));
     }
 }

@@ -12,7 +12,7 @@
 //! The floor is raised deliberately, in a commit that says why. It is never
 //! lowered to match a deletion: restore the test instead.
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// Measured floor. 175 tracked files on 2026-08-15, down from 181 on
@@ -38,18 +38,11 @@ const MARKERS: &[&str] = &[
 /// The number of property-test files stays at or above the measured floor.
 pub struct ProptestCoverage;
 
-impl Gate for ProptestCoverage {
-    fn name(&self) -> &'static str {
-        "proptest-coverage"
-    }
-
-    fn help(&self) -> &'static str {
-        "tracked source files carrying property tests, against a floor"
-    }
-
+impl crate::gate::GateBehavior for ProptestCoverage {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("proptest source files", tree.all_rust().len());
         let mut carrying = 0_usize;
         for file in tree.all_rust() {
             if scan::contains_any(&tree.read(&file)?, MARKERS) {
@@ -61,7 +54,10 @@ impl Gate for ProptestCoverage {
         ));
         if carrying < FLOOR {
             report.find(Finding::new(
-                format!("property-test coverage is {} file(s) below the floor of {FLOOR}", FLOOR - carrying),
+                format!(
+                    "property-test coverage is {} file(s) below the floor of {FLOOR}",
+                    FLOOR - carrying
+                ),
                 "restore the deleted property test; lower the floor in \
                  xtask/src/gates/proptest_coverage.rs only with a stated reason for why the \
                  coverage is no longer needed",
@@ -73,5 +69,47 @@ impl Gate for ProptestCoverage {
             ));
         }
         Ok(report)
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn proptest_marker_detection_and_floor_accounting() {
+        let sample_source = r#"
+            use proptest::prelude::*;
+            proptest! {
+                #[test]
+                fn test_ir_invariants(val in 0..100) {
+                    assert!(val >= 0);
+                }
+            }
+        "#;
+        assert!(scan::contains_any(sample_source, MARKERS));
+
+        let non_proptest_source = r#"
+            #[test]
+            fn regular_unit_test() {
+                assert_eq!(2 + 2, 4);
+            }
+        "#;
+        assert!(!scan::contains_any(non_proptest_source, MARKERS));
+
+        let carrying = 170;
+        let mut report = Report::clean();
+        if carrying < FLOOR {
+            report.find(Finding::new(
+                format!(
+                    "property-test coverage is {} file(s) below the floor of {FLOOR}",
+                    FLOOR - carrying
+                ),
+                "restore the deleted property test",
+            ));
+        }
+        assert_eq!(report.findings.len(), 1);
+        assert!(report.findings[0]
+            .message
+            .contains("below the floor of 175"));
     }
 }

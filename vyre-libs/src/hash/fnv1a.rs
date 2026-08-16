@@ -64,9 +64,9 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable op id  -  the Tier 3 wrapper registers under this id.
-pub const FNV1A32_OP_ID: &str = "vyre-primitives::hash::fnv1a32";
+pub const FNV1A32_OP_ID: &str = "vyre-libs::hash::fnv1a32";
 /// Stable op id for the 64-bit widening-multiply builder.
-pub const FNV1A64_OP_ID: &str = "vyre-primitives::hash::fnv1a64";
+pub const FNV1A64_OP_ID: &str = "vyre-libs::hash::fnv1a64";
 const FNV1A64_PRIME_LO: u32 = 0x0000_01B3;
 const FNV1A64_PRIME_HI: u32 = 0x0000_0100;
 const FNV1A64_OFFSET_LO: u32 = 0x8422_2325;

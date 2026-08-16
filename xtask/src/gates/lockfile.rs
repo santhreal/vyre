@@ -6,20 +6,12 @@
 
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 
 /// Reports a `Cargo.lock` that differs from the commit.
 pub struct LockfileClean;
 
-impl Gate for LockfileClean {
-    fn name(&self) -> &'static str {
-        "lockfile-clean"
-    }
-
-    fn help(&self) -> &'static str {
-        "Fail when Cargo.lock differs from the commit, because the resolved versions would not be the tested ones"
-    }
-
+impl crate::gate::GateBehavior for LockfileClean {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let output = Command::new("git")
             .args(["status", "--porcelain", "Cargo.lock"])
@@ -42,17 +34,41 @@ impl Gate for LockfileClean {
             ));
         }
         let mut report = Report::clean();
-        for line in String::from_utf8_lossy(&output.stdout).lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            report.find(Finding::in_file(
-                "Cargo.lock",
-                format!("differs from the commit: {trimmed}"),
-                "commit the resolved lockfile, or restore it if the change was accidental",
-            ));
-        }
+        collect_lockfile_findings(&String::from_utf8_lossy(&output.stdout), &mut report);
         Ok(report)
+    }
+}
+
+fn collect_lockfile_findings(stdout: &str, report: &mut Report) {
+    report.cover_complete("workspace lockfile", 1);
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        report.find(Finding::in_file(
+            "Cargo.lock",
+            format!("differs from the commit: {trimmed}"),
+            "commit the resolved lockfile, or restore it if the change was accidental",
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lockfile_findings_detect_porcelain_diff_and_pass_clean() {
+        let mut clean_report = Report::clean();
+        collect_lockfile_findings("", &mut clean_report);
+        assert!(clean_report.findings.is_empty());
+
+        let mut dirty_report = Report::clean();
+        collect_lockfile_findings(" M Cargo.lock\n", &mut dirty_report);
+        assert_eq!(dirty_report.findings.len(), 1);
+        assert!(dirty_report.findings[0]
+            .message
+            .contains("differs from the commit: M Cargo.lock"));
     }
 }

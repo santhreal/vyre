@@ -7,8 +7,8 @@
 //! compiled artifact for another, and an extra input silently misses cache.
 
 use super::*;
-use crate::ir_inner::model::program::MemoryKind;
 use crate::ir_inner::model::op_signature::BufferAccess;
+use crate::ir_inner::model::program::MemoryKind;
 use std::sync::atomic::Ordering;
 
 /// Uncached digest computations performed on THIS thread.

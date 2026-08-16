@@ -43,8 +43,8 @@ use std::process::Command;
 
 use serde::Deserialize;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
-use crate::subcommands::{self, SUBSETS};
+use crate::gate::{Finding, GateCtx, GateError, RegisteredGate, Report};
+use crate::subcommands;
 
 /// Where the pinned finding counts live.
 pub const BASELINES: &str = "xtask/gate-baselines.toml";
@@ -68,9 +68,9 @@ pub struct Baseline {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct BaselineFile {
+pub(crate) struct BaselineFile {
     #[serde(default)]
-    gate: Vec<Baseline>,
+    pub(crate) gate: Vec<Baseline>,
 }
 
 /// The baseline file under a checkout root.
@@ -81,14 +81,24 @@ pub fn baseline_path(root: &Path) -> PathBuf {
 
 /// Parse one revision of the baseline file.
 fn parse_baselines(text: &str, source: &str) -> Result<Vec<Baseline>, GateError> {
-    toml::from_str::<BaselineFile>(text)
-        .map(|file| file.gate)
-        .map_err(|error| {
-            GateError::new(
-                format!("cannot parse {source}: {error}"),
-                "repair the file so every row carries exactly `name` and `findings`",
-            )
-        })
+    let file: BaselineFile = toml::from_str(text).map_err(|error| {
+        GateError::new(
+            format!("cannot parse {source}: {error}"),
+            "repair the file so every row carries exactly `name` and `findings`",
+        )
+    })?;
+    for row in &file.gate {
+        if row.findings != 0 {
+            return Err(GateError::new(
+                format!(
+                    "gate `{}` pins {} finding(s); every baseline pin must be zero",
+                    row.name, row.findings
+                ),
+                "fix every finding so the gate passes with zero findings",
+            ));
+        }
+    }
+    Ok(file.gate)
 }
 
 /// Every pinned row in the working tree.
@@ -133,10 +143,8 @@ pub fn registry_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<Str
         }
     }
     for name in gate_names {
-        if !SUBSETS
-            .iter()
-            .any(|subset| subset.gates.contains(&{ *name }))
-        {
+        let subsets = subcommands::subsets();
+        if !subsets.iter().any(|subset| subset.gates.contains(name)) {
             failures.push(format!(
                 "gate `{name}` is registered and belongs to no subset; add it to the subset whose domain owns it, so its verdict reaches that domain instead of only the whole-registry run"
             ));
@@ -177,20 +185,13 @@ struct Constant {
 /// The gate that holds the registry to its own ratchets.
 pub struct GateCanon;
 
-impl Gate for GateCanon {
-    fn name(&self) -> &'static str {
-        "gate-canon"
-    }
-
-    fn help(&self) -> &'static str {
-        "Whether the registry, its pinned counts and its ratchet constants moved only in the strict direction; --base REF compares against that ref"
-    }
-
+impl crate::gate::GateBehavior for GateCanon {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let registry = subcommands::registry();
         let gate_names: Vec<&str> = registry.iter().map(|gate| gate.name()).collect();
         let baselines = load_baselines(&ctx.root)?;
+        report.cover_complete("registered gates", gate_names.len());
 
         for message in registry_failures(&gate_names, &baselines) {
             report.find(Finding::in_file(
@@ -308,12 +309,12 @@ fn at_revision(root: &Path, revision: &str, relative: &str) -> Option<String> {
 /// runs it, and a gate `xtask` runs in process names none. Deriving it means a
 /// gate moved into a new crate is scanned because it is registered, not because
 /// somebody remembered to widen a list.
-fn gate_sources(root: &Path, registry: &[&'static dyn Gate]) -> Result<Vec<String>, GateError> {
+fn gate_sources(root: &Path, registry: &[RegisteredGate]) -> Result<Vec<String>, GateError> {
     let mut crates: BTreeSet<&str> = BTreeSet::new();
     crates.insert("xtask");
     for gate in registry {
-        if let Some(package) = gate.package() {
-            crates.insert(package);
+        if gate.package() != "xtask" {
+            crates.insert(gate.package());
         }
     }
     let output = Command::new("git")
@@ -330,7 +331,10 @@ fn gate_sources(root: &Path, registry: &[&'static dyn Gate]) -> Result<Vec<Strin
         })?;
     if !output.status.success() {
         return Err(GateError::new(
-            format!("cannot list the gate sources: git ls-files exited {}", output.status),
+            format!(
+                "cannot list the gate sources: git ls-files exited {}",
+                output.status
+            ),
             "run this gate inside a git checkout of the repository",
         ));
     }
@@ -439,7 +443,11 @@ fn integer_constant(line: &str) -> Option<(String, u128)> {
     let rest = strip_visibility(code).strip_prefix("const ")?;
     let (name, rest) = rest.split_once(':')?;
     let name = name.trim();
-    if name.is_empty() || !name.bytes().all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit()) {
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte == b'_' || byte.is_ascii_digit())
+    {
         return None;
     }
     let (declared, literal) = rest.split_once('=')?;
@@ -447,8 +455,14 @@ fn integer_constant(line: &str) -> Option<(String, u128)> {
         return None;
     }
     let literal = literal.trim().trim_end_matches(';').trim();
-    let digits: String = literal.chars().filter(|character| *character != '_').collect();
-    digits.parse::<u128>().ok().map(|value| (name.to_string(), value))
+    let digits: String = literal
+        .chars()
+        .filter(|character| *character != '_')
+        .collect();
+    digits
+        .parse::<u128>()
+        .ok()
+        .map(|value| (name.to_string(), value))
 }
 
 /// Which way a constant of this name may move, or `None` when the name marks no
@@ -573,25 +587,14 @@ fn removal_findings(
     Ok(findings)
 }
 
-/// Every gate name a source revision declares.
+/// Every gate name a source revision declares in GateDescriptor metadata.
 ///
-/// Two shapes, because the registry has two: a `Gate` implementation answers
-/// `name()` with a literal, and a delegated gate carries the same literal as a
-/// struct field. Reading text is what makes a previous revision answerable at
+/// Gate descriptors declare `name: "..."`. Reading text is what makes a previous revision answerable at
 /// all, since the gate it declared no longer exists to be called.
 fn declared_gate_names(text: &str) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
-    let mut lines = text.lines().peekable();
-    while let Some(line) = lines.next() {
+    for line in text.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("fn name(&self) -> &'static str {") {
-            if let Some(next) = lines.peek() {
-                if let Some(name) = quoted(next) {
-                    names.insert(name);
-                }
-            }
-            continue;
-        }
         if let Some(rest) = trimmed.strip_prefix("name:") {
             if let Some(name) = quoted(rest) {
                 names.insert(name);
@@ -756,7 +759,10 @@ mod tests {
                 "{declaration}"
             );
         }
-        assert_eq!(integer_constant("published const MAX_LINES: usize = 4;"), None);
+        assert_eq!(
+            integer_constant("published const MAX_LINES: usize = 4;"),
+            None
+        );
     }
 
     /// WHY: the doc comment is the record of what was measured, so it is the
@@ -792,8 +798,9 @@ mod tests {
     /// names are read from its text. Both registration shapes have to be read
     /// or a removed delegated gate looks like a row that never named a gate.
     #[test]
-    fn reads_both_registration_shapes() {
-        let text = "impl Gate for A {\n    fn name(&self) -> &'static str {\n        \"alpha\"\n    }\n}\nDelegated {\n    name: \"beta\",\n}\n";
+    fn reads_descriptor_gate_names() {
+        let text =
+            "GateDescriptor {\n    name: \"alpha\",\n}\nGateDescriptor {\n    name: \"beta\",\n}\n";
         let names = declared_gate_names(text);
         assert!(names.contains("alpha"), "{names:?}");
         assert!(names.contains("beta"), "{names:?}");
@@ -822,11 +829,15 @@ mod tests {
         );
         let failures = registry_failures(&["ci-matrix", "unpinned-gate"], &baselines);
         assert!(
-            failures.iter().any(|text| text.contains("`unpinned-gate` has no row")),
+            failures
+                .iter()
+                .any(|text| text.contains("`unpinned-gate` has no row")),
             "{failures:?}"
         );
         assert!(
-            failures.iter().any(|text| text.contains("pins `retired-gate`")),
+            failures
+                .iter()
+                .any(|text| text.contains("pins `retired-gate`")),
             "{failures:?}"
         );
         assert!(
@@ -857,5 +868,14 @@ mod tests {
             );
         }
     }
+    /// WHY: Section 182.6.2 requires zero-only baselines. A row with non-zero
+    /// findings must be rejected on parse rather than allowing positive pins.
+    #[test]
+    fn a_row_with_nonzero_findings_fails_to_load() {
+        let nonzero = "[[gate]]\nname = \"dep-drift\"\nfindings = 5\n";
+        assert!(
+            parse_baselines(nonzero, "fixture").is_err(),
+            "a row with non-zero findings must fail to parse"
+        );
+    }
 }
-

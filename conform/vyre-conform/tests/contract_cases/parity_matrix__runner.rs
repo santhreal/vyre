@@ -75,14 +75,17 @@ impl BackendRunner {
                     .map_err(|error| format!("reference dispatch failed: {error}"))
             }
             BackendKind::Registered(registration) => {
-                let production =
-                    vyre_conform::production::ProductionSession::compile(program, registration)
-                        .map_err(|error| error.to_string())?;
-                let run_submission = |inputs: &[&[u8]]| {
+                let run_submission = |planned_inputs: &[&[u8]]| -> Result<Vec<Vec<u8>>, String> {
+                    let production = vyre_conform::production::ProductionSession::compile_with_representative_inputs(
+                        program,
+                        planned_inputs,
+                        registration,
+                    )
+                    .map_err(|error| error.to_string())?;
                     if let Some(grid) = config.grid_override {
-                        production.submit_with_invocation_grid(inputs, grid)
+                        production.submit_with_invocation_grid(planned_inputs, grid)
                     } else {
-                        production.submit(inputs)
+                        production.submit(planned_inputs)
                     }
                     .map_err(|error| error.to_string())
                 };

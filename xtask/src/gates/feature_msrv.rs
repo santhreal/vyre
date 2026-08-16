@@ -26,7 +26,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::cargo_runner;
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::feature_isolation::{derive_pairs, Pair};
 use crate::gates::scan::Tree;
 
@@ -36,15 +36,7 @@ const ROOT_MANIFEST: &str = "Cargo.toml";
 /// Compiles every declared feature selection on the advertised MSRV.
 pub struct FeatureMsrv;
 
-impl Gate for FeatureMsrv {
-    fn name(&self) -> &'static str {
-        "feature-msrv"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the advertised rust-version to a compile of every declared feature selection; --sweep compiles, --print-toolchain writes the validated version for a workflow to install"
-    }
-
+impl crate::gate::GateBehavior for FeatureMsrv {
     fn usage(&self) -> &'static [&'static str] {
         &[
             "--sweep compiles each declared selection on the advertised MSRV",
@@ -56,6 +48,7 @@ impl Gate for FeatureMsrv {
         let tree = Tree::open(&ctx.root)?;
         let manifest = tree.read_toml(ROOT_MANIFEST)?;
         let mut report = Report::clean();
+        report.cover_complete("workspace manifests", tree.members()?.len());
 
         let declared = declared_version(&manifest);
         let Some(version) = declared else {
@@ -112,9 +105,7 @@ impl Gate for FeatureMsrv {
             }
             compiled += 1;
         }
-        report.note(format!(
-            "compiled {compiled} selection(s) on {version}"
-        ));
+        report.note(format!("compiled {compiled} selection(s) on {version}"));
         Ok(report)
     }
 }
@@ -142,7 +133,8 @@ fn names_a_toolchain(version: &str) -> bool {
     if parts.next().is_some() {
         return false;
     }
-    let numeric = |value: &str| !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit());
+    let numeric =
+        |value: &str| !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit());
     numeric(major) && numeric(minor) && patch.is_none_or(numeric)
 }
 
@@ -173,8 +165,7 @@ fn installed(version: &str) -> Result<(), GateError> {
     if stdout.lines().any(|line| line.starts_with(version)) {
         return Ok(());
     }
-    Err(GateError::new
-        (
+    Err(GateError::new(
         format!("the advertised toolchain {version} is not installed"),
         format!("rustup toolchain install {version}"),
     ))
@@ -188,11 +179,7 @@ fn installed(version: &str) -> Result<(), GateError> {
 /// workspace into a directory another checkout owns, where the same member path
 /// hashes to the same unit and one checkout's artifact answers another's
 /// request. `installed` above still holds the toolchain to a named version.
-fn compile_failure(
-    root: &Path,
-    version: &str,
-    pair: &Pair,
-) -> Result<Option<Finding>, GateError> {
+fn compile_failure(root: &Path, version: &str, pair: &Pair) -> Result<Option<Finding>, GateError> {
     let output = cargo_runner::command(root)
         .arg(format!("+{version}"))
         .args(["check", "--locked", "-p"])

@@ -15,7 +15,7 @@ use std::sync::LazyLock;
 
 use serde_json::Value;
 
-use crate::gate::{Gate, GateCtx, GateError, Report};
+use crate::gate::{GateCtx, GateError, Report};
 
 /// Package whose binary owns the subcommand table.
 const DISPATCHER_PACKAGE: &str = "xtask";
@@ -120,26 +120,40 @@ pub fn dispatch_help_requested(args: &[String]) -> bool {
 ///
 /// Stdout is the protocol. The child prints one JSON `Report` and nothing else,
 /// so a converted gate returns everything it has to say and prints none of it.
-pub fn run_delegated_main(package: &str, purpose: &str, gates: &[&dyn Gate]) -> ! {
+pub fn run_delegated_main(
+    package: &str,
+    purpose: &str,
+    gates: &[(&'static str, &'static dyn crate::gate::GateBehavior)],
+) -> ! {
     let args: Vec<String> = std::env::args().collect();
     if dispatch_help_requested(&args[1..]) {
-        print_dispatch_help(package, purpose, gates.iter().map(|gate| gate.name()));
+        print_dispatch_help(package, purpose, gates.iter().map(|(name, _)| *name));
         std::process::exit(0);
     }
     let Some(name) = args.get(1) else {
         eprintln!("Fix: missing subcommand. Run `./cargo_full run --bin xtask -- --help`.");
         std::process::exit(1);
     };
-    let Some(gate) = gates.iter().find(|gate| gate.name() == name.as_str()) else {
+    let Some((_, behavior)) = gates
+        .iter()
+        .find(|(gate_name, _)| *gate_name == name.as_str())
+    else {
         eprintln!("Fix: `{name}` is not a subcommand of {package}. Run `./cargo_full run --bin xtask -- --help`.");
         std::process::exit(1);
     };
     let root = crate::checkout::checkout_root();
     let ctx = GateCtx::new(root, args[2..].to_vec());
+    let Some(descriptor) = crate::gate_metadata::descriptor(name) else {
+        eprintln!(
+            "Fix: `{name}` has an implementation in {package} but no authoritative gate descriptor."
+        );
+        std::process::exit(1);
+    };
+    let gate = crate::gate::RegisteredGate::new(descriptor, *behavior);
     // The gate the parent asked for usage is implemented here, so the answer is
     // built from what this gate declares and travels back as report notes.
     let outcome = if crate::gate::help_requested(&ctx.args) {
-        Ok(crate::gate::usage_report(*gate))
+        Ok(crate::gate::usage_report(&gate))
     } else {
         gate.run(&ctx)
     };
@@ -190,12 +204,18 @@ pub fn print_dispatch_help(
 }
 
 /// Assert that a delegated crate's table matches xtask assignment and has no usage gaps.
-pub fn assert_delegated_crate_contracts(package: &str, gates: &[&dyn Gate]) {
+pub fn assert_delegated_crate_contracts(
+    package: &str,
+    gates: &[(&'static str, &'static dyn crate::gate::GateBehavior)],
+) {
     assert_eq!(
         crate::subcommands::delegate_table_problems(package, gates),
         Vec::<String>::new()
     );
-    assert_eq!(crate::gate::usage_gaps(gates), Vec::<String>::new());
+    assert_eq!(
+        crate::gate::usage_gaps_delegated(gates),
+        Vec::<String>::new()
+    );
 }
 
 /// Build one delegated crate and return the path of the binary cargo produced.

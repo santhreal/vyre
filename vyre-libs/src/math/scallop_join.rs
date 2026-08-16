@@ -91,7 +91,7 @@ use crate::math::scallop_persistent::{
 };
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::scallop_join";
+pub const OP_ID: &str = "vyre-libs::math::scallop_join";
 /// One lane per relation cell in the lineage fixpoint.
 pub const SCALLOP_JOIN_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -549,7 +549,11 @@ mod tests {
         for w in [1u32, 2, 8] {
             let p = scallop_join("s", "n", "j", "c", 2, w, 4);
             let bufs = p.buffers();
-            assert_eq!(bufs.len(), 4, "scallop_join must declare 4 buffers at w={w}");
+            assert_eq!(
+                bufs.len(),
+                4,
+                "scallop_join must declare 4 buffers at w={w}"
+            );
             assert_eq!(p.workgroup_size(), SCALLOP_JOIN_WORKGROUP_SIZE);
             let names: Vec<&str> = bufs.iter().map(|b| b.name()).collect();
             assert!(names.contains(&"s"));
@@ -642,8 +646,7 @@ mod tests {
             to_value(&join_rules),
         ];
 
-        let results =
-            vyre_reference::reference_eval(&p, &inputs).expect("Fix: interpreter failed");
+        let results = vyre_reference::reference_eval(&p, &inputs).expect("Fix: interpreter failed");
         let actual_bytes = results[0].to_bytes();
         let actual_state: Vec<u32> = actual_bytes
             .chunks_exact(4)

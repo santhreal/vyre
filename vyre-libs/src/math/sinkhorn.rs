@@ -51,7 +51,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Op id for the scaling-update primitive.
-pub const OP_ID: &str = "vyre-primitives::math::sinkhorn_scale";
+pub const OP_ID: &str = "vyre-libs::math::sinkhorn_scale";
 
 /// Numerical floor for the divisor  -  values below saturate to this so
 /// the divide doesn't return MAX. 1 in 16.16 = 65_536 / 65_536; here

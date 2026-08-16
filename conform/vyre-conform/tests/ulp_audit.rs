@@ -146,8 +146,7 @@ fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
             // The reference oracle is what the audit compares against, so
             // auditing it against itself would measure zero ULP for every op.
             !registration.reference_oracle
-                && vyre_driver::backend_dispatches(registration.id)
-                    .expect("valid backend registry")
+                && vyre_driver::backend_dispatches(registration.id).expect("valid backend registry")
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)

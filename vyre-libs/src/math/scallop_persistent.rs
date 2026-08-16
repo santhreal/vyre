@@ -103,7 +103,14 @@ pub(crate) fn single_word_lineage_body(spec: &LineageFixpoint<'_>) -> Vec<Node> 
         spec,
         "__sj_iter",
         "__sj_chunk",
-        single_word_transfer_body(spec.state, spec.next, spec.join_rules, spec.n, cells, cell.clone()),
+        single_word_transfer_body(
+            spec.state,
+            spec.next,
+            spec.join_rules,
+            spec.n,
+            cells,
+            cell.clone(),
+        ),
         single_word_compare_body(spec.state, spec.next, spec.changed, cells, cell),
     )
 }

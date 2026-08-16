@@ -13,11 +13,11 @@
 //! the node becomes one node per segment, ordered by an explicit retained-state
 //! succession, and the fence is gone before any candidate is costed.
 //!
-//! Ordering the segments through a retained value rather than a schedule
-//! convention is what makes the cut hold. `legality::analyze_fusion_pair` rejects
-//! any edge whose value is not `ValueLifetime::Invocation`, so no later pass can
-//! contract two segments back into one module and reintroduce the fence it was
-//! split to remove.
+//! Ordering the segments through explicit retained-value successions rather than
+//! a schedule convention is what makes the cut hold. The ordering carrier keeps
+//! the launches separate, while sibling successions preserve every mutable value
+//! crossing a fence. `legality::analyze_fusion_pair` prevents a later pass from
+//! contracting the segments and reintroducing the fence.
 //!
 //! A fence inside a loop body has no correct cut and is refused. The loop body is
 //! emitted once and branched back to, so a single boundary would synchronize the
@@ -53,8 +53,8 @@ pub fn requires_grid_sync(program: &Program) -> bool {
 ///
 /// # Errors
 ///
-/// Returns a [`CompileError`] when a fence is loop-nested, when a fenced node has
-/// no retained read-write port to order its segments through, or when the
+/// Returns a [`CompileError`] when a fence is loop-nested, when a fenced node
+/// publishes no mutable carrier that can order its segments, or when the
 /// segmented graph does not satisfy the `ProgramGraph` contract.
 pub(crate) fn split_graph(graph: ProgramGraph) -> Result<ProgramGraph, CompileError> {
     if !graph
@@ -151,36 +151,84 @@ fn add_segments(
         return Ok(());
     }
 
-    let chain = chain_port(node)?;
-    let chain_name = remapped_name(rebuilt, value_map, chain.value)?;
-    let successor_port = node
-        .output_ports
-        .iter()
-        .position(|port| port.buffer == chain.buffer);
-    if let Some(position) = successor_port {
-        if node.output_ports[position].retained_successor_of != Some(chain.value) {
-            return Err(failure(
-                CompilerFailureKind::InvalidProgram,
-                format!("request.graph.nodes[{}].output_ports", node.id.0),
-                format!(
-                    "node `{}` binds buffer `{}` as both a retained input and an output port that does not declare it a retained successor, so the segments of a cut fence have no state succession to order them",
-                    node.name, chain.buffer
-                ),
-                "declare the output port a retained successor of the value bound to the same buffer",
-            ));
+    let ports = retained_ports(node);
+    let mut carriers = Vec::with_capacity(ports.len());
+    for port in ports {
+        let base_name = remapped_name(rebuilt, value_map, port.value)?;
+        let successor_port = node
+            .output_ports
+            .iter()
+            .position(|output| output.buffer == port.buffer);
+        if let Some(position) = successor_port {
+            if node.output_ports[position].retained_successor_of != Some(port.value) {
+                return Err(failure(
+                    CompilerFailureKind::InvalidProgram,
+                    format!("request.graph.nodes[{}].output_ports", node.id.0),
+                    format!(
+                        "node `{}` binds buffer `{}` as both a retained input and an output port that does not declare it a retained successor, so the segments of a cut fence have no state succession to order them",
+                        node.name, port.buffer
+                    ),
+                    "declare the output port a retained successor of the value bound to the same buffer",
+                ));
+            }
         }
+        let current = mapped(value_map, port.value, &node.name)?;
+        carriers.push((port.clone(), base_name, successor_port, Some(current)));
+    }
+    for (position, (port, value)) in node.output_ports.iter().zip(&node.outputs).enumerate() {
+        if !matches!(
+            port.contract.lifetime,
+            ValueLifetime::Retained | ValueLifetime::Output
+        ) || port.contract.access != BufferAccess::ReadWrite
+            || carriers
+                .iter()
+                .any(|(input, _, _, _)| input.buffer == port.buffer)
+        {
+            continue;
+        }
+        let mut carrier_contract = port.contract.clone();
+        carrier_contract.lifetime = ValueLifetime::Retained;
+        carriers.push((
+            GraphInput {
+                buffer: port.buffer.clone(),
+                value: *value,
+                contract: carrier_contract,
+            },
+            port.name.clone(),
+            Some(position),
+            None,
+        ));
     }
 
-    let mut current = mapped(value_map, chain.value, &node.name)?;
+    if carriers.is_empty() {
+        return Err(failure(
+            CompilerFailureKind::InvalidProgram,
+            format!("request.graph.nodes[{}].inputs", node.id.0),
+            format!(
+                "node `{}` holds a whole-grid fence but publishes no mutable value across the boundary, so its segments have no state succession to order them",
+                node.name
+            ),
+            "bind every buffer the fence publishes as retained read-write graph state",
+        ));
+    }
     for (index, segment) in leading.into_iter().enumerate() {
         let mut inputs = remap_inputs(value_map, node)?;
-        set_chain_input(&mut inputs, &chain.buffer, current);
-        let outputs = vec![GraphOutput {
-            buffer: chain.buffer.clone(),
-            name: format!("{chain_name}__gridsync{index}"),
-            contract: chain.contract.clone(),
-            retained_successor_of: Some(current),
-        }];
+        for (port, _, _, current) in &carriers {
+            if let Some(current) = current {
+                set_carrier_input(&mut inputs, port, *current);
+            }
+        }
+        let outputs = carriers
+            .iter()
+            .map(|(port, base_name, _, current)| {
+                Ok(GraphOutput {
+                    buffer: port.buffer.clone(),
+                    name: format!("{base_name}__gridsync{index}"),
+                    contract: port.contract.clone(),
+                    retained_successor_of: *current,
+                })
+            })
+            .collect::<Result<Vec<_>, CompileError>>()?;
         let produced = insert(
             rebuilt,
             format!("{}__gridsync{index}", node.name),
@@ -189,79 +237,116 @@ fn add_segments(
             inputs,
             outputs,
         )?;
-        current = produced[0];
+        for (carrier, produced) in carriers.iter_mut().zip(produced) {
+            carrier.3 = Some(produced);
+        }
     }
 
     let index = last;
-    let segment = final_segment;
     let mut inputs = remap_inputs(value_map, node)?;
-    set_chain_input(&mut inputs, &chain.buffer, current);
+    for (port, _, _, current) in &carriers {
+        let current = current.ok_or_else(|| {
+            failure(
+                CompilerFailureKind::InvalidProgram,
+                format!("request.graph.nodes[{}].program", node.id.0),
+                format!(
+                    "retained carrier `{}` has no predecessor after the first split segment",
+                    port.buffer
+                ),
+                "publish every retained carrier from the first segment onward",
+            )
+        })?;
+        set_carrier_input(&mut inputs, port, current);
+    }
     let mut outputs = remap_ports(value_map, node)?;
-    let newest = match successor_port {
-        Some(position) => {
-            outputs[position].retained_successor_of = Some(current);
-            position
-        }
-        None => {
-            outputs.push(GraphOutput {
-                buffer: chain.buffer.clone(),
-                name: format!("{chain_name}__gridsync{index}"),
-                contract: chain.contract.clone(),
-                retained_successor_of: Some(current),
-            });
-            outputs.len() - 1
-        }
-    };
+    let mut newest = Vec::with_capacity(carriers.len());
+    for (port, base_name, successor_port, current) in &carriers {
+        let current = current.ok_or_else(|| {
+            failure(
+                CompilerFailureKind::InvalidProgram,
+                format!("request.graph.nodes[{}].program", node.id.0),
+                format!(
+                    "retained carrier `{}` has no final predecessor",
+                    port.buffer
+                ),
+                "publish every retained carrier from the first segment onward",
+            )
+        })?;
+        let position = match successor_port {
+            Some(position) => {
+                let caller_output = node
+                    .program
+                    .buffers()
+                    .iter()
+                    .find(|buffer| buffer.name() == port.buffer)
+                    .is_some_and(|buffer| buffer.is_output())
+                    && outputs[*position].contract.lifetime == ValueLifetime::Output;
+                if caller_output {
+                    outputs[*position].retained_successor_of = Some(current);
+                } else {
+                    if outputs[*position].contract.lifetime == ValueLifetime::Output {
+                        outputs[*position].contract = port.contract.clone();
+                    }
+                    outputs[*position].retained_successor_of = Some(current);
+                }
+                *position
+            }
+            None => {
+                outputs.push(GraphOutput {
+                    buffer: port.buffer.clone(),
+                    name: format!("{base_name}__gridsync{index}"),
+                    contract: port.contract.clone(),
+                    retained_successor_of: Some(current),
+                });
+                outputs.len() - 1
+            }
+        };
+        newest.push(position);
+    }
     let produced = insert(
         rebuilt,
         format!("{}__gridsync{index}", node.name),
-        segment,
+        final_segment,
         index,
         inputs,
         outputs,
     )?;
     record_ports(value_map, node, &produced);
-    // Downstream nodes that bound the pre-split retained value must observe the
-    // state the LAST segment left, not the state the first one read. Without this
-    // the consumer takes a dependency on the producer of the original value and
-    // may be scheduled between two segments of the cut node.
-    value_map.insert(chain.value.0, produced[newest]);
+    // Every retained carrier must point downstream at the LAST segment's value.
+    // Updating only one ordering carrier loses writes made to sibling state
+    // buffers between fences.
+    for ((port, _, _, _), position) in carriers.iter().zip(newest) {
+        value_map.insert(port.value.0, produced[position]);
+    }
     Ok(())
 }
 
-/// The retained read-write port whose state succession orders the segments.
+/// Read-write inputs whose retained state crosses every split segment.
 ///
-/// A fence publishes a write for a later read of the same storage, so a fenced
-/// node necessarily binds that storage read-write; a write-only port cannot be
-/// read back and a read-only port cannot be written. `from_program` maps a
-/// read-write program buffer to a retained graph value, so the port exists
-/// whenever the fence is real.
-fn chain_port(node: &ProgramGraphNode) -> Result<&GraphInput, CompileError> {
+/// A fence publishes writes for later reads of the same storage. Every retained
+/// read-write input therefore gets a successor chain. A first-write output can
+/// instead publish the initial carrier from the first segment, so this set may
+/// be empty until output carriers are added.
+fn retained_ports(node: &ProgramGraphNode) -> Vec<&GraphInput> {
     node.inputs
         .iter()
-        .find(|input| {
+        .filter(|input| {
             input.contract.lifetime == ValueLifetime::Retained
                 && input.contract.access == BufferAccess::ReadWrite
         })
-        .ok_or_else(|| {
-            failure(
-                CompilerFailureKind::InvalidProgram,
-                format!("request.graph.nodes[{}].inputs", node.id.0),
-                format!(
-                    "node `{}` holds a whole-grid fence but binds no retained read-write value, so its segments have no state succession to order them",
-                    node.name
-                ),
-                "bind the buffer the fence publishes as a retained read-write graph value",
-            )
-        })
+        .collect()
 }
 
-fn set_chain_input(inputs: &mut [GraphInput], buffer: &str, value: GraphValueId) {
-    for input in inputs {
-        if input.buffer == buffer {
+fn set_carrier_input(inputs: &mut Vec<GraphInput>, port: &GraphInput, value: GraphValueId) {
+    for input in inputs.iter_mut() {
+        if input.buffer == port.buffer {
             input.value = value;
+            return;
         }
     }
+    let mut input = port.clone();
+    input.value = value;
+    inputs.push(input);
 }
 
 fn insert(

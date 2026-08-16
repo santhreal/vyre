@@ -17,9 +17,9 @@
 #![cfg(feature = "math")]
 
 use vyre_libs::math::tensor_train::tt_contract_step;
-use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::{fixed_mul, signed_fixed_18 as signed_fixed, to_fixed};
 
 /// Exact u32 16.16 oracle: `acc_out[b] = Σ_a acc_in[a]·core[a*r_next + b]`.
 fn contract_fixed(acc_in: &[u32], core: &[u32], r_prev: usize, r_next: usize) -> Vec<u32> {

@@ -96,7 +96,6 @@ fn cuda_scallop_join_zero_state_stays_zero() {
     });
 }
 
-
 #[test]
 fn cuda_wide_scallop_join_basic() {
     with_live_backend("cuda_wide_scallop_join_basic", |backend| {

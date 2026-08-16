@@ -7,11 +7,11 @@ use crate::bitset::bitset_words;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 /// Canonical op id for fused frontier absorption.
-pub const ABSORB_NEW_BITS_OP_ID: &str = "vyre-primitives::bitset::frontier_absorb_new_bits";
+pub const ABSORB_NEW_BITS_OP_ID: &str = "vyre-libs::bitset::frontier_absorb_new_bits";
 /// Canonical op id for fused frontier absorption when the caller does not need
 /// per-word popcounts.
 pub const ABSORB_NEW_BITS_NO_COUNTS_OP_ID: &str =
-    "vyre-primitives::bitset::frontier_absorb_new_bits_no_counts";
+    "vyre-libs::bitset::frontier_absorb_new_bits_no_counts";
 
 /// Error returned by packed-frontier helpers.
 #[derive(Clone, Debug, Eq, PartialEq)]

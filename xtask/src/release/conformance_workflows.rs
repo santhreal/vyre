@@ -402,4 +402,3 @@ fn workflow_job_section<'a>(workflow: &'a str, job_name: &str) -> Option<&'a str
     }
     Some(&rest[..section_end])
 }
-

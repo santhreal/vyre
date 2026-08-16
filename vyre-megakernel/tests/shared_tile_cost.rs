@@ -20,9 +20,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph,
-};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
     compile, ArtifactNodeId, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,

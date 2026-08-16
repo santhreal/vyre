@@ -5,11 +5,11 @@
 //! strategy code consume projections of this profile instead of carrying
 //! independent capability records that can drift.
 
-use vyre_foundation::optimizer::AdapterCaps;
-use vyre_foundation::validate;
 use vyre_foundation::geometry::{
     CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
 };
+use vyre_foundation::optimizer::AdapterCaps;
+use vyre_foundation::validate;
 
 /// Quality class for backend timing data exposed through [`DeviceProfile`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -251,7 +251,10 @@ impl DeviceProfile {
         .with_cooperative_launch(self.supports_cooperative_launch)
         .with_device_timestamps(self.supports_device_timestamps)
         .with_occupancy(self.regs_per_thread_max, self.max_shared_memory_bytes)
-        .with_launch_costs(self.per_launch_overhead_ns, self.persistent_setup_overhead_ns)
+        .with_launch_costs(
+            self.per_launch_overhead_ns,
+            self.persistent_setup_overhead_ns,
+        )
     }
 
     /// Optimizer capability projection.

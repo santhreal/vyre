@@ -59,9 +59,8 @@ fn reserve<T>(
     capacity: usize,
     field: &'static str,
 ) -> Result<(), GridSyncSplitError> {
-    try_reserve_vec_to_capacity(vec, capacity).map_err(|_: TryReserveError| {
-        GridSyncSplitError::Reservation { field, capacity }
-    })
+    try_reserve_vec_to_capacity(vec, capacity)
+        .map_err(|_: TryReserveError| GridSyncSplitError::Reservation { field, capacity })
 }
 
 /// Walk past `Program::wrapped`'s synthetic outer Region. Real programs are
@@ -319,7 +318,10 @@ fn is_grid_sync_fence(node: &Node) -> bool {
 pub fn split_on_grid_sync(program: &Program) -> Result<Vec<Program>, GridSyncSplitError> {
     let (wrappers, inner) = peel_entry_wrappers(program);
     let hoisted = hoist_grid_sync_barriers(inner);
-    let fences = hoisted.iter().filter(|node| is_grid_sync_fence(node)).count();
+    let fences = hoisted
+        .iter()
+        .filter(|node| is_grid_sync_fence(node))
+        .count();
     if fences == 0 {
         let mut segments = Vec::new();
         reserve(&mut segments, 1, "grid-sync no-op segment")?;
@@ -355,7 +357,11 @@ pub fn split_on_grid_sync(program: &Program) -> Result<Vec<Program>, GridSyncSpl
     propagate_let_bindings(&mut raw_segments, &hoisted);
 
     let mut segments = Vec::new();
-    reserve(&mut segments, raw_segments.len(), "grid-sync split segments")?;
+    reserve(
+        &mut segments,
+        raw_segments.len(),
+        "grid-sync split segments",
+    )?;
     for entry in raw_segments {
         segments.push(wrap_split_segment(program, &wrappers, entry));
     }
@@ -411,7 +417,11 @@ mod tests {
 
     #[test]
     fn a_program_without_a_fence_yields_itself() {
-        let program = Program::wrapped(vec![buffer()], [1, 1, 1], vec![region("a", vec![store(0, 1)])]);
+        let program = Program::wrapped(
+            vec![buffer()],
+            [1, 1, 1],
+            vec![region("a", vec![store(0, 1)])],
+        );
         assert!(!contains_grid_sync(&program));
         let split = segments(&program);
         assert_eq!(split.len(), 1);
@@ -563,9 +573,7 @@ mod tests {
             }],
         );
         assert_eq!(
-            loop_nested_grid_sync(&program)
-                .as_ref()
-                .map(Ident::as_str),
+            loop_nested_grid_sync(&program).as_ref().map(Ident::as_str),
             Some("inner"),
             "the refusal names the loop the fence is in, not an enclosing one"
         );

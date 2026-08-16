@@ -15,14 +15,32 @@ pub(crate) mod report_fixture;
 /// `xtask` links no vyre crate, so it cannot call these directly. It builds
 /// this crate's binary and runs it, and the binary resolves the name against
 /// this table, runs the gate and prints one `Report` on stdout.
-pub static GATES: &[&dyn xtask::gate::Gate] = &[
-    &release::backend_matrix::BackendMatrixGate,
-    &bench::bench_crossback::BenchCrossbackGate,
-    &bench::bench_release::BenchReleaseGate,
-    &bench::release_benchmarks::ReleaseBenchmarksGate,
-    &release::release_evidence::ReleaseEvidenceGate,
-    &release::release_workload_matrix::ReleaseWorkloadMatrixGate,
-    &release::vyre_release_gate::VyreReleaseGate,
+pub static GATES: &[(&'static str, &'static dyn xtask::gate::GateBehavior)] = &[
+    (
+        "backend-matrix",
+        &release::backend_matrix::BackendMatrixGate,
+    ),
+    (
+        "bench-crossback",
+        &bench::bench_crossback::BenchCrossbackGate,
+    ),
+    ("bench-release", &bench::bench_release::BenchReleaseGate),
+    (
+        "release-benchmarks",
+        &bench::release_benchmarks::ReleaseBenchmarksGate,
+    ),
+    (
+        "release-evidence",
+        &release::release_evidence::ReleaseEvidenceGate,
+    ),
+    (
+        "release-workload-matrix",
+        &release::release_workload_matrix::ReleaseWorkloadMatrixGate,
+    ),
+    (
+        "vyre-release-gate",
+        &release::vyre_release_gate::VyreReleaseGate,
+    ),
 ];
 
 #[cfg(test)]

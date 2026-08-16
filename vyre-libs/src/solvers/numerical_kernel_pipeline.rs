@@ -3,7 +3,6 @@
 //! These functions give scheduler and optimizer code named self-consumers for
 //! math primitives without reimplementing the primitive algorithms here.
 
-use vyre_foundation::ir::Program;
 use crate::math::{
     dp_accountant::{gaussian_rdp_step, rdp_to_dp},
     fractional::{
@@ -13,6 +12,7 @@ use crate::math::{
     preconditioner::{newton_schulz_poly5_f32, newton_schulz_y_step},
     randomized_svd::randomized_projection_step,
 };
+use vyre_foundation::ir::Program;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::math::{
@@ -233,8 +233,8 @@ pub fn reference_gaussian_rdp_step(alpha: &[f64], sigma_squared: &[f64]) -> Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Node;
     use crate::math::sinkhorn_iterate::{SinkhornBuffers, SinkhornExtents};
+    use vyre_foundation::ir::Node;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())
@@ -254,15 +254,15 @@ mod tests {
     fn program_builders_emit_expected_numerical_primitives() {
         assert_eq!(
             program_generator(&dispatch_randomized_projection("a", "omega", "y", 2, 2, 2)),
-            "vyre-primitives::math::randomized_projection_step"
+            "vyre-libs::math::randomized_projection_step"
         );
         assert_eq!(
             program_generator(&dispatch_newton_schulz_y_step("y", "yzy", "next", 2)),
-            "vyre-primitives::math::newton_schulz_y_step"
+            "vyre-libs::math::newton_schulz_y_step"
         );
         assert_eq!(
             program_generator(&dispatch_newton_schulz_poly5_f32("mat", "out", 2, 2)),
-            "vyre-primitives::math::newton_schulz_poly5_f32"
+            "vyre-libs::math::newton_schulz_poly5_f32"
         );
         assert_eq!(
             program_generator(&dispatch_sinkhorn_iterate(
@@ -273,11 +273,11 @@ mod tests {
                     max_iterations: 3,
                 },
             )),
-            "vyre-primitives::math::sinkhorn_iterate"
+            "vyre-libs::math::sinkhorn_iterate"
         );
         assert_eq!(
             program_generator(&dispatch_gaussian_rdp_step("alpha", "sigma", "out", 4)),
-            "vyre-primitives::math::gaussian_rdp_step"
+            "vyre-libs::math::gaussian_rdp_step"
         );
     }
 

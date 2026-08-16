@@ -846,7 +846,10 @@ mod tests {
                 (
                     "build_program_sharded_with_workspace_adapter",
                     Arc::new(build_program_sharded_with_workspace_adapter(
-                        64, 256, &[], &adapter,
+                        64,
+                        256,
+                        &[],
+                        &adapter,
                     )),
                 ),
                 (

@@ -42,17 +42,17 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// p2m op id.
-pub const P2M_OP_ID: &str = "vyre-primitives::math::fmm_p2m_step";
+pub const P2M_OP_ID: &str = "vyre-libs::math::fmm_p2m_step";
 /// m2l op id.
-pub const M2L_OP_ID: &str = "vyre-primitives::math::fmm_m2l_step";
+pub const M2L_OP_ID: &str = "vyre-libs::math::fmm_m2l_step";
 /// l2p op id.
-pub const L2P_OP_ID: &str = "vyre-primitives::math::fmm_l2p_step";
+pub const L2P_OP_ID: &str = "vyre-libs::math::fmm_l2p_step";
 /// f32 zeroth-moment p2m op id.
-pub const P2M_ZEROTH_F32_OP_ID: &str = "vyre-primitives::math::fmm_p2m_zeroth_f32_step";
+pub const P2M_ZEROTH_F32_OP_ID: &str = "vyre-libs::math::fmm_p2m_zeroth_f32_step";
 /// f32 zeroth-moment m2l op id.
-pub const M2L_ZEROTH_F32_OP_ID: &str = "vyre-primitives::math::fmm_m2l_zeroth_f32_step";
+pub const M2L_ZEROTH_F32_OP_ID: &str = "vyre-libs::math::fmm_m2l_zeroth_f32_step";
 /// f32 zeroth-moment l2p op id.
-pub const L2P_ZEROTH_F32_OP_ID: &str = "vyre-primitives::math::fmm_l2p_zeroth_f32_step";
+pub const L2P_ZEROTH_F32_OP_ID: &str = "vyre-libs::math::fmm_l2p_zeroth_f32_step";
 
 /// Number of u32 lanes per multipole/local expansion (`2 * (p + 1)`
 /// for `p = 3`, packed real-imag interleaved).

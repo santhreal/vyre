@@ -38,7 +38,7 @@ use vyre_libs::graph::dominator_tree::{
 use vyre_reference::value::Value;
 
 /// Prefix every phase of the fixpoint answers to.
-const PHASE_PREFIX: &str = "vyre-primitives::graph::dominator_tree_";
+const PHASE_PREFIX: &str = "vyre-libs::graph::dominator_tree_";
 
 /// Generators of every child region in `nodes`, at any depth.
 fn child_generators(nodes: &[Node], out: &mut BTreeSet<String>) {
@@ -101,7 +101,10 @@ fn fixpoint_composes_every_registered_phase() {
     );
 
     let mut generators = BTreeSet::new();
-    child_generators(dominator_tree_program(4, 4, 4, "idom").entry(), &mut generators);
+    child_generators(
+        dominator_tree_program(4, 4, 4, "idom").entry(),
+        &mut generators,
+    );
 
     let composed: BTreeSet<String> = generators
         .iter()
@@ -126,7 +129,7 @@ fn fixpoint_composes_every_registered_phase() {
 #[test]
 fn depth_phase_witness_matches_reference() {
     let entry = OperationRegistry::global()
-        .get("vyre-primitives::graph::dominator_tree_depth")
+        .get("vyre-libs::graph::dominator_tree_depth")
         .expect("dominator_tree_depth is registered");
     let inputs = (entry.test_inputs.expect("declared test inputs"))();
     let declared = (entry.expected_output.expect("declared expected output"))();
@@ -141,7 +144,11 @@ fn depth_phase_witness_matches_reference() {
     for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
         let outputs = vyre_reference::reference_eval(
             &build(),
-            &input_set.iter().cloned().map(Value::from).collect::<Vec<_>>(),
+            &input_set
+                .iter()
+                .cloned()
+                .map(Value::from)
+                .collect::<Vec<_>>(),
         )
         .expect("reference run for dominator_tree_depth")
         .into_iter()
@@ -184,7 +191,7 @@ fn depth_phase_treats_an_unreached_forest_as_flat() {
 #[test]
 fn intersect_phase_witness_matches_reference() {
     let entry = OperationRegistry::global()
-        .get("vyre-primitives::graph::dominator_tree_intersect_step")
+        .get("vyre-libs::graph::dominator_tree_intersect_step")
         .expect("dominator_tree_intersect_step is registered");
     let inputs = (entry.test_inputs.expect("declared test inputs"))();
     let declared = (entry.expected_output.expect("declared expected output"))();
@@ -203,7 +210,11 @@ fn intersect_phase_witness_matches_reference() {
     for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
         let outputs = vyre_reference::reference_eval(
             &build(),
-            &input_set.iter().cloned().map(Value::from).collect::<Vec<_>>(),
+            &input_set
+                .iter()
+                .cloned()
+                .map(Value::from)
+                .collect::<Vec<_>>(),
         )
         .expect("reference run for dominator_tree_intersect_step")
         .into_iter()

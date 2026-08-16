@@ -24,7 +24,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::graph::matroid_exchange_bfs_step";
+pub const OP_ID: &str = "vyre-libs::graph::matroid_exchange_bfs_step";
 
 /// Emit one BFS layer of the matroid-exchange graph.
 ///

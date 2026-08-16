@@ -1,7 +1,7 @@
 //! Regression contracts for canonical runtime artifact admission.
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::LazyLock;
 
 use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
@@ -16,7 +16,8 @@ use vyre_foundation::ir::{
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, Digest, TargetEntryPoint,
+    Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts,
+    Digest, ExternalFacts, SearchBudget, TargetCompileError, TargetCompiler, TargetEntryPoint,
     TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
@@ -693,6 +694,215 @@ static TEST_REGISTRATION: BackendRegistration = BackendRegistration {
     materializer: Some(test_materializer_factory),
 };
 
+static RECORDED_VALUE_ID: AtomicU32 = AtomicU32::new(u32::MAX);
+static RECORDED_BYTE_LEN: AtomicU64 = AtomicU64::new(0);
+static RECORDED_FIRST_BYTE: AtomicU32 = AtomicU32::new(0);
+
+struct RecordingInstance {
+    artifact: Digest,
+    payload: Digest,
+    device: DeviceIdentity,
+}
+
+impl ArtifactInstance for RecordingInstance {
+    fn artifact(&self) -> Digest {
+        self.artifact
+    }
+
+    fn payload(&self) -> Digest {
+        self.payload
+    }
+
+    fn device(&self) -> &DeviceIdentity {
+        &self.device
+    }
+
+    fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
+        for (value, resource) in bindings.resources() {
+            if let BoundResource::Host(bytes) = resource {
+                RECORDED_VALUE_ID.store(value.0, Ordering::Release);
+                RECORDED_BYTE_LEN.store(bytes.len() as u64, Ordering::Release);
+                RECORDED_FIRST_BYTE.store(
+                    bytes.first().copied().unwrap_or(0) as u32,
+                    Ordering::Release,
+                );
+            }
+        }
+        Ok(Box::new(TestSubmission(Some(Completion {
+            artifact: self.artifact,
+            outputs: BTreeMap::new(),
+            retained: BTreeMap::new(),
+            device_ns: Some(42),
+        }))))
+    }
+}
+
+struct RecordingMaterializer {
+    device: MaterializerDevice,
+}
+
+impl ArtifactMaterializer for RecordingMaterializer {
+    fn device(&self) -> &dyn Device {
+        &self.device
+    }
+
+    fn materialize(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
+        Ok(Box::new(RecordingInstance {
+            artifact: artifact.digest(),
+            payload: payload.digest(),
+            device: self.device.identity().clone(),
+        }))
+    }
+}
+
+struct RecordingCompiler {
+    format: TargetPayloadFormat,
+    profile: TargetProfile,
+}
+
+impl TargetCompiler for RecordingCompiler {
+    fn format(&self) -> &TargetPayloadFormat {
+        &self.format
+    }
+
+    fn profile(&self) -> &TargetProfile {
+        &self.profile
+    }
+
+    fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
+        TargetPayload::new(
+            artifact,
+            self.format.clone(),
+            self.profile.clone(),
+            vec![entry_point()],
+            vec![4, 2],
+        )
+        .map_err(Into::into)
+    }
+}
+
+fn recording_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
+    Ok(Box::new(RecordingCompiler {
+        format: format("test.cache-target", 1),
+        profile: profile("test.cache-target", 1),
+    }))
+}
+
+fn recording_materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
+    Ok(Box::new(RecordingMaterializer {
+        device: MaterializerDevice::acquire(DeviceSpec {
+            backend: "recording-artifact",
+            device: "recording-device".to_string(),
+            format_extension: "test.cache-target",
+            format_version: 1,
+            profile: profile("test.cache-target", 1),
+        })?,
+    }))
+}
+
+static RECORDING_REGISTRATION: BackendRegistration = BackendRegistration {
+    id: "recording-artifact",
+    target_id: vyre_foundation::operation::TargetId::expect_valid("test-artifact"),
+    payload_format: Some("test.cache-target"),
+    reference_oracle: false,
+    factory: test_backend_factory,
+    supported_ops: test_supported_ops,
+    semantic_operations: test_supported_ops,
+    target_compiler: Some(recording_compiler_factory),
+    materializer: Some(recording_materializer_factory),
+};
+
+/// WHY: DeviceFinalists binds exact non-zero representative bytes for each host input.
+#[test]
+fn finalist_measurement_binds_exact_representative_inputs() {
+    let graph = graph_over(
+        "entry",
+        [8, 1, 1],
+        &[(
+            "input",
+            contract(
+                DataType::U32,
+                8,
+                BufferAccess::ReadOnly,
+                ValueLifetime::Invocation,
+            ),
+        )],
+    );
+    let facts = ExternalFacts::new(Digest([1; 32]), BTreeMap::new());
+    let non_zero_bytes = vec![0xAB; 32];
+    let representative_inputs =
+        BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), non_zero_bytes.clone())]);
+
+    let device = DeviceFacts::unknown().with_device_timestamps(true);
+    let budget = SearchBudget::new(1, 1, 1, 1, 1_000_000_000);
+    let request = CompileRequest::new(graph, facts, device, budget, 1_000_000)
+        .with_representative_inputs(representative_inputs)
+        .validate()
+        .expect("compile request must validate");
+
+    let session = ArtifactSession::compile(&RECORDING_REGISTRATION, &request)
+        .expect("measured compilation must succeed with representative inputs");
+    assert!(session.artifact().is_ok());
+    assert_eq!(RECORDED_VALUE_ID.load(Ordering::Acquire), 0);
+    assert_eq!(RECORDED_BYTE_LEN.load(Ordering::Acquire), 32);
+    assert_eq!(RECORDED_FIRST_BYTE.load(Ordering::Acquire), 0xAB);
+}
+
+/// WHY: DeviceFinalists fails closed when representative inputs are missing for a host-input resource.
+#[test]
+fn finalist_measurement_fails_closed_on_missing_representative_inputs() {
+    let graph = graph_over(
+        "entry",
+        [8, 1, 1],
+        &[
+            (
+                "input",
+                contract(
+                    DataType::U32,
+                    8,
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            ),
+            (
+                "constant",
+                contract(
+                    DataType::U32,
+                    8,
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Constant,
+                ),
+            ),
+        ],
+    );
+    let mut facts = ExternalFacts::new(Digest([1; 32]), BTreeMap::new());
+    facts
+        .constant_identities
+        .insert(vyre_foundation::ir::GraphValueId(1), Digest([2; 32]));
+    let representative_inputs =
+        BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![0xAB; 32])]);
+    let device = DeviceFacts::unknown().with_device_timestamps(true);
+    let budget = SearchBudget::new(1, 1, 1, 1, 1_000_000_000);
+    let request = CompileRequest::new(graph, facts, device, budget, 1_000_000)
+        .with_representative_inputs(representative_inputs)
+        .validate()
+        .expect("compile request must validate");
+
+    let error = ArtifactSession::compile(&RECORDING_REGISTRATION, &request)
+        .err()
+        .expect("measured compilation must fail closed when representative inputs are missing");
+    let error_text = error.to_string();
+    assert!(
+        error_text.contains("missing representative input for host-input resource")
+            && error_text.contains("`constant`"),
+        "Fix: missing representative input must fail closed with an explicit error, got: {error_text}"
+    );
+}
+
 /// WHY: resident projection follows the authenticated target ABI, including
 /// read-only constant slots, rather than silently dropping non-global memory.
 #[test]
@@ -725,6 +935,172 @@ fn resident_bindings_include_global_and_constant_target_resources() {
             .contains("target entry requires 3 resident resource(s), but the caller supplied 2"),
         "count failure must report the authenticated target ABI: {error}"
     );
+}
+
+/// WHY: resident binding maps by authenticated canonical value identity rather than
+/// vector index, so target slots emitted in non-canonical order bind their exact resource.
+#[test]
+fn resident_bindings_preserve_canonical_value_identity_with_reordered_target_slots() {
+    let neutral = resident_projection_artifact();
+    let reordered_bindings = vec![
+        TargetResourceBinding {
+            resource: ArtifactValueId(2),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Constant,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(0),
+            group: 0,
+            slot: 1,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadWrite,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(1),
+            group: 0,
+            slot: 2,
+            memory: TargetResourceMemory::Constant,
+            access: TargetResourceAccess::ReadOnly,
+        },
+    ];
+    let payload = TargetPayload::new(
+        &neutral,
+        format("test.cache-target", 1),
+        profile("test.cache-target", 1),
+        vec![TargetEntryPoint {
+            name: "resident-projection".to_string(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [1, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: reordered_bindings,
+        }],
+        vec![7, 8, 9],
+    )
+    .expect("reordered resident projection payload must be valid");
+
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated resident projection must materialize");
+    let owner = ResidentOwner::new().expect("resident owner identity must be available");
+    let resources = [100, 200, 300].map(|id| Resource::Resident(owner.handle(id)));
+
+    let bindings = session
+        .resident_bindings(&resources)
+        .expect("resident resources must bind by canonical value identity");
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(0)),
+        Some(&BoundResource::Resident(resources[0].clone()))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(1)),
+        Some(&BoundResource::Resident(resources[1].clone()))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(2)),
+        Some(&BoundResource::Resident(resources[2].clone()))
+    );
+}
+
+/// WHY: program_resident_bindings binds non-shared buffers in program declaration
+/// order regardless of whether the order matches artifact ABI slot order.
+#[test]
+fn program_resident_bindings_maps_by_buffer_name_when_declarations_are_reordered() {
+    let neutral = resident_projection_artifact();
+    let payload = resident_projection_payload(&neutral);
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated resident projection must materialize");
+    let owner = ResidentOwner::new().expect("resident owner identity must be available");
+    let res_rule = Resource::Resident(owner.handle(50));
+    let res_out = Resource::Resident(owner.handle(60));
+    let res_pattern = Resource::Resident(owner.handle(70));
+
+    let reordered_program = Program::wrapped(
+        vec![
+            BufferDecl::read("rule_bitmap", 0, DataType::U32).with_count(8),
+            BufferDecl::read_write("out_flags", 1, DataType::U32).with_count(16),
+            BufferDecl::read("pattern_bitmap", 2, DataType::U32).with_count(8),
+        ],
+        [1, 1, 1],
+        Vec::new(),
+    );
+
+    let bindings = session
+        .program_resident_bindings(
+            &reordered_program,
+            &[res_rule.clone(), res_out.clone(), res_pattern.clone()],
+        )
+        .expect("program resident bindings must resolve by buffer name");
+
+    // rule_bitmap is value 2, out_flags is value 0, pattern_bitmap is value 1
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(2)),
+        Some(&BoundResource::Resident(res_rule))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(0)),
+        Some(&BoundResource::Resident(res_out))
+    );
+    assert_eq!(
+        bindings.resources().get(&ArtifactValueId(1)),
+        Some(&BoundResource::Resident(res_pattern))
+    );
+}
+
+/// WHY: resident bindings by name and value fail closed on unknown resources and conflicting duplicates.
+#[test]
+fn resident_bindings_fail_closed_on_duplicate_mismatch_and_unknown_names() {
+    let neutral = resident_projection_artifact();
+    let payload = resident_projection_payload(&neutral);
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated resident projection must materialize");
+    let owner = ResidentOwner::new().expect("resident owner identity must be available");
+    let res_a = Resource::Resident(owner.handle(1));
+    let res_b = Resource::Resident(owner.handle(2));
+    let res_c = Resource::Resident(owner.handle(3));
+
+    let by_name_ok = session.resident_bindings_by_name([
+        ("out_flags", &res_a),
+        ("pattern_bitmap", &res_b),
+        ("rule_bitmap", &res_c),
+    ]);
+    assert!(by_name_ok.is_ok());
+
+    let unknown_name = session.resident_bindings_by_name([
+        ("unknown_buffer", &res_a),
+        ("pattern_bitmap", &res_b),
+        ("rule_bitmap", &res_c),
+    ]);
+    let err = unknown_name.expect_err("unknown buffer name must fail closed");
+    assert!(err.to_string().contains("unknown_buffer"));
+
+    let by_val_ok = session.resident_bindings_by_value([
+        (ArtifactValueId(0), res_a.clone()),
+        (ArtifactValueId(1), res_b.clone()),
+        (ArtifactValueId(2), res_c.clone()),
+    ]);
+    assert!(by_val_ok.is_ok());
+
+    let unknown_val = session.resident_bindings_by_value([
+        (ArtifactValueId(99), res_a.clone()),
+        (ArtifactValueId(1), res_b.clone()),
+        (ArtifactValueId(2), res_c.clone()),
+    ]);
+    let err = unknown_val.expect_err("unknown value must fail closed");
+    assert!(err.to_string().contains("99"));
+
+    let duplicate_conflict = session.resident_bindings_by_value([
+        (ArtifactValueId(0), res_a),
+        (ArtifactValueId(0), res_b),
+        (ArtifactValueId(1), res_c.clone()),
+        (ArtifactValueId(2), res_c),
+    ]);
+    let err = duplicate_conflict.expect_err("conflicting duplicate value must fail closed");
+    assert!(err.to_string().contains("conflicting resident resources"));
 }
 
 /// WHY: bootstrap and recovery must authenticate and rematerialize without a compiler facet.
@@ -865,10 +1241,10 @@ fn retained_session_bindings(artifact: Digest) -> BindingSet {
     BindingSet::new(artifact)
 }
 
-fn symbol_contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
+fn fixed_contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     ValueContract {
         dtype: DataType::U32,
-        shape: vec![ShapeDim::Symbol("items".into())],
+        shape: vec![ShapeDim::Known(4)],
         access,
         lifetime,
     }
@@ -886,19 +1262,19 @@ fn three_stage_graph() -> ProgramGraph {
     let input = graph
         .add_external_value(
             "input",
-            symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            fixed_contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
         )
         .expect("graph input must be valid");
     let constant = graph
         .add_external_value(
             "constant",
-            symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
+            fixed_contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
         )
         .expect("graph constant must be valid");
     let retained = graph
         .add_external_value(
             "retained",
-            symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            fixed_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
         )
         .expect("graph retained value must be valid");
     let (_, produced) = graph
@@ -909,18 +1285,18 @@ fn three_stage_graph() -> ProgramGraph {
                 GraphInput {
                     buffer: "input".into(),
                     value: input,
-                    contract: symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                    contract: fixed_contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
                 },
                 GraphInput {
                     buffer: "constant".into(),
                     value: constant,
-                    contract: symbol_contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
+                    contract: fixed_contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
                 },
             ],
             vec![GraphOutput {
                 buffer: "intermediate".into(),
                 name: "intermediate".into(),
-                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                contract: fixed_contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
                 retained_successor_of: None,
             }],
         )
@@ -933,18 +1309,18 @@ fn three_stage_graph() -> ProgramGraph {
                 GraphInput {
                     buffer: "intermediate".into(),
                     value: produced[0],
-                    contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                    contract: fixed_contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
                 },
                 GraphInput {
                     buffer: "retained".into(),
                     value: retained,
-                    contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                    contract: fixed_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
                 },
             ],
             vec![GraphOutput {
                 buffer: "retained".into(),
                 name: "retained.next".into(),
-                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                contract: fixed_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
                 retained_successor_of: Some(retained),
             }],
         )
@@ -956,12 +1332,12 @@ fn three_stage_graph() -> ProgramGraph {
             vec![GraphInput {
                 buffer: "retained.next".into(),
                 value: succeeded[0],
-                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                contract: fixed_contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
             }],
             vec![GraphOutput {
                 buffer: "result".into(),
                 name: "result".into(),
-                contract: symbol_contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                contract: fixed_contract(BufferAccess::ReadWrite, ValueLifetime::Output),
                 retained_successor_of: None,
             }],
         )

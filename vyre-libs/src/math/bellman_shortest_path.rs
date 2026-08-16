@@ -9,7 +9,7 @@ use crate::fixpoint::persistent_fixpoint::{
 use crate::fixpoint::persistent_fixpoint::{routed_persistent_fixpoint, FixpointState};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::math::bellman_shortest_path";
+pub const OP_ID: &str = "vyre-libs::math::bellman_shortest_path";
 
 /// The six buffer bindings one Bellman-Ford shortest-path program declares.
 ///
@@ -772,7 +772,8 @@ mod tests {
     ) -> (Vec<u32>, Vec<u32>) {
         use vyre_reference::value::Value;
 
-        let to_value = |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+        let to_value =
+            |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
         let inputs = vec![
             to_value(dist),
             to_value(dist),

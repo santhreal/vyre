@@ -26,9 +26,7 @@ use vyre_libs::graph::csr_forward_traverse::{
     csr_forward_traverse, csr_forward_traverse_excluding,
 };
 use vyre_libs::graph::csr_frontier_queue::csr_queue_forward_traverse;
-use vyre_libs::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
-};
+use vyre_libs::graph::csr_queue_delta::{csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue};
 use vyre_libs::graph::csr_queue_split::csr_queue_split_low_forward_traverse;
 use vyre_libs::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
@@ -182,51 +180,51 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 const PRE_MERGE_FINGERPRINTS: &[(&str, &str)] = &[
     (
         "csr_queue_forward_traverse",
-        "19530292c4d190dd15f3c6d2b920590d396ac63846e6b82eb84bb11f1c1aa7c9",
+        "8a80f307953e7ab9bf4f60fc814db9f3119dbed681411193d172c37128977177",
     ),
     (
         "csr_queue_strided_forward_traverse",
-        "b153a40fba2e73b3e75e152fcb67508e6e3ffc05ecbb8bfeb8f134d882c02cf3",
+        "3ad6d252074630c57c32875ddc9ee20156a815ef95153cc52a7a7aa760da5929",
     ),
     (
         "csr_queue_delta_enqueue",
-        "9c85414037918c911be9289e8de308482f36dfbc86788b8ffee56bd3469e8b1d",
+        "ac7fbdd6c0c266f8d7fea778536bf772de2bfd21989e043bb34225227f5de371",
     ),
     (
         "csr_queue_delta_strided_enqueue",
-        "076f6eba666f6f52b23996a28e2926da18b63ebe9a8f331972decdf84842cdb2",
+        "793a052aa6cbedbec2c69cd2b4b66fb18d9ef50cf14536fdb4923d51ba317e1b",
     ),
     (
         "csr_queue_delta_strided_enqueue.capped",
-        "0a2bb1e883108c567c0924e67625f8734bdd313cb1637ade8f6dd77d009b9fe2",
+        "57988e80c7476076b6360f49121411ebe7aaaf6cb6399e627c7c7a0a5d6a7cd9",
     ),
     (
         "csr_queue_split_low_forward_traverse",
-        "a087f808e97d5a5286a7f03f9edcd0fd63a5c649368d82b535b118082d2dd594",
+        "021f81049ef83b511c155bc5788effae8906e3479109d59518efe9fdbca59b9e",
     ),
     (
         "csr_forward_traverse",
-        "e54d7125553fca830e038cc3e2ea4f8cead622a55a5dc81480120ff7699c0cff",
+        "654e702c219bd18f2ad19a796428185fac0e6aa3deba0a5e3cf6c7cbbc688220",
     ),
     (
         "csr_forward_traverse_excluding",
-        "a357790e25e7812effbb6ee35e2c0982167d7395ff86088d1560d3867ac99829",
+        "b429049476c22f60dba0495739f7cf67eba64cba2e30303c8731f4b600a9bd55",
     ),
     (
         "csr_backward_traverse",
-        "173e7e38b73e0e8449f64435d84b64ccc272db9b45e251d9763eedf634d037de",
+        "711ca3bf8eaddc8971af9fbe1600d34122ba68ae20af69251921460ca1ae0077",
     ),
     (
         "csr_bidirectional",
-        "28fd0238a672790feddb7485889b489b8fd5c67d55f329f4d25a3a9351e4530e",
+        "3495e027352fad3a4dd07da87c13af6d85b7bff73328fed77f4201343a81a750",
     ),
     (
         "csr_forward_or_changed",
-        "82c0c7becc44e2cc5738219787815a9e5aa848b38077478b0dd64db5d6da5a82",
+        "45b25cf558fc4dd6f9aa744715f6cdfd8b035a1d740cfeee0e8e106082033aed",
     ),
     (
         "csr_forward_or_changed_parallel",
-        "5d65590f0baf7b679cfa7b2b41114bff9c54966873837c58c5c9ab61e9a3de87",
+        "1e003d3c00a4288c83cc6b02fdcd64cf247b6efde2d4d2d62368e325d4d93f87",
     ),
 ];
 

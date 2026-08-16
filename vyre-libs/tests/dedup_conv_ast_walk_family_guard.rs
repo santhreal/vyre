@@ -275,67 +275,67 @@ const CONV_PINS: &[(&str, &str)] = &[
 const WALK_PINS: &[(&str, &str)] = &[
     (
         "ast_walk_preorder:0/8",
-        "1a4ddf103c94b1da51a9e5c331709f69ab929597c16c99facdffad36612eaaf0",
+        "9120d57d92ebe0e5ef493b33b9d8f1fb84ee5d624fe2bee967d10fdcaacfe2af",
     ),
     (
         "ast_walk_postorder_nodes:0/8",
-        "1b73f269f582337d7e1bf15812f59bd924b76f3327762de91b4f4a4e6f847bc4",
+        "e45c14d24a29d8420ef3f381c4b17fad422bf9c89927178be66512518613bda0",
     ),
     (
         "ast_walk_preorder:1/8",
-        "3b3382780be9befa3f9e25030685e42c228ebb18eeb683d6b678f817f6ccf48b",
+        "3640238ad3649e8e8aacbda1618e5e2b81cd4629f790b445e152f9429d6b5088",
     ),
     (
         "ast_walk_postorder_nodes:1/8",
-        "3e073d7fb96f9d8395d5bca82cff49e6858b2ade8b8d1718b2bef3d0f90cf789",
+        "81e3dcf6a968d9b2f791d37325a3cf694cf037382334ab465d887f5fe87f415d",
     ),
     (
         "ast_walk_preorder:1/1",
-        "9d0d0b4716e4bfa53aafcd991ccb6b4f237a8dd9e1f8111990761e70e9a5119e",
+        "f7f6a497dcb68afdd22d36cb6e6dc3f9219c8e9e3bbed17b76fdd77492828a65",
     ),
     (
         "ast_walk_postorder_nodes:1/1",
-        "a3e56147b00fa8c215067deaf49a2955db5e71dfe6743983c985efe29c9df84f",
+        "bb1d6fe37eccd4e41875eaab2bec1653e4e20d293a519e3480e5098d443dc2fa",
     ),
     (
         "ast_walk_preorder:4/8",
-        "e68761083cd25982fcf874300f7e88b036e299c20de07eced0e70c8be7f64f9c",
+        "8c4533866cc00485a92f5085e61731023ab3bacd1d913c62b7dc2ee5c9542558",
     ),
     (
         "ast_walk_postorder_nodes:4/8",
-        "369d8b80bad1964d72f7813d2550d694d5a72c5b145a13fe578216ae2043f3d5",
+        "bab7219257e19d16890d76bd363c7d8a9cc4eee7cc295aec60c23919e68bd872",
     ),
     (
         "ast_walk_preorder:6/8",
-        "dd5a5ec69059562fea7d9b3d8cb173a5a0a6c8ba98e06091ad0235e97f345c5b",
+        "bad02976f3fe033754f2e15d00239e002dbdbc8e5f8cf90449da4e959abcf33e",
     ),
     (
         "ast_walk_postorder_nodes:6/8",
-        "2e85a3e25ecce679723b46d1c1721019ae00d59a89481f8096d51cb99c5a80f9",
+        "f36af89b6a428591855ca76abd1ea6af1ef81a4651350435cc252b9a9820a281",
     ),
     (
         "ast_walk_preorder:8/4",
-        "b4045fd328bd7564bdbbde6d8e7a5dc334f4e23f5d26783362b1b10420372cb8",
+        "1d3636b9cbe36cc51028eed8c4e0f3febb9489266a5de312d0358744facb4359",
     ),
     (
         "ast_walk_postorder_nodes:8/4",
-        "9940b91a745b61e96a399f2f8105fe4573ebda4b14702b2acf89209e31a174e1",
+        "30b37ac6fddfd9908edd9a807c753e6209fa6a70e54a1043a1f7ef4c763f2c00",
     ),
     (
         "ast_walk_preorder:8/16",
-        "20928354ffbe04677f3f7db371f0ce3b3d6da4a990eebddf22ac3c5f7eaa57dd",
+        "b34bb9140a44618799a566c6bd8561b8a8f65bf095f352e01d5f70b63c1f9701",
     ),
     (
         "ast_walk_postorder_nodes:8/16",
-        "69d8539aef15f30f5a458dd55829bddd44d395df154de464675d3e79cef4a7b6",
+        "3cf95a1fd6fe72d3c21dd17f8200f57fcecfdc19292eef11944248e149d05725",
     ),
     (
         "ast_walk_preorder:8/1",
-        "6069843dba4a35d31be7c3da1589d798ab8368f029d99365256f57d003d726e4",
+        "0111e649fa300d5a493fe9e482a9f18afec250c0d44087e96c3edf6cd830d360",
     ),
     (
         "ast_walk_postorder_nodes:8/1",
-        "a0d960710cf14e44b4d862e5d4e3954c27e7d65f004373d2b5edcda29149ce0c",
+        "df9d61ce48e41de5da63fd12d4f81dff5167f02021749560df59053b361557db",
     ),
     (
         "ast_walk_postorder:0",

@@ -9,7 +9,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id for interval merge.
-pub const OP_ID: &str = "vyre-primitives::math::interval_merge";
+pub const OP_ID: &str = "vyre-libs::math::interval_merge";
 
 /// Build the per-lane interval merge body.
 ///

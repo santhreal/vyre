@@ -69,9 +69,7 @@ impl ExprNode for SyntheticOpaqueExpr {
 /// no registered resolver cannot be encoded for a backend: the target compiler
 /// rejects the artifact at decode. The bundle carries the variant, so the test
 /// binary owns the resolver for it.
-fn decode_synthetic_opaque(
-    payload: &[u8],
-) -> Result<std::sync::Arc<dyn ExprNode>, String> {
+fn decode_synthetic_opaque(payload: &[u8]) -> Result<std::sync::Arc<dyn ExprNode>, String> {
     if payload != [0x5a] {
         return Err(format!(
             "synthetic opaque payload is {payload:?}. Fix: emit the single marker byte `wire_payload` writes."

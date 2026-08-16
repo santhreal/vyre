@@ -13,7 +13,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// One compiler diagnostic, reduced to what a finding carries.
@@ -138,6 +138,8 @@ fn diagnostics(root: &Path, arguments: &[&str]) -> Result<Run, GateError> {
 /// Turn the diagnostics of one cargo invocation into a report.
 fn report_diagnostics(root: &Path, arguments: &[&str], fix: &str) -> Result<Report, GateError> {
     let mut report = Report::clean();
+    let tree = Tree::open(root)?;
+    report.cover_complete("workspace members", tree.member_manifests()?.len());
     let run = diagnostics(root, arguments)?;
     if let Some(missing) = run.unmeasured {
         report.find(Finding::new(
@@ -164,15 +166,7 @@ fn report_diagnostics(root: &Path, arguments: &[&str], fix: &str) -> Result<Repo
 /// Every target of every crate compiles with every feature enabled.
 pub struct WorkspaceCheck;
 
-impl Gate for WorkspaceCheck {
-    fn name(&self) -> &'static str {
-        "workspace-check"
-    }
-
-    fn help(&self) -> &'static str {
-        "Compile every target of every workspace crate with all features enabled"
-    }
-
+impl crate::gate::GateBehavior for WorkspaceCheck {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         report_diagnostics(
             &ctx.root,
@@ -185,15 +179,7 @@ impl Gate for WorkspaceCheck {
 /// Clippy is denied warnings across the same surface.
 pub struct WorkspaceClippy;
 
-impl Gate for WorkspaceClippy {
-    fn name(&self) -> &'static str {
-        "workspace-clippy"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every target of every workspace crate to clippy with warnings denied"
-    }
-
+impl crate::gate::GateBehavior for WorkspaceClippy {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         report_diagnostics(
             &ctx.root,
@@ -218,15 +204,7 @@ impl Gate for WorkspaceClippy {
 /// the crates it names, and that is the only doctest coverage the registry has.
 pub struct WorkspaceDocs;
 
-impl Gate for WorkspaceDocs {
-    fn name(&self) -> &'static str {
-        "workspace-docs"
-    }
-
-    fn help(&self) -> &'static str {
-        "Build the documentation of every workspace crate with all features enabled"
-    }
-
+impl crate::gate::GateBehavior for WorkspaceDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         report_diagnostics(
             &ctx.root,
@@ -281,18 +259,11 @@ fn tested_packages(ctx: &GateCtx, report: &mut Report) -> Result<Vec<String>, Ga
 /// Every test of the contract-owning crates passes.
 pub struct WorkspaceTests;
 
-impl Gate for WorkspaceTests {
-    fn name(&self) -> &'static str {
-        "workspace-tests"
-    }
-
-    fn help(&self) -> &'static str {
-        "Run the test suites of the crates that own the op, IR and reference contracts"
-    }
-
+impl crate::gate::GateBehavior for WorkspaceTests {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let packages = tested_packages(ctx, &mut report)?;
+        report.cover_complete("workspace packages", packages.len());
         if !report.findings.is_empty() {
             // The roster decides what runs, so a broken registry is not a tree
             // whose tests have been judged.
@@ -394,5 +365,31 @@ mod tests {
         let (cargo, driver) = split_at_driver(&check);
         assert_eq!(cargo, ["check", "--workspace"]);
         assert!(driver.is_empty());
+    }
+    /// WHY: workspace-check compiles every target with all features enabled.
+    #[test]
+    fn workspace_check_invokes_cargo_check_across_all_features() {
+        let check_args = ["check", "--workspace", "--all-targets", "--all-features"];
+        let (cargo, driver) = split_at_driver(&check_args);
+        assert_eq!(
+            cargo,
+            ["check", "--workspace", "--all-targets", "--all-features"]
+        );
+        assert!(driver.is_empty());
+    }
+
+    /// WHY: workspace-docs renders docs without dependencies.
+    #[test]
+    fn workspace_docs_constructs_no_deps_doc_arguments() {
+        let doc_args = ["doc", "--workspace", "--no-deps"];
+        let (cargo, driver) = split_at_driver(&doc_args);
+        assert_eq!(cargo, ["doc", "--workspace", "--no-deps"]);
+        assert!(driver.is_empty());
+    }
+
+    /// WHY: workspace-tests runs tests across contract-owning layer packages.
+    #[test]
+    fn workspace_tests_resolves_tested_layer_contract() {
+        assert_eq!(TESTED_LAYERS, &["foundation", "libraries", "semantics"]);
     }
 }

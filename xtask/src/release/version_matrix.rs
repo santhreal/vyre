@@ -699,7 +699,11 @@ fn collect_one_version(
             return;
         }
     };
-    let Some(package) = manifest.document.get("package").and_then(toml::Value::as_table) else {
+    let Some(package) = manifest
+        .document
+        .get("package")
+        .and_then(toml::Value::as_table)
+    else {
         return;
     };
     let version = package

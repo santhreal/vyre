@@ -5,7 +5,10 @@
 
 use super::*;
 
-pub(super) fn lego_duplicate_report(ops: &[OpInfo], generator_command: &str) -> DuplicateFamilyReport {
+pub(super) fn lego_duplicate_report(
+    ops: &[OpInfo],
+    generator_command: &str,
+) -> DuplicateFamilyReport {
     let mut families = Vec::new();
     families.extend(
         no_reinvention_pairs(ops)
@@ -74,8 +77,8 @@ pub(super) fn lego_duplicate_subject(op: &OpInfo) -> DuplicateSubject {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::path::PathBuf;
+    use xtask::gates::dedup_report::duplicate_report_json_path;
 
     /// WHY: this preserves the explicit duplicate-report output path contract.
     /// The gate reads the flag off `GateCtx` and resolves it through the shared
@@ -101,5 +104,4 @@ mod tests {
             Some(PathBuf::from("release/evidence/dedup/lego-duplicates.json"))
         );
     }
-
 }

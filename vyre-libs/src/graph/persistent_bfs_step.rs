@@ -10,7 +10,7 @@ use crate::graph::program_graph::{push_frontier_changed_buffers, ProgramGraphSha
 use crate::reduce::workgroup_any::workgroup_any_u32_child_prefixed;
 
 /// Canonical op id for one persistent-BFS workgroup-coalesced step.
-pub const PERSISTENT_BFS_STEP_OP_ID: &str = "vyre-primitives::graph::persistent_bfs_step";
+pub const PERSISTENT_BFS_STEP_OP_ID: &str = "vyre-libs::graph::persistent_bfs_step";
 
 /// Build one reusable persistent-BFS step body.
 #[must_use]

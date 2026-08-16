@@ -8,7 +8,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::zero";
+pub const OP_ID: &str = "vyre-libs::bitset::zero";
 
 /// Build a Program: `target[w] = 0` for `w` in `0..words`.
 #[must_use]
@@ -16,7 +16,7 @@ pub fn bitset_zero(target: &str, words: u32) -> Program {
     let w = Expr::InvocationId { axis: 0 };
     Program::wrapped(
         vec![
-            BufferDecl::storage(target, 0, BufferAccess::ReadWrite, DataType::U32)
+            BufferDecl::storage(target, 0, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(words),
         ],
         [256, 1, 1],

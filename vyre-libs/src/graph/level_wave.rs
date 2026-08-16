@@ -49,7 +49,7 @@ use vyre_foundation::ir::{
 };
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::level_wave";
+pub const OP_ID: &str = "anonymous::vyre-libs::graph::level_wave";
 /// Workgroup shape for per-node depth-wave traversal.
 pub const LEVEL_WAVE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -126,6 +126,26 @@ pub fn level_wave_program_with_buffers(
     max_depth: u32,
     lane_count: u32,
 ) -> Program {
+    level_wave_program_with_buffers_and_op_id(
+        OP_ID,
+        step_body,
+        depth_buf,
+        extra_buffers,
+        max_depth,
+        lane_count,
+    )
+}
+
+/// Same as [`level_wave_program_with_buffers`] with an explicit caller op id.
+#[must_use]
+pub fn level_wave_program_with_buffers_and_op_id(
+    op_id: &str,
+    step_body: Vec<Node>,
+    depth_buf: &str,
+    extra_buffers: Vec<BufferDecl>,
+    max_depth: u32,
+    lane_count: u32,
+) -> Program {
     let body = if lane_count <= LEVEL_WAVE_WORKGROUP_SIZE[0] {
         vec![Node::loop_for(
             "__lw_depth__",
@@ -172,7 +192,7 @@ pub fn level_wave_program_with_buffers(
     Program::wrapped(
         buffers,
         LEVEL_WAVE_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(OP_ID, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 
@@ -192,6 +212,32 @@ where
             }
         }
     }
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || {
+            level_wave_program_with_buffers(
+                vec![Node::store("out", Expr::InvocationId { axis: 0 }, Expr::u32(1))],
+                "depths",
+                vec![BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(4)],
+                4,
+                4,
+            )
+        },
+        Some(|| {
+            let to_bytes = vyre_primitives::wire::pack_u32_slice;
+            vec![
+                vec![to_bytes(&[0, 1, 2, 3])],
+                vec![to_bytes(&[0, 0, 0, 0])],
+            ]
+        }),
+        Some(|| {
+            let to_bytes = vyre_primitives::wire::pack_u32_slice;
+            vec![vec![to_bytes(&[1, 1, 1, 1])]]
+        }),
+    )
 }
 
 #[cfg(test)]

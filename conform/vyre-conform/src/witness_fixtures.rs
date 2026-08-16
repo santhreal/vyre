@@ -15,9 +15,8 @@ pub(crate) fn synthesize_witness_cases(program: &vyre::Program) -> Result<Fixtur
     let mut case = Vec::new();
     for buffer in program.buffers() {
         if buffer.kind() == vyre::ir::MemoryKind::Shared
-            || buffer.is_output()
-            || (buffer.is_pipeline_live_out()
-                && matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite))
+            || buffer.access() == vyre::ir::BufferAccess::Workgroup
+            || buffer.is_backend_allocated_output()
         {
             continue;
         }

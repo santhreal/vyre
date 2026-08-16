@@ -21,7 +21,7 @@ use vyre_foundation::ir::{DataType, Program};
 use crate::math::fixed_u32_matmul::{try_fixed_u32_matmul, FixedMatmulContext};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::tensor_network_pair_contract";
+pub const OP_ID: &str = "vyre-libs::math::tensor_network_pair_contract";
 
 const MATMUL_CONTEXT: FixedMatmulContext = FixedMatmulContext {
     op_id: OP_ID,

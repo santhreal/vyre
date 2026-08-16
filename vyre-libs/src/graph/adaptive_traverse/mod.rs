@@ -89,12 +89,12 @@ pub use sparse_dense_step::adaptive_sparse_dense_step;
 pub const DENSE_THRESHOLD_PCT: u32 = 25;
 
 /// Canonical op id for the dense step.
-pub const OP_ID: &str = "vyre-primitives::graph::adaptive_traverse_dense";
+pub const OP_ID: &str = "vyre-libs::graph::adaptive_traverse_dense";
 /// Canonical op id for the device-selected sparse/dense step.
-pub const HYBRID_OP_ID: &str = "vyre-primitives::graph::adaptive_traverse_sparse_dense";
+pub const HYBRID_OP_ID: &str = "vyre-libs::graph::adaptive_traverse_sparse_dense";
 /// Canonical op id for graph-level dense Four-Russians traversal planning.
 pub const FOUR_RUSSIANS_DENSE_OP_ID: &str =
-    "vyre-primitives::graph::adaptive_traverse_four_russians_dense";
+    "vyre-libs::graph::adaptive_traverse_four_russians_dense";
 
 /// Canonical input-frontier buffer name.
 pub const NAME_FRONTIER_IN: &str = "adap_frontier_in";

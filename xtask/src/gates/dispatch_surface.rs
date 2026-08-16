@@ -19,7 +19,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
 /// The row shape a dispatch method takes.
@@ -63,15 +63,7 @@ const SLOT_TYPES: &[&str] = &["OutputBuffers", "Vec<u8>"];
 /// Owned-row dispatch declared as the method a backend must implement.
 pub struct OwnedDispatch;
 
-impl Gate for OwnedDispatch {
-    fn name(&self) -> &'static str {
-        "hot-path-owned-dispatch"
-    }
-
-    fn help(&self) -> &'static str {
-        "owned-row dispatch required of backends instead of defaulted over the borrowed form"
-    }
-
+impl crate::gate::GateBehavior for OwnedDispatch {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut findings = Vec::new();
@@ -99,6 +91,7 @@ impl Gate for OwnedDispatch {
             }
         }
         let mut report = Report::with_findings(findings);
+        report.cover_complete("dispatch traits", traits);
         report
             .notes
             .push(format!("checked {traits} dispatch trait(s)"));
@@ -109,15 +102,7 @@ impl Gate for OwnedDispatch {
 /// Nested byte rows returned by a trait that offers no slots to fill instead.
 pub struct NestedRows;
 
-impl Gate for NestedRows {
-    fn name(&self) -> &'static str {
-        "hot-path-nested-rows"
-    }
-
-    fn help(&self) -> &'static str {
-        "nested byte rows returned by a dispatch trait with no caller-slot form"
-    }
-
+impl crate::gate::GateBehavior for NestedRows {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut findings = Vec::new();
@@ -142,6 +127,7 @@ impl Gate for NestedRows {
             }
         }
         let mut report = Report::with_findings(findings);
+        report.cover_complete("row-returning traits", traits);
         report
             .notes
             .push(format!("checked {traits} row-returning trait(s)"));
@@ -471,6 +457,7 @@ fn assigns_through(code: &str, slot: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout;
 
     /// The gate's report for a tree holding one driver source file.

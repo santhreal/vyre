@@ -42,8 +42,8 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
 /// of an existing kernel under a second crate's namespace fails here regardless
 /// of how the id is spelled in source.
 ///
-/// Two ops inside ONE crate may share a terminal name (`vyre-primitives::bitset::any`
-/// and `vyre-primitives::reduce::any` are different kernels over different layouts).
+/// Two ops inside ONE crate may share a terminal name (`vyre-libs::bitset::any`
+/// and `vyre-libs::reduce::any` are different kernels over different layouts).
 /// The same terminal name claimed by two crates means the higher layer re-registered
 /// the lower layer's kernel instead of calling it.
 #[test]

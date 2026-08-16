@@ -9,32 +9,32 @@
 
 /// Adversarial input descriptors  -  hostile payloads every op must reject or handle.
 /// Specification element.
-pub(crate) mod adversarial_input;
+pub mod adversarial_input;
 /// Algebraic law primitives  -  associativity, identity, commutativity declarations.
 /// Specification element.
-pub(crate) mod algebraic_law;
+pub mod algebraic_law;
 /// Canonical catalog of every algebraic law tagged to operations.
 /// Specification element.
-pub(crate) mod all_algebraic_laws;
+pub mod all_algebraic_laws;
 #[macro_use]
 mod op_wire;
 /// Versioned cross-engine analysis fact records.
 pub mod analysis;
 /// Atomic operation enum  -  the bounded set of read-modify-write primitives.
 /// Specification element.
-pub(crate) mod atomic_op;
+pub mod atomic_op;
 /// Binary operator enum  -  all element-wise two-operand primitives.
 /// Specification element.
-pub(crate) mod bin_op;
+pub mod bin_op;
 /// Buffer access mode (ReadOnly / WriteOnly / ReadWrite) + enforcement helpers.
 /// Specification element.
-pub(crate) mod buffer_access;
+pub mod buffer_access;
 /// Iterator returning op ids grouped by their `Category`.
 /// Specification element.
-pub(crate) mod by_category;
+pub mod by_category;
 /// Reverse index from op id string to its canonical descriptor.
 /// Specification element.
-pub(crate) mod by_id;
+pub mod by_id;
 /// Terminal ids for the LR(1) arithmetic expression grammar.
 /// Specification element.
 pub mod c11_expr_token;
@@ -43,101 +43,101 @@ pub mod c11_expr_token;
 pub mod c11_token;
 /// Conformance invariant: the op catalog enumerates every known id.
 /// Specification element.
-pub(crate) mod catalog_is_complete;
+pub mod catalog_is_complete;
 mod catalog_slices;
 /// Category enum (A/B/C) + backend-availability predicates.
 /// Specification element.
-pub(crate) mod category;
+pub mod category;
 /// Collective communication operators and communicator handles.
 /// Specification element.
-pub(crate) mod collective_op;
+pub mod collective_op;
 /// Calling conventions between CPU host and GPU kernels.
 /// Specification element.
-pub(crate) mod convention;
+pub mod convention;
 /// Primitive data-type enum (U32/F32/Bool/etc.) + size helpers.
 /// Specification element.
-pub(crate) mod data_type;
+pub mod data_type;
 /// Invariants the engine itself must preserve (wire round-trip, CSE stability, …).
 /// Specification element.
-pub(crate) mod engine_invariant;
+pub mod engine_invariant;
 /// Frozen catalog of core `Expr` variant names used by coverage tests.
 /// Specification element.
-pub(crate) mod expr_variant;
+pub mod expr_variant;
 /// Dialect extension descriptor  -  marks non-core ops carried by extensions.
 /// Specification element.
 pub mod extension;
 /// Floating-point type subset (F16/F32/F64) with associated properties.
 /// Specification element.
-pub(crate) mod float_type;
+pub mod float_type;
 /// Go lexer token ids shared by the GPU lexer program and its host matchers.
 /// Specification element.
 pub mod go_token;
 /// Golden reference samples  -  tiny fixtures every backend must reproduce exactly.
 /// Specification element.
-pub(crate) mod golden_sample;
+pub mod golden_sample;
 /// Table of hardware intrinsics exposed by `vyre-primitives::hardware`.
 /// Specification element.
-pub(crate) mod intrinsic_table;
+pub mod intrinsic_table;
 /// Abstract invariant type + provenance tracking.
 /// Specification element.
-pub(crate) mod invariant;
+pub mod invariant;
 /// Classification buckets grouping related invariants (numeric, memory, …).
 /// Specification element.
-pub(crate) mod invariant_category;
+pub mod invariant_category;
 /// Catalog of invariants every registered op is checked against.
 /// Specification element.
-pub(crate) mod invariants;
+pub mod invariants;
 /// Known-answer test vector type  -  deterministic input/output pairs.
 /// Specification element.
-pub(crate) mod kat_vector;
+pub mod kat_vector;
 /// Canonical catalog of algebraic laws exposed via `law_catalog()`.
 /// Specification element.
-pub(crate) mod law_catalog;
+pub mod law_catalog;
 /// Layer enum (IR / backend / runtime)  -  coarse module placement.
 /// Specification element.
-pub(crate) mod layer;
+pub mod layer;
 /// Metadata classification for `OpMetadata` entries.
 /// Specification element.
-pub(crate) mod metadata_category;
+pub mod metadata_category;
 /// Monotonicity direction (increasing / decreasing / none) for op outputs.
 /// Specification element.
-pub(crate) mod monotonic_direction;
+pub mod monotonic_direction;
 /// Operation contract: capability requirements, determinism, cost hints.
 /// Specification element.
-pub(crate) mod op_contract;
+pub mod op_contract;
 /// Op metadata struct  -  human-facing description and discoverability hooks.
 /// Specification element.
-pub(crate) mod op_metadata;
+pub mod op_metadata;
 /// Op signature  -  stable type profile every backend lowers against.
 /// Specification element.
-pub(crate) mod op_signature;
+pub mod op_signature;
 /// Packed graph node kinds for language-agnostic analysis.
 /// Specification element.
-pub(crate) mod pg_node_kind;
+pub mod pg_node_kind;
 /// Python lexer token ids shared by the GPU lexer program and its host matchers.
 /// Specification element.
 pub mod python_token;
 /// Canonical semiring selector for dataflow and algebraic kernels.
-pub(crate) mod semiring;
+pub mod semiring;
 /// Soundness markers and precision contracts for cross-engine analysis data.
 pub mod soundness;
 /// Subgroup (warp) reduction operator enum  -  add/mul/min/max/and/or/xor.
 /// Specification element.
-pub(crate) mod subgroup_reduce_op;
+pub mod subgroup_reduce_op;
 /// Ternary operator enum  -  select, FMA, mask-merge.
 /// Specification element.
-pub(crate) mod ternary_op;
+pub mod ternary_op;
 /// Structured test descriptor  -  op id, input sampler, expected shape.
 /// Specification element.
-pub(crate) mod test_descriptor;
+pub mod test_descriptor;
 #[cfg(test)]
 mod tests;
 /// Unary operator enum  -  single-operand element-wise primitives.
 /// Specification element.
-pub(crate) mod un_op;
+pub mod un_op;
 /// Conformance verification driver  -  runs the law + invariant battery.
 /// Specification element.
-pub(crate) mod verification;
+pub mod verification;
 
 /// See [`adversarial_input::AdversarialInput`].
 /// Specification element.
@@ -252,6 +252,6 @@ pub use verification::Verification;
 
 /// Intrinsic descriptors.
 /// Specification element.
-pub(crate) mod intrinsic_descriptor;
+pub mod intrinsic_descriptor;
 /// See [`intrinsic_descriptor::IntrinsicDescriptor`] and its identifying types.
 pub use intrinsic_descriptor::{Backend, BackendId, CpuFn, IntrinsicDescriptor};

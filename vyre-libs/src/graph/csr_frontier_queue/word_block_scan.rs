@@ -9,9 +9,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::sizing_diagnostics::{
     checked_frontier_u32_product, invalid_frontier_queue_sizing_program, try_u32_byte_range,
 };
-use super::{
-    FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID, FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID,
-};
+use super::{FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID, FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID};
 use crate::bitset::bitset_words;
 
 /// Build Pass A for deterministic packed-frontier queue materialization.
@@ -124,14 +122,12 @@ pub fn frontier_word_counts_scan_pass_a(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    body.extend(
-        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            block_lanes,
-        ),
-    );
+    body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+        &scratch_a,
+        &scratch_b,
+        &lane,
+        block_lanes,
+    ));
 
     body.push(Node::if_then(
         Expr::lt(global.clone(), Expr::u32(words)),
@@ -237,14 +233,9 @@ fn frontier_word_block_offsets_single_workgroup(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    body.extend(
-        crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
-            &scratch_a,
-            &scratch_b,
-            &lane,
-            1024,
-        ),
-    );
+    body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+        &scratch_a, &scratch_b, &lane, 1024,
+    ));
 
     body.push(Node::if_then(
         Expr::lt(lane.clone(), Expr::u32(num_blocks)),

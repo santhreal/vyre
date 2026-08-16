@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 use vyre::ir::Node;
 use vyre_foundation::visit::walk_nodes;
-use vyre_libs::nn::attention::gqa_attention;
 use vyre_libs::math::dot_partial::OP_ID as DOT_PARTIAL_OP_ID;
+use vyre_libs::nn::attention::gqa_attention;
 use vyre_libs::nn::attention_passes::{
     ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
 };

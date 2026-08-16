@@ -12,7 +12,7 @@ pub mod accounting;
 /// Backend-neutral fallible allocation reservation helpers.
 pub mod allocation;
 /// Backend-neutral ahead-of-time emission registry.
-pub(crate) mod aot;
+pub mod aot;
 /// Independent-arm detection for queue-parallel dispatch (ROADMAP D2).
 /// Pure set arithmetic over (reads, writes) summaries; the dispatcher
 /// uses `can_dispatch_concurrently` to decide whether two megakernel
@@ -107,8 +107,10 @@ pub(crate) mod pipeline;
 /// reads/writes can fuse into one launch with a workgroup-bounded
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
+/// Backend-neutral peer-transfer capability contracts and checked accounting.
+pub mod peer_transfer;
 /// Read-only semantic operation projections, migrations, and policy.
-pub(crate) mod registry;
+pub mod registry;
 /// Backend-neutral reservation policy adapters.
 pub mod reservation_policy;
 /// Backend-neutral resident-resource reuse telemetry.
@@ -143,6 +145,8 @@ pub mod speculation_verdict;
 /// Canonical subgroup operation taxonomy and capability records.
 pub(crate) mod subgroup;
 /// Target-compiler shell shared by every backend's dialect.
+/// Stable compilation and emission target identifiers.
+pub mod target;
 pub mod target_dialect;
 /// Trace-based JIT specialization decision policy (ROADMAP I2).
 /// Decides whether the dispatcher should fire a speculative
@@ -274,16 +278,16 @@ pub use pipeline::{
     PipelineCacheMissEvidence, PipelineCacheMissReason, PipelineCacheSnapshot,
     PipelineDeviceFingerprint, PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
 };
-pub use program_walks::{auto_grid, enforce_output_budget, output_binding_layouts_into};
 pub use program_walks::{
     admit_dispatch_grid, coerce_to_pow2_with_tail_mask, dispatch_element_count,
     dispatch_element_count_for_program, dispatch_param_words_into, element_size_bytes,
     enforce_actual_output_budget, find_indirect_dispatch, infer_dispatch_grid,
     infer_dispatch_grid_for_count, output_binding_layout, output_binding_layout_parts,
     output_binding_layouts, output_layout_from_program, try_coerce_to_pow2_with_tail_mask,
-    try_dispatch_param_words, try_dispatch_param_words_into, IndirectDispatch,
-    OutputBindingLayout, OutputLayout, TailMaskPolicy,
+    try_dispatch_param_words, try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout,
+    OutputLayout, TailMaskPolicy,
 };
+pub use program_walks::{auto_grid, enforce_output_budget, output_binding_layouts_into};
 pub use registry::DEPRECATED_OP_CODE;
 pub use registry::{
     deprecation_diagnostic, AttrMap, AttrValue, Deprecation, Migration, MigrationError,
@@ -291,7 +295,7 @@ pub use registry::{
 };
 pub use registry::{
     validate_intrinsic_lowering, Chain, EnforceGate, EnforceVerdict, IntrinsicRegistrationError,
-    MutationClass,
+    MutationClass, Target,
 };
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
 pub use routing::pgo;
@@ -311,3 +315,7 @@ pub use subgroup::{
     reduction_offsets, reduction_offsets_into, try_reduction_offsets, try_reduction_offsets_into,
 };
 pub use subgroup::{SubgroupCaps, SubgroupOp};
+pub use peer_transfer::{
+    PeerAccessCapability, PeerLinkKind, PeerTopology, PeerTransferAccounting, PeerTransferError,
+    PeerTransferPlan, PeerTransferPlanner, PeerTransferRequest,
+};

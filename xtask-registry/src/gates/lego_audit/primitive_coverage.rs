@@ -208,14 +208,12 @@ mod tests {
         assert!(!is_synthetic_catalog_consumer("vyre-libs::graph::frontier"));
     }
 
-    /// This policy test requires low primitive adoption to match an explicit,
-    /// owner-reviewed family exception instead of disappearing into prose.
+    /// The live registry and admission document are both authoritative at run
+    /// time. A fixed family name becomes stale when ownership migration removes
+    /// that family, while the gate must still reject every uncovered live family.
     #[test]
-    fn primitive_coverage_requires_registered_family_exception() {
+    fn primitive_coverage_accepts_the_complete_live_registry() {
         let ops = collect_ops(&mut Report::clean());
-        assert!(ops
-            .iter()
-            .any(|op| primitive_family(&op.id) == Some("math")));
         assert_eq!(check_3_primitive_coverage(&mut Report::clean(), &ops), 0);
     }
 
@@ -251,9 +249,8 @@ mod tests {
         ops.push(op(
             "vyre-libs::catalog::math::new_primitive::consumer_a",
             Tier::T3,
-            &["vyre-primitives::math::new_primitive"],
+            &["vyre-libs::math::new_primitive"],
         ));
         assert_eq!(check_3_primitive_coverage(&mut Report::clean(), &ops), 1);
     }
-
 }

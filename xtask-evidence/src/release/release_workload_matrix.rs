@@ -89,7 +89,9 @@ fn report_blockers(matrix: &ReleaseWorkloadMatrix, inspection: &mut Inspection) 
     for family in &matrix.missing_required_cpu_sota_100x_families {
         inspection.blocked(
             ARTIFACT,
-            format!("release workload family `{family}` declares no CPU state-of-the-art 100x case"),
+            format!(
+                "release workload family `{family}` declares no CPU state-of-the-art 100x case"
+            ),
             "Register a cpu-sota contract case for the family, or remove it from the required \
              100x set.",
         );

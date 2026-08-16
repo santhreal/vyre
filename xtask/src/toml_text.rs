@@ -78,10 +78,9 @@ mod tests {
 
     #[test]
     fn a_string_array_keeps_the_strings_and_drops_everything_else() {
-        let table: toml::Table = toml::from_str(
-            "mixed = [\"one\", 2, \"three\", true]\nempty = []\nscalar = \"one\"\n",
-        )
-        .expect("Fix: the fixture must be valid TOML.");
+        let table: toml::Table =
+            toml::from_str("mixed = [\"one\", 2, \"three\", true]\nempty = []\nscalar = \"one\"\n")
+                .expect("Fix: the fixture must be valid TOML.");
 
         assert_eq!(
             string_array(table.get("mixed")),

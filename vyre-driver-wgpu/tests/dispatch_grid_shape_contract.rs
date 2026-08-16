@@ -90,9 +90,9 @@ fn a_grid_wider_than_the_device_ceiling_is_refused_on_every_axis() {
         grid[axis] = over;
         let mut config = DispatchConfig::default();
         config.grid_override = Some(grid);
-        let error = backend
-            .dispatch(&program, &[], &config)
-            .expect_err("Fix: a grid past the device's per-axis ceiling must be refused, not recorded.");
+        let error = backend.dispatch(&program, &[], &config).expect_err(
+            "Fix: a grid past the device's per-axis ceiling must be refused, not recorded.",
+        );
         let message = error.to_string();
         let axis_name = ["x", "y", "z"][axis];
         assert!(
@@ -169,11 +169,9 @@ fn an_inferred_grid_wider_than_the_device_ceiling_is_refused() {
         "Fix: this case needs an inferred grid past the ceiling. ceiling {ceiling}, declared words \
          {words}, output word count {word_count}, inferred grid {inferred:?}"
     );
-    let error = backend
-        .dispatch(&program, &[], &config)
-        .expect_err(
-            "Fix: a grid inferred past the device's per-axis ceiling must be refused, not recorded.",
-        );
+    let error = backend.dispatch(&program, &[], &config).expect_err(
+        "Fix: a grid inferred past the device's per-axis ceiling must be refused, not recorded.",
+    );
     let message = error.to_string();
     assert!(
         message.contains(&ceiling.to_string()) && message.contains("Fix:"),

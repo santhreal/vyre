@@ -822,7 +822,7 @@ mod tests {
     /// Fixture whose region body the subgroup lowering pass rewrites.
     ///
     /// The pass only fires on a `Region` whose generator carries a canonical
-    /// `vyre-primitives::reduce::workgroup_*` prefix and whose body yields both
+    /// `vyre-libs::reduce::workgroup_*` prefix and whose body yields both
     /// a scratch buffer and a reduction scope, so a plain program is a no-op
     /// and cannot exercise the rewriting half of the discriminator.
     fn lowering_program() -> Program {
@@ -830,7 +830,7 @@ mod tests {
             vec![BufferDecl::output("scratch", 0, DataType::U32).with_count(64)],
             [64, 1, 1],
             vec![Node::Region {
-                generator: "vyre-primitives::reduce::workgroup_sum_u32".into(),
+                generator: "vyre-libs::reduce::workgroup_sum_u32".into(),
                 source_region: None,
                 body: Arc::new(vec![Node::store("scratch", Expr::u32(0), Expr::u32(7))]),
             }],

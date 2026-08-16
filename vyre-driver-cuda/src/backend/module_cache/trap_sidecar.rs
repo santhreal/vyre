@@ -50,7 +50,7 @@ impl TrapSidecar {
 /// The emitter always names the symbol, so the text is an exact signal and no
 /// speculative `cuModuleGetGlobal` is issued for the kernels that declare no
 /// trap.
-pub(super) fn declares_trap_sidecar(ptx_src: &str) -> bool {
+pub(crate) fn declares_trap_sidecar(ptx_src: &str) -> bool {
     ptx_src.contains(TRAP_SIDECAR_SYMBOL)
 }
 

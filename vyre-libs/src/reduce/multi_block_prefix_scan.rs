@@ -31,23 +31,19 @@
 //! splits the dispatch into three kernel launches at the GridSync
 //! barriers when the backend doesn't support cooperative groups.
 
-use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
-use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
 };
 
 /// Canonical op id for inclusive sum-scan over arbitrary `n`.
-pub const OP_ID_INCLUSIVE_SUM: &str =
-    "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum";
+pub const OP_ID_INCLUSIVE_SUM: &str = "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum";
 
 /// Canonical op id for the exclusive-sum element-difference pass that turns the
 /// inclusive multi-block scan into an exclusive one.
-pub const OP_ID_EXCLUSIVE_SUM: &str =
-    "vyre-primitives::reduce::multi_block_prefix_scan_exclusive_sum";
+pub const OP_ID_EXCLUSIVE_SUM: &str = "vyre-libs::reduce::multi_block_prefix_scan_exclusive_sum";
 
 /// Return the execution geometry requirements for multi-block prefix scan.
 #[must_use]
@@ -441,13 +437,10 @@ fn try_guarded_single_block_scan(
     Ok(Program::wrapped(
         buffers,
         [block_lanes, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(
-                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
-            ),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
+            body,
+        )],
     ))
 }
 /// Pass A  -  per-block local inclusive Hillis-Steele scan.
@@ -576,13 +569,10 @@ fn try_pass_a_local_scan(
     Ok(Program::wrapped(
         buffers,
         [block_lanes, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(
-                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_a",
-            ),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_a",
+            body,
+        )],
     ))
 }
 
@@ -705,13 +695,10 @@ fn try_pass_c_broadcast_offsets(
     Ok(Program::wrapped(
         buffers,
         [block_lanes, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(
-                "vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_c",
-            ),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        vec![wrap_anonymous_region(
+            "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::pass_c",
+            body,
+        )],
     ))
 }
 
@@ -1202,6 +1189,13 @@ mod tests {
             assert_eq!(prog_excl.workgroup_size(), [lanes, 1, 1]);
             let actual_excl = run_full_scan(&prog_excl, &input);
             assert_eq!(actual_excl, cpu_ref_exclusive(&input));
+
+            let prog_excl_geom = multi_block_prefix_scan_sum_exclusive_u32_with_geometry(
+                "input", "output", n, &geom,
+            );
+            assert_eq!(prog_excl_geom.workgroup_size(), [lanes, 1, 1]);
+            let actual_excl_geom = run_full_scan(&prog_excl_geom, &input);
+            assert_eq!(actual_excl_geom, cpu_ref_exclusive(&input));
         }
     }
 }

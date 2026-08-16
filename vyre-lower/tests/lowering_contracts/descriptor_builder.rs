@@ -90,7 +90,6 @@ fn child_body_index_is_the_append_order() {
 /// in `analyses` owns those.
 #[test]
 fn the_structured_constructors_name_the_child_indices_the_walk_reads() {
-
     for (op, expected) in [
         (if_then(7, 3), vec![3]),
         (if_then_else(7, 3, 4), vec![3, 4]),

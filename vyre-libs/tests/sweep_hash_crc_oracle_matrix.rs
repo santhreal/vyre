@@ -19,9 +19,7 @@ use vyre_libs::hash::crc32::{
     crc32, crc32_chunk, crc32_combine, crc32_combine_chunks, crc32_pair_reduce_chunks, Crc32Chunk,
     CRC32_INIT, CRC32_POLY,
 };
-use vyre_libs::hash::fnv1a::{
-    fnv1a32, fnv1a32_packed_u32_low8, FNV1A32_OFFSET, FNV1A32_PRIME,
-};
+use vyre_libs::hash::fnv1a::{fnv1a32, fnv1a32_packed_u32_low8, FNV1A32_OFFSET, FNV1A32_PRIME};
 
 /// Reflected IEEE 802.3 polynomial, from the CRC-32/ISO-HDLC specification.
 const SPEC_CRC32_POLY: u32 = 0xEDB8_8320;

@@ -18,10 +18,10 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::path_reconstruct";
+pub const OP_ID: &str = "vyre-libs::graph::path_reconstruct";
 
 /// Canonical batched op id.
-pub const BATCHED_OP_ID: &str = "vyre-primitives::graph::batched_path_reconstruct";
+pub const BATCHED_OP_ID: &str = "vyre-libs::graph::batched_path_reconstruct";
 
 /// Workgroup size used by the batched path-reconstruction primitive.
 pub const BATCHED_WORKGROUP_SIZE: u32 = 256;

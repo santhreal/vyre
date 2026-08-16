@@ -36,7 +36,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::randomized_projection_step";
+pub const OP_ID: &str = "vyre-libs::math::randomized_projection_step";
 
 /// Emit `Y = A · Ω` where:
 /// - `A` is `m × n` row-major u32.
@@ -81,8 +81,10 @@ pub fn try_randomized_projection_step(
     }
 
     let a_cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} A input"), m, n)?;
-    let omega_cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
-    let cells = crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
+    let omega_cells =
+        crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} omega input"), n, l)?;
+    let cells =
+        crate::plumbing::operand::shape::matrix_cells(&format!("{OP_ID} projection output"), m, l)?;
     let t = Expr::InvocationId { axis: 0 };
 
     // i = t / l, j = t % l

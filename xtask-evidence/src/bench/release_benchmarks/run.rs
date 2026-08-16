@@ -3,15 +3,15 @@ use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 use super::args::{parse_args, Config, Parsed, USAGE};
+use super::artifact_metrics::read_text_bounded;
 use super::cpu_sota_proof::write_cpu_100x_proof;
 use super::evidence_schema::{
     BackendSuiteArtifactInput, ReleaseWorkloadFamily, ReleaseWorkloadMatrix,
 };
 use super::frontier_leaderboard::write_frontier_leaderboard;
-use super::artifact_metrics::read_text_bounded;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
 use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES};
 use super::runner::{
@@ -27,26 +27,20 @@ const MATRIX_ARTIFACT: &str = "release/evidence/benchmarks/release-workload-matr
 
 pub(crate) struct ReleaseBenchmarksGate;
 
-impl Gate for ReleaseBenchmarksGate {
-    fn name(&self) -> &'static str {
-        "release-benchmarks"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every recorded release benchmark artifact to its blocker contract. `--write` \
-         re-measures the suite on a release host."
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl xtask::gate::GateBehavior for ReleaseBenchmarksGate {
     fn usage(&self) -> &'static [&'static str] {
         USAGE
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
+        for path in [
+            "release/evidence/benchmarks/benchmark-matrix.json",
+            "release/evidence/benchmarks/evidence-benchmark-matrix.json",
+        ] {
+            report.produced(path);
+        }
+        report.cover_complete("release benchmark suites", 2);
         let config = match parse_args(&ctx.args) {
             Ok(Parsed::Run(config)) => config,
             Ok(Parsed::Usage) => {
@@ -432,8 +426,7 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
              describing the previous tree.",
         ));
     }
-    for blocker in
-        generated_benchmark_evidence_blockers(&workspace_root, &generated_evidence_paths)
+    for blocker in generated_benchmark_evidence_blockers(&workspace_root, &generated_evidence_paths)
     {
         report.find(Finding::new(
             format!("generated release benchmark evidence blocker: {blocker}"),

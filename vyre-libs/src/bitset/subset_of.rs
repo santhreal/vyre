@@ -7,7 +7,7 @@ use vyre_foundation::ir::Program;
 use crate::bitset::relation::{bitset_relation_program, BitsetRelation};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::bitset::subset_of";
+pub const OP_ID: &str = "vyre-libs::bitset::subset_of";
 
 /// Build a Program: `out_scalar[0] = (forall w: (lhs[w] & !rhs[w]) == 0) ? 1 : 0`.
 #[must_use]

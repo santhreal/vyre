@@ -18,7 +18,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{mask_literals, Tree};
 
 /// Crates whose job is judging the tree.
@@ -63,19 +63,12 @@ const CONTENT_READS: &[&str] = &[
 /// Holds every ownership answer in the judging crates to a content read.
 pub struct PlacementPredicates;
 
-impl Gate for PlacementPredicates {
-    fn name(&self) -> &'static str {
-        "placement-predicates"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every crate, module and domain placement answer to a content read instead of a directory existence test"
-    }
-
+impl crate::gate::GateBehavior for PlacementPredicates {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let sources = tree.rust(JUDGING_ROOTS)?;
+        report.cover_complete("placement predicate sources", sources.len());
         let mut scanned = 0usize;
         for path in &sources {
             let text = tree.read(path)?;

@@ -7,6 +7,8 @@
 //! and no absent pattern set (precision). This is the per-output-mode equivalent
 //! of `bounded_ranges_suffix3_prefilter_reference_eval_matches_cpu_oracle`.
 
+#![cfg(all(feature = "matching-substring", feature = "cpu-parity"))]
+
 mod wire_words;
 use wire_words::{decode_u32_words as decode_u32, Lcg};
 

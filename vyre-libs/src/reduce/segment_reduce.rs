@@ -9,7 +9,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::reduce::segment_reduce_sum";
+pub const OP_ID: &str = "vyre-libs::reduce::segment_reduce_sum";
 
 /// Build a Program: `output[seg] = Σ input[offsets[seg]..offsets[seg+1]]`.
 ///

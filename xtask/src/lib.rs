@@ -16,8 +16,8 @@
 //! Items are `pub` rather than `pub(crate)` when the subcommands in those two
 //! crates use them: the crate boundary is no longer the tool boundary.
 
-pub mod artifact_paths;
 pub mod artifact_gate;
+pub mod artifact_paths;
 pub mod binary;
 pub mod cargo_runner;
 pub mod checkout;
@@ -26,6 +26,7 @@ pub mod delegate;
 pub mod docs;
 pub mod fixture_checkout;
 pub mod gate;
+pub mod gate_metadata;
 pub mod gates;
 pub mod generated_document;
 pub mod hash;

@@ -145,9 +145,7 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
                                 backend: backend.to_string(),
                                 status: status.to_string(),
                                 test_paths: test_paths.clone(),
-                                unreadable_test_paths: test_evidence
-                                    .unreadable_paths
-                                    .clone(),
+                                unreadable_test_paths: test_evidence.unreadable_paths.clone(),
                                 test_case_classes: test_evidence.case_classes.clone(),
                             });
                         }
@@ -319,4 +317,3 @@ pub fn inspect_conformance_test_evidence(
         unreadable_paths,
     }
 }
-

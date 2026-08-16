@@ -13,7 +13,7 @@ use crate::predicate::node_kind;
 use crate::predicate::traversal::backward_edge_program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::predicate::size_argument_of";
+pub const OP_ID: &str = "vyre-libs::predicate::size_argument_of";
 
 /// Build a Program that reverse-traverses CallArg edges and marks
 /// argument nodes whose callees are in `frontier_in`.

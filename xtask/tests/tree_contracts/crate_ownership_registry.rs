@@ -10,7 +10,7 @@ use super::workspace_sources::{run_gate, track_fixture, workspace_root};
 
 /// Run the gate over a fixture checkout.
 fn run(root: &Path) -> Report {
-    run_gate(&CrateOwnership, root, false)
+    run_gate("crate-ownership", &CrateOwnership, root, false)
 }
 
 /// Every message the gate reported, joined for a failure diagnostic.
@@ -163,8 +163,7 @@ fn stale_dependency_record_fails_closed() {
     let report = run(temp.path());
     let messages = messages(&report);
     assert!(
-        messages
-            .contains("`a` declares a record for `b` and no manifest edge resolves to it"),
+        messages.contains("`a` declares a record for `b` and no manifest edge resolves to it"),
         "Fix: stale record diagnostic must name consumer and dependency; got\n{messages}"
     );
 }

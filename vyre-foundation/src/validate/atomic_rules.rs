@@ -8,8 +8,8 @@
 //! races on the GPU.
 
 use crate::ir_inner::model::expr::Expr;
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::{AtomicOp, BufferAccess, DataType};
+use crate::ir_inner::model::program::BufferDecl;
 use crate::memory_model::MemoryOrdering;
 use crate::validate::typecheck::{expr_type, ScopeTypes};
 use crate::validate::{err, Binding, ValidationError};

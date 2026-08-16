@@ -15,18 +15,18 @@ use crate::cases::reference_sample::timed_reference;
 use vyre_foundation::ir::Program;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 
+mod fixture;
 mod metrics;
 mod queue_closure;
 mod queue_materialize;
-mod fixture;
 #[cfg(test)]
 mod tests;
 
-use metrics::{skewed_csr_baseline_metric_points, skewed_csr_metric_points};
 use fixture::{
     build_skewed_csr_fixture, skewed_csr_cpu_oracle, skewed_csr_inputs, SkewedCsrStats,
     CSR_ALLOW_MASK, CSR_NODE_COUNT, SUITES,
 };
+use metrics::{skewed_csr_baseline_metric_points, skewed_csr_metric_points};
 
 type GraphCsrSkewedPrepared = FrontierStep<SkewedCsrStats>;
 

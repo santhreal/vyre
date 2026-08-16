@@ -12,29 +12,21 @@
 //! reported as notes and never counted.
 
 use vyre::ir::Node;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 /// Walks the composition chain of the registered operations.
 pub struct PrintComposition;
 
-impl Gate for PrintComposition {
-    fn name(&self) -> &'static str {
-        "print-composition"
-    }
-
-    fn help(&self) -> &'static str {
-        "Walk the decomposition chain of every registered operation; --op-id ID narrows to one"
-    }
-
+impl xtask::gate::GateBehavior for PrintComposition {
     fn usage(&self) -> &'static [&'static str] {
-        &[
-            "--op-id ID narrows the walk to one registered operation",
-        ]
+        &["--op-id ID narrows the walk to one registered operation"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let selected = ctx.flag("--op-id");
         let mut report = Report::clean();
+        let ops = vyre_registry_link::operation::live_operation_registry();
+        report.cover_complete("registered operations", ops.iter().count());
         let mut walked = 0usize;
         let mut matched = false;
         for entry in vyre_registry_link::operation::live_operation_registry().iter() {
@@ -46,12 +38,12 @@ impl Gate for PrintComposition {
             matched = true;
             let Some(program) = entry.program() else {
                 report.find(Finding::new(
-                    format!(
-                        "registered operation `{}` provides no neutral builder, so its composition chain cannot be walked",
-                        entry.id
-                    ),
-                    "give the canonical registration a neutral builder, or withdraw the registration",
-                ));
+                format!(
+                    "registered operation `{}` provides no neutral builder, so its composition chain cannot be walked",
+                    entry.id
+                ),
+                "give the canonical registration a neutral builder, or withdraw the registration",
+            ));
                 continue;
             };
             walked += 1;
@@ -122,5 +114,25 @@ fn walk(op_id: &str, node: &Node, depth: usize, report: &mut Report) {
             }
         }
         _ => {}
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_region_bodies_are_detected_as_findings() {
+        let mut report = Report::clean();
+        let empty_region = Node::Region {
+            generator: vyre::ir::Ident::from("vyre-libs::math::empty_subregion"),
+            source_region: None,
+            body: std::sync::Arc::new(Vec::new()),
+        };
+
+        walk("vyre-libs::math::parent_op", &empty_region, 1, &mut report);
+
+        assert_eq!(report.findings.len(), 1);
+        let finding = &report.findings[0];
+        assert!(finding.message.contains("operation `vyre-libs::math::parent_op` opens region `vyre-libs::math::empty_subregion` with an empty body"));
     }
 }

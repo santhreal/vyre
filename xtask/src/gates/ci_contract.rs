@@ -16,7 +16,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// The hosted matrix workflow.
@@ -43,18 +43,11 @@ const GPU_ESCAPES: &[&str] = &["no-gpu", "gpu-feature"];
 /// The hosted matrix covers every platform and toolchain it is the only cover for.
 pub struct CiMatrix;
 
-impl Gate for CiMatrix {
-    fn name(&self) -> &'static str {
-        "ci-matrix"
-    }
-
-    fn help(&self) -> &'static str {
-        "hosted CI matrix axes, and device escape hatches inside them"
-    }
-
+impl crate::gate::GateBehavior for CiMatrix {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("ci matrix workflows", tree.members()?.len());
 
         for required in [CI, GPU_PARITY] {
             if !tree.exists(required) {
@@ -123,18 +116,11 @@ impl Gate for CiMatrix {
 /// Every required status context resolves to a job that still fails closed.
 pub struct CiRequired;
 
-impl Gate for CiRequired {
-    fn name(&self) -> &'static str {
-        "ci-required"
-    }
-
-    fn help(&self) -> &'static str {
-        "required status contexts, the workflows that define them, and their fan-in jobs"
-    }
-
+impl crate::gate::GateBehavior for CiRequired {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("ci required workflows", tree.members()?.len());
 
         if !tree.exists(REQUIRED) {
             report.find(Finding::in_file(
@@ -824,7 +810,9 @@ mod tests {
     /// tag is not a pull request context and is deliberately not held to this.
     #[test]
     fn a_pull_request_sweep_is_told_from_a_release_sweep() {
-        assert!(invokes_sweep("run: ./cargo_full run -p xtask -- gates --subset cat-a"));
+        assert!(invokes_sweep(
+            "run: ./cargo_full run -p xtask -- gates --subset cat-a"
+        ));
         assert!(invokes_sweep(
             "run: ./cargo_full run -q -p xtask --bin xtask -- gates"
         ));
@@ -841,7 +829,10 @@ mod tests {
             Some("gates.yml".to_string())
         );
         assert_eq!(workflow_file(".github/workflows-paused/book.yml"), None);
-        assert_eq!(workflow_file(".github/workflows/actions/x/action.yml"), None);
+        assert_eq!(
+            workflow_file(".github/workflows/actions/x/action.yml"),
+            None
+        );
 
         let root = crate::checkout::checkout_root();
         let tree = Tree::open(&root).expect("Fix: the checkout must be listable");

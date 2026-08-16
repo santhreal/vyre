@@ -679,8 +679,8 @@ mod tests {
         let leaf_dividend = Expr::var("x"); // cost 1
         let two_node_dividend = Expr::negate(Expr::var("x")); // cost 2
         let three_node_dividend = Expr::add(Expr::var("x"), Expr::var("y")); // cost 3
-        // Non-fixup divisor (copies = 1):
-        // 1 copy adds 0 extra nodes, so leaf, 2-node, and 3-node dividends all succeed.
+                                                                             // Non-fixup divisor (copies = 1):
+                                                                             // 1 copy adds 0 extra nodes, so leaf, 2-node, and 3-node dividends all succeed.
         assert!(
             granlund_montgomery_div(&leaf_dividend, 3).is_some(),
             "non-fixup division of leaf must succeed"

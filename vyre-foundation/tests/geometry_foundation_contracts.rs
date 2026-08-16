@@ -4,12 +4,13 @@
 //! 1. Neutrality: geometry types represent pure execution invariants without device-specific limits.
 //! 2. Correctness: builder methods, defaults, validation, and program metadata reflection.
 
+use std::sync::Arc;
+
 use vyre_foundation::geometry::{
     CooperativeWidth, ElementPolicy, GeometryLoweringError, GeometryRequirements, LaunchGeometry,
     Uniformity,
 };
-use vyre_foundation::ir::Program;
-
+use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 #[test]
 fn geometry_requirements_defaults_are_agnostic() {
     let req = GeometryRequirements::default();
@@ -68,7 +69,13 @@ fn launch_geometry_computes_total_invocations_and_validates() {
 
 #[test]
 fn program_applies_launch_geometry() {
-    let mut program = Program::empty();
+    let mut program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::Return],
+    )
+    .with_entry_op_id("vyre-libs::geometry::test");
+    program.non_composable_with_self = true;
     assert_eq!(program.workgroup_size(), [1, 1, 1]);
 
     let geo = LaunchGeometry {
@@ -81,9 +88,24 @@ fn program_applies_launch_geometry() {
 
     let with_geo = program.with_launch_geometry(&geo);
     assert_eq!(with_geo.workgroup_size(), [512, 1, 1]);
+    assert!(
+        Arc::ptr_eq(program.entry_arc(), with_geo.entry_arc()),
+        "with_launch_geometry must preserve the entry Arc without deep cloning"
+    );
+    assert_eq!(with_geo.buffers().len(), 1);
+    assert_eq!(with_geo.entry_op_id, program.entry_op_id);
+    assert!(with_geo.non_composable_with_self);
+
+    let with_rewritten = program.with_rewritten_launch_geometry(&geo);
+    assert_eq!(with_rewritten.workgroup_size(), [512, 1, 1]);
+    assert!(
+        Arc::ptr_eq(program.entry_arc(), with_rewritten.entry_arc()),
+        "with_rewritten_launch_geometry must preserve the entry Arc without deep cloning"
+    );
 
     program.set_launch_geometry(&geo);
     assert_eq!(program.workgroup_size(), [512, 1, 1]);
+    assert_eq!(program.buffers().len(), 1);
 }
 
 #[test]

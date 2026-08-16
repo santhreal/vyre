@@ -24,7 +24,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::reduce::histogram";
+pub const OP_ID: &str = "vyre-libs::reduce::histogram";
 
 /// Build a Program: `output[bin] = count(input[i] == bin)` for each bin.
 ///

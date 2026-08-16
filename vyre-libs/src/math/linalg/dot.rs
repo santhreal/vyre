@@ -6,11 +6,11 @@
 use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use crate::{
     builder::{check_tensors, strided_accumulate_child, BuildOptions},
     plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
-use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::math::dot";
 #[cfg(test)]

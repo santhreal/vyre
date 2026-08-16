@@ -17,7 +17,7 @@ use std::path::Path;
 
 use toml::Value;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::crate_registry::{self, CrateRecord};
 use crate::gates::scan::Tree;
 
@@ -62,23 +62,15 @@ impl Target {
 /// The per-crate testing guides under `docs/testing/`.
 pub struct TestingGuides;
 
-impl Gate for TestingGuides {
-    fn name(&self) -> &'static str {
-        "testing-guides"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold one testing guide per workspace member to the manifests and docs/testing/TESTING.toml; --write regenerates them"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for TestingGuides {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("testing guide paths", tree.paths().len());
         let records = crate_registry::load_registry(&tree, &mut report)?;
+        for record in &records {
+            report.produced(format!("{DIRECTORY}/{}", guide_name(record)));
+        }
         let metadata = load_metadata(&tree, &records, &mut report)?;
 
         let mut expected: BTreeMap<String, String> = BTreeMap::new();
@@ -449,7 +441,12 @@ fn explicit_targets(
 }
 
 /// The tracked `*.rs` files cargo would pick up implicitly from one directory.
-fn implicit_targets(tree: &Tree, crate_path: &str, directory: &str, kind: &'static str) -> Vec<Target> {
+fn implicit_targets(
+    tree: &Tree,
+    crate_path: &str,
+    directory: &str,
+    kind: &'static str,
+) -> Vec<Target> {
     let prefix = format!("{crate_path}/{directory}/");
     let mut targets: Vec<Target> = tree
         .paths()
@@ -631,11 +628,7 @@ fn render_guide(
         ]);
     }
 
-    lines.extend([
-        String::new(),
-        "## Cargo targets".to_string(),
-        String::new(),
-    ]);
+    lines.extend([String::new(), "## Cargo targets".to_string(), String::new()]);
     if targets.is_empty() {
         lines.push(
             "Cargo declares no executable, library, test, example, or benchmark target."
@@ -659,11 +652,7 @@ fn render_guide(
         }
     }
 
-    lines.extend([
-        String::new(),
-        "## Test classes".to_string(),
-        String::new(),
-    ]);
+    lines.extend([String::new(), "## Test classes".to_string(), String::new()]);
     lines.extend(fields.test_classes.iter().map(|item| format!("- {item}")));
     lines.extend([
         String::new(),

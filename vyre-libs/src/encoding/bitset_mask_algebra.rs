@@ -7,15 +7,15 @@
 //! in each optimizer pass.
 
 use super::decode_first_output;
-use crate::dispatch_buffers::{
-    ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
-};
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::bitset::{
     and::bitset_and, clear_bit::bitset_clear_bit, contains::bitset_contains, equal::bitset_equal,
     not::bitset_not, or::bitset_or, set_bit::bitset_set_bit, subset_of::bitset_subset_of,
     test_bit::bitset_test_bit, xor::bitset_xor,
 };
+use crate::dispatch_buffers::{
+    ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+};
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::bitset::{

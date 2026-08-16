@@ -1,5 +1,5 @@
 /// Canonical op id for the IFDS CSR construction program.
-pub const OP_ID: &str = "vyre-primitives::graph::exploded_build_ifds_csr";
+pub const OP_ID: &str = "vyre-libs::graph::exploded_build_ifds_csr";
 
 /// Canonical dispatch input label for intra-procedural procedure ids.
 pub const IFDS_CSR_INTRA_PROC_BUFFER: &str = "exploded_ifds_csr intra_proc";

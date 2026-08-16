@@ -29,7 +29,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id for the update primitive.
-pub const UPDATE_OP_ID: &str = "vyre-primitives::hash::count_sketch_update";
+pub const UPDATE_OP_ID: &str = "vyre-libs::hash::count_sketch_update";
 
 /// Count-sketch CPU-reference validation failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -468,7 +468,10 @@ mod tests {
         let outputs = vyre_reference::reference_eval(
             &program,
             &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&vec![0u32; (d * w) as usize])),
+                Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
+                    0u32;
+                    (d * w) as usize
+                ])),
                 Value::from(vyre_primitives::wire::pack_u32_slice(&hashes)),
                 Value::from(vyre_primitives::wire::pack_u32_slice(&signs_u32)),
             ],
@@ -476,7 +479,8 @@ mod tests {
         .expect("Fix: count_sketch_update must reference-evaluate");
         let table_idx = vyre_reference::output_index(&program, "table")
             .expect("Fix: count_sketch_update `table` must be a reference output");
-        let gpu_table = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[table_idx].to_bytes());
+        let gpu_table =
+            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[table_idx].to_bytes());
 
         // GPU must match the CPU exactly (both skip the two out-of-range columns).
         assert_eq!(
@@ -508,7 +512,10 @@ mod tests {
         let (_outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,
             &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&vec![0u32; (d * w) as usize])),
+                Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
+                    0u32;
+                    (d * w) as usize
+                ])),
                 Value::from(vyre_primitives::wire::pack_u32_slice(&hashes)),
                 Value::from(vyre_primitives::wire::pack_u32_slice(&signs)),
             ],

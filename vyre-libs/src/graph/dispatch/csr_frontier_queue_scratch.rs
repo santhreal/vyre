@@ -581,10 +581,7 @@ mod tests {
                 .expect("Fix: generated word-prefix scratch should fit");
             assert!(scratch.block_count >= 1);
             assert!(scratch.partial_words >= 1024);
-            assert_eq!(
-                scratch.partial_words,
-                scratch.block_total_words * 1024
-            );
+            assert_eq!(scratch.partial_words, scratch.block_total_words * 1024);
             assert!(
                 scratch.partial_words >= words,
                 "partial scratch must cover every packed frontier word"

@@ -1,7 +1,7 @@
 //! Bind-result log loading contracts over the public `vyre_debug` surface.
 
-use vyre_emit_naga::BindResultEntry;
 use vyre_debug::*;
+use vyre_emit_naga::BindResultEntry;
 
 #[test]
 fn load_bind_result_log_missing_file_returns_open_error() {

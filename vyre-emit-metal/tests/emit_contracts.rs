@@ -172,8 +172,7 @@ fn readonly_binding_emits_const_device_pointer() {
                 .literal(LiteralValue::U32(0)),
         )
         .build();
-    let msl =
-        emit(&desc).expect("Fix: read-only + read-write kernel must emit MSL without error.");
+    let msl = emit(&desc).expect("Fix: read-only + read-write kernel must emit MSL without error.");
     // Naga's MSL backend emits a read-only storage buffer as a CONST
     // reference (`device <type> const& name`) and a read-write buffer as a
     // mutable reference (`device <type>& name`). The read-only "input"

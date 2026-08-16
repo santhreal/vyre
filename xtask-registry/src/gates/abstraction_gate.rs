@@ -15,7 +15,7 @@
 use std::collections::BTreeSet;
 
 use vyre_foundation::composition::is_anonymous_generator;
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 use crate::gates::composition_budget::{self, ChildRegion};
 
@@ -23,18 +23,11 @@ use crate::gates::composition_budget::{self, ChildRegion};
 /// Enforces the registered building-block boundaries of every registered operation.
 pub struct AbstractionGate;
 
-impl Gate for AbstractionGate {
-    fn name(&self) -> &'static str {
-        "abstraction-gate"
-    }
-
-    fn help(&self) -> &'static str {
-        "Enforce registered building-block boundaries"
-    }
-
+impl xtask::gate::GateBehavior for AbstractionGate {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = composition_budget::collect_ops(&mut report);
+        report.cover_complete("registered operations", ops.len());
         let ids = composition_budget::registered_ids(&ops);
         let mut failures = BTreeSet::new();
 
@@ -47,13 +40,16 @@ impl Gate for AbstractionGate {
                 && (op.test_inputs_missing || op.expected_output_missing)
             {
                 failures.insert(format!(
-                    "PRIMITIVE-FIXTURE: `{}` must ship standalone test_inputs and expected_output. Fix: add an inventory fixture so the building block can be tested without its parent pipeline.",
-                    op.id
-                ));
+                "PRIMITIVE-FIXTURE: `{}` must ship standalone test_inputs and expected_output. Fix: add an inventory fixture so the building block can be tested without its parent pipeline.",
+                op.id
+            ));
             }
         }
 
-        report.note(format!("{} registered building block(s) checked", ops.len()));
+        report.note(format!(
+            "{} registered building block(s) checked",
+            ops.len()
+        ));
         for failure in &failures {
             report.find(violation(failure));
         }
@@ -196,7 +192,10 @@ mod tests {
     /// that does not exist, which is unwalkable in the other direction.
     #[test]
     fn a_child_citing_an_unregistered_parent_is_reported() {
-        let node = child("vyre-libs::security::flows_to", "vyre-libs::security::ghost");
+        let node = child(
+            "vyre-libs::security::flows_to",
+            "vyre-libs::security::ghost",
+        );
         let failures = findings(&node, &["vyre-libs::security::flows_to"]);
         assert!(
             failures

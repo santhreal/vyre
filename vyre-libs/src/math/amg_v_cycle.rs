@@ -17,12 +17,12 @@ use crate::math::multigrid::jacobi_smooth_step_cpu_into;
 use crate::math::multigrid::jacobi_smooth_step_serial_body;
 use std::sync::Arc;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::amg_v_cycle";
-const V_CYCLE_PHASE_OP_ID: &str = "vyre-primitives::math::amg_v_cycle::v_cycle_phase";
+pub const OP_ID: &str = "vyre-libs::math::amg_v_cycle";
+const V_CYCLE_PHASE_OP_ID: &str = "vyre-libs::math::amg_v_cycle::v_cycle_phase";
 
 /// Build an AMG V-cycle Program.
 #[must_use]

@@ -719,6 +719,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `xtask::artifact_gate!` now owns that shape and the eleven declarations state
   only what differs. Gates whose `run` does real work, such as
   release-conformance argument parsing, keep their own implementation.
+- Gate execution now derives names, owners, areas, artifact paths,
+  prerequisites, and mutation proofs from one authoritative descriptor
+  registry. Every gate reports non-empty subject coverage, generators declare
+  and report exact workspace-relative outputs, only artifact owners receive
+  `--write` authority, and the complete sweep rejects unowned workspace
+  mutations. README generation has one owner: `crate-readmes` refreshes both
+  crate-contract and CLI-contract sections.
 - Batched dispatch readback has one owner and one allocation for its rows.
   `vyre_driver::BatchOutputs` stores every dispatch's output row end to end in
   a single buffer and hands rows out borrowed, replacing the
@@ -1601,6 +1608,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   named its kernel matrix `u_curr` and its convergence flag `kv`; a record
   forces each name to be spelled at the call. `bellman_tn_order_program` and
   `sinkhorn_full_clustering_program` forward the same records.
+- The Jacobi eigensolver (`symmetric_eigen_jacobi`) distributes independent
+  identity seeding (`matrix_identity_fill`), eigenvector sign canonicalization
+  (`eigenvector_column_sign`), and diagonal extraction
+  (`matrix_diagonal_extract`) across declared workgroup lanes (`LANES = 64`),
+  preserving sequential Givens rotation on lane 0 behind workgroup barriers.
 - `reasoning::finite_category` states each construction once. Left and right
   Kan extension were four functions differing in whether the fold summed or
   multiplied and whether it ran per object or over a table; they are now
@@ -3392,17 +3404,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   profile instead of unknown device facts, so a case that uses subgroup
   intrinsics is measured on a device that has them rather than recorded as a
   validation failure.
-- `vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum` declares a
-  workgroup every registered target admits. `BLOCK_LANES` was 1024 on the claim
-  that 1024 is the universal maximum workgroup size; the wgpu target profile
-  admits 256, so admission refused the payload with `target workgroup extent
-  1024 exceeds profile limit 256`. The portable floor is now one named
-  constant, `vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS`, and the
-  block width reads it. Each backend keeps its own limit in its own capability
-  record; the constant is the extent an op may declare without knowing which
-  backend will run it. The cooperative block width is load-bearing for the
-  scan, so the block was resized rather than the launch clamped. Closes 1
-  diverging (backend, op) conformance pair.
+- `vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum` now declares
+  a workgroup every registered target admits. Its default builders previously
+  used 1024 lanes on the false claim that every target admitted that width, so
+  a target profile capped at 256 refused the payload with `target workgroup
+  extent 1024 exceeds profile limit 256`. The default block builders now read
+  the single target-neutral floor,
+  `vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS`, directly; no operation
+  declares a crate-local geometry alias. Backend-specific lowering can still
+  select a wider admitted launch through `LaunchGeometry`. The cooperative
+  block width is load-bearing for the scan, so the block was rebuilt at the
+  selected width rather than clamped after construction.
 - The wrapper rule reads an instruction, not any sentence containing the word
   cargo. A comment is a finding when a run verb comes before the command and
   the command is quoted as code, because prose says a full cargo build while an
@@ -4118,6 +4130,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   time regardless of how many cores the host had. Parallelism is declared once,
   in the config file, where it is reviewable and applies to every build
   equally.
+- Test fixtures now resolve host-owned Cargo target directories from either
+  Cargo cache marker. Older shared target roots that lack `CACHEDIR.TAG` but
+  contain Cargo's `.rustc_info.json` no longer fail before feature-boundary
+  builds can run.
 - The asm-alias, mixed-initializer and incomplete-initializer classification
   contracts live with the rest of their family in `vyre-libs`. Nothing in them
   dispatches anything, so holding them in a driver crate's tests made the CPU
@@ -4437,6 +4453,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   commit would carry: tracked files plus new files no rule excludes, so a copy
   still counts before it is committed. Running the gate outside a git checkout
   now fails with that as the remedy instead of measuring whatever is on disk.
+- The GPU e-graph mirror is split into the refusals, the columnar snapshot, the
+  device image, the row signature, the merge and the measured bridge, and its
+  suite moved to an integration test.
 - The async rule roster derives its covered set from the validation catalog and
   the suite sources at run time, which closed a gap where the empty-tag rule
   V128 had no test case in the tree.
@@ -4727,6 +4746,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   built.
 - `xtask heuristic-audit` now resolves both standalone Vyre checkouts and the
   enclosing Santh workspace without duplicating the Vyre path.
+- The hot-path roster names the three modules the columnar fact view split
+  into, and the lowering boundary budget drops to the zero it measures now that
+  its two format calls are gone.
 - `hot-path-scan` counts runtime code only. It claimed to skip `#[cfg(test)]`,
   calling those "intentional dev-only lines, not runtime cost", but an
   attribute annotates the item that follows it and the scan skipped the
@@ -5054,6 +5076,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The crate ownership registry stores every declared directory slash-separated,
   so a row written with backslashes owns its own directory and not only the
   files beneath it.
+- A binary-operator rewrite rule is a table row over one owned shape instead of
+  twelve lines written out per rule, and the CSE rule body imports the literal
+  body it builds on.
 - Tiled reductions share one program skeleton. reduce_mean, rms_norm,
   layer_norm and softmax each hand-built the same reduce-then-publish shape
   (bind the lane, accumulate with a stride, reduce through workgroup scratch,
@@ -5116,6 +5141,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   demanding it be empty could not fail on the one thing it exists to catch: a
   missing or blocked artifact. A test asserts that state, so the unconditional
   form turns the suite red.
+- Optimizer type facts now bind and restore loop induction variables, discard
+  stale assignment types, and traverse tile elementwise bodies.
+  Constant-division duplication budgets count every dividend copy. Batched
+  dispatch output reservations reserve requested increments from the current
+  length. Portable `vyre-conform --no-default-features` builds no longer link
+  default GPU drivers.
 - Inlining reaches a call inside a subgroup operand.
   `vyre_foundation::transform::inline` enumerated `Expr` itself and classified
   `SubgroupBallot`, `SubgroupShuffle` and `SubgroupReduce` as carrying nothing,
@@ -5166,6 +5197,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   dependencies through local registry patches after Cargo normalizes path
   dependencies for packaging. Cross-repository `weirflow` archive evidence now
   records its real files, examples, Rust sources, and file-list digest.
+- The encoded pattern-match pass is split into the action encoding, the
+  analysis programs, the two rule bodies, the decoder and the driver, and it
+  reads the shared arena workgroup size instead of declaring a second copy of
+  it.
 - Every per-node validation rule lives in
   `vyre-foundation/src/validate/node_rules.rs`, which both the production
   single-pass validator and the legacy multi-walk arm call. The two walks each
@@ -5216,6 +5251,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   feature against the published crate failed to compile; in-workspace builds
   hid it because another member always enabled a feature that pulled the
   foundation in.
+- The columnar program fact view is split into the tags, the fact table and the
+  build walk, and its suite moved to an integration test that reads only the
+  public surface.
 - The wire-roundtrip and ProgramStats property suites draw statements and
   programs from the one random-IR owner, not just expressions. `ir_arbitrary`
   already owned identifiers, data types, literals and expressions after an
@@ -5770,6 +5808,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and rejects intervening writes, divergent indices, atomics, and
   lane-dependent guards. The DCE fixpoint loop therefore removes one redundant
   barrier per iteration without weakening the unsafe-exit rejection.
+- Validation now propagates nested-loop exit uniformity to a fixed point,
+  applies subgroup capability decisions consistently, accepts IEEE-754 floating
+  division by zero, rejects ordered Boolean comparisons and invalid wrapping or
+  multiply-high operands, preserves same-scope duplicate-binding errors under
+  nested shadowing, reports specialized expression errors at the current node,
+  and publishes the emitted V020–V022 meanings.
 - Validator and runtime diagnostics build their fix text without a formatting
   call that has nothing to format, the dead-store pass filters its surviving
   nodes instead of mapping a boolean, and the runtime module headers link items

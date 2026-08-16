@@ -8,8 +8,8 @@
 
 use vyre_foundation::ir::{Expr, Node, Program};
 
-use crate::ReferenceError;
 use crate::value::Value;
+use crate::ReferenceError;
 use crate::{
     execution::async_transfer::{self, AsyncTransfer},
     execution::expr as eval_expr,
@@ -767,10 +767,7 @@ mod tests {
         }
 
         fn hashmap_executor(program: &Program) -> Result<(), crate::ReferenceError> {
-            let inputs = vec![
-                Value::from(vec![1_u8, 2, 3, 4]),
-                Value::from(vec![0_u8; 4]),
-            ];
+            let inputs = vec![Value::from(vec![1_u8, 2, 3, 4]), Value::from(vec![0_u8; 4])];
             crate::reference_eval(program, &inputs).map(|_| ())
         }
 
@@ -788,8 +785,7 @@ mod tests {
         #[test]
         fn every_async_variant_the_ir_declares_is_classified() {
             let classified = {
-                let mut names: Vec<&str> =
-                    ASYNC_NODE_ROLES.iter().map(|(name, _)| *name).collect();
+                let mut names: Vec<&str> = ASYNC_NODE_ROLES.iter().map(|(name, _)| *name).collect();
                 names.sort_unstable();
                 names
             };
@@ -908,7 +904,9 @@ fn eval_tile_store(
         origin_coords.push(coord);
     }
     let tile_val = invocation.local(tile_name).ok_or_else(|| {
-        crate::ReferenceError::new(format!("tile `{tile_name}` not found in scope for tile store"))
+        crate::ReferenceError::new(format!(
+            "tile `{tile_name}` not found in scope for tile store"
+        ))
     })?;
     let elements = match tile_val {
         Value::Array(elems) => elems.clone(),
@@ -925,7 +923,10 @@ fn eval_tile_matmul(
     b_name: &str,
     invocation: &mut Invocation<'_>,
 ) -> Result<(), crate::ReferenceError> {
-    let acc_val = invocation.local(acc_name).cloned().unwrap_or(Value::Array(Vec::new()));
+    let acc_val = invocation
+        .local(acc_name)
+        .cloned()
+        .unwrap_or(Value::Array(Vec::new()));
     let a_val = invocation.local(a_name).cloned().ok_or_else(|| {
         crate::ReferenceError::new(format!("tile `{a_name}` not found for matmul"))
     })?;
@@ -968,9 +969,10 @@ fn eval_tile_elementwise<'a>(
     let mut input_arrays = Vec::with_capacity(inputs.len());
     let mut max_len = 0;
     for input in inputs {
-        let val = invocation.local(input.as_str()).cloned().ok_or_else(|| {
-            crate::ReferenceError::new(format!("tile input `{input}` not found"))
-        })?;
+        let val = invocation
+            .local(input.as_str())
+            .cloned()
+            .ok_or_else(|| crate::ReferenceError::new(format!("tile input `{input}` not found")))?;
         let elems = match val {
             Value::Array(e) => e,
             s => vec![s],
@@ -982,16 +984,21 @@ fn eval_tile_elementwise<'a>(
     for idx in 0..max_len {
         invocation.push_scope();
         for (i, input) in inputs.iter().enumerate() {
-            let elem = input_arrays[i].get(idx).cloned().unwrap_or(Value::Float(0.0));
+            let elem = input_arrays[i]
+                .get(idx)
+                .cloned()
+                .unwrap_or(Value::Float(0.0));
             invocation.bind(input.as_str(), elem)?;
         }
         for node in body {
             execute_node(node, invocation, memory, program)?;
         }
-        let out_val = invocation.local(out_name).cloned().unwrap_or(Value::Float(0.0));
+        let out_val = invocation
+            .local(out_name)
+            .cloned()
+            .unwrap_or(Value::Float(0.0));
         out_elems.push(out_val);
         invocation.pop_scope();
     }
     invocation.bind(out_name, Value::Array(out_elems))
 }
-

@@ -70,9 +70,7 @@ impl LoopTripZeroEliminatePass {
 /// proves; `loop_licm` reads the other half of the same answer.
 fn is_empty_loop(node: &Node) -> bool {
     match node {
-        Node::Loop { from, to, .. } => {
-            super::loop_entry(from, to) == super::LoopEntry::Never
-        }
+        Node::Loop { from, to, .. } => super::loop_entry(from, to) == super::LoopEntry::Never,
         _ => false,
     }
 }

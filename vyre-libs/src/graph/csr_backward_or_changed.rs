@@ -9,14 +9,14 @@ use crate::bitset::bitset_words;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
-use vyre_primitives::lane_grid;
 use crate::graph::program_graph::{
     push_frontier_changed_buffers, ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
     NAME_EDGE_TARGETS,
 };
+use vyre_primitives::lane_grid;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::csr_backward_or_changed";
+pub const OP_ID: &str = "vyre-libs::graph::csr_backward_or_changed";
 /// Source-lane workgroup for reverse in-place CSR expansion.
 pub const CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

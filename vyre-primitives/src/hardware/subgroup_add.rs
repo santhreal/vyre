@@ -77,12 +77,18 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
     vec![vec![cpu_ref(&values)]]
 }
 
-crate::submit_intrinsic_operation! {
-    id: OP_ID,
-    signature: Some(crate::hardware::catalog::U32_UNARY_SIGNATURE),
-    build: || subgroup_add("values", "out", 4),
-    inputs: test_inputs,
-    expected: expected_output
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::intrinsic(
+        OP_ID,
+        crate::hardware::catalog::U32_UNARY_SIGNATURE,
+        Some(|| subgroup_add("values", "out", 4)),
+        Some(test_inputs),
+        Some(expected_output),
+    )
+    .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
+    .with_explicit_capabilities(
+        vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
+    )
 }
 
 inventory::submit! {

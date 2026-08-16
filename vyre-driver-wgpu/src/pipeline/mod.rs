@@ -11,13 +11,13 @@ use smallvec::SmallVec;
 use std::hash::BuildHasherDefault;
 #[cfg(test)]
 pub(crate) use vyre_driver::enforce_actual_output_budget;
-use vyre_driver::{resolve_launch_workgroup_for_geometry, LaunchGeometry};
 use vyre_driver::tuner::Mode;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::BackendLayoutFingerprint;
-pub(crate) use vyre_driver::{element_size_bytes, OutputBindingLayout};
 use vyre_driver::{admit_dispatch_grid, find_indirect_dispatch, infer_dispatch_grid_for_count};
+pub(crate) use vyre_driver::{element_size_bytes, OutputBindingLayout};
 pub use vyre_driver::{output_layout_from_program, IndirectDispatch, OutputLayout};
+use vyre_driver::{resolve_launch_workgroup_for_geometry, LaunchGeometry};
 use vyre_driver::{BackendError, DispatchConfig, OutputBuffers};
 use vyre_foundation::execution_plan::{self, ExecutionPlan};
 use vyre_foundation::ir::Program;
@@ -54,6 +54,7 @@ pub(crate) type BindGroupLayoutCache = dashmap::DashMap<
 pub(crate) struct AuthenticatedTarget<'a> {
     pub(crate) wgsl: &'a str,
     pub(crate) descriptor: &'a vyre_lower::KernelDescriptor,
+    pub(crate) resource_bindings: &'a [vyre_megakernel::TargetResourceBinding],
 }
 
 /// GPU pipeline + **all** per-program dispatch metadata co-located for
@@ -311,6 +312,8 @@ impl WgpuPipeline {
     ) -> Result<Arc<Self>, BackendError> {
         let authenticated_wgsl = target.as_ref().map(|target| target.wgsl);
         let authenticated_descriptor = target.as_ref().map(|target| target.descriptor);
+        let authenticated_resource_bindings =
+            target.as_ref().map(|target| target.resource_bindings);
         let compile_program = program;
         let geometry = match authenticated_descriptor {
             Some(descriptor) => {
@@ -436,38 +439,38 @@ impl WgpuPipeline {
         )?;
         public_output_bindings.extend(output_bindings.iter().map(|output| output.binding));
         let buffers = program.buffers();
-        let mut explicit_output_bindings = FxHashSet::default();
+        let mut host_input_bindings = FxHashSet::default();
         reserve_hash_set_to_capacity(
-            &mut explicit_output_bindings,
+            &mut host_input_bindings,
             buffers.len(),
             "WGPU pipeline binding classification",
-            "explicit output binding",
-            "split the pipeline or reduce output binding fanout before compilation",
+            "host input binding",
+            "split the pipeline or reduce input binding fanout before compilation",
         )?;
-        let mut pipeline_live_out_bindings = FxHashSet::default();
-        reserve_hash_set_to_capacity(
-            &mut pipeline_live_out_bindings,
-            buffers.len(),
-            "WGPU pipeline binding classification",
-            "pipeline live-out binding",
-            "split the pipeline or reduce live-out binding fanout before compilation",
-        )?;
-        for buffer in buffers {
-            if buffer.is_output() {
-                explicit_output_bindings.insert(buffer.binding());
-            }
-            if buffer.is_pipeline_live_out() {
-                pipeline_live_out_bindings.insert(buffer.binding());
-            }
+        if let Some(resource_bindings) = authenticated_resource_bindings {
+            host_input_bindings.extend(
+                resource_bindings
+                    .iter()
+                    .filter(|binding| {
+                        binding.access != vyre_megakernel::TargetResourceAccess::WriteOnly
+                    })
+                    .map(|binding| (binding.group, binding.slot)),
+            );
+        } else {
+            host_input_bindings.extend(
+                buffers
+                    .iter()
+                    .filter(|buffer| {
+                        buffer.kind() != vyre_foundation::ir::MemoryKind::Shared
+                            && !buffer.is_backend_allocated_output()
+                    })
+                    .map(|buffer| (0, buffer.binding())),
+            );
         }
 
-        let buffer_bindings: Arc<[BufferBindingInfo]> = descriptor_buffer_bindings(
-            &descriptor,
-            &public_output_bindings,
-            &explicit_output_bindings,
-            &pipeline_live_out_bindings,
-        )?
-        .into();
+        let buffer_bindings: Arc<[BufferBindingInfo]> =
+            descriptor_buffer_bindings(&descriptor, &public_output_bindings, &host_input_bindings)?
+                .into();
 
         for (group, binding) in bindings_reflection::declared_bindings(&wgsl) {
             if !buffer_bindings
@@ -834,12 +837,12 @@ pub(crate) mod disk_cache_entries;
 pub(crate) mod output_readback;
 /// Fallible output slot resizing shared by persistent and batched paths.
 pub(crate) mod output_slots;
-/// Persistent `Resource` to GPU-handle resolution and trap sidecar allocation.
-pub(crate) mod persistent_resources;
 /// Persistent dispatch-item lifecycle (`DispatchItem`)  -  multi-call
 /// reuse of bind groups, staging pools, and pipeline handles across
 /// the same program-graph topology.
 pub mod persistent;
+/// Persistent `Resource` to GPU-handle resolution and trap sidecar allocation.
+pub(crate) mod persistent_resources;
 
 // Inline: covers the private `wgpu_effective_dispatch_config_for_limits` and the
 // `pub(crate)` `BindGroupLayoutCache` and `WgpuPipeline::compile_with_device_queue`,
@@ -847,8 +850,8 @@ pub mod persistent;
 #[cfg(test)]
 mod tests {
     use super::{
-        enforce_actual_output_budget, wgpu_effective_dispatch_config_for_limits, BindGroupLayoutCache,
-        DispatchConfig, WgpuPipeline,
+        enforce_actual_output_budget, wgpu_effective_dispatch_config_for_limits,
+        BindGroupLayoutCache, DispatchConfig, WgpuPipeline,
     };
     use vyre_driver::tuner::Mode;
     use vyre_driver::validation::LaunchGeometryLimits;
@@ -859,7 +862,9 @@ mod tests {
     use std::sync::Arc;
 
     use crate::buffer::BufferPool;
-    use crate::engine::record_and_readback::{record_and_readback, DispatchLabels, RecordAndReadback};
+    use crate::engine::record_and_readback::{
+        record_and_readback, DispatchLabels, RecordAndReadback,
+    };
     use crate::runtime::cache::pipeline::LruPipelineCache;
     use crate::runtime::device::EnabledFeatures;
     use crate::DispatchArena;
@@ -887,10 +892,13 @@ mod tests {
                 adapter_info,
                 enabled_features,
                 config: DispatchConfig::default(),
-                pipeline_cache: Arc::new(LruPipelineCache::new(DEFAULT_PIPELINE_CACHE_ENTRIES as u32)),
+                pipeline_cache: Arc::new(LruPipelineCache::new(
+                    DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
+                )),
                 layout_cache: Arc::new(BindGroupLayoutCache::with_hasher(BuildHasherDefault::<
                     rustc_hash::FxHasher,
-                >::default())),
+                >::default(
+                ))),
             }
         }
 
@@ -997,9 +1005,9 @@ mod tests {
 
             let program1 = stores_u32("out", 4, 7);
 
-            let p1 = harness
-                .compile(&program1, pool.clone())
-                .expect("Fix: first compile must succeed; restore this invariant before continuing.");
+            let p1 = harness.compile(&program1, pool.clone()).expect(
+                "Fix: first compile must succeed; restore this invariant before continuing.",
+            );
             assert_eq!(
                 layout_cache.len(),
                 1,
@@ -1024,7 +1032,9 @@ mod tests {
                 "Fix: legacy handle creation must succeed; restore this invariant before continuing.",
             );
             p1.dispatch_persistent(&input_handles, &mut output_handles, None, [1, 1, 1])
-                .expect("Fix: first dispatch must succeed; restore this invariant before continuing.");
+                .expect(
+                    "Fix: first dispatch must succeed; restore this invariant before continuing.",
+                );
             let stats_after_miss = p1.bind_group_cache_stats();
             assert_eq!(
                 stats_after_miss.misses, 1,
@@ -1033,7 +1043,9 @@ mod tests {
             assert_eq!(stats_after_miss.hits, 0);
 
             p1.dispatch_persistent(&input_handles, &mut output_handles, None, [1, 1, 1])
-                .expect("Fix: second dispatch must succeed; restore this invariant before continuing.");
+                .expect(
+                    "Fix: second dispatch must succeed; restore this invariant before continuing.",
+                );
             let stats_after_hit = p1.bind_group_cache_stats();
             assert_eq!(
                 stats_after_hit.hits, 1,
@@ -1127,8 +1139,9 @@ mod tests {
                 [1, 1, 1],
                 vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
             );
-            let plan = execution_plan::plan(&program)
-                .expect("Fix: trimmed output program must plan; restore this invariant before continuing.");
+            let plan = execution_plan::plan(&program).expect(
+                "Fix: trimmed output program must plan; restore this invariant before continuing.",
+            );
             assert_eq!(
                 plan.strategy.readback,
                 ReadbackStrategy::Trimmed {
@@ -1178,7 +1191,8 @@ mod tests {
             let program = Program::wrapped(
                 vec![
                     BufferDecl::output("out", 0, DataType::U32).with_count(4096),
-                    BufferDecl::workgroup("scratch", 64, DataType::U32).with_kind(MemoryKind::Shared),
+                    BufferDecl::workgroup("scratch", 64, DataType::U32)
+                        .with_kind(MemoryKind::Shared),
                 ],
                 [64, 1, 1],
                 vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
@@ -1305,7 +1319,9 @@ mod tests {
                     compute: "vyre prerecord parity direct compute",
                 },
             )
-            .expect("Fix: direct persistent dispatch must succeed before comparing against replay.");
+            .expect(
+                "Fix: direct persistent dispatch must succeed before comparing against replay.",
+            );
 
             let prerecorded = pipeline
                 .prerecord_borrowed_dispatch(&[], [1, 1, 1])

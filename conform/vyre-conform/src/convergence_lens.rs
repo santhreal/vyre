@@ -54,27 +54,6 @@ pub fn run_fixpoint_to_convergence(
     max_iterations: u32,
 ) -> Result<Vec<Vec<u8>>, ConvergenceError> {
     let (current_name, next_name, words) = infer_fixpoint_buffers(program)?;
-    let changed_name = "fp_changed";
-    let bitset_program = vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint(
-        current_name,
-        next_name,
-        changed_name,
-        words,
-    );
-    let transfer_session = ExecutionRoute::open(program, backend)
-        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
-    let transfer_config = crate::dispatch_grid::config_for_program(program)
-        .map_err(ConvergenceError::IncompatibleLayout)?;
-    let bitset_session = ExecutionRoute::open(&bitset_program, backend)
-        .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
-    let bitset_config = crate::dispatch_grid::config_for_program(&bitset_program)
-        .map_err(ConvergenceError::IncompatibleLayout)?;
-
-    let mut state: Vec<Vec<u8>> = Vec::with_capacity(inputs.len());
-    state.extend(inputs.iter().cloned());
-    let mut changed_buf = vec![0u8; 4];
-    let mut rw_outputs: Vec<Vec<u8>> = Vec::with_capacity(program.buffers().len());
-
     let current_idx = index_of_buffer(program, current_name).ok_or_else(|| {
         ConvergenceError::IncompatibleLayout(format!(
             "buffer `{current_name}` not found in program"
@@ -83,6 +62,38 @@ pub fn run_fixpoint_to_convergence(
     let next_idx = index_of_buffer(program, next_name).ok_or_else(|| {
         ConvergenceError::IncompatibleLayout(format!("buffer `{next_name}` not found in program"))
     })?;
+    let changed_name = "fp_changed";
+    let bitset_program = vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint(
+        current_name,
+        next_name,
+        changed_name,
+        words,
+    );
+    let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
+    let transfer_session =
+        ExecutionRoute::open_with_representative_inputs(program, &borrowed_inputs, backend)
+            .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
+    let transfer_config = crate::dispatch_grid::config_for_program(program)
+        .map_err(ConvergenceError::IncompatibleLayout)?;
+
+    let mut state: Vec<Vec<u8>> = Vec::with_capacity(inputs.len());
+    state.extend(inputs.iter().cloned());
+    let mut changed_buf = vec![0u8; 4];
+    let mut rw_outputs: Vec<Vec<u8>> = Vec::with_capacity(program.buffers().len());
+
+    let bitset_representative_inputs = [
+        inputs.get(current_idx).map(Vec::as_slice).unwrap_or(&[]),
+        inputs.get(next_idx).map(Vec::as_slice).unwrap_or(&[]),
+        &changed_buf[..],
+    ];
+    let bitset_session = ExecutionRoute::open_with_representative_inputs(
+        &bitset_program,
+        &bitset_representative_inputs,
+        backend,
+    )
+    .map_err(|error| ConvergenceError::Dispatch(error.to_string()))?;
+    let bitset_config = crate::dispatch_grid::config_for_program(&bitset_program)
+        .map_err(ConvergenceError::IncompatibleLayout)?;
     for _ in 0..max_iterations {
         let borrowed: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
         let transfer_outputs = transfer_session

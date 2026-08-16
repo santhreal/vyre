@@ -58,7 +58,8 @@ fn an_explicit_grid_override_is_not_replaced_by_the_resolved_element_count() {
     let registration = vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("WGPU artifact target must be registered");
     let production =
-        ProductionSession::compile(&program, registration).expect("WGPU adapter required");
+        ProductionSession::compile_with_representative_inputs(&program, &borrowed, registration)
+            .expect("WGPU adapter required");
     let pinned = production
         .submit_with_invocation_grid(&borrowed, [1, 1, 1])
         .expect("a pinned grid must still submit");

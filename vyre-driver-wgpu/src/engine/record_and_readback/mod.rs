@@ -335,7 +335,7 @@ fn record_dispatch_unsubmitted_impl(
             if info.preserve_input_contents {
                 if let Some(bytes) = data {
                     if let Some((offset, len)) =
-                        write_padded_input(queue, b.buffer(), bytes, output_bytes)?
+                        write_padded_input(queue, b.buffer(), &info.name, bytes, output_bytes)?
                     {
                         clear_requests.push((info.binding, offset, len));
                     }
@@ -399,7 +399,9 @@ fn record_dispatch_unsubmitted_impl(
             let size_u64 = WGPU_NUMERIC.usize_to_u64(size, "input allocation bytes")?;
             let b = pool.acquire(size_u64, usage).map_err(pool_backend_error)?;
             if let Some(c) = contents {
-                if let Some((offset, len)) = write_padded_input(queue, b.buffer(), c, size)? {
+                if let Some((offset, len)) =
+                    write_padded_input(queue, b.buffer(), &info.name, c, size)?
+                {
                     clear_requests.push((info.binding, offset, len));
                 }
             } else {

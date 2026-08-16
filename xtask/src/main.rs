@@ -26,6 +26,12 @@ fn main() {
         sweep::run(&args[2..]);
         return;
     }
+    if name == "lego-audit" {
+        let mut runner_args = vec!["--subset".to_string(), "lego-audit".to_string()];
+        runner_args.extend(args[2..].iter().cloned());
+        sweep::run(&runner_args);
+        return;
+    }
     let Some(gate) = subcommands::find(name) else {
         eprintln!("Fix: unknown subcommand '{name}'. See --help.");
         process::exit(1);
@@ -34,16 +40,35 @@ fn main() {
     // A delegated gate carries its options in the crate that implements them,
     // so the request travels to the child and comes back as report notes. Every
     // other gate is answered here, before it reads the tree.
-    if gate::help_requested(&ctx.args) && gate.package().is_none() {
-        print!("{}", gate::render(name, &gate::usage_report(gate)));
+    if gate::help_requested(&ctx.args) && gate.package() == "xtask" {
+        print!("{}", gate::render(name, &gate::usage_report(&gate)));
         return;
     }
-    match gate.run(&ctx) {
+    let descriptor = xtask::gate_metadata::descriptor(name)
+        .expect("a registry gate always carries an authoritative descriptor");
+    let declared_artifacts = descriptor.artifacts;
+    let snapshot = xtask::artifact_gate::WorkspaceSnapshot::capture(&ctx.root);
+    let result = gate.run(&ctx);
+    let mutations = snapshot.detect_mutations(&ctx.root, name, declared_artifacts, ctx.write);
+    if !mutations.is_empty() {
+        for mutation in mutations {
+            eprintln!("Fix: {mutation}");
+        }
+        process::exit(1);
+    }
+    match result {
         Err(error) => {
             eprintln!("{error}");
             process::exit(1);
         }
         Ok(report) => {
+            let contract_failures = report.contract_failures(descriptor);
+            if !contract_failures.is_empty() {
+                for failure in contract_failures {
+                    eprintln!("Fix: gate `{name}` {failure}");
+                }
+                process::exit(1);
+            }
             if ctx.has("--print-toolchain") && report.findings.is_empty() {
                 return;
             }

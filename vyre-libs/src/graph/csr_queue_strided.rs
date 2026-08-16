@@ -28,7 +28,7 @@ use crate::graph::csr_frontier_step::{csr_queue_step_program, CsrQueueLanes};
 
 /// Canonical op id for row-strided queue-driven CSR expansion.
 pub const CSR_QUEUE_STRIDED_FORWARD_OP_ID: &str =
-    "vyre-primitives::graph::csr_queue_strided_forward_traverse";
+    "vyre-libs::graph::csr_queue_strided_forward_traverse";
 
 /// Fixed lane team assigned to each queued source row.
 pub const CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE: u32 = 32;

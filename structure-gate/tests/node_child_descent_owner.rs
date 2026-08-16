@@ -345,11 +345,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "back edge audit oracle, independent of the production walker by design",
     },
     Waiver {
-        path: "vyre-libs/tests/prefix_scan_contract.rs",
-        owner: "product-libraries",
-        reason: "per-lane store counter that folds each condition to decide whether a branch runs for that lane, so it must not descend into a body the lane never takes",
-    },
-    Waiver {
         path: "vyre-libs/tests/surface_contracts.rs",
         owner: "product-libraries",
         reason: "library surface contract walk owned by the libs lane, not converted in this lane",

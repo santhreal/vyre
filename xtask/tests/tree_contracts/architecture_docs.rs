@@ -13,7 +13,7 @@ use std::process::Command;
 use serde_json::{json, Value};
 
 use super::workspace_sources::workspace_root;
-use xtask::gate::{Gate, GateCtx, Report};
+use xtask::gate::{GateBehavior, GateCtx, Report};
 use xtask::gates::architecture_contract::ArchitectureContract;
 
 fn judge(root: &Path) -> Report {
@@ -197,7 +197,10 @@ fn retired_architecture_version_fails_closed() {
     let report = judge(temp.path());
     let text = rendered(&report);
     assert_eq!(report.count(), 1, "{text}");
-    assert!(text.contains("stale architecture phrase `version 0.6`"), "{text}");
+    assert!(
+        text.contains("stale architecture phrase `version 0.6`"),
+        "{text}"
+    );
 }
 
 /// WGPU cannot be presented as the primary production route when evidence selects CUDA.

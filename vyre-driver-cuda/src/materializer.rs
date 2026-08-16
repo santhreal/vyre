@@ -70,7 +70,7 @@ impl ArtifactMaterializer for CudaMaterializer {
         Ok(Box::new(CudaArtifactInstance {
             core: self
                 .descriptor
-                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES),
+                .instance(artifact, payload, materialize::NEUTRAL_MESSAGES)?,
             modules,
         }))
     }

@@ -116,9 +116,9 @@ const PROFILE_SEGMENTS: &[&str] = &["/debug/", "/release/"];
 /// real finding for a phantom is recoverable, and hiding a real one is not.
 #[must_use]
 pub fn unmeasured(output: &str) -> Option<String> {
-    for token in output.split(|character: char| {
-        character.is_whitespace() || matches!(character, '`' | '"' | '\'')
-    }) {
+    for token in output
+        .split(|character: char| character.is_whitespace() || matches!(character, '`' | '"' | '\''))
+    {
         let candidate = token.trim_end_matches([',', ')', ';', ':', '.']);
         if !candidate.starts_with('/') {
             continue;
@@ -187,11 +187,7 @@ mod tests {
     fn an_empty_variable_is_not_an_answer() {
         let root = tempfile::tempdir().expect("temporary directory");
 
-        let chosen = resolve(
-            Some(OsString::new()),
-            root.path(),
-            Some(OsString::new()),
-        );
+        let chosen = resolve(Some(OsString::new()), root.path(), Some(OsString::new()));
 
         assert_eq!(chosen, PathBuf::from("cargo"));
     }

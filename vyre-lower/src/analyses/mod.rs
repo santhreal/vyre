@@ -5,6 +5,10 @@
 //! semantics or descriptor structure. Concrete emission strategy lives in the
 //! owning emitter or driver.
 
+pub mod affine_access_map;
+pub mod resource_bounds;
+pub mod target_metrics;
+
 pub(crate) mod access_kind;
 pub mod alias_facts;
 pub(crate) mod bank_conflict;
@@ -155,3 +159,18 @@ pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport
 pub use workgroup_uniform::{analyze as analyze_workgroup_uniform, WorkgroupUniformReport};
 pub use workgroup_uniform::{BranchEmitHint, BranchHint};
 pub use workgroup_uniform::{BranchSite, BranchUniformity};
+pub use affine_access_map::{
+    AffineAccessMap, AffineMapError, ConsumerAbiRequirement, DimExtent, SliceSpec, StrideExpr,
+};
+pub use bank_conflict::{
+    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase,
+    AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation, PhaseConflictReport,
+    TargetBankGeometry,
+};
+pub use resource_bounds::{
+    verify_candidate_legality, CandidateLegalityReport, LegalityCheck, ResourceBounds,
+    RetainedFallbacks, TailHandling, TargetResourceLimits,
+};
+pub use target_metrics::{
+    rank_measured_candidates, CandidateRanking, TargetEmittedMetrics,
+};

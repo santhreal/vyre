@@ -1,22 +1,19 @@
 //! Production source files stay under a per-file line cap.
 //!
-//! Two ratchets and two caps. A file under a core crate carries the cap it was
-//! measured at, plus five percent, so a typo fix lands and a two hundred line
-//! addition does not. Everything else gets a flat cap. Test trees, benches, fuzz
-//! targets and the task runners get a looser one because a grammar table or a
-//! catalog dump is legitimately long.
+//! One hard ceiling per production or harness class, plus exact legacy rows
+//! that can only move downward. A measured row grants no growth headroom.
 
 use std::path::PathBuf;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Flat cap for a production file outside the core crates.
-const MAX_LINES: usize = 3000;
+const MAX_LINES: usize = 1000;
 /// Flat cap for a production file under a core crate with no measured row.
-const CORE_MAX_LINES: usize = 2500;
-/// Cap for tests, benches, fuzz targets, the conform tree and the task runners.
-const TEST_MAX_LINES: usize = 8000;
+const CORE_MAX_LINES: usize = 1000;
+/// Cap for tests, benches, fuzz targets, the conform tree and task runners.
+const TEST_MAX_LINES: usize = 2000;
 
 /// Core crates whose files carry measured caps.
 const CORE_ROOTS: &[&str] = &[
@@ -98,15 +95,7 @@ const AUDIT_CEILINGS: &[(&str, usize)] = &[("vyre-driver-cuda/src/codegen/mod.rs
 /// Production source files stay under their cap.
 pub struct FileSize;
 
-impl Gate for FileSize {
-    fn name(&self) -> &'static str {
-        "file-size"
-    }
-
-    fn help(&self) -> &'static str {
-        "source files over their per-file line cap, and ratchet rows that name nothing"
-    }
-
+impl crate::gate::GateBehavior for FileSize {
     fn usage(&self) -> &'static [&'static str] {
         &["--report prints every file over the cap instead of the ratchet rows alone"]
     }
@@ -133,6 +122,7 @@ impl Gate for FileSize {
             }
             rows.push((lines, cap, path.clone()));
         }
+        report.cover_complete("source files", rows.len());
         report.note(format!("{} source files scanned", rows.len()));
         if ctx.has("--report") {
             rows.sort_by(|left, right| right.0.cmp(&left.0).then(left.2.cmp(&right.2)));
@@ -184,15 +174,9 @@ fn cap_from(path: &str, core: &[(&str, usize)], audit: &[(&str, usize)]) -> usiz
         return TEST_MAX_LINES;
     }
     if is_core(path) {
-        return match measured(core, path) {
-            Some(base) => base + base.div_ceil(20),
-            None => CORE_MAX_LINES,
-        };
+        return measured(core, path).unwrap_or(CORE_MAX_LINES);
     }
-    match measured(audit, path) {
-        Some(base) => base + base.div_ceil(20),
-        None => MAX_LINES,
-    }
+    measured(audit, path).unwrap_or(MAX_LINES)
 }
 
 fn measured(rows: &[(&str, usize)], path: &str) -> Option<usize> {
@@ -221,13 +205,12 @@ fn is_core(path: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// WHY: the five percent headroom is what lets a typo fix land. It rounds up,
-    /// so a small file still gets at least one line of slack, and a cap that
-    /// rounded down would make the gate fire on formatting.
+    /// WHY: a measured legacy row is a ceiling, not a growth allowance. Any
+    /// increase must fail so organization improves monotonically.
     #[test]
-    fn headroom_rounds_up() {
-        assert_eq!(cap_for("vyre-libs/src/decode/inflate.rs"), 554 + 28);
-        assert_eq!(cap_for("vyre-driver-cuda/src/codegen/mod.rs"), 1160 + 58);
+    fn measured_rows_grant_no_headroom() {
+        assert_eq!(cap_for("vyre-libs/src/decode/inflate.rs"), 554);
+        assert_eq!(cap_for("vyre-driver-cuda/src/codegen/mod.rs"), 1160);
     }
 
     /// WHY: the core ratchet has to win over the audit ceiling, because it is the
@@ -239,8 +222,8 @@ mod tests {
     fn the_core_ratchet_wins_over_the_audit_ceiling() {
         let path = "vyre-foundation/src/visit/walk.rs";
         assert!(is_core(path));
-        assert_eq!(cap_from(path, &[(path, 400)], &[(path, 2000)]), 400 + 20);
-        assert_eq!(cap_for(path), 529 + 27);
+        assert_eq!(cap_from(path, &[(path, 400)], &[(path, 2000)]), 400);
+        assert_eq!(cap_for(path), 529);
     }
 
     /// WHY: the resident work queue left the exclusion when the runtime
@@ -263,7 +246,10 @@ mod tests {
             cap_for("vyre-foundation/src/optimizer/passes/fusion_tests.rs"),
             TEST_MAX_LINES
         );
-        assert_eq!(cap_for("xtask/src/gates/hygiene_matrix.rs"), TEST_MAX_LINES);
+        assert_eq!(
+            cap_for("xtask/src/gates/hygiene_matrix/mod.rs"),
+            TEST_MAX_LINES
+        );
         assert_eq!(cap_for("conform/vyre-conform/src/lib.rs"), TEST_MAX_LINES);
     }
 }

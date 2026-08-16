@@ -9,7 +9,7 @@
 //!
 //! The IR builder, the host oracle, the fixture registration and the
 //! family-scoped entry point all live here. The op id is
-//! `vyre-primitives::decode::ziftsieve_literal_copy`.
+//! `vyre-libs::decode::ziftsieve_literal_copy`.
 
 use vyre_foundation::composition::wrap_anonymous_region;
 
@@ -20,7 +20,7 @@ use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_bu
 const FAMILY_PREFIX: &str = "decode_ziftsieve";
 
 /// Canonical primitive op id.
-pub const OP_ID: &str = "vyre-primitives::decode::ziftsieve_literal_copy";
+pub const OP_ID: &str = "vyre-libs::decode::ziftsieve_literal_copy";
 /// One invocation processes one indexed LZ4 sequence.
 pub const WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 /// Defensive upper bound for one compressed block.
@@ -370,7 +370,8 @@ pub fn ziftsieve_gpu(buffers: ZiftsieveBuffers<'_>, extents: ZiftsieveExtents) -
 }
 
 fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
-    let input = vyre_primitives::wire::pack_u32_slice(&[0x10, b'A' as u32, 0x20, b'B' as u32, b'C' as u32]);
+    let input =
+        vyre_primitives::wire::pack_u32_slice(&[0x10, b'A' as u32, 0x20, b'B' as u32, b'C' as u32]);
     let seq_literal_start = vyre_primitives::wire::pack_u32_slice(&[1, 3]);
     let seq_literal_len = vyre_primitives::wire::pack_u32_slice(&[1, 2]);
     let seq_literal_offset = vyre_primitives::wire::pack_u32_slice(&[0, 1]);
@@ -539,7 +540,8 @@ mod primitive_tests {
             Value::from(vyre_primitives::wire::pack_u32_slice(seq_offsets)),
             Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
                 sentinel;
-                max_output.max(1) as usize
+                max_output.max(1)
+                    as usize
             ])),
         ];
         let outputs = vyre_reference::reference_eval(&program, &inputs)

@@ -245,12 +245,26 @@ pub(crate) fn step_nodes_frame<'a>(
         }
         Node::TileDecl { name, tile } => {
             let elements = vec![Value::Float(0.0); tile.element_count()];
-            invocation.locals.bind(name.as_str(), Value::Array(elements))?;
+            invocation
+                .locals
+                .bind(name.as_str(), Value::Array(elements))?;
         }
-        Node::TileLoad { tile, tile_type, buffer, origin, layout } => {
+        Node::TileLoad {
+            tile,
+            tile_type,
+            buffer,
+            origin,
+            layout,
+        } => {
             let mut origin_coords = Vec::with_capacity(origin.len());
             for expr in origin {
-                let v = eval_expr(expr, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                let v = eval_expr(
+                    expr,
+                    invocation,
+                    memory,
+                    #[cfg(feature = "subgroup-ops")]
+                    snapshots,
+                )?;
                 let coord = v.try_as_u32().ok_or_else(|| {
                     ReferenceError::new("tile load origin coord must be u32".to_string())
                 })?;
@@ -260,10 +274,20 @@ pub(crate) fn step_nodes_frame<'a>(
             let elements = crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout);
             invocation.locals.bind(tile.as_str(), Value::Array(elements))?;
         }
-        Node::TileStore { buffer, origin, tile } => {
+        Node::TileStore {
+            buffer,
+            origin,
+            tile,
+        } => {
             let mut origin_coords = Vec::with_capacity(origin.len());
             for expr in origin {
-                let v = eval_expr(expr, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                let v = eval_expr(
+                    expr,
+                    invocation,
+                    memory,
+                    #[cfg(feature = "subgroup-ops")]
+                    snapshots,
+                )?;
                 let coord = v.try_as_u32().ok_or_else(|| {
                     ReferenceError::new("tile store origin coord must be u32".to_string())
                 })?;
@@ -293,7 +317,12 @@ pub(crate) fn step_nodes_frame<'a>(
             crate::execution::tile::matmul(&mut acc_elems, &a_elems, &b_elems);
             invocation.locals.assign(acc.as_str(), Value::Array(acc_elems))?;
         }
-        Node::TileReduce { out, tile, op, axis } => {
+        Node::TileReduce {
+            out,
+            tile,
+            op,
+            axis,
+        } => {
             let tile_val = invocation.locals.local(tile.as_str()).ok_or_else(|| {
                 ReferenceError::new(format!("tile `{tile}` not found for reduce"))
             })?;
@@ -322,27 +351,47 @@ pub(crate) fn step_nodes_frame<'a>(
             for idx in 0..max_len {
                 invocation.locals.push_scope();
                 for (i, input) in inputs.iter().enumerate() {
-                    let elem = input_arrays[i].get(idx).cloned().unwrap_or(Value::Float(0.0));
+                    let elem = input_arrays[i]
+                        .get(idx)
+                        .cloned()
+                        .unwrap_or(Value::Float(0.0));
                     invocation.locals.bind(input.as_str(), elem)?;
                 }
                 for child in body {
                     match child {
                         Node::Let { name, value } => {
-                            let v = eval_expr(value, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                            let v = eval_expr(
+                                value,
+                                invocation,
+                                memory,
+                                #[cfg(feature = "subgroup-ops")]
+                                snapshots,
+                            )?;
                             invocation.locals.bind(name.as_str(), v)?;
                         }
                         Node::Assign { name, value } => {
-                            let v = eval_expr(value, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                            let v = eval_expr(
+                                value,
+                                invocation,
+                                memory,
+                                #[cfg(feature = "subgroup-ops")]
+                                snapshots,
+                            )?;
                             invocation.locals.assign(name.as_str(), v)?;
                         }
                         _ => {}
                     }
                 }
-                let out_val = invocation.locals.local(out.as_str()).unwrap_or(Value::Float(0.0));
+                let out_val = invocation
+                    .locals
+                    .local(out.as_str())
+                    .unwrap_or(Value::Float(0.0));
                 out_elems.push(out_val);
                 invocation.locals.pop_scope();
             }
-            invocation.locals.bind(out.as_str(), Value::Array(out_elems))?;
+            invocation
+                .locals
+                .bind(out.as_str(), Value::Array(out_elems))?;
         }
         Node::Opaque(extension) => {
             return Err(ReferenceError::new(format!(

@@ -75,6 +75,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `fusion_stress` | `vyre-foundation/tests/fusion_stress.rs` | None | `./cargo_full test -p vyre-foundation --test fusion_stress` |
 | `test` | `fusion_substitute_into_subgroup_operand` | `vyre-foundation/tests/fusion_substitute_into_subgroup_operand.rs` | None | `./cargo_full test -p vyre-foundation --test fusion_substitute_into_subgroup_operand` |
 | `test` | `fusion_workgroup_geometry` | `vyre-foundation/tests/fusion_workgroup_geometry.rs` | None | `./cargo_full test -p vyre-foundation --test fusion_workgroup_geometry` |
+| `test` | `geometry_foundation_contracts` | `vyre-foundation/tests/geometry_foundation_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test geometry_foundation_contracts` |
 | `test` | `graph_invariants` | `vyre-foundation/tests/graph_invariants.rs` | None | `./cargo_full test -p vyre-foundation --test graph_invariants` |
 | `test` | `inline_buffer_reference_arguments` | `vyre-foundation/tests/inline_buffer_reference_arguments.rs` | None | `./cargo_full test -p vyre-foundation --test inline_buffer_reference_arguments` |
 | `test` | `inline_callee_local_rename_in_trap_and_async` | `vyre-foundation/tests/inline_callee_local_rename_in_trap_and_async.rs` | None | `./cargo_full test -p vyre-foundation --test inline_callee_local_rename_in_trap_and_async` |
@@ -154,6 +155,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `tail_duplication_scope` | `vyre-foundation/tests/tail_duplication_scope.rs` | None | `./cargo_full test -p vyre-foundation --test tail_duplication_scope` |
 | `test` | `terminal_wire_round_trip` | `vyre-foundation/tests/terminal_wire_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test terminal_wire_round_trip` |
 | `test` | `text_format_boundary` | `vyre-foundation/tests/text_format_boundary.rs` | None | `./cargo_full test -p vyre-foundation --test text_format_boundary` |
+| `test` | `tile_nodes_contracts` | `vyre-foundation/tests/tile_nodes_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test tile_nodes_contracts` |
 | `test` | `transform_rewrites_still_fire` | `vyre-foundation/tests/transform_rewrites_still_fire.rs` | None | `./cargo_full test -p vyre-foundation --test transform_rewrites_still_fire` |
 | `test` | `type_boundary_adversarial` | `vyre-foundation/tests/type_boundary_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test type_boundary_adversarial` |
 | `test` | `v055_uniform_exit` | `vyre-foundation/tests/v055_uniform_exit.rs` | None | `./cargo_full test -p vyre-foundation --test v055_uniform_exit` |

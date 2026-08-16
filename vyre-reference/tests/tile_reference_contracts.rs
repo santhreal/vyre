@@ -1,8 +1,8 @@
 //! Contract tests for reference interpreter execution of Tile operations.
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency,
-    SubgroupReduceOp, Tile,
+    BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, SubgroupReduceOp,
+    Tile,
 };
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
@@ -15,10 +15,7 @@ fn decode_f32(bytes: &[u8]) -> Vec<f32> {
 }
 
 fn encode_f32(values: &[f32]) -> Vec<u8> {
-    values
-        .iter()
-        .flat_map(|v| v.to_ne_bytes())
-        .collect()
+    values.iter().flat_map(|v| v.to_ne_bytes()).collect()
 }
 
 #[test]
@@ -29,9 +26,24 @@ fn reference_eval_tile_matmul_2x2() {
     let a_data = vec![1.0f32, 2.0, 3.0, 4.0];
     let b_data = vec![5.0f32, 6.0, 7.0, 8.0];
 
-    let tile_a = Tile::new(DataType::F32, vec![2, 2], Layout::RowMajor, Residency::Register);
-    let tile_b = Tile::new(DataType::F32, vec![2, 2], Layout::RowMajor, Residency::Register);
-    let tile_c = Tile::new(DataType::F32, vec![2, 2], Layout::RowMajor, Residency::Register);
+    let tile_a = Tile::new(
+        DataType::F32,
+        vec![2, 2],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+    let tile_b = Tile::new(
+        DataType::F32,
+        vec![2, 2],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+    let tile_c = Tile::new(
+        DataType::F32,
+        vec![2, 2],
+        Layout::RowMajor,
+        Residency::Register,
+    );
 
     let prog = Program::wrapped(
         vec![
@@ -42,8 +54,20 @@ fn reference_eval_tile_matmul_2x2() {
         [1, 1, 1],
         vec![
             Node::tile_decl("c", tile_c),
-            Node::tile_load("t_a", tile_a, "a", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor),
-            Node::tile_load("t_b", tile_b, "b", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor),
+            Node::tile_load(
+                "t_a",
+                tile_a,
+                "a",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::RowMajor,
+            ),
+            Node::tile_load(
+                "t_b",
+                tile_b,
+                "b",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::RowMajor,
+            ),
             Node::tile_matmul("c", "t_a", "t_b"),
             Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
         ],
@@ -66,7 +90,12 @@ fn reference_eval_tile_matmul_2x2() {
 #[test]
 fn reference_eval_tile_reduce_and_elementwise() {
     let a_data = vec![1.0f32, 5.0, 2.0, 8.0];
-    let tile_a = Tile::new(DataType::F32, vec![2, 2], Layout::RowMajor, Residency::Register);
+    let tile_a = Tile::new(
+        DataType::F32,
+        vec![2, 2],
+        Layout::RowMajor,
+        Residency::Register,
+    );
 
     let prog = Program::wrapped(
         vec![
@@ -75,7 +104,13 @@ fn reference_eval_tile_reduce_and_elementwise() {
         ],
         [1, 1, 1],
         vec![
-            Node::tile_load("t_a", tile_a, "a", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor),
+            Node::tile_load(
+                "t_a",
+                tile_a,
+                "a",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::RowMajor,
+            ),
             Node::tile_reduce("max_per_row", "t_a", SubgroupReduceOp::Max, 1),
             Node::tile_store("out", vec![Expr::u32(0)], "max_per_row"),
         ],
@@ -83,10 +118,7 @@ fn reference_eval_tile_reduce_and_elementwise() {
 
     let outputs = reference_eval(
         &prog,
-        &[
-            Value::from(encode_f32(&a_data)),
-            Value::from(vec![0u8; 8]),
-        ],
+        &[Value::from(encode_f32(&a_data)), Value::from(vec![0u8; 8])],
     )
     .expect("reference_eval failed");
 
@@ -97,7 +129,12 @@ fn reference_eval_tile_reduce_and_elementwise() {
 #[test]
 fn reference_eval_tile_elementwise_scaling() {
     let a_data = vec![2.0f32, 4.0, 6.0, 8.0];
-    let tile_a = Tile::new(DataType::F32, vec![4], Layout::RowMajor, Residency::Register);
+    let tile_a = Tile::new(
+        DataType::F32,
+        vec![4],
+        Layout::RowMajor,
+        Residency::Register,
+    );
 
     let prog = Program::wrapped(
         vec![
@@ -121,10 +158,7 @@ fn reference_eval_tile_elementwise_scaling() {
 
     let outputs = reference_eval(
         &prog,
-        &[
-            Value::from(encode_f32(&a_data)),
-            Value::from(vec![0u8; 16]),
-        ],
+        &[Value::from(encode_f32(&a_data)), Value::from(vec![0u8; 16])],
     )
     .expect("reference_eval failed");
 
@@ -142,7 +176,12 @@ fn reference_eval_tile_column_major_layout() {
     // (1, 1) -> local linear index (1*1 + 1*2) = 3 => 4.0
     // In tile array elements: [1.0, 3.0, 2.0, 4.0]
     let a_data = vec![1.0f32, 2.0, 3.0, 4.0];
-    let tile_col = Tile::new(DataType::F32, vec![2, 2], Layout::ColumnMajor, Residency::Register);
+    let tile_col = Tile::new(
+        DataType::F32,
+        vec![2, 2],
+        Layout::ColumnMajor,
+        Residency::Register,
+    );
 
     let prog = Program::wrapped(
         vec![
@@ -151,17 +190,20 @@ fn reference_eval_tile_column_major_layout() {
         ],
         [1, 1, 1],
         vec![
-            Node::tile_load("t_col", tile_col, "a", vec![Expr::u32(0), Expr::u32(0)], Layout::ColumnMajor),
+            Node::tile_load(
+                "t_col",
+                tile_col,
+                "a",
+                vec![Expr::u32(0), Expr::u32(0)],
+                Layout::ColumnMajor,
+            ),
             Node::tile_store("out", vec![Expr::u32(0)], "t_col"),
         ],
     );
 
     let outputs = reference_eval(
         &prog,
-        &[
-            Value::from(encode_f32(&a_data)),
-            Value::from(vec![0u8; 16]),
-        ],
+        &[Value::from(encode_f32(&a_data)), Value::from(vec![0u8; 16])],
     )
     .expect("reference_eval failed");
 

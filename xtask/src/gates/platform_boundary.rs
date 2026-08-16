@@ -7,7 +7,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 
 const PLATFORM_ROOTS: &[&str] = &[
     "vyre-foundation",
@@ -33,15 +33,7 @@ struct Hit {
 /// Reports a downstream consumer name written into a platform crate's prose.
 pub struct PlatformBoundary;
 
-impl Gate for PlatformBoundary {
-    fn name(&self) -> &'static str {
-        "platform-boundary"
-    }
-
-    fn help(&self) -> &'static str {
-        "Reject consumer names in platform crate docs and comments"
-    }
-
+impl crate::gate::GateBehavior for PlatformBoundary {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut hits = Vec::new();
         let mut errors = Vec::new();
@@ -53,6 +45,7 @@ impl Gate for PlatformBoundary {
             errors,
             "make every platform source and doc file readable; a file this gate cannot read is a file it cannot judge",
         );
+        report.cover_complete("platform source roots", PLATFORM_ROOTS.len());
         report.note(format!(
             "scanned {} platform crates for {} consumer names",
             PLATFORM_ROOTS.len(),

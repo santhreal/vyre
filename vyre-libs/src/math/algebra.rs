@@ -6,7 +6,9 @@
 //! Every op here is a pure Category A composition over foundation IR primitives.
 
 use crate::builder::{build_elementwise_unary, BuildOptions};
-use crate::plumbing::operand::tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
+use crate::plumbing::operand::tensor_ref::{
+    check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError,
+};
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

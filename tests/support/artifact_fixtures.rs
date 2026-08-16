@@ -105,9 +105,17 @@ pub(crate) fn graph_over(
 /// request digest, so two fixtures that differ only in seed compile to different
 /// artifact identities.
 pub(crate) fn compile_graph(graph: ProgramGraph, facts_seed: u8) -> Artifact {
+    let constant_identities = graph
+        .values()
+        .iter()
+        .filter(|value| value.contract.lifetime == ValueLifetime::Constant)
+        .map(|value| (value.id, Digest([facts_seed.wrapping_add(1); 32])))
+        .collect();
+    let mut facts = ExternalFacts::new(Digest([facts_seed; 32]), BTreeMap::new());
+    facts.constant_identities = constant_identities;
     let request = CompileRequest::new(
         graph,
-        ExternalFacts::new(Digest([facts_seed; 32]), BTreeMap::new()),
+        facts,
         DeviceFacts::unknown(),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
         1_000_000,

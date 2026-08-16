@@ -7,18 +7,18 @@
 //! - The contraction $G_1 \cdot G_2 \cdot \dots \cdot G_n$ computes
 //!   the "fusion pressure" or "total shared volume" across the chain.
 //!
-//! This module uses `vyre-primitives::math::tensor_train::tt_contract_step`
+//! This module uses `vyre-libs::math::tensor_train::tt_contract_step`
 //! (the same Program shipped to users) to analyze Vyre's own IR.
 
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::math::tensor_train::tt_contract_step;
 #[cfg(test)]
 use crate::math::tensor_train::tt_contract_step_cpu;
+use crate::plumbing::host::scratch::reserve_vec_capacity;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 const FIXED_ONE: u32 = 1 << 16;
 const MAX_TT_DISPATCH_CELLS: u32 = 1 << 20;

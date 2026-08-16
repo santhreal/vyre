@@ -157,12 +157,7 @@ fn fusion_pair_graph(
     consumer_workgroup: [u32; 3],
     producer_pin: GeometryPin,
 ) -> ProgramGraph {
-    fn pair_program(
-        input: &str,
-        output: &str,
-        workgroup: [u32; 3],
-        pin: GeometryPin,
-    ) -> Program {
+    fn pair_program(input: &str, output: &str, workgroup: [u32; 3], pin: GeometryPin) -> Program {
         let mut buffers = vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
             BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
@@ -209,7 +204,12 @@ fn fusion_pair_graph(
     graph
         .add_node(
             "consumer",
-            pair_program("intermediate", "output", consumer_workgroup, GeometryPin::None),
+            pair_program(
+                "intermediate",
+                "output",
+                consumer_workgroup,
+                GeometryPin::None,
+            ),
             vec![GraphInput {
                 buffer: "intermediate".into(),
                 value: intermediate[0],
@@ -256,6 +256,21 @@ fn request_with(
 
 fn request(max_artifact_bytes: u64) -> vyre_megakernel::ValidatedCompileRequest {
     request_with(facts(), budget(), max_artifact_bytes)
+}
+
+fn request_with_representative_inputs(
+    representative_inputs: BTreeMap<vyre_foundation::ir::GraphValueId, Vec<u8>>,
+) -> vyre_megakernel::ValidatedCompileRequest {
+    CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(representative_inputs)
+    .validate()
+    .expect("fixture request with representative inputs must validate")
 }
 
 /// WHY: artifact encoding must preserve typed graph identities across every stage.
@@ -432,6 +447,20 @@ fn external_facts_and_search_budget_change_artifact_identity() {
     ))
     .unwrap();
     assert_ne!(baseline.digest(), searched.digest());
+
+    let with_representative =
+        BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![1u8; 68])]);
+    let representative_a = compile(&request_with_representative_inputs(
+        with_representative.clone(),
+    ))
+    .unwrap();
+    assert_ne!(baseline.digest(), representative_a.digest());
+
+    let with_different_bytes =
+        BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![2u8; 68])]);
+    let representative_b =
+        compile(&request_with_representative_inputs(with_different_bytes)).unwrap();
+    assert_ne!(representative_a.digest(), representative_b.digest());
 }
 
 /// WHY: missing external semantic facts must fail before artifact construction.
@@ -475,6 +504,111 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         diagnostic_path(&error),
         Some("request.facts.constant_identities.1")
     );
+}
+
+/// WHY: unknown representative input graph values and byte length mismatches fail validation.
+#[test]
+fn unknown_and_mismatched_representative_inputs_have_stable_diagnostics() {
+    let unknown_value = BTreeMap::from([(vyre_foundation::ir::GraphValueId(999), vec![0u8; 68])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(unknown_value)
+    .validate()
+    .err()
+    .expect("unknown representative value must fail validation");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC027_UNKNOWN_REPRESENTATIVE_INPUT"
+    );
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("request.representative_inputs.999")
+    );
+
+    let produced_value = BTreeMap::from([(vyre_foundation::ir::GraphValueId(3), vec![0u8; 68])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(produced_value)
+    .validate()
+    .err()
+    .expect("graph-produced representative input must fail validation");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC027_UNKNOWN_REPRESENTATIVE_INPUT"
+    );
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("request.representative_inputs.3")
+    );
+
+    let mismatched_length = BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![0u8; 12])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        facts(),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(mismatched_length)
+    .validate()
+    .err()
+    .expect("representative input length mismatch must fail validation");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC028_REPRESENTATIVE_INPUT_LENGTH_MISMATCH"
+    );
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("request.representative_inputs.0")
+    );
+}
+
+/// WHY: constant resources are caller-supplied host inputs during measurement,
+/// so their authenticated identity does not replace their representative bytes.
+#[test]
+fn constant_representative_inputs_are_accepted() {
+    let constant_input = BTreeMap::from([(vyre_foundation::ir::GraphValueId(1), vec![0xCD; 68])]);
+    let request = request_with_representative_inputs(constant_input);
+    assert_eq!(
+        request
+            .representative_inputs()
+            .get(&vyre_foundation::ir::GraphValueId(1))
+            .map(Vec::as_slice),
+        Some(&[0xCD; 68][..])
+    );
+}
+
+/// WHY: representative-input validation must propagate static-size failures
+/// instead of treating an unaddressable input as if no size contract existed.
+#[test]
+fn representative_input_size_overflow_fails_closed() {
+    let mut oversized_facts = facts();
+    oversized_facts
+        .symbolic_bindings
+        .insert("items".to_string(), u64::MAX);
+    let representative_inputs = BTreeMap::from([(vyre_foundation::ir::GraphValueId(0), vec![0u8])]);
+    let error = CompileRequest::new(
+        whole_graph(),
+        oversized_facts,
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .with_representative_inputs(representative_inputs)
+    .validate()
+    .err()
+    .expect("unaddressable representative input size must fail validation");
+    assert_eq!(error.diagnostic.code.as_str(), "MKC011_RESOURCE_OVERFLOW");
 }
 
 /// WHY: an unbounded or disabled mandatory search dimension is not a valid request.
@@ -605,6 +739,215 @@ fn a_cuttable_grid_fence_compiles_without_cooperative_launch() {
             "Fix: no segment may carry the fence it was split at"
         );
     }
+}
+
+/// WHY: a fence split must carry every mutable buffer whose first write occurs
+/// before a later segment reads it. Ordering the launches through one retained
+/// buffer is insufficient when a sibling backend-allocated carrier crosses the
+/// same fence.
+#[test]
+fn grid_fence_split_carries_every_mutable_sibling_value() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("state", 0, DataType::U32).with_count(1),
+            BufferDecl::read_write("scratch", 1, DataType::U32).with_count(1),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("scratch", Expr::u32(0), Expr::u32(2)),
+            Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync),
+            Node::store(
+                "state",
+                Expr::u32(0),
+                Expr::bitor(
+                    Expr::load("state", Expr::u32(0)),
+                    Expr::load("scratch", Expr::u32(0)),
+                ),
+            ),
+        ],
+    );
+    let graph = ProgramGraph::from_program("sibling_carriers", program).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("every mutable sibling carrier must survive the launch split");
+    let nodes = validated.graph().nodes();
+    assert_eq!(nodes.len(), 2);
+    let produced = nodes[0]
+        .output_ports
+        .iter()
+        .position(|port| port.buffer == "scratch")
+        .and_then(|position| nodes[0].outputs.get(position))
+        .copied()
+        .expect("the producing segment must publish scratch");
+    let consumed = nodes[1]
+        .inputs
+        .iter()
+        .find(|input| input.buffer == "scratch")
+        .map(|input| input.value)
+        .expect("the consuming segment must bind scratch");
+    assert_eq!(consumed, produced);
+    assert_eq!(
+        nodes[1]
+            .output_ports
+            .iter()
+            .find(|port| port.buffer == "scratch")
+            .map(|port| port.contract.lifetime),
+        Some(vyre_foundation::ir::ValueLifetime::Retained),
+        "an internal sibling carrier must remain retained rather than become a caller output"
+    );
+}
+
+/// WHY: the first segment can publish the value that orders later launches.
+/// Requiring pre-existing retained input state rejects valid producer-consumer
+/// pipelines whose only crossing value is backend allocated.
+#[test]
+fn grid_fence_split_accepts_a_first_write_carrier_without_retained_input() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(1),
+            BufferDecl::read_write("intermediate", 1, DataType::U32)
+                .with_count(1)
+                .with_pipeline_live_out(true),
+            BufferDecl::output("out", 2, DataType::U32).with_count(1),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store(
+                "intermediate",
+                Expr::u32(0),
+                Expr::load("input", Expr::u32(0)),
+            ),
+            Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::load("intermediate", Expr::u32(0)),
+            ),
+        ],
+    );
+    let graph = ProgramGraph::from_program("first_write_carrier", program).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("a first-write carrier must order split launches");
+    let nodes = validated.graph().nodes();
+    assert_eq!(nodes.len(), 2);
+    let produced = nodes[0]
+        .output_ports
+        .iter()
+        .position(|port| port.buffer == "intermediate")
+        .and_then(|position| nodes[0].outputs.get(position))
+        .copied()
+        .expect("the first segment must publish the carrier");
+    assert_eq!(
+        nodes[1]
+            .inputs
+            .iter()
+            .find(|input| input.buffer == "intermediate")
+            .map(|input| input.value),
+        Some(produced)
+    );
+}
+
+/// WHY: a caller-visible output can be written before a whole-grid fence and
+/// read after it. Intermediate segments must carry its bytes as retained state,
+/// while the final segment must preserve the public Output lifetime.
+#[test]
+fn grid_fence_split_preserves_a_crossing_caller_output() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("state", 0, DataType::U32).with_count(1),
+            BufferDecl::output("result", 1, DataType::U32).with_count(1),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store("result", Expr::u32(0), Expr::u32(2)),
+            Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync),
+            Node::store(
+                "state",
+                Expr::u32(0),
+                Expr::bitor(
+                    Expr::load("state", Expr::u32(0)),
+                    Expr::load("result", Expr::u32(0)),
+                ),
+            ),
+        ],
+    );
+    let graph = ProgramGraph::from_program("caller_output_carrier", program).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("a caller output crossing a fence must survive the launch split");
+    let nodes = validated.graph().nodes();
+    assert_eq!(nodes.len(), 2);
+    let produced = nodes[0]
+        .output_ports
+        .iter()
+        .position(|port| port.buffer == "result")
+        .and_then(|position| nodes[0].outputs.get(position))
+        .copied()
+        .expect("the producing segment must publish the output carrier");
+    assert_eq!(
+        nodes[1]
+            .inputs
+            .iter()
+            .find(|input| input.buffer == "result")
+            .map(|input| input.value),
+        Some(produced)
+    );
+    let final_port = nodes[1]
+        .output_ports
+        .iter()
+        .find(|port| port.buffer == "result")
+        .expect("the final segment must publish the caller output");
+    assert_eq!(
+        final_port.contract.lifetime,
+        vyre_foundation::ir::ValueLifetime::Output
+    );
+    assert_eq!(final_port.retained_successor_of, Some(produced));
+}
+
+/// WHY: cooperative dispatch already enforces a whole-grid fence in one kernel.
+/// Splitting that kernel would turn backend-allocated in-place pipeline storage
+/// into a retained host input and change the artifact ABI.
+#[test]
+fn a_cooperative_device_preserves_a_cuttable_grid_fence() {
+    let graph = ProgramGraph::from_program("fence", fenced_program(false)).unwrap();
+    let validated = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        device_with(|_| ()).with_cooperative_launch(true),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("Fix: a cooperative device must keep and admit the fenced kernel");
+    let nodes = validated.graph().nodes();
+    assert_eq!(
+        nodes.len(),
+        1,
+        "cooperative execution needs no launch split"
+    );
+    assert!(
+        vyre_megakernel::grid_sync::requires_grid_sync(&nodes[0].program),
+        "the target must still see the fence and select cooperative direct dispatch"
+    );
 }
 
 /// WHY: 150.11. A whole-grid fence runs in one kernel only under a cooperative
@@ -743,12 +1086,12 @@ fn resource_shape_overflow_has_stable_diagnostic() {
     assert_eq!(error.diagnostic.code.as_str(), "MKC011_RESOURCE_OVERFLOW");
 }
 
-/// WHY: persisted v3 artifacts must be rejected after the v4 target-seam cutover.
+/// WHY: persisted v6 artifacts must be rejected after the v7 named-resource-ABI cutover.
 #[test]
 fn stale_artifact_version_is_rejected_before_body_decode() {
     let artifact = compile(&request(LIMIT)).unwrap();
     let mut bytes = artifact.to_bytes().unwrap();
-    bytes[4..6].copy_from_slice(&3u16.to_le_bytes());
+    bytes[4..6].copy_from_slice(&6u16.to_le_bytes());
     let error = Artifact::from_bytes(&bytes).expect_err("stale schema must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC015_VERSION_SKEW");
     assert_eq!(diagnostic_path(&error), Some("artifact.schema_version"));
@@ -762,4 +1105,166 @@ fn artifact_body_tampering_is_detected() {
     bytes[10] ^= 1;
     let error = Artifact::from_bytes(&bytes).expect_err("tampered body must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC016_DIGEST_MISMATCH");
+}
+/// WHY: entry ABI input and output records must preserve Program buffer order even when graph ports are declared in a different order.
+#[test]
+fn entry_abi_inputs_and_outputs_preserve_program_buffer_order_despite_port_reordering() {
+    let mut graph = ProgramGraph::new();
+    let val_x = graph
+        .add_external_value(
+            "x",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+    let val_y = graph
+        .add_external_value(
+            "y",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("first", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("second", 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(
+                Expr::load("first", Expr::u32(0)),
+                Expr::load("second", Expr::u32(0)),
+            ),
+        )],
+    );
+
+    graph
+        .add_node(
+            "node_rev",
+            program,
+            vec![
+                GraphInput {
+                    buffer: "second".into(),
+                    value: val_y,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+                GraphInput {
+                    buffer: "first".into(),
+                    value: val_x,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "res".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+
+    let mut symbols = BTreeMap::new();
+    symbols.insert("items".into(), 32);
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), symbols),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+    let entry = artifact.abi().entries.first().expect("entry must exist");
+
+    assert_eq!(entry.inputs, vec![ArtifactValueId(0), ArtifactValueId(1)]);
+    assert_eq!(
+        entry
+            .input_bindings
+            .iter()
+            .map(|binding| (binding.buffer.as_str(), binding.value))
+            .collect::<Vec<_>>(),
+        vec![
+            ("first", ArtifactValueId(0)),
+            ("second", ArtifactValueId(1))
+        ]
+    );
+    assert_eq!(
+        entry
+            .output_bindings
+            .iter()
+            .map(|binding| (binding.buffer.as_str(), binding.value))
+            .collect::<Vec<_>>(),
+        vec![("out", ArtifactValueId(2))]
+    );
+}
+
+/// WHY: ResourceRecord retained_predecessor must serialize and round-trip through artifact framing.
+#[test]
+fn resource_record_retained_predecessor_round_trips() {
+    let mut graph = ProgramGraph::new();
+    let mut symbols = BTreeMap::new();
+    symbols.insert("items".into(), 32);
+    let state_init = graph
+        .add_external_value(
+            "state_init",
+            contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+        )
+        .unwrap();
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_s", 0, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::storage("out_s", 1, BufferAccess::ReadWrite, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out_s",
+            Expr::u32(0),
+            Expr::load("in_s", Expr::u32(0)),
+        )],
+    );
+    graph
+        .add_node(
+            "node0",
+            prog,
+            vec![GraphInput {
+                buffer: "in_s".into(),
+                value: state_init,
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![GraphOutput {
+                buffer: "out_s".into(),
+                name: "state_final".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                retained_successor_of: Some(state_init),
+            }],
+        )
+        .unwrap();
+
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), symbols),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+    let bytes = artifact.to_bytes().expect("artifact must encode");
+    let decoded = Artifact::from_bytes(&bytes).expect("artifact must decode");
+
+    let final_res = decoded
+        .resources()
+        .iter()
+        .find(|r| r.name == "state_final")
+        .expect("state_final resource must exist");
+    assert_eq!(
+        final_res.retained_predecessor,
+        Some(ArtifactValueId(state_init.0))
+    );
 }

@@ -47,7 +47,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use xtask::gate::{Finding, Gate, GateCtx, GateError, Report};
+use xtask::gate::{Finding, GateCtx, GateError, Report};
 
 use crate::gates::lego_audit::{collect_ops, MIN_COMPARABLE_FINGERPRINT_BYTES};
 
@@ -115,8 +115,7 @@ pub fn handrolls<'a>(ops: &[FingerprintedOperation<'a>]) -> Vec<Handroll<'a>> {
             };
             for &index in candidates {
                 let candidate = &ops[index];
-                if candidate.id == host.id
-                    || candidate.fingerprint.len() >= host.fingerprint.len()
+                if candidate.id == host.id || candidate.fingerprint.len() >= host.fingerprint.len()
                 {
                     continue;
                 }
@@ -143,23 +142,16 @@ pub fn handrolls<'a>(ops: &[FingerprintedOperation<'a>]) -> Vec<Handroll<'a>> {
 /// Reports registered operations that rebuild another registered operation.
 pub struct HandrolledOperations;
 
-impl Gate for HandrolledOperations {
-    fn name(&self) -> &'static str {
-        "handrolled-operations"
-    }
-
-    fn help(&self) -> &'static str {
-        "Report registered operations that hold another registered operation's whole program inline instead of composing it"
-    }
-
+impl xtask::gate::GateBehavior for HandrolledOperations {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let ops = collect_ops(&mut report);
+        report.cover_complete("registered operations", ops.len());
         if ops.is_empty() {
             return Err(GateError::new(
-                "the live operation registry produced no buildable program, so the containment walk judged nothing",
-                "link the crates that submit operations through vyre-registry-link, then run the gate again; a walk over an empty registry reporting zero handrolls is the failure this refuses",
-            ));
+            "the live operation registry produced no buildable program, so the containment walk judged nothing",
+            "link the crates that submit operations through vyre-registry-link, then run the gate again; a walk over an empty registry reporting zero handrolls is the failure this refuses",
+        ));
         }
 
         let subjects: Vec<FingerprintedOperation<'_>> = ops
@@ -176,21 +168,21 @@ impl Gate for HandrolledOperations {
 
         for handroll in handrolls(&subjects) {
             report.find(Finding::new(
-                format!(
-                    "registered operation `{}` holds the whole program of `{}` inline at fingerprint byte {}, with no attribution to it",
-                    handroll.host, handroll.rebuilt, handroll.offset
-                ),
-                format!(
-                    "replace the inlined body with a child region naming `{}`, so the selection is an edge to the registered building block rather than a second copy of it",
-                    handroll.rebuilt
-                ),
-            ));
+            format!(
+                "registered operation `{}` holds the whole program of `{}` inline at fingerprint byte {}, with no attribution to it",
+                handroll.host, handroll.rebuilt, handroll.offset
+            ),
+            format!(
+                "replace the inlined body with a child region naming `{}`, so the selection is an edge to the registered building block rather than a second copy of it",
+                handroll.rebuilt
+            ),
+        ));
         }
 
         report.note(format!(
-            "handrolled-operations: {} registered operations built, {comparable} above the {MIN_COMPARABLE_FINGERPRINT_BYTES}-byte comparison floor",
-            subjects.len()
-        ));
+        "handrolled-operations: {} registered operations built, {comparable} above the {MIN_COMPARABLE_FINGERPRINT_BYTES}-byte comparison floor",
+        subjects.len()
+    ));
         Ok(report)
     }
 }

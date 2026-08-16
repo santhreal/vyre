@@ -5,8 +5,8 @@
 //! program names every bad operand in it.
 
 use crate::ir_inner::model::expr::Expr;
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::{BinOp, DataType};
+use crate::ir_inner::model::program::BufferDecl;
 use crate::validate::{err, Binding, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;

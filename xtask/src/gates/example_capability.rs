@@ -25,7 +25,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan;
 
 /// Directory holding every subject.
@@ -62,18 +62,11 @@ enum Subject {
 /// Every example builds, and every capability it claims still holds.
 pub struct ExampleCapability;
 
-impl Gate for ExampleCapability {
-    fn name(&self) -> &'static str {
-        "example-capability"
-    }
-
-    fn help(&self) -> &'static str {
-        "Build every example crate outside the workspace and run what it asserts"
-    }
-
+impl crate::gate::GateBehavior for ExampleCapability {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tracked = tracked_example_paths(&ctx.root)?;
         let mut report = Report::clean();
+        report.cover_complete("tracked examples", tracked.len());
         let mut subjects = 0usize;
         for (name, paths) in &tracked {
             let directory = format!("{EXAMPLES}/{name}");

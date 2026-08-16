@@ -274,12 +274,9 @@ impl BenchCase for SyntheticCountWorkload {
         let baseline_start = std::time::Instant::now();
         let (baseline_outputs, counted) = match &prepared.baseline {
             SyntheticBaseline::Count { .. } => {
-                let cpu_count = synthetic_cpu_count_over_inputs(
-                    self.pattern,
-                    &prepared.inputs,
-                    self.records,
-                )
-                .map_err(BenchError::CorrectnessViolation)?;
+                let cpu_count =
+                    synthetic_cpu_count_over_inputs(self.pattern, &prepared.inputs, self.records)
+                        .map_err(BenchError::CorrectnessViolation)?;
                 (vec![cpu_count.to_le_bytes().to_vec()], Some(cpu_count))
             }
             SyntheticBaseline::StringBitmap {

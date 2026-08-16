@@ -5,8 +5,8 @@
 //! [`crate::security::flows_to_to_sink::flows_to_to_sink`]; the sink predicate
 //! is a family-tagged node set rather than a sink-tagged one.
 
-use vyre_foundation::ir::Program;
 use crate::graph::program_graph::ProgramGraphShape;
+use vyre_foundation::ir::Program;
 
 #[cfg(test)]
 use crate::security::flow_composition::dataflow_hit_cpu_ref;

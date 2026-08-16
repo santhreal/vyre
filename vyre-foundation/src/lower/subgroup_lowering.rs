@@ -12,10 +12,10 @@ use crate::visit::map_bodies_cow;
 use std::borrow::Cow;
 use std::sync::Arc;
 
-/// Canonical generator prefixes emitted by `vyre-primitives::reduce::workgroup_tree`.
-const WORKGROUP_SUM_PREFIX: &str = "vyre-primitives::reduce::workgroup_sum_";
-const WORKGROUP_MAX_PREFIX: &str = "vyre-primitives::reduce::workgroup_max_";
-const WORKGROUP_MIN_PREFIX: &str = "vyre-primitives::reduce::workgroup_min_";
+/// Canonical generator prefixes emitted by `vyre-libs::reduce::workgroup_tree`.
+const WORKGROUP_SUM_PREFIX: &str = "vyre-libs::reduce::workgroup_sum_";
+const WORKGROUP_MAX_PREFIX: &str = "vyre-libs::reduce::workgroup_max_";
+const WORKGROUP_MIN_PREFIX: &str = "vyre-libs::reduce::workgroup_min_";
 
 /// Scope deduced from a workgroup reduction region body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -150,36 +150,18 @@ fn try_lower_workgroup_reduction(
     let scope = detect_scope(body)?;
 
     if let Some(value_type) = workgroup_sum_value_type(generator) {
-        subgroup_reduce_body(
-            SubgroupReduceOp::Add,
-            &scratch,
-            scope,
-            plan,
-            value_type,
-        )
+        subgroup_reduce_body(SubgroupReduceOp::Add, &scratch, scope, plan, value_type)
     } else if let Some(value_type) = workgroup_max_value_type(generator) {
         // Max reductions lower to `subgroup_reduce(Max, ...)`, mirroring the
         // sum path but with the max identity (`-inf`) filling out-of-range
         // lanes in the two-level reduction. Backends emit the native
         // `subgroupMax` / `redux.sync.max` instead of the slow shared tree.
-        subgroup_reduce_body(
-            SubgroupReduceOp::Max,
-            &scratch,
-            scope,
-            plan,
-            value_type,
-        )
+        subgroup_reduce_body(SubgroupReduceOp::Max, &scratch, scope, plan, value_type)
     } else if let Some(value_type) = workgroup_min_value_type(generator) {
         // Min reductions lower to `subgroup_reduce(Min, ...)`, with the min
         // identity (`+inf` for f32, `u32::MAX` for u32) filling out-of-range
         // lanes. Backends emit the native `subgroupMin` / `redux.sync.min`.
-        subgroup_reduce_body(
-            SubgroupReduceOp::Min,
-            &scratch,
-            scope,
-            plan,
-            value_type,
-        )
+        subgroup_reduce_body(SubgroupReduceOp::Min, &scratch, scope, plan, value_type)
     } else {
         None
     }
@@ -396,7 +378,7 @@ mod tests {
             ],
             [4, 1, 1],
             vec![Node::Region {
-                generator: "vyre-primitives::reduce::workgroup_sum_f32".into(),
+                generator: "vyre-libs::reduce::workgroup_sum_f32".into(),
                 source_region: None,
                 body: Arc::new(vec![
                     Node::let_bind("local", Expr::LocalId { axis: 0 }),
@@ -429,7 +411,7 @@ mod tests {
             vec![BufferDecl::workgroup("scratch", 64, DataType::U32)],
             [64, 1, 1],
             vec![Node::Region {
-                generator: "vyre-primitives::reduce::workgroup_sum_u32".into(),
+                generator: "vyre-libs::reduce::workgroup_sum_u32".into(),
                 source_region: None,
                 body: Arc::new(vec![
                     Node::store(
@@ -565,7 +547,7 @@ mod tests {
             ]
         };
         Node::Region {
-            generator: "vyre-primitives::reduce::workgroup_sum_f32".into(),
+            generator: "vyre-libs::reduce::workgroup_sum_f32".into(),
             source_region: None,
             body: Arc::new(body),
         }
@@ -637,7 +619,7 @@ mod tests {
             panic!("workgroup_sum_region must build a Region");
         };
         let region = Node::Region {
-            generator: "vyre-primitives::reduce::workgroup_max_f32".into(),
+            generator: "vyre-libs::reduce::workgroup_max_f32".into(),
             source_region: None,
             body,
         };
@@ -686,7 +668,7 @@ mod tests {
             panic!("workgroup_sum_region must build a Region");
         };
         let region = Node::Region {
-            generator: "vyre-primitives::reduce::workgroup_max_u32".into(),
+            generator: "vyre-libs::reduce::workgroup_max_u32".into(),
             source_region: None,
             body,
         };
@@ -728,7 +710,7 @@ mod tests {
             panic!("workgroup_sum_region must build a Region");
         };
         let region = Node::Region {
-            generator: "vyre-primitives::reduce::workgroup_min_f32".into(),
+            generator: "vyre-libs::reduce::workgroup_min_f32".into(),
             source_region: None,
             body,
         };
@@ -767,7 +749,7 @@ mod tests {
             panic!("workgroup_sum_region must build a Region");
         };
         let region = Node::Region {
-            generator: "vyre-primitives::reduce::workgroup_min_u32".into(),
+            generator: "vyre-libs::reduce::workgroup_min_u32".into(),
             source_region: None,
             body,
         };
@@ -807,7 +789,7 @@ mod tests {
             panic!("workgroup_sum_region must build a Region");
         };
         let region = Node::Region {
-            generator: "vyre-primitives::reduce::workgroup_max_f32".into(),
+            generator: "vyre-libs::reduce::workgroup_max_f32".into(),
             source_region: None,
             body,
         };

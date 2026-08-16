@@ -1,9 +1,9 @@
 //! `tensor_core_fragment` pattern analysis contracts.
 
-use vyre_emit_ptx::ComputeCapability;
-use vyre_lower::KernelOpKind;
 use vyre_emit_ptx::patterns::tensor_core_fragment::*;
+use vyre_emit_ptx::ComputeCapability;
 use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
+use vyre_lower::KernelOpKind;
 use vyre_lower::{KernelDescriptor, LiteralValue};
 
 fn fma_kernel(fma_count: u32, workgroup_x: u32) -> KernelDescriptor {

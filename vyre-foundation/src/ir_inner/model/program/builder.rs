@@ -28,7 +28,7 @@ macro_rules! define_raw_program_constructor {
 impl Program {
     /// Synthetic generator id used when callers submit a raw top-level body
     /// instead of an explicit `Node::Region`.
-    pub const ROOT_REGION_GENERATOR: &'static str = "vyre.program.root";
+    pub const ROOT_REGION_GENERATOR: &'static str = "anonymous::vyre.program.root";
 
     /// Create a complete program from buffer declarations, workgroup size, and
     /// entry-point nodes, auto-wrapping the top-level body in a root Region

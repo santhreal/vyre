@@ -22,7 +22,7 @@ fn tt_idx(row: Expr, cols: u32, col: Expr) -> Expr {
 }
 
 /// Op id.
-pub const OP_ID: &str = "vyre-primitives::math::tensor_train_decompose";
+pub const OP_ID: &str = "vyre-libs::math::tensor_train_decompose";
 
 /// Build a TT-decomposition Program.
 ///

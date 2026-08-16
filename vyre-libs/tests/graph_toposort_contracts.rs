@@ -2,10 +2,9 @@
 
 use vyre_libs::graph::toposort::{
     toposort, toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch, toposort_program,
-    validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrError,
-    ToposortCsrLayout, ToposortCsrScratch, ToposortError,
+    validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrError, ToposortCsrLayout,
+    ToposortCsrScratch, ToposortError,
 };
-
 
 #[test]
 fn empty_graph_sorts_to_empty() {
@@ -14,8 +13,8 @@ fn empty_graph_sorts_to_empty() {
 
 #[test]
 fn no_edges_returns_all_nodes() {
-    let got = toposort(3, &[])
-        .expect("Fix: no-cycle case; restore this invariant before continuing.");
+    let got =
+        toposort(3, &[]).expect("Fix: no-cycle case; restore this invariant before continuing.");
     assert_eq!(got.len(), 3);
     let mut sorted = got.clone();
     sorted.sort_unstable();

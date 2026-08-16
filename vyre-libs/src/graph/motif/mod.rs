@@ -14,15 +14,14 @@ mod plan;
 mod program;
 mod registry;
 
-pub use layout::{
-    count_witness_participants, validate_csr_inputs, validate_motif_inputs,
-    validate_motif_witness, MotifLayout,
-};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use cpu_ref::{
     cpu_ref, cpu_ref_into, cpu_ref_matches, cpu_ref_participation_count, try_cpu_ref_into,
-    try_cpu_ref_participation_count, try_cpu_ref_participation_count_with_scratch,
-    MotifCpuScratch,
+    try_cpu_ref_participation_count, try_cpu_ref_participation_count_with_scratch, MotifCpuScratch,
+};
+pub use layout::{
+    count_witness_participants, validate_csr_inputs, validate_motif_inputs, validate_motif_witness,
+    MotifLayout,
 };
 pub use pattern::{MotifEdge, TWO_EDGE_PATH_MOTIF};
 pub use plan::{
@@ -32,7 +31,7 @@ pub use plan::{
 pub use program::motif;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::motif";
+pub const OP_ID: &str = "vyre-libs::graph::motif";
 /// Canonical binding index for motif scratch hits.
 pub const MOTIF_HITS_BUFFER: u32 = BINDING_PRIMITIVE_START;
 /// Canonical binding index for the public witness output.

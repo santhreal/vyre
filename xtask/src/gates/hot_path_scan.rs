@@ -35,7 +35,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::ownership::{load_ownership_lanes, owner_lane_for_file, OwnershipLaneRule};
 use crate::gates::scan::{cfg_test_lines, error_construction_lines, scan_code};
 
@@ -254,15 +254,7 @@ const BUDGET_FIX: &str = "reuse a scratch buffer, borrow instead of cloning, or 
 /// Scans every file docs/optimization/HOT_PATHS.toml lists against its budget.
 pub struct HotPathScan;
 
-impl Gate for HotPathScan {
-    fn name(&self) -> &'static str {
-        "hot-path-scan"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold every file listed in docs/optimization/HOT_PATHS.toml to its allocation, clone, lock, sleep and panic budget; --budget-vx-json PATH writes the overage candidates"
-    }
-
+impl crate::gate::GateBehavior for HotPathScan {
     fn usage(&self) -> &'static [&'static str] {
         &["--budget-vx-json PATH writes the overage candidates as JSON to that path"]
     }
@@ -282,6 +274,7 @@ impl Gate for HotPathScan {
                 "repair docs/optimization/HOT_PATHS.toml",
             )
         })?;
+        report.cover_complete("registered hot path files", entries.len());
         let ownership_path = root
             .join("docs")
             .join("optimization")
@@ -1147,10 +1140,7 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         let mut out = Vec::new();
         let _ = collect_findings("x.rs", text, &mut out);
 
-        let reported: Vec<(&str, u32)> = out
-            .iter()
-            .map(|hit| (hit.pattern, hit.line))
-            .collect();
+        let reported: Vec<(&str, u32)> = out.iter().map(|hit| (hit.pattern, hit.line)).collect();
         assert_eq!(
             reported,
             vec![("FxHashMap::new", 3), ("Vec::new", 4)],
@@ -1177,35 +1167,6 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         assert_eq!(out.len(), 1, "got {out:?}");
         assert_eq!(out[0].line, 5);
         assert_eq!(excluded, 1);
-    }
-
-    /// WHY: `contains` matching made `SmallVec::new()` a `Vec::new()` finding
-    /// and `FxHashMap::new()` two findings, so a file's ceiling was spent on a
-    /// stack allocation and on one construction counted twice. That is the whole
-    /// distance between a budget that measures heap traffic and one that
-    /// measures spelling. A qualified path still matches, because a `Vec` reached
-    /// through `alloc::vec::Vec` is the same allocation.
-    #[test]
-    fn a_pattern_matches_a_whole_path_segment_and_not_a_longer_name() {
-        let text = concat!(
-            "pub fn f() {\n",
-            "    let a: SmallVec<[u8; 4]> = SmallVec::new();\n",
-            "    let b = FxHashMap::new();\n",
-            "    let c = alloc::vec::Vec::new();\n",
-            "}\n",
-        );
-        let mut out = Vec::new();
-        let _ = collect_findings("x.rs", text, &mut out);
-
-        let reported: Vec<(&str, u32)> = out
-            .iter()
-            .map(|hit| (hit.pattern, hit.line))
-            .collect();
-        assert_eq!(
-            reported,
-            vec![("FxHashMap::new", 3), ("Vec::new", 4)],
-            "SmallVec is not a Vec and FxHashMap is one finding: {out:?}"
-        );
     }
 
     /// WHY: a brace inside a string literal is not a block. `panic!("{")` in a

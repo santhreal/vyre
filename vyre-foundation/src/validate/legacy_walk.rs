@@ -100,12 +100,8 @@ fn validate_node_inner(
     match node {
         Node::Let { name, value } => {
             validate_expr(value, buffers, scope, options, report, 0);
-            let duplicate_sibling = check_sibling_duplicate(
-                name,
-                region_bindings,
-                false,
-                &mut report.errors,
-            );
+            let duplicate_sibling =
+                check_sibling_duplicate(name, region_bindings, false, &mut report.errors);
             if !duplicate_sibling {
                 shadowing::check_local(name, scope, options, &mut report.errors);
             }
@@ -333,13 +329,7 @@ fn validate_node_inner(
             for expr in origin {
                 validate_expr(expr, buffers, scope, options, report, 0);
             }
-            node_rules::check_tile_store(
-                buffer,
-                origin,
-                tile,
-                buffers,
-                &mut report.errors,
-            );
+            node_rules::check_tile_store(buffer, origin, tile, buffers, &mut report.errors);
         }
         Node::TileMatmul { acc, a, b } => {
             node_rules::check_tile_matmul(acc, a, b, options, &mut report.errors);

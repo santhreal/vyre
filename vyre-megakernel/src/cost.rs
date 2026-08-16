@@ -154,7 +154,9 @@ pub(crate) fn evaluate(
                 .map(Vec::as_slice)
                 .unwrap_or_default()
             {
-                let held = group_tiles.iter().position(|(name_held, _)| *name_held == name);
+                let held = group_tiles
+                    .iter()
+                    .position(|(name_held, _)| *name_held == name);
                 match held {
                     // Fusion keeps one declaration per name and takes the
                     // larger count, so the group holds the larger of the two.
@@ -386,7 +388,10 @@ mod tests {
         let cheap_launches = device(128).with_launch_costs(512, 0);
         let fused = evaluate(&fused_plan, &facts, &dependencies, cheap_launches);
         let unfused = evaluate(&unfused_plan, &facts, &dependencies, cheap_launches);
-        assert_eq!(fused.launch_ns, 512, "the measured figure prices the launch");
+        assert_eq!(
+            fused.launch_ns, 512,
+            "the measured figure prices the launch"
+        );
         assert_eq!(unfused.launch_ns, 1024);
         assert!(
             unfused.total < fused.total,

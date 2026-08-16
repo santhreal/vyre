@@ -7,7 +7,8 @@ use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::transform::inline::inline_calls_with_resolver;
 use vyre_foundation::transform::inline::OpResolver;
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, TargetCompiler,
+    Artifact, ArtifactEnvelope, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
+    TargetCompiler,
 };
 
 use crate::artifact::{registration, TargetId};

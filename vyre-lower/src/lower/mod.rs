@@ -70,7 +70,7 @@ pub const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
 /// Returns [`LowerError`] when the input references undeclared buffers,
 /// exceeds the supported structured nesting depth, or uses an IR
 /// construct with invalid operands.
-pub(crate) fn lower(program: &Program) -> Result<KernelDescriptor, LowerError> {
+pub fn lower(program: &Program) -> Result<KernelDescriptor, LowerError> {
     let mut ctx = LowerCtx::new(program)?;
     let mut body = empty_body_with_capacity(estimated_root_op_capacity(program));
     ctx.lower_nodes(program.entry(), &mut body, 0)?;

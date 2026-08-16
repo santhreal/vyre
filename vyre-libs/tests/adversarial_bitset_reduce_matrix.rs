@@ -17,46 +17,32 @@ type BinaryVectorInto = fn(&[u32], &[u32], &mut Vec<u32>);
 
 #[test]
 fn scalar_bitset_and_reduce_ops_cover_adversarial_matrix() {
-    assert_unary_scalar(
-        "bitset_any",
-        vyre_libs::bitset::any::cpu_ref,
-        |input| u32::from(input.iter().any(|word| *word != 0)),
-    );
-    assert_unary_scalar(
-        "reduce_all",
-        vyre_libs::reduce::all::cpu_ref,
-        |input| u32::from(input.iter().all(|value| *value != 0)),
-    );
-    assert_unary_scalar(
-        "reduce_any",
-        vyre_libs::reduce::any::cpu_ref,
-        |input| u32::from(input.iter().any(|value| *value != 0)),
-    );
-    assert_unary_scalar(
-        "reduce_count",
-        vyre_libs::reduce::count::cpu_ref,
-        |input| input.iter().map(|word| word.count_ones()).sum(),
-    );
+    assert_unary_scalar("bitset_any", vyre_libs::bitset::any::cpu_ref, |input| {
+        u32::from(input.iter().any(|word| *word != 0))
+    });
+    assert_unary_scalar("reduce_all", vyre_libs::reduce::all::cpu_ref, |input| {
+        u32::from(input.iter().all(|value| *value != 0))
+    });
+    assert_unary_scalar("reduce_any", vyre_libs::reduce::any::cpu_ref, |input| {
+        u32::from(input.iter().any(|value| *value != 0))
+    });
+    assert_unary_scalar("reduce_count", vyre_libs::reduce::count::cpu_ref, |input| {
+        input.iter().map(|word| word.count_ones()).sum()
+    });
     assert_unary_scalar(
         "reduce_count_non_zero",
         vyre_libs::reduce::count_non_zero::cpu_ref,
         |input| input.iter().filter(|value| **value != 0).count() as u32,
     );
-    assert_unary_scalar(
-        "reduce_max",
-        vyre_libs::reduce::max::cpu_ref,
-        |input| input.iter().copied().max().unwrap_or(0),
-    );
-    assert_unary_scalar(
-        "reduce_min",
-        vyre_libs::reduce::min::cpu_ref,
-        |input| input.iter().copied().min().unwrap_or(u32::MAX),
-    );
-    assert_unary_scalar(
-        "reduce_sum",
-        vyre_libs::reduce::sum::cpu_ref,
-        |input| input.iter().copied().fold(0u32, u32::wrapping_add),
-    );
+    assert_unary_scalar("reduce_max", vyre_libs::reduce::max::cpu_ref, |input| {
+        input.iter().copied().max().unwrap_or(0)
+    });
+    assert_unary_scalar("reduce_min", vyre_libs::reduce::min::cpu_ref, |input| {
+        input.iter().copied().min().unwrap_or(u32::MAX)
+    });
+    assert_unary_scalar("reduce_sum", vyre_libs::reduce::sum::cpu_ref, |input| {
+        input.iter().copied().fold(0u32, u32::wrapping_add)
+    });
 }
 
 #[test]

@@ -695,7 +695,6 @@ fn validate_entries(
             ));
         }
         let mut slots = BTreeSet::new();
-        let mut resources = BTreeSet::new();
         for (binding_index, binding) in entry.resource_bindings.iter().enumerate() {
             let binding_path = format!("{path}.resource_bindings[{binding_index}]");
             if !slots.insert((binding.group, binding.slot)) {
@@ -707,17 +706,6 @@ fn validate_entries(
                         binding.group, binding.slot
                     ),
                     "associate each target binding group/slot exactly once",
-                ));
-            }
-            if !resources.insert(binding.resource) {
-                return Err(failure(
-                    CompilerFailureKind::MalformedTargetPayload,
-                    format!("{binding_path}.resource"),
-                    format!(
-                        "canonical resource {} is bound more than once",
-                        binding.resource.0
-                    ),
-                    "associate each canonical resource with at most one entry binding",
                 ));
             }
             if !neutral

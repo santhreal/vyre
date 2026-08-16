@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::gate::{Finding, Gate, GateCtx, GateError, Report};
+use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::release::release_train::RELEASE_TRAIN_TOML_PATH;
 
 /// Where the unreleased fragments live.
@@ -69,25 +69,20 @@ const LAUNCH_STEPS: [&str; 10] = [
 /// The changelog and release notes state what the fragments and the train say.
 pub struct ReleaseDocs;
 
-impl Gate for ReleaseDocs {
-    fn name(&self) -> &'static str {
-        "release-docs"
-    }
-
-    fn help(&self) -> &'static str {
-        "Hold the changelog and the release notes body to the release train and the unreleased fragments; --write regenerates both"
-    }
-
-    fn generates(&self) -> bool {
-        true
-    }
-
+impl crate::gate::GateBehavior for ReleaseDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let train = read_toml(&ctx.root, RELEASE_TRAIN_TOML_PATH)?;
         let mut report = Report::clean();
+        for doc in GENERATED_RELEASE_DOCUMENTS {
+            report.produced(doc);
+        }
 
         train_findings(&train, &mut report);
         let grouped = fragment_entries(&ctx.root, &mut report)?;
+        report.cover_complete(
+            "release change fragments",
+            grouped.values().map(Vec::len).sum(),
+        );
         if report.count() > 0 {
             return Ok(report);
         }
@@ -186,9 +181,8 @@ fn train_findings(train: &toml::Table, report: &mut Report) {
         let version_key = group
             .and_then(|table| table.get("version"))
             .and_then(toml::Value::as_str);
-        let known = version_key.is_some_and(|key| {
-            versions.is_some_and(|table| table.contains_key(key))
-        });
+        let known =
+            version_key.is_some_and(|key| versions.is_some_and(|table| table.contains_key(key)));
         if !known {
             report.find(Finding::in_file(
                 RELEASE_TRAIN_TOML_PATH,
@@ -298,7 +292,10 @@ fn fragment_entries(
                 )
             })?
             .path();
-        if path.extension().is_some_and(|extension| extension == "toml") {
+        if path
+            .extension()
+            .is_some_and(|extension| extension == "toml")
+        {
             files.push(path);
         }
     }
@@ -482,7 +479,9 @@ fn replace_unreleased(changelog: &str, section: &str) -> Result<String, String> 
     let end = changelog[after..]
         .find("\n## [")
         .map(|offset| after + offset)
-        .ok_or_else(|| "the changelog carries no released section after `## [Unreleased]`".to_string())?;
+        .ok_or_else(|| {
+            "the changelog carries no released section after `## [Unreleased]`".to_string()
+        })?;
     Ok(format!(
         "{}{}\n{}",
         &changelog[..start],
@@ -571,7 +570,6 @@ fn read_toml(root: &Path, relative: &str) -> Result<toml::Table, GateError> {
     })
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -611,8 +609,8 @@ mod tests {
     #[test]
     fn replacing_the_unreleased_section_keeps_the_released_history() {
         let changelog = "# Changelog\n\n## [Unreleased]\n\nold\n\n## [0.1.0]\n\nkept\n";
-        let replaced =
-            replace_unreleased(changelog, "## [Unreleased]\n\nnew\n").expect("a section to replace");
+        let replaced = replace_unreleased(changelog, "## [Unreleased]\n\nnew\n")
+            .expect("a section to replace");
         assert_eq!(
             replaced,
             "# Changelog\n\n## [Unreleased]\n\nnew\n\n## [0.1.0]\n\nkept\n"

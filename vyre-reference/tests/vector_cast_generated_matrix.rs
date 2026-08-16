@@ -80,4 +80,3 @@ fn generated_f32(seed: u32) -> f32 {
         -magnitude
     }
 }
-

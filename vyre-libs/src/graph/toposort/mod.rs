@@ -26,9 +26,8 @@ mod plan;
 mod program;
 
 pub use csr::{
-    toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch,
-    validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrLayout,
-    ToposortCsrScratch,
+    toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch, validate_toposort_csr_inputs,
+    validate_toposort_csr_order, ToposortCsrLayout, ToposortCsrScratch,
 };
 pub use edge_list::toposort;
 pub use error::{ToposortCsrError, ToposortError};
@@ -39,7 +38,7 @@ pub use plan::{
 pub use program::toposort_program;
 
 /// Canonical op id.
-pub const OP_ID: &str = "vyre-primitives::graph::toposort";
+pub const OP_ID: &str = "vyre-libs::graph::toposort";
 /// Canonical dispatch input label for CSR offsets.
 pub const TOPOSORT_OFFSETS_BUFFER: &str = "toposort offsets";
 /// Canonical dispatch input label for CSR targets.
