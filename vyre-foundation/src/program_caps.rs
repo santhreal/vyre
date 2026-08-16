@@ -21,7 +21,7 @@ use crate::ir::Program;
 /// universal diff harness asks `scan(program)` which bits the program
 /// needs, asks the backend which bits it advertises, and skips the pair
 /// when they disagree. The result reasons are attached for telemetry.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct RequiredCapabilities {
     /// The program invokes `Expr::SubgroupAdd`, `SubgroupBallot`, or
@@ -61,6 +61,58 @@ impl RequiredCapabilities {
     #[must_use]
     pub fn none() -> Self {
         Self::default()
+    }
+
+    /// Strongest applicable capability set (all capability flags active, maximum limits).
+    #[must_use]
+    pub fn all() -> Self {
+        Self {
+            subgroup_ops: true,
+            f16: true,
+            bf16: true,
+            f64: true,
+            async_dispatch: true,
+            indirect_dispatch: true,
+            tensor_ops: true,
+            trap: true,
+            distributed_collectives: true,
+            local_single_rank_collectives: 1,
+            transport_collectives: 1,
+            max_workgroup_size: [1024, 1024, 64],
+            static_storage_bytes: u64::MAX,
+        }
+    }
+
+    /// Monotonic lattice join for transitive call-graph fixed-point propagation.
+    ///
+    /// Computes the supremum of two capability requirements using boolean OR
+    /// and component-wise maximums, guaranteeing idempotence (`a.join(a) == a`)
+    /// and finite monotonic convergence on cyclic and multi-path call graphs.
+    #[must_use]
+    pub fn join(mut self, other: RequiredCapabilities) -> Self {
+        self.subgroup_ops |= other.subgroup_ops;
+        self.f16 |= other.f16;
+        self.bf16 |= other.bf16;
+        self.f64 |= other.f64;
+        self.async_dispatch |= other.async_dispatch;
+        self.indirect_dispatch |= other.indirect_dispatch;
+        self.tensor_ops |= other.tensor_ops;
+        self.trap |= other.trap;
+        self.distributed_collectives |= other.distributed_collectives;
+        self.local_single_rank_collectives = self
+            .local_single_rank_collectives
+            .max(other.local_single_rank_collectives);
+        self.transport_collectives = self
+            .transport_collectives
+            .max(other.transport_collectives);
+        for axis in 0..3 {
+            self.max_workgroup_size[axis] =
+                self.max_workgroup_size[axis].max(other.max_workgroup_size[axis]);
+        }
+        self.static_storage_bytes = self
+            .static_storage_bytes
+            .max(other.static_storage_bytes);
+        self
     }
 
     /// Build the union of two capability sets (field-wise `OR` and `max`).
