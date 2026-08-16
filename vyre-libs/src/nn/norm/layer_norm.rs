@@ -28,7 +28,6 @@ use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 const OP_ID: &str = "vyre-libs::nn::layer_norm";
 #[cfg(test)]
 const LAYER_NORM_REFERENCE_OP_ID: &str = "vyre-libs::nn::layer_norm_reference";
-const LAYER_NORM_TILE: u32 = 256;
 
 /// Typed Cat-A builder for [`layer_norm`].
 #[derive(Debug, Clone)]
@@ -81,7 +80,7 @@ impl LayerNorm {
         let workgroup = self
             .options
             .workgroup_size
-            .unwrap_or([LAYER_NORM_TILE, 1, 1]);
+            .unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1).min(n);
         let workgroup = [tile, workgroup[1], workgroup[2]];
         let chunks = n.div_ceil(tile);

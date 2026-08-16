@@ -19,7 +19,9 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::Program;
-use vyre_libs::reduce::multi_block_prefix_scan::{self, BLOCK_LANES};
+use vyre_libs::reduce::multi_block_prefix_scan;
+
+const BLOCK_LANES: u32 = 1024;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
 
@@ -178,5 +180,22 @@ fn multi_block_exclusive_scan_matches_cpu_ref_across_block_boundary() {
             gpu[0], 0,
             "exclusive prefix scan output[0] must be 0 at n={n}"
         );
+    }
+}
+
+#[test]
+fn multi_block_prefix_scan_matches_cpu_ref_with_256_block_lanes() {
+    for &n in &[257, 512, 1025, 2049] {
+        let input: Vec<u32> = (0..n).map(|i| (i % 7) + 1).collect();
+        let program = multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes(
+            "input", "output", n, 256,
+        );
+        let out_idx = output_index(&program, "output");
+        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack(&input))])
+            .expect("multi-block prefix scan with 256 lanes must execute under reference_eval");
+        let mut out = unpack(&outputs[out_idx].to_bytes());
+        out.truncate(input.len());
+        let cpu = multi_block_prefix_scan::cpu_ref(&input);
+        assert_eq!(out, cpu, "256-block-lanes prefix scan matches cpu_ref at n={n}");
     }
 }
