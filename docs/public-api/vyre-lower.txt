@@ -5,22 +5,22 @@ impl core::cmp::Eq for vyre_lower::KernelOpKind
 impl core::cmp::Eq for vyre_lower::LiteralValue
 impl core::convert::From<vyre_lower::descriptor_builder::KernelBodyBuilder> for vyre_lower::KernelBody
 impl core::convert::From<vyre_lower::descriptor_builder::KernelDescriptorBuilder> for vyre_lower::KernelDescriptor
+impl core::default::Default for vyre_lower::analyses::ConsumerAbiRequirement
+impl core::default::Default for vyre_lower::analyses::RetainedFallbacks
+impl core::default::Default for vyre_lower::analyses::TailHandling
 impl core::default::Default for vyre_lower::analyses::TargetBankGeometry
-impl core::default::Default for vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement
-impl core::default::Default for vyre_lower::analyses::resource_bounds::RetainedFallbacks
-impl core::default::Default for vyre_lower::analyses::resource_bounds::TailHandling
-impl core::default::Default for vyre_lower::analyses::resource_bounds::TargetResourceLimits
-impl core::default::Default for vyre_lower::analyses::target_metrics::TargetEmittedMetrics
+impl core::default::Default for vyre_lower::analyses::TargetEmittedMetrics
+impl core::default::Default for vyre_lower::analyses::TargetResourceLimits
 impl core::error::Error for vyre_lower::DescriptorIntentError
 impl core::error::Error for vyre_lower::LowerVerifiedError
-impl core::error::Error for vyre_lower::analyses::affine_access_map::AffineMapError
+impl core::error::Error for vyre_lower::analyses::AffineMapError
 impl core::fmt::Display for vyre_lower::DescriptorIntentError
 impl core::fmt::Display for vyre_lower::FullReport
 impl core::fmt::Display for vyre_lower::LowerVerifiedError
 impl core::fmt::Display for vyre_lower::PerfAuditReport
 impl core::fmt::Display for vyre_lower::WorkgroupLimitViolation
+impl core::fmt::Display for vyre_lower::analyses::AffineMapError
 impl core::fmt::Display for vyre_lower::analyses::OpHistogram
-impl core::fmt::Display for vyre_lower::analyses::affine_access_map::AffineMapError
 impl core::hash::Hash for vyre_lower::KernelBody
 impl core::hash::Hash for vyre_lower::KernelDescriptor
 impl core::hash::Hash for vyre_lower::KernelOp
@@ -43,23 +43,23 @@ impl vyre_lower::ScanConstructIntentMapping
 impl vyre_lower::SubgroupCapabilities
 impl vyre_lower::VerifyFailure
 impl vyre_lower::analyses::AccessPattern
+impl vyre_lower::analyses::AffineAccessMap
 impl vyre_lower::analyses::BankConflictKind
 impl vyre_lower::analyses::BankConflictReport
 impl vyre_lower::analyses::CoalescenceReport
 impl vyre_lower::analyses::CommonSubexprReport
 impl vyre_lower::analyses::ConstBufferPlan
 impl vyre_lower::analyses::DeadOpReport
+impl vyre_lower::analyses::DimExtent
 impl vyre_lower::analyses::IntRange
 impl vyre_lower::analyses::OpHistogram
 impl vyre_lower::analyses::PromotionPlan
 impl vyre_lower::analyses::ReachingDefFactSet
 impl vyre_lower::analyses::SharedStoreRaceReport
+impl vyre_lower::analyses::SliceSpec
+impl vyre_lower::analyses::StrideExpr
 impl vyre_lower::analyses::ValueRangeReport
 impl vyre_lower::analyses::WorkgroupUniformReport
-impl vyre_lower::analyses::affine_access_map::AffineAccessMap
-impl vyre_lower::analyses::affine_access_map::DimExtent
-impl vyre_lower::analyses::affine_access_map::SliceSpec
-impl vyre_lower::analyses::affine_access_map::StrideExpr
 impl vyre_lower::analyses::alias_facts::AliasFactSet
 impl vyre_lower::analyses::vec_pack::VecPackChain
 impl vyre_lower::analyses::vec_pack::VecPackReport
@@ -80,11 +80,11 @@ pub const fn vyre_lower::SubgroupCapabilities::any(self) -> bool
 pub const fn vyre_lower::SubgroupCapabilities::count(self) -> u32
 pub const fn vyre_lower::SubgroupCapabilities::first_missing(self, required: Self) -> core::option::Option<&'static str>
 pub const fn vyre_lower::analyses::AccessPattern::is_problematic(&self) -> bool
-pub const fn vyre_lower::analyses::affine_access_map::DimExtent::is_non_empty(&self) -> bool
-pub const fn vyre_lower::analyses::affine_access_map::DimExtent::is_static(&self) -> bool
-pub const fn vyre_lower::analyses::affine_access_map::DimExtent::static_extent(&self) -> core::option::Option<u64>
-pub const fn vyre_lower::analyses::affine_access_map::SliceSpec::forward(start: i64, stop: i64) -> Self
-pub const fn vyre_lower::analyses::affine_access_map::StrideExpr::static_stride(&self) -> core::option::Option<i64>
+pub const fn vyre_lower::analyses::DimExtent::is_non_empty(&self) -> bool
+pub const fn vyre_lower::analyses::DimExtent::is_static(&self) -> bool
+pub const fn vyre_lower::analyses::DimExtent::static_extent(&self) -> core::option::Option<u64>
+pub const fn vyre_lower::analyses::SliceSpec::forward(start: i64, stop: i64) -> Self
+pub const fn vyre_lower::analyses::StrideExpr::static_stride(&self) -> core::option::Option<i64>
 pub const vyre_lower::DESCRIPTOR_INTENT_SCHEMA_VERSION: u32
 pub const vyre_lower::SCAN_CONSTRUCT_INTENT_MAPPINGS: &[vyre_lower::ScanConstructIntentMapping]
 pub const vyre_lower::TRAP_SIDECAR_NAME: &str
@@ -93,7 +93,6 @@ pub const vyre_lower::WORKGROUP_SLOT_BASE: u32
 pub const vyre_lower::analyses::DEFAULT_BANK_COUNT: u32
 pub const vyre_lower::analyses::DEFAULT_CONST_BUFFER_BUDGET_BYTES: u32
 pub const vyre_lower::analyses::DEFAULT_SHARED_BUDGET_BYTES: u32
-pub const vyre_lower::lower::WORKGROUP_SLOT_BASE: u32
 pub const vyre_lower::pattern_audit::PatternAudit::FINDING_NOUN: &'static str
 pub const vyre_lower::pattern_audit::UNNAMED_KERNEL: &str
 pub const vyre_lower::program_stability_corpus::LANES: u32
@@ -127,10 +126,6 @@ pub enum vyre_lower::analyses::ConflictSeverity
 pub enum vyre_lower::analyses::DimExtent
 pub enum vyre_lower::analyses::SharedStoreLegality
 pub enum vyre_lower::analyses::StrideExpr
-pub enum vyre_lower::analyses::affine_access_map::AffineMapError
-pub enum vyre_lower::analyses::affine_access_map::DimExtent
-pub enum vyre_lower::analyses::affine_access_map::StrideExpr
-pub enum vyre_lower::analyses::shared_store_race::SharedStoreLegality
 pub enum vyre_lower::analyses::structured_walk::ArmDescent
 pub enum vyre_lower::analyses::structured_walk::BranchForm
 pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
@@ -186,6 +181,15 @@ pub fn vyre_lower::ScanConstructIntentMapping::requires_verifier_fragment(self) 
 pub fn vyre_lower::VerifyFailure::errors(&self) -> &[vyre_lower::VerifyError]
 pub fn vyre_lower::WorkgroupLimitViolation::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_lower::analyses::AccessPattern::throughput_factor(&self) -> f32
+pub fn vyre_lower::analyses::AffineAccessMap::is_contiguous(&self) -> bool
+pub fn vyre_lower::analyses::AffineAccessMap::is_zero_copy_compatible_with(&self, consumer_abi: &vyre_lower::analyses::ConsumerAbiRequirement) -> bool
+pub fn vyre_lower::analyses::AffineAccessMap::linear_offset_bytes(&self, coords: &[u64]) -> core::option::Option<i64>
+pub fn vyre_lower::analyses::AffineAccessMap::new(shape: alloc::vec::Vec<vyre_lower::analyses::DimExtent>, strides: alloc::vec::Vec<vyre_lower::analyses::StrideExpr>, offset_bytes: i64, element_size_bytes: u32, alignment_bytes: u32) -> Self
+pub fn vyre_lower::analyses::AffineAccessMap::rank(&self) -> usize
+pub fn vyre_lower::analyses::AffineAccessMap::slice(&self, dim: usize, slice: vyre_lower::analyses::SliceSpec) -> core::result::Result<Self, vyre_lower::analyses::AffineMapError>
+pub fn vyre_lower::analyses::AffineAccessMap::standard_row_major(extents: &[u64], element_size_bytes: u32, alignment_bytes: u32) -> Self
+pub fn vyre_lower::analyses::AffineAccessMap::transpose(&self, perm: &[usize]) -> core::result::Result<Self, vyre_lower::analyses::AffineMapError>
+pub fn vyre_lower::analyses::AffineMapError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_lower::analyses::BankConflictKind::severity(&self) -> vyre_lower::analyses::ConflictSeverity
 pub fn vyre_lower::analyses::BankConflictReport::critical_count(&self) -> usize
 pub fn vyre_lower::analyses::BankConflictReport::problematic_count(&self) -> usize
@@ -194,6 +198,7 @@ pub fn vyre_lower::analyses::CoalescenceReport::warnings(&self) -> alloc::vec::V
 pub fn vyre_lower::analyses::CoalescenceReport::waste_score(&self) -> f32
 pub fn vyre_lower::analyses::CommonSubexprReport::ops_eliminable(&self) -> usize
 pub fn vyre_lower::analyses::ConstBufferPlan::fits_in_budget(&self) -> bool
+pub fn vyre_lower::analyses::ConsumerAbiRequirement::default() -> Self
 pub fn vyre_lower::analyses::DeadOpReport::dead_count(&self) -> usize
 pub fn vyre_lower::analyses::DeadOpReport::dead_ratio(&self) -> f32
 pub fn vyre_lower::analyses::IntRange::contains(&self, v: i64) -> bool
@@ -216,9 +221,14 @@ pub fn vyre_lower::analyses::ReachingDefFactSet::is_empty(&self) -> bool
 pub fn vyre_lower::analyses::ReachingDefFactSet::len(&self) -> usize
 pub fn vyre_lower::analyses::ReachingDefFactSet::reaching_defs(&self, use_result: u32) -> &[u32]
 pub fn vyre_lower::analyses::ReachingDefFactSet::set_reaching_defs(&mut self, use_result: u32, defs: alloc::vec::Vec<u32>)
+pub fn vyre_lower::analyses::RetainedFallbacks::default() -> Self
 pub fn vyre_lower::analyses::SharedStoreRaceReport::is_race_free(&self) -> bool
 pub fn vyre_lower::analyses::SharedStoreRaceReport::race_count(&self) -> usize
+pub fn vyre_lower::analyses::SliceSpec::element_count(&self) -> core::result::Result<u64, vyre_lower::analyses::AffineMapError>
+pub fn vyre_lower::analyses::TailHandling::default() -> Self
 pub fn vyre_lower::analyses::TargetBankGeometry::default() -> Self
+pub fn vyre_lower::analyses::TargetEmittedMetrics::default() -> Self
+pub fn vyre_lower::analyses::TargetResourceLimits::default() -> Self
 pub fn vyre_lower::analyses::ValueRangeReport::as_constant(&self, result_id: u32) -> core::option::Option<i64>
 pub fn vyre_lower::analyses::ValueRangeReport::get(&self, result_id: u32) -> core::option::Option<vyre_lower::analyses::IntRange>
 pub fn vyre_lower::analyses::ValueRangeReport::get_at(&self, result_id: u32, op_index: usize) -> core::option::Option<vyre_lower::analyses::IntRange>
@@ -229,17 +239,6 @@ pub fn vyre_lower::analyses::ValueRangeReport::known_count(&self) -> usize
 pub fn vyre_lower::analyses::WorkgroupUniformReport::divergent_count(&self) -> usize
 pub fn vyre_lower::analyses::WorkgroupUniformReport::hints(&self) -> alloc::vec::Vec<vyre_lower::analyses::BranchHint>
 pub fn vyre_lower::analyses::WorkgroupUniformReport::uniform_count(&self) -> usize
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::is_contiguous(&self) -> bool
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::is_zero_copy_compatible_with(&self, consumer_abi: &vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement) -> bool
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::linear_offset_bytes(&self, coords: &[u64]) -> core::option::Option<i64>
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::new(shape: alloc::vec::Vec<vyre_lower::analyses::affine_access_map::DimExtent>, strides: alloc::vec::Vec<vyre_lower::analyses::affine_access_map::StrideExpr>, offset_bytes: i64, element_size_bytes: u32, alignment_bytes: u32) -> Self
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::rank(&self) -> usize
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::slice(&self, dim: usize, slice: vyre_lower::analyses::affine_access_map::SliceSpec) -> core::result::Result<Self, vyre_lower::analyses::affine_access_map::AffineMapError>
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::standard_row_major(extents: &[u64], element_size_bytes: u32, alignment_bytes: u32) -> Self
-pub fn vyre_lower::analyses::affine_access_map::AffineAccessMap::transpose(&self, perm: &[usize]) -> core::result::Result<Self, vyre_lower::analyses::affine_access_map::AffineMapError>
-pub fn vyre_lower::analyses::affine_access_map::AffineMapError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement::default() -> Self
-pub fn vyre_lower::analyses::affine_access_map::SliceSpec::element_count(&self) -> core::result::Result<u64, vyre_lower::analyses::affine_access_map::AffineMapError>
 pub fn vyre_lower::analyses::alias_facts::AliasFactSet::insert_no_alias(&mut self, fact: vyre_lower::analyses::alias_facts::NoAliasFact)
 pub fn vyre_lower::analyses::alias_facts::AliasFactSet::is_empty(&self) -> bool
 pub fn vyre_lower::analyses::alias_facts::AliasFactSet::len(&self) -> usize
@@ -266,24 +265,17 @@ pub fn vyre_lower::analyses::child_body_operands<'a>(kind: &vyre_lower::KernelOp
 pub fn vyre_lower::analyses::dead_by_no_use(desc: &vyre_lower::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
 pub fn vyre_lower::analyses::evaluate_mitigation_candidate(phases: &[vyre_lower::analyses::AccessPhaseProfile], geometry: &vyre_lower::analyses::TargetBankGeometry, candidate: vyre_lower::analyses::BankConflictMitigation, baseline_worst: vyre_lower::analyses::ConflictSeverity) -> vyre_lower::analyses::MitigationEvaluation
 pub fn vyre_lower::analyses::import_descriptor_reaching_defs(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::ReachingDefFactSet
-pub fn vyre_lower::analyses::rank_measured_candidates(candidates: alloc::vec::Vec<vyre_lower::analyses::target_metrics::CandidateRanking>) -> alloc::vec::Vec<vyre_lower::analyses::target_metrics::CandidateRanking>
+pub fn vyre_lower::analyses::rank_measured_candidates(candidates: alloc::vec::Vec<vyre_lower::analyses::CandidateRanking>) -> alloc::vec::Vec<vyre_lower::analyses::CandidateRanking>
 pub fn vyre_lower::analyses::resolve_copy_alias(id: u32, copy_aliases: &rustc_hash::FxHashMap<u32, u32>) -> u32
-pub fn vyre_lower::analyses::resource_bounds::RetainedFallbacks::default() -> Self
-pub fn vyre_lower::analyses::resource_bounds::TailHandling::default() -> Self
-pub fn vyre_lower::analyses::resource_bounds::TargetResourceLimits::default() -> Self
-pub fn vyre_lower::analyses::resource_bounds::verify_candidate_legality(desc: &vyre_lower::KernelDescriptor, candidate_name: &str, legality: vyre_lower::analyses::resource_bounds::LegalityCheck, shared_memory_bytes: usize, registers_per_thread: usize, limits: &vyre_lower::analyses::resource_bounds::TargetResourceLimits) -> vyre_lower::analyses::resource_bounds::CandidateLegalityReport
 pub fn vyre_lower::analyses::select_bank_conflict_strategy(phases: &[vyre_lower::analyses::AccessPhaseProfile], geometry: &vyre_lower::analyses::TargetBankGeometry) -> vyre_lower::analyses::MitigationEvaluation
-pub fn vyre_lower::analyses::shared_store_race::analyze(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::SharedStoreRaceReport
 pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::enter_body(&mut self, body: &'a vyre_lower::KernelBody, op_index_offset: usize)
 pub fn vyre_lower::analyses::structured_walk::StructuredVisitor::visit_op(&mut self, body: &'a vyre_lower::KernelBody, producers: &vyre_lower::analyses::ProducerMap<'a>, op_index: usize, op: &'a vyre_lower::KernelOp)
 pub fn vyre_lower::analyses::structured_walk::branch_at<'a>(body: &'a vyre_lower::KernelBody, op: &vyre_lower::KernelOp) -> core::option::Option<vyre_lower::analyses::structured_walk::StructuredBranch<'a>>
 pub fn vyre_lower::analyses::structured_walk::walk_structured<'a, V>(root: &'a vyre_lower::KernelBody, arms: vyre_lower::analyses::structured_walk::ArmDescent, visitor: &mut V) where V: vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
-pub fn vyre_lower::analyses::target_metrics::TargetEmittedMetrics::default() -> Self
-pub fn vyre_lower::analyses::target_metrics::rank_measured_candidates(candidates: alloc::vec::Vec<vyre_lower::analyses::target_metrics::CandidateRanking>) -> alloc::vec::Vec<vyre_lower::analyses::target_metrics::CandidateRanking>
 pub fn vyre_lower::analyses::vec_pack::VecPackChain::pack_width(&self) -> u32
 pub fn vyre_lower::analyses::vec_pack::VecPackReport::has_chains(&self) -> bool
 pub fn vyre_lower::analyses::vec_pack::analyze(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::vec_pack::VecPackReport
-pub fn vyre_lower::analyses::verify_candidate_legality(desc: &vyre_lower::KernelDescriptor, candidate_name: &str, legality: vyre_lower::analyses::resource_bounds::LegalityCheck, shared_memory_bytes: usize, registers_per_thread: usize, limits: &vyre_lower::analyses::resource_bounds::TargetResourceLimits) -> vyre_lower::analyses::resource_bounds::CandidateLegalityReport
+pub fn vyre_lower::analyses::verify_candidate_legality(desc: &vyre_lower::KernelDescriptor, candidate_name: &str, legality: vyre_lower::analyses::LegalityCheck, shared_memory_bytes: usize, registers_per_thread: usize, limits: &vyre_lower::analyses::TargetResourceLimits) -> vyre_lower::analyses::CandidateLegalityReport
 pub fn vyre_lower::artifact_golden::assert_matches_golden(path: &std::path::Path, actual: &str)
 pub fn vyre_lower::artifact_golden::contains_case(corpus: &str, case_id: &str) -> bool
 pub fn vyre_lower::artifact_golden::hex_words(bytes: &[u8]) -> alloc::string::String
@@ -337,7 +329,6 @@ pub fn vyre_lower::facts_for(kind: &vyre_lower::KernelOpKind) -> vyre_lower::OpF
 pub fn vyre_lower::format_verify_errors(errors: &[vyre_lower::VerifyError]) -> alloc::string::String
 pub fn vyre_lower::full_report(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::FullReport
 pub fn vyre_lower::lower(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::KernelDescriptor, vyre_lower::LowerError>
-pub fn vyre_lower::lower::lower(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::KernelDescriptor, vyre_lower::LowerError>
 pub fn vyre_lower::lower_verified(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::VerifiedLowering, vyre_lower::LowerVerifiedError>
 pub fn vyre_lower::operand_class::classify_operand(kind: &vyre_lower::KernelOpKind, pos: usize) -> vyre_lower::operand_class::OperandClass
 pub fn vyre_lower::operand_class::operand_is_result_reference(kind: &vyre_lower::KernelOpKind, pos: usize) -> bool
@@ -358,18 +349,13 @@ pub fn vyre_lower::verify(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::Ve
 pub fn vyre_lower::verify_descriptor(desc: &vyre_lower::KernelDescriptor) -> core::result::Result<vyre_lower::KernelDescriptor, vyre_lower::VerifyFailure>
 pub mod vyre_lower
 pub mod vyre_lower::analyses
-pub mod vyre_lower::analyses::affine_access_map
 pub mod vyre_lower::analyses::alias_facts
 pub mod vyre_lower::analyses::candidate_plan
-pub mod vyre_lower::analyses::resource_bounds
-pub mod vyre_lower::analyses::shared_store_race
 pub mod vyre_lower::analyses::structured_walk
-pub mod vyre_lower::analyses::target_metrics
 pub mod vyre_lower::analyses::vec_pack
 pub mod vyre_lower::artifact_golden
 pub mod vyre_lower::descriptor_builder
 pub mod vyre_lower::emit_adversarial_corpus
-pub mod vyre_lower::lower
 pub mod vyre_lower::operand_class
 pub mod vyre_lower::pattern_audit
 pub mod vyre_lower::program_stability_corpus
@@ -439,23 +425,10 @@ pub struct vyre_lower::analyses::TextureCandidate
 pub struct vyre_lower::analyses::UseSite
 pub struct vyre_lower::analyses::ValueRangeReport
 pub struct vyre_lower::analyses::WorkgroupUniformReport
-pub struct vyre_lower::analyses::affine_access_map::AffineAccessMap
-pub struct vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement
-pub struct vyre_lower::analyses::affine_access_map::SliceSpec
 pub struct vyre_lower::analyses::alias_facts::AliasFactSet
 pub struct vyre_lower::analyses::alias_facts::NoAliasFact
 pub struct vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>
-pub struct vyre_lower::analyses::resource_bounds::CandidateLegalityReport
-pub struct vyre_lower::analyses::resource_bounds::LegalityCheck
-pub struct vyre_lower::analyses::resource_bounds::ResourceBounds
-pub struct vyre_lower::analyses::resource_bounds::RetainedFallbacks
-pub struct vyre_lower::analyses::resource_bounds::TailHandling
-pub struct vyre_lower::analyses::resource_bounds::TargetResourceLimits
-pub struct vyre_lower::analyses::shared_store_race::SharedStoreRaceReport
-pub struct vyre_lower::analyses::shared_store_race::SharedStoreRaceSite
 pub struct vyre_lower::analyses::structured_walk::StructuredBranch<'a>
-pub struct vyre_lower::analyses::target_metrics::CandidateRanking
-pub struct vyre_lower::analyses::target_metrics::TargetEmittedMetrics
 pub struct vyre_lower::analyses::vec_pack::VecPackChain
 pub struct vyre_lower::analyses::vec_pack::VecPackReport
 pub struct vyre_lower::descriptor_builder::KernelBodyBuilder
@@ -741,8 +714,8 @@ pub vyre_lower::analyses::AffineAccessMap::alignment_bytes: u32
 pub vyre_lower::analyses::AffineAccessMap::bounds_verified: bool
 pub vyre_lower::analyses::AffineAccessMap::element_size_bytes: u32
 pub vyre_lower::analyses::AffineAccessMap::offset_bytes: i64
-pub vyre_lower::analyses::AffineAccessMap::shape: alloc::vec::Vec<vyre_lower::analyses::affine_access_map::DimExtent>
-pub vyre_lower::analyses::AffineAccessMap::strides: alloc::vec::Vec<vyre_lower::analyses::affine_access_map::StrideExpr>
+pub vyre_lower::analyses::AffineAccessMap::shape: alloc::vec::Vec<vyre_lower::analyses::DimExtent>
+pub vyre_lower::analyses::AffineAccessMap::strides: alloc::vec::Vec<vyre_lower::analyses::StrideExpr>
 pub vyre_lower::analyses::AffineMapError::AlignmentViolation
 pub vyre_lower::analyses::AffineMapError::AlignmentViolation::actual: u32
 pub vyre_lower::analyses::AffineMapError::AlignmentViolation::required: u32
@@ -796,14 +769,14 @@ pub vyre_lower::analyses::BranchUniformity::Unknown
 pub vyre_lower::analyses::CandidateLegalityReport::candidate_name: alloc::string::String
 pub vyre_lower::analyses::CandidateLegalityReport::is_legal: bool
 pub vyre_lower::analyses::CandidateLegalityReport::kernel_id: alloc::string::String
-pub vyre_lower::analyses::CandidateLegalityReport::legality: vyre_lower::analyses::resource_bounds::LegalityCheck
-pub vyre_lower::analyses::CandidateLegalityReport::resource_bounds: vyre_lower::analyses::resource_bounds::ResourceBounds
-pub vyre_lower::analyses::CandidateLegalityReport::retained_fallbacks: vyre_lower::analyses::resource_bounds::RetainedFallbacks
+pub vyre_lower::analyses::CandidateLegalityReport::legality: vyre_lower::analyses::LegalityCheck
+pub vyre_lower::analyses::CandidateLegalityReport::resource_bounds: vyre_lower::analyses::ResourceBounds
+pub vyre_lower::analyses::CandidateLegalityReport::retained_fallbacks: vyre_lower::analyses::RetainedFallbacks
 pub vyre_lower::analyses::CandidateLegalityReport::violations: alloc::vec::Vec<alloc::string::String>
 pub vyre_lower::analyses::CandidateRanking::candidate_id: alloc::string::String
 pub vyre_lower::analyses::CandidateRanking::disqualification_reason: core::option::Option<alloc::string::String>
 pub vyre_lower::analyses::CandidateRanking::is_disqualified: bool
-pub vyre_lower::analyses::CandidateRanking::metrics: vyre_lower::analyses::target_metrics::TargetEmittedMetrics
+pub vyre_lower::analyses::CandidateRanking::metrics: vyre_lower::analyses::TargetEmittedMetrics
 pub vyre_lower::analyses::CandidateRanking::rank: usize
 pub vyre_lower::analyses::CandidateRanking::score: f64
 pub vyre_lower::analyses::CandidateRanking::target_device: alloc::string::String
@@ -858,7 +831,7 @@ pub vyre_lower::analyses::LegalityCheck::dynamic_shapes_supported: bool
 pub vyre_lower::analyses::LegalityCheck::instructions_supported: bool
 pub vyre_lower::analyses::LegalityCheck::no_divergent_barriers: bool
 pub vyre_lower::analyses::LegalityCheck::partial_tiles_guarded: bool
-pub vyre_lower::analyses::LegalityCheck::tail_handling: vyre_lower::analyses::resource_bounds::TailHandling
+pub vyre_lower::analyses::LegalityCheck::tail_handling: vyre_lower::analyses::TailHandling
 pub vyre_lower::analyses::MitigationEvaluation::accepted: bool
 pub vyre_lower::analyses::MitigationEvaluation::aggregate_penalty: f32
 pub vyre_lower::analyses::MitigationEvaluation::phase_reports: alloc::vec::Vec<vyre_lower::analyses::PhaseConflictReport>
@@ -945,95 +918,12 @@ pub vyre_lower::analyses::ValueRangeReport::invalidated_from: rustc_hash::FxHash
 pub vyre_lower::analyses::ValueRangeReport::ranges: rustc_hash::FxHashMap<u32, vyre_lower::analyses::IntRange>
 pub vyre_lower::analyses::WorkgroupUniformReport::branches: alloc::vec::Vec<vyre_lower::analyses::BranchSite>
 pub vyre_lower::analyses::WorkgroupUniformReport::kernel_id: alloc::string::String
-pub vyre_lower::analyses::affine_access_map::AffineAccessMap::alias_class: core::option::Option<u32>
-pub vyre_lower::analyses::affine_access_map::AffineAccessMap::alignment_bytes: u32
-pub vyre_lower::analyses::affine_access_map::AffineAccessMap::bounds_verified: bool
-pub vyre_lower::analyses::affine_access_map::AffineAccessMap::element_size_bytes: u32
-pub vyre_lower::analyses::affine_access_map::AffineAccessMap::offset_bytes: i64
-pub vyre_lower::analyses::affine_access_map::AffineAccessMap::shape: alloc::vec::Vec<vyre_lower::analyses::affine_access_map::DimExtent>
-pub vyre_lower::analyses::affine_access_map::AffineAccessMap::strides: alloc::vec::Vec<vyre_lower::analyses::affine_access_map::StrideExpr>
-pub vyre_lower::analyses::affine_access_map::AffineMapError::AlignmentViolation
-pub vyre_lower::analyses::affine_access_map::AffineMapError::AlignmentViolation::actual: u32
-pub vyre_lower::analyses::affine_access_map::AffineMapError::AlignmentViolation::required: u32
-pub vyre_lower::analyses::affine_access_map::AffineMapError::DimensionOutOfBounds
-pub vyre_lower::analyses::affine_access_map::AffineMapError::DimensionOutOfBounds::dim: usize
-pub vyre_lower::analyses::affine_access_map::AffineMapError::DimensionOutOfBounds::rank: usize
-pub vyre_lower::analyses::affine_access_map::AffineMapError::InvalidPermutation
-pub vyre_lower::analyses::affine_access_map::AffineMapError::InvalidPermutation::rank: usize
-pub vyre_lower::analyses::affine_access_map::AffineMapError::InvalidSliceRange
-pub vyre_lower::analyses::affine_access_map::AffineMapError::InvalidSliceRange::start: i64
-pub vyre_lower::analyses::affine_access_map::AffineMapError::InvalidSliceRange::step: i64
-pub vyre_lower::analyses::affine_access_map::AffineMapError::InvalidSliceRange::stop: i64
-pub vyre_lower::analyses::affine_access_map::AffineMapError::OriginOutOfBounds
-pub vyre_lower::analyses::affine_access_map::AffineMapError::OriginOutOfBounds::dim: usize
-pub vyre_lower::analyses::affine_access_map::AffineMapError::OriginOutOfBounds::origin: i64
-pub vyre_lower::analyses::affine_access_map::AffineMapError::RankMismatch
-pub vyre_lower::analyses::affine_access_map::AffineMapError::RankMismatch::actual: usize
-pub vyre_lower::analyses::affine_access_map::AffineMapError::RankMismatch::expected: usize
-pub vyre_lower::analyses::affine_access_map::AffineMapError::ZeroStep
-pub vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement::allow_strided: bool
-pub vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement::element_size_bytes: u32
-pub vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement::min_leading_extent: core::option::Option<u64>
-pub vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement::require_contiguous: bool
-pub vyre_lower::analyses::affine_access_map::ConsumerAbiRequirement::required_alignment_bytes: u32
-pub vyre_lower::analyses::affine_access_map::DimExtent::Dynamic
-pub vyre_lower::analyses::affine_access_map::DimExtent::Dynamic::max: core::option::Option<u64>
-pub vyre_lower::analyses::affine_access_map::DimExtent::Dynamic::min: u64
-pub vyre_lower::analyses::affine_access_map::DimExtent::Static(u64)
-pub vyre_lower::analyses::affine_access_map::DimExtent::Symbolic(alloc::string::String)
-pub vyre_lower::analyses::affine_access_map::SliceSpec::start: i64
-pub vyre_lower::analyses::affine_access_map::SliceSpec::step: i64
-pub vyre_lower::analyses::affine_access_map::SliceSpec::stop: i64
-pub vyre_lower::analyses::affine_access_map::StrideExpr::Contiguous
-pub vyre_lower::analyses::affine_access_map::StrideExpr::Dynamic
-pub vyre_lower::analyses::affine_access_map::StrideExpr::Dynamic::stride_elements: core::option::Option<i64>
-pub vyre_lower::analyses::affine_access_map::StrideExpr::Static(i64)
-pub vyre_lower::analyses::affine_access_map::StrideExpr::Symbolic(alloc::string::String)
 pub vyre_lower::analyses::alias_facts::NoAliasFact::left_binding: u32
 pub vyre_lower::analyses::alias_facts::NoAliasFact::left_index: u32
 pub vyre_lower::analyses::alias_facts::NoAliasFact::right_binding: u32
 pub vyre_lower::analyses::alias_facts::NoAliasFact::right_index: u32
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::candidates: alloc::vec::Vec<Candidate>
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::kernel_id: alloc::string::String
-pub vyre_lower::analyses::resource_bounds::CandidateLegalityReport::candidate_name: alloc::string::String
-pub vyre_lower::analyses::resource_bounds::CandidateLegalityReport::is_legal: bool
-pub vyre_lower::analyses::resource_bounds::CandidateLegalityReport::kernel_id: alloc::string::String
-pub vyre_lower::analyses::resource_bounds::CandidateLegalityReport::legality: vyre_lower::analyses::resource_bounds::LegalityCheck
-pub vyre_lower::analyses::resource_bounds::CandidateLegalityReport::resource_bounds: vyre_lower::analyses::resource_bounds::ResourceBounds
-pub vyre_lower::analyses::resource_bounds::CandidateLegalityReport::retained_fallbacks: vyre_lower::analyses::resource_bounds::RetainedFallbacks
-pub vyre_lower::analyses::resource_bounds::CandidateLegalityReport::violations: alloc::vec::Vec<alloc::string::String>
-pub vyre_lower::analyses::resource_bounds::LegalityCheck::aliasing_free: bool
-pub vyre_lower::analyses::resource_bounds::LegalityCheck::alignment_bytes: u32
-pub vyre_lower::analyses::resource_bounds::LegalityCheck::dynamic_shapes_supported: bool
-pub vyre_lower::analyses::resource_bounds::LegalityCheck::instructions_supported: bool
-pub vyre_lower::analyses::resource_bounds::LegalityCheck::no_divergent_barriers: bool
-pub vyre_lower::analyses::resource_bounds::LegalityCheck::partial_tiles_guarded: bool
-pub vyre_lower::analyses::resource_bounds::LegalityCheck::tail_handling: vyre_lower::analyses::resource_bounds::TailHandling
-pub vyre_lower::analyses::resource_bounds::ResourceBounds::is_within_limits: bool
-pub vyre_lower::analyses::resource_bounds::ResourceBounds::register_limit_per_thread: usize
-pub vyre_lower::analyses::resource_bounds::ResourceBounds::registers_per_thread: usize
-pub vyre_lower::analyses::resource_bounds::ResourceBounds::shared_memory_bytes: usize
-pub vyre_lower::analyses::resource_bounds::ResourceBounds::shared_memory_limit_bytes: usize
-pub vyre_lower::analyses::resource_bounds::ResourceBounds::spill_bytes: usize
-pub vyre_lower::analyses::resource_bounds::RetainedFallbacks::synchronous_candidate_retained: bool
-pub vyre_lower::analyses::resource_bounds::RetainedFallbacks::unfused_candidate_retained: bool
-pub vyre_lower::analyses::resource_bounds::RetainedFallbacks::unswizzled_candidate_retained: bool
-pub vyre_lower::analyses::resource_bounds::TailHandling::dynamic_predication: bool
-pub vyre_lower::analyses::resource_bounds::TailHandling::padded_allocation: bool
-pub vyre_lower::analyses::resource_bounds::TargetResourceLimits::max_registers_per_thread: usize
-pub vyre_lower::analyses::resource_bounds::TargetResourceLimits::max_shared_memory_bytes: usize
-pub vyre_lower::analyses::resource_bounds::TargetResourceLimits::max_threads_per_workgroup: usize
-pub vyre_lower::analyses::resource_bounds::TargetResourceLimits::required_vector_alignment_bytes: u32
-pub vyre_lower::analyses::resource_bounds::TargetResourceLimits::supports_dynamic_shapes: bool
-pub vyre_lower::analyses::shared_store_race::SharedStoreLegality::IllegalMultiInvocationConstantStore
-pub vyre_lower::analyses::shared_store_race::SharedStoreLegality::RaceFreeAtomic
-pub vyre_lower::analyses::shared_store_race::SharedStoreLegality::RaceFreeDistinctIndices
-pub vyre_lower::analyses::shared_store_race::SharedStoreLegality::RaceFreeSingleInvocation
-pub vyre_lower::analyses::shared_store_race::SharedStoreRaceReport::kernel_id: alloc::string::String
-pub vyre_lower::analyses::shared_store_race::SharedStoreRaceReport::sites: alloc::vec::Vec<vyre_lower::analyses::SharedStoreRaceSite>
-pub vyre_lower::analyses::shared_store_race::SharedStoreRaceSite::binding_slot: u32
-pub vyre_lower::analyses::shared_store_race::SharedStoreRaceSite::legality: vyre_lower::analyses::SharedStoreLegality
-pub vyre_lower::analyses::shared_store_race::SharedStoreRaceSite::op_index: usize
 pub vyre_lower::analyses::structured_walk::ArmDescent::Enter
 pub vyre_lower::analyses::structured_walk::ArmDescent::Skip
 pub vyre_lower::analyses::structured_walk::BranchForm::IfThen
@@ -1042,21 +932,6 @@ pub vyre_lower::analyses::structured_walk::StructuredBranch::cond_operand_id: u3
 pub vyre_lower::analyses::structured_walk::StructuredBranch::else_body: core::option::Option<&'a vyre_lower::KernelBody>
 pub vyre_lower::analyses::structured_walk::StructuredBranch::form: vyre_lower::analyses::structured_walk::BranchForm
 pub vyre_lower::analyses::structured_walk::StructuredBranch::then_body: core::option::Option<&'a vyre_lower::KernelBody>
-pub vyre_lower::analyses::target_metrics::CandidateRanking::candidate_id: alloc::string::String
-pub vyre_lower::analyses::target_metrics::CandidateRanking::disqualification_reason: core::option::Option<alloc::string::String>
-pub vyre_lower::analyses::target_metrics::CandidateRanking::is_disqualified: bool
-pub vyre_lower::analyses::target_metrics::CandidateRanking::metrics: vyre_lower::analyses::target_metrics::TargetEmittedMetrics
-pub vyre_lower::analyses::target_metrics::CandidateRanking::rank: usize
-pub vyre_lower::analyses::target_metrics::CandidateRanking::score: f64
-pub vyre_lower::analyses::target_metrics::CandidateRanking::target_device: alloc::string::String
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::async_copy_counter: u64
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::bank_conflict_counter: u64
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::device_duration_nanos: u64
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::instruction_count: usize
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::local_memory_spill_bytes: usize
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::output_parity_verified: bool
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::register_count: usize
-pub vyre_lower::analyses::target_metrics::TargetEmittedMetrics::shared_memory_bytes: usize
 pub vyre_lower::analyses::vec_pack::VecPackChain::op_indices: alloc::vec::Vec<usize>
 pub vyre_lower::analyses::vec_pack::VecPackChain::slot: u32
 pub vyre_lower::analyses::vec_pack::VecPackChain::start_index: u32
