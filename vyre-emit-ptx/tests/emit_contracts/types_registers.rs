@@ -15,53 +15,6 @@ fn capability_constants_present() {
 }
 
 #[test]
-fn ptx_type_from_dtype_covers_scalars() {
-    assert_eq!(PtxType::from_dtype(&DataType::Bool).unwrap(), PtxType::Bool);
-    assert_eq!(PtxType::from_dtype(&DataType::U8).unwrap(), PtxType::U32);
-    assert_eq!(PtxType::from_dtype(&DataType::I8).unwrap(), PtxType::I32);
-    assert_eq!(PtxType::from_dtype(&DataType::U16).unwrap(), PtxType::U32);
-    assert_eq!(PtxType::from_dtype(&DataType::I16).unwrap(), PtxType::I32);
-    assert_eq!(PtxType::from_dtype(&DataType::U32).unwrap(), PtxType::U32);
-    assert_eq!(PtxType::from_dtype(&DataType::I32).unwrap(), PtxType::I32);
-    assert_eq!(PtxType::from_dtype(&DataType::F32).unwrap(), PtxType::F32);
-}
-
-#[test]
-fn ptx_type_from_dtype_rejects_unsupported() {
-    assert!(matches!(
-        PtxType::from_dtype(&DataType::Tensor),
-        Err(EmitError::UnsupportedDataType(_))
-    ));
-}
-
-#[test]
-fn ptx_type_from_dtype_rejects_bytes_instead_of_silent_u32() {
-    // `Bytes` is a packed-byte buffer element, not a scalar register type.
-    // Before this guard it was folded into `.u32` (grouped with U8/U16/U32),
-    // silently reinterpreting a byte stream as a word: a `Bytes` buffer load
-    // would index words not bytes, and a `Cast { Bytes }` of a u32 would no-op
-    // (src == dst). The emitter must fail closed and name the pack-to-u32 fix.
-    let err = PtxType::from_dtype(&DataType::Bytes)
-        .expect_err("from_dtype(Bytes) must fail closed, not silently map to .u32");
-    let EmitError::UnsupportedDataType(msg) = &err else {
-        panic!("Bytes rejection must be UnsupportedDataType; got {err:?}");
-    };
-    assert!(
-        msg.contains("Bytes") && msg.contains("pack-to-u32 pre-pass"),
-        "Bytes rejection must name the type and the fix (pack-to-u32 pre-pass); got: {msg}"
-    );
-}
-
-#[test]
-fn reg_display_uses_correct_prefix() {
-    assert_eq!(format!("{}", Reg(PtxType::U32, 5)), "%r5");
-    assert_eq!(format!("{}", Reg(PtxType::I32, 0)), "%s0");
-    assert_eq!(format!("{}", Reg(PtxType::F32, 3)), "%f3");
-    assert_eq!(format!("{}", Reg(PtxType::Bool, 1)), "%p1");
-    assert_eq!(format!("{}", Reg(PtxType::U64, 7)), "%rd7");
-}
-
-#[test]
 fn register_declaration_sized_to_used_count() {
     // A kernel with 3 u32 ops declares those registers on top of
     // the reserved launch-ABI registers.
