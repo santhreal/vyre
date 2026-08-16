@@ -78,6 +78,10 @@ impl Gate for PublicApiSnapshot {
         true
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &["--crate NAME judges one publishable crate instead of every one"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let rows = roster(&tree)?;

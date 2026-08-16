@@ -41,6 +41,10 @@ impl Gate for ReleaseBenchmarksGate {
         true
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        USAGE
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let config = match parse_args(&ctx.args) {

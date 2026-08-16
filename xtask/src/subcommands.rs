@@ -454,6 +454,20 @@ mod tests {
         assert_eq!(before, names.len(), "duplicate gate name in the registry");
     }
 
+    /// WHY: `--help` is a question about a gate, and a gate that reads the tree
+    /// to answer it has run the check the caller asked it not to run. Every
+    /// option a gate names in its help line is answered from what the gate
+    /// declares, and the roster is the registry, so a gate registered later is
+    /// judged without being listed here. A gate implemented in another package
+    /// declares its usage there and is judged by that package's own table.
+    #[test]
+    fn every_gate_answers_help_with_the_options_it_names() {
+        assert_eq!(
+            crate::gate::usage_gaps(&registry()),
+            Vec::<String>::new()
+        );
+    }
+
     /// WHY: a subset that names an unregistered gate silently runs fewer gates
     /// than its name promises, which is the exemption this whole registry
     /// exists to remove.

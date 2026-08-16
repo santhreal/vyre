@@ -136,7 +136,14 @@ pub fn run_delegated_main(package: &str, purpose: &str, gates: &[&dyn Gate]) -> 
     };
     let root = crate::checkout::checkout_root();
     let ctx = GateCtx::new(root, args[2..].to_vec());
-    match gate.run(&ctx) {
+    // The gate the parent asked for usage is implemented here, so the answer is
+    // built from what this gate declares and travels back as report notes.
+    let outcome = if crate::gate::help_requested(&ctx.args) {
+        Ok(crate::gate::usage_report(*gate))
+    } else {
+        gate.run(&ctx)
+    };
+    match outcome {
         Ok(report) => match serde_json::to_string(&report) {
             Ok(json) => {
                 println!("{json}");

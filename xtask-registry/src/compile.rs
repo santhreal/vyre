@@ -43,6 +43,15 @@ impl Gate for Compile {
         "Compile the registered release corpus; --program ID narrows to one case, --input PATH compiles one wire file, --to ID also compiles that registered target, --out DIR writes the payloads"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--program ID narrows the run to one registered corpus case",
+            "--input PATH compiles one wire file instead of the corpus",
+            "--to ID also compiles that registered target",
+            "--out DIR writes the compiled payloads there",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let cases = corpus(ctx)?;
         let targets: Vec<&str> = ctx

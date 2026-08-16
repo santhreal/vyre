@@ -262,6 +262,10 @@ impl Gate for HotPathScan {
         "Hold every file listed in docs/optimization/HOT_PATHS.toml to its allocation, clone, lock, sleep and panic budget; --budget-vx-json PATH writes the overage candidates"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &["--budget-vx-json PATH writes the overage candidates as JSON to that path"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
         let mut report = Report::clean();

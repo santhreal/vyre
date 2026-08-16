@@ -33,6 +33,12 @@ impl Gate for TraceF32 {
         "Run the recorded test inputs of every registered operation through the reference; --op-id ID narrows to one"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--op-id ID narrows the run to one registered operation",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let selected = ctx.flag("--op-id");
         let corpus = corpus(selected);

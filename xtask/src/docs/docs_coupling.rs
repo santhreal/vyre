@@ -78,6 +78,10 @@ impl Gate for DocsCoupling {
         "Whether an authored page still names code that exists, and whether a change to that code arrived with the page; --base REF compares against that ref"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &["--base REF compares the working tree against that git ref"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
         let pages = load_covering(&ctx.root, &mut report)?;

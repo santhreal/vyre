@@ -47,6 +47,10 @@ impl Gate for LegoQuick {
         "Hold every dialect-to-dialect import in vyre-libs to an edge the manifest declares; --staged narrows to the staged set"
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &["--staged narrows the scan to the files git reports as staged"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = workspace_root().ok_or_else(|| {
             GateError::new(

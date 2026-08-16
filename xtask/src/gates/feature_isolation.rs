@@ -795,6 +795,15 @@ impl Gate for FeatureIsolation {
         true
     }
 
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--sweep compiles each recorded selection instead of reading the recorded outcome",
+            "--member NAME narrows the sweep to one workspace member",
+            "--only-unrecorded sweeps the selections the record does not carry",
+            "--list prints the axis and judges nothing",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
         let mut report = Report::clean();
