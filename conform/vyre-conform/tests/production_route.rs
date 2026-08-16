@@ -92,18 +92,36 @@ fn cuda_production_route_reports_traps_on_malformed_inputs() {
     if !backend_dispatches("cuda").expect("valid backend registry") {
         return;
     }
-    let program = vyre_foundation::composition::trap_program(
-        "vyre-conform::production_route::trap_program",
-        Some(("out", DataType::U32)),
-        "deliberate test domain trap",
-    );
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::if_then(
+                Expr::ne(Expr::load("input", Expr::u32(0)), Expr::u32(0)),
+                vec![Node::trap(
+                    Expr::load("input", Expr::u32(0)),
+                    "deliberate malformed-input trap",
+                )],
+            ),
+            Node::store("out", Expr::u32(0), Expr::u32(0)),
+        ],
+    )
+    .with_entry_op_id("vyre-conform::production_route::conditional_trap");
 
     let session = ProductionSession::compile(&program, registration)
-        .expect("Fix: production compilation must succeed for trap-declaring program on CUDA");
-    let result = session.submit(&[]);
+        .expect("Fix: safe finalist inputs must compile a trap-declaring program on CUDA");
+    let malformed = 1_u32.to_le_bytes();
+    let error = session
+        .submit(&[&malformed])
+        .expect_err("malformed input must trap on CUDA");
+    let message = error.to_string();
     assert!(
-        result.is_err(),
-        "Fix: CUDA production execution of trap-declaring program must report trap error on execution"
+        message.contains("cuda dispatch trapped")
+            && message.contains("deliberate malformed-input trap"),
+        "Fix: CUDA production execution must report the device trap and its tag, got: {message}"
     );
 }
 
