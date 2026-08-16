@@ -2179,10 +2179,11 @@ pub fn vyre_foundation::transform::inline::output_buffer<'a>(op_id: &str, progra
 pub fn vyre_foundation::transform::inline::zero_value(ty: &vyre_spec::data_type::DataType) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::transform::licm::apply_licm(program: &vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::transform::parallelism::detect_parallelism(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::transform::parallelism::DispatchGroup>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::binding(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::body(&mut self, parent: &vyre_foundation::ir::Node, body: &[vyre_foundation::ir::Node]) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>> where Self: core::marker::Sized
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::enter(&mut self, node: &vyre_foundation::ir::Node)
-pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::ident(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::operand(&mut self, expr: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
+pub fn vyre_foundation::transform::rewrite_walk::NodeRewrite::tag(&mut self, name: &vyre_foundation::ir::Ident) -> core::option::Option<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::transform::rewrite_walk::extend_with_rewritten_scope<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R, out: &mut alloc::vec::Vec<vyre_foundation::ir::Node>)
 pub fn vyre_foundation::transform::rewrite_walk::reachable_prefix(body: &[vyre_foundation::ir::Node]) -> &[vyre_foundation::ir::Node]
 pub fn vyre_foundation::transform::rewrite_walk::rewrite_body<R: vyre_foundation::transform::rewrite_walk::NodeRewrite>(body: &[vyre_foundation::ir::Node], rewrite: &mut R) -> core::option::Option<alloc::vec::Vec<vyre_foundation::ir::Node>>
@@ -2311,6 +2312,7 @@ pub fn vyre_foundation::visit::node_map::map_children<F>(node: vyre_foundation::
 pub fn vyre_foundation::visit::node_operands(node: &vyre_foundation::ir::Node) -> [core::option::Option<&vyre_foundation::ir::Expr>; 2]
 pub fn vyre_foundation::visit::node_scalars(node: &vyre_foundation::ir::Node) -> vyre_foundation::visit::NodeScalars<'_>
 pub fn vyre_foundation::visit::node_shape(node: &vyre_foundation::ir::Node) -> vyre_foundation::visit::NodeShape
+pub fn vyre_foundation::visit::node_tag(node: &vyre_foundation::ir::Node) -> core::option::Option<&vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::referenced_buffers(program: &vyre_foundation::ir::Program) -> std::collections::hash::set::HashSet<vyre_foundation::ir::Ident>
 pub fn vyre_foundation::visit::try_for_each_expr<B>(nodes: &[vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>
 pub fn vyre_foundation::visit::try_for_each_node<'a, B>(nodes: &'a [vyre_foundation::ir::Node], f: impl core::ops::function::FnMut(&'a vyre_foundation::ir::Node) -> core::ops::control_flow::ControlFlow<B>) -> core::ops::control_flow::ControlFlow<B>

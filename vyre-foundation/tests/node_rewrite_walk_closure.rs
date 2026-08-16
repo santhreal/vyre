@@ -66,7 +66,8 @@ fn every_fixture() -> Vec<NodeSample> {
 #[derive(Default)]
 struct Observe {
     operands: Vec<Expr>,
-    idents: Vec<Ident>,
+    bindings: Vec<Ident>,
+    tags: Vec<Ident>,
     bodies: Vec<Vec<Node>>,
 }
 
@@ -76,8 +77,13 @@ impl NodeRewrite for Observe {
         None
     }
 
-    fn ident(&mut self, name: &Ident) -> Option<Ident> {
-        self.idents.push(name.clone());
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        self.bindings.push(name.clone());
+        None
+    }
+
+    fn tag(&mut self, name: &Ident) -> Option<Ident> {
+        self.tags.push(name.clone());
         None
     }
 
@@ -117,7 +123,8 @@ impl NodeRewrite for ReplaceOperand {
     }
 }
 
-/// A policy that replaces one identifier wherever it is offered.
+/// A policy that replaces one identifier in either name namespace, so a case
+/// that does not care which namespace a position belongs to still sees it.
 struct ReplaceIdent {
     from: Ident,
     to: Ident,
@@ -128,7 +135,11 @@ impl NodeRewrite for ReplaceIdent {
         None
     }
 
-    fn ident(&mut self, name: &Ident) -> Option<Ident> {
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        (*name == self.from).then(|| self.to.clone())
+    }
+
+    fn tag(&mut self, name: &Ident) -> Option<Ident> {
         (*name == self.from).then(|| self.to.clone())
     }
 }
