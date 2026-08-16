@@ -1,2 +1,2 @@
 category = "Fixed"
-text = "Ring occupancy sums report an overflowing slot count instead of saturating to a plausible total, and autotune cost selection carries the empty candidate set in its return type instead of a debug assertion absent from release builds."
+text = "Ring occupancy sums report an overflowing slot count instead of saturating to a plausible total, so a launch recommendation over an impossible decoded ring now fails with that reason instead of running on ratios derived from a saturated total, and autotune cost selection carries the empty candidate set in its return type instead of a debug assertion absent from release builds."
