@@ -435,6 +435,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "no source file in this workspace declares")]
     fn a_marker_no_file_declares_is_reported_rather_than_guessed() {
-        declaring_source_file("pub fn no_such_declaration_exists_anywhere");
+        let _ = declaring_source_file("pub fn no_such_declaration_exists_anywhere");
     }
 }
