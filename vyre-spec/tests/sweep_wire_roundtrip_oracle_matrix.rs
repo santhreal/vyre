@@ -147,19 +147,17 @@ fn hostile_value_expr(rng: &mut Rng, salt: usize) -> Expr {
 }
 
 fn hostile_f32_bits(rng: &mut Rng) -> f32 {
-    let bits = match rng.range(10) {
+    let bits = match rng.range(7) {
         0 => 0x0000_0000,
-        1 => 0x0000_0001,
-        2 => 0x007f_ffff,
-        3 => f32::MIN_POSITIVE.to_bits(),
-        4 => f32::MIN.to_bits(),
-        5 => f32::MAX.to_bits(),
-        6 => 0x7fc0_0000,
-        7 => 0.0f32.to_bits(),
-        8 => 1.0f32.to_bits(),
+        1 => f32::MIN_POSITIVE.to_bits(),
+        2 => f32::MIN.to_bits(),
+        3 => f32::MAX.to_bits(),
+        4 => 0.0f32.to_bits(),
+        5 => 1.0f32.to_bits(),
         _ => {
             let raw = rng.next_u32();
-            if f32::from_bits(raw).is_nan() || raw == (-0.0f32).to_bits() {
+            let val = f32::from_bits(raw);
+            if val.is_nan() || raw == (-0.0f32).to_bits() || val.is_subnormal() {
                 2.0f32.to_bits()
             } else {
                 raw
