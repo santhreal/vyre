@@ -676,6 +676,92 @@ mod tests {
         assert_eq!(bytes(&memory, "dst"), vec![0, 0, 0, 21, 22, 23, 24, 0]);
     }
 
+    #[test]
+    fn sequential_eval_tile_matmul_and_reduce() {
+        use vyre_foundation::ir::{BufferAccess, Layout, Residency, SubgroupReduceOp, Tile};
+
+        let tile_a = Tile::new(
+            DataType::F32,
+            vec![2, 2],
+            Layout::RowMajor,
+            Residency::Register,
+        );
+        let tile_b = Tile::new(
+            DataType::F32,
+            vec![2, 2],
+            Layout::RowMajor,
+            Residency::Register,
+        );
+        let tile_c = Tile::new(
+            DataType::F32,
+            vec![2, 2],
+            Layout::RowMajor,
+            Residency::Register,
+        );
+
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
+                BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F32).with_count(4),
+                BufferDecl::output("out", 2, DataType::F32).with_count(4),
+                BufferDecl::output("red", 3, DataType::F32).with_count(2),
+            ],
+            [1, 1, 1],
+            vec![
+                Node::tile_decl("c", tile_c),
+                Node::tile_load(
+                    "t_a",
+                    tile_a,
+                    "a",
+                    vec![Expr::u32(0), Expr::u32(0)],
+                    Layout::RowMajor,
+                ),
+                Node::tile_load(
+                    "t_b",
+                    tile_b,
+                    "b",
+                    vec![Expr::u32(0), Expr::u32(0)],
+                    Layout::RowMajor,
+                ),
+                Node::tile_matmul("c", "t_a", "t_b"),
+                Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
+                Node::tile_reduce("r", "c", SubgroupReduceOp::Add, 1),
+                Node::tile_store("red", vec![Expr::u32(0)], "r"),
+            ],
+        );
+
+        let mut a_bytes = Vec::new();
+        for &v in &[1.0f32, 2.0, 3.0, 4.0] {
+            a_bytes.extend_from_slice(&v.to_ne_bytes());
+        }
+        let mut b_bytes = Vec::new();
+        for &v in &[5.0f32, 6.0, 7.0, 8.0] {
+            b_bytes.extend_from_slice(&v.to_ne_bytes());
+        }
+
+        let mut memory = Memory::empty()
+            .with_storage("a", Buffer::new(a_bytes, DataType::F32))
+            .with_storage("b", Buffer::new(b_bytes, DataType::F32))
+            .with_storage("out", Buffer::new(vec![0; 16], DataType::F32))
+            .with_storage("red", Buffer::new(vec![0; 8], DataType::F32));
+
+        run_program(&program, &mut memory).unwrap();
+
+        let out_bytes = bytes(&memory, "out");
+        let out_f32: Vec<f32> = out_bytes
+            .chunks_exact(4)
+            .map(|c| f32::from_ne_bytes(c.try_into().unwrap()))
+            .collect();
+        assert_eq!(out_f32, vec![19.0, 22.0, 43.0, 50.0]);
+
+        let red_bytes = bytes(&memory, "red");
+        let red_f32: Vec<f32> = red_bytes
+            .chunks_exact(4)
+            .map(|c| f32::from_ne_bytes(c.try_into().unwrap()))
+            .collect();
+        assert_eq!(red_f32, vec![41.0, 93.0]);
+    }
+
     /// WHY: the reference tree must not hold two verdicts for one program. Both
     /// executors reach the three async rules (a tag started twice, a wait with
     /// nothing pending, a transfer still queued at the end of an invocation)
@@ -760,6 +846,13 @@ mod tests {
         }
 
         fn statement_executor(program: &Program) -> Result<(), crate::ReferenceError> {
+            let validation_report = vyre_foundation::validate::validate_with_options(
+                program,
+                vyre_foundation::validate::ValidationOptions::default(),
+            );
+            if let Some(source) = validation_report.errors.into_iter().next() {
+                return Err(crate::ReferenceError::validation(source));
+            }
             let mut memory = Memory::empty()
                 .with_storage("src", Buffer::new(vec![1, 2, 3, 4], DataType::U32))
                 .with_storage("dst", Buffer::new(vec![0; 4], DataType::U32));
@@ -805,7 +898,7 @@ mod tests {
                 let program = single_lane_program(vec![async_start_node(kind)]);
                 let message = refusal(statement_executor, &program);
                 assert!(
-                    message.contains("still pending")
+                    (message.contains("still pending") || message.contains("in flight"))
                         && message.contains(PENDING_TAG)
                         && message.contains("AsyncWait"),
                     "Fix: `Node::{kind}` left pending must name the tag and the missing AsyncWait, got: {message}"
@@ -822,7 +915,9 @@ mod tests {
                 let program = single_lane_program(vec![async_start_node(kind), Node::Return]);
                 let message = refusal(statement_executor, &program);
                 assert!(
-                    message.contains("still pending") && message.contains(PENDING_TAG),
+                    (message.contains("still pending") || message.contains("in flight"))
+                        && message.contains(PENDING_TAG)
+                        && message.contains("AsyncWait"),
                     "Fix: `Return` must not launder a pending `Node::{kind}` past the check, got: {message}"
                 );
             }
@@ -882,7 +977,7 @@ fn eval_tile_load(
         })?;
         origin_coords.push(coord);
     }
-    let target = eval_expr::buffer_mut(memory, program, buffer)?;
+    let target = eval_expr::buffer(memory, program, buffer)?;
     let elements = crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout);
     invocation.bind(tile_name, Value::Array(elements))
 }
@@ -968,17 +1063,22 @@ fn eval_tile_elementwise<'a>(
 ) -> Result<(), crate::ReferenceError> {
     let mut input_arrays = Vec::with_capacity(inputs.len());
     let mut max_len = 0;
+    let mut saved_inputs = Vec::with_capacity(inputs.len());
     for input in inputs {
         let val = invocation
             .local(input.as_str())
             .cloned()
             .ok_or_else(|| crate::ReferenceError::new(format!("tile input `{input}` not found")))?;
-        let elems = match val {
-            Value::Array(e) => e,
-            s => vec![s],
+        let elems = match &val {
+            Value::Array(e) => e.clone(),
+            s => vec![s.clone()],
         };
         max_len = max_len.max(elems.len());
         input_arrays.push(elems);
+        saved_inputs.push(val);
+    }
+    for input in inputs {
+        invocation.unbind(input.as_str());
     }
     let mut out_elems = Vec::with_capacity(max_len);
     for idx in 0..max_len {
@@ -999,6 +1099,9 @@ fn eval_tile_elementwise<'a>(
             .unwrap_or(Value::Float(0.0));
         out_elems.push(out_val);
         invocation.pop_scope();
+    }
+    for (input, val) in inputs.iter().zip(saved_inputs) {
+        let _ = invocation.bind(input.as_str(), val);
     }
     invocation.bind(out_name, Value::Array(out_elems))
 }

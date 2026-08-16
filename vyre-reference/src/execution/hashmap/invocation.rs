@@ -92,6 +92,10 @@ impl HashmapLocals {
             }
         }
     }
+    pub(crate) fn remove(&mut self, name: &str) -> Option<Value> {
+        self.immutable.remove(name);
+        self.locals.remove(name)
+    }
 }
 
 #[cfg(feature = "subgroup-ops")]

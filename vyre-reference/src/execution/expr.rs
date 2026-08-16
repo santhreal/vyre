@@ -452,6 +452,15 @@ fn eval_local_id(axis: u8, invocation: &Invocation<'_>) -> Result<Value, crate::
     axis_value(invocation.ids.local, axis)
 }
 
+/// Return a shared buffer for reading.
+pub fn buffer<'a>(
+    memory: &'a Memory,
+    program: &Program,
+    name: &str,
+) -> Result<&'a oob::Buffer, crate::ReferenceError> {
+    resolve_buffer(memory, program, name)
+}
+
 fn resolve_buffer<'a>(
     memory: &'a Memory,
     program: &Program,

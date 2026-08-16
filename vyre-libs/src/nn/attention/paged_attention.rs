@@ -20,7 +20,7 @@
 use thiserror::Error;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::{
-    BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program,
+    BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program,
 };
 
 use crate::nn::attention_stability::{bounded_score, positive_denominator};

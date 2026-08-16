@@ -336,16 +336,21 @@ pub(crate) fn step_nodes_frame<'a>(
         Node::TileElementwise { out, inputs, body } => {
             let mut input_arrays = Vec::with_capacity(inputs.len());
             let mut max_len = 0;
+            let mut saved_inputs = Vec::with_capacity(inputs.len());
             for input in inputs {
                 let val = invocation.locals.local(input.as_str()).ok_or_else(|| {
                     ReferenceError::new(format!("tile input `{input}` not found"))
                 })?;
-                let elems = match val {
-                    Value::Array(e) => e,
-                    s => vec![s],
+                let elems = match &val {
+                    Value::Array(e) => e.clone(),
+                    s => vec![s.clone()],
                 };
                 max_len = max_len.max(elems.len());
                 input_arrays.push(elems);
+                saved_inputs.push(val);
+            }
+            for input in inputs {
+                invocation.locals.remove(input.as_str());
             }
             let mut out_elems = Vec::with_capacity(max_len);
             for idx in 0..max_len {
@@ -388,6 +393,9 @@ pub(crate) fn step_nodes_frame<'a>(
                     .unwrap_or(Value::Float(0.0));
                 out_elems.push(out_val);
                 invocation.locals.pop_scope();
+            }
+            for (input, val) in inputs.iter().zip(saved_inputs) {
+                let _ = invocation.locals.bind(input.as_str(), val);
             }
             invocation
                 .locals

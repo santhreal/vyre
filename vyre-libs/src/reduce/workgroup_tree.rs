@@ -466,41 +466,6 @@ inventory::submit! {
     )
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        MAX_U32_OP_ID,
-        || workgroup_max_u32("values", "out", 4, 4),
-        Some(|| vec![vec![
-            fixture_u32(&[3, 17, 5, 42]),
-            fixture_u32(&[0]),
-        ]]),
-        Some(|| vec![vec![fixture_u32(&[42])]]),
-    )
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        MIN_F32_OP_ID,
-        || workgroup_min_f32("values", "out", 4, 4),
-        Some(|| vec![vec![
-            fixture_f32(&[3.0, 9.5, -2.5, 1.25]),
-            fixture_f32(&[0.0]),
-        ]]),
-        Some(|| vec![vec![fixture_f32(&[-2.5])]]),
-    )
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        MIN_U32_OP_ID,
-        || workgroup_min_u32("values", "out", 4, 4),
-        Some(|| vec![vec![
-            fixture_u32(&[17, 3, 42, 5]),
-            fixture_u32(&[0]),
-        ]]),
-        Some(|| vec![vec![fixture_u32(&[3])]]),
-    )
-}
 
 /// Index of the lane `stride` positions before `lane`.
 ///

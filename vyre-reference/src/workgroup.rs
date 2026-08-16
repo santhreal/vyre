@@ -383,6 +383,39 @@ impl NodeVisitor for LocalSlots {
         Continue(())
     }
 
+    fn visit_tile(&mut self, node: &Node) -> ControlFlow<Self::Break> {
+        match node {
+            Node::TileDecl { name, .. } => {
+                self.intern(name);
+            }
+            Node::TileLoad { tile, origin, .. } => {
+                self.intern(tile);
+                for expr in origin {
+                    visit_preorder(self, expr)?;
+                }
+            }
+            Node::TileStore { origin, .. } => {
+                for expr in origin {
+                    visit_preorder(self, expr)?;
+                }
+            }
+            Node::TileMatmul { acc, .. } => {
+                self.intern(acc);
+            }
+            Node::TileReduce { out, .. } => {
+                self.intern(out);
+            }
+            Node::TileElementwise { out, inputs, .. } => {
+                self.intern(out);
+                for input in inputs {
+                    self.intern(input);
+                }
+            }
+            _ => {}
+        }
+        Continue(())
+    }
+
     fn visit_block(&mut self, _: &Node, _: &[Node]) -> ControlFlow<Self::Break> {
         Continue(())
     }
@@ -572,6 +605,12 @@ impl<'a> Invocation<'a> {
             scope.push(slot);
         }
         Ok(())
+    }
+
+    /// Unbind a local by name and return its value if present.
+    pub fn unbind(&mut self, name: &str) -> Option<Value> {
+        let slot = self.slots.slot(name)?;
+        self.locals[slot].take()
     }
 
     /// Bind an immutable loop variable.

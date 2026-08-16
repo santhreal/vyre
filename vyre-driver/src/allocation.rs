@@ -3,7 +3,7 @@
 //! Concrete backends still own domain wording, but the arithmetic for
 //! "reserve additional" and "reserve up to target capacity" must not drift.
 
-use std::collections::{HashMap, HashSet, TryReserveError};
+use std::collections::{HashMap, HashSet};
 use std::hash::{BuildHasher, Hash};
 
 use smallvec::{Array, SmallVec};

@@ -15,6 +15,7 @@ pub(crate) mod node_tree;
 pub mod op_count;
 pub mod sequential;
 pub(crate) mod typed_ops;
+pub(crate) mod tile;
 
 use std::borrow::Cow;
 
