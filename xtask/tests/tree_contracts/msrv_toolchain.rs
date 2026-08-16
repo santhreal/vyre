@@ -109,10 +109,7 @@ fn every_cargo_fuzz_job_selects_nightly() {
     let mut runs = 0usize;
 
     for line in workflow.lines() {
-        if line.starts_with("  ")
-            && !line.starts_with("    ")
-            && line.trim_end().ends_with(':')
-        {
+        if line.starts_with("  ") && !line.starts_with("    ") && line.trim_end().ends_with(':') {
             job = line.trim().trim_end_matches(':');
             toolchain = None;
         }
@@ -129,8 +126,7 @@ fn every_cargo_fuzz_job_selects_nightly() {
                 "Fix: fuzz job `{job}` must select nightly before installing cargo-fuzz"
             );
             assert_eq!(
-                trimmed,
-                "run: cargo +nightly install --locked cargo-fuzz",
+                trimmed, "run: cargo +nightly install --locked cargo-fuzz",
                 "Fix: fuzz job `{job}` must install cargo-fuzz with the selected nightly toolchain"
             );
         }
@@ -147,7 +143,6 @@ fn every_cargo_fuzz_job_selects_nightly() {
                 "Fix: fuzz job `{job}` must invoke cargo-fuzz through the nightly toolchain: {trimmed}"
             );
         }
-
     }
 
     assert!(

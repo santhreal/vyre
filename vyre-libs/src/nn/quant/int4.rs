@@ -4,14 +4,14 @@
 //! weights stay packed through the inner product. This avoids the extra global
 //! memory traffic of materializing an unpacked i32 lane buffer before a dot.
 
-use vyre_foundation::composition::tag_program;
-use vyre_foundation::ir::Program;
 use crate::math::quantized::i4x8_batched_matmul_f32_scaled as primitive_i4x8_batched_matmul_f32_scaled;
 use crate::math::quantized::i4x8_batched_matmul_top1_f32_scaled as primitive_i4x8_batched_matmul_top1_f32_scaled;
 use crate::math::quantized::i4x8_batched_matvec_f32_scaled as primitive_i4x8_batched_matvec_f32_scaled;
 use crate::math::quantized::i4x8_dot_f32_scaled as primitive_i4x8_dot_f32_scaled;
 use crate::math::quantized::i4x8_dot_i32 as primitive_i4x8_dot_i32;
 use crate::math::quantized::i4x8_matvec_f32_scaled as primitive_i4x8_matvec_f32_scaled;
+use vyre_foundation::composition::tag_program;
+use vyre_foundation::ir::Program;
 
 /// Stable spec-level extension name for packed INT4 dot products.
 pub const INT4_DOT_EXTENSION_NAME: &str = "quant.int4.dot";

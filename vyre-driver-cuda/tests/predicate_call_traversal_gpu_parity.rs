@@ -17,9 +17,7 @@ use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::predicate::arg_of::{arg_of, cpu_ref as arg_of_cpu};
 use vyre_libs::predicate::call_to::{call_to, cpu_ref as call_to_cpu};
 use vyre_libs::predicate::edge_kind;
-use vyre_libs::predicate::return_value_of::{
-    cpu_ref as return_value_of_cpu, return_value_of,
-};
+use vyre_libs::predicate::return_value_of::{cpu_ref as return_value_of_cpu, return_value_of};
 
 /// Run a forward-traversal wrapper (call_to, return_value_of).
 fn run_forward<B>(

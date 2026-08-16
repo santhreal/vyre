@@ -1,8 +1,8 @@
 //! The one static type walker, and the environment it reads free names from.
 
 use crate::ir_inner::model::expr::Expr;
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::DataType;
+use crate::ir_inner::model::program::BufferDecl;
 use crate::validate::Binding;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;

@@ -1,7 +1,7 @@
 //! Shared test helpers for classic-AC program conformance tests.
 
-use vyre_foundation::ir::Program;
 use crate::matching::CompiledDfa;
+use vyre_foundation::ir::Program;
 use vyre_primitives::wire::pack_u32_slice;
 use vyre_reference::value::Value;
 

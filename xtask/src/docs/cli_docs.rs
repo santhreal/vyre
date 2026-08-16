@@ -246,7 +246,11 @@ fn read_manifest(root: &Path) -> Result<Vec<toml::Table>, GateError> {
             "repair the manifest syntax",
         )
     })?;
-    if document.get("schema_version").and_then(toml::Value::as_integer) != Some(SCHEMA_VERSION) {
+    if document
+        .get("schema_version")
+        .and_then(toml::Value::as_integer)
+        != Some(SCHEMA_VERSION)
+    {
         return Err(GateError::new(
             format!("{MANIFEST} does not declare schema_version = {SCHEMA_VERSION}"),
             format!("set `schema_version = {SCHEMA_VERSION}` at the top of the manifest"),
@@ -420,7 +424,10 @@ fn metadata(root: &Path, runner: &Path) -> Result<serde_json::Value, GateError> 
         .output()
         .map_err(|error| {
             GateError::new(
-                format!("`{} metadata` could not be spawned: {error}", runner.display()),
+                format!(
+                    "`{} metadata` could not be spawned: {error}",
+                    runner.display()
+                ),
                 "install the workspace cargo wrapper, or set VYRE_CARGO_RUNNER",
             )
         })?;
@@ -610,11 +617,15 @@ fn subcommand_token(word: Option<&str>) -> Option<String> {
         return None;
     }
     let mut characters = word.chars();
-    if !characters.next().is_some_and(|first| first.is_ascii_lowercase()) {
+    if !characters
+        .next()
+        .is_some_and(|first| first.is_ascii_lowercase())
+    {
         return None;
     }
-    if !characters.all(|character| character.is_ascii_lowercase() || character.is_ascii_digit() || character == '-')
-    {
+    if !characters.all(|character| {
+        character.is_ascii_lowercase() || character.is_ascii_digit() || character == '-'
+    }) {
         return None;
     }
     Some(word.to_string())
@@ -797,7 +808,10 @@ mod tests {
     /// option in a usage line, would be documented as one.
     #[test]
     fn only_lowercase_command_words_are_commands() {
-        assert_eq!(subcommand_token(Some("dump-lr")), Some("dump-lr".to_string()));
+        assert_eq!(
+            subcommand_token(Some("dump-lr")),
+            Some("dump-lr".to_string())
+        );
         assert_eq!(subcommand_token(Some("gate1")), Some("gate1".to_string()));
         assert_eq!(subcommand_token(Some("help")), None);
         assert_eq!(subcommand_token(Some("--out")), None);
@@ -828,7 +842,9 @@ mod tests {
             .expect("no markers, crate contract present");
         assert_eq!(
             inserted,
-            format!("# Tool\n\n{BEGIN}\n## Command-line interface\n{END}\n\n{CRATE_CONTRACT}\nrows\n")
+            format!(
+                "# Tool\n\n{BEGIN}\n## Command-line interface\n{END}\n\n{CRATE_CONTRACT}\nrows\n"
+            )
         );
 
         let appended = replace_block("# Tool\n", &block).expect("no markers at all");

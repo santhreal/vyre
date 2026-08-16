@@ -39,11 +39,11 @@ pub(crate) mod glass;
 pub(crate) mod glyph_grid;
 /// CSS-compatible gradient rasterization (linear, radial, conic).
 pub(crate) mod gradient;
+/// Packed-RGBA invocation skeletons shared by the pixel-map compositions.
+pub mod packed_rgba_map;
 /// GPU-computed box shadow with SDF falloff.
 pub(crate) mod shadow;
 pub(crate) mod u32_word_bytes;
-/// Packed-RGBA invocation skeletons shared by the pixel-map compositions.
-pub mod packed_rgba_map;
 /// 2× nearest-neighbor upsample for the half-resolution blur return path.
 pub(crate) mod upsample;
 

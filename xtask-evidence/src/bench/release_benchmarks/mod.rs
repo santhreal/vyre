@@ -5,10 +5,10 @@
 //! workload benchmark JSON artifacts listed by `release-matrix`.
 
 mod args;
+mod artifact_metrics;
 mod cpu_sota_proof;
 mod evidence_schema;
 mod frontier_leaderboard;
-mod artifact_metrics;
 mod metrics;
 mod optimization;
 mod release_thresholds;

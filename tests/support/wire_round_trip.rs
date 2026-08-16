@@ -47,8 +47,9 @@ pub(crate) fn assert_canonical_wire_round_trip(program: &Program, case: &str) ->
         "Fix: wire case {case} canonical bytes drifted after one round trip"
     );
 
-    let redecoded = Program::from_wire(&reencoded)
-        .unwrap_or_else(|error| panic!("Fix: wire case {case} must decode canonical bytes: {error}"));
+    let redecoded = Program::from_wire(&reencoded).unwrap_or_else(|error| {
+        panic!("Fix: wire case {case} must decode canonical bytes: {error}")
+    });
     let third = redecoded
         .to_wire()
         .unwrap_or_else(|error| panic!("Fix: wire case {case} must triple-encode: {error}"));

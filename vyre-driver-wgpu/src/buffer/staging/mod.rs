@@ -129,8 +129,9 @@ mod tests {
 
         // Create a small COPY_SRC buffer with known contents.
         let contents: Vec<u8> = vec![0xAB; 64];
-        let handle = GpuBufferHandle::upload(device, queue, &contents, wgpu::BufferUsages::COPY_SRC)
-            .expect("Fix: upload should succeed");
+        let handle =
+            GpuBufferHandle::upload(device, queue, &contents, wgpu::BufferUsages::COPY_SRC)
+                .expect("Fix: upload should succeed");
 
         let pool = StagingBufferPool::new();
 
@@ -159,8 +160,9 @@ mod tests {
         let (device, queue) = &*arc;
 
         let contents: Vec<u8> = vec![0xCD; 32];
-        let handle = GpuBufferHandle::upload(device, queue, &contents, wgpu::BufferUsages::COPY_SRC)
-            .expect("Fix: upload should succeed");
+        let handle =
+            GpuBufferHandle::upload(device, queue, &contents, wgpu::BufferUsages::COPY_SRC)
+                .expect("Fix: upload should succeed");
 
         for _ in 0..5 {
             let mut out = Vec::new();

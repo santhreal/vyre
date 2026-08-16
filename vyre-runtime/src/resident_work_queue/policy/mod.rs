@@ -1578,7 +1578,9 @@ mod tests {
                     },
                     ResidentQueueTopology::FusedDense,
                 )
-                .expect("Fix: stable fused dense recommendation should accept valid adapter limits");
+                .expect(
+                    "Fix: stable fused dense recommendation should accept valid adapter limits",
+                );
 
             assert_eq!(rec.topology, ResidentQueueTopology::FusedDense);
             assert_eq!(rec.execution_mode, ResidentExecutionMode::Jit);
@@ -1901,7 +1903,9 @@ mod tests {
                     device_memory_budget_bytes: 64 * 1024,
                     ..ResidentLaunchRequest::direct(1024, 64, 256)
                 })
-                .expect_err("Fix: launch policy must reject plans that exceed explicit device budget");
+                .expect_err(
+                    "Fix: launch policy must reject plans that exceed explicit device budget",
+                );
 
             match err {
                 vyre_driver::BackendError::DeviceOutOfMemory {

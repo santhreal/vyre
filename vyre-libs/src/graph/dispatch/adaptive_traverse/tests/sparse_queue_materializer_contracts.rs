@@ -101,9 +101,7 @@ fn words_for(node_count: u32) -> usize {
 const NODES_PER_WORD: u32 = 32;
 
 fn last_inline_offset_node_count() -> u32 {
-    1024
-        * WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS
-        * NODES_PER_WORD
+    1024 * WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS * NODES_PER_WORD
 }
 
 fn cases() -> Vec<MaterializerCase> {

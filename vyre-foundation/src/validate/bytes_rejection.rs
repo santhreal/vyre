@@ -8,8 +8,8 @@
 //! Both go through [`admits_store`], because a second copy of that list is how
 //! one write kind ends up admitting what the other refuses.
 
-use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::ir_inner::model::program::BufferDecl;
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;

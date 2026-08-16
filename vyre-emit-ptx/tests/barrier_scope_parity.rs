@@ -17,9 +17,7 @@
 //! the three body shapes below, and by the golden corpora in each emitter.
 
 use vyre_foundation::ir::{DataType, MemoryOrdering};
-use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_rw, lit, op, shared_rw,
-};
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, shared_rw};
 use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 /// Workgroup scratch bindings live above the host-visible slot range, which
@@ -178,7 +176,10 @@ fn sole_barrier(flags: &[naga::Barrier], label: &str) -> naga::Barrier {
 /// degrade into a bare fence. Collapsing the two is the regression this pins.
 #[test]
 fn ptx_separates_memory_fences_from_cta_barriers() {
-    for ordering in every_ordering().into_iter().filter(|o| o.is_valid_for_barrier()) {
+    for ordering in every_ordering()
+        .into_iter()
+        .filter(|o| o.is_valid_for_barrier())
+    {
         let emitted = emit_ptx(&storage_only(ordering));
         match expected_scope(ordering) {
             Scope::Fence => {
@@ -196,9 +197,8 @@ fn ptx_separates_memory_fences_from_cta_barriers() {
                 );
             }
             Scope::WorkgroupBarrier => {
-                let ptx = emitted.unwrap_or_else(|error| {
-                    panic!("Fix: {ordering:?} must lower to PTX: {error}")
-                });
+                let ptx = emitted
+                    .unwrap_or_else(|error| panic!("Fix: {ordering:?} must lower to PTX: {error}"));
                 assert!(
                     ptx.contains("bar.sync 0;"),
                     "Fix: {ordering:?} is a full workgroup barrier and must lower to `bar.sync 0`."

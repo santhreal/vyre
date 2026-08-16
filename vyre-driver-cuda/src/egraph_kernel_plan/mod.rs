@@ -26,7 +26,6 @@ mod types_union;
 mod args;
 mod ptx;
 
-
 pub use error::CudaEGraphKernelPlanError;
 pub use kernel_abi::{
     CUDA_EGRAPH_CANONICAL_REWRITE_KERNEL_ENTRY, CUDA_EGRAPH_CANONICAL_REWRITE_KERNEL_PARAM_COUNT,
@@ -434,7 +433,8 @@ mod tests {
 
         #[test]
         fn structural_equivalence_planner_rejects_divergent_language_op_ids() {
-            let snapshot = GpuEGraphSnapshot::build([(10u32, "lit", &[][..]), (20u32, "opaque", &[][..])]);
+            let snapshot =
+                GpuEGraphSnapshot::build([(10u32, "lit", &[][..]), (20u32, "opaque", &[][..])]);
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: valid divergent-op egraph image must pack");
@@ -601,7 +601,8 @@ mod tests {
 
         #[test]
         fn signature_pair_decoder_rejects_out_of_bounds_ordinals() {
-            let snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
+            let snapshot =
+                GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -622,7 +623,8 @@ mod tests {
                 }
             );
             assert_eq!(
-                cuda_egraph_signature_pair_rows(&plan, 7, 0).expect_err("missing bucket must be rejected"),
+                cuda_egraph_signature_pair_rows(&plan, 7, 0)
+                    .expect_err("missing bucket must be rejected"),
                 CudaEGraphKernelPlanError::SignaturePairOrdinalOutOfBounds {
                     bucket_index: 7,
                     pair_ordinal: 0,
@@ -633,7 +635,8 @@ mod tests {
 
         #[test]
         fn signature_pair_decoder_rejects_malformed_bucket_row_ranges() {
-            let snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
+            let snapshot =
+                GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "lit", &[][..])]);
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");
@@ -712,7 +715,8 @@ mod tests {
 
         #[test]
         fn structural_equivalence_collection_filters_signature_collision_bucket() {
-            let snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32][..])]);
+            let snapshot =
+                GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32][..])]);
             let image = snapshot
                 .try_pack_device_image()
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid egraph image must pack");

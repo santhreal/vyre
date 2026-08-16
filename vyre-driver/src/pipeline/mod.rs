@@ -718,7 +718,10 @@ mod tests {
 
         /// Load a cached blob by key. Returns `Ok(None)` on a miss
         /// (file doesn't exist) and `Err` on I/O errors.
-        pub(super) fn load(cache_dir: &Path, key: &[u8; 32]) -> Result<Option<Vec<u8>>, CacheError> {
+        pub(super) fn load(
+            cache_dir: &Path,
+            key: &[u8; 32],
+        ) -> Result<Option<Vec<u8>>, CacheError> {
             let path = cache_path(cache_dir, key);
             match fs::read(&path) {
                 Ok(bytes) => Ok(Some(bytes)),
@@ -731,7 +734,11 @@ mod tests {
         /// missing. Writes via a temp file + atomic rename so a
         /// concurrent reader either sees the old blob or the new one,
         /// never a torn write.
-        pub(super) fn store(cache_dir: &Path, key: &[u8; 32], bytes: &[u8]) -> Result<(), CacheError> {
+        pub(super) fn store(
+            cache_dir: &Path,
+            key: &[u8; 32],
+            bytes: &[u8],
+        ) -> Result<(), CacheError> {
             fs::create_dir_all(cache_dir).map_err(|e| CacheError::Io {
                 path: cache_dir.to_path_buf(),
                 source: e,

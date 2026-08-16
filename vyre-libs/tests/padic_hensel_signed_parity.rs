@@ -21,11 +21,11 @@
 #![cfg(feature = "math")]
 
 use vyre_libs::math::padic::hensel_lift_step;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
+use vyre_reference::value::Value;
 use vyre_test_support::fixed_point::{
     fixed_mul, signed_fixed_18 as signed_fixed, to_fixed, xorshift32 as xorshift,
 };
-use vyre_primitives::wire::pack_u32_slice as pack_u32;
-use vyre_reference::value::Value;
 
 /// Exact u32 16.16 oracle: `out[t] = x[t] - fixed_mul(f_x[t], inv_f_prime[t])`.
 fn hensel_fixed(x: &[u32], f_x: &[u32], inv_f_prime: &[u32]) -> Vec<u32> {

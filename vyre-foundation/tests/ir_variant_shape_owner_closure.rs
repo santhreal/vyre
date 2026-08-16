@@ -504,7 +504,10 @@ fn the_reported_tag_is_the_ident_the_rewriting_walk_renames() {
         };
         let rewritten =
             rewrite_walk::rewrite_node(&sample.node, &mut rename).unwrap_or_else(|| {
-                panic!("Fix: renaming the tag of {} changed nothing", sample.label())
+                panic!(
+                    "Fix: renaming the tag of {} changed nothing",
+                    sample.label()
+                )
             });
 
         assert_eq!(

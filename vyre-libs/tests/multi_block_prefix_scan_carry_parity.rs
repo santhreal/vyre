@@ -196,6 +196,9 @@ fn multi_block_prefix_scan_matches_cpu_ref_with_256_block_lanes() {
         let mut out = unpack(&outputs[out_idx].to_bytes());
         out.truncate(input.len());
         let cpu = multi_block_prefix_scan::cpu_ref(&input);
-        assert_eq!(out, cpu, "256-block-lanes prefix scan matches cpu_ref at n={n}");
+        assert_eq!(
+            out, cpu,
+            "256-block-lanes prefix scan matches cpu_ref at n={n}"
+        );
     }
 }

@@ -4,9 +4,9 @@
 //! Nesterov update. The momentum/update IR body is centralized here so optimizer
 //! variants cannot drift.
 
+use crate::nn::f32_stability::flush_tiny;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use crate::nn::f32_stability::flush_tiny;
 
 /// Build a Muon-style F32 optimizer step.
 #[must_use]

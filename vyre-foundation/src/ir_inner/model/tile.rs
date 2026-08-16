@@ -60,7 +60,10 @@ impl Layout {
                 }
                 index
             }
-            Self::Swizzled { permutation, period } => {
+            Self::Swizzled {
+                permutation,
+                period,
+            } => {
                 let mut permuted_coords = coords.to_vec();
                 if !permutation.is_empty() {
                     for (dst, &src) in permutation.iter().enumerate() {
@@ -101,7 +104,12 @@ pub struct Tile {
 impl Tile {
     /// Construct a new Tile description.
     #[must_use]
-    pub fn new(element: DataType, extents: impl Into<Vec<u32>>, layout: Layout, residency: Residency) -> Self {
+    pub fn new(
+        element: DataType,
+        extents: impl Into<Vec<u32>>,
+        layout: Layout,
+        residency: Residency,
+    ) -> Self {
         Self {
             element,
             extents: extents.into(),

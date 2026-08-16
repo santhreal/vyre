@@ -203,12 +203,14 @@ mod tests {
                 duplicate.to_string().contains("duplicate"),
                 "Fix: duplicate resident input indexes must fail before borrowed fallback can alias a logical input slot: {duplicate}"
             );
-            let sparse = validate_dense_resident_input_indices([0, 2, 3], 3, "test input").unwrap_err();
+            let sparse =
+                validate_dense_resident_input_indices([0, 2, 3], 3, "test input").unwrap_err();
             assert!(
                 sparse.to_string().contains("dense"),
                 "Fix: sparse resident input indexes must fail before borrowed fallback can skip a logical input slot: {sparse}"
             );
-            let truncated = validate_dense_resident_input_indices([0, 1], 3, "test input").unwrap_err();
+            let truncated =
+                validate_dense_resident_input_indices([0, 1], 3, "test input").unwrap_err();
             assert!(
                 truncated.to_string().contains("expected 3"),
                 "Fix: truncated resident input indexes must fail before borrowed fallback can drop a logical input slot: {truncated}"
@@ -219,8 +221,9 @@ mod tests {
         fn resident_borrowed_fallback_orders_downloaded_inputs_by_logical_slot() {
             let mut inputs = vec![(2, vec![0xCC]), (0, vec![0xAA]), (1, vec![0xBB])];
 
-            order_resident_fallback_inputs_by_logical_index(&mut inputs, 3)
-                .expect("Fix: reordered resident fallback inputs should sort by logical input slot.");
+            order_resident_fallback_inputs_by_logical_index(&mut inputs, 3).expect(
+                "Fix: reordered resident fallback inputs should sort by logical input slot.",
+            );
 
             assert_eq!(
                 inputs,

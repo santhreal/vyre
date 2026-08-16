@@ -3,9 +3,9 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::plumbing::operand::tensor_ref::TensorRefError;
 

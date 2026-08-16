@@ -375,7 +375,13 @@ fn loop_has_hoistable_let(var: &Ident, body: &[Node], loadable: Option<&FxHashSe
 /// longer needs a recursive arm here.
 fn has_hoistable_let_in_any_loop(node: &Node, read_only: &FxHashSet<Ident>) -> bool {
     any_descendant(node, &mut |n| {
-        if let Node::Loop { var, from, to, body } = n {
+        if let Node::Loop {
+            var,
+            from,
+            to,
+            body,
+        } = n
+        {
             let loadable = match loop_entry(from, to) {
                 LoopEntry::AtLeastOnce => Some(read_only),
                 LoopEntry::Never | LoopEntry::Unknown => None,

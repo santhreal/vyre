@@ -235,12 +235,12 @@ pub use descriptor::{
 };
 pub use descriptor::{KernelOpsIter, Name};
 pub use error::LowerError;
-pub use op_facts::{facts_for, OpFacts};
 /// Re-exported so a caller building a `KernelDescriptor` by hand through
 /// `descriptor_builder` can place a Shared or Scratch binding in the range
 /// `verify` accepts. A shared slot below this value is rejected with
 /// `VerifyErrorKind::WorkgroupBindingInHostRange`.
 pub use lower::WORKGROUP_SLOT_BASE;
+pub use op_facts::{facts_for, OpFacts};
 pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,

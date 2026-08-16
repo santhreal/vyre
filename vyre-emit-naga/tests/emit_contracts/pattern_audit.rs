@@ -1,8 +1,8 @@
 //! `audit` pattern analysis contracts.
 
-use vyre_lower::pattern_audit::PatternAudit;
 use vyre_emit_naga::patterns::*;
 use vyre_lower::descriptor_builder::descriptor;
+use vyre_lower::pattern_audit::PatternAudit;
 
 #[test]
 fn empty_kernel_yields_zero_candidates() {

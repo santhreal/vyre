@@ -10,8 +10,8 @@
 //! Everything read here is public. The one figure that is not, the 32-bit
 //! column limit, is proved beside its own function.
 
-use std::hash::Hash;
 use rustc_hash::FxHashMap;
+use std::hash::Hash;
 
 use vyre_foundation::optimizer::eqsat::{EChildren, EClassId, EGraph, ENodeLang};
 use vyre_foundation::optimizer::eqsat_gpu::{
@@ -179,9 +179,9 @@ fn snapshot_integrity_rejects_dangling_child_eclass() {
     let snapshot =
         GpuEGraphSnapshot::build([(0u32, "lit", &[][..]), (1u32, "add", &[0u32, 99u32][..])]);
 
-    let error = snapshot.validate_integrity().expect_err(
-        "Fix: malformed GPU snapshot child eclasses must be rejected before upload.",
-    );
+    let error = snapshot
+        .validate_integrity()
+        .expect_err("Fix: malformed GPU snapshot child eclasses must be rejected before upload.");
 
     assert_eq!(error.context(), "dangling child eclass");
     assert_eq!(error.row(), 1);

@@ -263,9 +263,7 @@ mod tests {
             backend: "cuda".to_string(),
             status: "supported".to_string(),
             test_paths: vec!["tests/deleted.rs".to_string()],
-            unreadable_test_paths: vec![
-                "tests/deleted.rs (No such file or directory)".to_string()
-            ],
+            unreadable_test_paths: vec!["tests/deleted.rs (No such file or directory)".to_string()],
             test_case_classes: BTreeSet::new(),
         };
         let entries = BTreeMap::from([(entry.id.as_str(), &entry)]);

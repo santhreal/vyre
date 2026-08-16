@@ -12,12 +12,12 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-#[cfg(test)]
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::math::differentiable::softmax_step;
 #[cfg(test)]
 use crate::math::differentiable::{differentiable_argmax_cpu_into, softmax_cpu_into};
+#[cfg(test)]
+use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned scratch for fixed-point differentiable-autotune dispatch.
 #[derive(Debug, Default)]

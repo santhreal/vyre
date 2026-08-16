@@ -31,10 +31,10 @@
 //! (`scan_presence_by_region` + `scan` + `regex_admission_by_region_program`).
 //! Prefer those until a segmentation/occupancy redesign makes fusion pay.
 
+use crate::matching::CompiledDfa;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::ByteRange;
-use crate::matching::CompiledDfa;
 
 use crate::scan::builders::append_match;
 use crate::scan::classic_ac::bounded_ranges::{

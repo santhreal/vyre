@@ -42,12 +42,12 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::math::natural_gradient::natural_gradient_block_apply;
 #[cfg(test)]
 use crate::math::natural_gradient::{
     natural_gradient_block_apply_cpu, natural_gradient_block_apply_cpu_into,
 };
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for fixed-point natural-gradient preconditioning.
 #[derive(Debug, Default)]

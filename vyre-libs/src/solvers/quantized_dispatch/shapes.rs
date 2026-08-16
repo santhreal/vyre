@@ -1,5 +1,5 @@
-use vyre_foundation::program_dispatch::DispatchError;
 use crate::math::quantized::i4_packed_words;
+use vyre_foundation::program_dispatch::DispatchError;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct PackedI4BatchedMatmulShape {

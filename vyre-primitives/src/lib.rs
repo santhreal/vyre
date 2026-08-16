@@ -62,7 +62,6 @@ pub use markers::{
     RegionId, Scan, Scatter, ShiftLeft, ShiftRight, Shuffle,
 };
 
-
 /// Derived view over canonical primitive operation registrations.
 #[cfg(feature = "inventory-registry")]
 pub mod operation_catalog;

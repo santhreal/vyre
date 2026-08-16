@@ -218,7 +218,6 @@ impl Value {
         }
     }
 
-
     /// Return the full value payload as little-endian bytes.
     #[must_use]
     pub fn wide_bytes(&self) -> Vec<u8> {

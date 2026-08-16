@@ -8,8 +8,8 @@ use std::collections::BTreeSet;
 use rustc_hash::FxHashMap;
 use thiserror::Error;
 
-use super::program::Program;
 use super::op_signature::{BufferAccess, DataType};
+use super::program::Program;
 
 /// Canonical graph-local identity for one connected semantic value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

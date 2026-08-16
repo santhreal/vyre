@@ -1,7 +1,7 @@
-use vyre_foundation::ir::Program;
 use crate::graph::union_find::{
     union_find_dispatch_grid, union_find_program, validate_union_find_inputs,
 };
+use vyre_foundation::ir::Program;
 
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, fingerprint_u32_slice,

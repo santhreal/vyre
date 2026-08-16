@@ -9,8 +9,8 @@
 //! worst failure mode available here, so the emitter refuses the shape instead.
 
 use vyre_emit_ptx::PtxEmitOptions;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 #[path = "emit_probe/probe.rs"]
 mod emit_probe;

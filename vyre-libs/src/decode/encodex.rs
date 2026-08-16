@@ -18,11 +18,11 @@
 //! - The host reference mirrors the GPU heuristics so conformance can
 //!   prove the on-device path without routing production work through it.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use crate::text::byte_histogram_256_child;
 use crate::text::encoding_classify_child;
 use crate::text::{ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 #[cfg(test)]
 use crate::buffer_names::fixed_name;

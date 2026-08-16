@@ -103,7 +103,10 @@ pub(crate) fn track_fixture(root: &Path) {
             .current_dir(root)
             .status()
             .expect("Fix: git must launch to build the fixture checkout");
-        assert!(status.success(), "Fix: git {arguments:?} failed in the fixture");
+        assert!(
+            status.success(),
+            "Fix: git {arguments:?} failed in the fixture"
+        );
     }
 }
 

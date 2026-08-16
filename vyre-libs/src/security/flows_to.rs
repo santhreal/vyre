@@ -15,9 +15,9 @@
 //! signature from the inert v2 API has been deleted  -  the shim
 //! now takes only the canonical frontier / sink buffer names.
 
-use vyre_foundation::ir::Program;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
+use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::{
     forward_reach_fixture_expected, forward_reach_fixture_inputs, security_flow_program,

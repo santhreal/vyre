@@ -1,11 +1,11 @@
 //! Node encoder for the stable IR wire format.
 
 use super::{put_expr, put_nodes};
+use crate::ir::{Layout, Residency, Tile};
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{put_len_u32, put_string, put_u32, put_u8};
-use crate::serial::wire::{Node, MAX_ARGS, MAX_OPAQUE_PAYLOAD_LEN, MAX_TENSOR_RANK};
-use crate::ir::{Layout, Residency, Tile};
 use crate::serial::wire::tags::put_data_type;
+use crate::serial::wire::{Node, MAX_ARGS, MAX_OPAQUE_PAYLOAD_LEN, MAX_TENSOR_RANK};
 
 fn put_residency(out: &mut Vec<u8>, residency: Residency) {
     match residency {
@@ -20,7 +20,10 @@ fn put_layout(out: &mut Vec<u8>, layout: &Layout) -> Result<(), WireEncodeErr> {
     match layout {
         Layout::RowMajor => put_u8(out, 0),
         Layout::ColumnMajor => put_u8(out, 1),
-        Layout::Swizzled { permutation, period } => {
+        Layout::Swizzled {
+            permutation,
+            period,
+        } => {
             put_u8(out, 2);
             if permutation.len() > MAX_TENSOR_RANK {
                 return Err(WireEncodeErr::fmt_usize2(

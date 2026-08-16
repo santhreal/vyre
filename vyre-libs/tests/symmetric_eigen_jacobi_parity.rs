@@ -13,9 +13,9 @@ use vyre_libs::math::eigenvector_column_sign::eigenvector_column_sign;
 use vyre_libs::math::matrix_diagonal_extract::matrix_diagonal_extract;
 use vyre_libs::math::matrix_identity_fill::matrix_identity_fill;
 use vyre_libs::math::symmetric_eigen_jacobi::symmetric_eigen_jacobi;
-use vyre_test_support::fixed_point::xorshift32 as xorshift;
 use vyre_primitives::wire::{decode_f32_le_bytes_all as unpack_f32, pack_f32_slice as pack_f32};
 use vyre_reference::value::Value;
+use vyre_test_support::fixed_point::xorshift32 as xorshift;
 /// Uniform f32 in [-2, 2) from the PRNG.
 fn rand_f32(state: &mut u32) -> f32 {
     let bits = xorshift(state);
@@ -237,15 +237,13 @@ fn matrix_diagonal_extract_multi_lane_reference_eval() {
             ],
         )
         .unwrap_or_else(|err| panic!("reference_eval failed for diagonal_extract n={n}: {err}"));
-        let result = unpack_f32(&outputs[vyre_reference::output_index(&program, "diag").unwrap()].to_bytes());
+        let result = unpack_f32(
+            &outputs[vyre_reference::output_index(&program, "diag").unwrap()].to_bytes(),
+        );
         assert_eq!(result.len(), n as usize);
         for i in 0..(n as usize) {
             let expected = matrix[i * (n as usize) + i];
-            assert_eq!(
-                result[i],
-                expected,
-                "mismatch at diagonal [{i}] for n={n}"
-            );
+            assert_eq!(result[i], expected, "mismatch at diagonal [{i}] for n={n}");
         }
     }
 }
@@ -272,11 +270,8 @@ fn eigenvector_column_sign_multi_lane_reference_eval() {
         }
 
         let program = eigenvector_column_sign("evec", n);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(pack_f32(&matrix))],
-        )
-        .unwrap_or_else(|err| panic!("reference_eval failed for column_sign n={n}: {err}"));
+        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_f32(&matrix))])
+            .unwrap_or_else(|err| panic!("reference_eval failed for column_sign n={n}: {err}"));
         let result = unpack_f32(&outputs[0].to_bytes());
         assert_eq!(result.len(), cells);
 

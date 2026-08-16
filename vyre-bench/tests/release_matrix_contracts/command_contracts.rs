@@ -192,4 +192,3 @@ fn release_matrix_covers_all_release_workload_bench_targets() {
         );
     }
 }
-

@@ -109,7 +109,10 @@ fn strategy_ranks_geometries_according_to_device_limits() {
     assert!(!candidates_256.is_empty());
     assert_eq!(candidates_256[0].workgroup[0], 256);
     for c in &candidates_256 {
-        assert!(c.workgroup[0] <= 256, "256-capped profile must not admit width > 256");
+        assert!(
+            c.workgroup[0] <= 256,
+            "256-capped profile must not admit width > 256"
+        );
     }
 }
 

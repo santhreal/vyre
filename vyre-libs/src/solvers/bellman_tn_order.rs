@@ -10,16 +10,14 @@
 //! We dispatch `crate::math::bellman_shortest_path` to find the
 //! globally optimal sequence of pairwise fusions.
 
+use crate::math::bellman_shortest_path::{bellman_shortest_path, BellmanBuffers, BellmanExtents};
 use vyre_foundation::ir::Program;
-use crate::math::bellman_shortest_path::{
-    bellman_shortest_path, BellmanBuffers, BellmanExtents,
-};
 
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Canonical self-substrate op ID for the Bellman TN order.
 pub const OP_ID: &str = "vyre-libs::self_substrate::bellman_tn_order";
@@ -238,8 +236,8 @@ pub fn bellman_tn_order_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_parity_oracles::NeverDispatches;
     use crate::math::bellman_shortest_path::cpu_ref;
+    use crate::test_parity_oracles::NeverDispatches;
 
     /// Terse binding names, for the tests that only care about the program.
     const FIXTURE: BellmanBuffers<'static> = BellmanBuffers::TERSE;
@@ -449,7 +447,8 @@ mod tests {
         let p2 = bellman_tn_order_program(stage("dist2", "nd2", "c2"), extents(4, 4, 5));
         let p3 = bellman_tn_order_program(stage("dist3", "nd3", "c3"), extents(4, 4, 5));
 
-        let final_p = crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p =
+            crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         // Assert we have at least 3 regions
         let region_count = final_p
             .entry()

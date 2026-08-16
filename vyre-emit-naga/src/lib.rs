@@ -130,4 +130,3 @@ fn emit_many_with(
         })
         .collect()
 }
-

@@ -180,7 +180,9 @@ fn classify(expr: &crate::ir::Expr, rules: ReexecutionRules<'_>) -> bool {
         | Expr::SubgroupShuffle { .. }
         | Expr::SubgroupReduce { .. } => false,
         Expr::Load { buffer, index } => {
-            rules.loadable.is_some_and(|allowed| allowed.contains(buffer))
+            rules
+                .loadable
+                .is_some_and(|allowed| allowed.contains(buffer))
                 && classify(index, rules)
         }
         Expr::SubgroupLocalId | Expr::SubgroupSize => rules.allow_subgroup_identity,

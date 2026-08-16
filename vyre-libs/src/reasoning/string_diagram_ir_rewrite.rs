@@ -50,10 +50,10 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use crate::graph::string_diagram::monoidal_compose;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::string_diagram::monoidal_compose_cpu_into;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Reusable buffers for string-diagram IR rewrites.
 #[derive(Debug, Default)]

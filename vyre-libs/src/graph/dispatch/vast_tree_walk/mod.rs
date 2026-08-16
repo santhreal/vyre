@@ -9,8 +9,8 @@ mod builders;
 #[cfg(test)]
 mod tests;
 
+pub use crate::graph::vast_tree_walk::VastTreeWalkProgramPlan as VastTreeWalkPlan;
 pub use builders::{
     build_checked_postorder_walk, build_checked_preorder_walk, build_trusted_postorder_walk,
     build_trusted_preorder_walk, build_vast_tree_walk_plan, primitive_op_ids,
 };
-pub use crate::graph::vast_tree_walk::VastTreeWalkProgramPlan as VastTreeWalkPlan;

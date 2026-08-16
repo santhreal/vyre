@@ -14,8 +14,8 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::decode::inflate::inflate_stored_reference_words;
 use vyre_libs::decode::inflate::inflate_stored_block;
+use vyre_libs::decode::inflate::inflate_stored_reference_words;
 
 const HEADER_WORDS: usize = 5;
 

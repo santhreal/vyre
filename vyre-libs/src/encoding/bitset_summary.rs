@@ -122,8 +122,7 @@ pub fn per_word_popcount_via_with_scratch_into(
             input.len()
         ))
     })?;
-    let program =
-        crate::bitset::popcount::bitset_popcount("input", "count_words", word_count);
+    let program = crate::bitset::popcount::bitset_popcount("input", "count_words", word_count);
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
     write_zero_bytes(

@@ -15,12 +15,6 @@
 //!   any_hit = bitset_any(hits)                (sink projection, optional)
 //! ```
 
-use vyre_foundation::composition::{
-    reparent_program_children, tag_program, trap_program, wrap_anonymous_region,
-};
-use vyre_foundation::execution_plan::fusion::fuse_programs;
-use vyre_foundation::ir::DataType;
-use vyre_foundation::ir::Program;
 use crate::bitset::and::bitset_and;
 #[cfg(test)]
 use crate::bitset::and::cpu_ref as bitset_and_cpu_ref;
@@ -35,6 +29,12 @@ use crate::graph::csr_forward_traverse::cpu_ref as csr_forward_cpu_ref;
 use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
+use vyre_foundation::composition::{
+    reparent_program_children, tag_program, trap_program, wrap_anonymous_region,
+};
+use vyre_foundation::execution_plan::fusion::fuse_programs;
+use vyre_foundation::ir::DataType;
+use vyre_foundation::ir::Program;
 
 use crate::security::flows_to::{FLOWS_TO_MASK, OP_ID as FLOWS_TO_OP_ID};
 

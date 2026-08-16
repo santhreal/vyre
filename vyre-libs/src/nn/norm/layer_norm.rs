@@ -12,11 +12,11 @@
 //!
 //! Both paths emit byte-identical IR.
 
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_foundation::composition::trap_program;
 #[cfg(test)]
 use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::builder::{
@@ -77,10 +77,7 @@ impl LayerNorm {
         // V7-CORR-012/013 parallel: the nonzero floor `checked_element_count`
         // enforces is what keeps the first `Expr::load(input, 0)` in bounds.
         let n = checked_element_count(OP_ID, &self.input)?;
-        let workgroup = self
-            .options
-            .workgroup_size
-            .unwrap_or([256, 1, 1]);
+        let workgroup = self.options.workgroup_size.unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1).min(n);
         let workgroup = [tile, workgroup[1], workgroup[2]];
         let chunks = n.div_ceil(tile);

@@ -24,11 +24,11 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
+use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::security::taint_pollution;
 use vyre_megakernel::{
     CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget, ValidatedCompileRequest,
 };
-use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 /// 33 nodes puts the bitset one node past a word boundary, which is the shape the
 /// family guard already pins as the interesting one.

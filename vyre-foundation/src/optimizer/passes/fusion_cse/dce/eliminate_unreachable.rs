@@ -94,7 +94,11 @@ pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
                     body: std::sync::Arc::new(eliminate_unreachable(body_nodes)),
                 });
             }
-            Node::TileElementwise { out: name, inputs, body } => {
+            Node::TileElementwise {
+                out: name,
+                inputs,
+                body,
+            } => {
                 out.push(Node::TileElementwise {
                     out: name,
                     inputs,

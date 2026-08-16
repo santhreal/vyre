@@ -189,9 +189,9 @@ fn elide_in_node_with_ctx(node: Node, loop_ctx: Option<(&str, u32)>, changed: &m
         // it. `map_body` owns which slots exist, so a new nesting variant is
         // rewritten instead of handed back untouched, which keeps this
         // transform reaching exactly as far as the analysis below.
-        other => visit::node_map::map_body(other, &mut |body| {
-            elide_in_sequence(body, None, changed)
-        }),
+        other => {
+            visit::node_map::map_body(other, &mut |body| elide_in_sequence(body, None, changed))
+        }
     }
 }
 

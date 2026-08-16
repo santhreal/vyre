@@ -234,7 +234,8 @@ fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
 }
 
 /// The command that re-measures the release benchmark suite for one backend.
-const RE_MEASURE: &str = "cargo_full run -q -p xtask --bin xtask -- release-benchmarks --write --backend";
+const RE_MEASURE: &str =
+    "cargo_full run -q -p xtask --bin xtask -- release-benchmarks --write --backend";
 
 /// Replace every stale-source verdict with the one command that answers them all.
 ///
@@ -262,7 +263,10 @@ fn collapse_stale_source_verdicts(failures: &mut Vec<String>) -> Vec<String> {
         return Vec::new();
     }
     failures.retain(|failure| !xtask::source_provenance::is_stale_source_verdict(failure));
-    let artifacts: BTreeSet<String> = stale.iter().filter_map(|verdict| cited_artifact(verdict)).collect();
+    let artifacts: BTreeSet<String> = stale
+        .iter()
+        .filter_map(|verdict| cited_artifact(verdict))
+        .collect();
     failures.push(format!(
         "{} recorded verdict(s) over {} benchmark evidence artifact(s) name a source tree that is no longer this one; re-measure on a release host with `{RE_MEASURE} cuda` and `{RE_MEASURE} wgpu`",
         stale.len(),
@@ -319,7 +323,11 @@ fn unlisted_produced_artifacts(
     let listed: BTreeSet<&str> = requirement
         .evidence
         .iter()
-        .map(|entry| entry.trim_start_matches("../").trim_start_matches("release/"))
+        .map(|entry| {
+            entry
+                .trim_start_matches("../")
+                .trim_start_matches("release/")
+        })
         .collect();
     let mut missing = Vec::new();
     for evidence in &requirement.evidence {
@@ -329,8 +337,10 @@ fn unlisted_produced_artifacts(
         let Some(subcommand) = manifest_command_subcommand(evidence) else {
             continue;
         };
-        for artifact in crate::release::release_evidence::expected_artifacts::
-            expected_artifacts_for_command(subcommand)
+        for artifact in
+            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command(
+                subcommand,
+            )
         {
             let relative = artifact.trim_start_matches("release/");
             if !listed.contains(relative) {
@@ -364,11 +374,19 @@ mod tests {
             Some("version-matrix")
         );
         assert_eq!(
-            manifest_command_subcommand("cargo_full run -p xtask --bin xtask -- backend-matrix --backend cuda"),
+            manifest_command_subcommand(
+                "cargo_full run -p xtask --bin xtask -- backend-matrix --backend cuda"
+            ),
             Some("backend-matrix")
         );
-        assert_eq!(manifest_command_subcommand("cargo_full test --workspace"), None);
-        assert_eq!(manifest_command_subcommand("cargo_full run -p xtask --"), None);
+        assert_eq!(
+            manifest_command_subcommand("cargo_full test --workspace"),
+            None
+        );
+        assert_eq!(
+            manifest_command_subcommand("cargo_full run -p xtask --"),
+            None
+        );
     }
 
     /// A requirement that lists every artifact its own producer writes has
@@ -376,9 +394,16 @@ mod tests {
     /// or relative to the manifest.
     #[test]
     fn a_complete_listing_reports_nothing() {
-        let produced = crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command("version-matrix");
-        assert!(!produced.is_empty(), "Fix: fixture subcommand must produce artifacts");
-        let mut evidence = vec!["cargo_full run -p xtask --bin xtask -- version-matrix".to_string()];
+        let produced =
+            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command(
+                "version-matrix",
+            );
+        assert!(
+            !produced.is_empty(),
+            "Fix: fixture subcommand must produce artifacts"
+        );
+        let mut evidence =
+            vec!["cargo_full run -p xtask --bin xtask -- version-matrix".to_string()];
         evidence.extend(produced.iter().map(|artifact| (*artifact).to_string()));
         let borrowed: Vec<&str> = evidence.iter().map(String::as_str).collect();
         assert!(unlisted_produced_artifacts(&closed("complete", &borrowed)).is_empty());
@@ -399,12 +424,16 @@ mod tests {
     /// evidence count could not say.
     #[test]
     fn an_omitted_artifact_is_named_with_its_producer() {
-        let produced = crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command("version-matrix");
+        let produced =
+            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command(
+                "version-matrix",
+            );
         let omitted = produced
             .first()
             .copied()
             .expect("Fix: fixture subcommand must produce artifacts");
-        let mut evidence = vec!["cargo_full run -p xtask --bin xtask -- version-matrix".to_string()];
+        let mut evidence =
+            vec!["cargo_full run -p xtask --bin xtask -- version-matrix".to_string()];
         evidence.extend(
             produced
                 .iter()
@@ -424,13 +453,14 @@ mod tests {
     /// its own, so a requirement backed only by files is never reported.
     #[test]
     fn path_evidence_produces_no_expectation() {
-        assert!(
-            unlisted_produced_artifacts(&closed(
-                "paths-only",
-                &["evidence/version/version-matrix.json", "../evidence/other.json"]
-            ))
-            .is_empty()
-        );
+        assert!(unlisted_produced_artifacts(&closed(
+            "paths-only",
+            &[
+                "evidence/version/version-matrix.json",
+                "../evidence/other.json"
+            ]
+        ))
+        .is_empty());
     }
 
     /// Every closed requirement in the shipped manifest lists every artifact its
@@ -443,7 +473,8 @@ mod tests {
     /// another checkout compiled.
     #[test]
     fn the_shipped_manifest_lists_what_its_producers_write() {
-        let mut directory = std::env::current_dir().expect("Fix: working directory must be readable");
+        let mut directory =
+            std::env::current_dir().expect("Fix: working directory must be readable");
         let manifest_path = loop {
             let candidate = directory.join("release/vyre-release-evidence.toml");
             if candidate.is_file() {
@@ -491,7 +522,8 @@ mod tests {
                 )
             })
             .collect();
-        failures.push("`release/evidence/benchmarks/suite-0.json` fingerprint is missing".to_string());
+        failures
+            .push("`release/evidence/benchmarks/suite-0.json` fingerprint is missing".to_string());
 
         let notes = collapse_stale_source_verdicts(&mut failures);
 
@@ -555,7 +587,9 @@ mod tests {
     /// A run with no stale verdict changes nothing and adds no note.
     #[test]
     fn a_tree_with_fresh_evidence_is_left_alone() {
-        let mut failures = vec!["`release/evidence/benchmarks/a.json` is not listed by any requirement".to_string()];
+        let mut failures = vec![
+            "`release/evidence/benchmarks/a.json` is not listed by any requirement".to_string(),
+        ];
         let notes = collapse_stale_source_verdicts(&mut failures);
         assert_eq!(failures.len(), 1);
         assert!(notes.is_empty());

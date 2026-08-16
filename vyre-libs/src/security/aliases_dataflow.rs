@@ -28,16 +28,16 @@
 //! `fixpoint_iterations` config  -  the same path single-direction
 //! flows_to uses.
 
-use vyre_foundation::composition::{tag_program, trap_program};
-use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
-use vyre_foundation::ir::Program;
-use vyre_foundation::ir::{BufferAccess, DataType};
 use crate::bitset::and::bitset_and;
 use crate::bitset::bitset_words;
 use crate::bitset::or_into::bitset_or_into;
 use crate::bitset::zero::bitset_zero;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
+use vyre_foundation::composition::{tag_program, trap_program};
+use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
+use vyre_foundation::ir::Program;
+use vyre_foundation::ir::{BufferAccess, DataType};
 
 use crate::security::flows_to::flows_to_alias_only;
 
@@ -401,8 +401,8 @@ mod tests {
     /// Both scratch clears must retain canonical primitive provenance after fusion.
     #[test]
     fn fused_program_uses_two_canonical_bitset_zero_regions() {
-        use vyre_foundation::visit::walk_nodes;
         use crate::bitset::zero::OP_ID as BITSET_ZERO_OP_ID;
+        use vyre_foundation::visit::walk_nodes;
 
         let program = witness_program();
         let mut primitive_zeros = 0usize;
