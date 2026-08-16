@@ -92,7 +92,12 @@ pub static SUBSETS: &[Subset] = &[
     Subset {
         name: "docs",
         help: "Whether the generated documentation artifacts still match the tree",
-        gates: &["docs-check", "optimization-docs", "release-docs"],
+        gates: &[
+            "docs-check",
+            "docs-coupling",
+            "optimization-docs",
+            "release-docs",
+        ],
     },
     Subset {
         name: "ir",

@@ -8,10 +8,15 @@
 
 pub mod cli_docs;
 pub mod docs_check;
+pub mod docs_coupling;
 pub mod research_key;
 pub mod research_source_ledger;
 
 use crate::gate::Gate;
 
 /// Every gate this module owns.
-pub static GATES: &[&dyn Gate] = &[&cli_docs::CliDocs, &docs_check::DocsCheck];
+pub static GATES: &[&dyn Gate] = &[
+    &cli_docs::CliDocs,
+    &docs_check::DocsCheck,
+    &docs_coupling::DocsCoupling,
+];

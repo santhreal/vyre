@@ -956,6 +956,10 @@ The `findings` column is the count with the injection applied, given the pin in
 | `evidence-paths` | In any artifact under `release/evidence`, change one cited path to a filename that does not exist but keeps a tree extension. | 18 to 19 |
 | `evidence-paths` | Add `"manifest": "target/debug/build.rs"` to an artifact object, with `target/` gitignored. | 18 to 19, in the gitignored class rather than the missing class |
 | `evidence-paths` | Change a cited path to `1.2.0`. | stays 18; a version string is not a citation |
+| `docs-coupling` | Delete the `covers` key from the `docs/reference/wire-format.md` page row. | 0 to 1 |
+| `docs-coupling` | Change one `covers` entry to a path the tree does not hold. | 0 to 1 |
+| `docs-coupling` | In `docs/architecture/parsing.md`, change a cited source path inside a code span to one that does not exist. | 0 to 1 |
+| `docs-coupling` | Edit a file `docs/reference/wire-format.md` covers without editing that page. | 0 to 2, one for the page and one for the missing changelog fragment |
 | `invariant-paths` | In `vyre-spec/src/invariants.rs`, change a cited conformance test path to one that does not exist. | 0 to 1 |
 | `doc-claims` | In `contracts/doc_claims_manifest.toml`, change one `phrase` to text its document does not contain. | 0 to 1 |
 | `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |

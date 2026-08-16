@@ -83,6 +83,10 @@ name = "docs-check"
 findings = 0
 
 [[gate]]
+name = "docs-coupling"
+findings = 0
+
+[[gate]]
 name = "dup-scan"
 findings = 0
 

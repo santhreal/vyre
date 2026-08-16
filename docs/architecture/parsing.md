@@ -20,7 +20,7 @@ kinds, delimiter handling, bracket matching, and full-grammar
 shunting-yard AST generation. A frontend composes these; it does not
 reimplement them.
 
-`vyre-libs/src/parsing/vast` is the packed AST wire format and its host
+`vyre-libs/src/parsing/vast.rs` is the packed AST wire format and its host
 walks, re-exported from `vyre-foundation`. A frontend's output is VAST, so
 a consumer reads one shape regardless of which language produced it.
 
