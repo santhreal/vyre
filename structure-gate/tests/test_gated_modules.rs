@@ -89,6 +89,35 @@ fn every_reported_path_is_a_file() {
     }
 }
 
+/// A declaration inside an inline `mod` block resolves under that block.
+///
+/// The compiler looks for the child of `pub mod outer { .. }` in `outer/`, so
+/// reading the file name alone records a path the tree does not hold and the
+/// real file keeps counting as production code with nothing to say so.
+#[test]
+fn a_declaration_inside_an_inline_module_resolves_under_it() {
+    let tree = tempfile::tempdir().expect("Fix: the fixture root must be creatable.");
+    let source = tree.path().join("demo/src");
+    std::fs::create_dir_all(source.join("outer")).expect("Fix: the tree must be creatable.");
+    std::fs::write(
+        source.join("lib.rs"),
+        "pub mod outer {\n    #[cfg(test)]\n    mod checks;\n}\n",
+    )
+    .expect("Fix: the fixture crate root must be writable.");
+    std::fs::write(source.join("outer/checks.rs"), "")
+        .expect("Fix: the fixture module must be writable.");
+    std::fs::write(source.join("checks.rs"), "")
+        .expect("Fix: the decoy module must be writable.");
+
+    let gated = test_gated_module_files(tree.path());
+
+    assert_eq!(
+        gated.into_iter().collect::<Vec<_>>(),
+        vec!["demo/src/outer/checks.rs".to_string()],
+        "Fix: the gated module is the child of the inline block, not of the file"
+    );
+}
+
 /// Which gate spellings the set accepts, on a tree written for the case.
 ///
 /// `#[cfg(test)]` and `#[cfg(all(test, unix))]` name a module no build without

@@ -310,32 +310,41 @@ fn end_of_item(text: &str, from: usize) -> Option<usize> {
 /// module that stops being gated leaves the set the same way.
 ///
 /// Both spellings of a gated module are covered: the sibling file `<name>.rs`
-/// and everything under the directory `<name>/`.
+/// and everything under the directory `<name>/`. A declaration written inside an
+/// inline `mod` block resolves under that block, because that is the directory
+/// the compiler looks in.
 ///
 /// Only a gate that no configuration satisfies without `test` counts. A module
 /// declared `#[cfg(any(test, feature = "test-fixtures"))]` compiles into a build
 /// that turns the feature on, so it stays production code here.
 #[must_use]
 pub fn test_gated_module_files(root: &Path) -> BTreeSet<String> {
-    let sources: Vec<(String, String)> = rust_sources_with_text(root).collect();
     let mut declared = BTreeSet::new();
-    for (file, text) in &sources {
+    let mut files = Vec::new();
+    for (file, text) in rust_sources_with_text(root) {
         let Some((parent, _)) = file.rsplit_once('/') else {
             continue;
         };
-        for span in cfg_test_spans_detailed(text) {
+        let mut inline = None;
+        for span in cfg_test_spans_detailed(&text) {
             if !span.test_only {
                 continue;
             }
             let Some(name) = declared_module_name(&text[span.start..span.end]) else {
                 continue;
             };
-            declared.insert(format!("{}/{name}", module_home(parent, file)));
+            let blocks = inline.get_or_insert_with(|| inline_module_blocks(&text));
+            let mut home = module_home(parent, &file).into_owned();
+            for enclosing in enclosing_modules(blocks, span.start) {
+                home.push('/');
+                home.push_str(enclosing);
+            }
+            declared.insert(format!("{home}/{name}"));
         }
+        files.push(file);
     }
-    sources
+    files
         .into_iter()
-        .map(|(file, _)| file)
         .filter(|file| {
             declared.iter().any(|module| {
                 file.strip_prefix(module)
@@ -356,4 +365,70 @@ fn module_home<'a>(parent: &'a str, file: &'a str) -> Cow<'a, str> {
     } else {
         Cow::Owned(format!("{parent}/{}", stem.trim_end_matches(".rs")))
     }
+}
+
+/// One inline `mod name { .. }` block: its name and the byte span of its body.
+struct InlineModule<'a> {
+    name: &'a str,
+    start: usize,
+    end: usize,
+}
+
+/// Every inline module block of one file, in source order.
+///
+/// A declaration inside such a block names a child of that block's directory,
+/// not of the file's. Reading the file name alone recorded `crate/src/tests` for
+/// a `mod tests;` written inside `pub mod foo { .. }`, so the real file was
+/// never matched and nothing said so.
+fn inline_module_blocks(text: &str) -> Vec<InlineModule<'_>> {
+    let mut blocks = Vec::new();
+    let mut search = 0usize;
+    while let Some(offset) = text[search..].find("mod ") {
+        let keyword = search + offset;
+        search = keyword + "mod ".len();
+        if !is_keyword_start(text, keyword) {
+            continue;
+        }
+        let rest = &text[search..];
+        let name_len = rest
+            .find(|c: char| !c.is_alphanumeric() && c != '_')
+            .unwrap_or(rest.len());
+        let name = &rest[..name_len];
+        if name.is_empty() {
+            continue;
+        }
+        let after = &text[search + name_len..];
+        let brace = after.len() - after.trim_start().len();
+        if !after[brace..].starts_with('{') {
+            continue;
+        }
+        let open = search + name_len + brace;
+        let Some(close) = match_delimited(text, open, b'{', b'}') else {
+            continue;
+        };
+        blocks.push(InlineModule {
+            name,
+            start: open,
+            end: close,
+        });
+        search = open + 1;
+    }
+    blocks
+}
+
+/// Names of the inline modules holding `offset`, outermost first.
+fn enclosing_modules<'a>(blocks: &[InlineModule<'a>], offset: usize) -> Vec<&'a str> {
+    blocks
+        .iter()
+        .filter(|block| block.start < offset && offset < block.end)
+        .map(|block| block.name)
+        .collect()
+}
+
+/// True when the `mod` at `index` opens a keyword rather than ending a word.
+fn is_keyword_start(text: &str, index: usize) -> bool {
+    text[..index]
+        .chars()
+        .next_back()
+        .is_none_or(|c| !c.is_alphanumeric() && c != '_')
 }
