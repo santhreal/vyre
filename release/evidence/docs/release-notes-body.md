@@ -3267,6 +3267,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every crate to find the rows describing one, and the generated per-crate page
   is what answers the question. The section now links `docs/testing/<crate>.md`
   and names the TOML as its authority.
+- Each crate SPEC.md links the crate-boundaries chapter by a path relative to
+  the page, so the link resolves from the crate directory it is read in.
 - The docs-references gate now reads every tracked Markdown file rather than
   the root, .github and docs pages only, resolves a relative path against the
   crate that owns the document as well as the workspace root, and exempts
@@ -3372,6 +3374,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   string literal and so is the table that spells it. The two rule sources are
   exempt by path, and a test requires each to exist and to still carry the
   language, so a stale exemption is red rather than a silent widening.
+- The compiler-grade thesis axes and the CPU-SOTA 100x contract page name the
+  workloads the suite measures: AST motif traversal replaces the deleted C
+  parser axis, e-graph saturation points at workload 17, and the required 100x
+  case list matches the ten cases the release thresholds declare. The two
+  superseded e-graph artifacts are deleted and the cross-backend comparison
+  table is regenerated from what remains.
+- The release workload matrix calls a CUDA command reproducible only when
+  --release reaches cargo. Everything after the argument separator goes to the
+  benchmark harness, which builds nothing, so a --release written there
+  described an optimized build that never happened.
 - A row in .github/CI_REQUIRED.md naming a workflow the checkout does not carry
   fails the ci-required gate, and the workflows whose path filters and
   directories no longer exist are deleted rather than parked.
@@ -3401,6 +3413,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   asserting a non-zero exit could never fail and passed against a committed
   schema that already disagreed with the live registry. The schema is
   regenerated from the 359 live registrations.
+- The ci-steps gate reads every script under scripts/, including the shared
+  shell functions and readers in scripts/lib that the registry declares and
+  every script sources; a single-level read skipped them while reporting the
+  directory covered. The structural-gate row for cargo invocation resolution
+  names the gate that now carries the contract.
 - The elementwise map builders live in the builder module rather than under
   math. A shared skeleton hosted inside one gated dialect is unreachable from
   the others: logical depended on math-broadcast only to reach the builder, and
@@ -3432,6 +3449,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The sentence that declares a recorded artifact stale is now formed and
   recognised through one constant in xtask::source_provenance, so the four
   producers and the recogniser cannot drift apart.
+- A workflow step that runs the gate sweep with --subset credits the gates in
+  that subset and no others. Recording the bare sweep for it gave every
+  registered gate a workflow, so a gate no workflow selects could not be
+  reported and the rows that were reported named the wrong file.
 - A test that compiles a scratch crate builds it in the cargo build directory.
   vyre_test_support::monorepo::cargo_target_directory reports where cargo is
   writing this run's artifacts, resolved from the running test binary, so no
@@ -3439,6 +3460,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   compiled the substrate and the foundation under the temp filesystem, which is
   capped, and it no longer clears its own build tree between the two consumers
   it checks.
+- The tail of a failed child command is cut at a character boundary. A cut that
+  landed inside a multibyte character fell back to the whole stream, so the
+  byte bound did not hold for the output it exists to bound.
 - A whole-grid fence is cut into sequential dispatches during compile-request
   validation instead of failing at emit. Program fusion writes
   MemoryOrdering::GridSync inside one node body, so a single-node graph had no
