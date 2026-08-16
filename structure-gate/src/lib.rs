@@ -509,13 +509,17 @@ pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
     failures
 }
 
-/// Reject a module whose name states no contract.
+/// Reject a module or a binary whose name states no contract.
 ///
 /// A module is exempt only while the committed public-API snapshot publishes
 /// it: renaming a published module renames a path a consumer already imports,
 /// and this gate is not what decides to break one. The exemption is read from
 /// the snapshot at run time, so it lapses by itself once the module stops
 /// being published, and a crate with no snapshot cannot claim it at all.
+///
+/// A Cargo binary root is judged by the binary's name, which is the word a
+/// reader types to run it: an executable called `utils` states no more than a
+/// module of that name. A binary has no module path, so no snapshot exempts one.
 ///
 /// What this does not catch: a specific name that is still wrong for its
 /// contents, and a published module that carries a banned name. The second one
@@ -528,6 +532,14 @@ pub fn generic_module_name_failures(
     let published: BTreeSet<&str> = published_modules.iter().map(String::as_str).collect();
     let mut failures = Vec::new();
     for file in module_files {
+        if let Some(binary) = binary_name_of(file) {
+            if is_banned_module_name(binary) {
+                failures.push(format!(
+                    "`{file}` names the binary `{binary}`, which states no contract; name it for what the binary does"
+                ));
+            }
+            continue;
+        }
         let Some(name) = module_name_of(file) else {
             continue;
         };
@@ -560,11 +572,29 @@ fn is_banned_module_name(name: &str) -> bool {
 /// layout: reading the file name alone would judge every module in the
 /// workspace as being called `mod`.
 fn module_name_of(file: &str) -> Option<&str> {
+    if binary_name_of(file).is_some() {
+        return None;
+    }
     let (_, inside) = file.split_once("/src/")?;
     match inside.rsplit('/').next()? {
         "lib.rs" | "main.rs" => None,
         "mod.rs" => inside.rsplit('/').nth(1),
         other => other.strip_suffix(".rs"),
+    }
+}
+
+/// The binary name a `src/` file declares, or `None` when it is not one.
+///
+/// Cargo takes both `src/bin/<name>.rs` and `src/bin/<name>/main.rs` as binary
+/// roots. Anything deeper under `src/bin/<name>/` is an ordinary module of that
+/// binary and is judged as one.
+fn binary_name_of(file: &str) -> Option<&str> {
+    let (_, inside) = file.split_once("/src/")?;
+    let after = inside.strip_prefix("bin/")?;
+    match after.split_once('/') {
+        None => after.strip_suffix(".rs"),
+        Some((name, "main.rs")) => Some(name),
+        Some(_) => None,
     }
 }
 
@@ -2588,6 +2618,53 @@ inventory::submit! {
         assert_eq!(module_name_of("conform/vyre-conform/src/main.rs"), None);
         assert_eq!(module_name_of("vyre-libs/src/scan/mod.rs"), Some("scan"));
         assert_eq!(module_name_of("vyre-libs/src/scan/window.rs"), Some("window"));
+    }
+
+    #[test]
+    fn a_binary_root_is_judged_by_the_binary_name() {
+        for name in BANNED_MODULE_NAMES {
+            let flat = format!("xtask/src/bin/{name}.rs");
+            let nested = format!("xtask/src/bin/{name}/main.rs");
+            let failures =
+                generic_module_name_failures(&[flat, nested], &["xtask::bin".to_string()]);
+
+            assert_eq!(failures.len(), 2, "{name}: {failures:?}");
+            assert!(
+                failures
+                    .iter()
+                    .all(|failure| failure.contains(&format!("names the binary `{name}`"))),
+                "{name}: {failures:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_named_binary_and_its_own_modules_are_told_apart() {
+        assert_eq!(binary_name_of("xtask/src/bin/scaffold_rule.rs"), Some("scaffold_rule"));
+        assert_eq!(
+            binary_name_of("xtask-registry/src/bin/vyre_new_op/main.rs"),
+            Some("vyre_new_op")
+        );
+        assert_eq!(binary_name_of("xtask-registry/src/bin/vyre_new_op/run.rs"), None);
+        assert_eq!(binary_name_of("vyre-libs/src/scan/window.rs"), None);
+        assert_eq!(module_name_of("xtask/src/bin/scaffold_rule.rs"), None);
+        assert_eq!(
+            module_name_of("xtask-registry/src/bin/vyre_new_op/helpers.rs"),
+            Some("helpers")
+        );
+    }
+
+    #[test]
+    fn a_descriptively_named_binary_is_accepted() {
+        let failures = generic_module_name_failures(
+            &paths(&[
+                "xtask/src/bin/scaffold_rule.rs",
+                "xtask-registry/src/bin/vyre_new_op/main.rs",
+            ]),
+            &[],
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
     }
 
     #[test]
