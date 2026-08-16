@@ -14,7 +14,7 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
     BoundResource, Completion, DeviceIdentity, Resource, Submission,
 };
-use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime};
+use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime, ResourceRecord};
 
 /// Failure to authenticate an artifact envelope or select its exact required payload.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -409,7 +409,7 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         let artifact = state.admitted.neutral();
-        let resources = host_input_resources(artifact);
+        let resources = host_input_resources(artifact)?;
         if resources.len() != inputs.len() {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
@@ -421,7 +421,7 @@ impl ArtifactSession {
             .into());
         }
         let mut bindings = BindingSet::new(state.admitted.neutral().digest());
-        for (resource, bytes) in resources.into_iter().zip(inputs) {
+        for ((resource, _), bytes) in resources.into_iter().zip(inputs) {
             bindings.insert(resource.value, BoundResource::Host(bytes.to_vec()));
         }
         Ok(bindings)
@@ -686,53 +686,77 @@ fn validate_instance(
     Ok(())
 }
 
-/// Artifact ABI resources the caller supplies host bytes for, in slot order.
+/// Artifact ABI resources the caller supplies host bytes for, in slot order,
+/// each paired with its canonical resource record.
 ///
-/// Write-only values and values an entry produces are written by the device, so
-/// only read-visible caller buffers need bytes. Measurement and caller submission
-/// select the same set: a measured launch that bound a different set would not be
-/// timing the launch the caller performs.
-fn host_input_resources(artifact: &Artifact) -> Vec<&ResourceAbiRecord> {
+/// One fact decides the set: whether an artifact entry produces the value. A
+/// value no entry produces has no other source, so its contents at launch are
+/// the caller's. A value some entry produces is device state, however many
+/// entries also read it, and a retained value's successor is produced even
+/// though its predecessor is bound by the caller.
+///
+/// The earlier form asked for the values in `entry.outputs` that were absent
+/// from `entry.inputs`. That is the same set on every representable artifact,
+/// because a node's newly minted outputs can never appear among the values it
+/// binds as inputs, but it reads as though the arity depended on how the
+/// compiler grouped the graph. Stating the rule directly removes the question.
+///
+/// Access then removes what nothing reads: a write-only slot's contents at
+/// launch are unobservable, so binding bytes to it would ask the caller for a
+/// buffer no kernel reads.
+///
+/// Measurement and caller submission select the same set: a measured launch that
+/// bound a different set would not be timing the launch the caller performs.
+///
+/// # Errors
+///
+/// Returns an error when an ABI slot names a value the resource set does not
+/// carry. Both describe one graph, so a gap is a malformed artifact, and
+/// assuming a byte count for the missing value binds a buffer at the wrong size.
+fn host_input_resources(
+    artifact: &Artifact,
+) -> Result<Vec<(&ResourceAbiRecord, &ResourceRecord)>, BackendError> {
     let produced = entry_produced_values(artifact);
-    let mut resources = artifact
-        .abi()
-        .resources
-        .iter()
-        .filter(|resource| !produced.contains(&resource.value))
-        .filter(|resource| match resource.access {
-            AbiAccess::ReadOnly | AbiAccess::Uniform => true,
-            AbiAccess::ReadWrite => artifact
-                .resources()
-                .iter()
-                .find(|record| record.value == resource.value)
-                .is_none_or(|record| record.lifetime != ResourceLifetime::Output),
-            AbiAccess::WriteOnly => false,
-        })
-        .collect::<Vec<_>>();
-    resources.sort_unstable_by_key(|resource| resource.slot);
-    resources
+    let mut resources = Vec::new();
+    for resource in &artifact.abi().resources {
+        let record = artifact
+            .resources()
+            .iter()
+            .find(|record| record.value == resource.value)
+            .ok_or_else(|| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: artifact ABI slot {} names value {}, which the artifact resource set does not carry. Regenerate the artifact so its ABI and its resource set describe the same graph.",
+                    resource.slot, resource.value.0
+                ),
+            })?;
+        if !produced.contains(&resource.value) && kernel_reads_initial_bytes(resource.access) {
+            resources.push((resource, record));
+        }
+    }
+    resources.sort_unstable_by_key(|(resource, _)| resource.slot);
+    Ok(resources)
 }
 
-/// Values an artifact entry produces without reading them first.
-///
-/// A value one fusion group writes and another consumes is device state, not a
-/// caller buffer, however many entries read it. Taking the host input set as the
-/// union of every entry's inputs asked the caller for one buffer per inter-group
-/// intermediate. A value an entry both reads and writes stays a caller buffer,
-/// because its initial contents are an input to that launch.
+/// Values some artifact entry produces.
 fn entry_produced_values(artifact: &Artifact) -> BTreeSet<ArtifactValueId> {
     artifact
         .abi()
         .entries
         .iter()
-        .flat_map(|entry| {
-            entry
-                .outputs
-                .iter()
-                .copied()
-                .filter(|value| !entry.inputs.contains(value))
-        })
+        .flat_map(|entry| entry.outputs.iter().copied())
         .collect()
+}
+
+/// Whether the kernel reads what a slot holds at launch.
+///
+/// Exhaustive on purpose: a new access class must state whether its initial
+/// contents are read before a caller can be asked for them, and a wildcard arm
+/// would file it under whichever answer happened to be first.
+fn kernel_reads_initial_bytes(access: AbiAccess) -> bool {
+    match access {
+        AbiAccess::ReadOnly | AbiAccess::Uniform | AbiAccess::ReadWrite => true,
+        AbiAccess::WriteOnly => false,
+    }
 }
 
 /// Compiler finalist evaluation on the acquired device.
@@ -762,12 +786,8 @@ impl FinalistEvaluator for DeviceFinalists<'_> {
             .materialize(artifact, payload)
             .map_err(measurement_failure)?;
         let mut bindings = BindingSet::new(artifact.digest());
-        for resource in host_input_resources(artifact) {
-            let byte_count = artifact
-                .resources()
-                .iter()
-                .find(|record| record.value == resource.value)
-                .map_or(0, |record| record.byte_count);
+        for (resource, record) in host_input_resources(artifact).map_err(measurement_failure)? {
+            let byte_count = record.byte_count;
             let byte_count = usize::try_from(byte_count).map_err(|_| {
                 TargetCompileError::Unsupported(format!(
                     "artifact value {} needs {byte_count} bytes, which exceeds host addressing",

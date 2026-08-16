@@ -43,7 +43,9 @@ mod kernel_op;
 #[cfg(test)]
 pub(crate) mod test_descriptors;
 
-pub use binding_layout::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
+pub use binding_layout::{
+    descriptor_trap_tags, DescriptorTrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
+};
 pub use intent::{
     scan_construct_intent_mapping, DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
 };
@@ -120,7 +122,7 @@ pub enum LiteralValue {
     Bool(bool),
 }
 
-/// Serde representation of an f32 literal: its IEEE-754 bit pattern.
+/// Serde representation of an f32 literal.
 ///
 /// A descriptor travels to a materializer inside a target-module bundle, and
 /// that bundle is JSON, which has no non-finite number. `serde_json` writes
@@ -130,19 +132,85 @@ pub enum LiteralValue {
 /// running maximum with negative infinity and failed target-module decode with
 /// `invalid type: null, expected f32`.
 ///
-/// The bit pattern is exact for every f32, including each NaN payload, in every
-/// serde format, so the literal an emitter reads is the literal the lowering
-/// chose. Round-tripping is a documented property of this module, so the
-/// encoding belongs to the variant rather than to any one format's writer.
+/// Only the values the plain encoding could not represent change shape. A
+/// finite literal is still written as a number, byte for byte what the derived
+/// impl wrote, so no other serde surface that carries a descriptor changes at
+/// all. A non-finite literal is written as its IEEE-754 bit pattern in hex,
+/// which is exact for every f32 including each NaN payload, and reads back
+/// through `f32::from_bits`.
+///
+/// `deserialize_any` makes this require a self-describing format. Every format
+/// a descriptor travels through today is one. A compact format that cannot
+/// answer `deserialize_any` refuses here by name instead of guessing, which is
+/// the decision that format needs anyway: it can carry all 32 bits as a number
+/// and wants no escape at all.
 mod literal_f32 {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::fmt;
+
+    use serde::de::{Unexpected, Visitor};
+    use serde::{Deserializer, Serializer};
+
+    /// Radix prefix for the non-finite escape. Present so a reader can tell an
+    /// escaped bit pattern from a decimal literal someone wrote by hand.
+    const BITS_PREFIX: &str = "0x";
 
     pub(super) fn serialize<S: Serializer>(value: &f32, serializer: S) -> Result<S::Ok, S::Error> {
-        value.to_bits().serialize(serializer)
+        if value.is_finite() {
+            return serializer.serialize_f32(*value);
+        }
+        serializer.serialize_str(&format!("{BITS_PREFIX}{:08x}", value.to_bits()))
     }
 
     pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f32, D::Error> {
-        u32::deserialize(deserializer).map(f32::from_bits)
+        deserializer.deserialize_any(LiteralVisitor)
+    }
+
+    struct LiteralVisitor;
+
+    impl Visitor<'_> for LiteralVisitor {
+        type Value = f32;
+
+        fn expecting(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                out,
+                "a finite f32 number, or a non-finite one as `{BITS_PREFIX}` and eight hex digits"
+            )
+        }
+
+        fn visit_f32<E: serde::de::Error>(self, value: f32) -> Result<f32, E> {
+            Ok(value)
+        }
+
+        fn visit_f64<E: serde::de::Error>(self, value: f64) -> Result<f32, E> {
+            Ok(value as f32)
+        }
+
+        fn visit_i64<E: serde::de::Error>(self, value: i64) -> Result<f32, E> {
+            Ok(value as f32)
+        }
+
+        fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<f32, E> {
+            Ok(value as f32)
+        }
+
+        fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<f32, E> {
+            let digits = value
+                .strip_prefix(BITS_PREFIX)
+                .ok_or_else(|| E::invalid_value(Unexpected::Str(value), &self))?;
+            let bits = u32::from_str_radix(digits, 16)
+                .map_err(|_| E::invalid_value(Unexpected::Str(value), &self))?;
+            let value = f32::from_bits(bits);
+            if value.is_finite() {
+                // A finite value has a number encoding, so accepting it here too
+                // would give one literal two spellings and break the bundle's
+                // canonical-bytes check on re-encode.
+                return Err(E::invalid_value(
+                    Unexpected::Float(f64::from(value)),
+                    &"a non-finite f32 bit pattern; write a finite literal as a number",
+                ));
+            }
+            Ok(value)
+        }
     }
 }
 
