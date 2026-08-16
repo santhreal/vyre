@@ -1,7 +1,7 @@
 //! NFA transition and epsilon table packing.
 
 use super::{alloc::reserve_vec, try_compile, NfaCompileError};
-use vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
+use crate::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 
 /// Build the `nfa_transition` state-major bit-table matching the
 /// [`subgroup_nfa::nfa_step`] contract:
@@ -11,7 +11,7 @@ use vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 /// The source state is the outermost index, so every lane's word for
 /// one `(src, byte)` pair is adjacent and one subgroup load coalesces.
 ///
-/// [`subgroup_nfa::nfa_step`]: vyre_primitives::nfa::subgroup_nfa::nfa_step
+/// [`subgroup_nfa::nfa_step`]: crate::nfa::subgroup_nfa::nfa_step
 ///
 /// # Panics
 ///
@@ -126,7 +126,7 @@ mod tests {
         build_epsilon_table, build_transition_table, try_build_epsilon_table,
         try_build_transition_table,
     };
-    use vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
+    use crate::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 
     #[test]
     fn compatibility_table_builders_match_fallible_builders_for_empty_plan() {

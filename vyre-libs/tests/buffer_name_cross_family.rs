@@ -18,7 +18,13 @@
 use std::collections::HashMap;
 
 #[cfg(feature = "decode")]
-use vyre_libs::decode::{base64_decode, encodex_gpu, hex_decode, inflate_stored_block};
+use vyre_libs::decode::base64::base64_decode;
+#[cfg(feature = "decode")]
+use vyre_libs::decode::encodex::encodex_gpu;
+#[cfg(feature = "decode")]
+use vyre_libs::decode::hex::hex_decode;
+#[cfg(feature = "decode")]
+use vyre_libs::decode::inflate::inflate_stored_block;
 #[cfg(all(feature = "hash", feature = "decode"))]
 use vyre_libs::hash::blake3_compress;
 

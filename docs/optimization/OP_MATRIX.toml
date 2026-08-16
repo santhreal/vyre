@@ -483,51 +483,6 @@ tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
-family = "vyre-primitives::decode::base64_decode"
-tier = "intrinsic"
-owners = ["vyre-primitives/src/decode"]
-ops = ["vyre-primitives::decode::base64_decode"]
-registry_sources = ["vyre-foundation::operation"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
-family = "vyre-primitives::decode::hex_decode"
-tier = "intrinsic"
-owners = ["vyre-primitives/src/decode"]
-ops = ["vyre-primitives::decode::hex_decode"]
-registry_sources = ["vyre-foundation::operation"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
-family = "vyre-primitives::decode::inflate_stored"
-tier = "intrinsic"
-owners = ["vyre-primitives/src/decode"]
-ops = ["vyre-primitives::decode::inflate_stored"]
-registry_sources = ["vyre-foundation::operation"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
 family = "vyre-primitives::decode::rle_segment_lengths"
 tier = "intrinsic"
 owners = ["vyre-primitives/src/decode"]

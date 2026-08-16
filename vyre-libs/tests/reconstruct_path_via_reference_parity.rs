@@ -14,7 +14,7 @@
 #![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
-use vyre_primitives::graph::path_reconstruct::cpu_ref;
+use vyre_libs::graph::path_reconstruct::cpu_ref;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 

@@ -1,17 +1,120 @@
-//! Shared fallible scratch allocation helpers for dispatch release paths.
+//! Shared fallible scratch reservation helpers.
 //!
-//! Dispatch wrappers reuse caller-owned buffers heavily. Keeping reservation
-//! policy here prevents each domain from growing its own unchecked
-//! `Vec::reserve` variant and keeps allocation failures actionable.
+//! Two families live here, distinguished by what a caller can do with the
+//! failure. Dispatch release paths reuse caller-owned buffers heavily and
+//! surface a [`DispatchError`], so they use `reserve_vec`, `reserve_hash_set`
+//! and friends. CPU oracles and structure-of-arrays builders report the owning
+//! kernel and the scratch role as a message the caller maps into its own error
+//! type, so they use `reserve_items`, `reserve_capacity`, `reserve_items_with`
+//! and `resize_vec`.
+//!
+//! Keeping both families here prevents each domain from growing its own
+//! unchecked `Vec::reserve` variant and keeps allocation failures actionable.
+//! Nothing here truncates or saturates on overflow.
 
+#[cfg(feature = "device")]
 use std::collections::HashSet;
+#[cfg(feature = "device")]
 use std::hash::{BuildHasher, Hash};
+#[cfg(feature = "device")]
 use vyre_foundation::program_dispatch::DispatchError;
+
+/// Reserve additional items in a scratch vector with a standard, actionable
+/// allocation diagnostic.
+///
+/// # Errors
+///
+/// Returns a message naming `owner`, `context`, and the allocator failure.
+#[cfg(any(feature = "graph", feature = "math-kernels"))]
+pub(crate) fn reserve_items<T>(
+    buffer: &mut Vec<T>,
+    additional: usize,
+    owner: &str,
+    context: &str,
+) -> Result<(), String> {
+    buffer.try_reserve(additional).map_err(|error| {
+        format!(
+            "Fix: {owner} could not reserve {additional} item(s) for {context}: {error}. Split the batch or reuse a smaller scratch buffer."
+        )
+    })
+}
+
+/// Grow `buffer` to hold at least `len` items.
+///
+/// # Errors
+///
+/// Returns a message naming `owner`, `context`, and the allocator failure.
+#[cfg(any(feature = "graph", feature = "math-kernels"))]
+pub(crate) fn reserve_capacity<T>(
+    buffer: &mut Vec<T>,
+    len: usize,
+    owner: &str,
+    context: &str,
+) -> Result<(), String> {
+    if len > buffer.capacity() {
+        reserve_items(buffer, len - buffer.len(), owner, context)?;
+    }
+    Ok(())
+}
+
+/// Define a per-owner `fn(out, len, name)` wrapper over [`reserve_capacity`].
+///
+/// A kernel module that reserves against many scratch vectors under one owner
+/// name would otherwise repeat that name at every call.
+#[cfg(any(feature = "graph", feature = "math-kernels"))]
+macro_rules! define_reserve_capacity {
+    ($name:ident, $item:ty, $owner:literal) => {
+        #[cfg(any(test, feature = "cpu-parity"))]
+        fn $name(out: &mut Vec<$item>, len: usize, name: &str) -> Result<(), String> {
+            crate::scratch::reserve_capacity(out, len, $owner, name)
+        }
+    };
+}
+#[cfg(any(feature = "graph", feature = "math-kernels"))]
+pub(crate) use define_reserve_capacity;
+
+/// Reserve scratch and map the shared diagnostic into a domain-specific error
+/// type.
+///
+/// # Errors
+///
+/// Returns the mapped allocation error when `Vec::try_reserve` fails.
+#[cfg(any(feature = "graph", feature = "math-kernels"))]
+pub(crate) fn reserve_items_with<T, E>(
+    buffer: &mut Vec<T>,
+    additional: usize,
+    owner: &str,
+    context: &str,
+    map: impl FnOnce(String) -> E,
+) -> Result<(), E> {
+    reserve_items(buffer, additional, owner, context).map_err(map)
+}
+
+/// Grow `buffer` to `len` items, filling new slots with `value`.
+///
+/// # Errors
+///
+/// Returns a message naming `owner`, `context`, and the allocator failure.
+#[cfg(any(feature = "graph", feature = "math-kernels"))]
+pub(crate) fn resize_vec<T: Clone>(
+    buffer: &mut Vec<T>,
+    len: usize,
+    value: T,
+    owner: &str,
+    context: &str,
+) -> Result<(), String> {
+    if len > buffer.len() {
+        reserve_items(buffer, len - buffer.len(), owner, context)?;
+    }
+    buffer.resize(len, value);
+    Ok(())
+}
 
 /// Grow `buffer` to hold at least `capacity` items.
 ///
 /// # Errors
 /// Returns the allocator's refusal rendered as a message.
+#[cfg(feature = "device")]
 pub(crate) fn try_reserve_vec_capacity<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
@@ -24,6 +127,7 @@ pub(crate) fn try_reserve_vec_capacity<T>(
 ///
 /// # Errors
 /// Returns a [`DispatchError::BackendError`] naming `context` and the count.
+#[cfg(feature = "device")]
 pub(crate) fn reserve_vec<T>(
     buffer: &mut Vec<T>,
     additional: usize,
@@ -43,6 +147,7 @@ pub(crate) fn reserve_vec<T>(
 ///
 /// # Errors
 /// Returns a [`DispatchError::BackendError`] naming `context` and the capacity.
+#[cfg(feature = "device")]
 pub(crate) fn reserve_vec_capacity<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
@@ -60,6 +165,7 @@ pub(crate) fn reserve_vec_capacity<T>(
 /// # Panics
 /// Panics when the reservation fails. Continuing with a short buffer would let a pass
 /// write past the scratch it believes it owns.
+#[cfg(feature = "device")]
 pub(crate) fn reserve_vec_capacity_or_panic<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
@@ -79,6 +185,7 @@ pub(crate) fn reserve_vec_capacity_or_panic<T>(
 /// # Errors
 /// Returns a [`DispatchError::BackendError`] when the target capacity overflows
 /// or the allocator refuses it.
+#[cfg(feature = "device")]
 pub(crate) fn reserve_hash_set<T, S>(
     set: &mut HashSet<T, S>,
     additional: usize,
@@ -103,7 +210,7 @@ where
     })
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
+#[cfg(all(feature = "device", any(test, feature = "cpu-parity")))]
 /// Reserve `capacity` entries in `set`, failing closed when refused.
 ///
 /// # Panics
@@ -125,8 +232,8 @@ pub(crate) fn reserve_hash_set_capacity_or_panic<T, S>(
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(all(test, feature = "device"))]
+mod dispatch_tests {
     use super::*;
 
     #[test]
@@ -157,3 +264,56 @@ mod tests {
         assert!(message.contains("Fix:"));
     }
 }
+
+#[cfg(all(test, any(feature = "graph", feature = "math-kernels")))]
+mod owner_reported_tests {
+    use super::{reserve_items, reserve_items_with};
+
+    #[test]
+    fn reserve_items_reuses_existing_capacity() {
+        let mut scratch = Vec::<u32>::with_capacity(8);
+
+        reserve_items(&mut scratch, 4, "test kernel", "frontier")
+            .expect("existing capacity should satisfy the reservation without allocating");
+
+        assert_eq!(scratch.capacity(), 8);
+        assert!(scratch.is_empty());
+    }
+
+    #[test]
+    fn reserve_items_reports_owner_and_context_on_capacity_overflow() {
+        let mut scratch = Vec::<u8>::new();
+
+        let err = reserve_items(
+            &mut scratch,
+            usize::MAX,
+            "test kernel",
+            "adversarial huge scratch",
+        )
+        .expect_err("usize::MAX reservation must fail without allocating");
+
+        assert!(err.contains("test kernel"));
+        assert!(err.contains("adversarial huge scratch"));
+        assert!(err.contains("usize::MAX") || err.contains("capacity"));
+    }
+
+    #[test]
+    fn reserve_items_with_preserves_domain_error_mapping() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct DomainError(String);
+
+        let mut scratch = Vec::<u8>::new();
+        let err = reserve_items_with(
+            &mut scratch,
+            usize::MAX,
+            "mapped kernel",
+            "mapped scratch",
+            DomainError,
+        )
+        .expect_err("usize::MAX reservation must fail without allocating");
+
+        assert!(err.0.contains("mapped kernel"));
+        assert!(err.0.contains("mapped scratch"));
+    }
+}
+

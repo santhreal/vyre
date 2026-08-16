@@ -1,5 +1,5 @@
 use crate::{dual_impls::evaluator, workgroup::Memory};
-use vyre_primitives::hash::fnv1a::fnv1a32;
+use vyre_libs::hash::fnv1a::fnv1a32;
 use vyre_primitives::HashFnv1a;
 
 impl evaluator::ReferenceEvaluator for HashFnv1a {

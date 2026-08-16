@@ -22,7 +22,7 @@
 /// `full_blocks` plus a `tail_block` and then floored the sum, and one returned a
 /// grid of zero groups.
 #[must_use]
-pub(crate) const fn lane_grid(lanes: u32, lanes_per_group: u32) -> [u32; 3] {
+pub const fn lane_grid(lanes: u32, lanes_per_group: u32) -> [u32; 3] {
     let groups = lanes.div_ceil(lanes_per_group);
     [if groups == 0 { 1 } else { groups }, 1, 1]
 }

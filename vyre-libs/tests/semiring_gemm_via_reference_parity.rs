@@ -25,7 +25,7 @@ use vyre_libs::analysis::dataflow_fixpoint::{
     reference_semiring_gemm, semiring_gemm_via_bool_or, semiring_gemm_via_lineage,
     semiring_gemm_via_min_plus,
 };
-use vyre_primitives::math::semiring_gemm::Semiring;
+use vyre_libs::math::semiring_gemm::Semiring;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 

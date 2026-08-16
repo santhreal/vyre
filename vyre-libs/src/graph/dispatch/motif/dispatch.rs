@@ -1,5 +1,5 @@
 use super::{CachedMotifProgram, MotifGpuScratch};
-use vyre_primitives::graph::motif::{
+use crate::graph::motif::{
     count_witness_participants, plan_motif_launch, validate_motif_witness, MotifEdge,
     MotifStaticInputKey,
 };
@@ -125,7 +125,7 @@ fn refresh_motif_inputs(
     inputs: &mut Vec<Vec<u8>>,
     static_input_key: &mut Option<MotifStaticInputKey>,
     next_static_input_key: MotifStaticInputKey,
-    layout: vyre_primitives::graph::motif::MotifLayout,
+    layout: crate::graph::motif::MotifLayout,
     edge_offsets: &[u32],
     edge_targets: &[u32],
     edge_kind_mask: &[u32],

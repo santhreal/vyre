@@ -131,7 +131,7 @@ pub fn try_rank1_superblocks(
         vec![wrap_anonymous_region(
             RANK_SUPERBLOCKS_OP_ID,
             vec![wrap_child_region(
-                vyre_primitives::graph::path_reconstruct::OP_ID,
+                crate::graph::path_reconstruct::OP_ID,
                 GeneratorRef {
                     name: RANK_SUPERBLOCKS_OP_ID.to_string(),
                 },

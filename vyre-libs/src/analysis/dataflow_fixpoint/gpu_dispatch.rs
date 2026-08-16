@@ -112,7 +112,7 @@ pub fn semiring_gemm_via_with_scratch_into(
     }
 
     let program =
-        vyre_primitives::math::semiring_gemm::semiring_gemm("a", "b", "c", m, n, k, semiring);
+        crate::math::semiring_gemm::semiring_gemm("a", "b", "c", m, n, k, semiring);
     ensure_input_slots(&mut scratch.inputs, 3);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], a);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], b);
@@ -477,7 +477,7 @@ pub fn scc_components_via_substrate_with_scratch_into(
             &mut scratch.forward,
             &mut scratch.backward,
         );
-        let program = vyre_primitives::graph::scc_decompose::scc_decompose(
+        let program = crate::graph::scc_decompose::scc_decompose(
             n,
             "forward",
             "backward",

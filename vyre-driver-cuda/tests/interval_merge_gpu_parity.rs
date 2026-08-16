@@ -1,4 +1,4 @@
-//! Parity test: `vyre_primitives::math::interval::interval_merge_program` on CUDA
+//! Parity test: `vyre_libs::math::interval::interval_merge_program` on CUDA
 //! matches its CPU reference for per-lane interval hulls.
 
 #![cfg(test)]
@@ -7,7 +7,7 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::math::interval::{cpu_interval_merge, interval_merge_program};
+use vyre_libs::math::interval::{cpu_interval_merge, interval_merge_program};
 
 fn run_interval_merge(
     mins_a: &[u32],

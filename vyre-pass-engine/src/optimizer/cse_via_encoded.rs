@@ -35,7 +35,7 @@ use vyre_foundation::transform::rewrite_walk::{
     extend_with_rewritten_scope, reachable_prefix, rewrite_program_entry, rewrite_scope,
     visit_scope, NodeRewrite,
 };
-use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
+use vyre_libs::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
 
 use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,

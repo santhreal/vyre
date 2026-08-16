@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=7aa6f646821e67ad47098581c63561f3020799ac626306bb13152939a14bfe84",
+  "source_fingerprint": "git:94997c20a9a5814703e6a1d618b4db44436d73bd:dirty=true:worktree=320810f23794bd0376cd15b50221e657ab382bc9fa944286cb884c89a6e382b4",
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -28,7 +28,7 @@
   ],
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
-  "release_suite_case_count": 23,
+  "release_suite_case_count": 22,
   "cpu_sota_contract_count": 30,
   "cpu_sota_100x_contract_count": 14,
   "cpu_sota_100x_contract_cases": [
@@ -491,7 +491,6 @@
       "matched_cases": [
         "conditions.yara_like.batch.16x64k",
         "dataflow.ifds.skewed.queue_closure.1m",
-        "parser.c_lexer.small_state_transition.4k",
         "primitives.graph.csr_skewed_queue_closure.1m",
         "sparse.compaction.count.1m"
       ],

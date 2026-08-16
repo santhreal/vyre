@@ -12,7 +12,7 @@
 //! restating the primitive's parameter list and calling it. A wrapper that
 //! forwards is not an owner: it gave the algorithm a second name, no second
 //! behaviour, and a second signature to keep in step. Callers name
-//! `vyre_primitives::graph` directly.
+//! `crate::graph` directly.
 
 #[cfg(test)]
 mod tests;

@@ -24,72 +24,63 @@ use crate::security::facts::{
 pub const EXTERNAL_IFDS_SECURITY_BACKEND_ID: &str = "external-ifds-gpu";
 
 /// Buffer names required to route a security taint query through external IFDS.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ExternalIfdsSecurityBuffers {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ExternalIfdsSecurityBuffers<'a> {
     /// ProgramGraph CSR edge-offset buffer.
-    pub pg_edge_offsets: String,
+    pub pg_edge_offsets: &'a str,
     /// ProgramGraph CSR edge-target buffer.
-    pub pg_edge_targets: String,
+    pub pg_edge_targets: &'a str,
     /// ProgramGraph edge-kind mask buffer.
-    pub pg_edge_kind_mask: String,
+    pub pg_edge_kind_mask: &'a str,
     /// ProgramGraph node-tag buffer.
-    pub pg_node_tags: String,
+    pub pg_node_tags: &'a str,
     /// Columnar fact-id buffer.
-    pub fact_ids: String,
+    pub fact_ids: &'a str,
     /// Columnar fact-kind buffer.
-    pub fact_kinds: String,
+    pub fact_kinds: &'a str,
     /// Columnar fact-subject buffer.
-    pub fact_subjects: String,
+    pub fact_subjects: &'a str,
     /// Columnar fact-object buffer.
-    pub fact_objects: String,
+    pub fact_objects: &'a str,
     /// Input IFDS frontier bitset.
-    pub frontier_in: String,
+    pub frontier_in: &'a str,
     /// Output IFDS frontier bitset.
-    pub frontier_out: String,
+    pub frontier_out: &'a str,
 }
 
-impl ExternalIfdsSecurityBuffers {
-    /// Build a buffer-name bundle.
-    #[allow(clippy::too_many_arguments)]
-    #[must_use]
-    pub fn new(
-        pg_edge_offsets: impl Into<String>,
-        pg_edge_targets: impl Into<String>,
-        pg_edge_kind_mask: impl Into<String>,
-        pg_node_tags: impl Into<String>,
-        fact_ids: impl Into<String>,
-        fact_kinds: impl Into<String>,
-        fact_subjects: impl Into<String>,
-        fact_objects: impl Into<String>,
-        frontier_in: impl Into<String>,
-        frontier_out: impl Into<String>,
-    ) -> Self {
-        Self {
-            pg_edge_offsets: pg_edge_offsets.into(),
-            pg_edge_targets: pg_edge_targets.into(),
-            pg_edge_kind_mask: pg_edge_kind_mask.into(),
-            pg_node_tags: pg_node_tags.into(),
-            fact_ids: fact_ids.into(),
-            fact_kinds: fact_kinds.into(),
-            fact_subjects: fact_subjects.into(),
-            fact_objects: fact_objects.into(),
-            frontier_in: frontier_in.into(),
-            frontier_out: frontier_out.into(),
-        }
-    }
+impl ExternalIfdsSecurityBuffers<'static> {
+    /// The canonical binding names for an external IFDS security route.
+    ///
+    /// A caller with no naming of its own gets one here instead of spelling ten
+    /// strings in positional order, where a transposed `fact_subjects`/`fact_objects`
+    /// compiles and looks deliberate from either side.
+    pub const CANONICAL: Self = Self {
+        pg_edge_offsets: "pg_edge_offsets",
+        pg_edge_targets: "pg_edge_targets",
+        pg_edge_kind_mask: "pg_edge_kind_mask",
+        pg_node_tags: "pg_node_tags",
+        fact_ids: "fact_ids",
+        fact_kinds: "fact_kinds",
+        fact_subjects: "fact_subjects",
+        fact_objects: "fact_objects",
+        frontier_in: "ifds_frontier_in",
+        frontier_out: "ifds_frontier_out",
+    };
+}
 
+impl ExternalIfdsSecurityBuffers<'_> {
     fn validate(&self) -> Result<(), ExternalIfdsSecurityRouteError> {
         for (field, value) in [
-            ("pg_edge_offsets", &self.pg_edge_offsets),
-            ("pg_edge_targets", &self.pg_edge_targets),
-            ("pg_edge_kind_mask", &self.pg_edge_kind_mask),
-            ("pg_node_tags", &self.pg_node_tags),
-            ("fact_ids", &self.fact_ids),
-            ("fact_kinds", &self.fact_kinds),
-            ("fact_subjects", &self.fact_subjects),
-            ("fact_objects", &self.fact_objects),
-            ("frontier_in", &self.frontier_in),
-            ("frontier_out", &self.frontier_out),
+            ("pg_edge_offsets", self.pg_edge_offsets),
+            ("pg_edge_targets", self.pg_edge_targets),
+            ("pg_edge_kind_mask", self.pg_edge_kind_mask),
+            ("pg_node_tags", self.pg_node_tags),
+            ("fact_ids", self.fact_ids),
+            ("fact_kinds", self.fact_kinds),
+            ("fact_subjects", self.fact_subjects),
+            ("fact_objects", self.fact_objects),
+            ("frontier_in", self.frontier_in),
+            ("frontier_out", self.frontier_out),
         ] {
             if value.trim().is_empty() {
                 return Err(ExternalIfdsSecurityRouteError::MissingBuffer { field });
@@ -97,7 +88,7 @@ impl ExternalIfdsSecurityBuffers {
         }
         if self.frontier_in == self.frontier_out {
             return Err(ExternalIfdsSecurityRouteError::AliasedFrontierBuffers {
-                buffer: self.frontier_in.clone(),
+                buffer: self.frontier_in.to_string(),
             });
         }
         Ok(())
@@ -106,7 +97,7 @@ impl ExternalIfdsSecurityBuffers {
 
 /// External IFDS dispatch selected for a Vyre security source-to-sink query.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExternalIfdsSecurityDispatch {
+pub struct ExternalIfdsSecurityDispatch<'a> {
     /// Query id; currently [`external_dataflow_engine::ifds_gpu::OP_ID`].
     pub query_id: String,
     /// Backend id for finding evidence.
@@ -116,7 +107,7 @@ pub struct ExternalIfdsSecurityDispatch {
     /// Checked exploded-node count.
     pub node_count: u32,
     /// Buffer names used by the dispatch route.
-    pub buffers: ExternalIfdsSecurityBuffers,
+    pub buffers: ExternalIfdsSecurityBuffers<'a>,
     /// Source fact used as the IFDS seed source.
     pub source_fact_id: FactId,
     /// Sink fact used as the IFDS seed target.
@@ -127,19 +118,15 @@ pub struct ExternalIfdsSecurityDispatch {
     pub primitive_soundness: Vec<DynamicPrimitiveSoundness>,
 }
 
-impl ExternalIfdsSecurityDispatch {
+impl ExternalIfdsSecurityDispatch<'_> {
     /// Build the external IFDS GPU step Program for this dispatch route.
     ///
     /// # Errors
     ///
     /// Returns [`ExternalIfdsSecurityRouteError`] if the external engine rejects the shape.
     pub fn step_program(&self) -> Result<Program, ExternalIfdsSecurityRouteError> {
-        ifds_gpu_step(
-            self.shape,
-            &self.buffers.frontier_in,
-            &self.buffers.frontier_out,
-        )
-        .map_err(|reason| ExternalIfdsSecurityRouteError::BuildProgram { reason })
+        ifds_gpu_step(self.shape, self.buffers.frontier_in, self.buffers.frontier_out)
+            .map_err(|reason| ExternalIfdsSecurityRouteError::BuildProgram { reason })
     }
 }
 
@@ -390,12 +377,12 @@ pub fn security_witness_path_from_external_path(
 ///
 /// Returns [`ExternalIfdsSecurityRouteError`] when facts, buffers, or shape are not
 /// valid for IFDS routing.
-pub fn route_security_taint_through_external_ifds(
+pub fn route_security_taint_through_external_ifds<'a>(
     table: &AnalysisFactTable,
     request: &SourceToSinkFindingRequest,
     shape: IfdsShape,
-    buffers: ExternalIfdsSecurityBuffers,
-) -> Result<ExternalIfdsSecurityDispatch, ExternalIfdsSecurityRouteError> {
+    buffers: ExternalIfdsSecurityBuffers<'a>,
+) -> Result<ExternalIfdsSecurityDispatch<'a>, ExternalIfdsSecurityRouteError> {
     table.validate()?;
     buffers.validate()?;
     let node_count = shape

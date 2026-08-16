@@ -1,6 +1,6 @@
 //! Region-graph motif-matching substrate consumer.
 //!
-//! Wires `vyre_primitives::graph::motif` so the optimizer can
+//! Wires `crate::graph::motif` so the optimizer can
 //! pattern-match small Region shapes (e.g. "load-store-store" or
 //! "atomic-then-barrier") for lint/audit/rewrite passes. Same
 //! primitive graph-analysis surface ships to user dialects, now consumed by
@@ -26,7 +26,7 @@ pub use reference::{
 };
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::motif::{MotifLayout, MotifProgramCacheKey, MotifStaticInputKey};
+use crate::graph::motif::{MotifLayout, MotifProgramCacheKey, MotifStaticInputKey};
 
 use crate::graph::dispatch::dispatch_bridge::ProgramCache;
 

@@ -34,7 +34,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::ByteRange;
-use vyre_primitives::matching::CompiledDfa;
+use crate::matching::CompiledDfa;
 
 use crate::scan::builders::append_match;
 use crate::scan::classic_ac::bounded_ranges::{

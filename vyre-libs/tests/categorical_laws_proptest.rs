@@ -6,7 +6,7 @@ use vyre_libs::reasoning::functorial_pass_composition::{
 use vyre_libs::reasoning::string_diagram_ir_rewrite::{
     compose_ir_arrows, composition_associates, identity_arrow,
 };
-use vyre_primitives::graph::sheaf::sheaf_diffusion_step_cpu;
+use vyre_libs::graph::sheaf::sheaf_diffusion_step_cpu;
 
 fn approx_eq_vec(a: &[f64], b: &[f64]) -> bool {
     if a.len() != b.len() {

@@ -1,5 +1,5 @@
 #[cfg(test)]
-pub(crate) use vyre_primitives::graph::path_reconstruct::cpu_ref as path_reconstruct_cpu;
+pub(crate) use crate::graph::path_reconstruct::cpu_ref as path_reconstruct_cpu;
 
 /// Reconstruct the path from `target` to its root, writing the
 /// `(target, parent, ..., root)` sequence into `scratch`.

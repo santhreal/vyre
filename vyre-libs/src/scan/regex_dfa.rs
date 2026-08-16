@@ -21,7 +21,7 @@ use std::fmt;
 
 use vyre_foundation::ir::Program;
 
-use vyre_primitives::matching::{nfa_to_dfa, CompiledDfa, NfaTables, NfaToDfaError};
+use crate::matching::{nfa_to_dfa, CompiledDfa, NfaTables, NfaToDfaError};
 
 use crate::scan::classic_ac::bounded_ranges::AcInputBindings;
 use crate::scan::classic_ac::{
@@ -120,7 +120,7 @@ impl From<NfaToDfaError> for RegexDfaError {
 /// `max_matches` is the per-dispatch hit-buffer cap (passed through to
 /// `build_ac_bounded_ranges_program`). `max_dfa_states` is the subset-
 /// construction state cap (see
-/// [`vyre_primitives::matching::nfa_to_dfa()`]). The default of 16k
+/// [`crate::matching::nfa_to_dfa()`]). The default of 16k
 /// states matches `DEFAULT_DFA_BUDGET_BYTES = 16 MiB` (16k × 256 × 4 B).
 ///
 /// The match-append strategy is the default `append_match_subgroup`

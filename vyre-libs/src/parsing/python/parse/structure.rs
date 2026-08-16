@@ -25,7 +25,7 @@ fn line_index_pass<'a>(
 ) -> TokenPass<'a> {
     TokenPass {
         op_id,
-        child_op_id: vyre_primitives::text::LINE_INDEX_OP_ID,
+        child_op_id: crate::text::LINE_INDEX_OP_ID,
         tok_types,
         tok_starts,
         tok_lens,

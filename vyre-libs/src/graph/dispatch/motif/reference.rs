@@ -1,4 +1,4 @@
-use vyre_primitives::graph::motif::{
+use crate::graph::motif::{
     cpu_ref_matches as reference_motif_matches, try_cpu_ref_into as try_reference_motif_into,
     try_cpu_ref_participation_count as try_reference_motif_participation_count, MotifEdge,
 };

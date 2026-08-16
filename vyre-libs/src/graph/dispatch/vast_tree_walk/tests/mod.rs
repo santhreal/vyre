@@ -1,5 +1,5 @@
 use super::*;
-use vyre_primitives::graph::vast_tree_walk::{
+use crate::graph::vast_tree_walk::{
     try_ast_walk_postorder, try_ast_walk_preorder, POSTORDER_OP_ID, PREORDER_OP_ID,
 };
 

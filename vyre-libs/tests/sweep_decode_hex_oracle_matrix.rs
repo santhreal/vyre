@@ -1,13 +1,13 @@
 //! Handwritten oracle matrix for ASCII hex decode.
 //!
-//! Compares `vyre_libs::decode::hex_decode` reference evaluation against an
+//! Compares `vyre_libs::decode::hex::hex_decode` reference evaluation against an
 //! independent nibble-table oracle over hostile even-length inputs.
 
 #![forbid(unsafe_code)]
 #![cfg(feature = "decode")]
 
-use vyre_libs::decode::hex_decode;
-use vyre_primitives::decode::hex::hex_decode_table_ref;
+use vyre_libs::decode::hex::hex_decode;
+use vyre_libs::decode::hex::hex_decode_table_ref;
 use vyre_reference::value::Value;
 
 const HEX_CASES: u32 = 512;

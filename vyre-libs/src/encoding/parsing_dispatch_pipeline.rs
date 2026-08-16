@@ -7,7 +7,7 @@
 //! `vyre-primitives::parsing` rather than duplicating layout rules here.
 
 use vyre_foundation::ir::{Expr, Node};
-use vyre_primitives::parsing::{
+use crate::parsing::{
     ast_cse_constant_fold::{ast_cse_constant_fold, OP_ID as AST_CSE_CONSTANT_FOLD_PRIMITIVE_ID},
     bytecode_dispatch_table_pack::{
         pack_dispatch_table_into, packed_dispatch_table_len, unpack_entry, OpcodeHandlerEntry,

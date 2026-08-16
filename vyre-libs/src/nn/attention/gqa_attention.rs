@@ -5,13 +5,13 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::GeneratorRef;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::nn::attention_passes::{
+use crate::nn::attention_passes::{
     attention_max_pass_bounded, attention_max_pass_with_bases, attention_sum_pass_bounded,
     attention_sum_pass_with_bases, attention_write_pass_bounded_typed,
     attention_write_pass_with_bases, ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID,
     ATTENTION_WRITE_PASS_OP_ID,
 };
-use vyre_primitives::nn::attention_stability::positive_denominator;
+use crate::nn::attention_stability::positive_denominator;
 
 const OP_ID: &str = "vyre-libs::nn::gqa_attention";
 

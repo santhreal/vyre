@@ -20,7 +20,7 @@ use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_primitives::hash::fnv1a::{fnv1a32, fnv1a32_program};
+use vyre_libs::hash::fnv1a::{fnv1a32, fnv1a32_program};
 
 /// Dispatch the real `fnv1a32_program` on the GPU: one U32 word per source byte
 /// (the builder masks each to its low 8 bits), single u32 hash out at `out[0]`.

@@ -7,11 +7,11 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::math::prefix_scan::{
+use vyre_libs::math::prefix_scan::{
     cpu_ref as prefix_cpu, prefix_scan, prefix_scan_large, ScanKind,
 };
-use vyre_primitives::math::stream_compact::{cpu_ref as compact_cpu, stream_compact};
-use vyre_primitives::reduce::multi_block_prefix_scan::BLOCK_LANES;
+use vyre_libs::math::stream_compact::{cpu_ref as compact_cpu, stream_compact};
+use vyre_libs::reduce::multi_block_prefix_scan::BLOCK_LANES;
 
 fn run_prefix_scan(input: &[u32], kind: ScanKind) -> Vec<u32> {
     let n = input.len() as u32;

@@ -1,6 +1,6 @@
 //! Two-dispatch separable Gaussian blur.
 //!
-//! Composes `vyre_primitives::math::conv1d` for horizontal + vertical
+//! Composes `crate::math::conv1d` for horizontal + vertical
 //! passes. The approach: since conv1d operates on scalar u32 values
 //! but pixels are packed RGBA, we process the image as a flat array
 //! of u32 values where each pixel's channels are handled by the
@@ -96,10 +96,10 @@ impl GaussianKernel {
     /// Precompute weights for a Gaussian blur radius and sigma.
     #[must_use]
     pub fn new(radius: u32, sigma: f32) -> Self {
-        let clamped = radius.min(vyre_primitives::math::conv1d::MAX_RADIUS);
+        let clamped = radius.min(crate::math::conv1d::MAX_RADIUS);
         Self {
             radius: clamped,
-            weights: vyre_primitives::math::conv1d::gaussian_weights(clamped, sigma),
+            weights: crate::math::conv1d::gaussian_weights(clamped, sigma),
         }
     }
 
@@ -110,7 +110,7 @@ impl GaussianKernel {
     /// Returns an actionable error when `weights.len()` does not match
     /// `2 * min(radius, MAX_RADIUS) + 1`.
     pub fn from_weights(radius: u32, weights: Vec<u32>) -> Result<Self, GaussianKernelError> {
-        let clamped = radius.min(vyre_primitives::math::conv1d::MAX_RADIUS);
+        let clamped = radius.min(crate::math::conv1d::MAX_RADIUS);
         let expected = (2 * clamped + 1) as usize;
         if weights.len() != expected {
             return Err(GaussianKernelError {
@@ -199,7 +199,7 @@ fn gaussian_blur_pass(
     weights: &[u32],
     axis: Axis,
 ) -> Program {
-    let clamped = radius.min(vyre_primitives::math::conv1d::MAX_RADIUS);
+    let clamped = radius.min(crate::math::conv1d::MAX_RADIUS);
     let diameter = 2 * clamped + 1;
     let count = width.saturating_mul(height);
     let is_horiz = matches!(axis, Axis::Horizontal);
@@ -215,7 +215,7 @@ fn gaussian_blur_pass(
     // The per-pixel blur body: for each channel, run a weighted sum
     // over the kernel window, reading neighbors along the given axis.
     let blur_pass = wrap_child_region(
-        vyre_primitives::math::conv1d::OP_ID,
+        crate::math::conv1d::OP_ID,
         parent,
         vec![
             Node::let_bind("idx", Expr::gid_x()),
@@ -389,9 +389,6 @@ fn gaussian_blur_pass(
         vec![wrap_anonymous_region(OP_ID, vec![blur_pass])],
     )
 }
-
-/// Re-export weight computation from the Tier 2.5 primitive.
-pub use vyre_primitives::math::conv1d::gaussian_weights;
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

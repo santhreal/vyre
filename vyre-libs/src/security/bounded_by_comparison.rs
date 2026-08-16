@@ -13,8 +13,8 @@
 //! by some dominating bound-check."
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 
 use crate::security::flow_composition::{
     dominance_fixture_expected, dominance_fixture_inputs, security_flow_program, FlowPredicate,
@@ -60,7 +60,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::security::flow_composition::diamond_dominance_tree;
-    use vyre_primitives::graph::csr_backward_traverse::cpu_ref;
+    use crate::graph::csr_backward_traverse::cpu_ref;
 
     #[test]
     fn bounded_by_comparison_mask_is_dominance_only() {

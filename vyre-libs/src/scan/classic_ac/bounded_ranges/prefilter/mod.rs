@@ -15,7 +15,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_primitives::matching::CompiledDfa;
+use crate::matching::CompiledDfa;
 
 use super::super::count_program::{
     count_suffix2_prefilter_body, suffix3_prefilter_match_nodes, CLASSIC_AC_SUFFIX2_MASK_WORDS,

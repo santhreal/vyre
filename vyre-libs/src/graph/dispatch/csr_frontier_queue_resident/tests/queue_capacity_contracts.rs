@@ -5,7 +5,7 @@ use super::recording_dispatcher::RecordingResidentDispatcher;
 fn resident_query_buckets_graph_sized_capacity_from_frontier_popcount() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 4096u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,
@@ -64,7 +64,7 @@ fn resident_query_buckets_graph_sized_capacity_from_frontier_popcount() {
 fn resident_query_reuses_larger_queue_scratch_for_smaller_effective_capacity() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 4096u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let graph = ResidentCsrQueueGraph {
         node_count,
         edge_count: 0,

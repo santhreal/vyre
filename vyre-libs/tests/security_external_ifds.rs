@@ -22,7 +22,7 @@ use vyre_libs::security::{
     FactKind, EXTERNAL_IFDS_SECURITY_BACKEND_ID,
 };
 use vyre_libs::security::{FindingProofBundle, FindingProofStep, SourceToSinkFindingRequest};
-use vyre_primitives::predicate::edge_kind;
+use vyre_libs::predicate::edge_kind;
 use vyre_spec::soundness::{DynamicPrimitiveSoundness, PrecisionContract, Soundness};
 
 #[test]
@@ -32,18 +32,7 @@ fn source_to_sink_query_dispatches_through_external_ifds_and_returns_witness_see
         fact(2, FactKind::Sink, 3),
     ]);
     let shape = IfdsShape::new(1, 4, 1, 3);
-    let buffers = ExternalIfdsSecurityBuffers::new(
-        "pg_edge_offsets",
-        "pg_edge_targets",
-        "pg_edge_kind_mask",
-        "pg_node_tags",
-        "fact_ids",
-        "fact_kinds",
-        "fact_subjects",
-        "fact_objects",
-        "ifds_frontier_in",
-        "ifds_frontier_out",
-    );
+    let buffers = ExternalIfdsSecurityBuffers::CANONICAL;
     let request = SourceToSinkFindingRequest {
         finding_id: "finding.security.external-ifds".to_string(),
         query_id: "security.source_to_sink".to_string(),
@@ -83,7 +72,7 @@ fn source_to_sink_query_dispatches_through_external_ifds_and_returns_witness_see
         .step_program()
         .expect("Fix: routed external IFDS dispatch should build a Program")
         .fingerprint();
-    let direct = ifds_gpu_step(shape, "ifds_frontier_in", "ifds_frontier_out")
+    let direct = ifds_gpu_step(shape, buffers.frontier_in, buffers.frontier_out)
         .expect("Fix: direct external IFDS dispatch should build a Program")
         .fingerprint();
     assert_eq!(

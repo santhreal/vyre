@@ -27,7 +27,7 @@ pub(crate) mod rng;
 
 pub(crate) use rng::Rng;
 
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 /// How a group seeds its frontier.
 ///

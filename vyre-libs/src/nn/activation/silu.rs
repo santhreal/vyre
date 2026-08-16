@@ -5,7 +5,7 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use vyre_primitives::nn::f32_stability::flush_tiny;
+use crate::nn::f32_stability::flush_tiny;
 
 /// Shared SiLU expression with the same tiny-value stabilization used by
 /// standalone and fused activation builders.

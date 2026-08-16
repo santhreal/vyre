@@ -1,7 +1,7 @@
 use super::*;
 use std::sync::atomic::Ordering;
 use vyre_foundation::ir::DataType;
-use vyre_primitives::graph::alias_registry::ALIAS_UNION_OP_ID;
+use crate::graph::alias_registry::ALIAS_UNION_OP_ID;
 
 const GENERATED_EXTENSION_IDS: &[&str] = &[
     "vyre-primitives::graph::alias_ext.generated.000",

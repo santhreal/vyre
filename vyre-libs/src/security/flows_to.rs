@@ -1,5 +1,5 @@
 //! `flows_to`  -  Tier-3 shim over
-//! [`vyre_primitives::graph::csr_forward_traverse`].
+//! [`crate::graph::csr_forward_traverse`].
 //!
 //! The taint-reachability semantics (*does taint flow from source
 //! NodeSet to sink NodeSet given this ProgramGraph?*) live in the
@@ -16,8 +16,8 @@
 //! now takes only the canonical frontier / sink buffer names.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
+use crate::graph::program_graph::ProgramGraphShape;
+use crate::predicate::edge_kind;
 
 use crate::security::flow_composition::{
     forward_reach_fixture_expected, forward_reach_fixture_inputs, security_flow_program,
@@ -116,7 +116,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::predicate::edge_kind;
+    use crate::predicate::edge_kind;
 
     #[test]
     fn flows_to_mask_excludes_control_and_dominance() {
@@ -170,7 +170,7 @@ mod tests {
             edge_kind::MUT_REF,
             edge_kind::RETURN,
         ];
-        let alias_only = vyre_primitives::graph::csr_forward_traverse::cpu_ref(
+        let alias_only = crate::graph::csr_forward_traverse::cpu_ref(
             6,
             &edge_offsets,
             &edge_targets,
@@ -178,7 +178,7 @@ mod tests {
             &[0b000001],
             ALIAS_PROPAGATION_MASK,
         );
-        let full_flow = vyre_primitives::graph::csr_forward_traverse::cpu_ref(
+        let full_flow = crate::graph::csr_forward_traverse::cpu_ref(
             6,
             &edge_offsets,
             &edge_targets,

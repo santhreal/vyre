@@ -5,7 +5,7 @@
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::tensor_ref::TensorRefError;
 

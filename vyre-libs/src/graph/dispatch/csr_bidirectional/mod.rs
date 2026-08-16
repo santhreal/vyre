@@ -1,6 +1,6 @@
 //! Region-graph bidirectional one-step reach substrate consumer.
 //!
-//! Wires `vyre_primitives::graph::csr_bidirectional` into the dispatch
+//! Wires `crate::graph::csr_bidirectional` into the dispatch
 //! path. One bidirectional BFS step is the right primitive when the
 //! optimizer wants the "neighborhood" of a Region  -  both writers
 //! (predecessors) and readers (successors) at once. Used by
@@ -26,10 +26,10 @@ pub use reference::{
 #[cfg(test)]
 use reference::{reference_csr_bidir, reference_csr_bidir_closure};
 #[cfg(test)]
-use vyre_primitives::graph::csr_bidirectional::can_dispatch_edge_buffers_without_padding;
+use crate::graph::csr_bidirectional::can_dispatch_edge_buffers_without_padding;
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
-use vyre_primitives::graph::csr_bidirectional::{
+use crate::graph::csr_bidirectional::{
     CsrBidirectionalProgramKey, CsrBidirectionalStaticInputKey,
 };
 

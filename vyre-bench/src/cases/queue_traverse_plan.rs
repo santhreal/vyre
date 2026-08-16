@@ -8,12 +8,12 @@
 //! threshold differ between the families, so those are what a caller supplies.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_frontier_queue::csr_queue_forward_traverse;
-use vyre_primitives::graph::csr_queue_split::{
+use vyre_libs::graph::csr_frontier_queue::csr_queue_forward_traverse;
+use vyre_libs::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_low_forward_traverse,
     csr_queue_split_mixed_logical_lanes,
 };
-use vyre_primitives::graph::csr_queue_strided::{
+use vyre_libs::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
 };

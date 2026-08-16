@@ -1,6 +1,6 @@
 use super::*;
 
-use vyre_primitives::math::quantized::{
+use vyre_libs::math::quantized::{
     i4x8_batched_matvec_f32_scaled, i4x8_batched_matvec_f32_scaled_cpu, i4x8_matvec_f32_scaled,
     i4x8_matvec_f32_scaled_cpu,
 };

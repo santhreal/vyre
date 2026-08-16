@@ -163,7 +163,7 @@ fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
     );
     assert_eq!(
         run.grids()[4],
-        Some(vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(1)),
+        Some(crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(1)),
         "skewed high-degree sparse queue traversal must launch row-strided teams only for the graph-wide high-row bound"
     );
 }
@@ -172,7 +172,7 @@ fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
 fn single_superhub_csr_only_sparse_queue_sizes_split_queue_from_high_row_count() {
     let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 2048u32;
-    let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let words = crate::bitset::bitset_words(node_count) as usize;
     let hub_degree = STRIDED_FORWARD_MIN_ROW_DEGREE * 9;
     let mut edge_offsets = vec![hub_degree; node_count as usize + 1];
     edge_offsets[0] = 0;
@@ -212,7 +212,7 @@ fn single_superhub_csr_only_sparse_queue_sizes_split_queue_from_high_row_count()
     );
     assert_eq!(
         dispatcher.last_step_grids()[4],
-        Some(vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(1)),
+        Some(crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(1)),
         "one-superhub adaptive traversal must launch only one row-strided team"
     );
 }
@@ -240,7 +240,7 @@ fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
     assert_eq!(
         run.grids()[2],
         Some(
-            vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
+            crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid(
                 queue_slots
             )
         ),

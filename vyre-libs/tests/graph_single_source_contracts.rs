@@ -58,7 +58,7 @@ fn the_wrapper_set_is_derived_and_not_empty() {
 fn every_dispatch_wrapper_names_the_graph_primitive_it_wraps() {
     let mut failures = Vec::new();
     for wrapper in wrappers() {
-        let path = format!("vyre_primitives::graph::{}", wrapper.name);
+        let path = format!("vyre_libs::graph::{}", wrapper.name);
         if !wrapper.source.contains(&path) {
             failures.push(format!(
                 "{} never names {path}, so it dispatches an algorithm it does not delegate",

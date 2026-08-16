@@ -25,7 +25,7 @@ impl DataflowFixpointScratch {
 
 /// Compute per-pivot forward + backward reach bitsets for the
 /// strongly-connected-component decomposition primitive
-/// (`vyre_primitives::graph::scc_decompose::cpu_ref`).
+/// (`crate::graph::scc_decompose::cpu_ref`).
 ///
 /// Returns `(forward, backward)` where `forward[w]` is the bitset
 /// row indexed by `pivot` of the BoolOr reachability closure of
@@ -132,7 +132,7 @@ pub(super) fn write_pivot_bitsets(
     }
 }
 
-/// Drive `vyre_primitives::graph::scc_decompose::cpu_ref` end-to-end
+/// Drive `crate::graph::scc_decompose::cpu_ref` end-to-end
 /// over an `n×n` adjacency: pick pivots in descending unassigned
 /// order and stamp every node in `forward(p) ∩ backward(p)` with `p`.
 /// Returns the per-node component-id vector. Unassigned nodes (not
@@ -206,7 +206,7 @@ pub fn reference_scc_components_via_substrate_into(
             &mut scratch.forward,
             &mut scratch.backward,
         );
-        vyre_primitives::graph::scc_decompose::cpu_ref_into(
+        crate::graph::scc_decompose::cpu_ref_into(
             n,
             &scratch.forward,
             &scratch.backward,
@@ -314,7 +314,7 @@ mod tests {
         let mut manual = vec![u32::MAX; 5];
         for pivot in [0u32, 3, 4] {
             let (fwd, bwd) = forward_backward_bitsets_for_pivot(&adj, pivot, 5);
-            manual = vyre_primitives::graph::scc_decompose::cpu_ref(5, &fwd, &bwd, &manual, pivot);
+            manual = crate::graph::scc_decompose::cpu_ref(5, &fwd, &bwd, &manual, pivot);
         }
         assert_eq!(via_substrate, manual);
         // The cycle members all carry pivot 0.

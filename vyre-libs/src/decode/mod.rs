@@ -1,32 +1,37 @@
-//! Decode / decompression compositions for GPU-resident pipelines.
+//! Decode and decompression kernels for GPU-resident pipelines.
 //!
-//! These builders keep encoded bytes in the same IR surface used by the
-//! matching kernels so decode→scan chains can stay on-device.
+//! Each codec is one module holding its IR builder, its CPU reference oracle,
+//! its conformance fixtures and its single registered op id. Encoded bytes stay
+//! in the same IR surface used by the matching kernels, so a decode-to-scan
+//! chain never leaves the device.
+//!
+//! The codec module is the public path. Callers write
+//! `vyre_libs::decode::hex::hex_decode(...)`; this module re-exports nothing,
+//! so an item has one path and the path names the codec that owns it.
 
-pub(crate) mod base64;
+/// Base64 decode.
+pub mod base64;
 mod buffers;
-pub(crate) mod encodex;
-pub(crate) mod hex;
-pub(crate) mod inflate;
+/// Encoding classification from a byte histogram.
+pub mod encodex;
+/// ASCII hex decode.
+pub mod hex;
+/// DEFLATE stored-block inflate.
+pub mod inflate;
+/// RLE-segment-length scan and start-position prefix sum.
+///
+/// Foundational stage for block-oriented compression decoders: LZ4 literal and
+/// match runs, zstd FSE literal counts, PNG IDAT chunks, snappy raw runs. It
+/// unpacks `(length, value)` from packed u32 segment headers. The prefix sum
+/// that turns those lengths into per-segment output start offsets is
+/// `math::prefix_scan`.
+pub mod rle_segment_lengths;
 mod scan;
-pub(crate) mod ziftsieve;
+/// Indexed LZ4 literal-copy stage for parallel block decoders.
+pub mod ziftsieve;
 
-/// Streaming decode → scan adapter. Fuses a decoder
-/// Program with a scanner Program so decoded bytes hand off through
-/// workgroup-shared memory instead of a DRAM round-trip.
+/// Streaming decode to scan adapter. Fuses a decoder Program with a scanner
+/// Program so decoded bytes hand off through workgroup-shared memory instead of
+/// a DRAM round trip.
 pub mod streaming;
 
-pub use base64::{base64_decode, base64_decode_then_aho_corasick, BASE64_DECODE_TABLE_BUFFER};
-pub use encodex::{
-    classify_from_histogram, encoding_classify_child, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
-    ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
-};
-pub use encodex::{encodex_gpu, encodex_reference};
-pub use hex::hex_decode_table_ref;
-pub use hex::{
-    hex_decode, hex_decode_table, hex_decode_then_aho_corasick, HEX_DECODE_TABLE_BUFFER,
-};
-pub use inflate::{inflate_stored_block, inflate_stored_block_then_aho_corasick};
-pub use ziftsieve::ziftsieve_gpu;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use ziftsieve::{ziftsieve_reference_extract_literals, ZiftsieveExtract};

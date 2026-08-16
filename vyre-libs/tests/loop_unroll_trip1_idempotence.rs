@@ -8,7 +8,7 @@
 
 use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::optimize;
-use vyre_primitives::math::scallop_join::scallop_join;
+use vyre_libs::math::scallop_join::scallop_join;
 
 fn is_trip1(from: &Expr, to: &Expr) -> bool {
     matches!((from, to), (Expr::LitU32(0), Expr::LitU32(1)))

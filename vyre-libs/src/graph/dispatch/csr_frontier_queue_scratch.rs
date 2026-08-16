@@ -1,12 +1,12 @@
 //! Shared scratch planning for resident CSR frontier queues.
 
-use vyre_primitives::bitset::frontier::frontier_tail_mask;
-use vyre_primitives::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES;
-use vyre_primitives::graph::csr_queue_split::{
+use crate::bitset::frontier::frontier_tail_mask;
+use crate::graph::csr_frontier_queue::FRONTIER_WORD_SCAN_BLOCK_LANES;
+use crate::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
     CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
 };
-use vyre_primitives::graph::csr_queue_strided::{
+use crate::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
 };
 
@@ -213,7 +213,7 @@ pub(crate) fn resident_csr_queue_frontier_stats(
         );
     }
 
-    let expected_words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let expected_words = crate::bitset::bitset_words(node_count) as usize;
     let final_word_mask = frontier_tail_mask(node_count);
     let mut max_active = 0u32;
     let mut max_nonzero_words = 0usize;
@@ -285,7 +285,7 @@ fn capped_frontier_popcount(
     requested_capacity: u32,
     query_index: usize,
 ) -> Result<u32, String> {
-    let expected_words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+    let expected_words = crate::bitset::bitset_words(node_count) as usize;
     frontier_query_stats(expected_words, final_word_mask, frontier, query_index)
         .map(|stats| stats.active_nodes.min(requested_capacity))
 }
@@ -729,7 +729,7 @@ mod tests {
             2,
             "tail bits outside node_count must not inflate resident queue capacity"
         );
-        let mut single = vec![0u32; vyre_primitives::bitset::bitset_words(1_000) as usize];
+        let mut single = vec![0u32; crate::bitset::bitset_words(1_000) as usize];
         single[0] = 1;
         assert_eq!(
             resident_csr_queue_effective_capacity(1_000, &[&single], 1_024)
@@ -747,7 +747,7 @@ mod tests {
     #[test]
     fn effective_queue_capacity_caps_dense_frontiers_to_requested_capacity() {
         let node_count = 1_000_000_u32;
-        let frontier = vec![u32::MAX; vyre_primitives::bitset::bitset_words(node_count) as usize];
+        let frontier = vec![u32::MAX; crate::bitset::bitset_words(node_count) as usize];
 
         assert_eq!(
             resident_csr_queue_effective_capacity(node_count, &[&frontier], 17)
@@ -755,7 +755,7 @@ mod tests {
             17
         );
 
-        let mut overpadded = vec![0u32; vyre_primitives::bitset::bitset_words(33) as usize + 128];
+        let mut overpadded = vec![0u32; crate::bitset::bitset_words(33) as usize + 128];
         overpadded[0] = 1;
         overpadded[2..].fill(u32::MAX);
         assert_eq!(
@@ -788,7 +788,7 @@ mod tests {
     fn generated_effective_queue_capacity_bounds_overlaunch() {
         for seed in 0..10_000u32 {
             let node_count = 1 + (mix32(seed) % 4_096);
-            let words = vyre_primitives::bitset::bitset_words(node_count) as usize;
+            let words = crate::bitset::bitset_words(node_count) as usize;
             let mut first = vec![0u32; words];
             let mut second = vec![0u32; words];
             for word_index in 0..words {

@@ -496,7 +496,7 @@ mod tests {
         let p = write(
             dir.path(),
             "vyre-libs/src/math/uses_primitives.rs",
-            "use vyre_primitives::reduce_sum;\nfn _f() {}\n",
+            "use vyre_primitives::lane_grid;\nfn _f() {}\n",
         );
         assert!(check_cross_dialect(dir.path(), &[p]).is_empty());
     }

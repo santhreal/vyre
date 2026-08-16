@@ -222,7 +222,15 @@ dropping_copy_types = "allow"
 # the engine crate depends on the Vyre platform, and `xtask platform-boundary`
 # forbids the platform from depending back on a consumer. Moving the bridge to
 # the consumer side is BACKLOG R47.
-unexpected_cfgs = { level = "warn", check-cfg = [
+#
+# `deny`, not `warn`, because a `cfg` naming a feature its own crate does not
+# declare deletes the code under it with nothing red. Moving the composition
+# domains into `vyre-libs` carried 161 `#[cfg(feature = "inventory-registry")]`
+# gates and seven whole-file `#![cfg(feature = "all-lego")]` gates into a crate
+# that declares neither feature. The composition audit went from 327 operations
+# to 174 and seven test files compiled to nothing, and the only signal was
+# `warning` text in a build that emitted many.
+unexpected_cfgs = { level = "deny", check-cfg = [
   'cfg(feature, values("external_ifds_engine"))',
 ] }
 unsafe_code = "deny"

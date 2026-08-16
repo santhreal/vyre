@@ -2,7 +2,7 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use std::sync::Mutex;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::dominator_frontier::cpu_ref as reference_dominator_frontier;
+use crate::graph::dominator_frontier::cpu_ref as reference_dominator_frontier;
 
 mod dispatcher_doubles;
 

@@ -30,8 +30,8 @@ macro_rules! define_bitset_and_security_op {
     ) => {
         pub(crate) mod $module {
             use vyre_foundation::ir::Program;
-            use vyre_primitives::bitset::and::bitset_and;
-            use vyre_primitives::bitset::bitset_words;
+            use crate::bitset::and::bitset_and;
+            use crate::bitset::bitset_words;
 
             pub(crate) const OP_ID: &str = $op_id;
 
@@ -51,7 +51,7 @@ macro_rules! define_bitset_and_security_op {
             #[must_use]
             #[cfg(test)]
             pub(crate) fn cpu_ref($left: &[u32], $right: &[u32]) -> Vec<u32> {
-                vyre_primitives::bitset::and::cpu_ref($left, $right)
+                crate::bitset::and::cpu_ref($left, $right)
             }
 
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
@@ -97,8 +97,8 @@ macro_rules! define_bitset_and_not_security_op {
     ) => {
         pub(crate) mod $module {
             use vyre_foundation::ir::Program;
-            use vyre_primitives::bitset::and_not::bitset_and_not;
-            use vyre_primitives::bitset::bitset_words;
+            use crate::bitset::and_not::bitset_and_not;
+            use crate::bitset::bitset_words;
 
             pub(crate) const OP_ID: &str = $op_id;
 
@@ -118,7 +118,7 @@ macro_rules! define_bitset_and_not_security_op {
             #[must_use]
             #[cfg(test)]
             pub(crate) fn cpu_ref($left: &[u32], $right: &[u32]) -> Vec<u32> {
-                vyre_primitives::bitset::and_not::cpu_ref($left, $right)
+                crate::bitset::and_not::cpu_ref($left, $right)
             }
 
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]

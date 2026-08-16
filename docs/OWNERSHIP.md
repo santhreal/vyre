@@ -328,7 +328,7 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
+| `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `public` | `primitive-library` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-lints`
@@ -412,12 +412,13 @@ The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a b
 - Path: `vyre-reference`
 - Owner: `reference-semantics`
 - Layer: `semantics`
-- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
+| `vyre-libs` | host-side helpers the oracle shares with the composition it checks: the FNV-1a state functions and the DFA compiler | `public` | `product-libraries` |
+| `vyre-primitives` | the wire format, the marker types, and guarded IR construction | `public` | `primitive-library` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 
 ### `vyre-registry-link`

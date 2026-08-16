@@ -1,12 +1,12 @@
-//! Self-substrate wrappers for dataflow convergence, scan, and compaction kernels.
+//! Compiler-side wrappers for dataflow convergence, scan, and compaction kernels.
 //!
 //! This is the glue layer for small but central GPU building blocks: fixpoint
 //! flags, prefix scans, stream compaction, stochastic bitsets, interval merges,
 //! sparse recovery, DP clipping, differentiable selection, and attention dot
-//! partials. The primitive crate owns the executable semantics.
+//! partials. The kernel domains in this crate own the executable semantics.
 
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_primitives::{
+use crate::{
     bitset::stochastic_compute::{
         decode_bitstream, encode_bitstream, encode_bitstream_into, stochastic_and_mul,
     },
@@ -26,7 +26,7 @@ use vyre_primitives::{
 };
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::{
+use crate::{
     fixpoint::bitset_fixpoint::reference_eval_warm_start,
     math::{
         differentiable::{differentiable_argmax_cpu, softmax_cpu},
@@ -270,7 +270,7 @@ pub fn stochastic_decode(bs: &[u32], len_bits: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_primitives::math::prefix_scan::OP_ID_INCLUSIVE_SUM;
+    use crate::math::prefix_scan::OP_ID_INCLUSIVE_SUM;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-8 * (1.0 + a.abs() + b.abs())

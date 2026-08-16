@@ -10,7 +10,7 @@ use crate::{
     builder::{check_tensors, strided_accumulate_child, BuildOptions},
     tensor_ref::{TensorRef, TensorRefError},
 };
-use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::math::dot";
 #[cfg(test)]

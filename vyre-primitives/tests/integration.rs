@@ -1,25 +1,37 @@
-//! Integration smoke: Tier 2.5 registry is linked and at least one op builds.
+//! Integration smoke: the intrinsic registry is linked and one op builds.
 //!
-//! Requires `hash` + `inventory-registry` (see `Cargo.toml` `[[test]]`).
-//! Deeper property/adversarial coverage lives in `vyre-libs` (consumers) and
-//! will expand here as the master plan matures.
+//! Requires `hardware` (see `Cargo.toml` `[[test]]`). Every composition domain
+//! moved to `vyre-libs`, so the only registrations this crate submits are
+//! Category C hardware intrinsics, and their ids are what the conformance
+//! harness discovers here.
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::hash::fnv1a::fnv1a32_program;
+use vyre_primitives::hardware::subgroup_add::subgroup_add;
 
 #[test]
-fn inventory_registry_exposes_primitives() {
-    let mut ids: Vec<_> = vyre_primitives::operation_catalog::all_entries()
-        .map(|e| e.id)
+fn inventory_registry_exposes_only_primitive_ids() {
+    let ids: Vec<_> = vyre_primitives::operation_catalog::all_entries()
+        .map(|entry| entry.id)
         .collect();
-    ids.sort_unstable();
     assert!(
         !ids.is_empty(),
-        "expected vyre-primitives with `inventory-registry` to register at least one op"
+        "Fix: vyre-primitives with `hardware` must register at least one op; an empty catalog means the inventory link dropped."
     );
-    assert!(ids.iter().all(|s| s.starts_with("vyre-primitives::")));
-    let p: Program = fnv1a32_program("in", "out", 4);
-    p.validate()
-        .unwrap_or_else(|e| panic!("expected fnv1a32 Program to validate: {e}"));
+    let foreign: Vec<&&str> = ids
+        .iter()
+        .filter(|id| !id.starts_with("vyre-primitives::"))
+        .collect();
+    assert!(
+        foreign.is_empty(),
+        "Fix: every id this crate registers must be namespaced `vyre-primitives::`, found {foreign:?}"
+    );
+}
+
+#[test]
+fn a_registered_intrinsic_builds_a_valid_program() {
+    let program: Program = subgroup_add("in", "out", 4);
+    program
+        .validate()
+        .unwrap_or_else(|error| panic!("Fix: subgroup_add must build a valid Program: {error}"));
 }

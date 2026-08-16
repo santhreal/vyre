@@ -7,15 +7,15 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::reduce::all::{cpu_ref as all_cpu, reduce_all};
-use vyre_primitives::reduce::any::{cpu_ref as any_cpu, reduce_any};
-use vyre_primitives::reduce::count::{cpu_ref as count_cpu, reduce_count};
-use vyre_primitives::reduce::count_non_zero::{cpu_ref as count_nz_cpu, reduce_count_non_zero};
-use vyre_primitives::reduce::max::{cpu_ref as max_cpu, reduce_max};
-use vyre_primitives::reduce::min::{cpu_ref as min_cpu, reduce_min};
-use vyre_primitives::reduce::range_counts::{cpu_ref as range_counts_cpu, range_counts_u32};
-use vyre_primitives::reduce::sum::{cpu_ref as sum_cpu, reduce_sum};
-use vyre_primitives::reduce::workgroup_any::workgroup_any_u32;
+use vyre_libs::reduce::all::{cpu_ref as all_cpu, reduce_all};
+use vyre_libs::reduce::any::{cpu_ref as any_cpu, reduce_any};
+use vyre_libs::reduce::count::{cpu_ref as count_cpu, reduce_count};
+use vyre_libs::reduce::count_non_zero::{cpu_ref as count_nz_cpu, reduce_count_non_zero};
+use vyre_libs::reduce::max::{cpu_ref as max_cpu, reduce_max};
+use vyre_libs::reduce::min::{cpu_ref as min_cpu, reduce_min};
+use vyre_libs::reduce::range_counts::{cpu_ref as range_counts_cpu, range_counts_u32};
+use vyre_libs::reduce::sum::{cpu_ref as sum_cpu, reduce_sum};
+use vyre_libs::reduce::workgroup_any::workgroup_any_u32;
 
 fn run_scalar_reduce<B>(builder: B, values: &[u32]) -> u32
 where

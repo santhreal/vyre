@@ -14,13 +14,13 @@ use crate::dispatch_program_cache::ProgramCache;
 use shapes::{expect_one_output, validate_batched_packed_matmul_shape};
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::math::quantized::{
+use crate::math::quantized::{
     i4_packed_words, i4x8_batched_matmul_f32_scaled, i4x8_batched_matmul_top1_f32_scaled,
     i4x8_batched_matvec_f32_scaled, i4x8_dot_f32_scaled, i4x8_matvec_f32_scaled, unpack_i4x8,
 };
 
 #[cfg(test)]
-use vyre_primitives::math::quantized::{
+use crate::math::quantized::{
     i4x8_batched_matmul_f32_scaled_cpu, i4x8_batched_matmul_top1_f32_scaled_cpu,
     i4x8_batched_matvec_f32_scaled_cpu, i4x8_dot_f32_scaled_cpu, i4x8_matvec_f32_scaled_cpu,
     pack_i4x8_cpu, unpack_i4x8_cpu_into,

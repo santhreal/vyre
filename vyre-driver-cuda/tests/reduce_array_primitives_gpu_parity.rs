@@ -7,11 +7,11 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_primitives::reduce::gather::{cpu_ref as gather_cpu, gather};
-use vyre_primitives::reduce::histogram::{cpu_ref as hist_cpu, histogram};
-use vyre_primitives::reduce::radix_sort::{cpu_ref as radix_cpu, radix_sort};
-use vyre_primitives::reduce::scatter::{cpu_ref as scatter_cpu, scatter};
-use vyre_primitives::reduce::segment_reduce::{cpu_ref as seg_cpu, segment_reduce_sum};
+use vyre_libs::reduce::gather::{cpu_ref as gather_cpu, gather};
+use vyre_libs::reduce::histogram::{cpu_ref as hist_cpu, histogram};
+use vyre_libs::reduce::radix_sort::{cpu_ref as radix_cpu, radix_sort};
+use vyre_libs::reduce::scatter::{cpu_ref as scatter_cpu, scatter};
+use vyre_libs::reduce::segment_reduce::{cpu_ref as seg_cpu, segment_reduce_sum};
 
 // ---------------------------------------------------------------------
 // gather

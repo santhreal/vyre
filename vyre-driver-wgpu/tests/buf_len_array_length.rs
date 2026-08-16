@@ -10,7 +10,7 @@
 //! `Expr::buf_len` at runtime and assert that the dispatched output
 //! reflects the actual bound buffer length. They are written to fail
 //! before a Q3 fix lands and pass after, so the workaround in
-//! `vyre_primitives::hash::fnv1a` (using `fnv1a64_program_n` instead of
+//! `vyre_libs::hash::fnv1a` (using `fnv1a64_program_n` instead of
 //! `fnv1a64_program`) can be reverted with confidence.
 //!
 //! Lane: `driver_wgpu` (per `docs/optimization/OWNERSHIP.toml`).

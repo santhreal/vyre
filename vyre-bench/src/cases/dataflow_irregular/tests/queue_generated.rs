@@ -4,7 +4,7 @@ use super::*;
 use crate::cases::mix32;
 use crate::cases::queue_stage::{QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_HIGH_QUEUE_INDEX};
 use crate::cases::queue_traverse_plan::{should_use_split_high_degree, traverse_logical_lanes};
-use vyre_primitives::graph::csr_queue_split::{
+use vyre_libs::graph::csr_queue_split::{
     csr_queue_split_mixed_logical_lanes, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
 };
 
@@ -79,7 +79,7 @@ fn generated_word_queue_materializer_launches_frontier_words_not_nodes() {
         let node_count = 65_536 + (mix32(case ^ 0xF901_DA7A) % 983_041);
         let frontier_words = node_count.div_ceil(32);
         let queue_capacity = 1 + (mix32(case ^ 0x51E5_4A11) % frontier_words.max(1));
-        let program = vyre_primitives::graph::csr_frontier_queue::frontier_words_to_queue_parallel(
+        let program = vyre_libs::graph::csr_frontier_queue::frontier_words_to_queue_parallel(
             "frontier_in",
             "active_queue",
             "queue_len",

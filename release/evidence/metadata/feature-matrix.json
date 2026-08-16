@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:b29ca5069a03d67a2634572101c4844e26763813:dirty=true:worktree=d66d676af34043929bc6575a4558a8a2951b8aa77cff9a5e18ef371b81721602",
+  "source_fingerprint": "git:e069d4413d0cd25acdc2211d13426d34f43842a5:dirty=true:worktree=d1903b4e82cac65dc396a8bcb974619c583b3d72592dd229413b4ba5e133961d",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -264,6 +264,17 @@
     {
       "name": "vyre-fuzz",
       "manifest": "fuzz/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-grammar-gen",
+      "manifest": "vyre-grammar-gen/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],

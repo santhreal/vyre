@@ -18,10 +18,10 @@
 //!    additions may differ.
 
 use vyre_foundation::ir::Program;
-use vyre_primitives::graph::csr_bidirectional::plan_csr_bidirectional_step;
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-use vyre_primitives::graph::csr_forward_or_changed::plan_csr_forward_or_changed_launch;
-use vyre_primitives::graph::csr_queue_delta::{
+use crate::graph::csr_bidirectional::plan_csr_bidirectional_step;
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use crate::graph::csr_forward_or_changed::plan_csr_forward_or_changed_launch;
+use crate::graph::csr_queue_delta::{
     csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
 };
 use vyre_test_support::ir_regions::{canonicalize, edge_guard, region};

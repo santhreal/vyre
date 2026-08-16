@@ -9,7 +9,7 @@
 
 use vyre_libs::scan::{compile_regex_set, RegexCompileError};
 
-const STATE_CAP: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP * 32;
+const STATE_CAP: usize = vyre_libs::nfa::subgroup_nfa::LANES_PER_SUBGROUP * 32;
 
 // ---------------------------------------------------------------------------
 // 1. Malformed regex parser inputs  -  must return RegexCompileError::Parse

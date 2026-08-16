@@ -21,10 +21,13 @@
 //! strongly-connected-component driver, and `gpu_dispatch` every
 //! dispatcher-backed wrapper. The host closures are the foundation substrate's
 //! own, re-exported here so this module's documented paths keep resolving;
-//! `reference_gemm` adds the call counter and nothing else. The public types
-//! stay declared here so their rendered documentation paths do not move.
+//! `reference_gemm` adds the call counter and nothing else.
+//!
+//! The semiring these analyses select is `vyre_spec::Semiring`, published by
+//! `math::semiring_gemm` because that is the composition it parameterizes. This
+//! module names it without republishing it, so the type has one path here.
 
-pub use vyre_foundation::pass_substrate::semiring_closure::Semiring;
+use vyre_foundation::pass_substrate::semiring_closure::Semiring;
 
 mod delta_maintenance;
 mod dense_matrix;

@@ -1,7 +1,7 @@
 use crate::graph::dispatch::plan_cache::GraphPlanCache;
 use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::persistent_bfs::{
+use crate::graph::persistent_bfs::{
     copy_persistent_bfs_batch_seed_and_clear_changed_into, copy_persistent_bfs_seed_frontier_into,
     PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey,
 };

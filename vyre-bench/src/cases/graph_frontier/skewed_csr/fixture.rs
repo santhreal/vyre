@@ -7,7 +7,7 @@ use crate::cases::queue_closure_oracle::{
 use crate::cases::skewed_graph::{
     skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
 };
-use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
+use vyre_libs::bitset::frontier::materialize_frontier_queue_exact_count_into;
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
 pub(super) const CSR_ALLOW_MASK: u32 = 0b0111;

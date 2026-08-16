@@ -28,7 +28,7 @@ fn bitset_and_cpu_ref_scale(criterion: &mut Criterion) {
             |bencher, (lhs, rhs)| {
                 bencher.iter(|| {
                     let output =
-                        vyre_primitives::bitset::and::cpu_ref(black_box(lhs), black_box(rhs));
+                        vyre_libs::bitset::and::cpu_ref(black_box(lhs), black_box(rhs));
                     black_box(output);
                 });
             },
@@ -50,7 +50,7 @@ fn bitset_and_cpu_ref_into_scale(criterion: &mut Criterion) {
             |bencher, (lhs, rhs)| {
                 bencher.iter(|| {
                     output.clear();
-                    vyre_primitives::bitset::and::cpu_ref_into(
+                    vyre_libs::bitset::and::cpu_ref_into(
                         black_box(lhs),
                         black_box(rhs),
                         black_box(&mut output),
@@ -114,7 +114,7 @@ fn dominator_tree_cpu_oracle_scale(criterion: &mut Criterion) {
                 &(nodes, edges),
                 |bencher, (nodes, edges)| {
                     bencher.iter(|| {
-                        let output = vyre_primitives::graph::dominator_tree::cpu_ref(
+                        let output = vyre_libs::graph::dominator_tree::cpu_ref(
                             black_box(*nodes),
                             0,
                             black_box(edges),
@@ -140,7 +140,7 @@ fn dominator_tree_program_build_scale(criterion: &mut Criterion) {
             |bencher, nodes| {
                 bencher.iter(|| {
                     let program =
-                        vyre_primitives::graph::dominator_tree::try_dominator_tree_program(
+                        vyre_libs::graph::dominator_tree::try_dominator_tree_program(
                             black_box(*nodes),
                             black_box(edge_count),
                             black_box(edge_count),

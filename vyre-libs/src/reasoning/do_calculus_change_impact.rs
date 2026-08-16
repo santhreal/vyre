@@ -17,11 +17,11 @@ use vyre_foundation::ir::Program;
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::do_calculus::{
+use crate::graph::do_calculus::{
     do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
 };
 #[cfg(any(test, feature = "cpu-parity"))]
-use vyre_primitives::graph::do_calculus::{
+use crate::graph::do_calculus::{
     do_intervention_delete_incoming_cpu_into, do_rule2_reverse_incoming_cpu_into,
     do_rule3_subgraph_cpu_into,
 };

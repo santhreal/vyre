@@ -1,5 +1,5 @@
 use super::{CachedIfdsCsrProgram, IfdsCsrGpuScratch};
-use vyre_primitives::graph::exploded::{
+use crate::graph::exploded::{
     canonicalize_csr_within_rows_in_place as primitive_canonicalize_csr_within_rows_in_place,
     plan_ifds_csr_dispatch, validate_ifds_csr_readback, IfdsCsrDispatchPlan,
     IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey, IFDS_CSR_COL_IDX_BUFFER,

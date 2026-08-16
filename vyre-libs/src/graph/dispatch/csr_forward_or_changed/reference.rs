@@ -1,4 +1,4 @@
-use vyre_primitives::graph::csr_forward_or_changed::{
+use crate::graph::csr_forward_or_changed::{
     cpu_ref as csr_foc_cpu,
     cpu_ref_closure_into_with_step_hook as csr_foc_closure_into_with_step_hook,
 };
@@ -32,7 +32,7 @@ pub fn reference_forward_step_with_change_flag(
     )
 }
 
-vyre_primitives::define_csr_closure_entry_points! {
+crate::define_csr_closure_entry_points! {
     allocating: reference_forward_closure_via_change_flag {
         /// Iterate `forward_step_with_change_flag` until the change flag
         /// reads 0 or `max_iters` is reached. Returns the saturated

@@ -22,7 +22,7 @@
 
 use super::super::*;
 use super::recording_dispatcher::{traversal_graph, RecordingResidentDispatcher};
-use vyre_primitives::graph::adaptive_traverse::{
+use crate::graph::adaptive_traverse::{
     adaptive_four_russians_dense_step, adaptive_sparse_dense_step,
 };
 

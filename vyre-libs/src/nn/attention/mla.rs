@@ -21,7 +21,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::tiled_online_softmax::{
     scratch_index, tiled_online_softmax_body, TiledOnlineSoftmaxSpec,
 };
-use vyre_primitives::nn::attention_stability::{bounded_exp_arg, bounded_score};
+use crate::nn::attention_stability::{bounded_exp_arg, bounded_score};
 
 /// Buffer names and shape for one [`mla_decode`] build.
 struct MlaDecodeSpec<'a> {

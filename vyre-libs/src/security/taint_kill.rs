@@ -17,8 +17,8 @@
 
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
-use vyre_primitives::bitset::and_not::bitset_and_not;
-use vyre_primitives::bitset::bitset_words;
+use crate::bitset::and_not::bitset_and_not;
+use crate::bitset::bitset_words;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::taint_kill";
 
@@ -46,7 +46,7 @@ pub fn taint_kill(
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_ref(frontier_in: &[u32], kill_set: &[u32]) -> Vec<u32> {
-    vyre_primitives::bitset::and_not::cpu_ref(frontier_in, kill_set)
+    crate::bitset::and_not::cpu_ref(frontier_in, kill_set)
 }
 
 /// Marker type for the taint_kill dataflow primitive.

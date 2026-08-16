@@ -68,7 +68,7 @@ criterion.workspace = true
 stats_alloc.workspace = true
 tempfile.workspace = true
 proptest.workspace = true
-vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "nn-attention", "cpu-parity", "crypto-blake3"] }
+vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "nn-attention", "cpu-parity", "crypto-blake3", "hash"] }
 # The integration tests under tests/ exercise the public `vyre` umbrella facade
 # (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}), the ergonomic
 # surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which
@@ -82,7 +82,7 @@ vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "nn-atte
 vyre = { path = "../vyre", default-features = false }
 # A handful of tests reach `vyre_primitives::wire::pack_u32_iter` directly (the
 # facade doesn't re-export the wire POD helpers). Also dropped in the 0.6.2 refactor.
-vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry", "parsing", "hash"], default-features = false }
+vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry"], default-features = false }
 # Cross-OS shader-VALIDITY coverage for the combined segmented megakernel: the
 # winning Vulkan/DX12 runs implicitly prove SPIR-V/HLSL validity, but macOS/Metal
 # is hardware-blocked, so the megakernel descriptor is lowered to MSL here (naga's

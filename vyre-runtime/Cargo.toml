@@ -33,6 +33,7 @@ libs-compositions = [
     "vyre-libs/analysis",
     "vyre-libs/encoding",
     "vyre-libs/solvers",
+    "vyre-libs/math",
 ]
 # `dep:` and not a bare name: a bare optional dependency also publishes a
 # feature of its own, so `remote-cache = ["ureq"]` made `--features ureq` a
@@ -44,7 +45,7 @@ uring-cmd-nvme = []
 [dependencies]
 vyre-driver.workspace = true
 vyre-libs = { workspace = true, optional = true }
-vyre-primitives = { workspace = true, optional = true, features = ["math"] }
+vyre-primitives = { workspace = true, optional = true }
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
 thiserror.workspace = true

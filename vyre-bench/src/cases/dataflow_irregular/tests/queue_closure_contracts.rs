@@ -96,7 +96,7 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     assert!(prepared.row_strided_delta);
     assert_eq!(
         prepared.delta_grid,
-        vyre_primitives::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
+        vyre_libs::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
             prepared.queue_capacity
         )
     );

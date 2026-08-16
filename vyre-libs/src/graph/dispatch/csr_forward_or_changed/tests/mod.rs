@@ -2,7 +2,7 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::test_parity_oracles::{NeverDispatches, StaticOutputs};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 mod reference_contracts;
 
