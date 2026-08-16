@@ -796,6 +796,12 @@ pub fn vyre_driver::materialize::InstanceCore::route_submission(&self, bindings:
 pub fn vyre_driver::materialize::InstanceCore::single_resident_module<'modules, M>(&self, modules: &'modules [M], feature: &str) -> core::result::Result<&'modules M, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::InstanceCore::submit_host_only(&self, bindings: &vyre_driver::BindingSet, feature: &str, host: impl core::ops::function::FnOnce(alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, core::option::Option<[u32; 3]>) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::InstanceCore::value_for_buffer(&self, name: &str) -> core::result::Result<vyre_megakernel::ArtifactValueId, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::MaterializedInstance::core(&self) -> &vyre_driver::materialize::InstanceCore
+pub fn vyre_driver::materialize::MaterializedInstance::execute_host(&self, state: alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, invocation_grid: core::option::Option<[u32; 3]>) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::MaterializedInstance::launch(&self, module: &Self::Module, plan: &vyre_driver::BindingPlan, config: &vyre_driver::DispatchConfig, state: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::MaterializedInstance::modules(&self) -> &[Self::Module]
+pub fn vyre_driver::materialize::MaterializedInstance::omitted_output(&self) -> fn(usize, &str) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::MaterializedInstance::submit_host_only(&self, bindings: &vyre_driver::BindingSet, feature: &str) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::MaterializerDevice::admit_modules<M>(&self, backend_id: &str, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, decode: impl core::ops::function::FnMut(vyre_driver::materialize::AdmittedModule) -> core::result::Result<M, vyre_driver::BackendError>) -> core::result::Result<alloc::vec::Vec<M>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::MaterializerDevice::identity(&self) -> &vyre_driver::DeviceIdentity
 pub fn vyre_driver::materialize::MaterializerDevice::instance(&self, artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, messages: vyre_driver::materialize::InstanceMessages) -> vyre_driver::materialize::InstanceCore
@@ -805,6 +811,13 @@ pub fn vyre_driver::materialize::MaterializerDevice::revocable(identity: vyre_dr
 pub fn vyre_driver::materialize::MaterializerDevice::target<'a>(&'a self, backend_id: &'a str) -> vyre_driver::materialize::MaterializerTarget<'a>
 pub fn vyre_driver::materialize::MaterializerDevice::target_format(&self) -> &vyre_megakernel::envelope::TargetPayloadFormat
 pub fn vyre_driver::materialize::MaterializerDevice::target_profile(&self) -> &vyre_megakernel::envelope::TargetProfile
+pub fn vyre_driver::materialize::ResidentInstance::execute_resident(&self, resources: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, vyre_driver::Resource>, invocation_grid: core::option::Option<[u32; 3]>) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::ResidentInstance::launch_resident(&self, module: &Self::Module, ordered: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::ResidentInstance::multi_module_feature(&self) -> &str
+pub fn vyre_driver::materialize::ResidentInstance::omitted_resident_output(&self) -> fn(usize, &str) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::ResidentInstance::ordered_resident(&self, module: &Self::Module, plan: &vyre_driver::BindingPlan, resources: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, vyre_driver::Resource>) -> core::result::Result<alloc::vec::Vec<vyre_driver::Resource>, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::ResidentInstance::resident_messages(&self) -> &vyre_driver::materialize::InstanceMessages
+pub fn vyre_driver::materialize::ResidentInstance::submit_routed(&self, bindings: &vyre_driver::BindingSet, mixed: fn() -> vyre_driver::BackendError) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::admit(artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, target: vyre_driver::materialize::MaterializerTarget<'_>) -> core::result::Result<alloc::vec::Vec<vyre_driver::materialize::AdmittedModule>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::compile_error(backend: &str, error: impl core::fmt::Display) -> vyre_driver::BackendError
 pub fn vyre_driver::materialize::host_only_bindings(bindings: &vyre_driver::BindingSet, feature: &str, backend: &str) -> core::result::Result<alloc::collections::btree::map::BTreeMap<vyre_megakernel::ArtifactValueId, alloc::vec::Vec<u8>>, vyre_driver::BackendError>
@@ -1358,12 +1371,15 @@ pub trait vyre_driver::accounting::ArithmeticOverflow: core::marker::Sized
 pub trait vyre_driver::lowering::LowerableOp: core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_driver::lowering::TargetGenCtx
 pub trait vyre_driver::materialize::ExecutableModule
+pub trait vyre_driver::materialize::MaterializedInstance
+pub trait vyre_driver::materialize::ResidentInstance: vyre_driver::materialize::MaterializedInstance
 pub trait vyre_driver::megakernel_execution::MegakernelExecutionPlanner
 pub trait vyre_driver::observability::BackendObservabilityProvider
 pub trait vyre_driver::strategy::LoweringStrategy: core::marker::Send + core::marker::Sync + core::fmt::Debug
 pub trait vyre_driver::tuner::BackendTimer
 pub type vyre_driver::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u8>>
 pub type vyre_driver::input_identity::ExactInputKey = [u8; 32]
+pub type vyre_driver::materialize::MaterializedInstance::Module: vyre_driver::materialize::ExecutableModule
 pub type vyre_driver::reservation_policy::StagingReservationFailureAdapter<E> = fn(&'static str, usize, alloc::string::String) -> E
 pub type vyre_driver::shape_prediction::ShapeFingerprint = [u32; 8]
 pub type vyre_driver::target_dialect::EmitSelected = fn(&vyre_megakernel::target::SelectedLowering, &vyre_megakernel::envelope::TargetProfile) -> core::result::Result<vyre_driver::target_dialect::EmittedDialectModule, vyre_megakernel::target::TargetCompileError>

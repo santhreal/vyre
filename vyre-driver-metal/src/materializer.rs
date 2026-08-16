@@ -5,10 +5,14 @@ mod native {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
-    use vyre_driver::materialize::{self, ExecutableModule, InstanceCore, MaterializerDevice};
+    use vyre_driver::materialize::{
+        self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
+        ResidentInstance,
+    };
     use vyre_driver::{
-        ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, Completion,
-        DeviceIdentity, DispatchConfig, ResidentOwner, Resource, Submission, VyreBackend,
+        ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
+        DeviceIdentity, DispatchConfig, ResidentOwner, Resource, Submission, TimedDispatchResult,
+        VyreBackend,
     };
     use vyre_foundation::ir::Program;
     use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
@@ -101,87 +105,68 @@ mod native {
         vyre_driver::artifact_instance_identity!();
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-            self.core.route_submission(
-                &bindings,
-                || {
-                    materialize::invalid_module(
-                        "Metal artifact submission cannot mix host and resident resources",
-                    )
-                },
-                |state, invocation_grid| self.execute(state, invocation_grid),
-                |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
-            )
+            self.submit_routed(&bindings, || {
+                materialize::invalid_module(
+                    "Metal artifact submission cannot mix host and resident resources",
+                )
+            })
         }
     }
 
-    impl MetalArtifactInstance {
-        fn execute(
-            &self,
-            state: BTreeMap<ArtifactValueId, Vec<u8>>,
-            invocation_grid: Option<[u32; 3]>,
-        ) -> Result<Completion, BackendError> {
-            self.core.execute_modules(
-                &self.modules,
-                state,
-                invocation_grid,
-                omitted_output,
-                |executable, plan, config, state| {
-                    let inputs = self.core.gather_inputs(
-                        plan,
-                        &executable.program,
-                        state,
-                        materialize::unbound_input,
-                    )?;
-                    self.backend.dispatch_target_module(
-                        &executable.module,
-                        &executable.program,
-                        &inputs,
-                        config,
-                    )
-                },
-            )
+    impl MaterializedInstance for MetalArtifactInstance {
+        type Module = MetalExecutableModule;
+
+        fn core(&self) -> &InstanceCore {
+            &self.core
         }
 
-        /// Launch the single module over caller-owned resident resources.
-        ///
-        /// `MetalBackend` holds a resident buffer table and dispatches against
-        /// it, so refusing every resident binding here made the artifact path
-        /// the one caller that could not use it: a chained pipeline had to round
-        /// trip each stage through the host to reach the next. The resident
-        /// order is the binding plan's non-shared roles, which is the order
-        /// `dispatch_resident_timed` reads.
-        fn execute_resident(
+        fn modules(&self) -> &[Self::Module] {
+            &self.modules
+        }
+
+        fn omitted_output(&self) -> fn(usize, &str) -> BackendError {
+            omitted_output
+        }
+
+        fn launch(
             &self,
-            resources: &BTreeMap<ArtifactValueId, Resource>,
-            invocation_grid: Option<[u32; 3]>,
-        ) -> Result<Completion, BackendError> {
-            let module = self.core.single_resident_module(
-                &self.modules,
-                "Metal resident submission for multi-module artifacts",
-            )?;
-            let plan = BindingPlan::build(&module.program)?;
-            let ordered = self.core.ordered_resident_resources(
-                materialize::resident_buffer_names(&plan, &module.program),
-                resources,
-                materialize::unbound_resident_buffer,
-            )?;
-            let mut config = module.config.clone();
-            if let Some(grid) = invocation_grid {
-                config.grid_override = Some(grid);
-                config.dispatch_grid = Some(grid);
-            }
-            let dispatched = VyreBackend::dispatch_resident_timed(
+            module: &Self::Module,
+            plan: &BindingPlan,
+            config: &DispatchConfig,
+            state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        ) -> Result<TimedDispatchResult, BackendError> {
+            let inputs =
+                self.core
+                    .gather_inputs(plan, &module.program, state, materialize::unbound_input)?;
+            self.backend
+                .dispatch_target_module(&module.module, &module.program, &inputs, config)
+        }
+    }
+
+    /// `MetalBackend` holds a resident buffer table and dispatches against it,
+    /// so refusing every resident binding here made the artifact path the one
+    /// caller that could not use it: a chained pipeline had to round trip each
+    /// stage through the host to reach the next.
+    impl ResidentInstance for MetalArtifactInstance {
+        fn multi_module_feature(&self) -> &str {
+            "Metal resident submission for multi-module artifacts"
+        }
+
+        fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError {
+            omitted_resident_output
+        }
+
+        fn launch_resident(
+            &self,
+            module: &Self::Module,
+            ordered: &[Resource],
+            config: &DispatchConfig,
+        ) -> Result<TimedDispatchResult, BackendError> {
+            VyreBackend::dispatch_resident_timed(
                 self.backend.as_ref(),
                 &module.program,
-                &ordered,
-                &config,
-            )?;
-            self.core.resident_completion(
-                &plan,
-                &module.program,
-                dispatched,
-                omitted_resident_output,
-                &self.core.messages,
+                ordered,
+                config,
             )
         }
     }

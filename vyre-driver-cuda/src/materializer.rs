@@ -2,11 +2,12 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use vyre_driver::materialize::{
-    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializerDevice,
+    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
+    MaterializerDevice, ResidentInstance,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
-    CompiledPipeline, Completion, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, CompiledPipeline,
+    DeviceIdentity, DispatchConfig, Resource, ResidentOwner, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
@@ -110,66 +111,62 @@ impl ArtifactInstance for CudaArtifactInstance {
     vyre_driver::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        self.core.route_submission(
-            &bindings,
-            || {
-                materialize::invalid_module(
-                    "CUDA artifact submission cannot mix host and resident resources",
-                )
-            },
-            |state, invocation_grid| self.execute(state, invocation_grid),
-            |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
-        )
+        self.submit_routed(&bindings, || {
+            materialize::invalid_module(
+                "CUDA artifact submission cannot mix host and resident resources",
+            )
+        })
     }
 }
 
-impl CudaArtifactInstance {
-    fn execute(
-        &self,
-        state: BTreeMap<ArtifactValueId, Vec<u8>>,
-        invocation_grid: Option<[u32; 3]>,
-    ) -> Result<Completion, BackendError> {
-        self.core.execute_modules(
-            &self.modules,
-            state,
-            invocation_grid,
-            omitted_output,
-            |module, plan, config, state| {
-                let inputs = self.core.gather_inputs(
-                    plan,
-                    &module.program,
-                    state,
-                    materialize::unbound_input,
-                )?;
-                module.pipeline.dispatch_borrowed_timed(&inputs, config)
-            },
-        )
+impl MaterializedInstance for CudaArtifactInstance {
+    type Module = CudaExecutableModule;
+
+    fn core(&self) -> &InstanceCore {
+        &self.core
     }
 
-    fn execute_resident(
+    fn modules(&self) -> &[Self::Module] {
+        &self.modules
+    }
+
+    fn omitted_output(&self) -> fn(usize, &str) -> BackendError {
+        omitted_output
+    }
+
+    fn launch(
         &self,
-        resources: &BTreeMap<ArtifactValueId, vyre_driver::Resource>,
-        invocation_grid: Option<[u32; 3]>,
-    ) -> Result<Completion, BackendError> {
-        let module = self.core.single_resident_module(
-            &self.modules,
-            "CUDA resident submission for multi-module artifacts",
-        )?;
-        let plan = BindingPlan::build(&module.program)?;
-        let ordered = self.core.ordered_resident_resources(
-            materialize::resident_buffer_names(&plan, &module.program),
-            resources,
-            materialize::unbound_resident_buffer,
-        )?;
-        let dispatched = module
-            .pipeline
-            .dispatch_artifact_resident_timed(&ordered, invocation_grid)?;
-        self.core.resident_completion(
-            &plan,
-            &module.program,
-            dispatched,
-            omitted_resident_output,
-            &self.core.messages,
+        module: &Self::Module,
+        plan: &BindingPlan,
+        config: &DispatchConfig,
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        let inputs =
+            self.core
+                .gather_inputs(plan, &module.program, state, materialize::unbound_input)?;
+        module.pipeline.dispatch_borrowed_timed(&inputs, config)
+    }
+}
+
+impl ResidentInstance for CudaArtifactInstance {
+    fn multi_module_feature(&self) -> &str {
+        "CUDA resident submission for multi-module artifacts"
+    }
+
+    fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError {
+        omitted_resident_output
+    }
+
+    fn launch_resident(
+        &self,
+        module: &Self::Module,
+        ordered: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        CompiledPipeline::dispatch_persistent_handles_timed(
+            module.pipeline.as_ref(),
+            ordered,
+            config,
         )
     }
 }

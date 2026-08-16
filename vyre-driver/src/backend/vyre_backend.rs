@@ -185,6 +185,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
         let result = self.dispatch_borrowed(program, inputs, config)?;
+        crate::observability::record_dispatch_io(inputs, &result);
         let stats = crate::backend::dispatch_result::replace_output_buffers_preserving_slots_with_memory_stats(
             result,
             outputs,

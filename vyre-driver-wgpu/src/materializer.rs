@@ -3,12 +3,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use vyre_driver::materialize::{
-    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializerDevice,
+    self, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
+    MaterializerDevice, ResidentInstance,
 };
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
-    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
-    Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, CompiledPipeline,
+    Device, DeviceIdentity, DispatchConfig, Resource, ResidentOwner, Submission,
+    TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload, TargetPayloadFormat};
@@ -173,42 +174,95 @@ impl ArtifactInstance for WgpuArtifactInstance {
         if self.lost.load(Ordering::Acquire) {
             return Err(device_lost_error(&self.core.device));
         }
-        self.core.route_submission(
-            &bindings,
-            || {
-                materialize::invalid_module(
-                    "WGPU artifact submission cannot mix host and resident resources",
-                )
+        self.submit_routed(&bindings, || {
+            materialize::invalid_module(
+                "WGPU artifact submission cannot mix host and resident resources",
+            )
+        })
+    }
+}
+
+impl MaterializedInstance for WgpuArtifactInstance {
+    type Module = WgpuExecutableModule;
+
+    fn core(&self) -> &InstanceCore {
+        &self.core
+    }
+
+    fn modules(&self) -> &[Self::Module] {
+        &self.modules
+    }
+
+    fn omitted_output(&self) -> fn(usize, &str) -> BackendError {
+        omitted_output
+    }
+
+    fn launch(
+        &self,
+        module: &Self::Module,
+        _plan: &BindingPlan,
+        config: &DispatchConfig,
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        let inputs = self.gather_slot_inputs(module, state)?;
+        match module.pipeline.dispatch_borrowed_timed(&inputs, config) {
+            Err(_) if self.lost.load(Ordering::Acquire) => {
+                Err(device_lost_error(&self.core.device))
+            }
+            result => result,
+        }
+    }
+}
+
+impl ResidentInstance for WgpuArtifactInstance {
+    fn multi_module_feature(&self) -> &str {
+        "WGPU resident submission for multi-module artifacts"
+    }
+
+    fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError {
+        omitted_resident_output
+    }
+
+    fn resident_messages(&self) -> &InstanceMessages {
+        &RESIDENT_MESSAGES
+    }
+
+    /// Resolve resident handles into the order the emitted target module
+    /// declares, which is the order its pipeline reports rather than the
+    /// binding plan's.
+    fn ordered_resident(
+        &self,
+        module: &Self::Module,
+        _plan: &BindingPlan,
+        resources: &BTreeMap<ArtifactValueId, Resource>,
+    ) -> Result<Vec<Resource>, BackendError> {
+        self.core.ordered_resident_resources(
+            module.resident_slots.iter().map(String::as_str),
+            resources,
+            |value, name| {
+                materialize::invalid_module(&format!(
+                    "canonical artifact value {} for resident target binding `{name}` is unbound",
+                    value.0
+                ))
             },
-            |state, invocation_grid| self.execute(state, invocation_grid),
-            |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
+        )
+    }
+
+    fn launch_resident(
+        &self,
+        module: &Self::Module,
+        ordered: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        CompiledPipeline::dispatch_persistent_handles_timed(
+            module.pipeline.as_ref(),
+            ordered,
+            config,
         )
     }
 }
 
 impl WgpuArtifactInstance {
-    fn execute(
-        &self,
-        state: BTreeMap<ArtifactValueId, Vec<u8>>,
-        invocation_grid: Option<[u32; 3]>,
-    ) -> Result<Completion, BackendError> {
-        self.core.execute_modules(
-            &self.modules,
-            state,
-            invocation_grid,
-            omitted_output,
-            |module, _plan, config, state| {
-                let inputs = self.gather_slot_inputs(module, state)?;
-                match module.pipeline.dispatch_borrowed_timed(&inputs, config) {
-                    Err(_) if self.lost.load(Ordering::Acquire) => {
-                        Err(device_lost_error(&self.core.device))
-                    }
-                    result => result,
-                }
-            },
-        )
-    }
-
     /// Borrow bound bytes into the order this backend's target bindings declare.
     ///
     /// The input order comes from the emitted descriptor slots rather than the
@@ -234,40 +288,6 @@ impl WgpuArtifactInstance {
             }
         }
         Ok(inputs)
-    }
-
-    fn execute_resident(
-        &self,
-        resources: &BTreeMap<ArtifactValueId, vyre_driver::Resource>,
-        invocation_grid: Option<[u32; 3]>,
-    ) -> Result<Completion, BackendError> {
-        let module = self.core.single_resident_module(
-            &self.modules,
-            "WGPU resident submission for multi-module artifacts",
-        )?;
-        let ordered = self.core.ordered_resident_resources(
-            module.resident_slots.iter().map(String::as_str),
-            resources,
-            |value, name| {
-                materialize::invalid_module(&format!(
-                    "canonical artifact value {} for resident target binding `{name}` is unbound",
-                    value.0
-                ))
-            },
-        )?;
-        let mut config = module.config.clone();
-        materialize::override_grid(&mut config, invocation_grid);
-        let dispatched = module
-            .pipeline
-            .dispatch_persistent_handles_timed(&ordered, &config)?;
-        let plan = BindingPlan::build(&module.program)?;
-        self.core.resident_completion(
-            &plan,
-            &module.program,
-            dispatched,
-            omitted_resident_output,
-            &RESIDENT_MESSAGES,
-        )
     }
 }
 

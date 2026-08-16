@@ -938,6 +938,208 @@ pub fn override_grid(config: &mut DispatchConfig, grid: Option<[u32; 3]>) {
     }
 }
 
+/// The execution paths of a materialized instance, defaulted over
+/// [`InstanceCore`].
+///
+/// Every backend wrote the same two bodies around the same [`InstanceCore`]
+/// calls: gather the module's inputs and launch it once per module of the
+/// selected plan, then complete the accumulated state. Only the launch is
+/// target-specific, so only the launch is required here. The identity methods
+/// of [`crate::ArtifactInstance`] come from [`artifact_instance_identity`] and
+/// `submit` routes through [`Self::submit_host_only`] or
+/// [`ResidentInstance::submit_routed`], which leaves a backend the launch, its
+/// rejection text, and nothing else.
+pub trait MaterializedInstance {
+    /// The backend's own module record, holding its native handle beside the
+    /// canonical Program and dispatch config the shared loop reads.
+    type Module: ExecutableModule;
+
+    /// Identity and artifact ABI recorded when this instance materialized.
+    fn core(&self) -> &InstanceCore;
+
+    /// Every module of the compiler-selected plan, in dispatch order.
+    fn modules(&self) -> &[Self::Module];
+
+    /// Rejection for a declared output slot a launch never produced.
+    ///
+    /// The sentence is [`omitted_output`]; what a backend supplies is the label
+    /// naming its own target module.
+    fn omitted_output(&self) -> fn(usize, &str) -> BackendError;
+
+    /// Launch one module over caller-owned bytes.
+    ///
+    /// `plan` and `config` are the binding plan of `module` and its dispatch
+    /// config with the submission grid already applied. The bytes to bind are
+    /// in `state`, keyed by canonical artifact value; most backends read them
+    /// through [`InstanceCore::gather_inputs`], and one whose target module
+    /// declares its own binding order reads them through its own walk.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever the launch reports.
+    fn launch(
+        &self,
+        module: &Self::Module,
+        plan: &BindingPlan,
+        config: &DispatchConfig,
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<TimedDispatchResult, BackendError>;
+
+    /// Dispatch every module over caller-owned bytes and complete the state.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever [`Self::launch`] reports, the omitted-output rejection
+    /// for a declared output no module produced, and the instance's completion
+    /// rejections when execution left a declared value behind.
+    fn execute_host(
+        &self,
+        state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        invocation_grid: Option<[u32; 3]>,
+    ) -> Result<Completion, BackendError> {
+        self.core().execute_modules(
+            self.modules(),
+            state,
+            invocation_grid,
+            self.omitted_output(),
+            |module, plan, config, state| self.launch(module, plan, config, state),
+        )
+    }
+
+    /// Route one submission on an instance with no resident execution path.
+    ///
+    /// `feature` names the refused capability in the backend's own words.
+    ///
+    /// # Errors
+    ///
+    /// Returns the instance's `foreign_artifact` rejection when the bindings
+    /// name another artifact, and `BackendError::UnsupportedFeature` when any
+    /// value is bound to a device-resident resource.
+    fn submit_host_only(
+        &self,
+        bindings: &BindingSet,
+        feature: &str,
+    ) -> Result<Box<dyn Submission>, BackendError> {
+        self.core()
+            .submit_host_only(bindings, feature, |state, invocation_grid| {
+                self.execute_host(state, invocation_grid)
+            })
+    }
+}
+
+/// The resident execution path of a materialized instance whose backend has
+/// one.
+///
+/// A resident launch is one module over device memory the caller already
+/// filled. Three backends wrote the same seven steps around it and differed on
+/// two: where the handle order comes from, and whether an unproduced resident
+/// value is worded the way the host path words it.
+pub trait ResidentInstance: MaterializedInstance {
+    /// Refused capability when a resident submission names more than one module.
+    fn multi_module_feature(&self) -> &str;
+
+    /// Rejection for a declared output slot a resident launch never produced.
+    fn omitted_resident_output(&self) -> fn(usize, &str) -> BackendError;
+
+    /// Completion rejections for the resident path.
+    ///
+    /// The host path's wording unless the backend words a resident value
+    /// differently.
+    fn resident_messages(&self) -> &InstanceMessages {
+        &self.core().messages
+    }
+
+    /// Resolve the caller's resources into the order the resident launch reads.
+    ///
+    /// The default is the binding plan's non-shared roles, which is the order a
+    /// launch that takes its handles from the Program reads. A backend whose
+    /// target module declares its own resident order overrides this and names
+    /// that order instead.
+    ///
+    /// # Errors
+    ///
+    /// Returns `unmapped_buffer` for a name outside the artifact ABI, and the
+    /// unbound-resident rejection for a declared name carrying no resource.
+    fn ordered_resident(
+        &self,
+        module: &Self::Module,
+        plan: &BindingPlan,
+        resources: &BTreeMap<ArtifactValueId, Resource>,
+    ) -> Result<Vec<Resource>, BackendError> {
+        self.core().ordered_resident_resources(
+            resident_buffer_names(plan, module.program()),
+            resources,
+            unbound_resident_buffer,
+        )
+    }
+
+    /// Launch the single resident module over `ordered`.
+    ///
+    /// `config` is the module's dispatch config with the submission grid
+    /// already applied.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever the launch reports.
+    fn launch_resident(
+        &self,
+        module: &Self::Module,
+        ordered: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError>;
+
+    /// Launch the single module over caller-owned resident resources.
+    ///
+    /// # Errors
+    ///
+    /// Returns `BackendError::UnsupportedFeature` unless the plan selected one
+    /// module, whatever [`Self::ordered_resident`] and [`Self::launch_resident`]
+    /// report, and the resident completion rejections when the launch left a
+    /// declared value behind.
+    fn execute_resident(
+        &self,
+        resources: &BTreeMap<ArtifactValueId, Resource>,
+        invocation_grid: Option<[u32; 3]>,
+    ) -> Result<Completion, BackendError> {
+        let core = self.core();
+        let module = core.single_resident_module(self.modules(), self.multi_module_feature())?;
+        let plan = BindingPlan::build(module.program())?;
+        let ordered = self.ordered_resident(module, &plan, resources)?;
+        let mut config = module.config().clone();
+        override_grid(&mut config, invocation_grid);
+        let dispatched = self.launch_resident(module, &ordered, &config)?;
+        core.resident_completion(
+            &plan,
+            module.program(),
+            dispatched,
+            self.omitted_resident_output(),
+            self.resident_messages(),
+        )
+    }
+
+    /// Route one submission to the host or the resident path.
+    ///
+    /// `mixed` supplies the refusal for a binding set spanning both, in the
+    /// backend's own words.
+    ///
+    /// # Errors
+    ///
+    /// Returns the instance's `foreign_artifact` rejection when the bindings
+    /// name another artifact, and `mixed` when they span both paths.
+    fn submit_routed(
+        &self,
+        bindings: &BindingSet,
+        mixed: fn() -> BackendError,
+    ) -> Result<Box<dyn Submission>, BackendError> {
+        self.core().route_submission(
+            bindings,
+            mixed,
+            |state, invocation_grid| self.execute_host(state, invocation_grid),
+            |resources, invocation_grid| self.execute_resident(resources, invocation_grid),
+        )
+    }
+}
+
 /// Answer the three [`crate::ArtifactInstance`] identity methods from an
 /// [`InstanceCore`] field named `core`.
 ///

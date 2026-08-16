@@ -96,6 +96,7 @@ pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
         let result = self.dispatch_borrowed(inputs, config)?;
+        crate::observability::record_dispatch_io(inputs, &result);
         let stats = crate::backend::replace_output_buffers_preserving_slots_with_memory_stats(
             result, outputs,
         );
