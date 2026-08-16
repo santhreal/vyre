@@ -11,7 +11,7 @@ Required documentation authority:
 - `docs/INDEX.md`
 - `docs/ARCHITECTURE.md`
 - `docs/CRATE_OWNERSHIP.toml`
-- `docs/optimization/README.md`
+- `docs/optimization/OWNERSHIP.toml`
 
 Release contract:
 

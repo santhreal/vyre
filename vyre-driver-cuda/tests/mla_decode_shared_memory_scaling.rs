@@ -320,8 +320,9 @@ fn mla_decode_head_dim_128_over_cap_refuses_naming_bytes_and_cap() {
     assert!(
         error.contains(&CONSERVATIVE_SHARED_MEMORY_CAP.to_string()),
         "refusal must name the {CONSERVATIVE_SHARED_MEMORY_CAP} byte cap, which is the \
-         figure quoted in docs/optimization/README.md. If a device reports a different \
-         per-workgroup static limit, update that table rather than loosening this. Got: {error}"
+         conservative figure in vyre-driver/src/device_profile.rs. If a device reports a \
+         different per-workgroup static limit, update that profile rather than loosening \
+         this. Got: {error}"
     );
     assert!(
         error.contains("per-workgroup static shared memory limit"),
