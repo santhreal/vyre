@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The operator binaries in the build-task crate share one usage renderer and one argument gate. Each carried its own copy and the exit codes had drifted between them."
