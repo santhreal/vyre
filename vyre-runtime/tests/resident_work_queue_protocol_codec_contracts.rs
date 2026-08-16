@@ -1,4 +1,9 @@
-use super::{
+//! Ring, control, debug-log and load-miss codec contracts.
+//!
+//! Every item under test is public API, so the suite runs against the crate the
+//! way a consumer reaches it.
+
+use {
     control, count_done_ring_slots, debug, decode_load_miss, encode_load_miss, read_debug_log,
     read_debug_log_into, read_done_count, read_epoch, read_metrics_into, read_observable, slot,
     try_encode_control, try_encode_empty_debug_log, try_encode_empty_ring,
@@ -6,7 +11,7 @@ use super::{
     try_read_debug_log, try_read_debug_log_into, try_read_done_count, try_read_epoch,
     try_read_metrics_into, try_read_observable, try_slot_byte_len, try_slot_word_base,
     try_slot_word_index, ProtocolError, MAX_ENCODED_DEBUG_RECORDS, MAX_ENCODED_OBSERVABLE_SLOTS,
-    MAX_ENCODED_RING_SLOTS, STATUS_WORD,
+    MAX_ENCODED_RING_SLOTS, SLOT_WORDS, STATUS_WORD,
 };
 
 #[test]
@@ -25,7 +30,7 @@ fn count_done_ring_slots_counts_only_done_status_words() {
         .into_iter()
         .enumerate()
     {
-        let word_idx = slot_idx * super::SLOT_WORDS as usize + STATUS_WORD as usize;
+        let word_idx = slot_idx * SLOT_WORDS as usize + STATUS_WORD as usize;
         let byte_idx = word_idx * 4;
         ring[byte_idx..byte_idx + 4].copy_from_slice(&status.to_le_bytes());
     }
@@ -75,7 +80,7 @@ fn allocating_encoders_preallocate_exact_protocol_capacity() {
 
 #[test]
 fn metrics_decode_into_reuses_capacity_without_overreserve() {
-    let mut control = super::try_encode_control(false, 1, 0).unwrap();
+    let mut control = try_encode_control(false, 1, 0).unwrap();
     let word_idx = control::METRICS_BASE as usize;
     control[word_idx * 4..word_idx * 4 + 4].copy_from_slice(&9_u32.to_le_bytes());
 
@@ -92,7 +97,7 @@ fn metrics_decode_into_reuses_capacity_without_overreserve() {
 
 #[test]
 fn metrics_decode_into_does_not_allocate_for_empty_metrics() {
-    let control = super::try_encode_control(false, 1, 0).unwrap();
+    let control = try_encode_control(false, 1, 0).unwrap();
 
     let mut out = Vec::new();
     read_metrics_into(&control, &mut out);
@@ -114,7 +119,7 @@ fn metrics_decode_into_does_not_allocate_for_empty_metrics() {
 
 #[test]
 fn metrics_decode_into_reserves_only_nonzero_metrics() {
-    let mut control = super::try_encode_control(false, 1, 0).unwrap();
+    let mut control = try_encode_control(false, 1, 0).unwrap();
     let word_idx = (control::METRICS_BASE + 7) as usize;
     control[word_idx * 4..word_idx * 4 + 4].copy_from_slice(&13_u32.to_le_bytes());
 
@@ -138,7 +143,7 @@ fn metrics_decode_into_reserves_only_nonzero_metrics() {
 
 #[test]
 fn debug_log_decode_into_reuses_capacity_without_overreserve() {
-    let mut debug_log = super::try_encode_empty_debug_log(2).unwrap();
+    let mut debug_log = try_encode_empty_debug_log(2).unwrap();
     debug_log[(debug::CURSOR_WORD as usize) * 4..(debug::CURSOR_WORD as usize) * 4 + 4]
         .copy_from_slice(&debug::RECORD_WORDS.to_le_bytes());
     let record_start = debug::RECORDS_BASE as usize * 4;
@@ -161,7 +166,7 @@ fn debug_log_decode_into_reuses_capacity_without_overreserve() {
 
 #[test]
 fn debug_log_owned_decode_does_not_allocate_for_empty_log() {
-    let debug_log = super::try_encode_empty_debug_log(64).unwrap();
+    let debug_log = try_encode_empty_debug_log(64).unwrap();
 
     let records = read_debug_log(&debug_log);
     assert!(records.is_empty());
@@ -215,7 +220,7 @@ fn slot_word_arithmetic_rejects_overflow_without_panic() {
         "Fix: overflow must identify the slot word-base contract, got: {err}"
     );
 
-    let word_result = std::panic::catch_unwind(|| try_slot_word_index(0, super::SLOT_WORDS));
+    let word_result = std::panic::catch_unwind(|| try_slot_word_index(0, SLOT_WORDS));
     assert!(
         word_result.is_ok(),
         "fallible slot-local word arithmetic must return an error instead of panicking"
@@ -327,7 +332,7 @@ fn try_read_epoch_parses_real_epoch_from_well_formed_control() {
     assert_eq!(epoch, 0, "Fix: fresh epoch must be 0");
 
     // Inject a non-zero epoch word to prove the decoder reads the right offset.
-    let epoch_word_idx = super::control::EPOCH as usize;
+    let epoch_word_idx = control::EPOCH as usize;
     let mut patched = control.clone();
     patched[epoch_word_idx * 4..epoch_word_idx * 4 + 4].copy_from_slice(&42_u32.to_le_bytes());
     let patched_epoch = try_read_epoch(&patched)

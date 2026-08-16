@@ -1,9 +1,14 @@
-// Tests for `core.rs`. Split out per audit item #85 to keep the
-// parent file focused on production code.
+//! Launch geometry, dispatch grid and continuation-task launch contracts.
+//!
+//! Every item under test is public API, so the suite runs against the crate the
+//! way a consumer reaches it.
 
-use super::*;
-use crate::resident_work_queue::policy::{diffuse_priority_across_siblings, ResidentLaunchPolicy};
 use vyre_foundation::execution_plan::SchedulingPolicy;
+use vyre_runtime::resident_work_queue::task::TaskPriority;
+use vyre_runtime::resident_work_queue::planner::*;
+use vyre_runtime::resident_work_queue::policy::{
+    diffuse_priority_across_siblings, ResidentLaunchPolicy,
+};
 
 #[test]
 fn launch_geometry_pads_slots_and_caps_grid_by_workers() {
@@ -78,9 +83,9 @@ fn config_builds_launch_policy_from_continuation_task_queue() {
         output_handle: 12,
         param: 13,
     };
-    let ready = TaskWorkItem::from_work_item(1, 0, super::super::task::TaskPriority::Normal, item);
+    let ready = TaskWorkItem::from_work_item(1, 0, TaskPriority::Normal, item);
     let paused = ready.paused(20, 30, 40);
-    let requeued = ready.requeued(50, 60, super::super::task::TaskPriority::High);
+    let requeued = ready.requeued(50, 60, TaskPriority::High);
 
     let request = config
         .launch_request_for_tasks(&[ready, paused, requeued], 256, 65_536, 1_024)

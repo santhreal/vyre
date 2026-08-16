@@ -267,6 +267,3 @@ pub fn try_slot_word_index(slot: u32, word: u32) -> Result<usize, ProtocolError>
             fix: "slot word index overflows host address space; shard the megakernel ring before host access",
         })
 }
-
-#[cfg(test)]
-mod tests;
