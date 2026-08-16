@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:fcfbace6b0597b5c4f4942b674cf5fe8af6d8a68:dirty=true:worktree=197e9e50d55211ccbe786215f2e6fc42897016ddcb0a8fa184a17e6e9c442419",
+  "source_fingerprint": "git:536c5b576c74d922d6248f72db1f47b38601566d:dirty=true:worktree=8a572fa966425e229f24aa03017485443beecd4829fda074bebdfd256835df3d",
   "schema_version": 5,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 3886,
+  "scanned_files": 3885,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
