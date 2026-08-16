@@ -89,20 +89,20 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
     ValidationRule {
         code: "V020",
         phase: ValidationPhase::Expression,
-        invariant: "Call to non-inlinable op",
-        corrective_action: "Lower this op through its dedicated backend path or rewrite the caller with explicit IR.",
+        invariant: "Call argument count mismatches callee signature input count",
+        corrective_action: "Pass exactly the number of arguments declared by the op signature.",
     },
     ValidationRule {
         code: "V021",
         phase: ValidationPhase::Expression,
-        invariant: "Call argument count mismatches callee's ReadOnly/Uniform input count",
-        corrective_action: "Pass exactly one argument per input buffer in binding order.",
+        invariant: "Call signature uses unknown or unsupported type spelling",
+        corrective_action: "Register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer.",
     },
     ValidationRule {
         code: "V022",
         phase: ValidationPhase::Expression,
-        invariant: "Program or callee declares too many outputs",
-        corrective_action: "Mark at most one result buffer with `BufferDecl::output(...)`.",
+        invariant: "Call argument type mismatches callee parameter type, or program declares too many outputs",
+        corrective_action: "Cast or rewrite the argument to match the registered op signature, and declare at most one output buffer.",
     },
     ValidationRule {
         code: "V023",
