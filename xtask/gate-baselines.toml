@@ -83,6 +83,18 @@ name = "cross-target"
 findings = 0
 
 [[gate]]
+name = "crate-ownership"
+findings = 0
+
+[[gate]]
+name = "crate-readmes"
+findings = 0
+
+[[gate]]
+name = "testing-guides"
+findings = 0
+
+[[gate]]
 name = "dep-drift"
 findings = 0
 
@@ -136,6 +148,10 @@ findings = 0
 
 [[gate]]
 name = "gate1"
+findings = 0
+
+[[gate]]
+name = "gate-canon"
 findings = 0
 
 [[gate]]

@@ -96,11 +96,42 @@ pub static SUBSETS: &[Subset] = &[
         help: "Whether the generated documentation artifacts still match the tree",
         gates: &[
             "architecture-contract",
+            "cli-docs",
+            "crate-ownership",
+            "crate-readmes",
             "docs-check",
             "docs-coupling",
             "docs-references",
+            "op-matrix",
             "optimization-docs",
             "release-docs",
+            "testing-guides",
+        ],
+    },
+    Subset {
+        name: "benchmarks",
+        help: "Whether the measured benchmark surface is registered, covered and inside its declared budget",
+        gates: &[
+            "bench-coverage",
+            "bench-release",
+            "bench-smoke-runtime",
+            "release-benchmarks",
+            "release-workload-matrix",
+        ],
+    },
+    Subset {
+        name: "release-evidence",
+        help: "Whether the committed release evidence still matches the manifests, the lockfile and the recorded runs",
+        gates: &[
+            "conformance-matrix",
+            "launch-state",
+            "metadata-matrix",
+            "optimization-corpus",
+            "optimization-matrix",
+            "package-readiness",
+            "release-conformance",
+            "release-evidence",
+            "version-matrix",
         ],
     },
     Subset {
@@ -124,6 +155,8 @@ pub static SUBSETS: &[Subset] = &[
             "internal-dep-versions",
             "layering",
             "neutral-crates",
+            "feature-matrix",
+            "feature-isolation",
         ],
     },
     Subset {
@@ -166,7 +199,10 @@ pub static SUBSETS: &[Subset] = &[
         gates: &[
             "frozen-contracts",
             "backend-extension",
+            "backend-matrix",
             "program-wire-fields",
+            "public-api-paths",
+            "public-api-snapshot",
             "readback-ring",
             "unification",
             "gpu-loudness",
@@ -175,7 +211,7 @@ pub static SUBSETS: &[Subset] = &[
     },
     Subset {
         name: "repo-rules",
-        help: "What the checkout carries, what the release evidence cites, and what the documents claim",
+        help: "What the checkout carries, what the release evidence cites, what the documents claim, and whether the registry itself was softened",
         gates: &[
             "repo-hygiene",
             "single-backlog",
@@ -186,6 +222,7 @@ pub static SUBSETS: &[Subset] = &[
             "invariant-paths",
             "ci-matrix",
             "ci-required",
+            "gate-canon",
         ],
     },
 ];

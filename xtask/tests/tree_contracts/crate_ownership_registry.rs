@@ -2,12 +2,25 @@
 
 use std::fs;
 use std::path::Path;
-use std::process::Output;
 
-use super::workspace_sources::workspace_root;
+use xtask::gate::Report;
+use xtask::gates::crate_registry::CrateOwnership;
 
-fn run_registry(root: &Path, mode: &str) -> Output {
-    super::workspace_sources::run_generator("scripts/crate_ownership.py", root, mode)
+use super::workspace_sources::{run_gate, track_fixture, workspace_root};
+
+/// Run the gate over a fixture checkout.
+fn run(root: &Path) -> Report {
+    run_gate(&CrateOwnership, root, false)
+}
+
+/// Every message the gate reported, joined for a failure diagnostic.
+fn messages(report: &Report) -> String {
+    report
+        .findings
+        .iter()
+        .map(|finding| finding.message.clone())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn write_member(root: &Path, path: &str, package: &str, dependencies: &str) {
@@ -51,21 +64,24 @@ fn registry_row(package: &str, path: &str, allowed: &[&str]) -> String {
     )
 }
 
+/// Write the registry and turn the fixture into a checkout the gate can read.
+fn seal(root: &Path, registry: String) {
+    fs::write(root.join("docs/CRATE_OWNERSHIP.toml"), registry)
+        .expect("Fix: fixture registry must be writable");
+    track_fixture(root);
+}
+
 /// The checked-in registry and both generated documents must agree with every current manifest edge.
 ///
 /// This is the repository-level regression for stale crate lists, missing ownership
 /// sections, and hand-edited dependency diagrams that disagree with Cargo.
 #[test]
 fn workspace_registry_and_generated_documents_are_current() {
-    let output = run_registry(&workspace_root(), "--check");
+    let report = run(&workspace_root());
     assert!(
-        output.status.success(),
-        "Fix: regenerate or repair crate ownership evidence: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(
-        String::from_utf8(output.stdout).expect("Fix: generator output must be UTF-8"),
-        "crate-ownership: verified docs/CRATE_GRAPH.md and docs/OWNERSHIP.md\n"
+        report.findings.is_empty(),
+        "Fix: regenerate or repair crate ownership evidence:\n{}",
+        messages(&report)
     );
 }
 
@@ -79,18 +95,17 @@ fn missing_workspace_member_ownership_fails_closed() {
     write_workspace(temp.path(), &["a", "b"]);
     write_member(temp.path(), "a", "a", "");
     write_member(temp.path(), "b", "b", "");
-    fs::write(
-        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
+    seal(
+        temp.path(),
         format!("schema_version = 2\n\n{}", registry_row("a", "a", &[])),
-    )
-    .expect("Fix: fixture registry must be writable");
+    );
 
-    let output = run_registry(temp.path(), "--check");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
+    let report = run(temp.path());
+    let messages = messages(&report);
     assert!(
-        error.contains("missing=['b']") && error.contains("extra=[]"),
-        "Fix: missing member diagnostic must identify the exact path; error={error}"
+        messages.contains("workspace member `b` has no registry row")
+            && messages.contains("workspace package `b` has no registry row"),
+        "Fix: missing member diagnostic must identify the exact path and package; got\n{messages}"
     );
 }
 
@@ -109,26 +124,48 @@ fn undeclared_production_dependency_fails_closed() {
         "[dependencies]\nb = { version = \"0.1.0\", path = \"../b\" }\n",
     );
     write_member(temp.path(), "b", "b", "");
-    fs::write(
-        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
+    seal(
+        temp.path(),
         format!(
             "schema_version = 2\n\n{}{}",
             registry_row("a", "a", &[]),
             registry_row("b", "b", &[])
         ),
-    )
-    .expect("Fix: fixture registry must be writable");
+    );
 
-    let output = run_registry(temp.path(), "--check");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
+    let report = run(temp.path());
+    let messages = messages(&report);
     assert!(
-        error.contains("package `a`")
-            && error.contains("undeclared=['b']")
-            && error.contains("stale=[]")
-            && error.contains("owning_boundaries={'b': 'fixture-owner'}")
-            && error.contains("declare each required destination"),
-        "Fix: undeclared edge diagnostic must name consumer, dependency, and owner; error={error}"
+        messages.contains("`a` depends on `b` and declares no record for it"),
+        "Fix: undeclared edge diagnostic must name consumer and dependency; got\n{messages}"
+    );
+}
+
+/// A record for an edge no manifest resolves must fail as loudly as a missing one.
+///
+/// The reverse direction is the one that survives a dependency removal: the manifest
+/// stops naming the crate and the registry keeps advertising the boundary.
+#[test]
+fn stale_dependency_record_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["a", "b"]);
+    write_member(temp.path(), "a", "a", "");
+    write_member(temp.path(), "b", "b", "");
+    seal(
+        temp.path(),
+        format!(
+            "schema_version = 2\n\n{}{}",
+            registry_row("a", "a", &["b"]),
+            registry_row("b", "b", &[])
+        ),
+    );
+
+    let report = run(temp.path());
+    let messages = messages(&report);
+    assert!(
+        messages
+            .contains("`a` declares a record for `b` and no manifest edge resolves to it"),
+        "Fix: stale record diagnostic must name consumer and dependency; got\n{messages}"
     );
 }
 
@@ -149,22 +186,20 @@ fn incomplete_dependency_metadata_fails_closed() {
     write_member(temp.path(), "b", "b", "");
     let incomplete = registry_row("a", "a", &["b"])
         .replace("purpose = \"Use the fixture dependency contract.\"\n", "");
-    fs::write(
-        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
+    seal(
+        temp.path(),
         format!(
             "schema_version = 2\n\n{}{}",
             incomplete,
             registry_row("b", "b", &[])
         ),
-    )
-    .expect("Fix: fixture registry must be writable");
+    );
 
-    let output = run_registry(temp.path(), "--check");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
+    let report = run(temp.path());
+    let messages = messages(&report);
     assert!(
-        error.contains("must define non-empty `purpose`"),
-        "Fix: incomplete edge metadata must name the missing field; error={error}"
+        messages.contains("declares no non-empty `purpose`"),
+        "Fix: incomplete edge metadata must name the missing field; got\n{messages}"
     );
 }
 
@@ -185,22 +220,54 @@ fn stale_dependency_seam_fails_closed() {
     write_member(temp.path(), "b", "b", "");
     let stale = registry_row("a", "a", &["b"])
         .replace("seam = \"fixture-owner\"", "seam = \"removed-owner\"");
-    fs::write(
-        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
+    seal(
+        temp.path(),
         format!(
             "schema_version = 2\n\n{}{}",
             stale,
             registry_row("b", "b", &[])
         ),
-    )
-    .expect("Fix: fixture registry must be writable");
+    );
 
-    let output = run_registry(temp.path(), "--check");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
+    let report = run(temp.path());
+    let messages = messages(&report);
     assert!(
-        error.contains("declares seam `removed-owner`")
-            && error.contains("required destination owner is `fixture-owner`"),
-        "Fix: stale seam diagnostic must name the declared and required owners; error={error}"
+        messages.contains(
+            "`a` -> `b` declares seam `removed-owner` and the destination owner is `fixture-owner`"
+        ),
+        "Fix: stale seam diagnostic must name the declared and required owners; got\n{messages}"
+    );
+}
+
+/// A feature the manifest turns on and the record omits is drift, in either
+/// direction.
+///
+/// The union of an inherited workspace feature list and a local one is what cargo
+/// enables, so a record that names only the local half under-reports the edge.
+#[test]
+fn dependency_feature_drift_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["a", "b"]);
+    write_member(
+        temp.path(),
+        "a",
+        "a",
+        "[dependencies]\nb = { version = \"0.1.0\", path = \"../b\", features = [\"fast\"] }\n",
+    );
+    write_member(temp.path(), "b", "b", "\n[features]\nfast = []\n");
+    seal(
+        temp.path(),
+        format!(
+            "schema_version = 2\n\n{}{}",
+            registry_row("a", "a", &["b"]),
+            registry_row("b", "b", &[])
+        ),
+    );
+
+    let report = run(temp.path());
+    let messages = messages(&report);
+    assert!(
+        messages.contains("`a` -> `b` declares features `` and cargo resolves `fast`"),
+        "Fix: feature drift must name both sides; got\n{messages}"
     );
 }

@@ -1,13 +1,26 @@
 //! Generated per-crate testing guide contracts.
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::path::Path;
 
-use super::workspace_sources::workspace_root;
+use xtask::gate::Report;
+use xtask::gates::testing_guides::TestingGuides;
 
-fn run_generator(root: &Path, mode: &str) -> Output {
-    super::workspace_sources::run_generator("scripts/testing_guides.py", root, mode)
+use super::workspace_sources::{run_gate, track_fixture, workspace_root};
+
+/// Run the gate over a fixture checkout.
+fn run(root: &Path, write: bool) -> Report {
+    run_gate(&TestingGuides, root, write)
+}
+
+/// Every message the gate reported, joined for a failure diagnostic.
+fn messages(report: &Report) -> String {
+    report
+        .findings
+        .iter()
+        .map(|finding| finding.message.clone())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn write_fixture(root: &Path, include_profile: bool) {
@@ -57,11 +70,11 @@ fn write_fixture(root: &Path, include_profile: bool) {
 /// from reappearing when crates or Cargo targets change.
 #[test]
 fn workspace_testing_guides_are_current() {
-    let output = run_generator(&workspace_root(), "--check");
+    let report = run(&workspace_root(), false);
     assert!(
-        output.status.success(),
-        "Fix: regenerate or repair testing guides: {}",
-        String::from_utf8_lossy(&output.stderr)
+        report.findings.is_empty(),
+        "Fix: regenerate or repair testing guides:\n{}",
+        messages(&report)
     );
 }
 
@@ -73,12 +86,13 @@ fn workspace_testing_guides_are_current() {
 fn generated_guide_contains_the_complete_crate_testing_contract() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), true);
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--write");
+    let report = run(temp.path(), true);
     assert!(
-        output.status.success(),
-        "Fix: valid fixture guide must generate: {}",
-        String::from_utf8_lossy(&output.stderr)
+        report.findings.is_empty(),
+        "Fix: valid fixture guide must generate:\n{}",
+        messages(&report)
     );
     let guide = fs::read_to_string(temp.path().join("docs/testing/a.md"))
         .expect("Fix: generated fixture guide must be readable");
@@ -108,24 +122,27 @@ fn generated_guide_contains_the_complete_crate_testing_contract() {
 fn new_cargo_test_target_invalidates_the_guide() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), true);
-    assert!(run_generator(temp.path(), "--write").status.success());
+    track_fixture(temp.path());
+    assert!(run(temp.path(), true).findings.is_empty());
     fs::write(
-        rooted(temp.path(), "a/tests/adversarial.rs"),
+        temp.path().join("a/tests/adversarial.rs"),
         "#[test] fn bad() {}\n",
     )
     .expect("Fix: added fixture target must be writable");
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--check");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
-    assert!(
-        error.contains("missing or stale testing guides: ['a.md']"),
-        "Fix: target drift must identify the stale guide; error={error}"
+    let report = run(temp.path(), false);
+    assert_eq!(
+        report.findings.len(),
+        1,
+        "Fix: target drift must be one finding; got\n{}",
+        messages(&report)
     );
-}
-
-fn rooted(root: &Path, relative: &str) -> PathBuf {
-    root.join(relative)
+    assert_eq!(
+        report.findings[0].file.as_deref(),
+        Some(Path::new("docs/testing/a.md")),
+        "Fix: target drift must identify the stale guide"
+    );
 }
 
 /// Every ownership layer needs maintained test-class metadata before its guides can generate.
@@ -136,13 +153,13 @@ fn rooted(root: &Path, relative: &str) -> PathBuf {
 fn missing_layer_profile_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), false);
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--write");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
+    let report = run(temp.path(), true);
     assert!(
-        error.contains("no profile for ownership layer `foundation` used by `a`"),
-        "Fix: missing profile diagnostic must name layer and crate; error={error}"
+        messages(&report).contains("no profile for layer `foundation`, which `a` occupies"),
+        "Fix: missing profile diagnostic must name layer and crate; got\n{}",
+        messages(&report)
     );
 }
 
@@ -154,41 +171,43 @@ fn missing_layer_profile_fails_closed() {
 fn orphaned_testing_guide_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), true);
-    assert!(run_generator(temp.path(), "--write").status.success());
+    track_fixture(temp.path());
+    assert!(run(temp.path(), true).findings.is_empty());
     fs::write(
         temp.path().join("docs/testing/removed.md"),
         "# Removed crate\n",
     )
     .expect("Fix: orphan guide fixture must be writable");
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--check");
-    let error = String::from_utf8_lossy(&output.stderr);
-    assert!(!output.status.success());
-    assert!(
-        error.contains("non-member guides: ['removed.md']"),
-        "Fix: orphan guide diagnostic must name the exact file; error={error}"
+    let report = run(temp.path(), false);
+    assert_eq!(
+        report.findings.len(),
+        1,
+        "Fix: an orphan guide must be one finding; got\n{}",
+        messages(&report)
+    );
+    assert_eq!(
+        report.findings[0].file.as_deref(),
+        Some(Path::new("docs/testing/removed.md")),
+        "Fix: orphan guide diagnostic must name the exact file"
     );
 }
 
 /// Prevents ignored local tests from appearing as published Cargo targets in generated guides.
 #[test]
-fn gitignored_targets_are_excluded_from_testing_guides() {
+fn untracked_targets_are_excluded_from_testing_guides() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     write_fixture(temp.path(), true);
-    let status = Command::new("git")
-        .args(["init", "-q"])
-        .current_dir(temp.path())
-        .status()
-        .expect("Fix: git must launch for ignored target semantics");
-    assert!(status.success());
     fs::write(temp.path().join(".gitignore"), "a/tests/behavior.rs\n")
         .expect("Fix: ignored target rule must be writable");
+    track_fixture(temp.path());
 
-    let output = run_generator(temp.path(), "--write");
+    let report = run(temp.path(), true);
     assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
+        report.findings.is_empty(),
+        "Fix: an ignored target must not stop generation:\n{}",
+        messages(&report)
     );
     let guide = fs::read_to_string(temp.path().join("docs/testing/a.md"))
         .expect("Fix: generated testing guide must be readable");

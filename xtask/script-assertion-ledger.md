@@ -1,10 +1,10 @@
 # Script assertion ledger
 
-`scripts/` holds 36 tracked files: 26 shell scripts and 10 Python scripts.
+`scripts/` holds 22 tracked files: 19 shell scripts and 3 Python scripts.
 Each one is recorded below with its assertions, what makes it exit nonzero, every
 caller found in the tree, whether the files it reads still exist, and the gate
-that owns its assertions after the port. The rows carry 148 assertions and
-35 findings.
+that owns its assertions after the port. The rows carry 76 assertions and
+19 findings.
 
 A script leaves this document by being deleted: its rule belongs to a registered
 gate, so the row is a record of a port that is finished, not of a file that still
@@ -12,28 +12,21 @@ runs. The ledger is empty when the registry owns every rule.
 
 ## Totals
 
-- Files: 36. Assertions: 148. Findings: 35.
-- Files whose subject is partly or wholly gone: 2.
-- Files nothing invokes: 12.
+- Files: 22. Assertions: 76. Findings: 19.
+- Files whose subject is partly or wholly gone: 1.
+- Files nothing invokes: 6.
 
 ### Subject gone
 
-- `scripts/bench/cross_backend_comparison.sh`
 - `scripts/final-launch.sh`
 
 ### Nothing invokes it
 
 - `scripts/apply-branch-protection.sh`
-- `scripts/bench/cross_backend_comparison.sh`
-- `scripts/bench_smoke.sh`
-- `scripts/check_bench_baselines.sh`
 - `scripts/check_metal_macbook.sh`
 - `scripts/check_signed_conformance_certificate.sh`
-- `scripts/crate_ownership.py`
-- `scripts/crate_readmes.py`
 - `scripts/final-launch.sh`
 - `scripts/install_wire_precommit_hook.sh`
-- `scripts/testing_guides.py`
 - `scripts/wire_ci_local.sh`
 
 ## Rows
@@ -57,125 +50,6 @@ Exits nonzero on:
 - wrong repository
 - a failing `ci-required` gate
 
-### `scripts/architecture_docs.py`
-
-Subject: present: the one document it validates, docs/ARCHITECTURE.md, is tracked, as are docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/optimization/OWNERSHIP.toml, docs/CRATE_OWNERSHIP.toml, release/release-train.toml and the backend evidence. CURRENT_DOCS carried five documents and an RFC when this row was written; four of the six were deleted and the list was trimmed to the survivor, so the assertions below that name a second document no longer apply.
-
-Invoked by: architectural-invariants.yml, xtask/tests/tree_contracts/architecture_docs.rs; version-coupled by xtask-registry/src/docs/operation_schema.rs and cited by docs/optimization/OWNERSHIP.toml and xtask/src/release/conformance_workflows.rs.
-
-Gate: xtask/src/gates/manifest_contract.rs takes the workspace, schema, backend evidence and lane assertions; xtask/src/gates/doc_contract.rs takes the five documents, their tokens, their dates and their forbidden patterns, and reports each missing document as one finding.
-
-Assertions:
-
-- workspace.members is a non-empty array of explicit paths and includes vyre-megakernel.
-- release/release-train.toml declares versions.vyre.
-- docs/generated/OP_SCHEMA.json declares schema_version 4 and is internally coherent: operation_count equals the operation row count and the tier counts sum to it.
-- release/evidence/backends/backend-matrix.json has an empty blockers array and a preferred_backend_id with a matching probe row.
-- docs/CRATE_OWNERSHIP.toml carries a vyre-megakernel crate row whose responsibility names ProgramGraph, and keeps no planned.vyre-megakernel entry.
-- docs/optimization/OWNERSHIP.toml declares [lane.*] tables, each with a purpose, a layer, at least one write glob and at least one required command; every write and avoid pattern is repository-relative and matches something in the tree; every -p in a required command names a package a workspace manifest declares.
-- docs/DOCS.toml classifies the four current architecture documents as current and the megakernel RFC as superseded.
-- Each of the four architecture documents and the RFC carries a Last verified date and the current Vyre version.
-- The RFC states Status: **Superseded**.
-- None of the five documents retains a stale architecture pattern: 0.6.x, nine-op, WGPU as primary production path, Four CI laws, a codex identifier, or seven phrasings that describe vyre-megakernel as planned.
-- Each of the five documents contains its required architecture tokens.
-
-Exits nonzero on:
-
-- any of the above, one at a time; validate raises on the first failure and never reports a second
-
-Findings:
-
-- architectural-invariants.yml fails on every tree today. read_text on docs/ARCHITECTURE.md raises before any live authority is read, so the six assertions that would still pass never run. Splitting them across two gates is what makes the surviving ones reachable again.
-- validate raises on the first failure, so a tree with ten violations reports one. The gate collects findings instead, which is also what makes the pinned count meaningful.
-- OPERATION_SCHEMA_VERSION = 4 is duplicated here and in xtask-registry/src/docs/operation_schema.rs. The gate reads the Rust constant instead of restating the number.
-
-### `scripts/bench/cross_backend_comparison.sh`
-
-Subject: gone: it wrapped a registered subcommand whose table now lives in the committed release evidence.
-
-Invoked by: nothing; the path appeared in .gitignore only, and that stanza is gone too.
-
-Gate: reported: it asserts nothing and its output directory is no longer published.
-
-Assertions:
-
-- Runs `xtask bench-crossback` for xor-1k and xor-1m and writes tables under docs/perf/.
-- Both programs are gone with it. The gate derives the comparison from the committed release benchmark evidence and records one table under release/evidence/benchmarks/.
-
-Exits nonzero on:
-
-- either run failing
-
-Findings:
-
-- It is a wrapper around a registered subcommand and wrote generated Markdown into a gitignored directory, so a fresh checkout was red and one local run turned it green. Nothing invoked it.
-
-### `scripts/bench_smoke.sh`
-
-Subject: present.
-
-Invoked by: nothing; named in CONTRIBUTING.md.
-
-Gate: xtask/src/gates/bench_contract.rs already runs the smoke suite under a budget, so this wrapper carries no assertion of its own.
-
-Assertions:
-
-- Runs the vyre-bench smoke suite. Asserts nothing itself beyond the run succeeding.
-
-Exits nonzero on:
-
-- any bench failure
-
-### `scripts/check_bench_baselines.sh`
-
-Subject: present.
-
-Invoked by: nothing; named in benches/RESULTS.md and the changelog only.
-
-Gate: xtask/src/gates/bench_contract.rs.
-
-Assertions:
-
-- benches/RESULTS.md exists and carries machine:, gpu:, cpu:, rustc: and commit: fields.
-- Every crate owning at least one benches/*.rs source has a `### <crate>` section in benches/RESULTS.md.
-
-Exits nonzero on:
-
-- missing RESULTS.md
-- missing header field
-- crate with a bench target and no section
-
-Findings:
-
-- Nothing invokes it. A published-baseline claim that no workflow checks is a claim.
-- It walks the filesystem with `find` rather than tracked files, so an untracked benches/*.rs in a dev tree demands a section that CI never asks for.
-
-### `scripts/check_bench_smoke_runtime.sh`
-
-Subject: present.
-
-Invoked by: bench-regression.yml.
-
-Gate: xtask/src/gates/bench_contract.rs.
-
-Assertions:
-
-- contracts/perf_targets.toml declares a budget for crates.vyre-bench.targets.smoke_runtime.
-- vyre-bench builds and the built binary is executable at the metadata target directory.
-- `vyre-bench list --format json` succeeds.
-- One smoke case (foundation.elementwise.add.1m, 30 measured samples) completes within the declared budget.
-
-Exits nonzero on:
-
-- missing budget
-- missing or non-executable bench binary
-- list failure
-- wall clock over budget
-
-Findings:
-
-- The budget is parsed with awk over TOML text rather than a TOML reader, so a budget declared inline or with a comment on the line is read wrongly or not at all.
-
 ### `scripts/check_cuda_parity_perf_gate.sh`
 
 Subject: present.
@@ -197,38 +71,6 @@ Exits nonzero on:
 - no tracked test target
 - no gpu_parity target
 - any test failure
-
-### `scripts/check_deep_bench_coverage.sh`
-
-Subject: present.
-
-Invoked by: gates.yml.
-
-Gate: xtask/src/gates/bench_contract.rs.
-
-Assertions:
-
-- Delegates to scripts/lib/check_deep_bench_coverage.py after selecting the cargo runner.
-
-Exits nonzero on:
-
-- whatever check_deep_bench_coverage.py exits nonzero on
-
-### `scripts/check_docs_references.py`
-
-Subject: present: docs carries 41 tracked Markdown documents again, plus root Markdown, .github Markdown and the crate READMEs.
-
-Invoked by: xtask/tests/docs_references.rs.
-
-Gate: xtask/src/gates/doc_contract.rs.
-
-Assertions:
-
-- Every Markdown document in scope resolves each of its relative links, so no published document points at a path a reader cannot open.
-
-Exits nonzero on:
-
-- any unresolvable reference
 
 ### `scripts/check_external_ir_extension_ci.sh`
 
@@ -303,39 +145,6 @@ Findings:
 - Roughly 60 assertions are `grep -q` over JSON, so a counter renamed inside a nested object still matches, and a field present with a null value passes. The gate parses the JSON and asserts the fields.
 - The artifact count of 7 is a literal in a grep pattern, so adding an eighth artifact fails with a message about a missing string rather than about the count.
 
-### `scripts/check_public_api_snapshot.sh`
-
-Subject: present (docs/public-api/*.txt survive; they are .txt, not the deleted mdbook).
-
-Invoked by: public-api.yml.
-
-Gate: xtask/src/gates/public_api.rs, with --refresh becoming ctx.write on a generating gate.
-
-Assertions:
-
-- public_api_snapshot_inventory.py resolves at least one publishable crate.
-- `cargo public-api -sss -p <crate>` succeeds for every publishable crate with a src directory.
-- Every publishable crate has a docs/public-api/<package>.txt snapshot.
-- Every snapshot file names a currently publishable package, so a stale snapshot is a failure.
-- The extracted surface is byte-identical to the committed snapshot, under LC_ALL=C sort.
-- --refresh takes an optional crate name and rejects a flag as its argument.
-- --refresh prints the per-crate diff before installing it.
-
-Exits nonzero on:
-
-- inventory failure or empty
-- cargo public-api failure
-- missing snapshot
-- unowned snapshot
-- surface drift
-- unknown argument
-- unknown crate name to --refresh
-
-Findings:
-
-- `set -uo pipefail` without `-e`.
-- The refresh path writes into docs/public-api from whatever the tree holds at that instant. Under the contract the write half is ctx.write on the gate that owns the artifact, which keeps the diff print and the per-crate scoping.
-
 ### `scripts/check_signed_conformance_certificate.sh`
 
 Subject: present.
@@ -373,98 +182,6 @@ Exits nonzero on:
 
 - spirv-val missing
 - test failure
-
-### `scripts/crate_ownership.py`
-
-Subject: present: docs/CRATE_OWNERSHIP.toml and both generated documents, docs/CRATE_GRAPH.md and docs/OWNERSHIP.md, are tracked.
-
-Invoked by: nothing directly; consumed by xtask/src/gates/check_tier_deps.rs and xtask/src/gates/layering.rs, and named as the generator of docs/CRATE_GRAPH.md and docs/OWNERSHIP.md.
-
-Gate: xtask/src/gates/ownership_registry.rs.
-
-Assertions:
-
-- docs/CRATE_OWNERSHIP.toml declares schema_version 2 and no `planned` table.
-- Every [[crate]] row declares package, path, owner, layer and responsibility, and no removed allowed_dependencies field.
-- Every [[crate.dependency]] declares package, purpose, features, conditions, kinds, optional, default_features, boundary and seam, with boundary public or private and kinds drawn from normal and build.
-- No row duplicates a package, a path or a dependency package.
-- The registry path set equals workspace.members and the package set equals the workspace packages.
-- Each package's registry path matches its manifest location.
-- Each crate's declared internal dependency set equals the set Cargo resolves, and every declared feature set, target condition set, kind set, optional flag and default-features flag matches Cargo exactly.
-- Every dependency's declared seam equals the owner of the destination crate.
-- docs/CRATE_GRAPH.md and docs/OWNERSHIP.md match the content generated from the registry.
-
-Exits nonzero on:
-
-- any registry schema or completeness failure
-- path or package set mismatch
-- dependency metadata drift
-- a wrong seam
-- a stale generated document
-
-Findings:
-
-- `--check` fails on every tree today, because it reads two generated Markdown documents that no longer exist. Its 30-odd registry assertions are the strongest manifest contract in the repository and none of them can pass while that read fails. The gate separates them: the registry assertions run, and the two missing generated documents are two findings with a pinned count.
-- Nothing invokes it. The registry validation runs only through the Rust tree-contract test that shells into it.
-
-### `scripts/crate_readmes.py`
-
-Subject: present: it writes into crate READMEs, and the docs/testing/<crate>.md guides its generated block links are tracked again, 35 of them.
-
-Invoked by: nothing directly; xtask/tests/tree_contracts/crate_readmes.rs shells into it, and all 35 crate READMEs name it as their generator.
-
-Gate: xtask/src/gates/doc_contract.rs, which regenerates the crate-contract block under ctx.write.
-
-Assertions:
-
-- The ownership registry validates first, through crate_ownership.validate.
-- docs/CRATE_GUIDES.toml declares schema_version 1 and defines profile and package tables.
-- No package override names a crate the registry does not declare.
-- No error profile names a layer no crate occupies.
-- Every layer a crate occupies has an error profile.
-- Every package override is a table.
-- Every crate manifest declares a [package] table with a version, and a [features] table whose default is a string array.
-- Every [[example]] row declares a name and a string-array required-features.
-- Every crate's error_behavior text is non-empty.
-- A release_status override is non-empty and uses only release-train version placeholders.
-- release/release-train.toml declares [versions] including versions.vyre.
-- No generated README contract contains a retired 0.4.x release claim.
-- Every crate README exists and its generated crate-contract block matches the generated content.
-- No README carries unbalanced or duplicate generated-contract markers, and none exceeds 2 MiB.
-
-Exits nonzero on:
-
-- a registry failure
-- a guide-metadata failure
-- an orphaned profile or unknown override
-- a manifest without a version or a malformed features table
-- a retired 0.4.x claim
-- a missing or stale README contract block
-
-Findings:
-
-- Every generated block links docs/testing/<crate>.md for testing commands. All 31 of those guides were deleted at b1ed746d1c, so 31 crate READMEs point a reader at nothing. That is a live defect in tracked files, and the gate reports one finding per dangling guide link.
-- It imports ContractError, load_registry, read_toml, validate and workspace_state from crate_ownership, so the registry contract and the README generator are one dependency chain. Both land in the same gate pair.
-
-### `scripts/docs.sh`
-
-Subject: present.
-
-Invoked by: docs-ci.yml.
-
-Gate: xtask/src/gates/rustdoc.rs.
-
-Assertions:
-
-- `cargo doc --no-deps --keep-going` succeeds, for the whole workspace or for the packages a diff touched.
-
-Exits nonzero on:
-
-- any rustdoc failure
-
-Findings:
-
-- `--changed-only` exits 0 when it finds no changed files and when it can resolve no affected package, so a run that documents nothing reports the same success as a run that documents everything. Under the contract the gate documents the workspace and reports what it built as a note.
 
 ### `scripts/final-launch.sh`
 
@@ -546,30 +263,6 @@ Exits nonzero on:
 Findings:
 
 - Nothing remains open.
-
-### `scripts/lib/check_deep_bench_coverage.py`
-
-Subject: present.
-
-Invoked by: check_deep_bench_coverage.sh from gates.yml.
-
-Gate: xtask/src/gates/bench_contract.rs.
-
-Assertions:
-
-- Each of five measured dimensions names a registered vyre-bench case id.
-- vyre-driver-cuda/tests/module_cache_contracts.rs exists and defines repeated_dispatch_reuses_loaded_cuda_module.
-- Every `--case <id>` reference in a tracked .yml/.yaml/.sh/.json/.toml/.md file names a registered case.
-- The vyre-bench registry lists at least one case and every entry carries an id.
-
-Exits nonzero on:
-
-- bench list failure
-- non-JSON registry
-- empty registry
-- missing representative case
-- missing cache contract file or test name
-- a case id passed to the runner that the registry does not contain
 
 ### `scripts/lib/check_feature_msrv.py`
 
@@ -728,28 +421,6 @@ Findings:
 
 - Nothing remains open.
 
-### `scripts/public_api_snapshot_inventory.py`
-
-Subject: present.
-
-Invoked by: check_public_api_snapshot.sh, semver-checks.yml.
-
-Gate: xtask/src/gates/public_api.rs, which derives the same roster from the manifests it already walks.
-
-Assertions:
-
-- workspace.members is an explicit string array.
-- Every member manifest is readable and declares a non-empty package.name.
-- Every package.publish value is true, false, an empty array or an array of registry strings.
-- Prints publishable members as directory:package, sorted by package name.
-
-Exits nonzero on:
-
-- wrong argument count
-- unreadable manifest
-- missing [package] or name
-- unsupported publish value
-
 ### `scripts/publish-release.sh`
 
 Subject: present.
@@ -832,44 +503,6 @@ Findings:
 
 - A shard index outside the shard count used to select nothing and exit 0. The four assertions that close that are the valuable part and are preserved as findings.
 
-### `scripts/testing_guides.py`
-
-Subject: present: docs/CRATE_OWNERSHIP.toml, docs/testing/TESTING.toml, every crate manifest and all 35 docs/testing/*.md guides are tracked.
-
-Invoked by: nothing directly; xtask/tests/tree_contracts/testing_guides.rs and docs_manifest_completeness.rs shell into it, and docs/DOCS.toml names it as the generator of every testing guide.
-
-Gate: xtask/src/gates/doc_contract.rs, which regenerates the guides under ctx.write; xtask/src/gates/manifest_contract.rs owns the registry-to-members equality and the Cargo target enumeration.
-
-Assertions:
-
-- The ownership registry path set equals workspace.members.
-- Every [[crate]] row declares a non-empty package, path, owner, layer and responsibility.
-- docs/testing/TESTING.toml declares schema_version 1 and defines [defaults], [profile] and [package] tables.
-- No package override names a crate the registry does not declare.
-- No profile names a layer no crate occupies.
-- Every layer a crate occupies has a profile.
-- Every crate manifest's package.name equals the registry package.
-- Every crate's merged metadata declares non-empty hardware, expected_skips and failure_behavior, string arrays test_classes and evidence_outputs, and a string-array commands.
-- Every explicit Cargo target row is a table with a non-empty name, a string path and a string-array required-features.
-- No two crates generate the same guide filename.
-- docs/testing/ contains no guide that no workspace member owns.
-- Every guide exists and matches the generated content, including the full Cargo target table for the crate.
-
-Exits nonzero on:
-
-- a registry or member mismatch
-- a metadata schema failure
-- an orphan profile or unknown override
-- a package-name mismatch
-- a guide filename collision
-- a non-member guide in the directory
-- a missing or stale guide
-
-Findings:
-
-- The extras assertion at line 397 globs docs/testing/*.md and reports guides no member owns. The directory is empty, so that assertion is now vacuous and stays vacuous until the guides come back.
-- The stale assertion is the opposite: every one of the 31 expected guides is missing, so --check fails with 31 names. Both assertions survive in the gate, and the missing guides are the pinned findings.
-
 ### `scripts/wait-crates-index.sh`
 
 Subject: present.
@@ -940,14 +573,14 @@ The `findings` column is the count with the injection applied, given the pin in
 | `readback-ring` | In `vyre-driver-wgpu/src/engine/record_and_readback/mod.rs`, rename `.arm_ticket(` to `.arm(` at its definition and its call sites. | 0 to 1 |
 | `readback-ring` | In `vyre-driver-wgpu/src/lib.rs`, replace `ReadbackRingSet::new()` with `ReadbackRingSet::default()`. | 0 to 1 |
 | `program-wire-fields` | Add `pub scratch_hint: u32,` to `Program` in `vyre-foundation/src/ir_inner/model/program/definition.rs`. | 0 to 1 |
-| `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire/mod.rs` and `decode/from_wire.rs`. | 0 to 1 |
+| `program-wire-fields` | Delete every mention of `workgroup_size` from `vyre-foundation/src/serial/wire/encode/to_wire/mod.rs` and `vyre-foundation/src/serial/wire/decode/from_wire/mod.rs`. | 0 to 1 |
 | `program-wire-fields` | Rename `pub struct Program` to `pub struct ProgramInner`. | gate errors, which is the intended outcome: the declaration is located, not named, so losing it is unmeasurable rather than clean |
-| `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr/mod.rs`. | 1 to 2 |
+| `frozen-contracts` | Add a method to `pub trait ExprVisitor` in `vyre-foundation/src/visit/expr_visitor/mod.rs`. | 1 to 2 |
 | `frozen-contracts` | Delete `docs/frozen-traits/MutationClass.txt`. | 1 to 2 |
 | `frozen-contracts` | Reindent the body of `pub enum AlgebraicLaw` by four spaces. | stays 1; indentation is not part of the contract |
 | `file-size` | Append 200 blank lines to `vyre-foundation/src/optimizer/fact_cache/mod.rs` (measured 570, cap 599). | 75 to 76 |
 | `file-size` | Append 60 lines to `vyre-libs/src/decode/inflate.rs` (measured 554, cap 582). | 75 to 76 |
-| `file-size` | Add a row to the audit ceilings naming `vyre-does-not-exist/src/lib.rs`. | 75 to 76 |
+| `file-size` | Add a row to the audit ceilings naming vyre-does-not-exist/src/lib.rs, a path the tree does not hold. | 75 to 76 |
 | `gpu-loudness` | Add `#[cfg(not(feature = "gpu"))]` above a test in `vyre-driver-wgpu/tests/` with no loud abort within ten lines above or twenty below. | 2 to 3 |
 | `gpu-loudness` | Add `if adapter.is_err() { return; }` to a test body. | 2 to 3 |
 | `gpu-loudness` | Add `Backend::acquire_or_panic();` five lines below an existing finding site in `conform/vyre-conform/tests/cert_artifact/prove_failure_contracts.rs`. | 2 to 1, which is the allowance working rather than a failure |
@@ -973,7 +606,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `doc-claims` | Delete the `test` key from one claim. | 0 to 1, reported as an incomplete row rather than as a missing test |
 | `hot-path-owned-dispatch` | In `vyre-driver/src/backend/compiled_pipeline.rs`, make `dispatch` the required method and give `dispatch_borrowed` a default that copies each row with `to_vec`. | 0 to 2, one finding for the requirement and one for the copy it forces |
 | `hot-path-inventory` | In `vyre-libs/src/operation_catalog.rs`, serve `convergence_contract` by walking `inventory::iter` instead of probing the frozen index. | 0 to 1, quoting the statement that scans |
-| `hot-path-nested-rows` | In `vyre-libs/src/parsing/c/preprocess/gpu_pipeline/dispatch.rs`, delete the `dispatch_borrowed_into` declaration from `ProgramOracle`. | 0 to 1, naming the returning method that is then the only shape offered |
+| `hot-path-nested-rows` | In `vyre-driver/src/backend/compiled_pipeline.rs`, delete the `dispatch_borrowed_into` declaration from the compiled-pipeline trait. | 0 to 1, naming the returning method that is then the only shape offered |
 | `hot-path-nested-rows` | In `vyre-driver/src/backend/vyre_backend.rs`, replace the slot-preserving replacement in `dispatch_borrowed_into` with `*outputs = self.dispatch_borrowed(program, inputs, config)?;`. | 0 to 1, naming the slot the default replaces |
 | `hot-path-unbounded-read` | Add `fs::read_to_string(` to a file under `vyre-driver/src` outside the reviewed cache modules. | 1 to 3 |
 | `lint-unsafe-budget` | Add `#![allow(unsafe_code)]` to a crate root not in the reviewed budget. | 0 to 1 |

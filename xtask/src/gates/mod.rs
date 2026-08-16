@@ -12,6 +12,8 @@ pub mod architecture_contract;
 pub mod bench;
 pub mod check_tier_deps;
 pub mod ci_contract;
+pub mod crate_readmes;
+pub mod crate_registry;
 pub mod dedup_report;
 pub mod dep_drift;
 pub mod dispatch_surface;
@@ -26,6 +28,7 @@ pub mod finding_capability;
 #[cfg(test)]
 pub mod fixture_checkout;
 pub mod frozen_contract;
+pub mod gate_canon;
 pub mod gpu_loudness;
 pub mod hot_path;
 pub mod hot_path_scan;
@@ -50,6 +53,7 @@ pub mod scan;
 pub mod shader_source;
 pub mod source_reachability;
 pub mod sweep;
+pub mod testing_guides;
 pub mod unification;
 pub mod use_paths;
 pub mod workspace_build;
@@ -69,6 +73,8 @@ pub static GATES: &[&dyn Gate] = &[
     &check_tier_deps::CheckTierDeps,
     &ci_contract::CiMatrix,
     &ci_contract::CiRequired,
+    &crate_readmes::CrateReadmes,
+    &crate_registry::CrateOwnership,
     &dep_drift::DepDrift,
     &dispatch_surface::NestedRows,
     &dispatch_surface::OwnedDispatch,
@@ -85,6 +91,7 @@ pub static GATES: &[&dyn Gate] = &[
     &frozen_contract::FrozenContracts,
     &frozen_contract::ProgramWireFields,
     &frozen_contract::ReadbackRing,
+    &gate_canon::GateCanon,
     &gpu_loudness::GpuLoudness,
     &hot_path::BlockingWait,
     &hot_path::ReserveArgument,
@@ -117,6 +124,7 @@ pub static GATES: &[&dyn Gate] = &[
     &source_reachability::IncludeIsNotAModule,
     &source_reachability::SourceParses,
     &source_reachability::SourceReachability,
+    &testing_guides::TestingGuides,
     &unification::Unification,
     &workspace_build::WorkspaceCheck,
     &workspace_build::WorkspaceClippy,

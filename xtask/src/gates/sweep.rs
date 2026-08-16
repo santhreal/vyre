@@ -23,12 +23,11 @@
 //! instead of in this file.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process;
 
-use serde::Deserialize;
-
 use crate::gate::{self, GateCtx, GateError, Report};
+use crate::gates::gate_canon::{self, Baseline, baseline_path, load_baselines};
 use crate::subcommands::{self, SUBSETS};
 
 /// The name the dispatcher answers to with this runner.
@@ -39,46 +38,17 @@ use crate::subcommands::{self, SUBSETS};
 /// the gate half of the table and reported the runner itself as unregistered.
 pub const RUNNER: &str = "gates";
 
-/// Pinned finding count for one gate.
+/// Read the pinned rows, or exit naming what could not be read.
 ///
-/// `deny_unknown_fields` is load-bearing. This file used to carry `status` and
-/// `owner` per row, which together let a failing gate stay legal indefinitely
-/// behind a prose excuse; three gates sat red that way for a fortnight while
-/// the sweep reported that every gate held its baseline. A row that still
-/// carries either field, or the `output_lines` this file pinned before findings
-/// were countable, now fails to load instead of being ignored.
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Baseline {
-    name: String,
-    findings: usize,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct BaselineFile {
-    #[serde(default)]
-    gate: Vec<Baseline>,
-}
-
-fn baseline_path(root: &Path) -> PathBuf {
-    root.join("xtask/gate-baselines.toml")
-}
-
-fn load_baselines(root: &Path) -> Vec<Baseline> {
-    let path = baseline_path(root);
-    let text = fs::read_to_string(&path).unwrap_or_else(|error| {
-        eprintln!(
-            "Fix: cannot read {}: {error}. Regenerate it with `xtask gates --write-baseline`.",
-            path.display()
-        );
+/// The rows and every rule about them belong to `gate_canon`, which is the gate
+/// a caller can ask for by name. The sweep needs them before it runs anything,
+/// because pairing a gate with its pin is what the sweep does, so it reads them
+/// through that owner rather than parsing the file a second time here.
+fn baselines_or_exit(root: &Path) -> Vec<Baseline> {
+    load_baselines(root).unwrap_or_else(|error| {
+        eprintln!("{error}");
         process::exit(1);
-    });
-    let parsed: BaselineFile = toml::from_str(&text).unwrap_or_else(|error| {
-        eprintln!("Fix: cannot parse {}: {error}", path.display());
-        process::exit(1);
-    });
-    parsed.gate
+    })
 }
 
 /// A glob a workflow may name, because a glob names a set rather than a file.
@@ -227,31 +197,6 @@ fn script_failures(root: &Path, scripts: &[(String, usize, String)]) -> Vec<Stri
     failures
 }
 
-/// Every disagreement between the registry and the baseline file.
-///
-/// Both directions are failures. A gate with no row would run unpinned, so a
-/// new finding in it would pass; a row with no gate is a pin nobody enforces,
-/// which is what a retired gate leaves behind.
-fn baseline_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
-    let mut failures = Vec::new();
-    for name in gate_names {
-        if !baselines.iter().any(|pin| pin.name == *name) {
-            failures.push(format!(
-                "gate `{name}` has no row in xtask/gate-baselines.toml; add one with its present finding count"
-            ));
-        }
-    }
-    for pin in baselines {
-        if !gate_names.iter().any(|name| *name == pin.name) {
-            failures.push(format!(
-                "xtask/gate-baselines.toml pins `{}`, which is not a registered gate; delete the row or register the gate",
-                pin.name
-            ));
-        }
-    }
-    failures
-}
-
 /// Every disagreement between the registry, the subsets and the workflows.
 fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]) -> Vec<String> {
     let mut failures = Vec::new();
@@ -312,7 +257,7 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
 /// script impossible to leave behind.
 fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
     let names = workflow_names(root);
-    let mut failures = baseline_failures(gate_names, baselines);
+    let mut failures = gate_canon::registry_failures(gate_names, baselines);
     failures.extend(workflow_failures(
         gate_names,
         &names.invoked,
@@ -442,7 +387,7 @@ pub fn run(args: &[String]) {
         return;
     }
 
-    let baselines = load_baselines(&root);
+    let baselines = baselines_or_exit(&root);
     let registry = subcommands::registry();
     let gate_names: Vec<&str> = registry.iter().map(|gate| gate.name()).collect();
     let mut failures = wiring_failures(&root, &gate_names, &baselines);
@@ -490,58 +435,6 @@ pub fn run(args: &[String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn pin(name: &str, findings: usize) -> Baseline {
-        Baseline {
-            name: name.to_string(),
-            findings,
-        }
-    }
-
-    /// WHY: this is the defect the whole registry exists to close. A gate
-    /// registered with no baseline row runs unpinned, so a new finding in it
-    /// passes; both injections have to go red, and the clean case has to be
-    /// silent or the failure means nothing.
-    #[test]
-    fn a_registry_and_a_baseline_that_disagree_both_fail() {
-        let names = ["dep-drift", "op-names"];
-        assert_eq!(
-            baseline_failures(&names, &[pin("dep-drift", 0), pin("op-names", 3)]),
-            Vec::<String>::new()
-        );
-
-        let missing_row = baseline_failures(&names, &[pin("dep-drift", 0)]);
-        assert_eq!(missing_row.len(), 1);
-        assert!(missing_row[0].contains("`op-names` has no row"));
-
-        let extra_row = baseline_failures(
-            &names,
-            &[pin("dep-drift", 0), pin("op-names", 3), pin("retired", 9)],
-        );
-        assert_eq!(extra_row.len(), 1);
-        assert!(extra_row[0].contains("pins `retired`"));
-    }
-
-    /// WHY: the baseline row shape is the exemption surface. `status` and
-    /// `owner` are what kept three gates red for a fortnight, and `output_lines`
-    /// is the pin that counted output instead of findings, so a file carrying
-    /// any of them must fail to load rather than be read with the field ignored.
-    #[test]
-    fn a_row_carrying_a_retired_field_fails_to_load() {
-        let good: BaselineFile =
-            toml::from_str("[[gate]]\nname = \"dep-drift\"\nfindings = 0\n").expect("loads");
-        assert_eq!(good.gate.len(), 1);
-        for row in [
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nstatus = \"red\"\n",
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nowner = \"someone\"\n",
-            "[[gate]]\nname = \"dep-drift\"\noutput_lines = 32\n",
-        ] {
-            assert!(
-                toml::from_str::<BaselineFile>(row).is_err(),
-                "a row carrying a retired field must not load: {row}"
-            );
-        }
-    }
 
     /// WHY: a workflow that invokes a name nobody registered runs nothing under
     /// a name that reads as coverage, and a subset nobody runs is a set of gates
