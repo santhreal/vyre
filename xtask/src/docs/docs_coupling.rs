@@ -26,6 +26,12 @@
 //! what a local caller has before committing. A push event has neither a base
 //! ref nor an unclean tree, so it reads an empty diff and rules 1 to 3 answer on
 //! their own.
+//!
+//! A base ref this checkout does not hold, which is what a shallow clone gives a
+//! pull request, is one finding naming the ref and the fetch that fixes it. It is
+//! not a gate that could not run: that reports a whole workflow red with a
+//! message about git, and it is not a silent pass either, because rule 4 would
+//! then be unenforceable in exactly the environment it exists for.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -96,16 +102,26 @@ impl Gate for DocsCoupling {
             )?);
         }
 
-        let changed = changed_paths(&ctx.root, ctx.flag("--base"))?;
-        report.note(format!(
-            "{} authored page(s), {} covers entr(ies), {} changed path(s)",
+        let declared = format!(
+            "{} authored page(s), {} covers entr(ies)",
             pages.len(),
-            pages.iter().map(|page| page.covers.len()).sum::<usize>(),
-            changed.len()
-        ));
-        report
-            .findings
-            .extend(coupling_findings(&pages, &changed, &ctx.root));
+            pages.iter().map(|page| page.covers.len()).sum::<usize>()
+        );
+        match changed_paths(&ctx.root, ctx.flag("--base"))? {
+            Diff::Read(changed) => {
+                report.note(format!("{declared}, {} changed path(s)", changed.len()));
+                report
+                    .findings
+                    .extend(coupling_findings(&pages, &changed, &ctx.root));
+            }
+            Diff::UnreachableBase(reference) => {
+                report.note(declared);
+                report.find(Finding::new(
+                    format!("`{reference}` is not in this checkout, so no diff can be compared against it"),
+                    "fetch the base ref before running this gate: `actions/checkout` with `fetch-depth: 0`, or pass `--base REF` naming a ref this checkout holds",
+                ));
+            }
+        }
         Ok(report)
     }
 }
@@ -434,28 +450,57 @@ fn looks_like_repository_path(
     }
 }
 
+/// What the diff comparison produced.
+enum Diff {
+    /// The comparison ran; these are the paths it touched.
+    Read(BTreeSet<String>),
+    /// The base ref this checkout was told to compare against is not present, so
+    /// rule 4 has nothing to read. A shallow checkout is the usual cause and it
+    /// is an environment fact, not a defect in the tree, so it is reported as one
+    /// actionable finding rather than as a gate that could not run: a crashed
+    /// gate takes a whole workflow red with a message about git.
+    UnreachableBase(String),
+}
+
 /// Every path the diff touches, relative to the checkout root.
 ///
 /// With a base ref the comparison is the merge base with `HEAD`, which is the
 /// set a pull request proposes. Without one it is the index plus the worktree,
 /// which is the set a local caller is about to commit.
-fn changed_paths(root: &Path, base: Option<&str>) -> Result<BTreeSet<String>, GateError> {
+fn changed_paths(root: &Path, base: Option<&str>) -> Result<Diff, GateError> {
     let base = base
         .map(str::to_string)
         .or_else(|| std::env::var("GITHUB_BASE_REF").ok())
         .filter(|reference| !reference.is_empty());
-    let mut paths = BTreeSet::new();
-    match base {
-        Some(reference) => {
-            let range = format!("origin/{reference}...HEAD");
-            paths.extend(diff_names(root, &["diff", "--name-only", &range])?);
-        }
-        None => {
-            paths.extend(diff_names(root, &["diff", "--name-only", "HEAD"])?);
-            paths.extend(diff_names(root, &["diff", "--name-only", "--cached", "HEAD"])?);
-        }
+    let Some(reference) = base else {
+        let mut paths = diff_names(root, &["diff", "--name-only", "HEAD"])?;
+        paths.extend(diff_names(root, &["diff", "--name-only", "--cached", "HEAD"])?);
+        return Ok(Diff::Read(paths));
+    };
+    let remote = format!("origin/{reference}");
+    if !ref_exists(root, &remote) {
+        return Ok(Diff::UnreachableBase(remote));
     }
-    Ok(paths)
+    let range = format!("{remote}...HEAD");
+    Ok(Diff::Read(diff_names(
+        root,
+        &["diff", "--name-only", &range],
+    )?))
+}
+
+/// Whether this checkout holds the named ref.
+///
+/// `rev-parse --verify` is asked rather than inferred from a failing `diff`,
+/// because a diff can fail for reasons a fetch does not fix and the two
+/// answers need different fix lines.
+fn ref_exists(root: &Path, reference: &str) -> bool {
+    Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["rev-parse", "--verify", "--quiet"])
+        .arg(format!("{reference}^{{commit}}"))
+        .output()
+        .is_ok_and(|output| output.status.success())
 }
 
 /// One `git diff` invocation, as a set of paths.
@@ -657,6 +702,24 @@ mod tests {
         assert!(coupling_findings(&pages, &with_both, root).is_empty());
 
         assert!(coupling_findings(&pages, &BTreeSet::new(), root).is_empty());
+    }
+
+    /// WHY: rule 4 needs history, and a shallow checkout is the environment a
+    /// pull request actually runs in. An unreachable base must read as one
+    /// actionable finding: a `GateError` here takes the whole workflow red over
+    /// a fetch depth, and an empty diff would make the rule silently
+    /// unenforceable in the only place it matters.
+    #[test]
+    fn an_unreachable_base_ref_is_a_finding_and_not_a_crash() {
+        let root = std::env::current_dir().expect("Fix: the test runs inside the checkout.");
+        let root = root.ancestors().find(|path| path.join(".git").exists()).unwrap_or(&root);
+        match changed_paths(root, Some("no-such-base-ref-cbb0a1")) {
+            Ok(Diff::UnreachableBase(reference)) => {
+                assert_eq!(reference, "origin/no-such-base-ref-cbb0a1");
+            }
+            other => panic!("Fix: an unreachable base must report itself, got {:?}", other.is_ok()),
+        }
+        assert!(matches!(changed_paths(root, None), Ok(Diff::Read(_))));
     }
 
     /// WHY: an uncovered change must not demand a fragment. Editing a test or a
