@@ -24,7 +24,7 @@ use vyre_test_support::ir_variants::node_operand_samples;
 /// Induction variable of the second loop. Fusion retires it onto [`SURVIVING`].
 const RETIRED: &str = "fixture_j";
 /// Induction variable of the first loop, which fusion keeps.
-const SURVIVING: &str = "fixture_i";
+const SURVIVING: &str = "fixture_k";
 
 /// Two adjacent loops over the same literal range whose buffers are disjoint,
 /// so the only thing that can refuse fusion is the content of `second`.
