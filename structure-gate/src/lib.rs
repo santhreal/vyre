@@ -167,7 +167,9 @@ pub struct Workspace {
     pub registry_submitters: Vec<String>,
     /// Every `use <crate> as _;` found in member sources.
     pub discarding_imports: Vec<DiscardingImport>,
-    /// Every `src/` module file of every member, checkout-relative.
+    /// Crate directories the layout rules judge, checkout-relative.
+    pub crate_roots: Vec<String>,
+    /// Every `src/` module file of every crate root, checkout-relative.
     pub module_files: Vec<String>,
     /// Module paths the committed public-API snapshots publish.
     pub published_modules: Vec<String>,
@@ -183,7 +185,8 @@ pub fn scan(root: &Path) -> Workspace {
     let materializers = scan_materializers(root, &members);
     let registry_submitters = scan_registry_submitters(root, &members);
     let discarding_imports = scan_discarding_imports(root, &members);
-    let module_files = scan_module_files(root, &members);
+    let crate_roots = scan_crate_roots(root);
+    let module_files = scan_module_files(root, &crate_roots);
     let published_modules = scan_published_modules(root);
     Workspace {
         members,
@@ -193,6 +196,7 @@ pub fn scan(root: &Path) -> Workspace {
         materializers,
         registry_submitters,
         discarding_imports,
+        crate_roots,
         module_files,
         published_modules,
     }
@@ -784,22 +788,48 @@ fn source_files(root: &Path, member: &str) -> Vec<PathBuf> {
     if member == SELF_CRATE {
         return Vec::new();
     }
-    member_source_files(root, member)
+    source_tree_files(&root.join(member).join("src"))
 }
 
-/// Every `.rs` file under a member's `src/`, this crate included.
-///
-/// [`source_files`] exempts this crate because its fixtures name other crates'
-/// operations. A rule over file names has no such fixtures, so it judges this
-/// crate's own layout like any other member's.
-fn member_source_files(root: &Path, member: &str) -> Vec<PathBuf> {
-    WalkDir::new(root.join(member).join("src"))
+/// Every `.rs` file under one source tree.
+fn source_tree_files(directory: &Path) -> Vec<PathBuf> {
+    WalkDir::new(directory)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().is_file())
         .map(|entry| entry.into_path())
         .filter(|path| path.extension().is_some_and(|ext| ext == "rs"))
         .collect()
+}
+
+/// Every crate in the checkout that keeps its sources in a `src/` directory.
+///
+/// Read from the tree rather than the workspace roster, because the layout
+/// rules judge tree shape and a crate outside the workspace grows the same
+/// pairs and the same nameless modules: the external extension examples are
+/// separate packages on purpose. A directory earns a place here by declaring
+/// `[package]` and holding a `src/`, so a crate added anywhere in the checkout
+/// is judged without an edit here. This crate is included; [`source_files`]
+/// exempts it only because its registration fixtures name other crates, and a
+/// rule over file names has no such fixtures.
+fn crate_source_roots(root: &Path) -> Vec<PathBuf> {
+    WalkDir::new(root)
+        .into_iter()
+        .filter_entry(|entry| !matches!(entry.file_name().to_str(), Some(".git" | "target")))
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_name() == "Cargo.toml")
+        .filter(|entry| declares_package(entry.path()))
+        .filter_map(|entry| entry.path().parent().map(Path::to_path_buf))
+        .filter(|directory| directory.join("src").is_dir())
+        .collect()
+}
+
+/// True when a manifest declares a package rather than only a workspace.
+fn declares_package(manifest: &Path) -> bool {
+    read_source_bounded(manifest)
+        .ok()
+        .and_then(|text| toml::from_str::<toml::Table>(&text).ok())
+        .is_some_and(|table| table.contains_key("package"))
 }
 
 fn relative(root: &Path, path: &Path) -> String {
@@ -1400,11 +1430,22 @@ fn scan_frontend_paths(root: &Path, members: &[String]) -> Vec<(String, String)>
     paths
 }
 
-/// Every `src/` module file in the workspace, checkout-relative.
-fn scan_module_files(root: &Path, members: &[String]) -> Vec<String> {
+/// Every crate directory the layout rules judge, checkout-relative.
+fn scan_crate_roots(root: &Path) -> Vec<String> {
+    let mut roots: Vec<String> = crate_source_roots(root)
+        .iter()
+        .map(|directory| relative(root, directory))
+        .collect();
+    roots.sort();
+    roots.dedup();
+    roots
+}
+
+/// Every `src/` module file of every crate root, checkout-relative.
+fn scan_module_files(root: &Path, crate_roots: &[String]) -> Vec<String> {
     let mut files = Vec::new();
-    for member in members {
-        for path in member_source_files(root, member) {
+    for crate_root in crate_roots {
+        for path in source_tree_files(&root.join(crate_root).join("src")) {
             files.push(relative(root, &path));
         }
     }
@@ -2445,6 +2486,7 @@ inventory::submit! {
 
         assert_eq!(named, vec!["vyre_driver_metal", "vyre_libs"]);
     }
+
 
     #[test]
     fn a_submission_inside_a_comment_does_not_make_a_crate_a_submitter() {

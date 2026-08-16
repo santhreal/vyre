@@ -215,26 +215,43 @@ fn no_module_name_states_no_contract() {
     );
 }
 
-/// The module-file scan and the published-module scan both find their input.
+/// Every crate in the checkout is judged, and the published-module scan reads.
 ///
-/// Guards the two rules above: an empty file list accepts every pair in the
-/// tree, and an empty published list would instead report every published
-/// module that carries a banned name, so both directions are checked.
+/// Guards the two rules above from both directions: an empty file list accepts
+/// every pair in the tree, and an empty published list instead reports every
+/// published module that carries a banned name. The crate roster comes from the
+/// scan itself rather than a list written here, so a crate added anywhere in
+/// the checkout has to appear in the judged file list or this fails.
 #[test]
-fn the_module_layout_scan_is_not_vacuous() {
+fn every_crate_in_the_checkout_is_judged() {
     let workspace = workspace();
 
     assert!(
-        workspace.module_files.len() > 1_000,
-        "expected the workspace to hold far more than {} src/ module files; the layout rules \
-         above are passing vacuously",
-        workspace.module_files.len()
+        workspace.crate_roots.len() > 20,
+        "expected far more than {} crate root(s) in the checkout; the layout rules above are \
+         passing vacuously. Found: {:?}",
+        workspace.crate_roots.len(),
+        workspace.crate_roots
     );
+    for crate_root in &workspace.crate_roots {
+        let prefix = format!("{crate_root}/src/");
+        assert!(
+            workspace
+                .module_files
+                .iter()
+                .any(|file| file.starts_with(&prefix)),
+            "`{crate_root}` declares a package and holds a src/ directory, but the module-file \
+             scan read nothing under it, so its layout is unjudged"
+        );
+    }
     assert!(
-        workspace.module_files.iter().any(|file| file
-            == "structure-gate/src/lib.rs"),
-        "the module-file scan skipped structure-gate's own sources, so this crate's layout is \
-         unjudged"
+        workspace
+            .crate_roots
+            .iter()
+            .any(|crate_root| !workspace.members.contains(crate_root)),
+        "every judged crate root is a workspace member, so a crate outside the workspace would \
+         grow pairs unjudged. Roots: {:?}",
+        workspace.crate_roots
     );
     assert!(
         workspace
