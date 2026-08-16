@@ -2,9 +2,10 @@
 
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    attach_target, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileError,
-    FusionGroupId, TargetCompileError, TargetCompiler, TargetModuleBundle, TargetModuleImage,
-    TargetPayload, TargetPayloadFormat, TargetProfile,
+    attach_target, compile_selected_modules, Artifact, ArtifactEnvelope, ArtifactNodeId,
+    ArtifactValueId, CompileError, EmittedTargetModule, FusionGroupId, TargetCompileError,
+    TargetCompiler, TargetModuleBundle, TargetModuleImage, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 
 #[path = "../../tests/support/artifact_fixtures.rs"]
@@ -248,4 +249,182 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
             "unexpected admission error: {error}"
         );
     }
+}
+/// WHY: fused multi-node modules where individual node programs declare buffers at colliding local binding slots (e.g. both slot 0) must resolve descriptor bindings by exact buffer name ownership, never cross-node slot index collisions.
+#[test]
+fn fused_multi_node_binding_resolution_uses_exact_name_ownership_over_colliding_slots() {
+    let mut graph = vyre_foundation::ir::ProgramGraph::new();
+    let val_a = graph
+        .add_external_value(
+            "a",
+            vyre_foundation::ir::ValueContract {
+                dtype: vyre_foundation::ir::DataType::U32,
+                shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+            },
+        )
+        .unwrap();
+    let val_b = graph
+        .add_external_value(
+            "b",
+            vyre_foundation::ir::ValueContract {
+                dtype: vyre_foundation::ir::DataType::U32,
+                shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+            },
+        )
+        .unwrap();
+
+    let prog0 = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::storage(
+                "node0_in",
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "node0_out",
+                1,
+                vyre_foundation::ir::BufferAccess::WriteOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+        ],
+        [32, 1, 1],
+        vec![vyre_foundation::ir::Node::store(
+            "node0_out",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::load("node0_in", vyre_foundation::ir::Expr::u32(0)),
+        )],
+    );
+
+    let prog1 = Program::wrapped(
+        vec![
+            vyre_foundation::ir::BufferDecl::storage(
+                "node1_in",
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+            vyre_foundation::ir::BufferDecl::storage(
+                "node1_out",
+                1,
+                vyre_foundation::ir::BufferAccess::WriteOnly,
+                vyre_foundation::ir::DataType::U32,
+            ),
+        ],
+        [32, 1, 1],
+        vec![vyre_foundation::ir::Node::store(
+            "node1_out",
+            vyre_foundation::ir::Expr::u32(0),
+            vyre_foundation::ir::Expr::load("node1_in", vyre_foundation::ir::Expr::u32(0)),
+        )],
+    );
+
+    let _ = graph
+        .add_node(
+            "node0",
+            prog0,
+            vec![vyre_foundation::ir::GraphInput {
+                buffer: "node0_in".into(),
+                value: val_a,
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                },
+            }],
+            vec![vyre_foundation::ir::GraphOutput {
+                buffer: "node0_out".into(),
+                name: "out0".into(),
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::WriteOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+
+    let _ = graph
+        .add_node(
+            "node1",
+            prog1,
+            vec![vyre_foundation::ir::GraphInput {
+                buffer: "node1_in".into(),
+                value: val_b,
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::ReadOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Invocation,
+                },
+            }],
+            vec![vyre_foundation::ir::GraphOutput {
+                buffer: "node1_out".into(),
+                name: "out1".into(),
+                contract: vyre_foundation::ir::ValueContract {
+                    dtype: vyre_foundation::ir::DataType::U32,
+                    shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+                    access: vyre_foundation::ir::BufferAccess::WriteOnly,
+                    lifetime: vyre_foundation::ir::ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+
+    let req = vyre_megakernel::CompileRequest::new(
+        graph,
+        vyre_megakernel::ExternalFacts::new(
+            vyre_megakernel::Digest([0; 32]),
+            std::collections::BTreeMap::new(),
+        ),
+        vyre_megakernel::DeviceFacts::unknown(),
+        vyre_megakernel::SearchBudget::new(100),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = vyre_megakernel::compile(&req).expect("compilation must succeed");
+
+    let mut captured_bindings = Vec::new();
+    let _payload = compile_selected_modules(
+        &artifact,
+        format(1),
+        profile(1),
+        |selected, _prof| {
+            captured_bindings = selected.canonical_bindings.clone();
+            Ok(EmittedTargetModule {
+                entry_point: "fused_entry".into(),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: selected.canonical_bindings.clone(),
+                bytes: vec![1, 2, 3],
+            })
+        },
+    )
+    .expect("selected module compilation must succeed");
+
+    let node0_in_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(val_a.0));
+    let node1_in_binding = captured_bindings
+        .iter()
+        .find(|b| b.resource == ArtifactValueId(val_b.0));
+
+    assert!(node0_in_binding.is_some(), "node0_in must be bound to val_a");
+    assert!(node1_in_binding.is_some(), "node1_in must be bound to val_b");
+    assert_ne!(
+        node0_in_binding.unwrap().slot,
+        node1_in_binding.unwrap().slot,
+        "descriptor slots in fused kernel must be distinct"
+    );
 }

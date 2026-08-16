@@ -781,3 +781,71 @@ fn artifact_body_tampering_is_detected() {
     let error = Artifact::from_bytes(&bytes).expect_err("tampered body must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC016_DIGEST_MISMATCH");
 }
+/// WHY: entry ABI input and output records must preserve Program buffer order even when graph ports are declared in a different order.
+#[test]
+fn entry_abi_inputs_and_outputs_preserve_program_buffer_order_despite_port_reordering() {
+    let mut graph = ProgramGraph::new();
+    let val_x = graph
+        .add_external_value("x", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation))
+        .unwrap();
+    let val_y = graph
+        .add_external_value("y", contract(BufferAccess::ReadOnly, ValueLifetime::Invocation))
+        .unwrap();
+
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("first", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("second", 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(
+                Expr::load("first", Expr::u32(0)),
+                Expr::load("second", Expr::u32(0)),
+            ),
+        )],
+    );
+
+    graph
+        .add_node(
+            "node_rev",
+            program,
+            vec![
+                GraphInput {
+                    buffer: "second".into(),
+                    value: val_y,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+                GraphInput {
+                    buffer: "first".into(),
+                    value: val_x,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "res".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+    let entry = artifact.abi().entries.first().expect("entry must exist");
+
+    assert_eq!(entry.inputs, vec![ArtifactValueId(0), ArtifactValueId(1)]);
+}

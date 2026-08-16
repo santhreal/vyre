@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
-use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
+use vyre_foundation::{
+    execution_plan::fusion::merge_programs_shared,
+    ir::{BufferAccess, Program},
+};
 use vyre_lower::{KernelDescriptor, MemoryClass};
 
 use crate::{
@@ -361,14 +364,68 @@ fn selected_resource_bindings(
             ) && slot.name != vyre_lower::TRAP_SIDECAR_NAME
         })
         .map(|slot| {
-            let resource = canonical_by_name
-                .get(slot.name.as_str())
-                .copied()
+            let mut resolved = None;
+            for (node_id, program) in module.nodes.iter().zip(&module.programs) {
+                let Some(entry) = artifact.abi().entries.iter().find(|e| e.node == *node_id) else {
+                    continue;
+                };
+                let mut in_idx = 0usize;
+                let mut out_idx = 0usize;
+                for buffer in program.buffers() {
+                    let is_in = matches!(
+                        buffer.access(),
+                        BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
+                    );
+                    let is_out = matches!(
+                        buffer.access(),
+                        BufferAccess::WriteOnly | BufferAccess::ReadWrite
+                    ) || buffer.is_output() || buffer.pipeline_live_out;
+
+                    let cur_in = if is_in {
+                        let idx = in_idx;
+                        in_idx += 1;
+                        entry.inputs.get(idx).copied()
+                    } else {
+                        None
+                    };
+                    let cur_out = if is_out {
+                        let idx = out_idx;
+                        out_idx += 1;
+                        entry.outputs.get(idx).copied()
+                    } else {
+                        None
+                    };
+
+                    if buffer.name() == slot.name {
+                        match slot.visibility {
+                            vyre_lower::BindingVisibility::WriteOnly
+                            | vyre_lower::BindingVisibility::ReadWrite => {
+                                if let Some(val) = cur_out {
+                                    resolved = Some(val);
+                                    break;
+                                }
+                            }
+                            vyre_lower::BindingVisibility::ReadOnly => {
+                                if let Some(val) = cur_in {
+                                    resolved = Some(val);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if resolved.is_some() {
+                    break;
+                }
+            }
+
+            let resource = resolved
+                .or_else(|| canonical_by_name.get(slot.name.as_str()).copied())
                 .ok_or_else(|| {
                     TargetCompileError::InvalidArtifact(format!(
-                    "fusion group {} descriptor binding `{}` has no canonical artifact resource",
-                    module.group.0, slot.name
-                ))
+                        "fusion group {} descriptor binding `{}` has no canonical artifact resource",
+                        module.group.0, slot.name
+                    ))
                 })?;
             Ok(TargetResourceBinding {
                 resource,
