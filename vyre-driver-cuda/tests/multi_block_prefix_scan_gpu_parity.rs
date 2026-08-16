@@ -4,9 +4,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_primitives::reduce::multi_block_prefix_scan::{
     cpu_ref as mbps_cpu, multi_block_prefix_scan_sum_u32, pass_c_broadcast_offsets, BLOCK_LANES,

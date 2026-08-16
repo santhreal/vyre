@@ -17,10 +17,10 @@
 #![forbid(unsafe_code)]
 
 use structure_gate::{
-    category_home_failures, frontend_owner_failures, generic_module_name_failures,
-    operation_identity_failures, registration_owner_failures, registry_link_failures,
-    roster_failures, scan, sibling_module_failures, substrate_home_failures, workspace_root,
-    Workspace,
+    category_home_failures, directory_stutter_failures, frontend_owner_failures,
+    generic_module_name_failures, numbered_sibling_failures, operation_identity_failures,
+    registration_owner_failures, registry_link_failures, roster_failures, scan,
+    sibling_module_failures, substrate_home_failures, workspace_root, Workspace,
 };
 
 fn workspace() -> Workspace {
@@ -195,18 +195,28 @@ fn no_module_file_sits_beside_its_own_directory() {
     );
 }
 
-/// Every module name states what the module holds.
+/// Every file name states what the file holds.
 ///
-/// WHY: `helpers`, `common`, `core`, `types`, `misc`, `utils` and any `_ext`
-/// suffix answer no question a reader has, so the module becomes wherever an
-/// item went when nobody decided where it belonged, and it grows without
-/// limit. A module the committed public-API snapshot publishes is exempt while
-/// it stays published, because renaming it renames a path consumers import.
+/// WHY: `helpers`, `common`, `core`, `types`, `misc`, `support`, `utils` and the
+/// same words as a suffix answer no question a reader has, so the file becomes
+/// wherever an item went when nobody decided where it belonged, and it grows
+/// without limit. Judged over `tests/`, `benches/` and `examples/` as well as
+/// `src/`, because the prohibition was enforced against modules only and the
+/// population moved into test-adjacent files: 15 of the last 16 offenders were
+/// `tests/common/mod.rs` or `tests/support/mod.rs`. A module the committed
+/// public-API snapshot publishes is exempt while it stays published, because
+/// renaming it renames a path consumers import.
+///
+/// Red on this branch by 8 files: the C frontend's `sparse_impl`,
+/// `build_declaration_kind_inner` and the `c_ast_gpu_parity_support` and
+/// `c_token_support` test trees close by deletion with the frontend rather than
+/// by rename, and teaching the rule to skip them would name paths that stop
+/// existing.
 #[test]
-fn no_module_name_states_no_contract() {
+fn no_file_name_states_no_contract() {
     let workspace = workspace();
     let failures = generic_module_name_failures(
-        &workspace.module_files,
+        &workspace.source_files,
         &workspace.crate_roots,
         &workspace.published_modules,
     );
@@ -215,6 +225,44 @@ fn no_module_name_states_no_contract() {
         failures.is_empty(),
         "{}",
         report("generic-module-name", &failures)
+    );
+}
+
+/// No sibling files are told apart by a number.
+///
+/// WHY: ten files called `nodes_00` through `nodes_09` convey nothing about
+/// which one classifies a given node, so answering that question means opening
+/// all ten and a new case lands in whichever file was already open. A number
+/// inside a name that means something, `crc32` or `flash_attention_2`, has no
+/// numbered sibling, which is exactly what this rule keys on.
+///
+/// Red on this branch by the ten `vyre-libs/src/parsing/c/parse/vast/classify`
+/// files, which the C frontend removal deletes.
+#[test]
+fn no_siblings_are_told_apart_by_a_number() {
+    let failures = numbered_sibling_failures(&workspace().source_files);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("numbered-sibling", &failures)
+    );
+}
+
+/// No file repeats the directory that holds it.
+///
+/// WHY: `fma_f32/fma_f32.rs` states its contents once and its location twice,
+/// and a reader who opens the directory cannot tell whether the file is the
+/// module or one part of it. The module is the directory, so that file is
+/// `mod.rs`.
+#[test]
+fn no_file_repeats_the_directory_holding_it() {
+    let failures = directory_stutter_failures(&workspace().source_files);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("directory-stutter", &failures)
     );
 }
 
@@ -253,6 +301,22 @@ fn every_crate_in_the_checkout_is_judged() {
              public-API exemption would never match it",
             crate_root.directory,
             crate_root.ident
+        );
+    }
+    assert!(
+        workspace.source_files.len() > workspace.module_files.len(),
+        "the name rules read the same {} file(s) as the src-only scan, so every fixture module in \
+         the checkout is unjudged",
+        workspace.source_files.len()
+    );
+    for tree in ["tests", "benches", "examples"] {
+        assert!(
+            workspace
+                .source_files
+                .iter()
+                .any(|file| file.contains(&format!("/{tree}/"))),
+            "no file under any crate's {tree}/ tree reached the name rules, so that whole tree is \
+             unjudged"
         );
     }
     assert!(

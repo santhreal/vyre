@@ -11,9 +11,9 @@
 //! `reference_oracle` flag.
 
 #[macro_use]
-mod common;
+mod fixture_backend;
 
-use common::FixtureBackend;
+use fixture_backend::FixtureBackend;
 use vyre_driver::acquire_preferred_dispatch_backend;
 use vyre_driver::{BackendError, VyreBackend};
 

@@ -1,5 +1,5 @@
 //! End-to-end parity for `data::reduction_metrics::*_via` through the shared faithful
-//! [`vyre_libs::test_support::ReferenceEvalDispatcher`], across every reduction the consumer exposes
+//! [`vyre_libs::test_parity_oracles::ReferenceEvalDispatcher`], across every reduction the consumer exposes
 //! (sum / max / min / count-non-zero / any / all scalar reduces, per-segment CSR sum, and the
 //! atomic-scatter histogram).
 //!
@@ -21,7 +21,7 @@ use vyre_libs::encoding::reduction_metrics::{
     reference_segment_reduce_sum, segment_reduce_sum_via,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

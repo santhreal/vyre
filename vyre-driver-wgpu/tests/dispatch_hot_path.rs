@@ -12,8 +12,8 @@
 //! - Even on the compiled-pipeline fast path execution remains GPU-consistent,
 //!   never silently falling back to CPU
 
-mod common;
-use common::{acquire_live_backend as live_backend, add_one_program};
+mod harness;
+use harness::{acquire_live_backend as live_backend, add_one_program};
 
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};

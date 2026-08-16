@@ -114,7 +114,7 @@ const WAIVERS: &[Waiver] = &[
         reason: "driver test walk, converted with the driver walker lane",
     },
     Waiver {
-        path: "vyre-libs/src/nn/linear/inner/linear_4bit/affine_grouped.rs",
+        path: "vyre-libs/src/nn/linear/layer/linear_4bit/affine_grouped.rs",
         owner: "Backends",
         reason: "domain op builder walk, owned by the vyre-libs lane",
     },
@@ -259,7 +259,7 @@ const WAIVERS: &[Waiver] = &[
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
-        path: "vyre-foundation/tests/contract_cases/autodiff_transform_contracts_support.rs",
+        path: "vyre-foundation/tests/contract_cases/autodiff_transform_contracts_programs.rs",
         owner: "CompilerCore",
         reason: "test oracle deliberately independent of the production walker it audits",
     },

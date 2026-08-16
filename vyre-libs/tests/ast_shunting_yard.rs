@@ -2,10 +2,10 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod common;
+mod wire_words;
 
-use common::bytes_from_words;
-use common::words_from_bytes;
+use wire_words::bytes_from_words;
+use wire_words::words_from_bytes;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::core::ast::node::*;

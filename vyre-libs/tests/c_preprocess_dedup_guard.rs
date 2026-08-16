@@ -22,9 +22,9 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-mod support;
+mod harness;
 
-use support::preprocess_stream::{
+use harness::preprocess_stream::{
     build_token_stream_with, pack_defined_macros, unpack_u32, LineEnds,
 };
 use vyre_foundation::ir::{Expr, Program};

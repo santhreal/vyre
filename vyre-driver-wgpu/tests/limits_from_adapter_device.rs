@@ -8,8 +8,8 @@
 //! - `max_storage_buffer_bytes` matches the live device limits
 //! - `device_limits()` is the actual `wgpu::Limits` of the created device
 
-mod common;
-use common::shared_live_backend as live_backend;
+mod harness;
+use harness::shared_live_backend as live_backend;
 
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;

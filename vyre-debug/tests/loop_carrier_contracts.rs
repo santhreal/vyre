@@ -4,8 +4,8 @@ use vyre_debug::fixtures::loop_carry_smoke;
 use vyre_debug::{carrier_summary, find_uncarriered_assigns};
 use vyre_foundation::ir::{Expr, Node};
 
-#[path = "support/mod.rs"]
-mod support;
+#[path = "program_fixtures/mod.rs"]
+mod program_fixtures;
 
 #[test]
 fn find_uncarriered_assigns_smoke_program_returns_empty() {
@@ -19,7 +19,7 @@ fn find_uncarriered_assigns_smoke_program_returns_empty() {
 
 #[test]
 fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
-    let p = support::program_over_out(
+    let p = program_fixtures::program_over_out(
         [64, 1, 1],
         vec![
             Node::let_bind("x", Expr::u32(0)),

@@ -9,7 +9,7 @@
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 
-#[path = "../tests/support/elementwise.rs"]
+#[path = "../tests/target_artifacts/elementwise.rs"]
 mod elementwise;
 use elementwise::{bytes_to_u32_values, elementwise_add_program, u32_values_to_bytes};
 

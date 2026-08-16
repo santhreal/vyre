@@ -1,8 +1,8 @@
 //! Regression tests for the post-audit Naga lowering follow-up.
 
-mod common;
+mod harness;
 
-use common::emit_validated_wgsl as emit_wgsl;
+use harness::emit_validated_wgsl as emit_wgsl;
 
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};

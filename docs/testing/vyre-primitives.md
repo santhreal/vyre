@@ -90,7 +90,7 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 | `test` | `bellman_oob_edge_parity` | `vyre-primitives/tests/bellman_oob_edge_parity.rs` | None | `./cargo_full test -p vyre-primitives --test bellman_oob_edge_parity` |
 | `test` | `bigint_add_carry_ir_parity_proptest` | `vyre-primitives/tests/bigint_add_carry_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-primitives --test bigint_add_carry_ir_parity_proptest` |
 | `test` | `bitset_fixpoint_warm_start_parity` | `vyre-primitives/tests/bitset_fixpoint_warm_start_parity.rs` | None | `./cargo_full test -p vyre-primitives --test bitset_fixpoint_warm_start_parity` |
-| `test` | `bitset_law_support` | `vyre-primitives/tests/bitset_law_support.rs` | None | `./cargo_full test -p vyre-primitives --test bitset_law_support` |
+| `test` | `bitset_law_properties` | `vyre-primitives/tests/bitset_law_properties.rs` | None | `./cargo_full test -p vyre-primitives --test bitset_law_properties` |
 | `test` | `bitset_scalar_ir_parity_proptest` | `vyre-primitives/tests/bitset_scalar_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-primitives --test bitset_scalar_ir_parity_proptest` |
 | `test` | `bitset_word_contracts` | `vyre-primitives/tests/bitset_word_contracts.rs` | None | `./cargo_full test -p vyre-primitives --test bitset_word_contracts` |
 | `test` | `bitset_word_contracts` | `vyre-primitives/tests/bitset_word_contracts.rs` | `bitset`, `cpu-parity` | `./cargo_full test -p vyre-primitives --test bitset_word_contracts` |
@@ -321,7 +321,7 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 | `test` | `tensor_train_contract_signed_parity` | `vyre-primitives/tests/tensor_train_contract_signed_parity.rs` | None | `./cargo_full test -p vyre-primitives --test tensor_train_contract_signed_parity` |
 | `test` | `tensor_train_decompose_eigen_contract` | `vyre-primitives/tests/tensor_train_decompose_eigen_contract.rs` | None | `./cargo_full test -p vyre-primitives --test tensor_train_decompose_eigen_contract` |
 | `test` | `tensor_train_decompose_step_parity` | `vyre-primitives/tests/tensor_train_decompose_step_parity.rs` | None | `./cargo_full test -p vyre-primitives --test tensor_train_decompose_step_parity` |
-| `test` | `text_char_class_support` | `vyre-primitives/tests/text_char_class_support.rs` | None | `./cargo_full test -p vyre-primitives --test text_char_class_support` |
+| `test` | `text_char_class_runner` | `vyre-primitives/tests/text_char_class_runner.rs` | None | `./cargo_full test -p vyre-primitives --test text_char_class_runner` |
 | `test` | `tfn_scalar_mix_signed_parity` | `vyre-primitives/tests/tfn_scalar_mix_signed_parity.rs` | None | `./cargo_full test -p vyre-primitives --test tfn_scalar_mix_signed_parity` |
 | `test` | `toposort_program_value_parity` | `vyre-primitives/tests/toposort_program_value_parity.rs` | None | `./cargo_full test -p vyre-primitives --test toposort_program_value_parity` |
 | `test` | `union_find_connectivity_parity` | `vyre-primitives/tests/union_find_connectivity_parity.rs` | None | `./cargo_full test -p vyre-primitives --test union_find_connectivity_parity` |

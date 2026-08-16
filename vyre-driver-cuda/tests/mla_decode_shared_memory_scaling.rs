@@ -34,9 +34,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{live_dispatcher, reference_outputs};
+use harness::{live_dispatcher, reference_outputs};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::Program;
 use vyre_libs::nn::attention::mla_decode;

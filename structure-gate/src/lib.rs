@@ -171,6 +171,8 @@ pub struct Workspace {
     pub crate_roots: Vec<CrateRoot>,
     /// Every `src/` module file of every crate root, checkout-relative.
     pub module_files: Vec<String>,
+    /// Every source file of every crate root, checkout-relative.
+    pub source_files: Vec<String>,
     /// Module paths the committed public-API snapshots publish.
     pub published_modules: Vec<String>,
 }
@@ -188,6 +190,7 @@ pub fn scan(root: &Path) -> Workspace {
     let crate_roots = scan_crate_roots(root);
     let module_files = scan_module_files(root, &crate_roots);
     let published_modules = scan_published_modules(root);
+    let source_files = scan_source_files(root, &crate_roots);
     Workspace {
         members,
         registrations,
@@ -198,6 +201,7 @@ pub fn scan(root: &Path) -> Workspace {
         discarding_imports,
         crate_roots,
         module_files,
+        source_files,
         published_modules,
     }
 }
@@ -223,10 +227,12 @@ pub fn violations(root: &Path) -> Vec<String> {
     ));
     failures.extend(sibling_module_failures(&workspace.module_files));
     failures.extend(generic_module_name_failures(
-        &workspace.module_files,
+        &workspace.source_files,
         &workspace.crate_roots,
         &workspace.published_modules,
     ));
+    failures.extend(numbered_sibling_failures(&workspace.source_files));
+    failures.extend(directory_stutter_failures(&workspace.source_files));
     failures
 }
 
@@ -454,19 +460,27 @@ fn crate_declares_frontend(crate_name: &str, language: &str) -> bool {
     names_frontend && names_language
 }
 
-/// Module names that state no contract.
+/// Trees a crate compiles source from, judged by the name rules.
 ///
-/// A module called `helpers`, `types` or `utils` says nothing about what is
+/// `benches` and `examples` are in for the same reason `tests` is: a reader
+/// looking for the fixture a benchmark uses reads its file name first.
+const SOURCE_TREES: &[&str] = &["src", "tests", "benches", "examples"];
+
+/// Names that state no contract.
+///
+/// A file called `helpers`, `types` or `utils` says nothing about what is
 /// inside it, so finding the thing it holds means opening it, and deciding
 /// where a new item goes means giving up and adding it there. Every name here
 /// has that property; a name that states its contents does not.
-const BANNED_MODULE_NAMES: &[&str] = &["common", "core", "helpers", "misc", "types", "utils"];
-
-/// Suffix that turns any module name into the same grab bag.
 ///
-/// `foo_ext` is whatever `foo` had no room for, which is a dumping ground with
-/// a qualifier bolted on.
-const BANNED_MODULE_SUFFIX: &str = "_ext";
+/// The same word as a suffix is the same dumping ground with a qualifier
+/// bolted on: `foo_ext` is whatever `foo` had no room for, and `spec_types` is
+/// whatever the spec needed a home for. `is_banned_module_name` derives the
+/// suffix family from this list so the two cannot drift apart.
+const BANNED_MODULE_NAMES: &[&str] = &[
+    "base", "common", "core", "ext", "extra", "glue", "helper", "helpers", "impl", "inner", "misc",
+    "shared", "shim", "stuff", "support", "things", "types", "util", "utils", "wrapper",
+];
 
 /// Committed snapshot of the API each publishable crate reaches out with.
 const PUBLIC_API_SNAPSHOT_DIR: &str = "docs/public-api";
@@ -525,21 +539,33 @@ pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
     failures
 }
 
-/// Reject a module or a binary whose name states no contract.
+/// Reject a file, module or binary whose name states no contract.
+///
+/// Judged over every source tree a crate compiles, not `src/` alone. The
+/// prohibition was written for modules and went unenforced against
+/// test-adjacent files, which is where the population moved: at the last count
+/// 15 of 16 remaining banned names were `tests/common/mod.rs` or
+/// `tests/support/mod.rs`.
 ///
 /// A module is exempt only while the committed public-API snapshot publishes
 /// it: renaming a published module renames a path a consumer already imports,
 /// and this gate is not what decides to break one. The exemption is read from
 /// the snapshot at run time, so it lapses by itself once the module stops
-/// being published, and a crate with no snapshot cannot claim it at all.
+/// being published, and a crate with no snapshot cannot claim it at all. A file
+/// outside `src/` has no public path and no exemption.
 ///
 /// A Cargo binary root is judged by the binary's name, which is the word a
 /// reader types to run it: an executable called `utils` states no more than a
 /// module of that name. A binary has no module path, so no snapshot exempts one.
 ///
+/// A name ending in two digit runs, `validation_findings_12_20`, names the
+/// ticket that produced the file rather than the contract inside it, and the
+/// ticket is closed by the time anyone reads the name.
+///
 /// What this does not catch: a specific name that is still wrong for its
-/// contents, and a published module that carries a banned name. The second one
-/// shows up as a snapshot diff in the change that publishes it.
+/// contents, a published module that carries a banned name, and a directory
+/// with no `mod.rs`, whose name no file states. The second one shows up as a
+/// snapshot diff in the change that publishes it.
 #[must_use]
 pub fn generic_module_name_failures(
     module_files: &[String],
@@ -557,9 +583,15 @@ pub fn generic_module_name_failures(
             }
             continue;
         }
-        let Some(name) = module_name_of(file) else {
+        let Some(name) = judged_name_of(file) else {
             continue;
         };
+        if let Some(range) = ticket_range_of(name) {
+            failures.push(format!(
+                "`{file}` is named for ticket range `{range}`, not for a contract; name it for what it holds"
+            ));
+            continue;
+        }
         if !is_banned_module_name(name) {
             continue;
         }
@@ -582,21 +614,122 @@ pub fn generic_module_name_failures(
     failures
 }
 
-/// True when a module name is a dumping ground by name alone.
-fn is_banned_module_name(name: &str) -> bool {
-    BANNED_MODULE_NAMES.contains(&name) || name.ends_with(BANNED_MODULE_SUFFIX)
+/// Reject sibling files distinguished only by a number.
+///
+/// `nodes_00.rs` through `nodes_09.rs` in one directory convey nothing about
+/// which of the ten classifies a given node, so finding the one that answers a
+/// question means opening all ten, and a new case goes into whichever file the
+/// author had open. A number inside a name that means something, `crc32`,
+/// `float16`, `flash_attention_2`, has no numbered sibling, which is what
+/// separates the two: the defect is the number carrying the distinction.
+#[must_use]
+pub fn numbered_sibling_failures(source_files: &[String]) -> Vec<String> {
+    let mut families: BTreeMap<(&str, &str), Vec<&String>> = BTreeMap::new();
+    for file in source_files {
+        let Some(name) = judged_name_of(file) else {
+            continue;
+        };
+        let Some(stem) = numbered_stem_of(name) else {
+            continue;
+        };
+        let directory = file.rsplit_once('/').map_or("", |(head, _)| head);
+        families.entry((directory, stem)).or_default().push(file);
+    }
+    let mut failures: Vec<String> = families
+        .into_iter()
+        .filter(|(_, family)| family.len() > 1)
+        .flat_map(|((_, stem), family)| {
+            let count = family.len();
+            family.into_iter().map(move |file| {
+                format!(
+                    "`{file}` is one of {count} `{stem}_N` siblings, so the number carries the \
+                     distinction and the name carries none; name each for what it holds"
+                )
+            })
+        })
+        .collect();
+    failures.sort();
+    failures.dedup();
+    failures
 }
 
-/// The module name a `src/` file declares, or `None` for a crate or binary root.
+/// Reject a file that repeats the name of the directory holding it.
+///
+/// `hardware/fma_f32/fma_f32.rs` states its contents once and its location
+/// twice, and the reader who opens the directory has to decide whether the file
+/// is the module or a part of it. The module is the directory, so the file is
+/// `mod.rs`.
+#[must_use]
+pub fn directory_stutter_failures(source_files: &[String]) -> Vec<String> {
+    let mut failures: Vec<String> = source_files
+        .iter()
+        .filter_map(|file| {
+            let (parents, name) = file.rsplit_once('/')?;
+            let stem = name.strip_suffix(".rs")?;
+            let directory = parents.rsplit('/').next()?;
+            (stem == directory).then(|| {
+                format!(
+                    "`{file}` repeats the directory `{directory}/` that holds it; the module is \
+                     the directory, so this file is `{parents}/mod.rs`"
+                )
+            })
+        })
+        .collect();
+    failures.sort();
+    failures.dedup();
+    failures
+}
+
+/// The stem a numbered sibling shares with its family, or `None`.
+///
+/// `nodes_09` is `nodes`; `float16` and `sha256` have no `_` before the digits,
+/// so the digits are part of one word rather than a sibling index.
+fn numbered_stem_of(name: &str) -> Option<&str> {
+    let (stem, digits) = name.rsplit_once('_')?;
+    (!digits.is_empty()
+        && digits.bytes().all(|byte| byte.is_ascii_digit())
+        && !stem.is_empty())
+    .then_some(stem)
+}
+
+/// The `<digits>_<digits>` tail of a name written for a ticket, or `None`.
+fn ticket_range_of(name: &str) -> Option<String> {
+    let (head, second) = name.rsplit_once('_')?;
+    let (_, first) = head.rsplit_once('_')?;
+    (!first.is_empty()
+        && !second.is_empty()
+        && first.bytes().all(|byte| byte.is_ascii_digit())
+        && second.bytes().all(|byte| byte.is_ascii_digit()))
+    .then(|| format!("{first}_{second}"))
+}
+
+/// True when a name is a dumping ground by name alone.
+///
+/// A banned word standing alone, or the same word as a `_` suffix.
+fn is_banned_module_name(name: &str) -> bool {
+    BANNED_MODULE_NAMES.contains(&name)
+        || BANNED_MODULE_NAMES.iter().any(|banned| {
+            name.len() > banned.len() + 1
+                && name.ends_with(banned)
+                && name.as_bytes()[name.len() - banned.len() - 1] == b'_'
+        })
+}
+
+/// The name a source file states, or `None` for a crate or binary root.
 ///
 /// A `mod.rs` is named by its directory, which is the whole point of the
 /// layout: reading the file name alone would judge every module in the
-/// workspace as being called `mod`.
-fn module_name_of(file: &str) -> Option<&str> {
+/// workspace as being called `mod`. A file under `tests/`, `benches/` or
+/// `examples/` is judged the same way, because a reader looking for a fixture
+/// reads that name for the same reason.
+fn judged_name_of(file: &str) -> Option<&str> {
     if binary_name_of(file).is_some() {
         return None;
     }
-    let (_, inside) = file.split_once("/src/")?;
+    let inside = SOURCE_TREES
+        .iter()
+        .filter_map(|tree| file.split_once(&format!("/{tree}/")).map(|(_, rest)| rest))
+        .min_by_key(|rest| rest.len())?;
     match inside.rsplit('/').next()? {
         "lib.rs" | "main.rs" => None,
         "mod.rs" => inside.rsplit('/').nth(1),
@@ -1515,6 +1648,25 @@ fn scan_module_files(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
     for crate_root in crate_roots {
         for path in source_tree_files(&root.join(&crate_root.directory).join("src")) {
             files.push(relative(root, &path));
+        }
+    }
+    files.sort();
+    files.dedup();
+    files
+}
+
+/// Every source file of every crate root, checkout-relative.
+///
+/// Wider than [`scan_module_files`] by the trees in [`SOURCE_TREES`] other than
+/// `src`: the name rules judge a fixture module the same way they judge a
+/// library module, because a reader looks for one the same way.
+fn scan_source_files(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
+    let mut files = Vec::new();
+    for crate_root in crate_roots {
+        for tree in SOURCE_TREES {
+            for path in source_tree_files(&root.join(&crate_root.directory).join(tree)) {
+                files.push(relative(root, &path));
+            }
         }
     }
     files.sort();
@@ -2709,10 +2861,95 @@ inventory::submit! {
 
     #[test]
     fn a_crate_root_carries_no_module_name() {
-        assert_eq!(module_name_of("vyre-libs/src/lib.rs"), None);
-        assert_eq!(module_name_of("conform/vyre-conform/src/main.rs"), None);
-        assert_eq!(module_name_of("vyre-libs/src/scan/mod.rs"), Some("scan"));
-        assert_eq!(module_name_of("vyre-libs/src/scan/window.rs"), Some("window"));
+        assert_eq!(judged_name_of("vyre-libs/src/lib.rs"), None);
+        assert_eq!(judged_name_of("conform/vyre-conform/src/main.rs"), None);
+        assert_eq!(judged_name_of("vyre-libs/src/scan/mod.rs"), Some("scan"));
+        assert_eq!(judged_name_of("vyre-libs/src/scan/window.rs"), Some("window"));
+    }
+
+    #[test]
+    fn every_source_tree_is_judged_and_a_file_in_none_is_not() {
+        for tree in SOURCE_TREES {
+            assert_eq!(
+                judged_name_of(&format!("vyre-libs/{tree}/parity/mod.rs")),
+                Some("parity"),
+                "the {tree} tree went unjudged"
+            );
+            assert_eq!(
+                judged_name_of(&format!("vyre-libs/{tree}/parity_support.rs")),
+                Some("parity_support")
+            );
+        }
+        assert_eq!(judged_name_of("release/changes/support.rs"), None);
+        assert_eq!(
+            judged_name_of("vyre-libs/tests/support/nested/deep/util.rs"),
+            Some("util"),
+            "a file nested under a judged tree is judged by its own name"
+        );
+    }
+
+    #[test]
+    fn a_number_is_a_defect_only_when_it_distinguishes_siblings() {
+        let family: Vec<String> = (0..3)
+            .map(|index| format!("vyre-libs/src/classify/nodes_0{index}.rs"))
+            .collect();
+        let failures = numbered_sibling_failures(&family);
+        assert_eq!(failures.len(), 3, "{failures:?}");
+        assert!(failures[0].contains("3 `nodes_N` siblings"), "{failures:?}");
+
+        for lone in [
+            "vyre-libs/src/nn/attention/flash_attention_2.rs",
+            "vyre-primitives/src/hash/crc32.rs",
+            "vyre-primitives/src/math/float16.rs",
+            "vyre-libs/src/classify/nodes_00.rs",
+        ] {
+            assert!(
+                numbered_sibling_failures(&paths(&[lone])).is_empty(),
+                "{lone} has no numbered sibling, so its digits carry meaning"
+            );
+        }
+        assert!(
+            numbered_sibling_failures(&paths(&[
+                "vyre-libs/src/classify/nodes_00.rs",
+                "vyre-libs/src/emit/nodes_01.rs",
+            ]))
+            .is_empty(),
+            "siblings are per directory; two directories are not one family"
+        );
+    }
+
+    #[test]
+    fn a_ticket_range_is_rejected_and_a_single_number_is_not() {
+        let failures = generic_module_name_failures(
+            &paths(&["vyre-foundation/tests/validation_findings_12_20.rs"]),
+            &crate_roots(&[("vyre-foundation", "vyre_foundation")]),
+            &[],
+        );
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].contains("ticket range `12_20`"), "{failures:?}");
+        assert!(
+            generic_module_name_failures(
+                &paths(&["xtask-evidence/src/semantic/proof_workloads_12.rs"]),
+                &crate_roots(&[("xtask-evidence", "xtask_evidence")]),
+                &[],
+            )
+            .is_empty(),
+            "one number can be a count or a size; a range names a ticket"
+        );
+    }
+
+    #[test]
+    fn a_file_repeating_its_directory_is_rejected() {
+        let failures = directory_stutter_failures(&paths(&[
+            "vyre-intrinsics/src/hardware/fma_f32/fma_f32.rs",
+            "vyre-intrinsics/src/hardware/fma_f32/mod.rs",
+            "vyre-intrinsics/src/hardware/fma_f32/lowering.rs",
+        ]));
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("fma_f32/mod.rs`"),
+            "the failure must name where the file belongs: {failures:?}"
+        );
     }
 
     #[test]
@@ -2745,9 +2982,9 @@ inventory::submit! {
         );
         assert_eq!(binary_name_of("xtask-registry/src/bin/vyre_new_op/run.rs"), None);
         assert_eq!(binary_name_of("vyre-libs/src/scan/window.rs"), None);
-        assert_eq!(module_name_of("xtask/src/bin/scaffold_rule.rs"), None);
+        assert_eq!(judged_name_of("xtask/src/bin/scaffold_rule.rs"), None);
         assert_eq!(
-            module_name_of("xtask-registry/src/bin/vyre_new_op/helpers.rs"),
+            judged_name_of("xtask-registry/src/bin/vyre_new_op/helpers.rs"),
             Some("helpers")
         );
     }

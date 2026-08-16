@@ -21,14 +21,14 @@
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 mod c_token_support;
-mod common;
+mod harness;
 use c_frontend::macro_expansion::{run_dynamic_macro_expansion, MacroFixture};
 use c_frontend::token_fixture::c_fixture;
 use c_token_support::{
     assert_pg_row, assert_shape_none, find_row_for_lexeme, node_count_from_vast, row_typed_kind,
     run_c11_lexer, run_cpu_pipeline, word_at, PG_STRIDE_U32,
 };
-use common::{decode_u32_words, u32_bytes};
+use harness::{decode_u32_words, u32_bytes};
 use std::sync::OnceLock;
 
 use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;

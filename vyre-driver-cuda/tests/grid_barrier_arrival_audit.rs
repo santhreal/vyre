@@ -18,9 +18,9 @@
 //! These tests assert real counter values and real dispatch outcomes. A
 //! `!is_empty()` style check would pass for an audit that never ran.
 
-mod common;
+mod harness;
 
-use common::{
+use harness::{
     cross_block_grid_sync_expected, cross_block_grid_sync_inputs, cross_block_grid_sync_program,
     CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };

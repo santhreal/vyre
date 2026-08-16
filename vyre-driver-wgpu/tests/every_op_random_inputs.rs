@@ -18,9 +18,9 @@ use vyre_foundation::optimizer::optimize;
 use vyre_libs::operation_catalog::fixture_entries;
 use vyre_reference::value::Value;
 
-mod common;
+mod harness;
 
-use common::every_op_random_inputs::{
+use harness::every_op_random_inputs::{
     compare_outputs, gpu_dispatch_inputs, is_program_graph_frontier, missing_capability_reason,
     op_seed, random_amg_v_cycle_inputs, random_buffer_for, random_program_graph_frontier,
     randomize_buffer,

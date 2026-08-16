@@ -3,9 +3,9 @@
 //! The wire decoder must reject tampered or corrupted payloads with
 //! structured errors rather than panics or silent acceptance.
 
-mod wire_decode_support;
+mod wire_decode_hostile_inputs;
 
-use wire_decode_support::{decode_error_string, minimal_program_bytes};
+use wire_decode_hostile_inputs::{decode_error_string, minimal_program_bytes};
 
 #[test]
 fn wire_decoder_rejects_corrupted_checksum() {

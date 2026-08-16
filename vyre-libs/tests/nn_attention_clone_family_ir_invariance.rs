@@ -14,9 +14,9 @@
 
 #![forbid(unsafe_code)]
 
-mod support;
+mod harness;
 
-use support::ir_fingerprint::assert_pinned_ir_fingerprints;
+use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{DataType, Node, Program};
 use vyre_libs::nn::attention::{
     chunked_gated_delta, flash_attention_2, mla_decode, recurrent_gated_delta, softmax,

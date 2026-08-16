@@ -1,16 +1,16 @@
 //! Source contracts for C GPU-preprocess directive staging allocation.
 
-mod support;
+mod harness;
 
 #[test]
 fn directive_staging_uses_checked_fallible_allocation_paths() {
-    let directives = support::crate_file("src/parsing/c/preprocess/gpu_pipeline/directives.rs");
-    support::assert_contains_all(
+    let directives = harness::crate_file("src/parsing/c/preprocess/gpu_pipeline/directives.rs");
+    harness::assert_contains_all(
         &directives,
         &["fn directive_word_bytes(", "fn reserve_directive_vec<T>("],
         "directive extraction must centralize checked byte sizing and fallible reserve paths.",
     );
-    support::assert_contains_all(
+    harness::assert_contains_all(
         &directives,
         &[
             "fn prepare_zero_init(&mut self, byte_len: usize) -> Result<(), String>",
@@ -18,12 +18,12 @@ fn directive_staging_uses_checked_fallible_allocation_paths() {
         ],
         "directive zero-init staging must reserve fallibly before resize.",
     );
-    support::assert_contains_all(
+    harness::assert_contains_all(
         &directives,
         &["u32::try_from(scratch.macro_names.len())"],
         "directive macro-name offsets must reject values outside the GPU u32 address space.",
     );
-    support::assert_contains_none(
+    harness::assert_contains_none(
         &directives,
         &[
             "prepare_zero_init(n_pad * 4)",

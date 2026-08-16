@@ -1,8 +1,8 @@
 //! Structural contracts for C preprocessing replacement-token caching.
 
-mod support;
+mod harness;
 
-use support::{
+use harness::{
     assert_byte_lru_core_rejects_and_accounts, assert_byte_lru_core_tracks_resident_bytes,
     crate_file,
 };

@@ -6,9 +6,9 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod support;
+mod harness;
 
-use support::gpu_pipeline_filter::{
+use harness::gpu_pipeline_filter::{
     assert_byte_source_dispatches_use_supported_layouts, assert_byte_source_inputs_are_unpadded,
     assert_preflight_flags_match_declared_extent, generated_route_source,
     reference_filter_source_bytes, run, CountingDispatcher,

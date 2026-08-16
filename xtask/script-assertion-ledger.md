@@ -933,7 +933,7 @@ The `findings` column is the count with the injection applied, given the pin in
 
 | Gate | Injection | Findings |
 | --- | --- | --- |
-| `backend-extension` | In `vyre-driver-wgpu/src/backend_impl.rs`, delete the `BackendPrecedence` inventory submission block. | 0 to 1 |
+| `backend-extension` | In `vyre-driver-wgpu/src/backend_dispatch.rs`, delete the `BackendPrecedence` inventory submission block. | 0 to 1 |
 | `backend-extension` | In `vyre-driver/src/backend/registry/acquire.rs`, rename `registered_backends_by_precedence_slice` at its definition and its call. | 0 to 1 |
 | `backend-extension` | Add `let id = "cuda";` to any file under `vyre-driver/src/backend/registry/`. | 0 to 1 |
 | `readback-ring` | In `vyre-driver-wgpu/src/engine/record_and_readback/mod.rs`, rename `.arm_ticket(` to `.arm(` at its definition and its call sites. | 0 to 1 |

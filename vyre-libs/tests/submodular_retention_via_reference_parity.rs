@@ -1,5 +1,5 @@
 //! End-to-end parity for `submodular_cache_eviction::select_retention_set_via`: the greedy
-//! submodular cache-retention selector (through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`]).
+//! submodular cache-retention selector (through the shared faithful [`vyre_libs::test_parity_oracles::ReferenceEvalDispatcher`]).
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `argmax_of_marginals`'s IR is not run through a faithful dispatch boundary by any
@@ -20,7 +20,7 @@ use vyre_libs::scheduling::submodular_cache_eviction::{
     select_retention_set, select_retention_set_via,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

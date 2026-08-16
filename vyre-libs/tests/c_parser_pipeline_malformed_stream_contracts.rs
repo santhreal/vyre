@@ -6,8 +6,8 @@
 mod c_frontend;
 use c_frontend::expression_pipeline::run_reference_pg_lower;
 
-mod common;
-use common::u32_bytes;
+mod wire_words;
+use wire_words::u32_bytes;
 
 #[path = "contract_cases/c_parser_pipeline_malformed_stream_contracts__word_at.rs"]
 mod c_parser_pipeline_malformed_stream_contracts_word_at;

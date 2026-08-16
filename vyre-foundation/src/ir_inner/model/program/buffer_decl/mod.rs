@@ -7,7 +7,7 @@
 use std::ops::Range;
 use std::sync::Arc;
 
-use crate::ir_inner::model::spec_types::{BufferAccess, DataType};
+use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
 
 use super::{MemoryHints, MemoryKind};
 

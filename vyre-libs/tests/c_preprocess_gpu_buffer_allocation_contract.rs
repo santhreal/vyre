@@ -1,8 +1,8 @@
 //! Source contracts for shared C GPU-preprocess buffer staging helpers.
 
-mod support;
+mod harness;
 
-use support::{assert_contains_all, assert_contains_none, crate_file};
+use harness::{assert_contains_all, assert_contains_none, crate_file};
 
 #[test]
 fn shared_gpu_buffer_pack_helpers_are_checked_fallible_and_padding_free() {

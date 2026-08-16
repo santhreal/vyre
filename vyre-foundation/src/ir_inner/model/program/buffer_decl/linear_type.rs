@@ -53,7 +53,7 @@ impl LinearType {
 mod linear_type_tests {
     use super::*;
     use crate::ir_inner::model::program::BufferDecl;
-    use crate::ir_inner::model::spec_types::DataType;
+    use crate::ir_inner::model::op_signature::DataType;
 
     #[test]
     fn default_is_unrestricted() {

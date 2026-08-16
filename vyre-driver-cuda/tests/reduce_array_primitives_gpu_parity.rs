@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_primitives::reduce::gather::{cpu_ref as gather_cpu, gather};
 use vyre_primitives::reduce::histogram::{cpu_ref as hist_cpu, histogram};

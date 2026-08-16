@@ -11,7 +11,7 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use super::inspect_core::{first_metric_p50, read_text_bounded, WallClockMinima};
+use super::artifact_metrics::{first_metric_p50, read_text_bounded, WallClockMinima};
 use super::metrics::write_json;
 use super::release_thresholds::{
     MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CPU_SOTA_100X_RELEASE_CASES, REQUIRED_CPU_SOTA_100X_CASES,

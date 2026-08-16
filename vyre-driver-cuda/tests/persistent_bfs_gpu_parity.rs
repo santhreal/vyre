@@ -8,9 +8,9 @@
 #![cfg(test)]
 
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-mod common;
+mod harness;
 
-use common::{with_live_backend, CudaProgramDispatcher};
+use harness::{with_live_backend, CudaProgramDispatcher};
 use vyre_driver_cuda::CudaProgramDispatcher as CudaResidentProgramDispatcher;
 use vyre_libs::graph::dispatch::persistent_bfs::{
     bfs_expand as reference_bfs_expand, bfs_expand_resident_graph_batch_with_scratch_into,

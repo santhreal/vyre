@@ -163,8 +163,8 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `wire_adversarial` | `vyre-foundation/tests/wire_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test wire_adversarial` |
 | `test` | `wire_buffer_ref_round_trip` | `vyre-foundation/tests/wire_buffer_ref_round_trip.rs` | None | `./cargo_full test -p vyre-foundation --test wire_buffer_ref_round_trip` |
 | `test` | `wire_decode_corruption` | `vyre-foundation/tests/wire_decode_corruption.rs` | None | `./cargo_full test -p vyre-foundation --test wire_decode_corruption` |
+| `test` | `wire_decode_hostile_inputs` | `vyre-foundation/tests/wire_decode_hostile_inputs.rs` | None | `./cargo_full test -p vyre-foundation --test wire_decode_hostile_inputs` |
 | `test` | `wire_decode_oom_guard` | `vyre-foundation/tests/wire_decode_oom_guard.rs` | None | `./cargo_full test -p vyre-foundation --test wire_decode_oom_guard` |
-| `test` | `wire_decode_support` | `vyre-foundation/tests/wire_decode_support.rs` | None | `./cargo_full test -p vyre-foundation --test wire_decode_support` |
 | `test` | `wire_format_corpus` | `vyre-foundation/tests/wire_format_corpus.rs` | None | `./cargo_full test -p vyre-foundation --test wire_format_corpus` |
 | `test` | `wire_fuzz_infra_contracts` | `vyre-foundation/tests/wire_fuzz_infra_contracts.rs` | None | `./cargo_full test -p vyre-foundation --test wire_fuzz_infra_contracts` |
 | `test` | `wire_generated_hostile_inputs` | `vyre-foundation/tests/wire_generated_hostile_inputs.rs` | None | `./cargo_full test -p vyre-foundation --test wire_generated_hostile_inputs` |

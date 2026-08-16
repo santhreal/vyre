@@ -2,9 +2,9 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod support;
+mod harness;
 
-use support::preprocess_stream::{run_directive_metadata_stage, unpack_u32};
+use harness::preprocess_stream::{run_directive_metadata_stage, unpack_u32};
 use vyre_libs::parsing::c::preprocess::gpu_include_parse::gpu_include_parse;
 use vyre_reference::value::Value;
 

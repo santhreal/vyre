@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, live_backend};
+use harness::{bytes_u32, live_backend};
 use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
     resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,

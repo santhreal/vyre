@@ -1,4 +1,4 @@
-use crate::common::{bytes_u32, u32_bytes, with_live_backend};
+use crate::harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;

@@ -21,7 +21,7 @@ use xtask::gates::feature_isolation::{
     BASELINE, DEFAULTS,
 };
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 fn row(member: &str, feature: &str, outcome: &str, reason: Option<&str>) -> Row {
     Row {

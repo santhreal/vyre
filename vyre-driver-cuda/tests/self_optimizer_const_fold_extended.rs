@@ -3,9 +3,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::self_optimizer::{
+use harness::self_optimizer::{
     assert_lit_u32, assert_unfolded_u32_binop, binop, folded_store_value, is_bool_word,
 };
 use vyre::ir::{BinOp, Expr};

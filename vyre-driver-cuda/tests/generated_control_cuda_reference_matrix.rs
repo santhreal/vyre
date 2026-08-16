@@ -1,10 +1,10 @@
 //! Generated live CUDA/reference differential matrix for data-dependent control semantics.
 
-mod common;
-#[path = "common/generated_control_values.rs"]
+mod harness;
+#[path = "harness/generated_control_values.rs"]
 mod generated_control_values;
 
-use common::{
+use harness::{
     assert_f32_matrix_sweep, assert_u32_matrix_sweep, bool_bytes, f32_bytes,
     generated_lane_program, generated_mixed_bool_values as generated_bool_values,
     guarded_generated_store, i32_bytes, live_backend, u32_bytes, GeneratedMatrixCase,

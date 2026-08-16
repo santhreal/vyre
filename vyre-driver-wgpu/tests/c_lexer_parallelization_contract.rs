@@ -12,10 +12,10 @@
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
 mod c_token_support;
-mod common;
+mod harness;
 use c_frontend::rows::haystack_words;
 use c_token_support::run_c11_lexer;
-use common::words_from_bytes;
+use harness::words_from_bytes;
 
 use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;
 

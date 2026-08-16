@@ -5,12 +5,12 @@
 
 #![cfg(test)]
 
-#[path = "common/c_preprocess_oracles.rs"]
+#[path = "harness/c_preprocess_oracles.rs"]
 mod c_preprocess_oracles;
-mod common;
+mod harness;
 
 use c_preprocess_oracles::CudaOracle;
-use common::with_live_backend;
+use harness::with_live_backend;
 use vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::reference_gpu_comment_strip_mask;
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::gpu_filter_source_bytes;
 use vyre_primitives::parsing::line_splice_classify::reference_line_splice_classify;

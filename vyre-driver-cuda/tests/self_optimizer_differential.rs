@@ -19,9 +19,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::live_backend;
 use vyre::ir::{Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_pass_engine::optimizer::pipeline_resident::gpu_pipeline_resident;

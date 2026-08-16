@@ -1,7 +1,7 @@
 //! WGPU contract coverage for composed persistent Sinkhorn iteration.
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::VyreBackend;
 use vyre_primitives::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};

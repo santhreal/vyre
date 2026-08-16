@@ -8,9 +8,9 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-mod support;
+mod harness;
 
-use support::gpu_if_expression::{
+use harness::gpu_if_expression::{
     assert_gpu_matches_cpu, run_full_pipeline, run_if_expression_with_macro_value,
 };
 

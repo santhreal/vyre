@@ -19,9 +19,9 @@
 //! symmetric and still wrong; rotation separates the two.
 #![cfg(feature = "hardware")]
 
-mod common;
+mod gate_fixtures;
 
-use common::overfire_grid;
+use gate_fixtures::overfire_grid;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
 

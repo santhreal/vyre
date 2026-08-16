@@ -17,7 +17,7 @@ use crate::composition::self_exclusive_region_key;
 use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
-use crate::ir_inner::model::spec_types::{BufferAccess, DataType};
+use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
 use crate::visit::node_visitor::{dispatch_node, NodeVisitor};
 use hashbrown::hash_map::RawEntryMut;
 use rustc_hash::{FxHashMap, FxHashSet};

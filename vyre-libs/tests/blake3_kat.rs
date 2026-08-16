@@ -13,8 +13,8 @@
 
 #![cfg(feature = "crypto-blake3")]
 #![allow(deprecated)]
-mod common;
-use common::{decode_u32_words, u32_bytes};
+mod wire_words;
+use wire_words::{decode_u32_words, u32_bytes};
 use vyre::ir::Program;
 use vyre_libs::hash::blake3_compress;
 use vyre_reference::value::Value;

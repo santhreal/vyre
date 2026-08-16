@@ -2,10 +2,10 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod common;
+mod wire_words;
 
-use common::decode_u32_words as words_from_bytes;
-use common::u32_bytes as bytes;
+use wire_words::decode_u32_words as words_from_bytes;
+use wire_words::u32_bytes as bytes;
 use vyre_libs::parsing::c::lex::keyword::{
     c_keyword, c_keyword_map_words, c_keyword_packed_haystack, fnv1a32, reference_c_keyword_types,
     C_KEYWORDS,

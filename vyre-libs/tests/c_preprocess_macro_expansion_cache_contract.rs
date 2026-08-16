@@ -1,8 +1,8 @@
 //! Structural contracts for the C macro expansion cache.
 
-mod support;
+mod harness;
 
-use support::{assert_byte_lru_core_rejects_and_accounts, crate_file};
+use harness::{assert_byte_lru_core_rejects_and_accounts, crate_file};
 
 #[test]
 fn macro_expansion_caches_are_byte_bounded() {

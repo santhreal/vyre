@@ -5,8 +5,8 @@
 
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod common;
-use common::decode_u32_words;
+mod wire_words;
+use wire_words::decode_u32_words;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use c_frontend::macro_expansion::{run_dynamic_macro_expansion, MacroFixture};

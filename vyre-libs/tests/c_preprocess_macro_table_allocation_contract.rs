@@ -1,8 +1,8 @@
 //! Source contracts for C GPU-preprocess macro-table staging allocation.
 
-mod support;
+mod harness;
 
-use support::{assert_contains_all, assert_contains_none, crate_file};
+use harness::{assert_contains_all, assert_contains_none, crate_file};
 
 #[test]
 fn macro_table_staging_uses_checked_fallible_allocation_paths() {

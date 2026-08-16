@@ -5,7 +5,7 @@
 use vyre_primitives::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
-mod graph_sweep_support;
+mod graph_sweep_fixtures;
 
 use vyre_primitives::graph::persistent_bfs;
 

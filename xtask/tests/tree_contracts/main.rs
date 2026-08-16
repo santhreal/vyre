@@ -14,8 +14,8 @@
 
 #![forbid(unsafe_code)]
 
-#[path = "../common/mod.rs"]
-mod common;
+#[path = "../workspace_sources/mod.rs"]
+mod workspace_sources;
 
 mod architecture_docs;
 mod canonical_first_workgroup_guard;
@@ -27,7 +27,7 @@ mod crate_readmes;
 mod docs_manifest_completeness;
 mod exit_states_a_cause;
 mod feature_isolation;
-mod nested_byte_row_types;
+mod nested_byte_rows;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
 mod subcommand_dispatch;

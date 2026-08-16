@@ -14,9 +14,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_live_backend;
+use harness::with_live_backend;
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
 

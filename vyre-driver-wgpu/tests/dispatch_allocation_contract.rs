@@ -10,8 +10,8 @@
 //! `dispatch_borrowed_async`).
 #![allow(missing_docs)]
 
-mod common;
-use common::{acquire_live_backend as live_backend, add_one_program};
+mod harness;
+use harness::{acquire_live_backend as live_backend, add_one_program};
 
 use std::alloc::System;
 use std::sync::{Mutex, MutexGuard};

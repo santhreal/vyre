@@ -32,8 +32,8 @@
 //! the two differ by at most one ulp. A device that stops contracting still
 //! passes; a device that returns something outside that pair has a real bug.
 
-mod common;
-use common::acquire_live_backend as live_backend;
+mod harness;
+use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};

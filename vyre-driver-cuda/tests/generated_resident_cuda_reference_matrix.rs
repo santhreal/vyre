@@ -1,6 +1,6 @@
 //! Generated live CUDA-resident/reference differential matrix for release-path semantics.
 
-mod common;
+mod harness;
 
 #[path = "generated_resident_cuda_reference_matrix/case_defs.rs"]
 mod case_defs;
@@ -23,7 +23,7 @@ mod f32_contracts;
 mod integer_contracts;
 #[path = "generated_resident_cuda_reference_matrix/memory_contracts.rs"]
 mod memory_contracts;
-use common::{
+use harness::{
     assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, bool_word, eq_word, f32_bytes,
     ge_word, generated_bool_cast_values, generated_f32_cast_values, generated_f32_fma_values,
     generated_i32_cast_values, generated_mixed_bool_values as generated_bool_values,

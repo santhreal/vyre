@@ -8,9 +8,9 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod support;
+mod harness;
 
-use support::preprocess_stream::{build_token_stream, unpack_u32};
+use harness::preprocess_stream::{build_token_stream, unpack_u32};
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::{
     gpu_directive_metadata, gpu_directive_metadata_u8,
 };

@@ -1,5 +1,5 @@
 //! End-to-end parity for `math::bellman_tn_order::bellman_tn_order_via` (the fused Bellman-Ford
-//! shortest-path solver) through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! shortest-path solver) through the shared faithful [`vyre_libs::test_parity_oracles::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `bellman_shortest_path`'s IR is run by only ONE `vyre-primitives/tests/*` file
@@ -29,7 +29,7 @@ use vyre_foundation::program_dispatch::DispatchError;
 use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 const INF: u32 = u32::MAX;
 

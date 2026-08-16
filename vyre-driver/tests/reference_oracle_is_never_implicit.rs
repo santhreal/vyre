@@ -18,9 +18,9 @@
 //! `no_backend_crate_links_host_arithmetic.rs`.
 
 #[macro_use]
-mod common;
+mod fixture_backend;
 
-use common::FixtureBackend;
+use fixture_backend::FixtureBackend;
 use vyre_driver::{acquire, acquire_preferred_dispatch_backend};
 use vyre_driver::{BackendError, VyreBackend};
 

@@ -2,8 +2,8 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
-mod graph_sweep_support;
-use graph_sweep_support::bitset_words;
+mod graph_sweep_fixtures;
+use graph_sweep_fixtures::bitset_words;
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 

@@ -2,8 +2,8 @@
 
 #![cfg(feature = "c-parser")]
 
-mod common;
-use common::words_to_bytes;
+mod harness;
+use harness::words_to_bytes;
 
 use vyre::ir::Expr;
 use vyre_driver::VyreBackend;

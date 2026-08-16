@@ -18,7 +18,7 @@ mod timed;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use crate::backend::resident_dispatch_support::CudaResidentDispatch;
+pub(crate) use crate::backend::resident_dispatch_accounting::CudaResidentDispatch;
 pub(crate) use descriptor_cursor::next_dispatch_binding;
 
 use std::sync::Arc;

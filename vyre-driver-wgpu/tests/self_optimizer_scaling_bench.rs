@@ -12,8 +12,8 @@
 
 #![cfg(test)]
 
-mod common;
-use common::self_optimizer::WgpuProgramDispatcher;
+mod harness;
+use harness::self_optimizer::WgpuProgramDispatcher;
 
 use vyre::ir::Program;
 use vyre_driver::self_optimizer_bench::report_scaling;

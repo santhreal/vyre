@@ -4,7 +4,7 @@
 
 #[path = "csr_frontier_queue_gpu_parity/batch_contracts.rs"]
 mod batch_contracts;
-mod common;
+mod harness;
 #[path = "csr_frontier_queue_gpu_parity/delta_contracts.rs"]
 mod delta_contracts;
 #[path = "csr_frontier_queue_gpu_parity/manual_sequence_contracts.rs"]
@@ -14,7 +14,7 @@ mod queue_sequence;
 #[path = "csr_frontier_queue_gpu_parity/resident_graph_contracts.rs"]
 mod resident_graph_contracts;
 
-use common::{bytes_u32, live_backend, pack_nodes, u32_bytes};
+use harness::{bytes_u32, live_backend, pack_nodes, u32_bytes};
 use queue_sequence::{
     run_manual_queue_sequence, GraphUpload, ManualQueueHandles, QueueBuild, QueueGraph,
     QueueReadback, ResidentQueueSession,

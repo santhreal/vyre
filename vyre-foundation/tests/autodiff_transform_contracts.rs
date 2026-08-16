@@ -1,9 +1,9 @@
 //! Contract tests for RFC-0002 autodiff as an IR transform.
 
-#[path = "contract_cases/autodiff_transform_contracts_support.rs"]
-mod autodiff_transform_contracts_support;
+#[path = "contract_cases/autodiff_transform_contracts_programs.rs"]
+mod autodiff_transform_contracts_programs;
 
-use autodiff_transform_contracts_support::{
+use autodiff_transform_contracts_programs::{
     flatten_nodes, generated_cast_program, generated_differentiable_program,
     generated_f32_identity_cast_program, generated_intermediate_buffer_program,
     generated_nondifferentiable_cast_shape, square_via_local_program,

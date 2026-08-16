@@ -10,7 +10,7 @@ use vyre_driver_spirv::SpirvBackendRegistration;
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
-#[path = "support/elementwise.rs"]
+#[path = "target_artifacts/elementwise.rs"]
 mod elementwise;
 use elementwise::{
     bytes_to_u32_values, elementwise_add_program, elementwise_fma_program,

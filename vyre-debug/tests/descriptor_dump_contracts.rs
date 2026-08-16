@@ -2,9 +2,9 @@
 use vyre_debug::{dump_descriptor, DescriptorDumpOptions};
 use vyre_foundation::ir::{Expr, Ident, Node};
 
-#[path = "support/mod.rs"]
-mod support;
-use support::minimal_program;
+#[path = "program_fixtures/mod.rs"]
+mod program_fixtures;
+use program_fixtures::minimal_program;
 
 #[test]
 fn dump_descriptor_renders_minimal_program() {
@@ -21,7 +21,7 @@ fn dump_descriptor_renders_minimal_program() {
 
 #[test]
 fn dump_descriptor_op_counts_match_walk() {
-    let p = support::program_over_out(
+    let p = program_fixtures::program_over_out(
         [64, 1, 1],
         vec![Node::loop_for(
             "i",
@@ -58,7 +58,7 @@ fn dump_descriptor_op_counts_match_walk() {
 
 #[test]
 fn dump_descriptor_truncates_when_max_ops_per_body_set() {
-    let p = support::program_over_out(
+    let p = program_fixtures::program_over_out(
         [64, 1, 1],
         vec![
             Node::store("out", Expr::u32(0), Expr::u32(1)),

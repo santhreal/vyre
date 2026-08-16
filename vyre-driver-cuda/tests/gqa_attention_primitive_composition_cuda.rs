@@ -1,8 +1,8 @@
 //! Live CUDA regression for grouped-query attention primitive composition.
 
-mod common;
+mod harness;
 
-use common::with_live_backend;
+use harness::with_live_backend;
 use vyre_driver::DispatchConfig;
 use vyre_libs::nn::attention::gqa_attention;
 

@@ -13,8 +13,8 @@
 //! Dispatched on the 5090 and asserted byte-for-byte against the `adler32` Rust
 //! reference and the standard zlib Adler-32 vector for "abc".
 
-mod common;
-use common::u32_bytes;
+mod harness;
+use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

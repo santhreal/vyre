@@ -2,9 +2,9 @@
 
 #![cfg(feature = "c-parser")]
 
-mod support;
+mod harness;
 
-use support::optimizer::assert_optimizer_is_idempotent;
+use harness::optimizer::assert_optimizer_is_idempotent;
 use vyre::ir::{Expr, Program};
 use vyre_libs::parsing::c::parse::vast::c11_classify_vast_node_kinds;
 

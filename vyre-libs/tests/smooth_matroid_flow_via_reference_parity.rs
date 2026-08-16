@@ -1,6 +1,6 @@
 //! End-to-end parity for `math::amg_pass_solver::smooth_matroid_flow_fixed_via`: one full two-level
 //! algebraic-multigrid (AMG) V-cycle (pre-smooth → restrict → coarse-solve → prolong → post-smooth)
-//! through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! through the shared faithful [`vyre_libs::test_parity_oracles::ReferenceEvalDispatcher`].
 //!
 //! Closes the LAST mock-dispatcher-coherence gap in the SWEEP drain (see BACKLOG
 //! `SWEEP-self-substrate-mock-dispatcher-coherence`): the 11-buffer `amg_v_cycle` IR is not run through a
@@ -37,7 +37,7 @@ use vyre_libs::solvers::amg_pass_solver::{
     reference_smooth_matroid_flow, smooth_matroid_flow_fixed_via,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 const FIXED_ONE: f64 = 65536.0;
 

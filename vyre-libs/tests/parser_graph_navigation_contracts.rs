@@ -8,8 +8,8 @@
 
 #![allow(deprecated)]
 
-mod common;
-use common::decode_u32_words;
+mod wire_words;
+use wire_words::decode_u32_words;
 use vyre_libs::graph::{pack_branching_fixture, pack_spine_fixture};
 use vyre_reference::value::Value;
 

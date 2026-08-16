@@ -6,9 +6,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::live_backend;
+use harness::live_backend;
 use std::{thread, time::Instant};
 
 use vyre::ir::{Expr, Node, Program};

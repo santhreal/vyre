@@ -14,9 +14,9 @@
 
 #![cfg(test)]
 
-mod common;
-use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
+mod harness;
+use harness::acquire_live_backend as live_backend;
+use harness::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
 
 use vyre::ir::{Expr, Node};
 use vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold;

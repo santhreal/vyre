@@ -8,9 +8,9 @@
 
 use vyre::ir::Program;
 
-#[path = "support/mod.rs"]
-mod support;
-use support::{empty_program, one_store_program};
+#[path = "program_fixtures/mod.rs"]
+mod program_fixtures;
+use program_fixtures::{empty_program, one_store_program};
 
 #[test]
 fn empty_program_round_trips() {

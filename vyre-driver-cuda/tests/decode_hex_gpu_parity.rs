@@ -1,8 +1,8 @@
 //! CUDA parity for the primitive-owned hex decoder.
 
-mod common;
+mod harness;
 
-use common::{bytes_u32, live_backend, u32_bytes};
+use harness::{bytes_u32, live_backend, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_primitives::decode::hex::{
     hex_decode, hex_decode_reference_packed, hex_decode_table, hex_decoded_capacity,

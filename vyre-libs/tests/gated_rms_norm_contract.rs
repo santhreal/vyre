@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{f32_bytes, f32_words as decode_f32};
+mod wire_words;
+use wire_words::{f32_bytes, f32_words as decode_f32};
 
 use vyre::ir::DataType;
 use vyre_libs::nn::norm::{gated_rms_norm, gated_rms_norm_with_weight_dtype, GatedRmsNormError};

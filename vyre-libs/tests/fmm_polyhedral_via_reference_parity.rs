@@ -1,7 +1,7 @@
 //! End-to-end parity for `math::fmm_polyhedral_compress::{aggregate_to_cells_via,
 //! translate_to_targets_via, evaluate_at_regions_via}`, the three zeroth-order Fast-Multipole stages
 //! (P2M aggregate, M2L translate, L2P evaluate), through the shared faithful
-//! [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! [`vyre_libs::test_parity_oracles::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! the FMM f32 IRs are not run through a faithful dispatch boundary by any `vyre-primitives/tests/*`
@@ -24,7 +24,7 @@ use vyre_libs::solvers::fmm_polyhedral_compress::{
     aggregate_to_cells_via, evaluate_at_regions_via, translate_to_targets_via,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

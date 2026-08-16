@@ -5,9 +5,9 @@
 
 #![cfg(test)]
 
-mod common;
-use common::acquire_live_backend as live_backend;
-use common::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
+mod harness;
+use harness::acquire_live_backend as live_backend;
+use harness::self_optimizer::{first_let_value, wrapped, WgpuProgramDispatcher};
 
 use vyre::ir::{BinOp, Expr, Node};
 use vyre_pass_engine::optimizer::pattern_match_via_encoded::gpu_algebraic_identities;

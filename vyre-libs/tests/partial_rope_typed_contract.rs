@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::{bf16_bytes, bf16_word, f32_bytes};
+mod wire_words;
+use wire_words::{bf16_bytes, bf16_word, f32_bytes};
 
 use vyre::ir::DataType;
 use vyre_libs::nn::attention::partial_rope_at_offset_typed;

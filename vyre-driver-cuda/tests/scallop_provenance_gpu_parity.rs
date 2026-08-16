@@ -2,9 +2,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::encoding::scallop_provenance::{
     provenance_closure_via, reference_provenance_closure,
 };

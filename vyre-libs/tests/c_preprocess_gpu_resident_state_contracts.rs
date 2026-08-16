@@ -13,14 +13,14 @@
 
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod common;
-mod support;
+mod wire_words;
+mod harness;
 use c_frontend::macro_expansion::{
     hash_token, run_dynamic_macro_expansion as run_dynamic, MacroFixture as DynamicFixture,
 };
-use common::{decode_u32_words, u32_bytes};
+use wire_words::{decode_u32_words, u32_bytes};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use support::c_macro_table::{
+use harness::c_macro_table::{
     fnv1a32, macro_slot, run_named_macro_expansion, NamedMacroFixture, TokenStream, EMPTY_SLOT,
     NAME_POOL_BYTES, TABLE_MASK, TABLE_SLOTS,
 };

@@ -1,5 +1,5 @@
 //! End-to-end parity for `data::bitset_mask_algebra::mask_*_via` through the shared faithful
-//! [`vyre_libs::test_support::ReferenceEvalDispatcher`], across every mask operation the consumer exposes:
+//! [`vyre_libs::test_parity_oracles::ReferenceEvalDispatcher`], across every mask operation the consumer exposes:
 //! and / or / xor / not (word-parallel), equal / subset-of (binary predicates), contains / test_bit
 //! (bit queries), and set_bit / clear_bit (single-bit rewrites).
 //!
@@ -22,7 +22,7 @@ use vyre_libs::encoding::bitset_mask_algebra::{
     reference_mask_xor,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

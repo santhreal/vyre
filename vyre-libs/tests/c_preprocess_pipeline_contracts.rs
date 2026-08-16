@@ -13,11 +13,11 @@
 
 #[path = "../../tests/support/c_frontend/mod.rs"]
 mod c_frontend;
-mod common;
+mod wire_words;
 
 use c_frontend::macro_expansion::{run_dynamic_macro_expansion, MacroFixture};
 use c_frontend::reference_lexer::run_c11_lexer;
-use common::{decode_u32_words, u32_bytes};
+use wire_words::{decode_u32_words, u32_bytes};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use c_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds;

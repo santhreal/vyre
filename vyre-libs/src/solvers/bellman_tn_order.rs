@@ -238,7 +238,7 @@ pub fn bellman_tn_order_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::test_support::NeverDispatches;
+    use crate::test_parity_oracles::NeverDispatches;
     use vyre_primitives::math::bellman_shortest_path::cpu_ref;
 
     /// Terse binding names, for the tests that only care about the program.
@@ -449,7 +449,7 @@ mod tests {
         let p2 = bellman_tn_order_program(stage("dist2", "nd2", "c2"), extents(4, 4, 5));
         let p3 = bellman_tn_order_program(stage("dist3", "nd3", "c3"), extents(4, 4, 5));
 
-        let final_p = crate::test_support::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
+        let final_p = crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
         // Assert we have at least 3 regions
         let region_count = final_p
             .entry()

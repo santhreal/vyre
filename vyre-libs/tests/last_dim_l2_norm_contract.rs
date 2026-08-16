@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::f32_bytes;
+mod wire_words;
+use wire_words::f32_bytes;
 
 use vyre::ir::DataType;
 use vyre_libs::nn::norm::{last_dim_l2_norm, LastDimL2NormError};

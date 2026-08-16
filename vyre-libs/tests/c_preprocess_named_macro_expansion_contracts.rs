@@ -3,13 +3,13 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-mod common;
-mod support;
+mod wire_words;
+mod harness;
 
-use common::decode_u32_words;
+use wire_words::decode_u32_words;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use support::c_macro_table::{
+use harness::c_macro_table::{
     fnv1a32, macro_slot, run_named_macro_expansion, NamedMacroFixture, TokenStream, TABLE_MASK,
 };
 use vyre_libs::parsing::c::lex::tokens::{

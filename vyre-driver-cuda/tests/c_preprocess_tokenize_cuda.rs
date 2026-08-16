@@ -6,12 +6,12 @@
 
 #![cfg(test)]
 
-#[path = "common/c_preprocess_oracles.rs"]
+#[path = "harness/c_preprocess_oracles.rs"]
 mod c_preprocess_oracles;
-mod common;
+mod harness;
 
 use c_preprocess_oracles::{CudaOracle, ReferenceOracle};
-use common::with_live_backend;
+use harness::with_live_backend;
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
     gpu_tokenize_and_classify, ClassifiedTokens,
 };

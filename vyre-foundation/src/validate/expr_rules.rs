@@ -1,6 +1,6 @@
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::spec_types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use crate::validate::atomic_rules;
 use crate::validate::bytes_rejection;
 use crate::validate::call_rules::validate_call;
@@ -474,12 +474,12 @@ mod tests {
             Expr::WorkgroupId { axis: 0 },
             Expr::LocalId { axis: 0 },
             Expr::BinOp {
-                op: crate::ir_inner::model::spec_types::BinOp::Add,
+                op: crate::ir_inner::model::op_signature::BinOp::Add,
                 left: Box::new(Expr::LitU32(1)),
                 right: Box::new(Expr::LitU32(2)),
             },
             Expr::UnOp {
-                op: crate::ir_inner::model::spec_types::UnOp::LogicalNot,
+                op: crate::ir_inner::model::op_signature::UnOp::LogicalNot,
                 operand: Box::new(Expr::LitBool(false)),
             },
             Expr::Call {
@@ -501,7 +501,7 @@ mod tests {
                 c: Box::new(Expr::LitF32(3.0)),
             },
             Expr::Atomic {
-                op: crate::ir_inner::model::spec_types::AtomicOp::Add,
+                op: crate::ir_inner::model::op_signature::AtomicOp::Add,
                 buffer: Ident::from("buf"),
                 index: Box::new(Expr::LitU32(0)),
                 expected: None,

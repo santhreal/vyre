@@ -9,7 +9,7 @@ use rustc_hash::FxHashMap;
 use thiserror::Error;
 
 use super::program::Program;
-use super::spec_types::{BufferAccess, DataType};
+use super::op_signature::{BufferAccess, DataType};
 
 /// Canonical graph-local identity for one connected semantic value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

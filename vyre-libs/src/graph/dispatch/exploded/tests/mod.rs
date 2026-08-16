@@ -8,7 +8,7 @@ use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, Expl
 
 mod ifds_doubles;
 
-use crate::test_support::StaticOutputs;
+use crate::test_parity_oracles::StaticOutputs;
 use ifds_doubles::{canonical_expected, RecordingIfdsOracle};
 
 /// The readback shapes below are deliberately malformed, so the dispatcher

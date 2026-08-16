@@ -2,8 +2,8 @@
 
 #![forbid(unsafe_code)]
 
-mod common;
-use common::bf16_word;
+mod wire_words;
+use wire_words::bf16_word;
 
 use vyre::ir::DataType;
 use vyre_libs::nn::activation::sigmoid_gate_typed;

@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::inspect_core::WallClockMinima;
+use super::artifact_metrics::WallClockMinima;
 
 #[derive(Debug, Deserialize)]
 pub(super) struct ReleaseWorkloadMatrix {

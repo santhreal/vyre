@@ -1,5 +1,5 @@
 //! End-to-end parity for `data::scallop_provenance::provenance_closure_via` (the transitive lineage
-//! closure) through the shared faithful [`vyre_libs::test_support::ReferenceEvalDispatcher`].
+//! closure) through the shared faithful [`vyre_libs::test_parity_oracles::ReferenceEvalDispatcher`].
 //!
 //! Closes a mock-dispatcher-coherence gap (see BACKLOG `SWEEP-self-substrate-mock-dispatcher-coherence`):
 //! `scallop_join`'s IR is run by NO `vyre-primitives/tests/*` file through a faithful dispatch
@@ -20,7 +20,7 @@ use vyre_libs::encoding::scallop_provenance::{
     provenance_closure_via, reference_provenance_closure,
 };
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 fn xorshift(state: &mut u32) -> u32 {
     *state ^= *state << 13;

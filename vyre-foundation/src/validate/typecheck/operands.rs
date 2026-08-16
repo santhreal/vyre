@@ -6,7 +6,7 @@
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::spec_types::{BinOp, DataType};
+use crate::ir_inner::model::op_signature::{BinOp, DataType};
 use crate::validate::{err, Binding, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
@@ -229,7 +229,7 @@ fn expr_is_static_zero(expr: &Expr) -> bool {
 
 #[inline]
 pub(crate) fn validate_unop_operand(
-    op: &crate::ir_inner::model::spec_types::UnOp,
+    op: &crate::ir_inner::model::op_signature::UnOp,
     expr: &Expr,
     buffers: &FxHashMap<&str, &BufferDecl>,
     scope: &FxHashMap<crate::ir::Ident, Binding>,
@@ -237,7 +237,7 @@ pub(crate) fn validate_unop_operand(
 ) {
     if let Some(ty) = expr_type(expr, &mut ScopeTypes::new(buffers, scope)) {
         match op {
-            crate::ir_inner::model::spec_types::UnOp::Negate => {
+            crate::ir_inner::model::op_signature::UnOp::Negate => {
                 if matches!(ty, DataType::I32) {
                     errors.push(err("V098", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `Negate` operand has type `{ty}`, but legal total Negate types are `u32` and `f32`; raw i32 negation has the i32::MIN overflow case"
@@ -252,7 +252,7 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::spec_types::UnOp::LogicalNot => {
+            crate::ir_inner::model::op_signature::UnOp::LogicalNot => {
                 if !matches!(ty, DataType::U32 | DataType::Bool) {
                     errors.push(err("V100", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `LogicalNot` operand has type `{ty}`; legal set is `u32` or `bool`"
@@ -261,11 +261,11 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::spec_types::UnOp::BitNot
-            | crate::ir_inner::model::spec_types::UnOp::Popcount
-            | crate::ir_inner::model::spec_types::UnOp::Clz
-            | crate::ir_inner::model::spec_types::UnOp::Ctz
-            | crate::ir_inner::model::spec_types::UnOp::ReverseBits => {
+            crate::ir_inner::model::op_signature::UnOp::BitNot
+            | crate::ir_inner::model::op_signature::UnOp::Popcount
+            | crate::ir_inner::model::op_signature::UnOp::Clz
+            | crate::ir_inner::model::op_signature::UnOp::Ctz
+            | crate::ir_inner::model::op_signature::UnOp::ReverseBits => {
                 // VAL-004: U64 operands are valid for every bitwise-unary
                 // op. The reference interpreter handles Value::U64 for
                 // BitNot/Popcount/Clz/Ctz/ReverseBits and target-text ≥ the 64-bit
@@ -279,31 +279,31 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::spec_types::UnOp::Sin
-            | crate::ir_inner::model::spec_types::UnOp::Cos
-            | crate::ir_inner::model::spec_types::UnOp::Exp
-            | crate::ir_inner::model::spec_types::UnOp::Log
-            | crate::ir_inner::model::spec_types::UnOp::Log2
-            | crate::ir_inner::model::spec_types::UnOp::Exp2
-            | crate::ir_inner::model::spec_types::UnOp::Tan
-            | crate::ir_inner::model::spec_types::UnOp::Acos
-            | crate::ir_inner::model::spec_types::UnOp::Asin
-            | crate::ir_inner::model::spec_types::UnOp::Atan
-            | crate::ir_inner::model::spec_types::UnOp::Tanh
-            | crate::ir_inner::model::spec_types::UnOp::Sinh
-            | crate::ir_inner::model::spec_types::UnOp::Cosh
-            | crate::ir_inner::model::spec_types::UnOp::Abs
-            | crate::ir_inner::model::spec_types::UnOp::Sqrt
-            | crate::ir_inner::model::spec_types::UnOp::InverseSqrt
-            | crate::ir_inner::model::spec_types::UnOp::Reciprocal
-            | crate::ir_inner::model::spec_types::UnOp::Floor
-            | crate::ir_inner::model::spec_types::UnOp::Ceil
-            | crate::ir_inner::model::spec_types::UnOp::Round
-            | crate::ir_inner::model::spec_types::UnOp::Trunc
-            | crate::ir_inner::model::spec_types::UnOp::Sign
-            | crate::ir_inner::model::spec_types::UnOp::IsNan
-            | crate::ir_inner::model::spec_types::UnOp::IsInf
-            | crate::ir_inner::model::spec_types::UnOp::IsFinite => {
+            crate::ir_inner::model::op_signature::UnOp::Sin
+            | crate::ir_inner::model::op_signature::UnOp::Cos
+            | crate::ir_inner::model::op_signature::UnOp::Exp
+            | crate::ir_inner::model::op_signature::UnOp::Log
+            | crate::ir_inner::model::op_signature::UnOp::Log2
+            | crate::ir_inner::model::op_signature::UnOp::Exp2
+            | crate::ir_inner::model::op_signature::UnOp::Tan
+            | crate::ir_inner::model::op_signature::UnOp::Acos
+            | crate::ir_inner::model::op_signature::UnOp::Asin
+            | crate::ir_inner::model::op_signature::UnOp::Atan
+            | crate::ir_inner::model::op_signature::UnOp::Tanh
+            | crate::ir_inner::model::op_signature::UnOp::Sinh
+            | crate::ir_inner::model::op_signature::UnOp::Cosh
+            | crate::ir_inner::model::op_signature::UnOp::Abs
+            | crate::ir_inner::model::op_signature::UnOp::Sqrt
+            | crate::ir_inner::model::op_signature::UnOp::InverseSqrt
+            | crate::ir_inner::model::op_signature::UnOp::Reciprocal
+            | crate::ir_inner::model::op_signature::UnOp::Floor
+            | crate::ir_inner::model::op_signature::UnOp::Ceil
+            | crate::ir_inner::model::op_signature::UnOp::Round
+            | crate::ir_inner::model::op_signature::UnOp::Trunc
+            | crate::ir_inner::model::op_signature::UnOp::Sign
+            | crate::ir_inner::model::op_signature::UnOp::IsNan
+            | crate::ir_inner::model::op_signature::UnOp::IsInf
+            | crate::ir_inner::model::op_signature::UnOp::IsFinite => {
                 if ty != DataType::F32 {
                     errors.push(err("V102", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `{op:?}` operand has type `{ty}`; legal set for math ops is `f32`"
@@ -312,10 +312,10 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::spec_types::UnOp::Unpack4Low
-            | crate::ir_inner::model::spec_types::UnOp::Unpack4High
-            | crate::ir_inner::model::spec_types::UnOp::Unpack8Low
-            | crate::ir_inner::model::spec_types::UnOp::Unpack8High => {
+            crate::ir_inner::model::op_signature::UnOp::Unpack4Low
+            | crate::ir_inner::model::op_signature::UnOp::Unpack4High
+            | crate::ir_inner::model::op_signature::UnOp::Unpack8Low
+            | crate::ir_inner::model::op_signature::UnOp::Unpack8High => {
                 // VAL-004: nibble/byte unpack ops extract a masked, shifted lane
                 // from a 32-bit integer word, emit lowers them to
                 // `(v >> shift) & mask` and the reference interpreter mirrors it,

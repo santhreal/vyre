@@ -7,9 +7,9 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod support;
+mod harness;
 
-use support::preprocess_stream::{
+use harness::preprocess_stream::{
     column_words, cpu_kinds_and_values, padded_defined_macros, run_directive_metadata_stage,
 };
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};

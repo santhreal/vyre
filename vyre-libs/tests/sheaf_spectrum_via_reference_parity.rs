@@ -13,7 +13,7 @@
 
 use vyre_libs::solvers::sheaf_spectral_clustering::dominant_spectrum_fixed_via;
 
-use vyre_libs::test_support::ReferenceEvalDispatcher;
+use vyre_libs::test_parity_oracles::ReferenceEvalDispatcher;
 
 const ONE_FP: u32 = 1 << 16;
 

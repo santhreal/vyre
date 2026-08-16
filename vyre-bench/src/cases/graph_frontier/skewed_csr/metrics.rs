@@ -1,4 +1,4 @@
-use super::support::SkewedCsrStats;
+use super::fixture::SkewedCsrStats;
 use crate::api::metric::MetricPoint;
 
 pub(super) fn skewed_csr_metric_points(

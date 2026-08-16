@@ -28,9 +28,9 @@
 #![cfg(feature = "parsing")]
 #![forbid(unsafe_code)]
 
-mod support;
+mod harness;
 
-use support::ir_fingerprint::assert_pinned_ir_fingerprints;
+use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::operation::OperationRegistry;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_semantic_graph};

@@ -7,9 +7,9 @@
 //! - Back-to-back async dispatches submit without host serialization
 //! - Returned WGPU pending handles are object-safe
 
-mod common;
+mod harness;
 
-use common::{
+use harness::{
     assert_dispatch_async_ready_state_observable_for_non_trivial_work,
     assert_dispatch_async_returns_before_gpu_completion,
     assert_multiple_concurrent_async_dispatches_do_not_serialize,

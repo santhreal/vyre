@@ -10,8 +10,8 @@ use vyre_driver::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-mod support;
-use support::{dispatch_no_input, dispatch_with_inputs};
+mod dispatch_fixtures;
+use dispatch_fixtures::{dispatch_no_input, dispatch_with_inputs};
 
 // ---------------------------------------------------------------
 // Store literal

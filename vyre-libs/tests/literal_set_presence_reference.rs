@@ -7,8 +7,8 @@
 //! and no absent pattern set (precision). This is the per-output-mode equivalent
 //! of `bounded_ranges_suffix3_prefilter_reference_eval_matches_cpu_oracle`.
 
-mod common;
-use common::decode_u32_words as decode_u32;
+mod wire_words;
+use wire_words::decode_u32_words as decode_u32;
 
 use std::collections::BTreeSet;
 

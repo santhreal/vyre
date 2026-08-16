@@ -6,9 +6,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::with_cuda_optimizer_dispatcher;
+use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::encoding::bitset_summary::{
     per_word_popcount, per_word_popcount_via, saturation_ratio, saturation_ratio_via,
     total_set_bits, total_set_bits_via,

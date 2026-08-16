@@ -32,7 +32,7 @@ const CORE_ROOTS: &[&str] = &[
 /// plus five percent, rounded up.
 const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-libs/src/parsing/c/preprocess/mod.rs", 981),
-    ("vyre-driver-wgpu/src/backend_impl.rs", 1360),
+    ("vyre-driver-wgpu/src/backend_dispatch.rs", 1360),
     ("vyre-driver-wgpu/src/pipeline/mod.rs", 900),
     ("vyre-libs/src/parsing/c/parse/structure/mod.rs", 844),
     ("vyre-driver-wgpu/src/buffer/handle/mod.rs", 674),

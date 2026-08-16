@@ -14,10 +14,10 @@
 //! used so the `no_directives` variants agree with the full base.
 #![cfg(feature = "c-parser")]
 
-use common::decode_u32_words as decode;
-mod common;
+use wire_words::decode_u32_words as decode;
+mod wire_words;
 
-use common::u32_bytes as bytes;
+use wire_words::u32_bytes as bytes;
 use vyre::ir::Program;
 use vyre_libs::parsing::c::lex::lexer::{
     c11_lex_regular_single_pass, c11_lexer, c11_lexer_regular, c11_lexer_regular_ranked,

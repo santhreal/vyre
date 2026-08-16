@@ -20,10 +20,10 @@
 //! output-byte assertions (Testing-Contract: truth, not `!is_empty`).
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod common;
+mod wire_words;
 
-use common::decode_u32_words as words_from_bytes;
-use common::u32_bytes as bytes;
+use wire_words::decode_u32_words as words_from_bytes;
+use wire_words::u32_bytes as bytes;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{

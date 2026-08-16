@@ -4,14 +4,14 @@
 //! expected collapsed form.
 //!
 //! The pipeline runner and the program shapes live in
-//! `common::self_optimizer`; this file only groups the per-rule submodules and
+//! `harness::self_optimizer`; this file only groups the per-rule submodules and
 //! puts the harness in scope for their `use super::*`.
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-pub(crate) use common::self_optimizer::{
+pub(crate) use harness::self_optimizer::{
     assert_branch_folded_to, assert_cond_not_headed_by, assert_lit_bool, assert_lit_u32,
     assert_var, b_load_branch_program, binop, folded_x_store_value, folded_xy_store_value,
     run_pipeline, unop,

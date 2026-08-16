@@ -31,7 +31,7 @@ use std::path::{Path, PathBuf};
 use quote::ToTokens;
 use syn::visit::Visit;
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 /// Below this many exit sites the walk or the shape match has stopped seeing the
 /// xtask crates and an empty offender set would mean nothing.

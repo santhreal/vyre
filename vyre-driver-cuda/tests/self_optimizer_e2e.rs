@@ -13,9 +13,9 @@
 
 #![cfg(test)]
 
-mod common;
+mod harness;
 
-use common::{live_backend, CudaProgramDispatcher};
+use harness::{live_backend, CudaProgramDispatcher};
 use vyre::ir::{BinOp, Expr, Node};
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::dce as cpu_dce_oracle;

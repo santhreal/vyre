@@ -6,10 +6,10 @@ use std::process::Output;
 
 use serde_json::{json, Value};
 
-use super::common::workspace_root;
+use super::workspace_sources::workspace_root;
 
 fn run_checker(root: &Path) -> Output {
-    super::common::run_generator("scripts/architecture_docs.py", root, "--check")
+    super::workspace_sources::run_generator("scripts/architecture_docs.py", root, "--check")
 }
 
 fn write_json(path: &Path, value: &Value) {

@@ -18,7 +18,7 @@
 
 use vyre_libs::solvers::mori_zwanzig_region_coarsen::coarsen_region_state_fixed_via;
 
-use vyre_libs::test_support::{
+use vyre_libs::test_parity_oracles::{
     fixed_matvec as mz_project_fixed, signed_fixed_19 as signed_fixed, xorshift32 as xorshift,
     ReferenceEvalDispatcher,
 };

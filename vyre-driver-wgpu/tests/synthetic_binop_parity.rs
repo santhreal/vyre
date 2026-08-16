@@ -24,10 +24,10 @@
 //! added to the shared table without a reference fails at the lookup, before the
 //! GPU is acquired.
 
-mod binop_parity_support;
-mod common;
+mod binop_parity_fixtures;
+mod harness;
 
-use binop_parity_support::program;
+use binop_parity_fixtures::program;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::Program;
 use vyre_test_support::binop_parity::{
@@ -39,7 +39,7 @@ use vyre_test_support::binop_parity::{
 const LOWERING: &str = "the multi-step naga synthesis";
 
 fn dispatch(backend: &WgpuBackend, program: &Program, pairs: &[(u32, u32)]) -> Vec<u32> {
-    binop_parity_support::dispatch(backend, program, pairs, "synthetic-binop parity contract")
+    binop_parity_fixtures::dispatch(backend, program, pairs, "synthetic-binop parity contract")
 }
 
 /// Dispatch `case` on the live GPU and assert byte-for-byte against the shared
