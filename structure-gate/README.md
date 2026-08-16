@@ -1,9 +1,9 @@
 # structure-gate
 
 The structural contract: the crate roster, one identity per operation,
-one home per concept. It also owns the correct source-text reader, the
-one that handles nested block comments, raw strings, and a character
-literal that is not a lifetime.
+one home per concept, one place per module. It also owns the correct
+source-text reader, the one that handles nested block comments, raw
+strings, and a character literal that is not a lifetime.
 
 Not here: a second source scanner.
 
@@ -26,7 +26,7 @@ Environment: No environment variables alter CLI behavior.
 
 Configuration: The command reads the workspace manifests and Rust sources under the repository root. It takes no arguments other than help.
 
-Failure behavior: A workspace member outside the reviewed roster, an operation identity registered more than once, or a concept with more than one home returns status 1 with the offending paths.
+Failure behavior: A workspace member outside the reviewed roster, an operation identity registered more than once, a concept with more than one home, a src/ module file beside a directory of its own name, or a module or binary name that states no contract returns status 1 with the offending paths.
 
 Exit codes: 0 when the structure is clean or on help, 1 on a structural finding.
 <!-- END GENERATED CLI CONTRACT -->
@@ -39,7 +39,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Enforce the crate roster, one operation identity per semantic operation, and one home per concept. Depends on no vyre crate so it keeps running while the workspace does not compile.
+Enforce the crate roster, one operation identity per semantic operation, one home per concept, and one place per module. Depends on no vyre crate so it keeps running while the workspace does not compile.
 
 ### Boundaries
 

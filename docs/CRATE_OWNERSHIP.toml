@@ -34,7 +34,7 @@ package = "structure-gate"
 path = "structure-gate"
 owner = "release-tooling"
 layer = "standalone-tooling"
-responsibility = "Enforce the crate roster, one operation identity per semantic operation, and one home per concept. Depends on no vyre crate so it keeps running while the workspace does not compile."
+responsibility = "Enforce the crate roster, one operation identity per semantic operation, one home per concept, and one place per module. Depends on no vyre crate so it keeps running while the workspace does not compile."
 
 [[crate]]
 package = "vyre"

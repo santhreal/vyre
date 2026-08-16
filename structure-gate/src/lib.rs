@@ -2591,11 +2591,17 @@ inventory::submit! {
     }
 
     #[test]
-    fn a_qualifier_suffix_module_is_rejected() {
-        let failures =
-            generic_module_name_failures(&paths(&["vyre-libs/src/scan/window_ext.rs"]), &[]);
+    fn a_qualifier_suffix_is_rejected_as_a_file_and_as_a_directory() {
+        let failures = generic_module_name_failures(
+            &paths(&[
+                "vyre-libs/src/scan/window_ext.rs",
+                "vyre-libs/src/scan/region_ext/mod.rs",
+                "xtask/src/bin/dump_ext.rs",
+            ]),
+            &[],
+        );
 
-        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert_eq!(failures.len(), 3, "{failures:?}");
     }
 
     #[test]
