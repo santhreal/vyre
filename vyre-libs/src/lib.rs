@@ -46,8 +46,12 @@ pub(crate) mod builder;
 /// and what the host does to launch it.
 pub(crate) mod plumbing;
 
+#[cfg(feature = "graph")]
+pub use builder::csr;
 pub use builder::range_ordering;
 pub use builder::state_machine;
+#[cfg(feature = "graph")]
+pub use builder::CsrTraversalComposer;
 pub use builder::TableStateMachineComposer;
 pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};

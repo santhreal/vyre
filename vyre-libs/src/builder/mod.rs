@@ -24,6 +24,10 @@
 /// cooperative walk already enables it.
 #[cfg(feature = "reduce")]
 pub(crate) mod cooperative;
+#[cfg(feature = "graph")]
+pub mod csr;
+#[cfg(feature = "graph")]
+pub use csr::CsrTraversalComposer;
 pub(crate) mod elementwise;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.

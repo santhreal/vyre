@@ -9,8 +9,7 @@ use super::frontier_plan::ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE;
 use super::mode_selection::dense_cutover_nodes;
 use super::HYBRID_OP_ID;
 use crate::bitset::bitset_words;
-use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
-
+use crate::graph::frontier_bits::{set_bit, BitAccess};
 /// Build the GPU Program for one adaptive sparse/dense step.
 ///
 /// Each invocation uses the device-resident `frontier_popcount[0]` to choose
@@ -100,58 +99,19 @@ pub fn adaptive_sparse_dense_step(
         ),
     ];
 
-    let sparse_body: Vec<Node> = when_bit_set(
-        frontier_in,
-        &lane,
-        Some("sparse_word_idx"),
-        "sparse_src_word",
-        "sparse_bit_mask",
-        |word| word,
-        vec![
-            Node::let_bind("sparse_edge_start", Expr::load(edge_offsets, lane.clone())),
-            Node::let_bind(
-                "sparse_edge_end",
-                Expr::load(edge_offsets, Expr::add(lane.clone(), Expr::u32(1))),
-            ),
-            Node::loop_for(
-                "sparse_e",
-                Expr::var("sparse_edge_start"),
-                Expr::var("sparse_edge_end"),
-                vec![
-                    Node::let_bind(
-                        "sparse_kind_mask",
-                        Expr::load(edge_kind_mask, Expr::var("sparse_e")),
-                    ),
-                    Node::if_then(
-                        Expr::ne(
-                            Expr::bitand(Expr::var("sparse_kind_mask"), Expr::u32(allow_mask)),
-                            Expr::u32(0),
-                        ),
-                        vec![
-                            Node::let_bind(
-                                "sparse_dst",
-                                Expr::load(edge_targets, Expr::var("sparse_e")),
-                            ),
-                            Node::if_then(
-                                Expr::lt(Expr::var("sparse_dst"), Expr::u32(node_count)),
-                                set_bit(
-                                    frontier_out,
-                                    &Expr::var("sparse_dst"),
-                                    BitAccess {
-                                        word: "sparse_dst_word_idx",
-                                        mask: "sparse_dst_bit",
-                                        value: "_sparse_prev",
-                                    },
-                                    |word| word,
-                                    Vec::new(),
-                                ),
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    );
+    let sparse_body: Vec<Node> = crate::builder::csr::CsrTraversalComposer::new(
+        HYBRID_OP_ID,
+        "adaptive_sparse_dense_step",
+        node_count,
+    )
+    .with_buffers(crate::builder::csr::CsrBuffers::new(
+        edge_offsets,
+        edge_targets,
+        Some(edge_kind_mask),
+    ))
+    .with_allow_mask(allow_mask)
+    .with_prefix("sparse")
+    .emit_edge_scan(frontier_out, lane.clone(), |word| word, Vec::new);
 
     let body = vec![
         Node::let_bind(

@@ -16,12 +16,9 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::graph::frontier_bits::{
-    active_source_lane, bind_bit_address, set_bit, when_bit_set, BitAccess,
-};
+use crate::graph::frontier_bits::bind_bit_address;
 use crate::graph::program_graph::{
-    frontier_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK,
-    NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
+    ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
 };
 
 /// Canonical binding index for the input frontier bitset.
@@ -249,41 +246,24 @@ pub(crate) fn csr_frontier_step_program(
     frontier_out: &str,
     allow_mask: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
-    let mut buffers = shape.read_only_buffers();
-    buffers.push(frontier_buffer(
-        frontier_in,
-        BINDING_FRONTIER_IN,
-        BufferAccess::ReadOnly,
-        shape.node_count,
-    ));
-    buffers.push(frontier_buffer(
-        frontier_out,
-        BINDING_FRONTIER_OUT,
-        BufferAccess::ReadWrite,
-        shape.node_count,
-    ));
-
-    let body = match kind {
-        CsrFrontierStepKind::Forward => forward_body(
+    match kind {
+        CsrFrontierStepKind::Forward => crate::builder::csr::CsrTraversalComposer::forward(
+            op_id,
             shape.node_count,
-            frontier_in,
-            None,
-            frontier_out,
+            shape.edge_count,
             allow_mask,
-            t,
-        ),
-        CsrFrontierStepKind::Backward => vec![Node::if_then(
-            Expr::lt(t.clone(), Expr::u32(shape.node_count)),
-            backward_body(shape.node_count, frontier_in, frontier_out, allow_mask, t),
-        )],
-    };
-
-    Program::wrapped(
-        buffers,
-        CSR_FRONTIER_STEP_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(op_id, body)],
-    )
+        )
+        .with_workgroup_size(CSR_FRONTIER_STEP_WORKGROUP_SIZE)
+        .build_forward_step(frontier_in, frontier_out),
+        CsrFrontierStepKind::Backward => crate::builder::csr::CsrTraversalComposer::backward(
+            op_id,
+            shape.node_count,
+            shape.edge_count,
+            allow_mask,
+        )
+        .with_workgroup_size(CSR_FRONTIER_STEP_WORKGROUP_SIZE)
+        .build_backward_step(frontier_in, frontier_out),
+    }
 }
 /// Build a forward CSR step that excludes active source nodes selected by
 /// `excluded_sources`.
@@ -296,123 +276,14 @@ pub(crate) fn csr_forward_step_excluding_program(
     frontier_out: &str,
     allow_mask: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
-    let mut buffers = shape.read_only_buffers();
-    buffers.push(frontier_buffer(
-        frontier_in,
-        BINDING_FRONTIER_IN,
-        BufferAccess::ReadOnly,
+    crate::builder::csr::CsrTraversalComposer::forward(
+        op_id,
         shape.node_count,
-    ));
-    buffers.push(frontier_buffer(
-        excluded_sources,
-        BINDING_EXCLUDED_SOURCES,
-        BufferAccess::ReadOnly,
-        shape.node_count,
-    ));
-    buffers.push(frontier_buffer(
-        frontier_out,
-        BINDING_EXCLUDING_FRONTIER_OUT,
-        BufferAccess::ReadWrite,
-        shape.node_count,
-    ));
-
-    Program::wrapped(
-        buffers,
-        CSR_FRONTIER_STEP_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            op_id,
-            forward_body(
-                shape.node_count,
-                frontier_in,
-                Some(excluded_sources),
-                frontier_out,
-                allow_mask,
-                t,
-            ),
-        )],
-    )
-}
-
-fn forward_body(
-    node_count: u32,
-    frontier_in: &str,
-    excluded_sources: Option<&str>,
-    frontier_out: &str,
-    allow_mask: u32,
-    t: Expr,
-) -> Vec<Node> {
-    let active_body = crate::graph::edge_scan::csr_edge_expand_nodes(
-        ProgramGraphShape::new(node_count, 0),
-        frontier_out,
-        Expr::var("src"),
-        |word| word,
-        Vec::new,
+        shape.edge_count,
         allow_mask,
-        "",
-    );
-    vec![active_source_lane(
-        node_count,
-        frontier_in,
-        excluded_sources,
-        t,
-        active_body,
-    )]
-}
-
-fn backward_body(
-    node_count: u32,
-    frontier_in: &str,
-    frontier_out: &str,
-    allow_mask: u32,
-    t: Expr,
-) -> Vec<Node> {
-    let mut body = vec![
-        Node::let_bind("src", t),
-        Node::let_bind("hit", Expr::u32(0)),
-    ];
-    body.extend(edge_bounds_and_loop(vec![Node::if_then(
-        Expr::eq(Expr::var("hit"), Expr::u32(0)),
-        vec![
-            Node::let_bind("kind_mask", Expr::load(NAME_EDGE_KIND_MASK, Expr::var("e"))),
-            Node::if_then(
-                Expr::ne(
-                    Expr::bitand(Expr::var("kind_mask"), Expr::u32(allow_mask)),
-                    Expr::u32(0),
-                ),
-                vec![
-                    Node::let_bind("dst", Expr::load(NAME_EDGE_TARGETS, Expr::var("e"))),
-                    Node::if_then(
-                        Expr::lt(Expr::var("dst"), Expr::u32(node_count)),
-                        when_bit_set(
-                            frontier_in,
-                            &Expr::var("dst"),
-                            None,
-                            "dst_word",
-                            "dst_bit",
-                            |word| word,
-                            vec![Node::assign("hit", Expr::u32(1))],
-                        ),
-                    ),
-                ],
-            ),
-        ],
-    )]));
-    body.push(Node::if_then(
-        Expr::eq(Expr::var("hit"), Expr::u32(1)),
-        set_bit(
-            frontier_out,
-            &Expr::var("src"),
-            BitAccess {
-                word: "src_word_idx",
-                mask: "src_bit",
-                value: "_prev",
-            },
-            |word| word,
-            Vec::new(),
-        ),
-    ));
-    body
+    )
+    .with_workgroup_size(CSR_FRONTIER_STEP_WORKGROUP_SIZE)
+    .build_forward_step_excluding(frontier_in, excluded_sources, frontier_out)
 }
 
 pub(crate) fn edge_scan_body(

@@ -5,8 +5,6 @@ use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::layout::{CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID};
-use crate::graph::edge_scan::csr_edge_expand_nodes;
-use crate::graph::frontier_bits::{bind_bit_address, bit_is_set, BitAccess};
 use crate::graph::program_graph::{push_frontier_changed_buffers, ProgramGraphShape};
 
 /// Parallel in-place expansion program for production fixed-point drivers.
@@ -120,124 +118,20 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
     active_gate: Option<Expr>,
     extra_changed: Option<(&str, Expr)>,
 ) -> Vec<Node> {
-    let local = |name: &str| -> String {
-        if local_prefix.is_empty() {
-            name.to_string()
-        } else {
-            format!("{local_prefix}_{name}")
-        }
-    };
-    let src = Expr::gid_x();
-    let in_bounds = local("in_bounds");
-    let word_idx = local("word_idx");
-    let bit_mask = local("bit_mask");
-    let src_word = local("src_word");
-    let src_active = local("src_active");
-    let changed_old = local("changed_old");
-    let extra_changed_old = local("extra_changed_old");
-
-    let mark_changed = || {
-        let mut nodes = vec![Node::let_bind(
-            changed_old.as_str(),
-            Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
-        )];
-        if let Some((extra_changed_buffer, extra_changed_index)) = &extra_changed {
-            nodes.push(Node::let_bind(
-                extra_changed_old.as_str(),
-                Expr::atomic_or(
-                    extra_changed_buffer,
-                    extra_changed_index.clone(),
-                    Expr::u32(1),
-                ),
-            ));
-        }
-        nodes
-    };
-
-    // The neighbor expansion is the ONE canonical CSR edge-scan (identity frontier
-    // index, a single bitset, and `mark_changed` on each newly-set bit). This is
-    // the EDGE-WALK-ONLY level: the source-activity read is done by THIS function
-    // (inline in the non-snapshot path, or snapshotted before a barrier), so it wraps
-    // `csr_edge_expand_nodes` rather than the full `csr_edge_scan_nodes`. Byte-identical
-    // to the previous hand-written `edge_scan` closure. `mark_changed` is borrowed so
-    // both call sites can reuse it.
-    let edge_scan = || {
-        csr_edge_expand_nodes(
-            shape,
-            frontier_out,
-            src.clone(),
-            |word| word,
-            &mark_changed,
-            edge_kind_mask,
-            local_prefix,
-        )
-    };
-
-    if let Some(ordering) = snapshot_barrier {
-        let ungated_src_active = Expr::select(
-            Expr::var(in_bounds.as_str()),
-            Expr::bitand(Expr::var(src_word.as_str()), Expr::var(bit_mask.as_str())),
-            Expr::u32(0),
-        );
-        let src_active_expr = if let Some(active_gate) = active_gate {
-            Expr::select(
-                Expr::ne(active_gate, Expr::u32(0)),
-                ungated_src_active,
-                Expr::u32(0),
-            )
-        } else {
-            ungated_src_active
-        };
-        let mut preamble = vec![Node::let_bind(
-            in_bounds.as_str(),
-            Expr::lt(src.clone(), Expr::u32(shape.node_count)),
-        )];
-        // The snapshot path reads its own source bit rather than calling
-        // `frontier_bits::when_bit_set`: the read must land BEFORE the barrier and
-        // the guard AFTER it, so the address, the load and the test are three
-        // separate statements here instead of one probe. The word index is
-        // `select`ed to zero out of bounds so the pre-barrier load stays in range
-        // for the tail lanes of the last group.
-        preamble.extend(bind_bit_address(
-            &src,
-            word_idx.as_str(),
-            bit_mask.as_str(),
-            |word| Expr::select(Expr::var(in_bounds.as_str()), word, Expr::u32(0)),
-        ));
-        preamble.extend([
-            Node::let_bind(
-                src_word.as_str(),
-                Expr::load(frontier_out, Expr::var(word_idx.as_str())),
-            ),
-            Node::let_bind(src_active.as_str(), src_active_expr),
-            Node::barrier_with_ordering(ordering),
-            Node::if_then(
-                Expr::ne(Expr::var(src_active.as_str()), Expr::u32(0)),
-                edge_scan(),
-            ),
-        ]);
-        return preamble;
-    }
-
-    let mut body =
-        bind_bit_address(&src, word_idx.as_str(), bit_mask.as_str(), |word| word).to_vec();
-    body.push(Node::let_bind(
-        src_word.as_str(),
-        Expr::load(frontier_out, Expr::var(word_idx.as_str())),
-    ));
-    body.push(Node::if_then(
-        bit_is_set(BitAccess {
-            word: word_idx.as_str(),
-            mask: bit_mask.as_str(),
-            value: src_word.as_str(),
-        }),
-        edge_scan(),
-    ));
-
-    vec![Node::if_then(
-        Expr::lt(Expr::gid_x(), Expr::u32(shape.node_count)),
-        body,
-    )]
+    crate::builder::csr::CsrTraversalComposer::forward(
+        OP_ID,
+        shape.node_count,
+        shape.edge_count,
+        edge_kind_mask,
+    )
+    .with_prefix(local_prefix)
+    .emit_parallel_forward_or_changed_body(
+        frontier_out,
+        changed,
+        snapshot_barrier,
+        active_gate,
+        extra_changed,
+    )
 }
 
 /// Wrap a parallel expansion body as a child Region of `parent_op_id`.

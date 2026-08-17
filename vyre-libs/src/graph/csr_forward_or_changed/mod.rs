@@ -1,6 +1,5 @@
 //! CSR frontier expansion over an in-place accumulator bitset.
 
-mod batched_frontier_words;
 mod body;
 mod cpu_ref;
 mod dispatch_plan;

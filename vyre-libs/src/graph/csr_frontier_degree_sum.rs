@@ -27,7 +27,7 @@ use vyre_foundation::ir::{BufferAccess, Expr, Node, Program};
 
 use crate::graph::frontier_bits::active_source_lane;
 use crate::graph::program_graph::{
-    frontier_buffer, word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_OFFSETS,
+    frontier_buffer, word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START,
 };
 
 /// Canonical op id.
@@ -63,21 +63,20 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
         frontier_in,
         None,
         Expr::InvocationId { axis: 0 },
-        vec![
-            Node::let_bind("off_lo", Expr::load(NAME_EDGE_OFFSETS, Expr::var("src"))),
-            Node::let_bind(
-                "off_hi",
-                Expr::load(NAME_EDGE_OFFSETS, Expr::add(Expr::var("src"), Expr::u32(1))),
-            ),
-            Node::let_bind(
-                "degree",
-                Expr::sub(Expr::var("off_hi"), Expr::var("off_lo")),
-            ),
-            Node::let_bind(
-                "_old",
-                Expr::atomic_add(degree_sum_out, Expr::u32(0), Expr::var("degree")),
-            ),
-        ],
+        {
+            let [off_lo, off_hi, deg] =
+                crate::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, shape.node_count)
+                    .emit_row_degree(Expr::var("src"), "off_lo", "off_hi", "degree");
+            vec![
+                off_lo,
+                off_hi,
+                deg,
+                Node::let_bind(
+                    "_old",
+                    Expr::atomic_add(degree_sum_out, Expr::u32(0), Expr::var("degree")),
+                ),
+            ]
+        },
     )];
 
     let mut buffers = shape.read_only_buffers();

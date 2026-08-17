@@ -1,18 +1,12 @@
 //! Reverse CSR frontier expansion over an in-place accumulator bitset.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
-use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::ir::Program;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::bitset::bitset_words;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
-use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
-use crate::graph::program_graph::{
-    push_frontier_changed_buffers, ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS,
-    NAME_EDGE_TARGETS,
-};
+use crate::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::lane_grid;
 
 /// Canonical op id.
@@ -34,77 +28,14 @@ pub fn csr_backward_or_changed_parallel(
     changed: &str,
     edge_kind_mask: u32,
 ) -> Program {
-    let src = Expr::InvocationId { axis: 0 };
-    let body = vec![
-        Node::let_bind("edge_start", Expr::load(NAME_EDGE_OFFSETS, src.clone())),
-        Node::let_bind(
-            "edge_end",
-            Expr::load(NAME_EDGE_OFFSETS, Expr::add(src.clone(), Expr::u32(1))),
-        ),
-        Node::let_bind("hit", Expr::u32(0)),
-        Node::loop_for(
-            "e",
-            Expr::var("edge_start"),
-            Expr::var("edge_end"),
-            vec![Node::if_then(
-                Expr::eq(Expr::var("hit"), Expr::u32(0)),
-                vec![
-                    Node::let_bind("kind_mask", Expr::load(NAME_EDGE_KIND_MASK, Expr::var("e"))),
-                    Node::if_then(
-                        Expr::ne(
-                            Expr::bitand(Expr::var("kind_mask"), Expr::u32(edge_kind_mask)),
-                            Expr::u32(0),
-                        ),
-                        vec![
-                            Node::let_bind("dst", Expr::load(NAME_EDGE_TARGETS, Expr::var("e"))),
-                            Node::if_then(
-                                Expr::lt(Expr::var("dst"), Expr::u32(shape.node_count)),
-                                when_bit_set(
-                                    frontier_out,
-                                    &Expr::var("dst"),
-                                    None,
-                                    "dst_word",
-                                    "dst_bit",
-                                    |word| word,
-                                    vec![Node::assign("hit", Expr::u32(1))],
-                                ),
-                            ),
-                        ],
-                    ),
-                ],
-            )],
-        ),
-        Node::if_then(
-            Expr::eq(Expr::var("hit"), Expr::u32(1)),
-            set_bit(
-                frontier_out,
-                &src,
-                BitAccess {
-                    word: "src_word_idx",
-                    mask: "src_bit",
-                    value: "old",
-                },
-                |word| word,
-                vec![Node::let_bind(
-                    "_changed",
-                    Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
-                )],
-            ),
-        ),
-    ];
-    let mut buffers = shape.read_only_buffers();
-    push_frontier_changed_buffers(&mut buffers, frontier_out, changed, shape.node_count);
-    Program::wrapped(
-        buffers,
-        CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![Node::if_then(
-                Expr::lt(src.clone(), Expr::u32(shape.node_count)),
-                body,
-            )],
-        )],
+    crate::builder::csr::CsrTraversalComposer::backward(
+        OP_ID,
+        shape.node_count,
+        shape.edge_count,
+        edge_kind_mask,
     )
+    .with_workgroup_size(CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE)
+    .build_parallel_backward_or_changed(frontier_out, changed)
 }
 
 /// CPU reference for one reverse-or-changed expansion pass (snapshot semantics): a
