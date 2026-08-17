@@ -38,20 +38,21 @@ pub(crate) struct BenchReleaseGate;
 
 impl xtask::gate::GateBehavior for BenchReleaseGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let mut r = Report::clean();
+        let mut report = Report::clean();
         let tree = Tree::open(&ctx.root)?;
-        r.cover_complete("benchmark evidence directories", tree.members()?.len());
+        report.cover_complete("benchmark evidence directories", tree.members()?.len());
         let evidence_dir = match evidence_dir(ctx) {
             Ok(directory) => directory,
             Err(message) => {
-                r.find(Finding::new(
-                message,
-                "Pass --evidence-dir with the directory holding the recorded release benchmark artifacts.",
-            ));
-                return Ok(r);
+                report.find(Finding::new(
+                    message,
+                    "Pass --evidence-dir with the directory holding the recorded release benchmark artifacts.",
+                ));
+                return Ok(report);
             }
         };
-        Ok(judge(&evidence_dir))
+        judge(&evidence_dir, &mut report);
+        Ok(report)
     }
 }
 
@@ -59,11 +60,10 @@ impl xtask::gate::GateBehavior for BenchReleaseGate {
 ///
 /// Each axis used to abort the command on the first failure, so a release note
 /// author learned about one missing axis per run. All five are judged here.
-fn judge(evidence_dir: &Path) -> Report {
-    let mut report = Report::clean();
-    let axes = match load_release_axes(evidence_dir, &mut report) {
+fn judge(evidence_dir: &Path, report: &mut Report) {
+    let axes = match load_release_axes(evidence_dir, report) {
         Some(axes) => axes,
-        None => return report,
+        None => return,
     };
     let mut values = Vec::new();
     for (axis, units, kind) in [
@@ -88,7 +88,6 @@ fn judge(evidence_dir: &Path) -> Report {
         xtask::release::release_train::vyre_version(),
         values.join(", ")
     ));
-    report
 }
 
 /// Which numeric type an axis must parse as.

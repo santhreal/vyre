@@ -737,7 +737,8 @@ fn row_matches(pattern: SyntheticPattern, row: &[u32]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::super::synthetic_programs::{
-        string_bitmap_scatter_program, string_bitmap_scatter_program_with_batch,
+        build_synthetic_release_program, string_bitmap_scatter_program,
+        string_bitmap_scatter_program_with_batch,
     };
     use super::*;
     use vyre::ir::BufferAccess;
@@ -836,5 +837,70 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(outputs, vec![expected_row.repeat(batch_size as usize)]);
+    }
+    /// WHY: release.condition_eval.1m uses bitwise popcount reduction instead of an unrolled loop;
+    /// reference evaluation must produce byte-exact agreement with the scalar CPU oracle.
+    #[test]
+    fn condition_eval_reference_eval_matches_cpu_oracle() {
+        for records in [1, 17, 32, 33, 64, 127, 256, 1024] {
+            let program = build_synthetic_release_program(SyntheticPattern::ConditionEval, records);
+            let generated = synthetic_inputs(SyntheticPattern::ConditionEval, records);
+            let values = generated
+                .inputs
+                .iter()
+                .cloned()
+                .map(vyre_reference::value::Value::from)
+                .collect::<Vec<_>>();
+            let outputs = vyre_reference::reference_eval(&program, &values)
+                .expect("Fix: condition eval program must reference-evaluate")
+                .into_iter()
+                .map(|value| value.to_bytes())
+                .collect::<Vec<_>>();
+
+            assert_eq!(
+                outputs,
+                vec![encode_u32_words(&[generated.expected])],
+                "records={records} condition eval output must match CPU oracle count"
+            );
+        }
+    }
+
+    /// WHY: all triple-mask threshold count programs share the bitwise popcount fast path;
+    /// every pattern variant across all predicates must match its CPU oracle.
+    #[test]
+    fn all_triple_mask_programs_reference_eval_match_cpu_oracles() {
+        let patterns = [
+            SyntheticPattern::ConditionEval,
+            SyntheticPattern::OffsetCountAggregation,
+            SyntheticPattern::EntropyWindow,
+            SyntheticPattern::AliasReachingDef,
+            SyntheticPattern::IfdsWitness,
+            SyntheticPattern::AstMotifTraversal,
+            SyntheticPattern::MegakernelQueuedBatch,
+            SyntheticPattern::EgraphSaturation,
+        ];
+        for pattern in patterns {
+            for records in [1, 31, 64, 128] {
+                let program = build_synthetic_release_program(pattern, records);
+                let generated = synthetic_inputs(pattern, records);
+                let values = generated
+                    .inputs
+                    .iter()
+                    .cloned()
+                    .map(vyre_reference::value::Value::from)
+                    .collect::<Vec<_>>();
+                let outputs = vyre_reference::reference_eval(&program, &values)
+                    .unwrap_or_else(|err| panic!("pattern {pattern:?} records {records} failed reference eval: {err}"))
+                    .into_iter()
+                    .map(|value| value.to_bytes())
+                    .collect::<Vec<_>>();
+
+                assert_eq!(
+                    outputs,
+                    vec![encode_u32_words(&[generated.expected])],
+                    "pattern={pattern:?} records={records} output must match CPU oracle count"
+                );
+            }
+        }
     }
 }
