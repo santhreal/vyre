@@ -70,6 +70,7 @@ pub(crate) struct BenchCrossbackGate;
 impl xtask::gate::GateBehavior for BenchCrossbackGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
+        report.produced(TABLE);
         let cases = collect(&ctx.root, &mut report)?;
         report.cover_complete("benchmark crossback cases", cases.len());
         let measured: usize = cases.values().map(|case| case.measured.len()).sum();

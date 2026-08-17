@@ -4312,6 +4312,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   fingerprint or device signature, and a recorded table that disagrees with the
   evidence are findings now, and a backend a case contract declares without a
   measurement is listed in the table instead of dropping out of it.
+- The cross-backend comparison gate now reports ownership of its generated
+  table, so both immutable validation and canonical regeneration satisfy the
+  gate artifact contract.
 - `vyre_libs::graph::csr_backward_or_changed` named the per-edge kind array
   `masks` and the scalar edge-kind filter `edge_kind_mask`, inverting the roles
   every sibling CSR module gives those two names. A call repointed from a
