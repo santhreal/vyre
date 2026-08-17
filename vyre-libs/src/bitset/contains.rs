@@ -59,18 +59,6 @@ pub fn bitset_contains(input: &str, index_buffer: &str, out: &str, words: u32) -
     )
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(input: &[u32], index: u32) -> u32 {
-    let w = (index / 32) as usize;
-    let b = index % 32;
-    if w < input.len() {
-        (input[w] >> b) & 1
-    } else {
-        0
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

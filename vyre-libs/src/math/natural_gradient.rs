@@ -90,67 +90,8 @@ pub fn try_natural_gradient_block_apply(
     ))
 }
 
-/// CPU reference: `g_nat = M_inv_sqrt · g` in f64.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn natural_gradient_block_apply_cpu(m_inv_sqrt: &[f64], grad: &[f64], n: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    try_natural_gradient_block_apply_cpu_into(m_inv_sqrt, grad, n, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference: `g_nat = M_inv_sqrt · g` in f64 using caller-owned output.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn natural_gradient_block_apply_cpu_into(
-    m_inv_sqrt: &[f64],
-    grad: &[f64],
-    n: u32,
-    out: &mut Vec<f64>,
-) {
-    try_natural_gradient_block_apply_cpu_into(m_inv_sqrt, grad, n, out)
-        .unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference: `g_nat = M_inv_sqrt · g` in f64 using caller-owned output.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_natural_gradient_block_apply_cpu_into(
-    m_inv_sqrt: &[f64],
-    grad: &[f64],
-    n: u32,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = n as usize;
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "natural_gradient_block_apply CPU oracle n={n} overflows preconditioner block indexing. Fix: shard the gradient block before parity evaluation."
-        )
-    })?;
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "natural-gradient CPU oracle",
-            "natural_gradient_block_apply output",
-        )?;
-    }
-    out.clear();
-    out.resize(n, 0.0);
-    for i in 0..n {
-        let mut acc = 0.0;
-        for j in 0..n {
-            let Some(&m) = m_inv_sqrt.get(i * n + j) else {
-                continue;
-            };
-            let Some(&g) = grad.get(j) else {
-                continue;
-            };
-            acc += m * g;
-        }
-        out[i] = acc;
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

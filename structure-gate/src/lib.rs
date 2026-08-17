@@ -57,7 +57,8 @@ pub use source_scan::opaque_span;
 
 use crate::module_layout::{
     directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
-    sibling_module_failures, CrateRoot, PUBLIC_API_SNAPSHOT_DIR, SOURCE_TREES,
+    sibling_module_failures, source_test_directory_failures, CrateRoot, PUBLIC_API_SNAPSHOT_DIR,
+    SOURCE_TREES,
 };
 use crate::registration_text::parse_registrations;
 use crate::source_scan::code_offsets;
@@ -251,7 +252,8 @@ pub fn violations(root: &Path) -> Vec<String> {
         &workspace.registry_submitters,
         &workspace.discarding_imports,
     ));
-    failures.extend(sibling_module_failures(&workspace.module_files));
+    failures.extend(sibling_module_failures(&workspace.source_files));
+    failures.extend(source_test_directory_failures(&workspace.module_files));
     failures.extend(generic_module_name_failures(
         &workspace.source_files,
         &workspace.crate_roots,

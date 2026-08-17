@@ -1,8 +1,8 @@
 //! Property gates for `bitset::popcount::cpu_ref` - per-word population count.
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_libs::bitset::popcount::cpu_ref;
+use vyre_reference::composition_witness::bitset_popcount_witness;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]

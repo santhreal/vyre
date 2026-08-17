@@ -8,7 +8,6 @@
 //! (real reference-eval of the kernel), then reconstructs the tensor from the TT cores and asserts it
 //! matches the input within an f32 tolerance, the basis-invariant correctness contract for a
 //! decomposition (a stub reconstructs to garbage).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::tensor_train_compression::compress_cost_tensor_f32_via;
 

@@ -20,14 +20,10 @@ pub(crate) mod utf8_shape_counts;
 /// UTF-8 byte classifier  -  single-pass sequence-shape detection.
 pub(crate) mod utf8_validate;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use byte_histogram::reference_byte_histogram;
 pub use byte_histogram::{
     byte_histogram_256, byte_histogram_256_body, byte_histogram_256_child, byte_histogram_256_u8,
     byte_histogram_256_u8_child, BYTE_HISTOGRAM_256_OP_ID,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use char_class::reference_char_class;
 pub use char_class::{
     build_char_class_table, char_class, char_class_dispatch_grid, char_class_u8, CHAR_CLASS_OP_ID,
     CHAR_CLASS_WORKGROUP_SIZE, C_ALPHA, C_AMP, C_BACKSLASH, C_BANG, C_CARET, C_CLOSE_BRACE,
@@ -40,20 +36,14 @@ pub use encoding_classify::{
     ENCODING_CLASSIFY_OP_ID, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY,
     ENC_ISO8859_1, ENC_UTF16BE, ENC_UTF16LE, ENC_UTF8,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use line_index::reference_line_index;
 pub use line_index::{
     line_index, line_index_requirements, line_index_u8, line_index_u8_with_block_lanes,
     line_index_u8_with_geometry, line_index_with_block_lanes, line_index_with_geometry,
     LINE_INDEX_OP_ID,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use utf8_shape_counts::reference_utf8_shape_counts;
 pub use utf8_shape_counts::{
     utf8_shape_counts, utf8_shape_counts_body, utf8_shape_counts_child, UTF8_SHAPE_COUNTS_OP_ID,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use utf8_validate::reference_utf8_validate;
 pub use utf8_validate::{
     utf8_validate, utf8_validate_dispatch_grid, utf8_validate_u8, UTF8_ASCII, UTF8_CONT,
     UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3, UTF8_LEAD_4, UTF8_VALIDATE_WORKGROUP_SIZE,

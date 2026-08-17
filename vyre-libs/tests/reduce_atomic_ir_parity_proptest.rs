@@ -23,7 +23,7 @@
 //! dispatch grid. This suite now SPANS the 256-lane boundary into 4+ workgroups (lengths up to 1100)
 //! specifically to keep that fix regression-proof. See BACKLOG
 //! FINDING-atomic-scalar-reduce-double-counts-under-multi-workgroup-dispatch.
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;

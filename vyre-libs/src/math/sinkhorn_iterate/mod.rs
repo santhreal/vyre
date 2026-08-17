@@ -5,22 +5,14 @@
 //! harness.
 
 mod program;
-mod reference;
-mod reference_f64;
 
 #[cfg(test)]
 mod f64_tests;
 #[cfg(test)]
+#[path = "../../../tests/internal/math/sinkhorn_iterate/mod.rs"]
 mod tests;
 
 pub use program::sinkhorn_iterate;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::{cpu_ref, cpu_ref_into, try_cpu_ref, try_cpu_ref_into};
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference_f64::{
-    sinkhorn_col_residual, sinkhorn_iterate_f64, sinkhorn_iterate_f64_into, sinkhorn_row_residual,
-    try_sinkhorn_iterate_f64, try_sinkhorn_iterate_f64_into,
-};
 
 /// Stable registry id for the iterative Sinkhorn primitive.
 pub const OP_ID: &str = "vyre-libs::math::sinkhorn_iterate";

@@ -44,19 +44,5 @@ fn main() {
 
     println!("Nodes: {node_count}, Edges: {}", edges.len());
 
-    #[cfg(feature = "cpu-parity")]
-    {
-        use vyre_libs::graph::dominator_tree::cpu_ref;
-        let idoms = cpu_ref(node_count, 0, &edges);
-        for (v, idom) in idoms.iter().enumerate() {
-            match idom {
-                Some(p) => println!("idom[{v}] = {p}"),
-                None => println!("idom[{v}] = NONE (unreachable)"),
-            }
-        }
-    }
-    #[cfg(not(feature = "cpu-parity"))]
-    {
-        println!("Enable feature 'cpu-parity' to run the CPU oracle.");
-    }
+    println!("Dominator tree graph representation: {node_count} nodes, {} edges.", edges.len());
 }

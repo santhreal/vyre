@@ -1,10 +1,10 @@
 //! Adversarial coverage for the UTF-8 shape-count text primitive.
 //!
 //! Focus: hostile boundaries, overflow, invalid offsets, property invariants.
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 #![allow(clippy::needless_range_loop)]
 
-use vyre_libs::text::reference_utf8_shape_counts;
+use vyre_reference::composition_witness::utf8_shape_counts_witness;
 
 #[test]
 fn reference_utf8_shape_counts_empty_histogram() {

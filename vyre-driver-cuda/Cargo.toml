@@ -62,7 +62,7 @@ vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # Integration tests and benchmarks assert against the lower-layer libraries they
 # exercise. The canonical scan product is a direct dev dependency.
-vyre-libs = { path = "../vyre-libs", features = ["full", "analysis", "cpu-parity"] }
+vyre-libs = { path = "../vyre-libs", features = ["full", "analysis"] }
 tempfile.workspace = true
 # Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on
@@ -91,3 +91,43 @@ vyre-primitives = { path = "../vyre-primitives", features = [
 # explicitly (the `test` cfg only applies to that crate's own tests, not ours).
 # Dev-dep only -> gated out of the production lib build keyhog links.
 vyre-pass-engine = { path = "../vyre-pass-engine", features = ["cpu-parity"] }
+
+[[test]]
+name = "cuda_graph_dispatch_parity"
+path = "tests/cuda_graph_dispatch_parity/mod.rs"
+
+[[test]]
+name = "generated_resident_sequence_cuda_reference_matrix"
+path = "tests/generated_resident_sequence_cuda_reference_matrix/mod.rs"
+
+[[test]]
+name = "self_optimizer_pattern_match_extended"
+path = "tests/self_optimizer_pattern_match_extended/mod.rs"
+
+[[test]]
+name = "resident_dispatch_contracts"
+path = "tests/resident_dispatch_contracts/mod.rs"
+
+[[test]]
+name = "egraph_device_image_upload"
+path = "tests/egraph_device_image_upload/mod.rs"
+
+[[test]]
+name = "csr_frontier_queue_gpu_parity"
+path = "tests/csr_frontier_queue_gpu_parity/mod.rs"
+
+[[test]]
+name = "resident_buffer_contracts"
+path = "tests/resident_buffer_contracts/mod.rs"
+
+[[test]]
+name = "generated_resident_cuda_reference_matrix"
+path = "tests/generated_resident_cuda_reference_matrix/mod.rs"
+
+[[test]]
+name = "adaptive_traverse_vast_walk_gpu_parity"
+path = "tests/adaptive_traverse_vast_walk_gpu_parity/mod.rs"
+
+[[test]]
+name = "int4_quantized_gpu_parity"
+path = "tests/int4_quantized_gpu_parity/mod.rs"

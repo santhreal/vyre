@@ -50,6 +50,7 @@ mod program_key;
 mod validation;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/exploded/mod.rs"]
 mod tests;
 
 pub use abi::{
@@ -63,11 +64,6 @@ pub use abi::{
     IFDS_CSR_WORKGROUP_SIZE, OP_ID,
 };
 pub use canonicalize::{canonicalize_csr_within_rows, canonicalize_csr_within_rows_in_place};
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::{
-    build_cpu_reference, try_build_cpu_reference, try_build_cpu_reference_into,
-    ExplodedIfdsCpuScratch,
-};
 pub use dispatch_plan::{
     plan_ifds_csr_dispatch, split_ifds_rule_quads_into, split_ifds_rule_triples_into,
     IfdsCsrDispatchPlan, IfdsCsrRuleColumns,
@@ -80,8 +76,6 @@ pub use layout::{
     IfdsCsrLayout, IfdsCsrProgramCacheKey, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
 };
 pub use program_ir::build_ifds_csr_program;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use program_key::ifds_program_cache_key_from_program;
 pub use validation::{
     ifds_node_count_checked, ifds_node_count_saturating, max_ifds_col_count,
     validate_ifds_csr_inputs, validate_ifds_csr_layout, validate_ifds_csr_readback,

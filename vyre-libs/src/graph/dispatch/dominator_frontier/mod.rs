@@ -23,9 +23,8 @@
 //! counter and forwards.
 
 mod dispatch;
-#[cfg(any(test, feature = "cpu-parity"))]
-mod reference;
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/dominator_frontier/mod.rs"]
 mod tests;
 
 use crate::graph::dominator_frontier::{
@@ -38,8 +37,6 @@ use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
 pub use dispatch::{
     dominance_frontier_via, dominance_frontier_via_into, dominance_frontier_via_with_scratch_into,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::{dominance_frontier, try_dominance_frontier};
 
 /// Caller-owned GPU dispatch scratch for dominance-frontier queries.
 #[derive(Debug, Default)]

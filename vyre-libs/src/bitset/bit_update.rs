@@ -50,18 +50,6 @@ pub(crate) fn bit_update_program(
     )
 }
 
-/// CPU scalar bit update.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn cpu_ref(target: &mut [u32], bit_idx: u32, kind: BitUpdateKind) {
-    let word = (bit_idx / 32) as usize;
-    let bit = bit_idx % 32;
-    if let Some(slot) = target.get_mut(word) {
-        match kind {
-            BitUpdateKind::Set => *slot |= 1u32 << bit,
-            BitUpdateKind::Clear => *slot &= !(1u32 << bit),
-        }
-    }
-}
 
 macro_rules! define_bit_update_op {
     (
@@ -86,15 +74,6 @@ macro_rules! define_bit_update_op {
             )
         }
 
-        /// CPU reference. Mutates `target` in place.
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref(target: &mut [u32], bit_idx: u32) {
-            crate::bitset::bit_update::cpu_ref(
-                target,
-                bit_idx,
-                crate::bitset::bit_update::BitUpdateKind::$kind,
-            );
-        }
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(

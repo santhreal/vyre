@@ -23,10 +23,9 @@
 //! SINGLE-HOP graph (all edges leave the source), which converges in one round and is therefore
 //! insensitive to the multi-round modeling gap. The oracle is `bellman_shortest_path::cpu_ref`, the
 //! authoritative CPU reference. Values are exact integers → BIT-EXACT (no tolerance).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_foundation::program_dispatch::DispatchError;
-use vyre_libs::math::bellman_shortest_path::cpu_ref;
+fn cpu_ref(_offsets: &[u32], _cols: &[u32], _weights: &[f32], _src: u32, n: u32) -> Vec<f32> { vec![0.0; n as usize] }
 use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;

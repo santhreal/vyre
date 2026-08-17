@@ -13,7 +13,6 @@
 //!   `sum = Σ pre_exp[i]` (u32 wrapping); `sum_safe = max(sum, 1)`; `out[j] = (pre_exp[j] << 16) / sum_safe`
 //! (a u32 left-shift that keeps the low 32 bits, then integer division). The oracle here replicates
 //! that bit-for-bit → BIT-EXACT (no tolerance).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::differentiable_autotune::pick_config_pre_exp_fixed_via;
 

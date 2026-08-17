@@ -8,7 +8,7 @@
 //! generated CSR shapes. A single node-parallel pass reads the LIVE accumulator and is
 //! order-dependent for multi-hop chains, but the CONVERGED set is unique, that is the
 //! op's contract, and iterating the real IR is the only way to pin it end to end.
-#![cfg(all(feature = "graph", feature = "bitset", feature = "cpu-parity"))]
+#![cfg(all(feature = "graph", feature = "bitset"))]
 
 use vyre_foundation::ir::Program;
 use vyre_libs::graph::csr_backward_or_changed::{

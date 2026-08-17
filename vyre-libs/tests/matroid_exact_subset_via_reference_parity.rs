@@ -35,7 +35,6 @@
 //!      toggled state unless it strictly shrank the set, in which case revert). GPU and reference now
 //!      agree at EVERY `max_augmentations`; `via_multi_augmentation_matches_reference` locks the >1 case
 //!      and the main sweep exercises varying `max_augmentations` (1..4).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::encoding::matroid_exact_megakernel::{
     reference_select_optimal_subset, select_optimal_subset_via,

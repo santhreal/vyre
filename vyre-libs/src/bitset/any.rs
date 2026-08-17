@@ -90,16 +90,6 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
     )
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(input: &[u32]) -> u32 {
-    if input.iter().any(|w| *w != 0) {
-        1
-    } else {
-        0
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -119,6 +109,9 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn cpu_ref(input: &[u32]) -> u32 {
+        u32::from(input.iter().any(|&w| w != 0))
+    }
 
     #[test]
     fn any_true_when_single_bit_set() {

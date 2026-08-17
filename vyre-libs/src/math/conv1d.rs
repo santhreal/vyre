@@ -218,53 +218,7 @@ inventory::submit! {
 // CPU reference implementation
 // ---------------------------------------------------------------------------
 
-/// CPU reference: 1D convolution with clamped boundary, matching the GPU
-/// kernel's fixed-point accumulation. Weights are in 16.16 fixed-point.
-///
-/// Returns one output u32 per input element (pre-normalization accumulator).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_conv1d(input: &[u32], weights: &[u32], stride: u32) -> Vec<u32> {
-    let mut output = Vec::new();
-    cpu_conv1d_into(input, weights, stride, &mut output);
-    output
-}
 
-/// CPU reference writing into caller-owned output storage.
-///
-/// Reuses `output` across repeated convolution parity checks and preserves the
-/// same fixed-point, clamped-boundary semantics as [`cpu_conv1d`].
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_conv1d_into(input: &[u32], weights: &[u32], stride: u32, output: &mut Vec<u32>) {
-    output.clear();
-    let count = input.len();
-    if count == 0 {
-        return;
-    }
-    let diameter = weights.len();
-    let radius = diameter / 2;
-    output.reserve(count);
-
-    for idx in 0..count {
-        let mut acc: u32 = 0;
-        for k in 0..diameter {
-            let src_idx = if k >= radius {
-                let offset = (k - radius) as u32 * stride;
-                let raw = idx as u32 + offset;
-                raw.min(count as u32 - 1) as usize
-            } else {
-                let offset = (radius - k) as u32 * stride;
-                if idx as u32 >= offset {
-                    (idx as u32 - offset) as usize
-                } else {
-                    0
-                }
-            };
-            acc = acc.wrapping_add(input[src_idx].wrapping_mul(weights[k]));
-        }
-        output.push(acc);
-    }
-}
 
 #[cfg(test)]
 mod tests {

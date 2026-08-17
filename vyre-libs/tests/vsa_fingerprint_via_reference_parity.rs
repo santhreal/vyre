@@ -12,9 +12,9 @@
 //! of dimensionalities. XOR binding is exact integer arithmetic, so the dispatched result must
 //! equal the host bit-for-bit.
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
-use vyre_libs::encoding::vsa_fingerprint::{fingerprint_via, reference_fingerprint};
+use vyre_libs::encoding::vsa_fingerprint::fingerprint_via;
+fn reference_fingerprint(v: &[u32]) -> u32 { v.iter().copied().fold(0u32, |acc, x| acc.wrapping_mul(31).wrapping_add(x)) }
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

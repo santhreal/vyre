@@ -65,74 +65,8 @@ pub fn segment_reduce_sum(
     )
 }
 
-/// CPU reference.
-///
-/// Malformed segment bounds fail loudly; this oracle is only for parity tests
-/// with valid CSR-style segment metadata and must not hide bad host fixtures.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(input: &[u32], segment_offsets: &[u32]) -> Vec<u32> {
-    super::collect_cpu_reference("segment_reduce_sum", |out| {
-        try_cpu_ref_into(input, segment_offsets, out)
-    })
-}
 
-/// CPU reference using a caller-owned output buffer.
-///
-/// Malformed segment bounds fail loudly so CPU parity cannot hide truncated or
-/// non-monotonic segment metadata as an all-zero segment.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(input: &[u32], segment_offsets: &[u32], out: &mut Vec<u32>) {
-    if let Err(error) = try_cpu_ref_into(input, segment_offsets, out) {
-        panic!("vyre-primitives segment_reduce_sum CPU reference failed: {error}");
-    }
-}
 
-/// Fallible CPU reference using a caller-owned output buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(
-    input: &[u32],
-    segment_offsets: &[u32],
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    let num_segments = segment_offsets.len().checked_sub(1).ok_or_else(|| {
-        "segment_reduce_sum CPU oracle received empty segment_offsets. Fix: pass at least one CSR-style offset.".to_string()
-    })?;
-    for seg in 0..num_segments {
-        let start = usize::try_from(segment_offsets[seg]).map_err(|_| {
-            format!("segment_reduce_sum CPU oracle segment {seg} start does not fit host usize.")
-        })?;
-        let end = usize::try_from(segment_offsets[seg + 1]).map_err(|_| {
-            format!("segment_reduce_sum CPU oracle segment {seg} end does not fit host usize.")
-        })?;
-        if start > end || end > input.len() {
-            return Err(format!(
-                "segment_reduce_sum CPU oracle received malformed segment {seg}: start={start}, end={end}, input_len={}. Fix: rebuild monotonic in-bounds segment offsets before parity comparison.",
-                input.len()
-            ));
-        }
-    }
-
-    vyre_foundation::allocation::reserve_exact_cleared(out, num_segments).map_err(|err| {
-        format!(
-            "segment_reduce_sum CPU oracle could not reserve {num_segments} output segments: {err}"
-        )
-    })?;
-    for seg in 0..num_segments {
-        let start = usize::try_from(segment_offsets[seg]).map_err(|_| {
-            format!("segment_reduce_sum CPU oracle segment {seg} start does not fit host usize.")
-        })?;
-        let end = usize::try_from(segment_offsets[seg + 1]).map_err(|_| {
-            format!("segment_reduce_sum CPU oracle segment {seg} end does not fit host usize.")
-        })?;
-        let sum = input[start..end]
-            .iter()
-            .copied()
-            .fold(0u32, u32::wrapping_add);
-        out.push(sum);
-    }
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

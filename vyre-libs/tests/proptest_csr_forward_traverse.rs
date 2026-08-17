@@ -1,9 +1,9 @@
 //! Property gates for `vyre_libs::graph::csr_forward_traverse::cpu_ref`.
 
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-use vyre_libs::graph::csr_forward_traverse::cpu_ref;
+use vyre_reference::composition_witness::csr_forward_traverse_witness as cpu_ref;
 
 fn build_dag(node_count: u32, edges: &[(u32, u32)]) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let mut offsets = vec![0u32; node_count as usize + 1];

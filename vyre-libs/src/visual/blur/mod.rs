@@ -203,11 +203,6 @@ fn gaussian_blur_pass(
     let diameter = 2 * clamped + 1;
     let count = width.saturating_mul(height);
     let is_horiz = matches!(axis, Axis::Horizontal);
-    let dim = if is_horiz {
-        width.max(1)
-    } else {
-        height.max(1)
-    };
     let parent = Ident::from(OP_ID);
 
     // The per-pixel blur body: for each channel, run a weighted sum
@@ -218,9 +213,10 @@ fn gaussian_blur_pass(
         vec![
             Node::let_bind("idx", Expr::gid_x()),
             Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(count)), {
+                let (py, px) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
                 let mut body = vec![
-                    Node::let_bind("px", Expr::rem(Expr::var("idx"), Expr::u32(width.max(1)))),
-                    Node::let_bind("py", Expr::div(Expr::var("idx"), Expr::u32(width.max(1)))),
+                    Node::let_bind("px", px),
+                    Node::let_bind("py", py),
                     // Accumulators per channel (fixed-point).
                     Node::let_bind("acc_r", Expr::u32(0)),
                     Node::let_bind("acc_g", Expr::u32(0)),
@@ -235,52 +231,15 @@ fn gaussian_blur_pass(
                     if w_val == 0 {
                         continue;
                     }
-                    // Sample coordinate: clamp(coord + k - radius, 0, dim-1)
                     let offset = k as i32 - clamped as i32;
-                    let sample_coord = if is_horiz {
-                        // sx = clamp(px + offset, 0, width-1)
-                        if offset >= 0 {
-                            Expr::select(
-                                Expr::lt(
-                                    Expr::add(Expr::var("px"), Expr::u32(offset as u32)),
-                                    Expr::u32(dim),
-                                ),
-                                Expr::add(Expr::var("px"), Expr::u32(offset as u32)),
-                                Expr::u32(dim - 1),
-                            )
-                        } else {
-                            Expr::select(
-                                Expr::ge(Expr::var("px"), Expr::u32((-offset) as u32)),
-                                Expr::sub(Expr::var("px"), Expr::u32((-offset) as u32)),
-                                Expr::u32(0),
-                            )
-                        }
-                    } else {
-                        // sy = clamp(py + offset, 0, height-1)
-                        if offset >= 0 {
-                            Expr::select(
-                                Expr::lt(
-                                    Expr::add(Expr::var("py"), Expr::u32(offset as u32)),
-                                    Expr::u32(dim),
-                                ),
-                                Expr::add(Expr::var("py"), Expr::u32(offset as u32)),
-                                Expr::u32(dim - 1),
-                            )
-                        } else {
-                            Expr::select(
-                                Expr::ge(Expr::var("py"), Expr::u32((-offset) as u32)),
-                                Expr::sub(Expr::var("py"), Expr::u32((-offset) as u32)),
-                                Expr::u32(0),
-                            )
-                        }
-                    };
-
-                    // Pixel index: sample_coord used for the varying axis.
-                    let pixel_idx = if is_horiz {
-                        Expr::add(Expr::mul(Expr::var("py"), Expr::u32(width)), sample_coord)
-                    } else {
-                        Expr::add(Expr::mul(sample_coord, Expr::u32(width)), Expr::var("px"))
-                    };
+                    let pixel_idx = crate::builder::stencil::separable_sample_index(
+                        is_horiz,
+                        &Expr::var("py"),
+                        &Expr::var("px"),
+                        offset,
+                        width,
+                        height,
+                    );
 
                     let tap_name = format!("tap_{k}");
                     body.push(Node::let_bind(&tap_name, Expr::load(input, pixel_idx)));
@@ -291,7 +250,7 @@ fn gaussian_blur_pass(
                         Expr::add(
                             Expr::var("acc_r"),
                             Expr::mul(
-                                Expr::bitand(Expr::var(&tap_name), Expr::u32(0xFF)),
+                                crate::builder::stencil::unpack_channel(&tap_name, 0),
                                 Expr::u32(w_val),
                             ),
                         ),
@@ -301,10 +260,7 @@ fn gaussian_blur_pass(
                         Expr::add(
                             Expr::var("acc_g"),
                             Expr::mul(
-                                Expr::bitand(
-                                    Expr::shr(Expr::var(&tap_name), Expr::u32(8)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel(&tap_name, 8),
                                 Expr::u32(w_val),
                             ),
                         ),
@@ -314,10 +270,7 @@ fn gaussian_blur_pass(
                         Expr::add(
                             Expr::var("acc_b"),
                             Expr::mul(
-                                Expr::bitand(
-                                    Expr::shr(Expr::var(&tap_name), Expr::u32(16)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel(&tap_name, 16),
                                 Expr::u32(w_val),
                             ),
                         ),
@@ -327,7 +280,7 @@ fn gaussian_blur_pass(
                         Expr::add(
                             Expr::var("acc_a"),
                             Expr::mul(
-                                Expr::shr(Expr::var(&tap_name), Expr::u32(24)),
+                                crate::builder::stencil::unpack_channel(&tap_name, 24),
                                 Expr::u32(w_val),
                             ),
                         ),
@@ -356,20 +309,16 @@ fn gaussian_blur_pass(
                 // Pack.
                 body.push(Node::let_bind(
                     "packed",
-                    Expr::bitor(
-                        Expr::bitor(Expr::var("or"), Expr::shl(Expr::var("og"), Expr::u32(8))),
-                        Expr::bitor(
-                            Expr::shl(Expr::var("ob"), Expr::u32(16)),
-                            Expr::shl(Expr::var("oa"), Expr::u32(24)),
-                        ),
+                    crate::builder::stencil::pack_rgba(
+                        Expr::var("or"),
+                        Expr::var("og"),
+                        Expr::var("ob"),
+                        Expr::var("oa"),
                     ),
                 ));
                 body.push(Node::let_bind(
                     "oidx",
-                    Expr::add(
-                        Expr::mul(Expr::var("py"), Expr::u32(width)),
-                        Expr::var("px"),
-                    ),
+                    crate::builder::stencil::flat_index(Expr::var("py"), width, Expr::var("px")),
                 ));
                 body.push(Node::store(output, Expr::var("oidx"), Expr::var("packed")));
                 body

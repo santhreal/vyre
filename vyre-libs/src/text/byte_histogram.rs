@@ -145,10 +145,6 @@ fn byte_histogram_256_with_source_type(
     )
 }
 
-/// Reference oracle for [`byte_histogram_256`].
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_byte_histogram(bytes: &[u8]) -> [u32; 256] {
     let mut histogram = [0u32; 256];
     for &byte in bytes {
         histogram[usize::from(byte)] += 1;

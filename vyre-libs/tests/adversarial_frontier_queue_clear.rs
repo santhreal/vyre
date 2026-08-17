@@ -1,6 +1,6 @@
 //! Adversarial tests for packed frontier queue materialization with fused output clear.
 
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use vyre_foundation::ir::Program;

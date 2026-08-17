@@ -15,7 +15,7 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use vyre_libs::bitset::{
     and, and_into, and_not, and_not_into, any, clear_bit, contains, copy, equal, not, or, or_into,

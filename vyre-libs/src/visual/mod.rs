@@ -21,8 +21,6 @@
 //! - `glyph_grid`  -  composes `cell_grid`'s lookup with alpha blending
 //! - `glass`  -  composes blur + filter_chain (hero composition)
 
-use vyre_foundation::ir::Expr;
-
 /// Two-pass separable Gaussian blur (composes `math::conv1d`).
 pub(crate) mod blur;
 /// Character-cell grid expansion for terminal and text surfaces.
@@ -64,25 +62,6 @@ pub use gradient::{linear_gradient, ColorStop};
 pub use shadow::box_shadow;
 pub use upsample::upsample_2x;
 
-pub(crate) const PIXEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
-
-/// Return `(left * right) >> shift` without losing the high half of the
-/// unsigned 32-bit product before the rescale.
-pub(crate) fn wide_mul_shr_u32(left: Expr, right: Expr, shift: u32) -> Expr {
-    debug_assert!((1..32).contains(&shift));
-    let low = Expr::mul(left.clone(), right.clone());
-    let high = Expr::mulhi(left, right);
-    Expr::bitor(
-        Expr::shr(low, Expr::u32(shift)),
-        Expr::shl(high, Expr::u32(32 - shift)),
-    )
-}
-
-/// Return `(left * right) >> 16` for UNSIGNED 16.16 fixed-point pixel math.
-///
-/// Pixel channels, coverage and filter coefficients are all non-negative, so no
-/// sign correction is emitted. A kernel whose operands may be negative needs
-/// `math::fixed::fixed_mul_16_16_expr` instead.
-pub(crate) fn fixed_mul_16_16_unsigned_expr(left: Expr, right: Expr) -> Expr {
-    wide_mul_shr_u32(left, right, 16)
-}
+pub(crate) use crate::builder::stencil::fixed_mul_16_16 as fixed_mul_16_16_unsigned_expr;
+pub(crate) use crate::builder::stencil::wide_mul_shr_u32;
+pub(crate) use crate::builder::stencil::DEFAULT_2D_WORKGROUP_SIZE as PIXEL_WORKGROUP_SIZE;

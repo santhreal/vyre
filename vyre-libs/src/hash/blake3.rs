@@ -222,47 +222,7 @@ inventory::submit! {
 // CPU reference implementations
 // ---------------------------------------------------------------------------
 
-/// CPU reference: BLAKE3 G mixing quartet on state words `(a, b, c, d)` with
-/// message words `(mx, my)`. Mutates `state` in place.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_blake3_g(
-    state: &mut [u32; 16],
-    a: usize,
-    b: usize,
-    c: usize,
-    d: usize,
-    mx: u32,
-    my: u32,
-) {
-    state[a] = state[a].wrapping_add(state[b]).wrapping_add(mx);
-    state[d] = (state[d] ^ state[a]).rotate_right(16);
-    state[c] = state[c].wrapping_add(state[d]);
-    state[b] = (state[b] ^ state[c]).rotate_right(12);
-    state[a] = state[a].wrapping_add(state[b]).wrapping_add(my);
-    state[d] = (state[d] ^ state[a]).rotate_right(8);
-    state[c] = state[c].wrapping_add(state[d]);
-    state[b] = (state[b] ^ state[c]).rotate_right(7);
-}
 
-/// CPU reference: one full BLAKE3 permutation round with message schedule
-/// permutation applied to `message`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_blake3_round(state: &mut [u32; 16], message: &[u32; 16], perm: &[usize; 16]) {
-    let mut m = [0u32; 16];
-    for (i, &src) in perm.iter().enumerate() {
-        m[i] = message[src];
-    }
-    // Column step
-    cpu_blake3_g(state, 0, 4, 8, 12, m[0], m[1]);
-    cpu_blake3_g(state, 1, 5, 9, 13, m[2], m[3]);
-    cpu_blake3_g(state, 2, 6, 10, 14, m[4], m[5]);
-    cpu_blake3_g(state, 3, 7, 11, 15, m[6], m[7]);
-    // Diagonal step
-    cpu_blake3_g(state, 0, 5, 10, 15, m[8], m[9]);
-    cpu_blake3_g(state, 1, 6, 11, 12, m[10], m[11]);
-    cpu_blake3_g(state, 2, 7, 8, 13, m[12], m[13]);
-    cpu_blake3_g(state, 3, 4, 9, 14, m[14], m[15]);
-}
 
 #[cfg(test)]
 mod tests {

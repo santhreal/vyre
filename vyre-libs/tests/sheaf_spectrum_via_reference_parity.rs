@@ -9,7 +9,6 @@
 //! exact 16.16 closed form, the first end-to-end execution of the actual kernel through the
 //! consumer's dispatch path.
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::sheaf_spectral_clustering::dominant_spectrum_fixed_via;
 

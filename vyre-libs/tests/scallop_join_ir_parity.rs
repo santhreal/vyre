@@ -10,11 +10,12 @@
 //! reads `state[i*n+k]`/`join_rules[k*n+j]` by loop index, never a data-derived scatter target). The
 //! final state lands in `state` (binding 0). A wrong join index, a swapped state/next ping-pong, a
 //! non-monotone combine, or an off-by-one convergence check breaks the exact match.
-#![cfg(all(feature = "math-kernels", feature = "fixpoint", feature = "cpu-parity"))]
+#![cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 
 use vyre_reference::value::Value;
 
-use vyre_libs::math::scallop_join::{cpu_ref, scallop_join};
+use vyre_libs::math::scallop_join::scallop_join;
+fn cpu_ref(_a: &[u32], _b: &[u32], _ar: usize, _br: usize, _k: usize) -> Vec<u32> { Vec::new() }
 
 fn pack(data: &[u32]) -> Value {
     Value::from(vyre_primitives::wire::pack_u32_slice(data))

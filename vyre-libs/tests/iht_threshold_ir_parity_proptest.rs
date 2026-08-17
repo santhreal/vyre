@@ -13,7 +13,7 @@
 //! NEGATIVE number below threshold survives), a `>` vs `>=` boundary error, or a
 //! scalar-broadcast mistake all diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use proptest::prelude::*;
 use vyre_libs::math::sparse_recovery::iht_threshold;

@@ -4,7 +4,7 @@
 //! against an independent byte-classification oracle over 1024 hostile corpora.
 
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 
 use vyre_libs::text::{
     reference_utf8_validate, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3,

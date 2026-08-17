@@ -27,7 +27,7 @@ fn bitset_and_cpu_ref_scale(criterion: &mut Criterion) {
             &(lhs.clone(), rhs.clone()),
             |bencher, (lhs, rhs)| {
                 bencher.iter(|| {
-                    let output = vyre_libs::bitset::and::cpu_ref(black_box(lhs), black_box(rhs));
+                    let output = vyre_reference::composition_witness::bitset_and_witness(black_box(lhs), black_box(rhs));
                     black_box(output);
                 });
             },
@@ -49,7 +49,7 @@ fn bitset_and_cpu_ref_into_scale(criterion: &mut Criterion) {
             |bencher, (lhs, rhs)| {
                 bencher.iter(|| {
                     output.clear();
-                    vyre_libs::bitset::and::cpu_ref_into(
+                    vyre_reference::composition_witness::bitset_and_witness_into(
                         black_box(lhs),
                         black_box(rhs),
                         black_box(&mut output),
@@ -113,7 +113,7 @@ fn dominator_tree_cpu_oracle_scale(criterion: &mut Criterion) {
                 &(nodes, edges),
                 |bencher, (nodes, edges)| {
                     bencher.iter(|| {
-                        let output = vyre_libs::graph::dominator_tree::cpu_ref(
+                        let output = vyre_reference::composition_witness::dominator_tree_witness(
                             black_box(*nodes),
                             0,
                             black_box(edges),

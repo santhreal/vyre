@@ -8,7 +8,7 @@
 //! a host wrapping scan, so a builder that traps, truncates, or drops a block
 //! carry at the boundary fails here rather than in a consumer.
 
-#![cfg(all(feature = "math-scan", feature = "cpu-parity"))]
+#![cfg(feature = "math-scan")]
 
 use vyre_foundation::ir::BufferAccess;
 use vyre_libs::math::scan::scan_prefix_sum;

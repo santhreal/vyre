@@ -699,82 +699,10 @@ fn try_pass_c_broadcast_offsets(
     ))
 }
 
-/// CPU reference: inclusive prefix sum. Used by tests + as the
-/// correctness oracle for the GPU primitive.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(input: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_cpu_ref_into(input, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
-        Err(error) => {
-            panic!("vyre-primitives multi-block prefix-scan CPU reference failed: {error}")
-        }
-    }
-}
 
-/// CPU reference writing into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(input: &[u32], out: &mut Vec<u32>) {
-    if let Err(error) = try_cpu_ref_into(input, out) {
-        panic!("vyre-primitives multi-block prefix-scan CPU reference failed: {error}");
-    }
-}
 
-/// Fallible CPU reference writing into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    vyre_foundation::allocation::reserve_exact_cleared(out, input.len()).map_err(|err| {
-        format!(
-            "multi-block prefix-scan CPU reference could not reserve {} output words: {err}",
-            input.len()
-        )
-    })?;
-    let mut acc: u32 = 0;
-    for &x in input {
-        acc = acc.wrapping_add(x);
-        out.push(acc);
-    }
-    Ok(())
-}
 
-/// CPU reference: **exclusive** prefix sum (`out[0] = 0`, `out[i] = sum(in[0..i])`).
-/// The oracle for [`multi_block_prefix_scan_sum_exclusive_u32`]. Fails loud on a
-/// reservation failure rather than returning a short vec that would let a parity
-/// assertion pass on `empty == empty` (Law 10 / Law 6).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_exclusive(input: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_cpu_ref_exclusive_into(input, &mut out) {
-        Ok(()) => out,
-        Err(error) => {
-            panic!(
-                "vyre-primitives multi-block prefix-scan exclusive CPU reference failed: {error}"
-            )
-        }
-    }
-}
 
-/// Fallible exclusive CPU reference writing into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_exclusive_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    vyre_foundation::allocation::reserve_exact_cleared(out, input.len()).map_err(|err| {
-        format!(
-            "multi-block prefix-scan exclusive CPU reference could not reserve {} output words: {err}",
-            input.len()
-        )
-    })?;
-    let mut acc: u32 = 0;
-    for &x in input {
-        out.push(acc);
-        acc = acc.wrapping_add(x);
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

@@ -31,7 +31,6 @@
 //!   • `_with_negative_intermediates`: SMALL coarse diagonals that force overshoot → negative residuals →
 //!     exercises (and regression-locks) the signed multiply + signed divide fix.
 //! Every input value is a multiple of 0.5 or a power of two → exact in 16.16.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::amg_pass_solver::{
     reference_smooth_matroid_flow, smooth_matroid_flow_fixed_via,

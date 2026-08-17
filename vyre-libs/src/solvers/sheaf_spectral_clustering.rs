@@ -25,8 +25,6 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_product_count, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::sheaf_laplacian_eigenvalue::cpu_ref_into;
 use crate::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -41,21 +39,6 @@ pub const DEFAULT_SPECTRUM_ITERATIONS: u32 = 32;
 /// Reusable buffers for the sheaf-spectral dominant-eigenpair scan.
 #[derive(Debug, Default)]
 pub struct SheafSpectrumScratch {
-    #[cfg(any(test, feature = "cpu-parity"))]
-    v_init: Vec<f64>,
-    #[cfg(any(test, feature = "cpu-parity"))]
-    v: Vec<f64>,
-    #[cfg(any(test, feature = "cpu-parity"))]
-    v_next: Vec<f64>,
-}
-
-impl SheafSpectrumScratch {
-    /// Dominant eigenvector from the last spectral solve.
-    #[must_use]
-    #[cfg(any(test, feature = "cpu-parity"))]
-    pub fn eigenvector(&self) -> &[f64] {
-        &self.v
-    }
 }
 
 /// Caller-owned GPU dispatch scratch for fixed-point sheaf spectra.
@@ -73,64 +56,8 @@ pub struct FixedSheafSpectrum {
     pub eigenvector: Vec<u32>,
 }
 
-/// Compute the dominant eigenvalue + eigenvector of the dispatch
-/// graph's sheaf Laplacian. The eigenvalue magnitude is the spectral
-/// gap signal; the eigenvector indicates which work items lie on the
-/// principal cluster boundary.
-///
-/// `restriction_diag[i]` is the per-item transmission coefficient
-/// from the existing
-/// [`super::sheaf_heterophilic_dispatch`] wire. Pass the same vector
-/// the diffusion step uses.
-///
-/// Returns `(dominant_eigenvalue, eigenvector)` of length `n`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn dominant_spectrum(restriction_diag: &[f64], iterations: u32) -> (f64, Vec<f64>) {
-    use crate::telemetry::{bump, sheaf_spectral_clustering_calls};
-    bump(&sheaf_spectral_clustering_calls);
-    let mut scratch = SheafSpectrumScratch::default();
-    let lambda = dominant_spectrum_with_scratch(restriction_diag, iterations, &mut scratch);
-    (lambda, scratch.v)
-}
 
-/// Compute the dominant eigenvalue using reusable spectral scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn dominant_spectrum_with_scratch(
-    restriction_diag: &[f64],
-    iterations: u32,
-    scratch: &mut SheafSpectrumScratch,
-) -> f64 {
-    reference_dominant_spectrum_into(
-        restriction_diag,
-        iterations,
-        &mut scratch.v_init,
-        &mut scratch.v,
-        &mut scratch.v_next,
-    )
-}
 
-/// Compute the dominant eigenvalue into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_dominant_spectrum_into(
-    restriction_diag: &[f64],
-    iterations: u32,
-    v_init: &mut Vec<f64>,
-    v: &mut Vec<f64>,
-    v_next: &mut Vec<f64>,
-) -> f64 {
-    let n = restriction_diag.len();
-    if n == 0 {
-        v_init.clear();
-        v.clear();
-        v_next.clear();
-        return 0.0;
-    }
-    let inv_sqrt_n = 1.0 / (n as f64).sqrt();
-    v_init.clear();
-    v_init.resize(n, inv_sqrt_n);
-    cpu_ref_into(restriction_diag, v_init, iterations, v, v_next)
-}
 
 /// Fixed-point production path for sheaf spectral clustering.
 ///

@@ -22,24 +22,15 @@ use vyre_test_support::monorepo::vyre_workspace_root;
 /// Path of the generated catalog, relative to the workspace root.
 const CATALOG_PATH: &str = "docs/generated/error-codes.toml";
 
-/// Set this to any value to rewrite the catalog instead of reporting drift.
-const WRITE_ENV: &str = "VYRE_WRITE_ERROR_CATALOG";
-
 #[test]
 fn generated_catalog_matches_the_live_validation_rules() {
     let path = vyre_workspace_root().join(CATALOG_PATH);
     let rendered = render_catalog_toml();
 
-    if std::env::var_os(WRITE_ENV).is_some() {
-        fs::write(&path, &rendered).unwrap_or_else(|error| {
-            panic!("cannot write {CATALOG_PATH}: {error}. Fix: check the path is writable.")
-        });
-    }
-
     let on_disk = fs::read_to_string(&path).unwrap_or_else(|error| {
         panic!(
             "cannot read {CATALOG_PATH}: {error}. \
-             Fix: run the suite with {WRITE_ENV}=1 to generate it."
+             Fix: run `./cargo_full run -p xtask --bin xtask -- error-codes --write` to generate it."
         )
     });
     if on_disk == rendered {
@@ -50,12 +41,12 @@ fn generated_catalog_matches_the_live_validation_rules() {
     assert!(
         findings.is_empty(),
         "{CATALOG_PATH} does not match the live validation rules:\n{}\n\
-         Fix: run the suite with {WRITE_ENV}=1 to regenerate it.",
+         Fix: run `./cargo_full run -p xtask --bin xtask -- error-codes --write` to regenerate it.",
         findings.join("\n")
     );
     panic!(
         "{CATALOG_PATH} differs from the render outside any rule block. \
-         Fix: run the suite with {WRITE_ENV}=1 to regenerate it."
+         Fix: run `./cargo_full run -p xtask --bin xtask -- error-codes --write` to regenerate it."
     );
 }
 

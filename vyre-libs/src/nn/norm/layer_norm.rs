@@ -18,7 +18,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
+use crate::builder::reduction::{ReductionComposer, ReductionPhase};
 use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate2_child,
     strided_writeback_child, BuildOptions,
@@ -131,7 +131,7 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
         workgroup,
         generator,
     } = *spec;
-    let moments = ReducePhase {
+    let moments = ReductionPhase {
         accumulate: strided_accumulate2_child(
             OP_ID,
             tile,
@@ -219,9 +219,9 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
         },
     );
 
-    tiled_reduce_program(TiledReduceProgram {
+    ReductionComposer::new(
         generator,
-        buffers: vec![
+        vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("ln_sum_scratch", tile, DataType::F32),
             BufferDecl::workgroup("ln_sq_scratch", tile, DataType::F32),
@@ -229,9 +229,10 @@ fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         workgroup,
-        phases: vec![moments],
-        writeback: Some(writeback),
-    })
+    )
+    .with_phase(moments)
+    .with_writeback(writeback)
+    .build()
 }
 
 #[cfg(test)]

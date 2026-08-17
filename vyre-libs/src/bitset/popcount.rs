@@ -18,39 +18,8 @@ pub fn bitset_popcount(input: &str, count_words: &str, words: u32) -> Program {
     bitset_unary_word_program(OP_ID, input, count_words, words, UnOp::Popcount)
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(input: &[u32]) -> Vec<u32> {
-    super::build_cpu_ref(
-        |out| try_cpu_ref_into(input, out),
-        "vyre-primitives bitset_popcount cpu_ref failed",
-    )
-}
 
-/// CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(input: &[u32], out: &mut Vec<u32>) {
-    if let Err(error) = try_cpu_ref_into(input, out) {
-        panic!("vyre-primitives bitset_popcount cpu_ref_into failed: {error}");
-    }
-}
 
-/// Fallible CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    if input.len() > out.capacity() {
-        out.try_reserve(input.len() - out.len()).map_err(|err| {
-            format!(
-                "bitset_popcount CPU oracle failed to reserve {} output words: {err}. Fix: shard the bitset before parity evaluation.",
-                input.len()
-            )
-        })?;
-    }
-    out.clear();
-    out.extend(input.iter().map(|w| w.count_ones()));
-    Ok(())
-}
 
 #[cfg(test)]
 mod non_panic_wrapper_tests {

@@ -31,21 +31,14 @@ mod depth;
 mod intersect_step;
 mod program;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod dominator_vec_growth;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod lengauer_tarjan;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod cooper_harvey_kennedy;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod cpu_ref;
 
 mod registry;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/dominator_tree/mod.rs"]
 mod tests;
 
 pub use depth::{
@@ -59,16 +52,4 @@ pub use intersect_step::{
 pub use program::{
     dominator_tree_program, try_dominator_tree_program, validate_dominator_tree_inputs,
     DominatorTreeError, DominatorTreeLayout, IDOM_NONE, OP_ID,
-};
-
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cooper_harvey_kennedy::cooper_harvey_kennedy_idoms;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::{
-    cpu_ref, idoms_to_dominator_sets, try_cpu_ref, try_cpu_ref_into, try_idoms_to_dominator_sets,
-};
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use lengauer_tarjan::{
-    lengauer_tarjan_idoms, try_lengauer_tarjan_idoms, try_lengauer_tarjan_idoms_into,
-    DominatorTreeCpuScratch,
 };

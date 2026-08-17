@@ -21,18 +21,7 @@ pub fn literal_of(nodes: &str, nodeset_out: &str, node_count: u32) -> Program {
     node_kind_eq_with_op_id(OP_ID, nodes, nodeset_out, node_count, node_kind::LITERAL)
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(nodes: &[u32]) -> Vec<u32> {
-    crate::predicate::node_kind_eq::cpu_ref(nodes, node_kind::LITERAL)
-}
 
-/// CPU reference using a caller-owned nodeset bitset.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(nodes: &[u32], out: &mut Vec<u32>) {
-    crate::predicate::node_kind_eq::cpu_ref_into(nodes, node_kind::LITERAL, out);
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

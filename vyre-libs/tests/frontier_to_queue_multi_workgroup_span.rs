@@ -24,7 +24,7 @@
 //! a different symptom: here the shared word is inflated by duplicate atomic
 //! increments rather than erased by a racing plain-store clear.
 
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use vyre_foundation::ir::Program;
 use vyre_libs::graph::csr_frontier_queue::{frontier_to_queue, frontier_to_queue_cpu};

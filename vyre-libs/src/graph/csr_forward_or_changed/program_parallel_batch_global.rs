@@ -1,11 +1,7 @@
-use vyre_foundation::composition::wrap_anonymous_region;
-
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::batched_frontier_words::checked_batched_frontier_words;
 use super::layout::{CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID};
-use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
-
+use crate::graph::program_graph::{ProgramGraphShape, BINDING_PRIMITIVE_START};
 /// Batched parallel expansion with one global convergence flag.
 ///
 /// Same frontier layout as [`crate::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_batch`], but every
@@ -153,64 +149,23 @@ pub(crate) fn csr_forward_or_changed_parallel_batch_global_indexed(
     query_count: u32,
     changed_index: Expr,
     changed_slots: u32,
-    mut prologue: Vec<Node>,
+    prologue: Vec<Node>,
     extra_buffers: Vec<BufferDecl>,
 ) -> Result<Program, String> {
-    if query_count == 0 {
-        return Err(
-            "Fix: csr_forward_or_changed_parallel_batch_global requires at least one query frontier."
-                .to_string(),
-        );
-    }
-    let src = Expr::InvocationId { axis: 0 };
-    let query = Expr::InvocationId { axis: 1 };
-    let words = crate::bitset::bitset_words(shape.node_count);
-    let total_words = checked_batched_frontier_words(words, query_count)?;
-    let query_word_base = Expr::mul(query.clone(), Expr::u32(words));
-    // The neighbor expansion is the ONE canonical CSR edge-scan; this variant
-    // supplies (a) the flat per-query frontier index `query_word_base + word` and
-    // (b) an `atomic_or(changed, changed_index, 1)` on each newly-set bit. The
-    // `query_word_base` let-bind is emitted first so the frontier-index closure can
-    // reference it. Byte-identical to the previous hand-written body.
-    let mut body = vec![Node::let_bind("query_word_base", query_word_base.clone())];
-    body.extend(crate::graph::edge_scan::csr_edge_scan_nodes(
-        shape,
-        frontier_out,
-        src.clone(),
-        |word| Expr::add(Expr::var("query_word_base"), word),
-        || {
-            vec![Node::let_bind(
-                "_changed",
-                Expr::atomic_or(changed, changed_index.clone(), Expr::u32(1)),
-            )]
-        },
+    crate::builder::csr::CsrTraversalComposer::forward(
+        OP_ID,
+        shape.node_count,
+        shape.edge_count,
         edge_kind_mask,
-        "",
-    ));
-    prologue.append(&mut body);
-    let mut buffers = shape.try_read_only_buffers()?;
-    buffers.push(word_buffer(
+    )
+    .with_workgroup_size(CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE)
+    .build_parallel_batch_forward_or_changed(
         frontier_out,
-        BINDING_PRIMITIVE_START,
-        BufferAccess::ReadWrite,
-        total_words.max(1),
-    ));
-    buffers.push(word_buffer(
         changed,
-        BINDING_PRIMITIVE_START + 1,
-        BufferAccess::ReadWrite,
+        query_count,
+        changed_index,
         changed_slots,
-    ));
-    buffers.extend(extra_buffers);
-    Ok(Program::wrapped(
-        buffers,
-        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![Node::if_then(
-                Expr::lt(src.clone(), Expr::u32(shape.node_count)),
-                prologue,
-            )],
-        )],
-    ))
+        prologue,
+        extra_buffers,
+    )
 }

@@ -1,9 +1,8 @@
 //! Property gates for `vyre_libs::reduce::sum::cpu_ref`.
 
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
-use vyre_libs::reduce::sum::cpu_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -33,4 +32,9 @@ proptest! {
         let total = cpu_ref(&[a, b, c, d]);
         prop_assert_eq!(u32::wrapping_add(left, right), total);
     }
+}
+
+#[must_use]
+fn cpu_ref(input: &[u32]) -> u32 {
+    input.iter().copied().fold(0u32, u32::wrapping_add)
 }

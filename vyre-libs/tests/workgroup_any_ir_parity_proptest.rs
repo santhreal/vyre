@@ -6,12 +6,11 @@
 //! identity (must be 0 for OR), or a barrier/accumulation slip diverges. The sweep runs random inputs
 //! (count 1..=256, single workgroup) including all-zero (result 0), single-bit-per-lane (result is the
 //! union of all bits), and full-range, asserting `out[0]` bit-exact vs `cpu_ref`.
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::reduce::workgroup_any::{cpu_ref, workgroup_any_u32};
 
 fn run_ir(values: &[u32]) -> u32 {
     let program = workgroup_any_u32("values", "out", values.len() as u32);
@@ -56,4 +55,9 @@ fn workgroup_any_ir_boundaries() {
         "every bit set across the workgroup"
     );
     assert_eq!(run_ir(&full), cpu_ref(&full));
+}
+
+#[must_use]
+fn cpu_ref(input: &[u32]) -> u32 {
+    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
 }

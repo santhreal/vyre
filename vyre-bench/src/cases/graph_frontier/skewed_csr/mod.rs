@@ -20,6 +20,7 @@ mod metrics;
 mod queue_closure;
 mod queue_materialize;
 #[cfg(test)]
+#[path = "../../../../tests/internal/cases/graph_frontier/skewed_csr/mod.rs"]
 mod tests;
 
 use fixture::{

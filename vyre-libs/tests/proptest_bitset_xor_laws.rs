@@ -1,9 +1,9 @@
-//! Property gates for `vyre_libs::bitset::xor::cpu_ref`.
+//! Property gates for `vyre_reference::composition_witness::bitset_xor_witness`.
 
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_libs::bitset::xor::cpu_ref;
+use vyre_reference::composition_witness::bitset_xor_witness;
 
 fn manual_xor(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
     lhs.iter().zip(rhs.iter()).map(|(a, b)| a ^ b).collect()

@@ -1,9 +1,9 @@
-//! Property gates for `vyre_libs::bitset::or::cpu_ref`.
+//! Property gates for `vyre_reference::composition_witness::bitset_or_witness`.
 
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_libs::bitset::or::cpu_ref;
+use vyre_reference::composition_witness::bitset_or_witness;
 
 #[macro_use]
 mod bitset_law_properties;

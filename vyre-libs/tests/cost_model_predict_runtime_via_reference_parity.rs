@@ -32,7 +32,6 @@
 //! got 0, silently wrong on GPU, masked only by the topo-array `_cpu` oracle). The suite exercises both
 //! depth-1 circuits (the sweep) and genuine multi-level DAGs (`..evaluates_multilevel_dag_correctly`),
 //! all end to end through the circuit→conformal composite.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::analysis::cost_model::predict_runtime_fixed_via;
 use vyre_libs::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};

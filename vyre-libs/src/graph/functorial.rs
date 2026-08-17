@@ -89,49 +89,8 @@ pub fn functor_apply_sized(
     )
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn functor_apply_cpu(source_row: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
-    try_functor_apply_cpu(source_row, mapping, target_size)
-        .unwrap_or_else(|error| panic!("{error}"))
-}
 
-/// Fallible CPU reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_functor_apply_cpu(
-    source_row: &[u32],
-    mapping: &[u32],
-    target_size: u32,
-) -> Result<Vec<u32>, String> {
-    let mut out = Vec::new();
-    try_functor_apply_cpu_into(source_row, mapping, target_size, &mut out)?;
-    Ok(out)
-}
 
-/// Fallible CPU reference using caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_functor_apply_cpu_into(
-    source_row: &[u32],
-    mapping: &[u32],
-    target_size: u32,
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    out.clear();
-    crate::plumbing::host::scratch::resize_vec(
-        out,
-        target_size as usize,
-        0u32,
-        "functorial migration CPU oracle",
-        "functor_apply CPU output",
-    )?;
-    for (&src, &dst) in source_row.iter().zip(mapping.iter()) {
-        if let Some(slot) = out.get_mut(dst as usize) {
-            *slot = src;
-        }
-    }
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

@@ -4,7 +4,6 @@
 //! entry-by-entry.  Graphs are single-entry (all edges emanate from node 0 or
 //! are reachable from it) with 0..=128 nodes.
 #![cfg(feature = "graph")]
-#![cfg(feature = "cpu-parity")]
 
 use proptest::prelude::*;
 use vyre_libs::graph::dominator_tree::{cooper_harvey_kennedy_idoms, lengauer_tarjan_idoms};

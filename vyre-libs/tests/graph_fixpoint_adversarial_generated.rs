@@ -1,6 +1,6 @@
 //! Generated adversarial graph-fixpoint tests for CSR traversal and persistent BFS.
 
-#![cfg(all(feature = "graph", feature = "bitset", feature = "cpu-parity"))]
+#![cfg(all(feature = "graph", feature = "bitset"))]
 
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};

@@ -60,8 +60,6 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::sheaf::sheaf_diffusion_step;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::graph::sheaf::{sheaf_diffusion_step_cpu, sheaf_diffusion_step_cpu_into};
 use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -72,39 +70,7 @@ pub struct SheafDispatchGpuScratch {
     damping: Vec<u32>,
 }
 
-/// Apply one sheaf-diffusion step to dispatch-graph stalks.
-/// `stalks[i]` is Region i's feature scalar (in its own type's
-/// feature space); `restriction_diag[i]` is the per-Region
-/// transmission coefficient (high = compatible neighbor types,
-/// low = mismatch). `damping` is the diffusion rate in `[0, 1]`.
-///
-/// Returns the diffused stalks.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_diffuse_dispatch_stalks(
-    stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-) -> Vec<f64> {
-    use crate::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
-    bump(&sheaf_heterophilic_dispatch_calls);
-    sheaf_diffusion_step_cpu(stalks, restriction_diag, damping)
-}
 
-/// Apply one sheaf-diffusion step into caller-owned storage.
-///
-/// Clears `out` and reuses its allocation.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_diffuse_dispatch_stalks_into(
-    stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-    out: &mut Vec<f64>,
-) {
-    use crate::telemetry::{bump, sheaf_heterophilic_dispatch_calls};
-    bump(&sheaf_heterophilic_dispatch_calls);
-    sheaf_diffusion_step_cpu_into(stalks, restriction_diag, damping, out);
-}
 
 /// Fixed-point production path for one sheaf-diffusion step.
 ///

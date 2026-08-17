@@ -223,56 +223,8 @@ pub const fn is_structural_whitespace(byte: u8) -> bool {
     matches!(byte, 0x20 | 0x09 | 0x0A | 0x0D)
 }
 
-/// Reference oracle. Returns the per-word whitespace bitmaps for the input
-/// byte stream (already packed 4 bytes per u32, little-endian). Matches
-/// the GPU `Program` lane-for-lane.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_whitespace_classify_word(words_in: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    try_reference_whitespace_classify_word_into(words_in, &mut out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - whitespace word-classifier reference allocation failed");
-    out
-}
 
-/// Reference oracle into caller-owned output storage.
-///
-/// Clears `out`, then reuses its capacity.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_whitespace_classify_word_into(words_in: &[u32], out: &mut Vec<u32>) {
-    try_reference_whitespace_classify_word_into(words_in, out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - whitespace word-classifier reference allocation failed");
-}
 
-/// Fallible reference oracle into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_reference_whitespace_classify_word_into(
-    words_in: &[u32],
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    vyre_foundation::allocation::reserve_exact_cleared(out, words_in.len()).map_err(|err| {
-        format!(
-            "whitespace word-classifier reference could not reserve {} output words: {err}",
-            words_in.len()
-        )
-    })?;
-    for word in words_in {
-        let bytes = [
-            (*word & 0xFF) as u8,
-            ((*word >> 8) & 0xFF) as u8,
-            ((*word >> 16) & 0xFF) as u8,
-            ((*word >> 24) & 0xFF) as u8,
-        ];
-        let mut mask = 0u32;
-        for (lane, byte) in bytes.iter().enumerate() {
-            if is_structural_whitespace(*byte) {
-                mask |= 1u32 << lane;
-            }
-        }
-        out.push(mask);
-    }
-    Ok(())
-}
 
 /// Pack 4 bytes into one little-endian u32 word. Helper for tests +
 /// host-side fixture building.

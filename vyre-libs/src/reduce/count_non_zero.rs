@@ -2,7 +2,8 @@
 
 use vyre_foundation::ir::Program;
 
-use super::atomic_scalar::{atomic_reduce_u32, AtomicReduceKind};
+use crate::builder::reduction::ReductionComposer;
+use super::atomic_scalar::AtomicReduceKind;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::reduce::count_non_zero";
@@ -10,15 +11,9 @@ pub const OP_ID: &str = "vyre-libs::reduce::count_non_zero";
 /// Build a Program: `out[0] = |{ i | values[i] != 0 }|`.
 #[must_use]
 pub fn reduce_count_non_zero(values: &str, out: &str, count: u32) -> Program {
-    atomic_reduce_u32(values, out, count, AtomicReduceKind::CountNonZero, OP_ID)
+    ReductionComposer::atomic_scalar_reduction(OP_ID, values, out, count, AtomicReduceKind::CountNonZero)
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(values: &[u32]) -> u32 {
-    values.iter().filter(|&&value| value != 0).count() as u32
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

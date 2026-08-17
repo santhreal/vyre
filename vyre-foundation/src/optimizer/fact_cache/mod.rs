@@ -353,4 +353,5 @@ impl FactCache {
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
+#[path = "../../../tests/internal/optimizer/fact_cache/mod.rs"]
 mod tests;

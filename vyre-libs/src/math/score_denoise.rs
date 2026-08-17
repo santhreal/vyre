@@ -91,64 +91,8 @@ pub fn score_denoise_step(
     )
 }
 
-/// CPU reference. f64 for clarity; callers convert at the boundary.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn score_denoise_step_cpu(
-    x: &[f64],
-    score: &[f64],
-    noise: &[f64],
-    alpha: f64,
-    beta: f64,
-    sigma: f64,
-) -> Vec<f64> {
-    let n = x.len().min(score.len()).min(noise.len());
-    let mut out = Vec::with_capacity(n);
-    score_denoise_step_cpu_into(x, score, noise, alpha, beta, sigma, &mut out);
-    out
-}
 
-/// CPU reference into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn score_denoise_step_cpu_into(
-    x: &[f64],
-    score: &[f64],
-    noise: &[f64],
-    alpha: f64,
-    beta: f64,
-    sigma: f64,
-    out: &mut Vec<f64>,
-) {
-    try_score_denoise_step_cpu_into(x, score, noise, alpha, beta, sigma, out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - score_denoise_step_cpu_into failed: output allocation failed");
-}
 
-/// Fallible CPU reference into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_score_denoise_step_cpu_into(
-    x: &[f64],
-    score: &[f64],
-    noise: &[f64],
-    alpha: f64,
-    beta: f64,
-    sigma: f64,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = x.len().min(score.len()).min(noise.len());
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "score-denoise CPU oracle",
-            "denoised output",
-        )?;
-    }
-    out.clear();
-    for i in 0..n {
-        out.push(alpha * x[i] + beta * score[i] + sigma * noise[i]);
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

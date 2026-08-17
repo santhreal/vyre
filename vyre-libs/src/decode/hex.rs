@@ -71,8 +71,7 @@ pub const fn hex_decoded_capacity(input_len: u32) -> u32 {
 }
 
 fn nibble_expr(byte: Expr, table: &str) -> Expr {
-    // Canonical masked 256-table lookup (ONE-PLACE: vyre_primitives::ir_safe).
-    vyre_primitives::ir_safe::byte_table_lookup(table, byte)
+    crate::builder::TableStateMachineComposer::byte_table_lookup(table, byte)
 }
 
 /// Decode one hex byte pair into a single u32 byte value.
@@ -281,23 +280,6 @@ inventory::submit! {
         Some(fixture_inputs),
         Some(fixture_outputs),
     )
-}
-/// CPU oracle for the primitive hex decode contract.
-///
-/// Invalid nibbles clamp to zero through the table, matching the GPU body.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn hex_decode_reference_packed(input: &[u8]) -> Vec<u32> {
-    assert!(input.len() % 2 == 0, "hex input must contain byte pairs");
-    let table = hex_decode_table_ref();
-    input
-        .chunks_exact(2)
-        .map(|pair| {
-            let hi = table[usize::from(pair[0])];
-            let lo = table[usize::from(pair[1])];
-            (hi << 4) | lo
-        })
-        .collect()
 }
 #[cfg(test)]
 mod primitive_tests {

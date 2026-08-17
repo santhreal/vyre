@@ -17,7 +17,6 @@
 //! integer inputs the recurrence `T_next = 2·(L̂·T_curr) − T_prev` never u32-underflows (every
 //! `2·(L̂·T_curr)` dominates `T_prev`) and every intermediate stays < 2^24, where f32 represents integers
 //! EXACTLY. So the u32 GPU output equals the f32 reference cast to integer, bit-for-bit.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
 use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;

@@ -15,7 +15,6 @@
 //! Because `min` is monotone and order-preserving, the u32 result equals the documented f64 reference
 //! `mp_edge_clip_cpu` (`v.min(edge)`) applied to the same magnitudes and re-encoded, so this suite
 //! asserts BOTH the direct u32 min oracle AND agreement with the importable `mp_edge_clip_cpu`.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::math::spectral_shape::mp_edge_clip_cpu;
 use vyre_libs::scheduling::spectral_schedule::shape_spectrum_fixed_via;

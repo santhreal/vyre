@@ -645,4 +645,5 @@ fn emit_adjoint_node(
 }
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/transform/autodiff/grad/mod.rs"]
 mod tests;

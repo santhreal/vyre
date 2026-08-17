@@ -31,8 +31,6 @@ use crate::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::amg_v_cycle::amg_v_cycle;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::amg_v_cycle::{cpu_ref, cpu_ref_into, AmgVcycleScratch};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for fixed-point AMG V-cycle execution.
@@ -52,113 +50,7 @@ pub const DEFAULT_OMEGA: f64 = 0.66;
 /// This is the primitive-native equivalent of [`DEFAULT_OMEGA`].
 pub const DEFAULT_OMEGA_FIXED: u32 = 43_254;
 
-/// Run one AMG V-cycle to smooth the matroid LP flow vector.
-///
-/// `a` is the fine-level system matrix (n_fine × n_fine row-major).
-/// `b` is the right-hand side (n_fine entries).
-/// `x` is the current iterate (n_fine entries).
-/// `r_mat` is the restriction operator (n_coarse × n_fine).
-/// `p_mat` is the prolongation operator (n_fine × n_coarse).
-/// `a_c` is the coarse-level system matrix (n_coarse × n_coarse).
-///
-/// Returns the post-smoothed iterate (n_fine entries).
-///
-/// # Panics
-///
-/// Panics on size mismatches between input arrays and `n_fine` /
-/// `n_coarse`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_smooth_matroid_flow(
-    a: &[f64],
-    b: &[f64],
-    x: &[f64],
-    r_mat: &[f64],
-    p_mat: &[f64],
-    a_c: &[f64],
-    n_fine: u32,
-    n_coarse: u32,
-) -> Vec<f64> {
-    let nf = n_fine as usize;
-    let nc = n_coarse as usize;
-    assert_eq!(a.len(), nf * nf, "Fix: a must be n_fine x n_fine.");
-    assert_eq!(b.len(), nf, "Fix: b must have n_fine entries.");
-    assert_eq!(x.len(), nf, "Fix: x must have n_fine entries.");
-    assert_eq!(
-        r_mat.len(),
-        nc * nf,
-        "Fix: r_mat must be n_coarse x n_fine."
-    );
-    assert_eq!(
-        p_mat.len(),
-        nf * nc,
-        "Fix: p_mat must be n_fine x n_coarse."
-    );
-    assert_eq!(a_c.len(), nc * nc, "Fix: a_c must be n_coarse x n_coarse.");
-    if n_fine == 0 {
-        assert_eq!(n_coarse, 0, "Fix: empty fine grids require n_coarse = 0.");
-        return Vec::new();
-    }
 
-    use crate::telemetry::{amg_pass_solver_calls, bump};
-    bump(&amg_pass_solver_calls);
-    cpu_ref(a, b, x, r_mat, p_mat, a_c, DEFAULT_OMEGA, n_fine, n_coarse)
-}
-
-/// Run one AMG V-cycle into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_smooth_matroid_flow_into(
-    a: &[f64],
-    b: &[f64],
-    x: &[f64],
-    r_mat: &[f64],
-    p_mat: &[f64],
-    a_c: &[f64],
-    n_fine: u32,
-    n_coarse: u32,
-    scratch: &mut AmgVcycleScratch,
-    out: &mut Vec<f64>,
-) {
-    let nf = n_fine as usize;
-    let nc = n_coarse as usize;
-    assert_eq!(a.len(), nf * nf, "Fix: a must be n_fine x n_fine.");
-    assert_eq!(b.len(), nf, "Fix: b must have n_fine entries.");
-    assert_eq!(x.len(), nf, "Fix: x must have n_fine entries.");
-    assert_eq!(
-        r_mat.len(),
-        nc * nf,
-        "Fix: r_mat must be n_coarse x n_fine."
-    );
-    assert_eq!(
-        p_mat.len(),
-        nf * nc,
-        "Fix: p_mat must be n_fine x n_coarse."
-    );
-    assert_eq!(a_c.len(), nc * nc, "Fix: a_c must be n_coarse x n_coarse.");
-    if n_fine == 0 {
-        assert_eq!(n_coarse, 0, "Fix: empty fine grids require n_coarse = 0.");
-        out.clear();
-        return;
-    }
-
-    use crate::telemetry::{amg_pass_solver_calls, bump};
-    bump(&amg_pass_solver_calls);
-    cpu_ref_into(
-        a,
-        b,
-        x,
-        r_mat,
-        p_mat,
-        a_c,
-        DEFAULT_OMEGA,
-        n_fine,
-        n_coarse,
-        scratch,
-        out,
-    );
-}
 
 /// Primitive-native fixed-point production path for one AMG V-cycle.
 ///

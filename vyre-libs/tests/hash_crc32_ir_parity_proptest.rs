@@ -12,7 +12,7 @@
 //! the low 8 bits as the op contracts) and asserts `out[0] == crc32(bytes)` bit-exact, plus the
 //! standard CRC check-value `crc32(b"123456789") == 0xCBF43926` as an absolute anchor (so a
 //! self-consistent-but-wrong oracle+IR pair cannot both drift).
-#![cfg(all(feature = "hash", feature = "cpu-parity"))]
+#![cfg(feature = "hash")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;

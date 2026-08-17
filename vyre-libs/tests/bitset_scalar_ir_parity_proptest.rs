@@ -14,7 +14,7 @@
 //! NOTE: `bitset::copy` and `bitset::stochastic_and_mul` are deliberately EXCLUDED — they lower through
 //! `binary_word.rs`, which is mid-refactor (git-dirty) in the current tree; testing against an
 //! in-flight lowering would be flaky. They are recorded for the family sweep once that file settles.
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;

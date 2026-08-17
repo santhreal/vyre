@@ -7,6 +7,7 @@
 
 mod builders;
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/vast_tree_walk/mod.rs"]
 mod tests;
 
 pub use crate::graph::vast_tree_walk::VastTreeWalkProgramPlan as VastTreeWalkPlan;

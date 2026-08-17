@@ -175,17 +175,6 @@ impl Cl2Mv {
     }
 }
 
-/// CPU reference for the Cl(2, 0) geometric product.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn clifford2_product_cpu(a: Cl2Mv, b: Cl2Mv) -> Cl2Mv {
-    Cl2Mv {
-        s: a.s * b.s + a.e1 * b.e1 + a.e2 * b.e2 - a.e12 * b.e12,
-        e1: a.s * b.e1 + a.e1 * b.s - a.e2 * b.e12 + a.e12 * b.e2,
-        e2: a.s * b.e2 + a.e2 * b.s + a.e1 * b.e12 - a.e12 * b.e1,
-        e12: a.s * b.e12 + a.e12 * b.s + a.e1 * b.e2 - a.e2 * b.e1,
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

@@ -13,7 +13,7 @@
 //! `dst < node_count` bound, or a non-atomic OR (lost bit when two source lanes
 //! set the same output word) all diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 mod graph_sweep_fixtures;
 use graph_sweep_fixtures::{bitset_words, frontier_step_out};
@@ -21,7 +21,8 @@ use graph_sweep_fixtures::{bitset_words, frontier_step_out};
 mod csr_sweep;
 
 use proptest::prelude::*;
-use vyre_libs::graph::csr_forward_traverse::{cpu_ref, csr_forward_traverse};
+use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse;
+use vyre_reference::composition_witness::csr_forward_traverse_witness as cpu_ref;
 
 /// Drive the real forward-step IR and return the `frontier_out` word bitset.
 fn gpu_forward_step(

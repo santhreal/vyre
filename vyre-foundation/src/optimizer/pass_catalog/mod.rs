@@ -408,4 +408,5 @@ const SUPPLEMENTAL_OPTIMIZATION_RULES: &[OptimizationCatalogEntry] = &[
 ];
 
 #[cfg(test)]
+#[path = "../../../tests/internal/optimizer/pass_catalog/mod.rs"]
 mod tests;

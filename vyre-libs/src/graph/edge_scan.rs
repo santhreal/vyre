@@ -1,51 +1,18 @@
-//! The ONE canonical CSR neighbor-expansion edge-scan, shared by every
-//! `csr_forward_or_changed` variant and the persistent-BFS batch step.
+//! The ONE canonical CSR neighbor-expansion edge-scan, backed by
+//! [`crate::builder::csr::CsrTraversalComposer`].
 //!
-//! It lives at `graph/` level, a peer of both `csr_forward_or_changed` and
-//! `persistent_bfs`: because it is the common parent of every consumer; parking
-//! it inside one variant would force the others to reach across a sibling module.
-//!
-//! The inner loop: "for a source node whose frontier bit is set, walk its CSR
-//! edge range, and for each edge that passes the kind-mask, atomic-OR the target
-//! bit into the frontier, marking the run changed on a newly-set bit", was
-//! hand-written five times across the graph module (single-serial, grid-sync
-//! parallel, batch, batch-global, and persistent-BFS batch step). Byte-identical
-//! copies drift (the persistent_bfs seed bug and the `{n,m}` lowering bugs both
-//! hid in near-duplicate paths), so it lives here ONCE and every caller supplies
-//! only what genuinely differs: how a word index maps into its frontier buffer,
-//! and what to write when a new bit is discovered.
-//!
-//! Two entry points at different levels:
-//! - [`csr_edge_scan_nodes`] reads the source bit INLINE then expands, for callers
-//!   that check activity where they expand (the serial and batch-global paths).
-//! - [`csr_edge_expand_nodes`] is the edge-walk ALONE, for callers that read the
-//!   source bit into a pre-barrier snapshot and guard the expansion themselves (the
-//!   parallel snapshot path and the persistent-BFS batch step). `csr_edge_scan_nodes`
-//!   is itself the inline source-bit read wrapped around this.
+//! Preserved at `graph/` level as the public/internal seam for graph module
+//! callers, while sharing implementation with the canonical builder composer.
 
 use vyre_foundation::ir::{Expr, Node};
 
-use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
-use crate::graph::program_graph::{
-    ProgramGraphShape, NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS, NAME_EDGE_TARGETS,
-};
-
-fn local_name(prefix: &str, n: &str) -> String {
-    if prefix.is_empty() {
-        n.to_string()
-    } else {
-        format!("{prefix}_{n}")
-    }
-}
+use crate::builder::csr::CsrTraversalComposer;
+use crate::graph::program_graph::ProgramGraphShape;
 
 /// Emit ONLY the CSR edge walk for source node `src` (no source-activity guard):
 /// load the `[edge_start, edge_end)` range, and for every edge passing
 /// `edge_kind_mask`, atomic-OR the target bit into `frontier_out` at
 /// `frontier_index(dst_word)`, running `on_new_bit()` when a bit flips 0→1.
-///
-/// Callers that snapshot source activity before a barrier (the one-hop-per-iteration
-/// guarantee) wrap this themselves; callers that read activity inline use
-/// [`csr_edge_scan_nodes`].
 #[must_use]
 pub(in crate::graph) fn csr_edge_expand_nodes(
     shape: ProgramGraphShape,
@@ -56,90 +23,18 @@ pub(in crate::graph) fn csr_edge_expand_nodes(
     edge_kind_mask: u32,
     prefix: &str,
 ) -> Vec<Node> {
-    let name = |n: &str| local_name(prefix, n);
-    let edge_start = name("edge_start");
-    let edge_end = name("edge_end");
-    let edge_iter = name("e");
-    let kind_mask = name("kind_mask");
-    let dst = name("dst");
-    let dst_word_idx = name("dst_word_idx");
-    let dst_bit = name("dst_bit");
-
-    // Callers that track a changed flag (the in-place accumulating paths) pass a
-    // non-empty `on_new_bit`; the two-buffer forward step (frontier_in -> frontier_out)
-    // discovers no new-bit work and passes an empty body. `set_bit` then emits a bare
-    // `atomic_or` with no flip guard, so the forward step keeps its minimal set-only IR
-    // and binds the discarded pre-OR word under the `_`-prefixed name.
-    let flip_body = on_new_bit();
-    let pre_or_word = name(if flip_body.is_empty() { "_prev" } else { "old" });
-    let on_bounded = set_bit(
-        frontier_out,
-        &Expr::var(dst.as_str()),
-        BitAccess {
-            word: dst_word_idx.as_str(),
-            mask: dst_bit.as_str(),
-            value: pre_or_word.as_str(),
-        },
-        frontier_index,
-        flip_body,
-    );
-
-    vec![
-        Node::let_bind(
-            edge_start.as_str(),
-            Expr::load(NAME_EDGE_OFFSETS, src.clone()),
-        ),
-        Node::let_bind(
-            edge_end.as_str(),
-            Expr::load(NAME_EDGE_OFFSETS, Expr::add(src.clone(), Expr::u32(1))),
-        ),
-        Node::loop_for(
-            edge_iter.as_str(),
-            Expr::var(edge_start.as_str()),
-            Expr::var(edge_end.as_str()),
-            vec![
-                Node::let_bind(
-                    kind_mask.as_str(),
-                    Expr::load(NAME_EDGE_KIND_MASK, Expr::var(edge_iter.as_str())),
-                ),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var(kind_mask.as_str()), Expr::u32(edge_kind_mask)),
-                        Expr::u32(0),
-                    ),
-                    vec![
-                        Node::let_bind(
-                            dst.as_str(),
-                            Expr::load(NAME_EDGE_TARGETS, Expr::var(edge_iter.as_str())),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var(dst.as_str()), Expr::u32(shape.node_count)),
-                            on_bounded,
-                        ),
-                    ],
-                ),
-            ],
-        ),
-    ]
+    CsrTraversalComposer::forward(
+        "edge_expand",
+        shape.node_count,
+        shape.edge_count,
+        edge_kind_mask,
+    )
+    .with_prefix(prefix)
+    .emit_edge_expand(frontier_out, src, frontier_index, on_new_bit)
 }
 
 /// Emit the CSR neighbor expansion for one source node `src`, reading its frontier
 /// bit INLINE and expanding only when set.
-///
-/// The two axes of variation across callers:
-/// - `frontier_index(word) -> storage_index`: maps a bitset WORD index to the
-///   position in `frontier_out` (identity for a single bitset; `query_word_base +
-///   word` for a flat per-query batch).
-/// - `on_new_bit() -> Vec<Node>`: what to run when a target bit flips from 0 to 1
-///   (a local `assign(changed, 1)`, or `atomic_or(changed, <index>, 1)`).
-///
-/// `prefix` disambiguates the local bindings when this body is inlined more than
-/// once into a larger kernel (the no-shadowing validator forbids reused names);
-/// pass `""` for a standalone program to keep the canonical unprefixed names.
-///
-/// This is exactly the inline source-bit read wrapped around
-/// [`csr_edge_expand_nodes`], so a caller's emitted IR is unchanged (locked by the
-/// graph oracle/fixpoint matrices + the csr module's per-variant parity tests).
 #[must_use]
 pub(in crate::graph) fn csr_edge_scan_nodes(
     shape: ProgramGraphShape,
@@ -150,27 +45,12 @@ pub(in crate::graph) fn csr_edge_scan_nodes(
     edge_kind_mask: u32,
     prefix: &str,
 ) -> Vec<Node> {
-    let name = |n: &str| local_name(prefix, n);
-    let word_idx = name("word_idx");
-    let bit_mask = name("bit_mask");
-    let src_word = name("src_word");
-
-    let expand = csr_edge_expand_nodes(
-        shape,
-        frontier_out,
-        src.clone(),
-        &frontier_index,
-        on_new_bit,
+    CsrTraversalComposer::forward(
+        "edge_scan",
+        shape.node_count,
+        shape.edge_count,
         edge_kind_mask,
-        prefix,
-    );
-    when_bit_set(
-        frontier_out,
-        &src,
-        Some(word_idx.as_str()),
-        src_word.as_str(),
-        bit_mask.as_str(),
-        frontier_index,
-        expand,
     )
+    .with_prefix(prefix)
+    .emit_edge_scan(frontier_out, src, frontier_index, on_new_bit)
 }

@@ -34,12 +34,6 @@ mod word_block_scatter;
 #[cfg(test)]
 mod emitted_program_shape;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use self::cpu_reference::{
-    csr_queue_forward_traverse_cpu, frontier_to_queue_cpu, try_csr_queue_forward_traverse_cpu,
-    try_csr_queue_forward_traverse_cpu_into, try_frontier_to_queue_cpu,
-    try_frontier_to_queue_cpu_into,
-};
 pub use self::graph_validation::{
     validate_csr_queue_graph, validate_frontier_queue_batch, validate_frontier_queue_query,
 };

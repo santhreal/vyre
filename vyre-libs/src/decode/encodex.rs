@@ -77,20 +77,6 @@ pub fn encodex_gpu(input: &str, output: &str, count: u32) -> Program {
     )
 }
 
-/// Host-side reference that mirrors the GPU heuristics.
-///
-/// Computes the same 256-bin histogram and applies the identical
-/// classification rules so the host oracle and `encodex_gpu` agree on
-/// every fixture input.
-///
-/// Gated like every other host oracle under `decode/`. It executes the
-/// classification on the CPU, so a release consumer of this crate must not
-/// compile it, and nothing outside a parity check may call it.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn encodex_reference(input: &[u8]) -> u32 {
-    let histogram = crate::text::reference_byte_histogram(input);
-    crate::text::classify_from_histogram(&histogram, input.len() as u32)
-}
 
 // ---------------------------------------------------------------------------
 // Fixtures & harness

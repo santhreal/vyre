@@ -12,7 +12,6 @@
 //! zero-filled by the wrapper), decoding TWO outputs (motif_hits + witness_out). The importable
 //! `match_motif` / `motif_matches` / `motif_participation_count` references (cpu-parity gated) are the
 //! authoritative oracles; values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::dispatch::motif::{
     match_motif, match_motif_via, motif_matches, motif_matches_via, motif_participation_count,

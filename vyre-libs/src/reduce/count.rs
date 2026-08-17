@@ -2,8 +2,8 @@
 //! as a single u32 into `out[0]`.
 
 use vyre_foundation::ir::Program;
-
-use super::atomic_scalar::{atomic_reduce_u32, AtomicReduceKind};
+use crate::builder::reduction::ReductionComposer;
+use super::atomic_scalar::AtomicReduceKind;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::reduce::count";
@@ -11,15 +11,9 @@ pub const OP_ID: &str = "vyre-libs::reduce::count";
 /// Build a Program: `out[0] = sum_{w} popcount(bitset[w])`.
 #[must_use]
 pub fn reduce_count(bitset: &str, out: &str, words: u32) -> Program {
-    atomic_reduce_u32(bitset, out, words, AtomicReduceKind::PopcountSum, OP_ID)
+    ReductionComposer::atomic_scalar_reduction(OP_ID, bitset, out, words, AtomicReduceKind::PopcountSum)
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(bitset: &[u32]) -> u32 {
-    bitset.iter().map(|w| w.count_ones()).sum()
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

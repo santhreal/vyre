@@ -82,57 +82,8 @@ pub fn try_mz_project_step(
     ))
 }
 
-/// CPU reference, f64.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn mz_project_step_cpu(p_matrix: &[f64], f_vec: &[f64], n: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    try_mz_project_step_cpu_into(p_matrix, f_vec, n, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference, f64, using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn mz_project_step_cpu_into(p_matrix: &[f64], f_vec: &[f64], n: u32, out: &mut Vec<f64>) {
-    try_mz_project_step_cpu_into(p_matrix, f_vec, n, out).unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference, f64, using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_mz_project_step_cpu_into(
-    p_matrix: &[f64],
-    f_vec: &[f64],
-    n: u32,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = n as usize;
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "mz_project_step CPU oracle n={n} overflows dense projector indexing. Fix: shard the Mori-Zwanzig resolved space before parity evaluation."
-        )
-    })?;
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "Mori-Zwanzig CPU oracle",
-            "mz_project_step output",
-        )?;
-    }
-    out.clear();
-    out.resize(n, 0.0);
-    for i in 0..n {
-        let mut acc = 0.0;
-        for j in 0..n {
-            let p = p_matrix.get(i * n + j).copied().unwrap_or(0.0);
-            let f = f_vec.get(j).copied().unwrap_or(0.0);
-            acc += p * f;
-        }
-        out[i] = acc;
-    }
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

@@ -10,8 +10,7 @@
     feature = "reduce",
     feature = "graph",
     feature = "bitset",
-    feature = "math",
-    feature = "cpu-parity"
+    feature = "math"
 ))]
 #![forbid(unsafe_code)]
 

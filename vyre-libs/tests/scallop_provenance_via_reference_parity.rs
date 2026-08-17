@@ -14,7 +14,6 @@
 //! `next[i*n+j]` (STATIC index) under grid-sync, the static-scatter form that converges correctly
 //! across iterations through reference_eval (so the full multi-iteration closure is validated here).
 //! Values are exact bitset unions → BIT-EXACT (no tolerance) vs `reference_provenance_closure`.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::encoding::scallop_provenance::{
     provenance_closure_via, reference_provenance_closure,

@@ -15,7 +15,6 @@
 //! scratch), the consumer previously passed SEVEN (a spurious zero slot for the allocated output),
 //! which the real backend's strict `validate_input_lengths` would reject. The faithful dispatcher's
 //! strict count check caught it; the consumer now passes exactly six.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::sinkhorn_dispatch_clustering::{
     reference_sinkhorn_clustering, sinkhorn_clustering_via,

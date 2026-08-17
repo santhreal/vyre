@@ -64,10 +64,6 @@ pub(crate) fn reserve_capacity<T>(
 #[cfg(any(feature = "graph", feature = "math-kernels"))]
 macro_rules! define_reserve_capacity {
     ($name:ident, $item:ty, $owner:literal) => {
-        #[cfg(any(test, feature = "cpu-parity"))]
-        fn $name(out: &mut Vec<$item>, len: usize, name: &str) -> Result<(), String> {
-            crate::plumbing::host::scratch::reserve_capacity(out, len, $owner, name)
-        }
     };
 }
 #[cfg(any(feature = "graph", feature = "math-kernels"))]
@@ -210,27 +206,6 @@ where
     })
 }
 
-#[cfg(all(feature = "device", any(test, feature = "cpu-parity")))]
-/// Reserve `capacity` entries in `set`, failing closed when refused.
-///
-/// # Panics
-/// Panics when the reservation fails. A short hash scratch would silently drop
-/// facts the analysis believes it recorded.
-pub(crate) fn reserve_hash_set_capacity_or_panic<T, S>(
-    set: &mut HashSet<T, S>,
-    capacity: usize,
-    context: &'static str,
-) where
-    T: Eq + Hash,
-    S: BuildHasher,
-{
-    if let Err(error) = vyre_foundation::allocation::try_reserve_hash_set_to_capacity(set, capacity)
-    {
-        panic!(
-            "Fix: {context} could not reserve hash scratch capacity for {capacity} item(s): {error}. Split the analysis window before retrying."
-        );
-    }
-}
 
 #[cfg(all(test, feature = "device"))]
 mod dispatch_tests {

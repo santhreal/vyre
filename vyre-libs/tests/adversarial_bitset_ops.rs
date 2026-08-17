@@ -2,11 +2,11 @@
 //!
 //! Coverage: and_not, popcount, test_bit  -  hostile boundaries, empty
 //! bitsets, cross-word node indices, alternating patterns.
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
-use vyre_libs::bitset::and_not::cpu_ref as and_not_cpu_ref;
-use vyre_libs::bitset::popcount::cpu_ref as popcount_cpu_ref;
-use vyre_libs::bitset::test_bit::cpu_ref as test_bit_cpu_ref;
+use vyre_reference::composition_witness::bitset_and_not_witness as and_not_cpu_ref;
+use vyre_reference::composition_witness::bitset_popcount_witness as popcount_cpu_ref;
+use vyre_reference::composition_witness::bitset_test_bit_witness as test_bit_cpu_ref;
 
 // ---------------------------------------------------------------------------
 // and_not

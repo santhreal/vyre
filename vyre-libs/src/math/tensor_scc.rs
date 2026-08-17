@@ -91,26 +91,6 @@ pub fn tensor_scc_fixpoint(
     )
 }
 
-/// CPU reference for the bounded SCC-local bitset fixpoint.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(matrix_rows: &[u32], seed_mask: u32, group_mask: u32, iteration_limit: u32) -> u32 {
-    let mut active = seed_mask & group_mask;
-    for _ in 0..iteration_limit {
-        let previous = active;
-        let mut next = active;
-        for (row, edges) in matrix_rows.iter().copied().enumerate().take(32) {
-            if (active & (1u32 << row)) != 0 {
-                next |= edges & group_mask;
-            }
-        }
-        active = next & group_mask;
-        if active == previous {
-            break;
-        }
-    }
-    active
-}
 
 #[cfg(test)]
 mod tests {

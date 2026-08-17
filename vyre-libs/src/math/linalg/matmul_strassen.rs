@@ -45,9 +45,10 @@
 //! overhead across N^2 / 4 sub-matmuls, so the addition cost is a
 //! fixed fraction of the multiplication savings.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::Program;
 
+use crate::builder::gemm::{ContractionComposer, ContractionGeometry};
+use crate::plumbing::operand::tensor_ref::TensorRef;
 const OP_ID: &str = "vyre-libs::math::linalg::matmul_strassen_2x2";
 
 /// Build a Program that computes `C = A · B` for 2x2 row-major F32
@@ -56,109 +57,15 @@ const OP_ID: &str = "vyre-libs::math::linalg::matmul_strassen_2x2";
 /// `a[2..4]` is row 1); `c` is the length-4 F32 output buffer.
 #[must_use]
 pub fn matmul_strassen_2x2(a: &str, b: &str, c: &str) -> Program {
-    // 7-multiplication Strassen formula. The Lets bind every named
-    // intermediate so the IR is straight-line; const-fold and CSE
-    // can collapse common sub-expressions across the formula.
-    let body = vec![
-        // Load the eight scalar entries.
-        Node::let_bind("a00", Expr::load(a, Expr::u32(0))),
-        Node::let_bind("a01", Expr::load(a, Expr::u32(1))),
-        Node::let_bind("a10", Expr::load(a, Expr::u32(2))),
-        Node::let_bind("a11", Expr::load(a, Expr::u32(3))),
-        Node::let_bind("b00", Expr::load(b, Expr::u32(0))),
-        Node::let_bind("b01", Expr::load(b, Expr::u32(1))),
-        Node::let_bind("b10", Expr::load(b, Expr::u32(2))),
-        Node::let_bind("b11", Expr::load(b, Expr::u32(3))),
-        // 7 Strassen products.
-        Node::let_bind(
-            "m1",
-            Expr::mul(
-                Expr::add(Expr::var("a00"), Expr::var("a11")),
-                Expr::add(Expr::var("b00"), Expr::var("b11")),
-            ),
-        ),
-        Node::let_bind(
-            "m2",
-            Expr::mul(
-                Expr::add(Expr::var("a10"), Expr::var("a11")),
-                Expr::var("b00"),
-            ),
-        ),
-        Node::let_bind(
-            "m3",
-            Expr::mul(
-                Expr::var("a00"),
-                Expr::sub(Expr::var("b01"), Expr::var("b11")),
-            ),
-        ),
-        Node::let_bind(
-            "m4",
-            Expr::mul(
-                Expr::var("a11"),
-                Expr::sub(Expr::var("b10"), Expr::var("b00")),
-            ),
-        ),
-        Node::let_bind(
-            "m5",
-            Expr::mul(
-                Expr::add(Expr::var("a00"), Expr::var("a01")),
-                Expr::var("b11"),
-            ),
-        ),
-        Node::let_bind(
-            "m6",
-            Expr::mul(
-                Expr::sub(Expr::var("a10"), Expr::var("a00")),
-                Expr::add(Expr::var("b00"), Expr::var("b01")),
-            ),
-        ),
-        Node::let_bind(
-            "m7",
-            Expr::mul(
-                Expr::sub(Expr::var("a01"), Expr::var("a11")),
-                Expr::add(Expr::var("b10"), Expr::var("b11")),
-            ),
-        ),
-        // C[0,0] = M1 + M4 - M5 + M7
-        Node::Store {
-            buffer: c.into(),
-            index: Expr::u32(0),
-            value: Expr::add(
-                Expr::sub(Expr::add(Expr::var("m1"), Expr::var("m4")), Expr::var("m5")),
-                Expr::var("m7"),
-            ),
-        },
-        // C[0,1] = M3 + M5
-        Node::Store {
-            buffer: c.into(),
-            index: Expr::u32(1),
-            value: Expr::add(Expr::var("m3"), Expr::var("m5")),
-        },
-        // C[1,0] = M2 + M4
-        Node::Store {
-            buffer: c.into(),
-            index: Expr::u32(2),
-            value: Expr::add(Expr::var("m2"), Expr::var("m4")),
-        },
-        // C[1,1] = M1 - M2 + M3 + M6
-        Node::Store {
-            buffer: c.into(),
-            index: Expr::u32(3),
-            value: Expr::add(
-                Expr::add(Expr::sub(Expr::var("m1"), Expr::var("m2")), Expr::var("m3")),
-                Expr::var("m6"),
-            ),
-        },
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(a, 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::storage(b, 1, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output(c, 2, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    let a_ref = TensorRef::f32_2d(a, 2, 2);
+    let b_ref = TensorRef::f32_2d(b, 2, 2);
+    let c_ref = TensorRef::f32_2d(c, 2, 2);
+    let mut composer = ContractionComposer::matmul_2d(OP_ID, a_ref, b_ref, c_ref, 2, 2, 2);
+    composer.geometry = ContractionGeometry::Strassen2x2;
+    composer
+        .with_region_generator(OP_ID)
+        .build()
+        .expect("Fix: matmul_strassen_2x2 failed to build")
 }
 
 inventory::submit! {
@@ -205,276 +112,28 @@ pub fn matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> Result<Pr
             "Fix: matmul_strassen_one_level requires even n; got n={n}. Use matmul or pad."
         ));
     }
-    let half = n / 2;
-    let total = n
-        .checked_mul(n)
+    n.checked_mul(n)
         .ok_or_else(|| "Fix: matmul_strassen_one_level n*n overflows u32; reduce n.".to_string())?;
 
-    // One invocation per output element (n*n lanes).
-    let body = vec![
-        Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(Expr::var("flat"), Expr::u32(total)),
-            vec![
-                // Output coordinates: row, col in [0, n)
-                Node::let_bind("row", Expr::div(Expr::var("flat"), Expr::u32(n))),
-                Node::let_bind("col", Expr::rem(Expr::var("flat"), Expr::u32(n))),
-                // Quadrant indices: q_row = row / half ∈ {0, 1}
-                Node::let_bind("q_row", Expr::div(Expr::var("row"), Expr::u32(half))),
-                Node::let_bind("q_col", Expr::div(Expr::var("col"), Expr::u32(half))),
-                // Sub-coordinates within the quadrant.
-                Node::let_bind("sr", Expr::rem(Expr::var("row"), Expr::u32(half))),
-                Node::let_bind("sc", Expr::rem(Expr::var("col"), Expr::u32(half))),
-                // Strassen formula at the quadrant level. Each Mp =
-                // sum_k of products of A-quadrant entries and B-quadrant entries.
-                // Compute the 7 Mp values for the (sr, sc) cell and combine
-                // into C[q_row, q_col][sr, sc].
-                //
-                // Helper indices:
-                //   A[qa_row, qa_col][sr, k] is at flat index
-                //     (qa_row * half + sr) * n + (qa_col * half + k)
-                //
-                // We unroll the 7 Strassen products inline with an inner
-                // k-loop accumulating each Mp.
-                Node::let_bind("c_val", Expr::f32(0.0)),
-                Node::let_bind("m1", Expr::f32(0.0)),
-                Node::let_bind("m2", Expr::f32(0.0)),
-                Node::let_bind("m3", Expr::f32(0.0)),
-                Node::let_bind("m4", Expr::f32(0.0)),
-                Node::let_bind("m5", Expr::f32(0.0)),
-                Node::let_bind("m6", Expr::f32(0.0)),
-                Node::let_bind("m7", Expr::f32(0.0)),
-                // The 7 Mp values are matmuls of (half x half) sub-matrices.
-                // Compute the (sr, sc) entry of each Mp:
-                //   M1 = (A11+A22) * (B11+B22)  → entry: sum_k (A11[sr,k]+A22[sr,k]) * (B11[k,sc]+B22[k,sc])
-                //   M2 = (A21+A22) * B11        → entry: sum_k (A21[sr,k]+A22[sr,k]) * B11[k,sc]
-                //   M3 = A11 * (B12-B22)        → entry: sum_k A11[sr,k] * (B12[k,sc]-B22[k,sc])
-                //   M4 = A22 * (B21-B11)        → entry: sum_k A22[sr,k] * (B21[k,sc]-B11[k,sc])
-                //   M5 = (A11+A12) * B22        → entry: sum_k (A11[sr,k]+A12[sr,k]) * B22[k,sc]
-                //   M6 = (A21-A11) * (B11+B12)  → entry: sum_k (A21[sr,k]-A11[sr,k]) * (B11[k,sc]+B12[k,sc])
-                //   M7 = (A12-A22) * (B21+B22)  → entry: sum_k (A12[sr,k]-A22[sr,k]) * (B21[k,sc]+B22[k,sc])
-                Node::loop_for(
-                    "k",
-                    Expr::u32(0),
-                    Expr::u32(half),
-                    vec![
-                        // Load A-quadrant entries at row=sr, col=k.
-                        Node::let_bind(
-                            "a11",
-                            Expr::load(
-                                a,
-                                Expr::add(Expr::mul(Expr::var("sr"), Expr::u32(n)), Expr::var("k")),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "a12",
-                            Expr::load(
-                                a,
-                                Expr::add(
-                                    Expr::mul(Expr::var("sr"), Expr::u32(n)),
-                                    Expr::add(Expr::u32(half), Expr::var("k")),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "a21",
-                            Expr::load(
-                                a,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::u32(half), Expr::var("sr")),
-                                        Expr::u32(n),
-                                    ),
-                                    Expr::var("k"),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "a22",
-                            Expr::load(
-                                a,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::u32(half), Expr::var("sr")),
-                                        Expr::u32(n),
-                                    ),
-                                    Expr::add(Expr::u32(half), Expr::var("k")),
-                                ),
-                            ),
-                        ),
-                        // Load B-quadrant entries at row=k, col=sc.
-                        Node::let_bind(
-                            "b11",
-                            Expr::load(
-                                b,
-                                Expr::add(Expr::mul(Expr::var("k"), Expr::u32(n)), Expr::var("sc")),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "b12",
-                            Expr::load(
-                                b,
-                                Expr::add(
-                                    Expr::mul(Expr::var("k"), Expr::u32(n)),
-                                    Expr::add(Expr::u32(half), Expr::var("sc")),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "b21",
-                            Expr::load(
-                                b,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::u32(half), Expr::var("k")),
-                                        Expr::u32(n),
-                                    ),
-                                    Expr::var("sc"),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "b22",
-                            Expr::load(
-                                b,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::u32(half), Expr::var("k")),
-                                        Expr::u32(n),
-                                    ),
-                                    Expr::add(Expr::u32(half), Expr::var("sc")),
-                                ),
-                            ),
-                        ),
-                        // Accumulate the 7 Mp values for this (sr, sc, k).
-                        Node::assign(
-                            "m1",
-                            Expr::add(
-                                Expr::var("m1"),
-                                Expr::mul(
-                                    Expr::add(Expr::var("a11"), Expr::var("a22")),
-                                    Expr::add(Expr::var("b11"), Expr::var("b22")),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "m2",
-                            Expr::add(
-                                Expr::var("m2"),
-                                Expr::mul(
-                                    Expr::add(Expr::var("a21"), Expr::var("a22")),
-                                    Expr::var("b11"),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "m3",
-                            Expr::add(
-                                Expr::var("m3"),
-                                Expr::mul(
-                                    Expr::var("a11"),
-                                    Expr::sub(Expr::var("b12"), Expr::var("b22")),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "m4",
-                            Expr::add(
-                                Expr::var("m4"),
-                                Expr::mul(
-                                    Expr::var("a22"),
-                                    Expr::sub(Expr::var("b21"), Expr::var("b11")),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "m5",
-                            Expr::add(
-                                Expr::var("m5"),
-                                Expr::mul(
-                                    Expr::add(Expr::var("a11"), Expr::var("a12")),
-                                    Expr::var("b22"),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "m6",
-                            Expr::add(
-                                Expr::var("m6"),
-                                Expr::mul(
-                                    Expr::sub(Expr::var("a21"), Expr::var("a11")),
-                                    Expr::add(Expr::var("b11"), Expr::var("b12")),
-                                ),
-                            ),
-                        ),
-                        Node::assign(
-                            "m7",
-                            Expr::add(
-                                Expr::var("m7"),
-                                Expr::mul(
-                                    Expr::sub(Expr::var("a12"), Expr::var("a22")),
-                                    Expr::add(Expr::var("b21"), Expr::var("b22")),
-                                ),
-                            ),
-                        ),
-                    ],
-                ),
-                // Combine the 7 Mp values into the C-quadrant entry at (sr, sc).
-                // The combine depends on which output quadrant (q_row, q_col).
-                //   C11 = M1 + M4 - M5 + M7   (q_row=0, q_col=0)
-                //   C12 = M3 + M5             (q_row=0, q_col=1)
-                //   C21 = M2 + M4             (q_row=1, q_col=0)
-                //   C22 = M1 - M2 + M3 + M6   (q_row=1, q_col=1)
-                Node::assign(
-                    "c_val",
-                    Expr::select(
-                        Expr::and(
-                            Expr::eq(Expr::var("q_row"), Expr::u32(0)),
-                            Expr::eq(Expr::var("q_col"), Expr::u32(0)),
-                        ),
-                        Expr::add(
-                            Expr::sub(Expr::add(Expr::var("m1"), Expr::var("m4")), Expr::var("m5")),
-                            Expr::var("m7"),
-                        ),
-                        Expr::select(
-                            Expr::and(
-                                Expr::eq(Expr::var("q_row"), Expr::u32(0)),
-                                Expr::eq(Expr::var("q_col"), Expr::u32(1)),
-                            ),
-                            Expr::add(Expr::var("m3"), Expr::var("m5")),
-                            Expr::select(
-                                Expr::and(
-                                    Expr::eq(Expr::var("q_row"), Expr::u32(1)),
-                                    Expr::eq(Expr::var("q_col"), Expr::u32(0)),
-                                ),
-                                Expr::add(Expr::var("m2"), Expr::var("m4")),
-                                Expr::add(
-                                    Expr::add(
-                                        Expr::sub(Expr::var("m1"), Expr::var("m2")),
-                                        Expr::var("m3"),
-                                    ),
-                                    Expr::var("m6"),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-                Node::store(c, Expr::var("flat"), Expr::var("c_val")),
-            ],
-        ),
-    ];
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(a, 0, BufferAccess::ReadOnly, DataType::F32).with_count(total),
-            BufferDecl::storage(b, 1, BufferAccess::ReadOnly, DataType::F32).with_count(total),
-            BufferDecl::output(c, 2, DataType::F32).with_count(total),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::math::linalg::matmul_strassen_one_level",
-            body,
-        )],
-    ))
+    let a_ref = TensorRef::f32_2d(a, n, n);
+    let b_ref = TensorRef::f32_2d(b, n, n);
+    let c_ref = TensorRef::f32_2d(c, n, n);
+    let mut composer = ContractionComposer::matmul_2d(
+        "vyre-libs::math::linalg::matmul_strassen_one_level",
+        a_ref,
+        b_ref,
+        c_ref,
+        n,
+        n,
+        n,
+    );
+    composer.geometry = ContractionGeometry::StrassenOneLevel { n };
+    composer
+        .with_region_generator(
+            "anonymous::vyre-libs::math::linalg::matmul_strassen_one_level",
+        )
+        .build()
+        .map_err(|e| format!("Fix: matmul_strassen_one_level failed: {e}"))
 }
 
 #[cfg(test)]

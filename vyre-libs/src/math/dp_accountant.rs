@@ -95,47 +95,8 @@ pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32
     )
 }
 
-/// CPU reference (f64 for precision, callers convert to/from their
-/// fixed-point convention).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn gaussian_rdp_step_cpu(alpha: &[f64], sigma_squared: &[f64]) -> Vec<f64> {
-    let mut out = Vec::new();
-    try_gaussian_rdp_step_cpu_into(alpha, sigma_squared, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn gaussian_rdp_step_cpu_into(alpha: &[f64], sigma_squared: &[f64], out: &mut Vec<f64>) {
-    try_gaussian_rdp_step_cpu_into(alpha, sigma_squared, out)
-        .unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_gaussian_rdp_step_cpu_into(
-    alpha: &[f64],
-    sigma_squared: &[f64],
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = alpha.len().min(sigma_squared.len());
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "DP accountant CPU oracle",
-            "gaussian_rdp_step output",
-        )?;
-    }
-    out.clear();
-    alpha
-        .iter()
-        .zip(sigma_squared.iter())
-        .for_each(|(&a, &s2)| out.push(a / (2.0 * s2)));
-    Ok(())
-}
 
 /// Convert RDP(α) to (ε, δ)-DP via Mironov's standard inequality:
 /// `ε(δ) = rdp(α) + ln(1/δ) / (α - 1)`. Pure host-side helper because

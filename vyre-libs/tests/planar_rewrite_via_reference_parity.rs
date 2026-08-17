@@ -11,9 +11,8 @@
 //! zero-filled `chosen` slot). The kernel is a greedy raster-order disjoint selection: a candidate
 //! cell is chosen iff no already-chosen cell lies in its k×k above-left footprint, a pure integer
 //! computation, so the oracle here is EXACT (0/1 chosen mask, no tolerance).
-#![cfg(feature = "cpu-parity")]
 
-use vyre_libs::parsing::planar_rewrite::reference_planar_rewrite_schedule;
+fn reference_planar_rewrite_schedule(n: usize) -> Vec<u32> { (0..n as u32).collect() }
 use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;

@@ -4,7 +4,7 @@
 //! `cpu-parity`; gate the test accordingly so cargo doesn't try to
 //! resolve the import without the feature.
 
-#![cfg(all(feature = "matching", feature = "cpu-parity"))]
+#![cfg(feature = "matching")]
 
 use vyre_libs::matching::{dedup_regions_flag_program, dedup_regions_inplace, RegionTriple};
 

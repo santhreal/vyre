@@ -18,13 +18,9 @@ mod validate;
 mod registry;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/persistent_bfs/mod.rs"]
 mod tests;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::{
-    cpu_ref, try_cpu_ref, try_cpu_ref_converged, try_cpu_ref_density, try_cpu_ref_into,
-    PersistentBfsConvergence,
-};
 pub use hash::{persistent_bfs_layout_hash, persistent_bfs_program_layout_hash};
 pub use layout::{
     persistent_bfs_batch_dispatch_grid, persistent_bfs_single_dispatch_grid,

@@ -19,9 +19,7 @@ use vyre_megakernel::{
     DeviceFacts, Digest, ExternalFacts, SearchBudget,
 };
 
-use graph_fixtures::{add_program, copy_program};
-
-mod graph_fixtures;
+use vyre_test_support::pass_programs::{add_program, copy_program};
 
 const LIMIT: u64 = 1_000_000;
 

@@ -1,6 +1,5 @@
 //! CSR frontier expansion over an in-place accumulator bitset.
 
-mod batched_frontier_words;
 mod body;
 mod cpu_ref;
 mod dispatch_plan;
@@ -17,15 +16,12 @@ mod validate;
 mod registry;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/csr_forward_or_changed/mod.rs"]
 mod tests;
 
 pub use body::{
     csr_forward_or_changed_body, csr_forward_or_changed_body_prefixed,
     csr_forward_or_changed_child, csr_forward_or_changed_child_prefixed,
-};
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::{
-    cpu_ref, cpu_ref_closure, cpu_ref_closure_into, cpu_ref_closure_into_with_step_hook,
 };
 pub use launch_plan::CsrForwardOrChangedLaunchPlan;
 pub use layout::{

@@ -91,44 +91,16 @@ impl GridShape {
         self
     }
 }
-
 /// Bind `y`, `x`, `col`, `row` and `cell` for the pixel already bound as
 /// `idx`. Shared by every op that expands a cell grid, so the mapping cannot
 /// drift between them.
-///
-/// Every divisor is a build-time constant, so the Layer 1 strength-reduction
-/// pass turns each division into mulhi plus a shift. Writing the division is
-/// the correct thing to write.
 pub(super) fn cell_lookup_nodes(shape: GridShape) -> Vec<Node> {
-    let width = shape.width();
-    vec![
-        Node::let_bind("y", Expr::div(Expr::var("idx"), Expr::u32(width))),
-        // x = idx - y * width, not idx % width. The remainder lowers to the
-        // same division just performed, plus a multiply and a subtract, so
-        // reusing y keeps one division for the pair.
-        Node::let_bind(
-            "x",
-            Expr::sub(
-                Expr::var("idx"),
-                Expr::mul(Expr::var("y"), Expr::u32(width)),
-            ),
-        ),
-        Node::let_bind(
-            "col",
-            Expr::div(Expr::var("x"), Expr::u32(shape.cell_width)),
-        ),
-        Node::let_bind(
-            "row",
-            Expr::div(Expr::var("y"), Expr::u32(shape.cell_height)),
-        ),
-        Node::let_bind(
-            "cell",
-            Expr::add(
-                Expr::mul(Expr::var("row"), Expr::u32(shape.cols)),
-                Expr::var("col"),
-            ),
-        ),
-    ]
+    crate::builder::stencil::cell_lookup_nodes(crate::builder::stencil::CellGridShape {
+        cols: shape.cols,
+        rows: shape.rows,
+        cell_width: shape.cell_width,
+        cell_height: shape.cell_height,
+    })
 }
 
 /// Build a Program that fills `output` with one packed RGBA pixel per pixel of
@@ -140,7 +112,6 @@ pub(super) fn cell_lookup_nodes(shape: GridShape) -> Vec<Node> {
 pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
     let shape = shape.validated();
     let pixels = shape.pixel_count();
-    let width = shape.width();
 
     Program::wrapped(
         vec![

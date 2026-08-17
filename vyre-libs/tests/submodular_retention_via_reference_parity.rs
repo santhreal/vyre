@@ -14,7 +14,6 @@
 //! GPU path and `select_retention_set` (the reference) run the IDENTICAL greedy loop, so the produced
 //! `picked` 0/1 vector must match BIT-FOR-BIT (no tolerance), this pins that the IR argmax (including its
 //! tie-break) agrees with `argmax_of_marginals_cpu`.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::scheduling::submodular_cache_eviction::{
     select_retention_set, select_retention_set_via,

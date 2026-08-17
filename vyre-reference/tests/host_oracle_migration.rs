@@ -1,6 +1,5 @@
 //! Contract test verifying derived host oracle migration.
 
-use std::path::Path;
 use vyre_reference::host_oracle_migration::{
     assert_host_oracle_migration_complete, derive_host_function_inventory,
     HOST_FUNCTION_DISCOVERY_FLOOR,

@@ -14,7 +14,6 @@
 //! the old RO-sequential `ReferenceEvalDispatcher` mapped `blocks_in` to the wrong (zero `blocks_out`)
 //! slot. The faithful dispatcher consumes one input per input-consuming buffer in buffer order,
 //! matching the real backend, so kfac's already-correct 3-input consumer now runs.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
 

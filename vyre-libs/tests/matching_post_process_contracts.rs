@@ -1,6 +1,6 @@
 //! Contracts for canonical match post-processing and engine pipelines.
 
-#![cfg(all(feature = "matching", feature = "cpu-parity"))]
+#![cfg(feature = "matching")]
 #![allow(deprecated)]
 use vyre_foundation::match_result::ByteRange;
 use vyre_libs::scan::{

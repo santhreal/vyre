@@ -12,7 +12,6 @@
 //! bind 2 IC (input RO + out RW). All decode outputs[0] = the sole writable buffer. Every op is exact
 //! bitwise arithmetic → BIT-EXACT (no tolerance), compared against the authoritative `reference_mask_*`
 //! CPU oracles.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::encoding::bitset_mask_algebra::{
     mask_and_via, mask_clear_bit_via, mask_contains_via, mask_equal_via, mask_not_via, mask_or_via,

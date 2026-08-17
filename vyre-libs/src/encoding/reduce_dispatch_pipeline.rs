@@ -20,12 +20,6 @@ use crate::reduce::{
 };
 use vyre_foundation::ir::{Node, Program};
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::reduce::{
-    multi_block_prefix_scan::cpu_ref as primitive_prefix_sum,
-    radix_sort::cpu_ref as primitive_radix_sort, range_counts::cpu_ref as primitive_range_count,
-    workgroup_any::cpu_ref as primitive_workgroup_any,
-};
 
 /// Build the self-substrate f32 workgroup sum dispatch program.
 #[must_use]
@@ -174,54 +168,12 @@ pub fn dispatch_radix_sort(input: &str, output: &str, count: u32, bits: u32) -> 
     radix_sort(input, output, count, bits)
 }
 
-/// Reference range-count contract used by CPU parity gates.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_range_count(histogram: &[u32], start: u32, end: u32) -> u32 {
-    primitive_range_count(histogram, start, end)
-}
 
-/// Reference workgroup-any contract used by CPU parity gates.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_workgroup_any(values: &[u32]) -> u32 {
-    primitive_workgroup_any(values)
-}
 
-/// Reference inclusive prefix-sum contract used by CPU parity gates.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_prefix_sum(values: &[u32]) -> Vec<u32> {
-    primitive_prefix_sum(values)
-}
 
-/// Reference radix-sort contract used by CPU parity gates.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_radix_sort(values: &[u32], bits: u32) -> Vec<u32> {
-    primitive_radix_sort(values, bits)
-}
 
-/// Allocation-free workgroup f32 sum reference for scheduler scoring.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sum_f32(values: &[f32]) -> f32 {
-    values.iter().copied().sum()
-}
 
-/// Allocation-free workgroup u32 sum reference for scheduler scoring.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sum_u32(values: &[u32]) -> u32 {
-    values.iter().copied().sum()
-}
 
-/// Allocation-free workgroup f32 max reference for scheduler scoring.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_max_f32(values: &[f32]) -> f32 {
-    values.iter().copied().fold(f32::MIN, f32::max)
-}
 
 #[cfg(test)]
 mod tests {

@@ -34,8 +34,22 @@ scores it. `analyze_fusion_pair` returns `FusionDecision::Legal` or
 | `MKL006_SYNCHRONIZATION_BOUNDARY` | the geometries differ and one program reasons about the size of its own workgroup |
 | `MKL007_DEPENDENCY_CYCLE` | contracting the proposed group would create a dependency cycle |
 
-`FusionRejectionReason` is `#[non_exhaustive]`. A rejection is recorded in
+`FusionRejectionReason` and `TopologyRejectionReason` are `#[non_exhaustive]`. A rejection is recorded in
 the artifact rather than dropped, so a plan that looks unfused says why.
+
+Execution topologies are also validated before scoring:
+
+| Code | Reason |
+|---|---|
+| `MKL010_INSUFFICIENT_CONCURRENT_QUEUES` | target device does not report or support required concurrent queues |
+| `MKL011_INSUFFICIENT_COMPUTE_UNITS` | target device does not report or support required compute units |
+| `MKL012_UNENFORCEABLE_SPATIAL_MASKING` | spatial masking requested on a target without enforceable spatial partitioning capability |
+| `MKL013_REQUIRES_COOPERATIVE_LAUNCH` | bounded resident queue or device-wide join requested on a device without cooperative launch |
+| `MKL014_RESOURCE_CONFLICT` | RAW/WAR/WAW hazard or resource alias between concurrent arms |
+| `MKL015_CONTROL_DEPENDENCY_OR_EFFECT` | cross-arm control dependency or effect that cannot be satisfied by concurrent queues |
+| `MKL016_ILLEGAL_ASYMMETRIC_JOIN` | asymmetric or divergent join across resident boundary without cooperative join or GridSync cut |
+| `MKL017_NO_INDEPENDENT_CONCURRENCY` | candidate has no independent arms to execute concurrently |
+| `MKL018_OCCUPANCY_EXCEEDED` | occupancy or scratch budget exceeded for resident execution |
 
 A barrier is not a rejection on its own. Two programs that declare the same
 workgroup and synchronize inside it fuse into one kernel, because the merge

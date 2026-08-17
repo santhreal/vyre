@@ -1,9 +1,8 @@
 //! Property gates for `vyre_libs::reduce::any::cpu_ref`.
 
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
-use vyre_libs::reduce::any::cpu_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -41,4 +40,9 @@ proptest! {
         let v = if v == 0 { 1 } else { v };
         prop_assert_eq!(cpu_ref(&[v]), 1);
     }
+}
+
+#[must_use]
+fn cpu_ref(input: &[u32]) -> u32 {
+    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
 }

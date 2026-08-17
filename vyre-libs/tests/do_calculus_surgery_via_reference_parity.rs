@@ -18,7 +18,6 @@
 //! Rule 3 is the one that never had a `_via` at all before; this locks its full round-trip
 //! (compaction + gather + kept-index map + stride-k block) through the real dispatch boundary.
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::do_calculus::{
     do_intervention_delete_incoming_cpu, do_rule2_reverse_incoming_cpu, do_rule3_subgraph_cpu,

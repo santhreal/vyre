@@ -12,8 +12,6 @@ use crate::graph::csr_backward_traverse::csr_backward_traverse;
 use crate::graph::csr_closure_entry_points::{
     define_panicking_csr_closure_entry_points, define_try_csr_closure_entry_points,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;
 use crate::graph::program_graph::ProgramGraphShape;
@@ -56,157 +54,10 @@ pub fn csr_bidirectional(
     })
 }
 
-/// CPU reference: union of forward + backward one-step reach.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    try_cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-    )
-    .unwrap_or_else(|err| panic!("csr_bidirectional CPU oracle received malformed input. {err}"))
-}
 
-/// Fallible CPU reference for the union of forward + backward one-step reach.
-///
-/// This variant is suitable for fuzzing/conformance and wrapper validation
-/// because malformed CSR/frontier shapes return an actionable error instead of
-/// panicking.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Result<Vec<u32>, String> {
-    let mut out = Vec::new();
-    try_cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        &mut out,
-    )?;
-    Ok(out)
-}
 
-/// CPU reference writing the unioned forward/backward step into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    try_cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        out,
-    )
-    .unwrap_or_else(|err| panic!("csr_bidirectional CPU oracle received malformed input. {err}"));
-}
 
-/// Fallible CPU reference writing one bidirectional step into caller storage.
-///
-/// The output buffer is not cleared or resized until validation and reservation
-/// both succeed, so hostile malformed inputs cannot destroy reusable scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    let layout = validate_csr_inputs(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-    )?;
-    crate::plumbing::host::scratch::reserve_items_with(
-        out,
-        layout.words,
-        "csr_bidirectional CPU oracle",
-        "bidirectional step output",
-        |message| message,
-    )?;
-    cpu_ref_into_validated(
-        layout,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-        out,
-    )
-}
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn cpu_ref_into_validated(
-    layout: CsrBidirectionalLayout,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    out.clear();
-    out.resize(layout.words, 0);
-    for src in 0..layout.node_words {
-        let src_word = src / 32;
-        let src_bit = 1u32 << (src % 32);
-        let src_in_frontier =
-            src_word < frontier_in.len() && (frontier_in[src_word] & src_bit) != 0;
-        let edge_start = csr_bidir_u32_to_usize(edge_offsets[src], "edge start offset")?;
-        let edge_end = csr_bidir_u32_to_usize(edge_offsets[src + 1], "edge end offset")?;
-        let mut backward_hit = false;
-        for edge in edge_start..edge_end.min(edge_targets.len()).min(edge_kind_mask.len()) {
-            if edge_kind_mask[edge] & allow_mask == 0 {
-                continue;
-            }
-            let dst = csr_bidir_u32_to_usize(edge_targets[edge], "edge target")?;
-            let dst_word = dst / 32;
-            let dst_bit = 1u32 << (dst % 32);
-            if src_in_frontier && dst < layout.node_words {
-                out[dst_word] |= dst_bit;
-            }
-            if dst_word < frontier_in.len() && (frontier_in[dst_word] & dst_bit) != 0 {
-                backward_hit = true;
-            }
-        }
-        if backward_hit && src_word < out.len() {
-            out[src_word] |= src_bit;
-        }
-    }
-    Ok(())
-}
 
 /// Validated dispatch layout for bidirectional CSR traversal.
 ///
@@ -814,48 +665,6 @@ define_panicking_csr_closure_entry_points! {
     hook_bound: FnMut()
 }
 
-/// Fallible CPU reference: closure into caller-owned buffers with a per-step hook.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_closure_into_with_step_hook<F>(
-    inputs: CsrClosureInputs<'_>,
-    seed: &[u32],
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-    mut on_step: F,
-) -> Result<(), String>
-where
-    F: FnMut(),
-{
-    let graph = inputs.graph;
-    let plan = plan_csr_bidirectional_step(
-        graph.node_count,
-        graph.edge_offsets,
-        graph.edge_targets,
-        graph.edge_kind_mask,
-        seed,
-        inputs.allow_mask,
-    )?;
-    run_csr_bidirectional_closure_plan_with_step(
-        &plan,
-        seed,
-        inputs.max_iters,
-        current,
-        next,
-        |message| message,
-        |frontier, out| {
-            on_step();
-            cpu_ref_into_validated(
-                plan.layout,
-                graph.edge_offsets,
-                graph.edge_targets,
-                graph.edge_kind_mask,
-                frontier,
-                inputs.allow_mask,
-                out,
-            )
-        },
-    )
-}
 
 /// Merge a bidirectional step frontier into the accumulated closure.
 ///

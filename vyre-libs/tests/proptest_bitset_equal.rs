@@ -1,8 +1,8 @@
 //! Property gates for `bitset::equal::cpu_ref` - bitset equality predicate.
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_libs::bitset::equal::cpu_ref;
+use vyre_reference::composition_witness::bitset_equal_witness;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]

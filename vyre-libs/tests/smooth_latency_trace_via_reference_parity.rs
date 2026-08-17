@@ -15,7 +15,6 @@
 //! `cpu_conv1d`. So `smooth_latency_trace_via(latency, radius, sigma)` must equal
 //! `cpu_conv1d(latency, gaussian_weights(radius, sigma), 1)` bit-for-bit; this pins that `conv1d_program`
 //! reproduces `cpu_conv1d` (mul/accumulate order AND the clamp-to-edge boundary handling).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::math::conv1d::{cpu_conv1d, gaussian_weights};
 use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;

@@ -103,28 +103,7 @@ pub fn homotopy_euler_predictor(
     )
 }
 
-/// CPU reference: `x_pred[i] = x_curr[i] + dt · v[i]`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn homotopy_euler_predictor_cpu(x_curr: &[f64], v: &[f64], dt: f64) -> Vec<f64> {
-    x_curr
-        .iter()
-        .zip(v.iter())
-        .map(|(&x, &dv)| x + dt * dv)
-        .collect()
-}
 
-/// CPU helper: build the homotopy `H(x, t) = (1 - t) · G(x) + t · F(x)`
-/// elementwise (parameter `t` in [0, 1]).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
-    let s = 1.0 - t;
-    g_x.iter()
-        .zip(f_x.iter())
-        .map(|(&g, &f)| s * g + t * f)
-        .collect()
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

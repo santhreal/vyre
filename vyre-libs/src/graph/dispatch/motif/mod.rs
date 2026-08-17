@@ -8,10 +8,9 @@
 
 mod dispatch;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod reference;
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/motif/mod.rs"]
 mod tests;
 
 pub use dispatch::{
@@ -19,11 +18,6 @@ pub use dispatch::{
     motif_participation_count_via,
 };
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::{
-    match_motif, motif_matches, motif_participation_count, try_match_motif, try_motif_matches,
-    try_motif_participation_count,
-};
 
 use crate::graph::motif::{MotifLayout, MotifProgramCacheKey, MotifStaticInputKey};
 use vyre_foundation::ir::Program;

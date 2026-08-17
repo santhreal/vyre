@@ -13,7 +13,7 @@
 //!   compaction (prefix scan of the kept indices) + gather producing a dense `k × k` subgraph with
 //!   stride `k ≠ n`. This differential locks the compaction order, the kept-index map, and the
 //!   stride-k gather against the CPU oracle.
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use vyre_libs::graph::do_calculus::{
     do_intervention_delete_incoming, do_intervention_delete_incoming_cpu,

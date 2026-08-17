@@ -14,7 +14,6 @@
 //! The decision substrate lives beside this primitive once the
 //! profiling hooks are wired.
 
-use std::cmp::Ordering;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -47,17 +46,18 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
                     Expr::mul(Expr::var("flat"), Expr::u32(9)),
                     Expr::u32(tap.column),
                 ),
-                patch_cell(input, tap),
+                patch_cell(input, &tap),
             )
         })
         .collect();
+    let (y, x) = crate::builder::stencil::decompose_index(&Expr::var("flat"), w);
     let body = vec![
         Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("flat"), Expr::u32(pixels)),
             vec![
-                Node::let_bind("y", Expr::div(Expr::var("flat"), Expr::u32(w))),
-                Node::let_bind("x", Expr::rem(Expr::var("flat"), Expr::u32(w))),
+                Node::let_bind("y", y),
+                Node::let_bind("x", x),
                 Node::Block(tap_writes),
             ],
         ),
@@ -71,75 +71,8 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
         vec![wrap_anonymous_region(OP_ID, body)],
     ))
 }
-
-/// One tap of the zero-padded 3x3 patch centred at (`y`, `x`).
-///
-/// `column` is the im2col column `ky*3 + kx`, `input_index` is the row-major
-/// index of the neighbour it reads, and `in_bounds` is true exactly when that
-/// neighbour lies inside the `[H, W]` image.
-pub(super) struct PatchTap {
-    pub column: u32,
-    pub in_bounds: Expr,
-    pub input_index: Expr,
-}
-
-/// The nine taps of the patch centred at (`y`, `x`), in im2col column order.
-///
-/// Single owner of the 3x3 neighbour-coordinate arithmetic and its padding
-/// predicate. `im2col_3x3` writes the taps into a patch matrix;
-/// `conv2d_3x3_direct` contracts them against the kernel in place. Neither
-/// re-derives the walk.
-pub(super) fn patch_taps(y: &Expr, x: &Expr, h: u32, w: u32) -> Vec<PatchTap> {
-    let mut taps = Vec::with_capacity(9);
-    for ky in 0..3u32 {
-        for kx in 0..3u32 {
-            let dy = (ky as i32) - 1;
-            let dx = (kx as i32) - 1;
-            taps.push(PatchTap {
-                column: ky * 3 + kx,
-                in_bounds: Expr::and(axis_in_bounds(y, dy, h), axis_in_bounds(x, dx, w)),
-                input_index: Expr::add(
-                    Expr::mul(shifted_coord(y, dy), Expr::u32(w)),
-                    shifted_coord(x, dx),
-                ),
-            });
-        }
-    }
-    taps
-}
-
-/// The im2col cell value for `tap`: the input sample, or zero-padding outside
-/// the image bounds.
-pub(super) fn patch_cell(input: &str, tap: PatchTap) -> Expr {
-    Expr::select(
-        tap.in_bounds,
-        Expr::load(input, tap.input_index),
-        Expr::f32(0.0),
-    )
-}
-
-/// `coord + delta` is inside `[0, extent)`. Coordinates are unsigned, so a
-/// negative offset becomes a lower-bound test instead of a signed add.
-fn axis_in_bounds(coord: &Expr, delta: i32, extent: u32) -> Expr {
-    if delta < 0 {
-        Expr::ge(coord.clone(), Expr::u32(delta.unsigned_abs()))
-    } else {
-        Expr::lt(
-            Expr::add(coord.clone(), Expr::u32(delta.unsigned_abs())),
-            Expr::u32(extent),
-        )
-    }
-}
-
-/// `coord + delta` under unsigned arithmetic, guarded by [`axis_in_bounds`].
-fn shifted_coord(coord: &Expr, delta: i32) -> Expr {
-    match delta.cmp(&0) {
-        Ordering::Less => Expr::sub(coord.clone(), Expr::u32(delta.unsigned_abs())),
-        Ordering::Equal => coord.clone(),
-        Ordering::Greater => Expr::add(coord.clone(), Expr::u32(delta.unsigned_abs())),
-    }
-}
-
+pub(super) use crate::builder::stencil::sample_stencil_3x3_or_zero as patch_cell;
+pub(super) use crate::builder::stencil::stencil_3x3_taps as patch_taps;
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,

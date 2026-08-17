@@ -1,6 +1,6 @@
 //! Property gates for `vyre_libs::graph::reachable::reachable`.
 
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use std::collections::HashSet;

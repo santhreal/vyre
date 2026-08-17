@@ -14,7 +14,7 @@
 //! out-of-range mapping (no target lane matches it, so it must vanish) all
 //! diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use vyre_libs::graph::functorial::{functor_apply_cpu, functor_apply_sized};

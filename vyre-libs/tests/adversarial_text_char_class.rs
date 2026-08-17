@@ -1,11 +1,12 @@
 //! Adversarial oracle tests for `text::char_class` reference mapping.
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 
 mod text_char_class_runner;
 
 use text_char_class_runner::run_packed_u8_program;
 use vyre_foundation::ir::DataType;
-use vyre_libs::text::{char_class, char_class_u8, reference_char_class};
+use vyre_libs::text::{char_class, char_class_u8};
+use vyre_reference::composition_witness::char_class_witness as reference_char_class;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
 use vyre_reference::value::Value;
 

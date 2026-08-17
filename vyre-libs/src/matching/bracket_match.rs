@@ -256,47 +256,7 @@ fn bracket_match_parallel(
     )
 }
 
-/// CPU reference: bounded-stack pair-matching walk over `kinds`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn bracket_match_cpu_ref(kinds: &[u32], max_depth: u32) -> Vec<u32> {
-    let mut match_pairs = Vec::new();
-    let mut stack = Vec::new();
-    bracket_match_cpu_ref_into(kinds, max_depth, &mut match_pairs, &mut stack);
-    match_pairs
-}
 
-/// CPU reference writing into caller-owned output and stack scratch.
-///
-/// This is the allocation-free parity path for parser workloads that run
-/// bracket matching across thousands of token shards. `match_pairs` is fully
-/// overwritten on every call and `stack` is cleared before use.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn bracket_match_cpu_ref_into(
-    kinds: &[u32],
-    max_depth: u32,
-    match_pairs: &mut Vec<u32>,
-    stack: &mut Vec<u32>,
-) {
-    match_pairs.clear();
-    match_pairs.resize(kinds.len(), BRACKET_MATCH_NONE);
-    stack.clear();
-    let max_depth = max_depth as usize;
-    for (index, kind) in kinds.iter().copied().enumerate() {
-        if kind == BRACKET_KIND_OPEN {
-            if stack.len() < max_depth {
-                stack.push(index as u32);
-            }
-            continue;
-        }
-        if kind == BRACKET_KIND_CLOSE {
-            if let Some(open_idx) = stack.pop() {
-                match_pairs[open_idx as usize] = index as u32;
-                match_pairs[index] = open_idx;
-            }
-        }
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

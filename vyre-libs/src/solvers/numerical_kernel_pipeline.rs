@@ -14,19 +14,6 @@ use crate::math::{
 };
 use vyre_foundation::ir::Program;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::{
-    dp_accountant::gaussian_rdp_step_cpu,
-    fractional::{fractional_derivative_cpu, fractional_derivative_cpu_into},
-    preconditioner::{
-        newton_schulz_inverse_sqrt_cpu, newton_schulz_inverse_sqrt_cpu_into,
-        newton_schulz_y_step_cpu, newton_schulz_y_step_cpu_into, NewtonSchulzScratch,
-    },
-    randomized_svd::{
-        modified_gram_schmidt_cpu, modified_gram_schmidt_cpu_into, randomized_projection_step_cpu,
-        randomized_projection_step_cpu_into,
-    },
-};
 
 /// Build a randomized projection dispatch for low-rank optimizer telemetry.
 #[must_use]
@@ -105,130 +92,22 @@ pub fn privacy_epsilon_from_rdp(rdp: f64, alpha: f64, delta: f64) -> f64 {
     rdp_to_dp(rdp, alpha, delta)
 }
 
-/// CPU randomized projection reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_randomized_projection(
-    a: &[f64],
-    omega: &[f64],
-    m: u32,
-    n: u32,
-    l: u32,
-) -> Vec<f64> {
-    randomized_projection_step_cpu(a, omega, m, n, l)
-}
 
-/// CPU randomized projection reference into caller storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_randomized_projection_into(
-    a: &[f64],
-    omega: &[f64],
-    m: u32,
-    n: u32,
-    l: u32,
-    y: &mut Vec<f64>,
-) {
-    randomized_projection_step_cpu_into(a, omega, m, n, l, y);
-}
 
-/// CPU modified Gram-Schmidt reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_modified_gram_schmidt(y: &[f64], m: u32, l: u32) -> Vec<f64> {
-    modified_gram_schmidt_cpu(y, m, l)
-}
 
-/// CPU modified Gram-Schmidt reference into caller storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_modified_gram_schmidt_into(y: &[f64], m: u32, l: u32, q: &mut Vec<f64>) {
-    modified_gram_schmidt_cpu_into(y, m, l, q);
-}
 
-/// CPU fractional derivative reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_fractional_derivative(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
-    fractional_derivative_cpu(f, alpha, step)
-}
 
-/// CPU fractional derivative reference into caller storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_fractional_derivative_into(
-    f: &[f64],
-    alpha: f64,
-    step: f64,
-    kernel: &mut Vec<f64>,
-    out: &mut Vec<f64>,
-) {
-    fractional_derivative_cpu_into(f, alpha, step, kernel, out);
-}
 
-/// CPU Newton-Schulz Y-step reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_newton_schulz_y_step(y_curr: &[f64], yzy: &[f64]) -> Vec<f64> {
-    newton_schulz_y_step_cpu(y_curr, yzy)
-}
 
-/// CPU Newton-Schulz Y-step reference into caller storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_newton_schulz_y_step_into(y_curr: &[f64], yzy: &[f64], out: &mut Vec<f64>) {
-    newton_schulz_y_step_cpu_into(y_curr, yzy, out);
-}
 
-/// CPU Newton-Schulz inverse-square-root reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_newton_schulz_inverse_sqrt(m: &[f64], n: usize, iters: u32) -> Vec<f64> {
-    newton_schulz_inverse_sqrt_cpu(m, n, iters)
-}
 
-/// CPU Newton-Schulz inverse-square-root reference into caller storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_newton_schulz_inverse_sqrt_into(
-    m: &[f64],
-    n: usize,
-    iters: u32,
-    out: &mut Vec<f64>,
-    scratch: &mut NewtonSchulzScratch,
-) {
-    newton_schulz_inverse_sqrt_cpu_into(m, n, iters, out, scratch);
-}
 
-/// CPU quantized Sinkhorn reference.
-///
-/// Re-exported for the same reason as [`dispatch_sinkhorn_iterate`]: the
-/// wrapper's whole body was its nine-parameter positional list, which is where a
-/// transposed `k`/`k_t` or `m`/`n` hides, unprovable from either side.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::math::sinkhorn_iterate::cpu_ref as reference_sinkhorn_quantized;
 
-/// CPU quantized Sinkhorn reference into caller storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::math::sinkhorn_iterate::cpu_ref_into as reference_sinkhorn_quantized_into;
 
-/// CPU f64 Sinkhorn-Knopp reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::math::sinkhorn_iterate::sinkhorn_iterate_f64 as reference_sinkhorn_f64;
 
-/// CPU f64 Sinkhorn-Knopp reference into caller storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::math::sinkhorn_iterate::sinkhorn_iterate_f64_into as reference_sinkhorn_f64_into;
 
-/// CPU Sinkhorn row residual.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::math::sinkhorn_iterate::sinkhorn_row_residual as reference_sinkhorn_row_residual;
 
-/// CPU Sinkhorn column residual.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::math::sinkhorn_iterate::sinkhorn_col_residual as reference_sinkhorn_col_residual;
 
-/// CPU Gaussian RDP reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_gaussian_rdp_step(alpha: &[f64], sigma_squared: &[f64]) -> Vec<f64> {
-    gaussian_rdp_step_cpu(alpha, sigma_squared)
-}
 
 #[cfg(test)]
 mod tests {

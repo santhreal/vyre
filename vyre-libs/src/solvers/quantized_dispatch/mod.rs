@@ -90,4 +90,5 @@ pub use top1::{
 pub use unpack::{unpack_i4x8_via, unpack_i4x8_via_with_scratch_into};
 
 #[cfg(test)]
+#[path = "../../../tests/internal/solvers/quantized_dispatch/mod.rs"]
 mod tests;

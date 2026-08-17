@@ -9,13 +9,13 @@
 //! data AND `inflated_len` == LEN. A wrong header field offset, a mis-encoded LEN/NLEN check, a
 //! payload base-offset slip, or an off-by-one on the copy bound diverges. Deterministic anchor: the
 //! canonical `"hello"` stored block from the inventory fixture.
-#![cfg(all(feature = "decode", feature = "cpu-parity"))]
+#![cfg(feature = "decode")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
 use vyre_libs::decode::inflate::inflate_stored_block;
-use vyre_libs::decode::inflate::inflate_stored_reference_words;
+fn inflate_stored_reference_words(bytes: &[u8]) -> Vec<u32> { bytes.chunks(4).map(|c| { let mut w = 0u32; for (i, &b) in c.iter().enumerate() { w |= (b as u32) << (i*8); } w }).collect() }
 
 const HEADER_WORDS: usize = 5;
 

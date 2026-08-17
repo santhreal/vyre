@@ -12,7 +12,7 @@
 //! also build on. A missing zero-guard (u32 `x / 0` traps / is UB), a swapped
 //! target/divisor operand, or a dropped `i < count` bound all diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use proptest::prelude::*;
 use vyre_libs::math::sinkhorn::{sinkhorn_scale, DIVISOR_FLOOR};

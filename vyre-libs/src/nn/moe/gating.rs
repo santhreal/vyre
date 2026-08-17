@@ -7,7 +7,7 @@
 //! softmax does rather than walking it in lane zero.
 
 use crate::builder::cooperative::chunks;
-use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
+use crate::builder::reduction::{ReductionComposer, ReductionPhase};
 use crate::builder::{strided_accumulate_child, strided_writeback_child};
 use crate::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
 use crate::reduce::workgroup_tree::{max_f32_child, sum_f32_child, WorkgroupReductionScope};
@@ -37,7 +37,7 @@ pub fn moe_gate(
     let expert_chunks = chunks(num_experts, PORTABLE_WORKGROUP_INVOCATIONS);
     // The top-k pass suppresses a chosen expert by overwriting its score, so it
     // reads a workgroup copy rather than the caller's read-only input.
-    let mut phases = vec![ReducePhase {
+    let mut phases = vec![ReductionPhase {
         accumulate: strided_writeback_child(
             OP_ID,
             PORTABLE_WORKGROUP_INVOCATIONS,
@@ -53,7 +53,7 @@ pub fn moe_gate(
     phases.extend(softmax_stats_phases(OP_ID, input_scores, num_experts));
     // Selection pass `j` reads the expert pass `j - 1` suppressed, so the scan
     // is sequential in the selection index and stays in one lane.
-    phases.push(ReducePhase {
+    phases.push(ReductionPhase {
         accumulate: Node::if_then(
             Expr::and(
                 Expr::is_first_workgroup(),
@@ -73,9 +73,9 @@ pub fn moe_gate(
     // `output_weights` is the scalar gating result the reference
     // interpreter compares against; `output_indices` is a read-write
     // storage buffer the caller consumes alongside.
-    tiled_reduce_program(TiledReduceProgram {
-        generator: OP_ID,
-        buffers: vec![
+    ReductionComposer::new(
+        OP_ID,
+        vec![
             BufferDecl::storage(input_scores, 0, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(num_experts),
             BufferDecl::storage(output_indices, 1, BufferAccess::ReadWrite, DataType::U32)
@@ -85,16 +85,17 @@ pub fn moe_gate(
             BufferDecl::workgroup(STATS_SCRATCH, 2, DataType::F32),
             BufferDecl::workgroup(LANE_SCRATCH, PORTABLE_WORKGROUP_INVOCATIONS, DataType::F32),
         ],
-        workgroup: [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
-        phases,
-        writeback: Some(weight_write_child(
-            OP_ID,
-            input_scores,
-            output_indices,
-            output_weights,
-            k,
-        )),
-    })
+        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
+    )
+    .with_phases(phases)
+    .with_writeback(weight_write_child(
+        OP_ID,
+        input_scores,
+        output_indices,
+        output_weights,
+        k,
+    ))
+    .build()
 }
 
 /// The two reduce passes that leave `STATS_SCRATCH` holding the stable-softmax
@@ -106,10 +107,10 @@ fn softmax_stats_phases(
     parent: &'static str,
     input_scores: &str,
     num_experts: u32,
-) -> Vec<ReducePhase> {
+) -> Vec<ReductionPhase> {
     let expert_chunks = chunks(num_experts, PORTABLE_WORKGROUP_INVOCATIONS);
     vec![
-        ReducePhase {
+        ReductionPhase {
             accumulate: strided_accumulate_child(
                 parent,
                 PORTABLE_WORKGROUP_INVOCATIONS,
@@ -132,7 +133,7 @@ fn softmax_stats_phases(
                 Expr::load(LANE_SCRATCH, Expr::u32(0)),
             )],
         },
-        ReducePhase {
+        ReductionPhase {
             accumulate: strided_accumulate_child(
                 parent,
                 PORTABLE_WORKGROUP_INVOCATIONS,
@@ -243,40 +244,40 @@ fn u32_fixture(values: &[u32]) -> Vec<u8> {
 }
 
 fn softmax_stats_program() -> Program {
-    tiled_reduce_program(TiledReduceProgram {
-        generator: SOFTMAX_STATS_OP_ID,
-        buffers: vec![
+    ReductionComposer::new(
+        SOFTMAX_STATS_OP_ID,
+        vec![
             BufferDecl::storage("scores", 0, BufferAccess::ReadOnly, DataType::F32).with_count(8),
             BufferDecl::storage(STATS_SCRATCH, 1, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(2),
             BufferDecl::workgroup(LANE_SCRATCH, PORTABLE_WORKGROUP_INVOCATIONS, DataType::F32),
         ],
-        workgroup: [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
-        phases: softmax_stats_phases(SOFTMAX_STATS_OP_ID, "scores", 8),
-        writeback: None,
-    })
+        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
+    )
+    .with_phases(softmax_stats_phases(SOFTMAX_STATS_OP_ID, "scores", 8))
+    .build()
 }
 
 fn weight_write_program() -> Program {
-    tiled_reduce_program(TiledReduceProgram {
-        generator: WEIGHT_WRITE_OP_ID,
-        buffers: vec![
+    ReductionComposer::new(
+        WEIGHT_WRITE_OP_ID,
+        vec![
             BufferDecl::storage("scores", 0, BufferAccess::ReadOnly, DataType::F32).with_count(8),
             BufferDecl::storage("indices", 1, BufferAccess::ReadOnly, DataType::U32).with_count(2),
             BufferDecl::storage(STATS_SCRATCH, 2, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(2),
             BufferDecl::output("weights", 3, DataType::F32).with_count(2),
         ],
-        workgroup: [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
-        phases: Vec::new(),
-        writeback: Some(weight_write_child(
-            WEIGHT_WRITE_OP_ID,
-            "scores",
-            "indices",
-            "weights",
-            2,
-        )),
-    })
+        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
+    )
+    .with_writeback(weight_write_child(
+        WEIGHT_WRITE_OP_ID,
+        "scores",
+        "indices",
+        "weights",
+        2,
+    ))
+    .build()
 }
 
 inventory::submit! {

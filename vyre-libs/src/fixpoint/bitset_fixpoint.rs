@@ -77,18 +77,6 @@ pub fn bitset_fixpoint(current: &str, next: &str, changed: &str, words: u32) -> 
     )
 }
 
-/// Reference evaluation: returns `1` if the two bitsets differ
-/// word-for-word, else `0`. Primitive only  -  doesn't run the
-/// transfer body.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_eval(current: &[u32], next: &[u32]) -> u32 {
-    if current == next {
-        0
-    } else {
-        1
-    }
-}
 
 /// Canonical seed-buffer name for the warm-start variant.
 pub const NAME_WARM_SEED: &str = "fp_warm_seed";
@@ -178,29 +166,6 @@ pub fn bitset_fixpoint_warm_start(
 /// Canonical op id for the warm-start variant.
 pub const OP_ID_WARM_START: &str = "vyre-libs::fixpoint::bitset_fixpoint_warm_start";
 
-/// Reference evaluation for the warm-start flow: emulates
-/// `current |= seed`, then returns `1` if the ORIGINAL (pre-warm)
-/// `current` differs from `next`.
-///
-/// AUDIT_2026-04-24 F-BF-01: the earlier version compared the
-/// warm-started `updated` (`current | seed`) against `next`, which
-/// falsely signalled convergence when the transfer body had added
-/// exactly the bits the seed already provided.  Convergence means
-/// the transfer step contributed no new bits  -  compare `current`
-/// directly.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_eval_warm_start(current: &[u32], next: &[u32], seed: &[u32]) -> (Vec<u32>, u32) {
-    debug_assert_eq!(current.len(), seed.len());
-    debug_assert_eq!(current.len(), next.len());
-    let updated: Vec<u32> = current
-        .iter()
-        .zip(seed.iter())
-        .map(|(c, s)| c | s)
-        .collect();
-    let flag = if current == next { 0 } else { 1 };
-    (updated, flag)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

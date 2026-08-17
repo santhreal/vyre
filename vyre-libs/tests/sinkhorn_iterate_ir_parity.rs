@@ -13,7 +13,7 @@
 //!
 //! A wrong gemm index, a swapped Kv/Ktu, a mis-ordered ping-pong, a broken `a./Kv` fixed-point divide,
 //! or an off-by-one on the convergence check makes the exact comparison fail.
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use vyre_reference::value::Value;
 

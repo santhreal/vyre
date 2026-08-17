@@ -4,7 +4,6 @@
 //! oracle on randomly generated DAGs across thousands of CSR shapes.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::toposort::{
     toposort_csr, toposort_csr_into_with_scratch, validate_toposort_csr_order, ToposortCsrScratch,

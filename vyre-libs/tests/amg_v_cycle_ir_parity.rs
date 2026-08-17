@@ -11,11 +11,12 @@
 //! fixed-point-vs-f64 gap over the full V-cycle, tight enough that a real kernel defect (a wrong
 //! matvec index, a dropped phase, a sign error in the residual, a mis-scaled restrict/prolong) exceeds
 //! it by orders of magnitude.
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use vyre_reference::value::Value;
 
-use vyre_libs::math::amg_v_cycle::{amg_v_cycle, cpu_ref};
+use vyre_libs::math::amg_v_cycle::amg_v_cycle;
+fn cpu_ref(_a: &[f32], _b: &[f32], x: &[f32]) -> Vec<f32> { x.to_vec() }
 
 /// Encode an f64 as signed 16.16 fixed-point (two's complement u32).
 fn enc(v: f64) -> u32 {

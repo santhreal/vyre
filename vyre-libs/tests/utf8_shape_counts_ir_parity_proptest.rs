@@ -12,7 +12,7 @@
 //! all with SATURATING add/mul. The sweep feeds random 256-bin histograms plus histograms biased to
 //! `u32::MAX` in the multiplied ranges so the saturating `count*2`/`count*3` and the saturating sums
 //! are actually driven into saturation — the exact path a plain wrapping op would get wrong.
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;

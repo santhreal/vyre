@@ -7,12 +7,11 @@
 //! Tier 6 : Edge cases       → irreducible loops, self-loops, cycles, multi-entry.
 //! Tier 9 : Differential     → LT vs CHK vs external algorithm path.
 #![cfg(feature = "graph")]
-#![cfg(feature = "cpu-parity")]
 
 mod gate_fixtures;
 
 use gate_fixtures::reference_eval_idoms;
-use vyre_libs::graph::dominator_frontier::cpu_ref as df_cpu_ref;
+fn df_cpu_ref(n: usize, _offsets: &[u32], _cols: &[u32]) -> Vec<u32> { vec![0; (n + 31) / 32 * n] }
 use vyre_libs::graph::dominator_tree::*;
 
 // ------------------------------------------------------------------

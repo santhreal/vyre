@@ -22,6 +22,9 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
     let in_h = height / 2;
     let input_count = in_w.saturating_mul(in_h);
     let output_count = width.saturating_mul(height);
+    let (oy, ox) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
+    let in_sample_idx =
+        crate::builder::stencil::upsample_2x_source_index(&Expr::var("oy"), &Expr::var("ox"), in_w);
 
     Program::wrapped(
         vec![
@@ -39,22 +42,10 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
                     Expr::lt(Expr::var("idx"), Expr::u32(output_count)),
                     vec![
                         // Output coordinates.
-                        Node::let_bind("ox", Expr::rem(Expr::var("idx"), Expr::u32(width.max(1)))),
-                        Node::let_bind("oy", Expr::div(Expr::var("idx"), Expr::u32(width.max(1)))),
-                        // Map to input coordinates (integer division = nearest-neighbor).
-                        Node::let_bind("ix", Expr::div(Expr::var("ox"), Expr::u32(2))),
-                        Node::let_bind("iy", Expr::div(Expr::var("oy"), Expr::u32(2))),
+                        Node::let_bind("ox", ox),
+                        Node::let_bind("oy", oy),
                         // Load input pixel.
-                        Node::let_bind(
-                            "pixel",
-                            Expr::load(
-                                input,
-                                Expr::add(
-                                    Expr::mul(Expr::var("iy"), Expr::u32(in_w.max(1))),
-                                    Expr::var("ix"),
-                                ),
-                            ),
-                        ),
+                        Node::let_bind("pixel", Expr::load(input, in_sample_idx)),
                         // Write to output.
                         Node::store(output, Expr::var("idx"), Expr::var("pixel")),
                     ],

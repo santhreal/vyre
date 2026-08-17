@@ -31,10 +31,6 @@ pub use anchor_dfa::{
     build_anchor_dfa_plan, AnchorDfaCandidate, AnchorDfaLiteral, AnchorDfaPlan, AnchorDfaPlanError,
     ANCHOR_DFA_PLAN_SCHEMA_VERSION,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use bracket_match::bracket_match_cpu_ref;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use bracket_match::bracket_match_cpu_ref_into;
 pub use bracket_match::BRACKET_MATCH_OP_ID;
 pub use bracket_match::{
     bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
@@ -48,12 +44,6 @@ pub use nfa_to_dfa::{
     dfa_fingerprint, dfa_wire_bytes, nfa_to_dfa, DfaDedupBatch, DfaDedupResult, DfaDedupStats,
     DfaDedupTable, NfaTables, NfaToDfaError,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use region::cap_regions_per_pattern_survivors_cpu;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use region::dedup_regions_cpu;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use region::dedup_regions_inplace;
 pub use region::{
     cap_regions_per_pattern_flag_program, dedup_regions_cluster_program,
     dedup_regions_flag_program, region_dedup_dispatch_grid, RegionTriple,
@@ -63,5 +53,3 @@ pub use region::{
     compact_first_per_region_pattern_flag_program, region_sort_program,
     COMPACT_FIRST_PER_REGION_PATTERN_OP_ID, DEDUP_REGIONS_CLUSTER_OP_ID, DEDUP_REGIONS_FLAG_OP_ID,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use region::{compact_first_per_region_pattern_survivors_cpu, sort_regions_cpu};

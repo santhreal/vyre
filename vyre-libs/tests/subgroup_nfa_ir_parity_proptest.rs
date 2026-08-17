@@ -20,7 +20,7 @@
 //! the shuffle-gather across lanes is what is under test. A dedicated anchor
 //! exercises a shallow cross-lane epsilon.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "nfa", feature = "cpu-parity"))]
+#![cfg(feature = "nfa")]
 
 use proptest::prelude::*;
 use vyre_libs::nfa::subgroup_nfa::{cpu_step, nfa_step, LANES_PER_SUBGROUP};

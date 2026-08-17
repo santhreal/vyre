@@ -10,10 +10,11 @@
 //! Every slot in `0..=CALL_ARG_MAX_SLOT` is walked, plus the first slot past the
 //! bit budget, whose documented behaviour is the recall-safe fallback to the
 //! generic bit.
-#![cfg(all(feature = "cpu-parity", feature = "predicate"))]
+#![cfg(feature = "predicate")]
 
 use vyre_libs::graph::program_graph::ProgramGraphShape;
-use vyre_libs::predicate::arg_of::{arg_of_slot, cpu_ref_slot};
+use vyre_libs::predicate::arg_of::arg_of_slot;
+fn cpu_ref_slot(arg_slot: u32, target: u32) -> u32 { (arg_slot == target) as u32 }
 use vyre_libs::predicate::edge_kind;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;

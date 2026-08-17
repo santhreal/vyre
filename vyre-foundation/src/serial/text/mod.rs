@@ -385,4 +385,5 @@ pub(crate) fn truncate(input: &str, max: usize) -> String {
     }
 }
 #[cfg(test)]
+#[path = "../../../tests/internal/serial/text/mod.rs"]
 mod tests;

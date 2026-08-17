@@ -5,10 +5,6 @@
 //! summarize how saturated their reachability / alias / dirty-set bitsets are
 //! without each pass re-implementing popcount inline.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::bitset::popcount::{
-    cpu_ref as primitive_popcount, cpu_ref_into as primitive_popcount_into,
-};
 
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
@@ -22,54 +18,9 @@ pub struct BitsetSummaryGpuScratch {
     inputs: Vec<Vec<u8>>,
 }
 
-/// Per-word popcount via the bitset primitive. Bumps the
-/// dataflow-fixpoint substrate counter so dispatch dashboards
-/// register every summary.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn per_word_popcount(input: &[u32]) -> Vec<u32> {
-    use crate::telemetry::{bump, dataflow_fixpoint_calls};
-    bump(&dataflow_fixpoint_calls);
-    primitive_popcount(input)
-}
 
-/// Per-word popcount into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn per_word_popcount_into(input: &[u32], out: &mut Vec<u32>) {
-    use crate::telemetry::{bump, dataflow_fixpoint_calls};
-    bump(&dataflow_fixpoint_calls);
-    primitive_popcount_into(input, out);
-}
 
-/// Total set-bit count across the bitset. Saturating-summed so a
-/// 32-billion-bit bitset doesn't overflow.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn total_set_bits(input: &[u32]) -> u64 {
-    let mut total: u64 = 0;
-    for word in input {
-        total = total.saturating_add(u64::from(word.count_ones()));
-    }
-    total
-}
 
-/// Saturation ratio in `[0.0, 1.0]`: fraction of bits set across the
-/// bitset's full word capacity. The dispatch-time tracker uses this
-/// to detect "alias-set is becoming dense, switch to whole-program
-/// reachability instead of per-region masks".
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn saturation_ratio(input: &[u32]) -> f64 {
-    if input.is_empty() {
-        return 0.0;
-    }
-    let capacity_bits = (input.len() as u64) * 32;
-    if capacity_bits == 0 {
-        return 0.0;
-    }
-    let set = total_set_bits(input);
-    (set as f64) / (capacity_bits as f64)
-}
 
 /// GPU dispatch wrapper around the primitive per-word popcount program.
 ///

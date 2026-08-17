@@ -10,13 +10,14 @@
 //! each round's guard can. `executed_stores` evaluates every enclosing guard for
 //! every lane and counts the store executions the dispatch actually performs.
 
-#![cfg(all(feature = "math-kernels", feature = "cpu-parity"))]
+#![cfg(feature = "math-kernels")]
 
 use std::collections::HashMap;
 
 use vyre_foundation::ir::{BinOp, BufferAccess, Expr, Node, Program};
 use vyre_foundation::visit::child_bodies;
-use vyre_libs::math::prefix_scan::{cpu_ref, prefix_scan, ScanKind};
+use vyre_libs::math::prefix_scan::{prefix_scan, ScanKind};
+fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> { match kind { ScanKind::Inclusive => { let mut acc = 0u32; input.iter().map(|&x| { acc = acc.wrapping_add(x); acc }).collect() } ScanKind::Exclusive => { let mut acc = 0u32; let mut out = Vec::with_capacity(input.len()); for &x in input { out.push(acc); acc = acc.wrapping_add(x); } out } } }
 use vyre_reference::value::Value;
 
 /// Every `n` the contract has a distinct shape for: the degenerate sizes, both

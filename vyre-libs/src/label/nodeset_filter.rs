@@ -26,13 +26,6 @@ impl NodeSetFilter {
         }
     }
 
-    #[cfg(any(test, feature = "cpu-parity"))]
-    fn matches(self, value: u32) -> bool {
-        match self {
-            Self::Eq(expected) => value == expected,
-            Self::Intersects(mask) => (value & mask) != 0,
-        }
-    }
 }
 
 /// Build `nodeset_out = { v : filter(values[v]) }`.
@@ -79,52 +72,8 @@ pub(crate) fn nodeset_filter_program(
     )
 }
 
-/// CPU reference for `nodeset_filter_program`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn nodeset_filter_cpu_ref(values: &[u32], filter: NodeSetFilter) -> Vec<u32> {
-    let mut out = Vec::new();
-    nodeset_filter_cpu_ref_into(values, filter, &mut out);
-    out
-}
 
-/// CPU reference using a caller-owned output buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn nodeset_filter_cpu_ref_into(
-    values: &[u32],
-    filter: NodeSetFilter,
-    out: &mut Vec<u32>,
-) {
-    if let Err(error) = try_nodeset_filter_cpu_ref_into(values, filter, out) {
-        // A parity oracle that clears to empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
-        panic!("vyre-primitives nodeset_filter CPU reference failed: {error}");
-    }
-}
 
-/// Fallible CPU reference using a caller-owned output buffer.
-///
-/// `out` is not cleared until the target storage has been reserved.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn try_nodeset_filter_cpu_ref_into(
-    values: &[u32],
-    filter: NodeSetFilter,
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    let words = values.len().div_ceil(32);
-    let additional = words.saturating_sub(out.capacity());
-    out.try_reserve_exact(additional)
-        .map_err(|err| format!("failed to reserve nodeset filter output: {err}"))?;
-    out.clear();
-    out.resize(words, 0);
-    for (node, value) in values.iter().copied().enumerate() {
-        if filter.matches(value) {
-            out[node / 32] |= 1_u32 << (node % 32);
-        }
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

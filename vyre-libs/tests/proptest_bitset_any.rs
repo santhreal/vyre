@@ -1,9 +1,8 @@
 //! Property gates for `vyre_libs::bitset::any::cpu_ref`.
 
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_libs::bitset::any::cpu_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -53,4 +52,9 @@ proptest! {
         words[word_idx] = 1u32 << bit_idx;
         prop_assert_eq!(cpu_ref(&words), 1);
     }
+}
+
+#[must_use]
+fn cpu_ref(input: &[u32]) -> u32 {
+    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
 }

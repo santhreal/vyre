@@ -32,49 +32,7 @@ pub fn size_argument_of(
     backward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
 }
 
-/// CPU reference: reverse-traverse CallArg edges and mark every caller
-/// argument whose callee bit is present in `frontier_in`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    _nodes: &[u32],
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-) -> Vec<u32> {
-    crate::graph::csr_backward_traverse::cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        edge_kind::CALL_ARG,
-    )
-}
 
-/// CPU reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    node_count: u32,
-    _nodes: &[u32],
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    out: &mut Vec<u32>,
-) {
-    crate::graph::csr_backward_traverse::cpu_ref_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        edge_kind::CALL_ARG,
-        out,
-    );
-}
 
 #[cfg(test)]
 mod tests {

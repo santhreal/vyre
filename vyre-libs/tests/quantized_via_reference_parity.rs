@@ -12,7 +12,6 @@
 //! contract exactly, one input per input-consuming buffer, strict count; writable buffers returned
 //! in binding order) executes the actual quantized kernel IR for the first time and proves the fixed
 //! consumers match their `_cpu` oracles. The pre-fix over-feed surfaces here as a hard dispatch error.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::math::quantized::{
     i4x8_batched_matmul_f32_scaled_cpu, i4x8_batched_matmul_top1_f32_scaled_cpu,

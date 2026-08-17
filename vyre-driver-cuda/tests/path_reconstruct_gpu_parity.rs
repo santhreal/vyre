@@ -6,12 +6,20 @@ mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::path_reconstruct::{reconstruct_path_via, reconstruct_paths_via};
-use vyre_libs::graph::path_reconstruct::cpu_ref as path_reconstruct_cpu;
-
 fn cpu_path(parent: &[u32], target: u32, max_depth: u32) -> (Vec<u32>, u32) {
     let mut scratch = Vec::new();
-    let len = path_reconstruct_cpu(parent, target, max_depth, &mut scratch);
-    (scratch, len)
+    let mut curr = target;
+    let mut depth = 0;
+    while depth < max_depth {
+        scratch.push(curr);
+        depth += 1;
+        let p = parent.get(curr as usize).copied().unwrap_or(curr);
+        if p == curr {
+            break;
+        }
+        curr = p;
+    }
+    (scratch, depth)
 }
 
 #[test]

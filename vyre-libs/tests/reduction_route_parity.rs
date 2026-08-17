@@ -1,6 +1,6 @@
 //! Exact parity and contention-shape contracts for scalar sum reduction routes.
 
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 #![forbid(unsafe_code)]
 
 use vyre_reference::value::Value;

@@ -1,5 +1,5 @@
 //! RLE segment-length CPU parity and reusable-storage contracts.
-#![cfg(all(feature = "cpu-parity", feature = "decode"))]
+#![cfg(feature = "decode")]
 
 use vyre_libs::decode::rle_segment_lengths::{
     pack_rle_segments, rle_decode_cpu, rle_segment_lengths, try_rle_decode_cpu_into,

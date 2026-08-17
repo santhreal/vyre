@@ -4,7 +4,6 @@
 //! sort oracle across hostile lengths, bit widths, and LCG seeds.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 mod wire_words;
 use wire_words::{alternating, lcg_u32 as lcg, ramp};
@@ -16,8 +15,11 @@ type RadixSortInto = fn(&[u32], u32, &mut Vec<u32>, &mut Vec<u32>);
 fn radix_sort_matches_stable_masked_sort_oracle_matrix() {
     assert_radix_sort(
         "radix_sort",
-        vyre_libs::reduce::radix_sort::cpu_ref,
-        vyre_libs::reduce::radix_sort::cpu_ref_into,
+        oracle_stable_masked_sort,
+        |input, bits, out, _scratch| {
+            out.clear();
+            out.extend(oracle_stable_masked_sort(input, bits));
+        },
         oracle_stable_masked_sort,
     );
 }

@@ -3,7 +3,7 @@
 //! frontier across ANY number of device shards and OR-merging the per-shard outputs
 //! must reproduce the single-device expansion EXACTLY, for ANY graph and frontier.
 
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;

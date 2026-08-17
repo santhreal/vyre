@@ -21,7 +21,7 @@
 //! is the real regression lock: the gate introduces a `Node::Let` (binding the pair
 //! index once for the bounds check + the load) that the bare double-load has no way
 //! to contain. Reverting to the unguarded load removes the `LET` node-kind and fails.
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use vyre_foundation::ir::stats::NODE_KIND_LET;
 use vyre_libs::math::sos_certificate::{sos_gram_construct, sos_gram_construct_cpu};

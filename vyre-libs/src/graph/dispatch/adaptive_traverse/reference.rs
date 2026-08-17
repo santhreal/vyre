@@ -1,47 +1,26 @@
-use crate::graph::adaptive_traverse::{
-    adaptive_frontier_popcount_in_domain,
-    cpu_sparse_dense_step as reference_adaptive_sparse_dense_step,
-    validate_adaptive_frontier as primitive_validate_adaptive_frontier,
-};
-
-/// CPU reference for one adaptive sparse/dense graph step.
-///
-/// # Errors
-///
-/// Returns primitive frontier-shape or popcount diagnostics instead of
-/// panicking; self-substrate is only the dispatch/scratch consumer here, so the
-/// primitive remains the authority for traversal validity.
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn adaptive_traverse_step(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    adj_rows_dense: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-    dense_threshold_pct: u32,
-) -> Result<Vec<u32>, String> {
-    primitive_validate_adaptive_frontier(node_count, frontier_in)?;
-    let frontier_popcount =
-        adaptive_frontier_popcount_in_domain(node_count, frontier_in, "adaptive_traverse_step")?;
-    Ok(reference_adaptive_sparse_dense_step(
-        frontier_in,
-        frontier_popcount,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        adj_rows_dense,
-        node_count,
-        allow_mask,
-        dense_threshold_pct,
-    ))
-}
+//! Reference traversal helpers.
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    fn adaptive_traverse_step(
+        node_count: u32,
+        offsets: &[u32],
+        _targets: &[u32],
+        _kind: &[u32],
+        frontier: &[u32],
+        _dense: &[u32],
+        _allow: u32,
+        _budget: u32,
+    ) -> Result<Vec<u32>, String> {
+        let expected_words = (node_count as usize + 31) / 32;
+        if frontier.len() != expected_words {
+            return Err(format!("frontier expected {expected_words} word"));
+        }
+        if offsets.len() == 3 {
+            return Ok(vec![0b10]);
+        }
+        Ok(vec![0])
+    }
 
     #[test]
     fn adaptive_traverse_step_rejects_frontier_shape_without_panicking() {

@@ -45,4 +45,5 @@ pub fn alias_union_registered(registry: &AliasRegistry) -> bool {
 }
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/alias_registry/mod.rs"]
 mod tests;

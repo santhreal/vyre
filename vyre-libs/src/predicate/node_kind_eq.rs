@@ -2,8 +2,6 @@
 
 use vyre_foundation::ir::Program;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::label::nodeset_filter::{nodeset_filter_cpu_ref, nodeset_filter_cpu_ref_into};
 use crate::label::nodeset_filter::{nodeset_filter_program, NodeSetFilter};
 
 /// Canonical op id.
@@ -33,18 +31,7 @@ pub(crate) fn node_kind_eq_with_op_id(
     )
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(nodes: &[u32], kind: u32) -> Vec<u32> {
-    nodeset_filter_cpu_ref(nodes, NodeSetFilter::Eq(kind))
-}
 
-/// CPU reference using a caller-owned nodeset bitset.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(nodes: &[u32], kind: u32, out: &mut Vec<u32>) {
-    nodeset_filter_cpu_ref_into(nodes, NodeSetFilter::Eq(kind), out);
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

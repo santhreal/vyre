@@ -68,7 +68,7 @@ criterion.workspace = true
 stats_alloc.workspace = true
 tempfile.workspace = true
 proptest.workspace = true
-vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "nn-attention", "cpu-parity", "crypto-blake3", "hash"] }
+vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "nn-attention", "crypto-blake3", "hash"] }
 # The integration tests under tests/ exercise the public `vyre` umbrella facade
 # (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}), the ergonomic
 # surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which
@@ -118,3 +118,15 @@ workspace = true
 name = "vyre-wgpu"
 path = "src/bin/vyre.rs"
 
+
+[[test]]
+name = "op_pairwise"
+path = "tests/op_pairwise/mod.rs"
+
+[[test]]
+name = "resident_buffer_contracts"
+path = "tests/resident_buffer_contracts/mod.rs"
+
+[[test]]
+name = "buf_len_array_length"
+path = "tests/buf_len_array_length/mod.rs"

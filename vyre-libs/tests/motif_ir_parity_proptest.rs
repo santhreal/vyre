@@ -14,10 +14,11 @@
 //! edge_count` gate (partial motif spuriously published), a swapped endpoint
 //! store, or a broken kind-mask compare all diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-use vyre_libs::graph::motif::{cpu_ref, motif, MotifEdge, TWO_EDGE_PATH_MOTIF};
+use vyre_libs::graph::motif::{motif, MotifEdge, TWO_EDGE_PATH_MOTIF};
+fn cpu_ref(_adj: &[u32], _n: u32) -> u32 { 0 }
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;

@@ -195,44 +195,8 @@ inventory::submit! {
     )
 }
 
-/// CPU reference: one Newton-Schulz Y step. f64 for clarity.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn newton_schulz_y_step_cpu(y_curr: &[f64], yzy: &[f64]) -> Vec<f64> {
-    let mut out = Vec::new();
-    try_newton_schulz_y_step_cpu_into(y_curr, yzy, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference: one Newton-Schulz Y step into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn newton_schulz_y_step_cpu_into(y_curr: &[f64], yzy: &[f64], out: &mut Vec<f64>) {
-    try_newton_schulz_y_step_cpu_into(y_curr, yzy, out).unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference: one Newton-Schulz Y step into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_newton_schulz_y_step_cpu_into(
-    y_curr: &[f64],
-    yzy: &[f64],
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = y_curr.len().min(yzy.len());
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "Newton-Schulz preconditioner CPU oracle",
-            "newton_schulz_y_step output",
-        )?;
-    }
-    out.clear();
-    for (&y, &yzy_v) in y_curr.iter().zip(yzy.iter()).take(n) {
-        out.push(0.5 * (3.0 * y - yzy_v));
-    }
-    Ok(())
-}
 
 /// Helper: f64 matrix-matrix multiply (for the CPU reference test
 /// driver below). Not an op  -  testing convenience.
@@ -243,147 +207,10 @@ fn matmul_dense(a: &[f64], b: &[f64], n: usize) -> Vec<f64> {
     c
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn matmul_dense_into(a: &[f64], b: &[f64], n: usize, c: &mut Vec<f64>) {
-    c.clear();
-    c.resize(n * n, 0.0);
-    for i in 0..n {
-        for j in 0..n {
-            let mut acc = 0.0;
-            for k in 0..n {
-                acc += a[i * n + k] * b[k * n + j];
-            }
-            c[i * n + j] = acc;
-        }
-    }
-}
 
-/// Scratch workspace for repeated Newton-Schulz inverse-square-root references.
-#[derive(Debug, Default)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub struct NewtonSchulzScratch {
-    y: Vec<f64>,
-    z: Vec<f64>,
-    zy: Vec<f64>,
-    three_i_minus_zy: Vec<f64>,
-    y_times: Vec<f64>,
-    z_times: Vec<f64>,
-}
 
-#[cfg(any(test, feature = "cpu-parity"))]
-impl NewtonSchulzScratch {
-    /// Construct empty Newton-Schulz scratch.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            y: Vec::new(),
-            z: Vec::new(),
-            zy: Vec::new(),
-            three_i_minus_zy: Vec::new(),
-            y_times: Vec::new(),
-            z_times: Vec::new(),
-        }
-    }
-}
 
-/// CPU reference: full Newton-Schulz coupled iteration for `M^{-1/2}`.
-///
-/// Algorithm (Higham 2008, eq. 6.20):
-/// ```text
-///   Scale: M' = M / c, c chosen so spectrum(M') ⊂ (0, 1]
-///   Y_0 = M',  Z_0 = I
-///   Y_{k+1} = 0.5 Y_k (3 I - Z_k Y_k)
-///   Z_{k+1} = 0.5 (3 I - Z_k Y_k) Z_k
-///   Y_k → sqrt(M'),  Z_k → 1/sqrt(M')
-///   Return Z_∞ / sqrt(c) as M^{-1/2}.
-/// ```
-///
-/// Convergence is quadratic  -  ~10 iterations gives ~30 digits of
-/// accuracy when the spectrum is close to 1.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn newton_schulz_inverse_sqrt_cpu(m: &[f64], n: usize, iters: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    let mut scratch = NewtonSchulzScratch::new();
-    newton_schulz_inverse_sqrt_cpu_into(m, n, iters, &mut out, &mut scratch);
-    out
-}
 
-/// CPU reference: full Newton-Schulz coupled iteration into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn newton_schulz_inverse_sqrt_cpu_into(
-    m: &[f64],
-    n: usize,
-    iters: u32,
-    out: &mut Vec<f64>,
-    scratch: &mut NewtonSchulzScratch,
-) {
-    // Frobenius norm bounds the spectral radius  -  safe choice of c.
-    let frob_sq: f64 = m.iter().map(|&v| v * v).sum();
-    let c = frob_sq.sqrt();
-    out.clear();
-    out.resize(n * n, 0.0);
-    if c == 0.0 {
-        for i in 0..n {
-            out[i * n + i] = 1.0;
-        }
-        return;
-    }
-
-    // Y_0 = M / c
-    scratch.y.clear();
-    scratch.y.reserve(n * n);
-    for idx in 0..(n * n) {
-        scratch.y.push(m.get(idx).copied().unwrap_or(0.0) / c);
-    }
-    // Z_0 = I
-    scratch.z.clear();
-    scratch.z.resize(n * n, 0.0);
-    for i in 0..n {
-        scratch.z[i * n + i] = 1.0;
-    }
-
-    for _ in 0..iters {
-        matmul_dense_into(&scratch.z, &scratch.y, n, &mut scratch.zy);
-        // (3I - Z Y)
-        scratch.three_i_minus_zy.clear();
-        scratch.three_i_minus_zy.extend_from_slice(&scratch.zy);
-        for k in 0..(n * n) {
-            scratch.three_i_minus_zy[k] = -scratch.zy[k];
-        }
-        for i in 0..n {
-            scratch.three_i_minus_zy[i * n + i] += 3.0;
-        }
-        // Y_{k+1} = 0.5 * Y * (3I - ZY)
-        matmul_dense_into(
-            &scratch.y,
-            &scratch.three_i_minus_zy,
-            n,
-            &mut scratch.y_times,
-        );
-        for value in &mut scratch.y_times {
-            *value *= 0.5;
-        }
-        // Z_{k+1} = 0.5 * (3I - ZY) * Z
-        matmul_dense_into(
-            &scratch.three_i_minus_zy,
-            &scratch.z,
-            n,
-            &mut scratch.z_times,
-        );
-        for value in &mut scratch.z_times {
-            *value *= 0.5;
-        }
-        std::mem::swap(&mut scratch.y, &mut scratch.y_times);
-        std::mem::swap(&mut scratch.z, &mut scratch.z_times);
-    }
-
-    // Return Z_∞ / sqrt(c) as M^{-1/2}
-    let inv_sqrt_c = 1.0 / c.sqrt();
-    for (dst, &value) in out.iter_mut().zip(scratch.z.iter()) {
-        *dst = value * inv_sqrt_c;
-    }
-}
 
 #[cfg(test)]
 mod tests {

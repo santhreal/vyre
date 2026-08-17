@@ -29,8 +29,6 @@
 
 use vyre_foundation::ir::Program;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use super::indexed_move::{indexed_move_cpu_ref_into, try_indexed_move_cpu_ref_into};
 use super::indexed_move::{indexed_move_program, IndexedMoveKind};
 
 /// Canonical op id.
@@ -45,39 +43,8 @@ pub fn scatter(src: &str, indices: &str, dst: &str, count: u32) -> Program {
     indexed_move_program(OP_ID, src, indices, dst, count, IndexedMoveKind::Scatter)
 }
 
-/// CPU reference.
-///
-/// Returns a `Vec<u32>` of length `dst_len`. Out-of-range indices are
-/// ignored, matching the guarded GPU store contract.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(src: &[u32], indices: &[u32], dst_len: usize) -> Vec<u32> {
-    let mut dst = Vec::new();
-    match try_cpu_ref_into(src, indices, dst_len, &mut dst) {
-        Ok(()) => dst,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
-        Err(error) => panic!("vyre-primitives scatter CPU reference failed: {error}"),
-    }
-}
 
-/// CPU reference into caller-owned destination storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(src: &[u32], indices: &[u32], dst_len: usize, dst: &mut Vec<u32>) {
-    indexed_move_cpu_ref_into(IndexedMoveKind::Scatter, src, indices, dst_len, dst);
-}
 
-/// Fallible CPU reference into caller-owned destination storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(
-    src: &[u32],
-    indices: &[u32],
-    dst_len: usize,
-    dst: &mut Vec<u32>,
-) -> Result<(), String> {
-    try_indexed_move_cpu_ref_into(IndexedMoveKind::Scatter, src, indices, dst_len, dst)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

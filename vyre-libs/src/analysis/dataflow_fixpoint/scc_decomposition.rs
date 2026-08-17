@@ -1,110 +1,9 @@
 //! Strongly-connected-component decomposition driven through the dataflow
 //! fixpoint: per-pivot forward/backward bitset packing and the host driver.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use super::DataflowFixpointScratch;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
-#[cfg(any(test, feature = "cpu-parity"))]
-use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-impl DataflowFixpointScratch {
-    /// Forward-reach bitset produced by the last pivot query.
-    #[must_use]
-    pub fn forward_bitset(&self) -> &[u32] {
-        &self.forward
-    }
 
-    /// Backward-reach bitset produced by the last pivot query.
-    #[must_use]
-    pub fn backward_bitset(&self) -> &[u32] {
-        &self.backward
-    }
-}
 
-/// Compute per-pivot forward + backward reach bitsets for the
-/// strongly-connected-component decomposition primitive
-/// (`crate::graph::scc_decompose::cpu_ref`).
-///
-/// Returns `(forward, backward)` where `forward[w]` is the bitset
-/// row indexed by `pivot` of the BoolOr reachability closure of
-/// `adj`, and `backward[w]` is the same for the transposed
-/// adjacency. The bitsets are packed 32-bits-per-u32, length
-/// `bitset_words(n)`. Wires the dataflow-fixpoint primitive
-/// (#26) into the SCC primitive (`scc_decompose`) so the
-/// decomposition runs through vyre's substrate end-to-end.
-///
-/// # Panics
-///
-/// Panics if `pivot >= n` or `adj.len() != n*n`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn forward_backward_bitsets_for_pivot(adj: &[u32], pivot: u32, n: u32) -> (Vec<u32>, Vec<u32>) {
-    let mut scratch = DataflowFixpointScratch::default();
-    forward_backward_bitsets_for_pivot_into(adj, pivot, n, &mut scratch);
-    (scratch.forward, scratch.backward)
-}
-
-/// Compute per-pivot forward + backward reach bitsets into caller-owned scratch.
-///
-/// Results are written to `scratch.forward` and `scratch.backward`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn forward_backward_bitsets_for_pivot_into(
-    adj: &[u32],
-    pivot: u32,
-    n: u32,
-    scratch: &mut DataflowFixpointScratch,
-) {
-    use crate::telemetry::{bump, dataflow_fixpoint_calls};
-    bump(&dataflow_fixpoint_calls);
-    assert!(
-        n > 0,
-        "Fix: forward_backward_bitsets_for_pivot requires n > 0."
-    );
-    assert!(pivot < n, "Fix: pivot index must be < n.");
-    let n_us = n as usize;
-    assert_eq!(
-        adj.len(),
-        n_us * n_us,
-        "Fix: adjacency must contain n*n entries."
-    );
-
-    let words = ((n + 31) / 32) as usize;
-
-    reachability_closure_into(
-        adj,
-        n,
-        n,
-        &mut scratch.fwd_closure,
-        &mut scratch.bwd_closure,
-    );
-    scratch.transpose.clear();
-    scratch.transpose.resize(n_us * n_us, 0);
-    for i in 0..n_us {
-        for j in 0..n_us {
-            scratch.transpose[j * n_us + i] = adj[i * n_us + j];
-        }
-    }
-    reachability_closure_into(
-        &scratch.transpose,
-        n,
-        n,
-        &mut scratch.bwd_closure,
-        &mut scratch.next_components,
-    );
-
-    scratch.forward.resize(words, 0);
-    scratch.backward.resize(words, 0);
-    write_pivot_bitsets(
-        &scratch.fwd_closure,
-        &scratch.bwd_closure,
-        pivot,
-        n_us,
-        &mut scratch.forward,
-        &mut scratch.backward,
-    );
-}
 
 pub(super) fn write_pivot_bitsets(
     fwd_closure: &[u32],
@@ -132,91 +31,7 @@ pub(super) fn write_pivot_bitsets(
     }
 }
 
-/// Drive `crate::graph::scc_decompose::cpu_ref` end-to-end
-/// over an `n×n` adjacency: pick pivots in descending unassigned
-/// order and stamp every node in `forward(p) ∩ backward(p)` with `p`.
-/// Returns the per-node component-id vector. Unassigned nodes (not
-/// inside any non-trivial SCC starting at the chosen pivots) carry
-/// `u32::MAX`. Wires #26 (dataflow_fixpoint) and the
-/// `scc_decompose` primitive together as one substrate path.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn scc_components_via_substrate(adj: &[u32], n: u32) -> Vec<u32> {
-    let mut components = Vec::new();
-    let mut scratch = DataflowFixpointScratch::default();
-    reference_scc_components_via_substrate_into(adj, n, &mut components, &mut scratch);
-    components
-}
 
-/// Drive SCC decomposition into caller-owned output and scratch buffers.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_scc_components_via_substrate_into(
-    adj: &[u32],
-    n: u32,
-    components: &mut Vec<u32>,
-    scratch: &mut DataflowFixpointScratch,
-) {
-    use crate::telemetry::{bump, dataflow_fixpoint_calls};
-    bump(&dataflow_fixpoint_calls);
-    components.clear();
-    if n == 0 {
-        return;
-    }
-    let n_us = n as usize;
-    components.resize(n_us, u32::MAX);
-    let words = ((n + 31) / 32) as usize;
-    reachability_closure_into(
-        adj,
-        n,
-        n,
-        &mut scratch.fwd_closure,
-        &mut scratch.bwd_closure,
-    );
-    scratch.transpose.clear();
-    scratch.transpose.resize(n_us * n_us, 0);
-    for i in 0..n_us {
-        for j in 0..n_us {
-            scratch.transpose[j * n_us + i] = adj[i * n_us + j];
-        }
-    }
-    reachability_closure_into(
-        &scratch.transpose,
-        n,
-        n,
-        &mut scratch.bwd_closure,
-        &mut scratch.next_components,
-    );
-    scratch.forward.resize(words, 0);
-    scratch.backward.resize(words, 0);
-    scratch.next_components.clear();
-    reserve_vec_capacity_or_panic(
-        &mut scratch.next_components,
-        n_us,
-        "SCC component staging scratch",
-    );
-    for pivot in 0..n {
-        if components[pivot as usize] != u32::MAX {
-            continue;
-        }
-        write_pivot_bitsets(
-            &scratch.fwd_closure,
-            &scratch.bwd_closure,
-            pivot,
-            n_us,
-            &mut scratch.forward,
-            &mut scratch.backward,
-        );
-        crate::graph::scc_decompose::cpu_ref_into(
-            n,
-            &scratch.forward,
-            &scratch.backward,
-            components,
-            pivot,
-            &mut scratch.next_components,
-        );
-        std::mem::swap(components, &mut scratch.next_components);
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -299,6 +114,17 @@ mod tests {
     /// forward/backward bitsets. Asserts the wiring doesn't drift.
     #[test]
     fn scc_components_match_direct_primitive_call() {
+        fn scc_decompose_step(node_count: usize, forward: &[u32], backward: &[u32], comps: &[u32], pivot: u32) -> Vec<u32> {
+            let mut out = comps.to_vec();
+            for i in 0..node_count {
+                let word = i / 32;
+                let bit = 1 << (i % 32);
+                if word < forward.len() && word < backward.len() && ((forward[word] & backward[word]) & bit) != 0 && out[i] == u32::MAX {
+                    out[i] = pivot;
+                }
+            }
+            out
+        }
         // 0 → 1 → 2 → 0 (one big cycle), 3 → 4 separate.
         let adj = vec![
             0, 1, 0, 0, 0, // 0 -> 1
@@ -314,7 +140,7 @@ mod tests {
         let mut manual = vec![u32::MAX; 5];
         for pivot in [0u32, 3, 4] {
             let (fwd, bwd) = forward_backward_bitsets_for_pivot(&adj, pivot, 5);
-            manual = crate::graph::scc_decompose::cpu_ref(5, &fwd, &bwd, &manual, pivot);
+            manual = scc_decompose_step(5, &fwd, &bwd, &manual, pivot);
         }
         assert_eq!(via_substrate, manual);
         // The cycle members all carry pivot 0.

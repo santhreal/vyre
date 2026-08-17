@@ -200,12 +200,6 @@ macro_rules! define_tag_family_predicate {
                 )
             }
 
-            /// CPU reference.
-            #[must_use]
-            #[cfg(any(test, feature = "cpu-parity"))]
-            pub fn cpu_ref(node_tags: &[u32]) -> Vec<u32> {
-                crate::label::resolve_family::cpu_ref(node_tags, $family)
-            }
 
             inventory::submit! {
                 vyre_foundation::operation::OperationRegistration::library(
@@ -259,8 +253,6 @@ macro_rules! define_fixed_forward_edge_predicate {
 
             use crate::graph::program_graph::ProgramGraphShape;
             use crate::predicate::traversal::forward_edge_program;
-            #[cfg(any(test, feature = "cpu-parity"))]
-            use crate::predicate::traversal::{cpu_ref_forward, cpu_ref_forward_into};
 
             /// Canonical op id.
             pub const OP_ID: &str = $op_id;
@@ -275,46 +267,7 @@ macro_rules! define_fixed_forward_edge_predicate {
                 forward_edge_program(OP_ID, shape, frontier_in, frontier_out, $edge_mask)
             }
 
-            /// CPU reference.
-            #[must_use]
-            #[cfg(any(test, feature = "cpu-parity"))]
-            pub fn cpu_ref(
-                node_count: u32,
-                edge_offsets: &[u32],
-                edge_targets: &[u32],
-                edge_kind_mask: &[u32],
-                frontier_in: &[u32],
-            ) -> Vec<u32> {
-                cpu_ref_forward(
-                    node_count,
-                    edge_offsets,
-                    edge_targets,
-                    edge_kind_mask,
-                    frontier_in,
-                    $edge_mask,
-                )
-            }
 
-            /// CPU reference using caller-owned output storage.
-            #[cfg(any(test, feature = "cpu-parity"))]
-            pub fn cpu_ref_into(
-                node_count: u32,
-                edge_offsets: &[u32],
-                edge_targets: &[u32],
-                edge_kind_mask: &[u32],
-                frontier_in: &[u32],
-                out: &mut Vec<u32>,
-            ) {
-                cpu_ref_forward_into(
-                    node_count,
-                    edge_offsets,
-                    edge_targets,
-                    edge_kind_mask,
-                    frontier_in,
-                    $edge_mask,
-                    out,
-                );
-            }
 
             inventory::submit! {
                 vyre_foundation::operation::OperationRegistration::library(

@@ -19,7 +19,6 @@
 //! the CPU oracle uses `saturating_add`; the two agree exactly as long as no finite `a+b` overflows
 //! u32. The generated systems bound finite entries so every `a+b` stays well under u32::MAX, and inject
 //! `u32::MAX` (∞ / no-edge) to exercise the guarded branch and the `min` accumulate against ∞.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::analysis::dataflow_fixpoint::{
     reference_semiring_gemm, semiring_gemm_via_bool_or, semiring_gemm_via_lineage,

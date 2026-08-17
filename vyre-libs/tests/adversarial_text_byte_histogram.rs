@@ -1,11 +1,12 @@
 //! Adversarial coverage for the byte-histogram text primitive.
 //!
 //! Focus: hostile boundaries, overflow, invalid offsets, property invariants.
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 #![allow(clippy::needless_range_loop)]
 
 use vyre_foundation::ir::DataType;
-use vyre_libs::text::{byte_histogram_256_u8, reference_byte_histogram};
+use vyre_libs::text::byte_histogram_256_u8;
+use vyre_reference::composition_witness::byte_histogram_witness as reference_byte_histogram;
 
 #[test]
 fn reference_byte_histogram_empty() {

@@ -27,7 +27,7 @@ use vyre_foundation::ir::{BufferAccess, Expr, Node, Program};
 
 use crate::graph::frontier_bits::active_source_lane;
 use crate::graph::program_graph::{
-    frontier_buffer, word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_OFFSETS,
+    frontier_buffer, word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START,
 };
 
 /// Canonical op id.
@@ -63,21 +63,20 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
         frontier_in,
         None,
         Expr::InvocationId { axis: 0 },
-        vec![
-            Node::let_bind("off_lo", Expr::load(NAME_EDGE_OFFSETS, Expr::var("src"))),
-            Node::let_bind(
-                "off_hi",
-                Expr::load(NAME_EDGE_OFFSETS, Expr::add(Expr::var("src"), Expr::u32(1))),
-            ),
-            Node::let_bind(
-                "degree",
-                Expr::sub(Expr::var("off_hi"), Expr::var("off_lo")),
-            ),
-            Node::let_bind(
-                "_old",
-                Expr::atomic_add(degree_sum_out, Expr::u32(0), Expr::var("degree")),
-            ),
-        ],
+        {
+            let [off_lo, off_hi, deg] =
+                crate::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, shape.node_count)
+                    .emit_row_degree(Expr::var("src"), "off_lo", "off_hi", "degree");
+            vec![
+                off_lo,
+                off_hi,
+                deg,
+                Node::let_bind(
+                    "_old",
+                    Expr::atomic_add(degree_sum_out, Expr::u32(0), Expr::var("degree")),
+                ),
+            ]
+        },
     )];
 
     let mut buffers = shape.read_only_buffers();
@@ -98,63 +97,7 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
     Program::wrapped(buffers, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE, entry)
 }
 
-/// CPU reference. `frontier_in` is a packed bitset over `node_count`
-/// with one bit per source node; `edge_offsets` is the CSR row pointer
-/// array of length `node_count + 1`. Returns the total outgoing-edge
-/// count over active frontier nodes.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn csr_frontier_degree_sum_cpu(
-    frontier_in: &[u32],
-    edge_offsets: &[u32],
-    node_count: u32,
-) -> u32 {
-    match try_csr_frontier_degree_sum_cpu(frontier_in, edge_offsets, node_count) {
-        Ok(total) => total,
-        Err(_) => u32::MAX,
-    }
-}
 
-/// CPU reference with checked degree-sum accumulation.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_csr_frontier_degree_sum_cpu(
-    frontier_in: &[u32],
-    edge_offsets: &[u32],
-    node_count: u32,
-) -> Result<u32, String> {
-    let expected_offsets = node_count as usize + 1;
-    if edge_offsets.len() != expected_offsets {
-        return Err(format!(
-            "csr_frontier_degree_sum CPU oracle received {} row offsets for node_count={node_count}; Fix: pass exactly node_count + 1 CSR offsets.",
-            edge_offsets.len()
-        ));
-    }
-    for (index, pair) in edge_offsets.windows(2).enumerate() {
-        if pair[0] > pair[1] {
-            return Err(format!(
-                "csr_frontier_degree_sum CPU oracle received non-monotonic CSR offsets at row {index}: {} > {}. Fix: rebuild CSR row pointers before parity comparison.",
-                pair[0],
-                pair[1]
-            ));
-        }
-    }
-    let mut total = 0u32;
-    for src in 0..node_count {
-        let word = (src / 32) as usize;
-        let bit = src % 32;
-        if frontier_in.get(word).copied().unwrap_or(0) & (1u32 << bit) == 0 {
-            continue;
-        }
-        let lo = edge_offsets[src as usize];
-        let hi = edge_offsets[(src + 1) as usize];
-        total = total.checked_add(hi - lo).ok_or_else(|| {
-            format!(
-                "csr_frontier_degree_sum CPU oracle overflowed degree sum at src={src}. Fix: shard the frontier or graph before parity comparison."
-            )
-        })?;
-    }
-    Ok(total)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

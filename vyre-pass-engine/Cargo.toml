@@ -66,7 +66,7 @@ vyre-driver-reference = { path = "../vyre-driver-reference" }
 # `vyre_libs::test_support` program-sequence helper and the `graph::dispatch`
 # composition surface the parity suites build programs from. Dev builds only,
 # the same way as the primitives oracles above.
-vyre-libs = { workspace = true, features = ["cpu-parity", "graph-dispatch"] }
+vyre-libs = { workspace = true, features = ["graph-dispatch"] }
 proptest.workspace = true
 
 [[test]]

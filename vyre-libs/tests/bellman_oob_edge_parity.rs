@@ -10,7 +10,7 @@
 //! diverging from the CPU ref; an edge with an OOB DEST additionally OOB atomic-WRITES
 //! `next_dist[v]` (memory corruption on real hardware). This is the gather/test_bit
 //! parity class. Pins the fix against `reference_eval`.
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use vyre_libs::math::bellman_shortest_path::{
     bellman_shortest_path, cpu_ref, BellmanBuffers, BellmanExtents,

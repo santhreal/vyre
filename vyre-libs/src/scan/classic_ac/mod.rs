@@ -24,8 +24,6 @@ mod count_program;
 #[cfg(test)]
 pub(crate) mod test_dispatch_and_decode;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use bounded_ranges::classic_ac_bounded_ranges_scan;
 /// The `build_*`/`try_build_*` form is the published entry for each program.
 /// The buffer-name form each one wraps stays inside `crate::scan`: the names it
 /// takes are the ABI every gate, prefilter row and parity test pins, so a
@@ -97,21 +95,6 @@ pub fn classic_ac_compile(patterns: &[&[u8]]) -> ClassicAcAutomaton {
 /// Returns a vector of `(pattern_id, end_offset)` pairs.  `end_offset`
 /// is the byte position (0-based, inclusive) where the match ends.
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn classic_ac_scan(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<(u32, u32)> {
-    let dfa = &ac.dfa;
-    let mut state = 0u32;
-    let mut out = Vec::new();
-    for (pos, &b) in haystack.iter().enumerate() {
-        state = dfa.transitions[(state as usize) * 256 + (b as usize)];
-        let begin = dfa.output_offsets[state as usize] as usize;
-        let end = dfa.output_offsets[state as usize + 1] as usize;
-        for &pattern_id in &dfa.output_records[begin..end] {
-            out.push((pattern_id, pos as u32));
-        }
-    }
-    out
-}
 
 /// Reference oracle that returns a per-position **count** of matches.
 ///
@@ -119,19 +102,6 @@ pub fn classic_ac_scan(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<(u32, u3
 /// This is the oracle shape used by the companion GPU emit when the
 /// caller only needs cardinality, not the individual pattern ids.
 #[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn classic_ac_scan_counts(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<u32> {
-    let dfa = &ac.dfa;
-    let mut state = 0u32;
-    let mut out = Vec::with_capacity(haystack.len());
-    for &b in haystack {
-        state = dfa.transitions[(state as usize) * 256 + (b as usize)];
-        let begin = dfa.output_offsets[state as usize] as usize;
-        let end = dfa.output_offsets[state as usize + 1] as usize;
-        out.push((end - begin) as u32);
-    }
-    out
-}
 
 /// Build a vyre `Program` that scans `haystack` and appends every
 /// matching pattern id to `matches` via an atomic slot counter.

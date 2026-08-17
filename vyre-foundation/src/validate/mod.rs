@@ -10,7 +10,7 @@
 ///
 /// Ensures that buffer names are unique, binding slots do not collide,
 /// and workgroup buffers have positive element counts.
-pub mod binding;
+pub(crate) mod binding;
 
 /// The validation-rule catalog and its generated-document renderer.
 ///
@@ -29,7 +29,7 @@ pub(crate) mod depth;
 ///
 /// Internal utilities for building consistent `ValidationError` values
 /// with actionable `Fix:` messages.
-pub mod err;
+pub(crate) mod err;
 /// Validation options + backend capability hooks.
 pub(crate) mod options;
 

@@ -7,7 +7,6 @@
 //! this crate's test sources.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;

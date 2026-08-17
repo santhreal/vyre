@@ -14,7 +14,6 @@
 //! corrected `fixed_mul_16_16_expr`; this generated corpus stays non-negative so the value is unchanged,
 //! but the oracle mirrors the signed kernel exactly (see BACKLOG FIXED-amg-fixed-path-unsigned-mul)).
 //! That is exactly reproducible in u32, so the oracle here is BIT-EXACT (no tolerance).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::sheaf_heterophilic_dispatch::diffuse_dispatch_stalks_fixed_via;
 

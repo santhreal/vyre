@@ -11,25 +11,25 @@ use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
 use super::shape::{output_tile_shape, padded_tile_lane_count, MatrixShape, TileShape};
 use super::tensor_core_policy::{select_matmul_kernel, MatmulKernelPath};
 
-pub(super) struct MatmulTiledProgramSpec<'a> {
-    pub(super) op_id: &'static str,
-    pub(super) a: &'a str,
-    pub(super) b: &'a str,
-    pub(super) bias: Option<&'a str>,
-    pub(super) out: &'a str,
-    pub(super) m: u32,
-    pub(super) k: u32,
-    pub(super) n: u32,
-    pub(super) tile: u32,
-    pub(super) workgroup: [u32; 3],
-    pub(super) generator: &'static str,
-    pub(super) dtype: DataType,
-    pub(super) a_tile_name: &'a str,
-    pub(super) b_tile_name: &'a str,
-    pub(super) mma_capabilities: MmaCapabilityRecord,
+pub(crate) struct MatmulTiledProgramSpec<'a> {
+    pub(crate) op_id: &'static str,
+    pub(crate) a: &'a str,
+    pub(crate) b: &'a str,
+    pub(crate) bias: Option<&'a str>,
+    pub(crate) out: &'a str,
+    pub(crate) m: u32,
+    pub(crate) k: u32,
+    pub(crate) n: u32,
+    pub(crate) tile: u32,
+    pub(crate) workgroup: [u32; 3],
+    pub(crate) generator: &'static str,
+    pub(crate) dtype: DataType,
+    pub(crate) a_tile_name: &'a str,
+    pub(crate) b_tile_name: &'a str,
+    pub(crate) mma_capabilities: MmaCapabilityRecord,
 }
 
-pub(super) fn build_matmul_tiled_program(
+pub(crate) fn build_matmul_tiled_program(
     spec: MatmulTiledProgramSpec<'_>,
 ) -> Result<Program, TensorRefError> {
     let MatmulTiledProgramSpec {

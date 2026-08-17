@@ -27,8 +27,6 @@ pub(crate) mod csr_frontier_queue_scratch;
 pub(crate) mod dispatch_bridge;
 pub mod dominator_frontier;
 pub mod exploded;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) mod frontier;
 pub mod level_wave_pass;
 pub mod motif;
 pub mod path_reconstruct;

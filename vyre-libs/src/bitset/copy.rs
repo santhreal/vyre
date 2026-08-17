@@ -19,12 +19,6 @@ pub fn bitset_copy(target: &str, source: &str, words: u32) -> Program {
     copy_word_program(OP_ID, target, source, words)
 }
 
-/// CPU reference. Copies `source` into `target` word-for-word.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(target: &mut [u32], source: &[u32]) {
-    let n = target.len().min(source.len());
-    target[..n].copy_from_slice(&source[..n]);
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

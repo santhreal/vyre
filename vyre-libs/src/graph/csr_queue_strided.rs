@@ -72,18 +72,6 @@ pub fn csr_queue_strided_forward_traverse_with(
     ))
 }
 
-/// CPU reference for the row-strided queue traversal.
-///
-/// Row-striding decides which lane walks which edge slot and nothing else, so
-/// this op has no traversal semantics of its own to check: the queue-driven
-/// reference is published here under the strided names. A second hand-written
-/// copy could only drift away from the walk it is supposed to check.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use crate::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse_cpu as csr_queue_strided_forward_traverse_cpu,
-    try_csr_queue_forward_traverse_cpu as try_csr_queue_strided_forward_traverse_cpu,
-    try_csr_queue_forward_traverse_cpu_into as try_csr_queue_strided_forward_traverse_cpu_into,
-};
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

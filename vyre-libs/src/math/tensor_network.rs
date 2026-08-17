@@ -56,85 +56,11 @@ pub fn try_tn_pair_contract(
     try_fixed_u32_matmul(a, b, c, m, k, n, &MATMUL_CONTEXT)
 }
 
-/// CPU reference: f64.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn tn_pair_contract_cpu(a: &[f64], b: &[f64], m: u32, k: u32, n: u32) -> Vec<f64> {
-    try_tn_pair_contract_cpu(a, b, m, k, n).unwrap_or_else(|error| panic!("{error}"))
-}
 
-/// Fallible CPU reference: f64.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_tn_pair_contract_cpu(
-    a: &[f64],
-    b: &[f64],
-    m: u32,
-    k: u32,
-    n: u32,
-) -> Result<Vec<f64>, String> {
-    let mut c = Vec::new();
-    try_tn_pair_contract_cpu_into(a, b, m, k, n, &mut c)?;
-    Ok(c)
-}
 
-/// CPU reference into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn tn_pair_contract_cpu_into(a: &[f64], b: &[f64], m: u32, k: u32, n: u32, c: &mut Vec<f64>) {
-    try_tn_pair_contract_cpu_into(a, b, m, k, n, c).unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_tn_pair_contract_cpu_into(
-    a: &[f64],
-    b: &[f64],
-    m: u32,
-    k: u32,
-    n: u32,
-    c: &mut Vec<f64>,
-) -> Result<(), String> {
-    crate::math::cpu_matrix::try_f64_matmul_into(
-        a,
-        b,
-        m,
-        k,
-        n,
-        c,
-        crate::math::cpu_matrix::MatmulContext::TENSOR_CONTRACT,
-    )
-}
 
-/// CPU helper: greedy contraction-order picker. Given a list of tensor
-/// dimensions, return an ordering that minimizes the sum of
-/// intermediate sizes. This is the tropical-shortest-path solution
-/// in a small-dimension case.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn greedy_contract_order_cpu(dims: &[u32]) -> Vec<usize> {
-    let mut order = Vec::new();
-    try_greedy_contract_order_cpu_into(dims, &mut order).unwrap_or_else(|error| panic!("{error}"));
-    order
-}
 
-/// Fallible greedy contraction-order picker into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_greedy_contract_order_cpu_into(
-    dims: &[u32],
-    order: &mut Vec<usize>,
-) -> Result<(), String> {
-    if dims.len() > order.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            order,
-            dims.len() - order.len(),
-            "tensor-network CPU oracle",
-            "greedy_contract_order output",
-        )?;
-    }
-    order.clear();
-    order.extend(0..dims.len());
-    order.sort_by(|&left, &right| dims[right].cmp(&dims[left]).then_with(|| left.cmp(&right)));
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

@@ -59,7 +59,7 @@ jobs:
         # `--lib` release-evidence state.)
         run: >-
           ./cargo_full test -p vyre-libs
-          --features analysis,cpu-parity,encoding,graph-dispatch,reasoning,scheduling,solvers,test-fixtures
+          --features analysis,encoding,graph-dispatch,reasoning,scheduling,solvers,test-fixtures
           --test sweep_graph_cpu_oracle_matrix
           --test do_calculus_surgery_via_reference_parity
           --test functor_apply_via_reference_parity

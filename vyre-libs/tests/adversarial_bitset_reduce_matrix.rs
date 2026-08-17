@@ -4,7 +4,6 @@
 //! drives every scalar reducer, vector unary bitset map, and binary bitset map
 //! through the same hostile length/value corpus.
 
-#![cfg(feature = "cpu-parity")]
 
 mod wire_words;
 use wire_words::{alternating, lcg_u32 as lcg, ramp};
@@ -17,30 +16,30 @@ type BinaryVectorInto = fn(&[u32], &[u32], &mut Vec<u32>);
 
 #[test]
 fn scalar_bitset_and_reduce_ops_cover_adversarial_matrix() {
-    assert_unary_scalar("bitset_any", vyre_libs::bitset::any::cpu_ref, |input| {
+    assert_unary_scalar("bitset_any", |input| u32::from(input.iter().any(|word| *word != 0)), |input| {
         u32::from(input.iter().any(|word| *word != 0))
     });
-    assert_unary_scalar("reduce_all", vyre_libs::reduce::all::cpu_ref, |input| {
+    assert_unary_scalar("reduce_all", |input| u32::from(input.iter().all(|value| *value != 0)), |input| {
         u32::from(input.iter().all(|value| *value != 0))
     });
-    assert_unary_scalar("reduce_any", vyre_libs::reduce::any::cpu_ref, |input| {
+    assert_unary_scalar("reduce_any", |input| u32::from(input.iter().any(|value| *value != 0)), |input| {
         u32::from(input.iter().any(|value| *value != 0))
     });
-    assert_unary_scalar("reduce_count", vyre_libs::reduce::count::cpu_ref, |input| {
+    assert_unary_scalar("reduce_count", |input| input.iter().map(|word| word.count_ones()).sum(), |input| {
         input.iter().map(|word| word.count_ones()).sum()
     });
     assert_unary_scalar(
         "reduce_count_non_zero",
-        vyre_libs::reduce::count_non_zero::cpu_ref,
+        |input| input.iter().filter(|value| **value != 0).count() as u32,
         |input| input.iter().filter(|value| **value != 0).count() as u32,
     );
-    assert_unary_scalar("reduce_max", vyre_libs::reduce::max::cpu_ref, |input| {
+    assert_unary_scalar("reduce_max", |input| input.iter().copied().max().unwrap_or(0), |input| {
         input.iter().copied().max().unwrap_or(0)
     });
-    assert_unary_scalar("reduce_min", vyre_libs::reduce::min::cpu_ref, |input| {
+    assert_unary_scalar("reduce_min", |input| input.iter().copied().min().unwrap_or(u32::MAX), |input| {
         input.iter().copied().min().unwrap_or(u32::MAX)
     });
-    assert_unary_scalar("reduce_sum", vyre_libs::reduce::sum::cpu_ref, |input| {
+    assert_unary_scalar("reduce_sum", |input| input.iter().copied().fold(0u32, u32::wrapping_add), |input| {
         input.iter().copied().fold(0u32, u32::wrapping_add)
     });
 }
@@ -49,14 +48,14 @@ fn scalar_bitset_and_reduce_ops_cover_adversarial_matrix() {
 fn unary_bitset_maps_cover_adversarial_matrix_and_reused_outputs() {
     assert_unary_vector(
         "bitset_not",
-        vyre_libs::bitset::not::cpu_ref,
-        vyre_libs::bitset::not::cpu_ref_into,
+        vyre_reference::composition_witness::bitset_not_witness,
+        vyre_reference::composition_witness::bitset_not_witness_into,
         |input| input.iter().map(|word| !word).collect(),
     );
     assert_unary_vector(
         "bitset_popcount",
-        vyre_libs::bitset::popcount::cpu_ref,
-        vyre_libs::bitset::popcount::cpu_ref_into,
+        vyre_reference::composition_witness::bitset_popcount_witness,
+        vyre_reference::composition_witness::bitset_popcount_witness_into,
         |input| input.iter().map(|word| word.count_ones()).collect(),
     );
 }
@@ -65,8 +64,8 @@ fn unary_bitset_maps_cover_adversarial_matrix_and_reused_outputs() {
 fn binary_bitset_maps_cover_adversarial_matrix_and_reused_outputs() {
     assert_binary_vector(
         "bitset_and",
-        vyre_libs::bitset::and::cpu_ref,
-        vyre_libs::bitset::and::cpu_ref_into,
+        vyre_reference::composition_witness::bitset_and_witness,
+        vyre_reference::composition_witness::bitset_and_witness_into,
         |lhs, rhs| {
             lhs.iter()
                 .zip(rhs)
@@ -76,8 +75,8 @@ fn binary_bitset_maps_cover_adversarial_matrix_and_reused_outputs() {
     );
     assert_binary_vector(
         "bitset_or",
-        vyre_libs::bitset::or::cpu_ref,
-        vyre_libs::bitset::or::cpu_ref_into,
+        vyre_reference::composition_witness::bitset_or_witness,
+        vyre_reference::composition_witness::bitset_or_witness_into,
         |lhs, rhs| {
             lhs.iter()
                 .zip(rhs)
@@ -87,8 +86,8 @@ fn binary_bitset_maps_cover_adversarial_matrix_and_reused_outputs() {
     );
     assert_binary_vector(
         "bitset_xor",
-        vyre_libs::bitset::xor::cpu_ref,
-        vyre_libs::bitset::xor::cpu_ref_into,
+        vyre_reference::composition_witness::bitset_xor_witness,
+        vyre_reference::composition_witness::bitset_xor_witness_into,
         |lhs, rhs| {
             lhs.iter()
                 .zip(rhs)

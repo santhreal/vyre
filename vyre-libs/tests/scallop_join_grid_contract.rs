@@ -19,7 +19,7 @@
 //!    `grid_sync_split::split_on_grid_sync`. A fence that survives into a
 //!    segment reaches an emitter that refuses it, and a fence nested in a loop
 //!    cannot be cut at all.
-#![cfg(all(feature = "math-kernels", feature = "fixpoint", feature = "cpu-parity"))]
+#![cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 
 use vyre_foundation::transform::grid_sync_split::{
     contains_grid_sync, entry_sequence, loop_nested_grid_sync, split_on_grid_sync,

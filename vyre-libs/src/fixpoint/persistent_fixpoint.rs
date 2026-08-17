@@ -789,85 +789,8 @@ fn build_fixpoint_program(
     )
 }
 
-/// CPU oracle. Iterates `transfer_step` (a closure that takes
-/// `current` and writes `next`) until the two arrays match or
-/// `max_iterations` is hit. Returns the final `current` state and the
-/// number of iterations actually executed.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref<F>(seed: &[u32], max_iterations: u32, mut transfer_step: F) -> (Vec<u32>, u32)
-where
-    F: FnMut(&[u32], &mut [u32]),
-{
-    let mut current = Vec::new();
-    let mut next = Vec::new();
-    let iters = try_cpu_ref_into(
-        seed,
-        max_iterations,
-        &mut transfer_step,
-        &mut current,
-        &mut next,
-    )
-    .expect("Fix: caller must size scratch for node_count; use try_cpu_ref on hostile layouts");
-    (current, iters)
-}
 
-/// CPU oracle using caller-owned buffers.
-///
-/// `current` receives the final fixpoint state and `next` is retained as
-/// ping-pong scratch for subsequent calls.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into<F>(
-    seed: &[u32],
-    max_iterations: u32,
-    transfer_step: &mut F,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) -> u32
-where
-    F: FnMut(&[u32], &mut [u32]),
-{
-    try_cpu_ref_into(seed, max_iterations, transfer_step, current, next).expect(
-        "Fix: caller must size scratch for node_count; use try_cpu_ref_into on hostile layouts",
-    )
-}
 
-/// Fallible CPU oracle using caller-owned ping-pong buffers.
-///
-/// The output buffers are not mutated until both have enough capacity
-/// for the seed length.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into<F>(
-    seed: &[u32],
-    max_iterations: u32,
-    transfer_step: &mut F,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) -> Result<u32, String>
-where
-    F: FnMut(&[u32], &mut [u32]),
-{
-    let additional_current = seed.len().saturating_sub(current.capacity());
-    let additional_next = seed.len().saturating_sub(next.capacity());
-    current
-        .try_reserve_exact(additional_current)
-        .map_err(|err| format!("failed to reserve current fixpoint buffer: {err}"))?;
-    next.try_reserve_exact(additional_next)
-        .map_err(|err| format!("failed to reserve next fixpoint buffer: {err}"))?;
-    current.clear();
-    current.extend_from_slice(seed);
-    next.clear();
-    next.resize(seed.len(), 0);
-    for iter in 0..max_iterations {
-        next.fill(0);
-        transfer_step(current, next);
-        if next == current {
-            return Ok(iter + 1);
-        }
-        std::mem::swap(current, next);
-    }
-    Ok(max_iterations)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

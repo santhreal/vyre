@@ -15,15 +15,8 @@ use crate::dispatch_buffers::{
 use crate::graph::do_calculus::{
     do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::graph::do_calculus::{
-    do_intervention_delete_incoming_cpu_into, do_rule2_reverse_incoming_cpu_into,
-    do_rule3_subgraph_cpu_into,
-};
 use crate::prelude::reachability_closure_via_into;
 use vyre_foundation::ir::Program;
-#[cfg(any(test, feature = "cpu-parity"))]
-use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Reusable matrix buffers for do-calculus impact queries.
@@ -58,65 +51,8 @@ impl DoCalculusImpactScratch {
     }
 }
 
-/// Predict which nodes in a dependency graph are impacted by a change
-/// in a subset of nodes.
-///
-/// This performs a `do(intervened_nodes)` intervention (removing
-/// incoming edges to the changed nodes) and then computes the
-/// transitive closure to find all affected downstream nodes.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn predict_impact(adj: &[u32], intervention_mask: &[u32], n: u32) -> Vec<u32> {
-    use crate::telemetry::{bump, do_calculus_change_impact_calls};
-    bump(&do_calculus_change_impact_calls);
-    if n == 0 {
-        return Vec::new();
-    }
-    let mut scratch = DoCalculusImpactScratch::default();
-    predict_impact_with_scratch(adj, intervention_mask, n, &mut scratch);
-    scratch.impact_mask
-}
 
-/// Predict impact using named reusable scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn predict_impact_with_scratch(
-    adj: &[u32],
-    intervention_mask: &[u32],
-    n: u32,
-    scratch: &mut DoCalculusImpactScratch,
-) {
-    reference_predict_impact_into(
-        adj,
-        intervention_mask,
-        n,
-        &mut scratch.surgically_modified_adj,
-        &mut scratch.closure,
-        &mut scratch.scratch,
-        &mut scratch.impact_mask,
-    );
-}
 
-/// Predict impact while reusing caller-owned matrix scratch buffers.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_predict_impact_into(
-    adj: &[u32],
-    intervention_mask: &[u32],
-    n: u32,
-    surgically_modified_adj: &mut Vec<u32>,
-    closure: &mut Vec<u32>,
-    scratch: &mut Vec<u32>,
-    impact_mask: &mut Vec<u32>,
-) {
-    if n == 0 {
-        impact_mask.clear();
-        return;
-    }
-    do_intervention_delete_incoming_cpu_into(adj, intervention_mask, n, surgically_modified_adj);
-
-    reachability_closure_into(surgically_modified_adj, n, n, closure, scratch);
-
-    impact_mask_from_closure(intervention_mask, closure, n, impact_mask);
-}
 
 fn impact_mask_from_closure(
     intervention_mask: &[u32],
@@ -571,117 +507,10 @@ fn rule3_subgraph_via_into_with_inputs(
     Ok(())
 }
 
-/// Compute the impacted subgraph: the adjacency restricted to the
-/// nodes `predict_impact` flags as stale.
-///
-/// Uses do-calculus Rule 3 (subgraph extraction) on the impact mask.
-/// Returns `(reduced_adjacency, kept_indices)` where `reduced_adjacency`
-/// is row-major `k × k` with `k = kept_indices.len()`. The reduced
-/// adjacency contains only edges between impacted nodes; downstream
-/// analyses (lineage walks, dependency reports) iterate `k²` cells
-/// instead of `n²`.
-///
-/// On a hot path this lets cache invalidation skip every non-impacted
-/// row outright when computing per-impacted lineage details  -  `k` is
-/// almost always far smaller than `n`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn impact_subgraph(adj: &[u32], intervention_mask: &[u32], n: u32) -> (Vec<u32>, Vec<u32>) {
-    use crate::telemetry::{bump, do_calculus_change_impact_calls};
-    bump(&do_calculus_change_impact_calls);
-    if n == 0 {
-        return (Vec::new(), Vec::new());
-    }
-    let mut scratch = DoCalculusImpactScratch::default();
-    reference_impact_subgraph_with_scratch(adj, intervention_mask, n, &mut scratch);
-    (scratch.reduced_adjacency, scratch.kept_indices)
-}
 
-/// Compute impacted subgraph using named reusable scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_impact_subgraph_with_scratch(
-    adj: &[u32],
-    intervention_mask: &[u32],
-    n: u32,
-    scratch: &mut DoCalculusImpactScratch,
-) {
-    predict_impact_with_scratch(adj, intervention_mask, n, scratch);
-    do_rule3_subgraph_cpu_into(
-        adj,
-        &scratch.impact_mask,
-        n,
-        &mut scratch.reduced_adjacency,
-        &mut scratch.kept_indices,
-    );
-}
 
-/// Predict impact under the **observation** semantics rather than
-/// the **intervention** semantics.
-///
-/// Pearl's Rule 2 (action / observation exchange) says that for a
-/// node X, we can replace `do(X)` with an observation `X` after
-/// reversing the edges incoming to X. The two yield the same
-/// downstream-impact set on a DAG; on a graph with feedback edges
-/// into the observed node they differ  -  the rule-2 form lets a
-/// caller answer "if we OBSERVED rule X had changed (rather than
-/// explicitly invalidating it), what does the dependency graph
-/// predict?". Cache-invalidation telemetry uses this to model
-/// "passive change detection" against "active invalidation".
-///
-/// Returns a 0/1 mask over the n nodes; bit `j` set means the
-/// graph's reversed-edge reachability from the observed set
-/// reaches `j`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn predict_impact_observation_form(adj: &[u32], observation_mask: &[u32], n: u32) -> Vec<u32> {
-    use crate::telemetry::{bump, do_calculus_change_impact_calls};
-    bump(&do_calculus_change_impact_calls);
-    if n == 0 {
-        return Vec::new();
-    }
-    let mut scratch = DoCalculusImpactScratch::default();
-    predict_impact_observation_form_with_scratch(adj, observation_mask, n, &mut scratch);
-    scratch.impact_mask
-}
 
-/// Predict observation-form impact using named reusable scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn predict_impact_observation_form_with_scratch(
-    adj: &[u32],
-    observation_mask: &[u32],
-    n: u32,
-    scratch: &mut DoCalculusImpactScratch,
-) {
-    reference_predict_impact_observation_form_into(
-        adj,
-        observation_mask,
-        n,
-        &mut scratch.surgically_modified_adj,
-        &mut scratch.closure,
-        &mut scratch.scratch,
-        &mut scratch.impact_mask,
-    );
-}
 
-/// Predict observation-form impact while reusing caller-owned matrix scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_predict_impact_observation_form_into(
-    adj: &[u32],
-    observation_mask: &[u32],
-    n: u32,
-    reversed_adj: &mut Vec<u32>,
-    closure: &mut Vec<u32>,
-    scratch: &mut Vec<u32>,
-    impact_mask: &mut Vec<u32>,
-) {
-    if n == 0 {
-        impact_mask.clear();
-        return;
-    }
-    do_rule2_reverse_incoming_cpu_into(adj, observation_mask, n, reversed_adj);
-    reachability_closure_into(reversed_adj, n, n, closure, scratch);
-    impact_mask_from_closure(observation_mask, closure, n, impact_mask);
-}
 
 /// GPU-backed observation-form impact prediction.
 ///

@@ -136,52 +136,6 @@ pub fn simplicial_triangle_message(
     )
 }
 
-/// CPU reference: `triangle_messages = ∂(edge_features)` per triangle.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn simplicial_triangle_message_cpu(
-    edge_features: &[f64],
-    triangle_edges: &[u32],
-    n_edges: u32,
-    n_triangles: u32,
-    d: u32,
-) -> Vec<f64> {
-    let n_edges = n_edges as usize;
-    let n_triangles = n_triangles as usize;
-    let d = d as usize;
-
-    let mut out = vec![0.0; n_triangles * d];
-    for tri in 0..n_triangles {
-        let Some(&e_jk) = triangle_edges.get(tri * 3) else {
-            continue;
-        };
-        let Some(&e_ik) = triangle_edges.get(tri * 3 + 1) else {
-            continue;
-        };
-        let Some(&e_ij) = triangle_edges.get(tri * 3 + 2) else {
-            continue;
-        };
-        let e_jk = e_jk as usize;
-        let e_ik = e_ik as usize;
-        let e_ij = e_ij as usize;
-        if e_jk >= n_edges || e_ik >= n_edges || e_ij >= n_edges {
-            continue;
-        }
-        for k in 0..d {
-            let Some(&jk) = edge_features.get(e_jk * d + k) else {
-                continue;
-            };
-            let Some(&ik) = edge_features.get(e_ik * d + k) else {
-                continue;
-            };
-            let Some(&ij) = edge_features.get(e_ij * d + k) else {
-                continue;
-            };
-            out[tri * d + k] = jk - ik + ij;
-        }
-    }
-    out
-}
 
 #[cfg(test)]
 mod tests {

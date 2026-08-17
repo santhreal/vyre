@@ -2,8 +2,10 @@
 //!
 //! Category A composition. Each invocation computes one output element.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Program};
+
+use crate::builder::gemm::ContractionComposer;
+use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 /// Build a Program that computes batched matmul.
 ///
@@ -25,98 +27,41 @@ pub fn batch_matmul(
         return Err("Fix: batch_matmul all dims must be > 0".to_string());
     }
 
-    let a_batch_stride = m
-        .checked_mul(k)
+    m.checked_mul(k)
         .ok_or("Fix: batch_matmul a_batch_stride overflow")?;
-    let b_batch_stride = k
-        .checked_mul(n)
+    k.checked_mul(n)
         .ok_or("Fix: batch_matmul b_batch_stride overflow")?;
-    let out_batch_stride = m
-        .checked_mul(n)
+    m.checked_mul(n)
         .ok_or("Fix: batch_matmul out_batch_stride overflow")?;
-    let a_count = batch
-        .checked_mul(a_batch_stride)
-        .ok_or("Fix: batch_matmul a_count overflow")?;
-    let b_count = batch
-        .checked_mul(b_batch_stride)
-        .ok_or("Fix: batch_matmul b_count overflow")?;
-    let out_count = batch
-        .checked_mul(out_batch_stride)
-        .ok_or("Fix: batch_matmul out_count overflow")?;
 
-    let idx = Expr::var("idx");
-    let batch_idx = Expr::var("batch_idx");
-    let row = Expr::var("row");
-    let col = Expr::var("col");
-    let local_idx = Expr::var("local_idx");
+    let a_ref = TensorRef::new(a, DataType::F32, vec![batch, m, k]);
+    let b_ref = TensorRef::new(b, DataType::F32, vec![batch, k, n]);
+    let out_ref = TensorRef::new(out, DataType::F32, vec![batch, m, n]);
 
-    let body = vec![
-        Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-        Node::let_bind(
-            "batch_idx",
-            Expr::div(idx.clone(), Expr::u32(out_batch_stride)),
-        ),
-        Node::let_bind(
-            "local_idx",
-            Expr::rem(idx.clone(), Expr::u32(out_batch_stride)),
-        ),
-        Node::let_bind("row", Expr::div(local_idx.clone(), Expr::u32(n))),
-        Node::let_bind("col", Expr::rem(local_idx.clone(), Expr::u32(n))),
-        Node::if_then(
-            Expr::lt(idx.clone(), Expr::buf_len(out)),
-            vec![
-                Node::let_bind("acc", Expr::f32(0.0)),
-                Node::loop_for(
-                    "kk",
-                    Expr::u32(0),
-                    Expr::u32(k),
-                    vec![Node::assign(
-                        "acc",
-                        Expr::add(
-                            Expr::var("acc"),
-                            Expr::mul(
-                                Expr::load(
-                                    a,
-                                    Expr::add(
-                                        Expr::mul(batch_idx.clone(), Expr::u32(a_batch_stride)),
-                                        Expr::add(
-                                            Expr::mul(row.clone(), Expr::u32(k)),
-                                            Expr::var("kk"),
-                                        ),
-                                    ),
-                                ),
-                                Expr::load(
-                                    b,
-                                    Expr::add(
-                                        Expr::mul(batch_idx.clone(), Expr::u32(b_batch_stride)),
-                                        Expr::add(
-                                            Expr::mul(Expr::var("kk"), Expr::u32(n)),
-                                            col.clone(),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index: idx,
-                    value: Expr::var("acc"),
-                },
-            ],
-        ),
-    ];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(a, 0, BufferAccess::ReadOnly, DataType::F32).with_count(a_count),
-            BufferDecl::storage(b, 1, BufferAccess::ReadOnly, DataType::F32).with_count(b_count),
-            BufferDecl::output(out, 2, DataType::F32).with_count(out_count),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region("vyre-libs::nn::batch_matmul", body)],
-    ))
+    ContractionComposer::batched_matmul_3d(
+        "vyre-libs::nn::batch_matmul",
+        a_ref,
+        b_ref,
+        out_ref,
+        batch,
+        m,
+        k,
+        n,
+    )
+    .with_region_generator("anonymous::vyre-libs::nn::batch_matmul")
+    .build()
+    .map_err(|e| match e {
+        TensorRefError::ElementCountOverflow { name, .. } => {
+            if name == a {
+                "Fix: batch_matmul a_count overflow".to_string()
+            } else if name == b {
+                "Fix: batch_matmul b_count overflow".to_string()
+            } else {
+                "Fix: batch_matmul out_count overflow".to_string()
+            }
+        }
+        _ => format!("Fix: batch_matmul build failed: {e}"),
+    })
 }
 
 #[cfg(test)]

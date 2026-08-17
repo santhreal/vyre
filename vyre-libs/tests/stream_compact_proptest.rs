@@ -11,10 +11,11 @@
 //! (b) `live_count` == the survivor count. A wrong offset gather, an off-by-one on the final-lane
 //! `live_count` write, or a missed live lane diverges. Complements the inline oracle tests with the
 //! GPU-IR scatter path over randomized masks incl. all-dead, all-live, and single-lane.
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use proptest::prelude::*;
-use vyre_libs::math::stream_compact::{cpu_ref, stream_compact};
+use vyre_libs::math::stream_compact::stream_compact;
+fn cpu_ref(input: &[u32], flags: &[u32]) -> (Vec<u32>, u32) { let mut out = Vec::new(); for (&x, &f) in input.iter().zip(flags) { if f != 0 { out.push(x); } } let c = out.len() as u32; (out, c) }
 use vyre_reference::value::Value;
 
 /// Exclusive prefix sum of a 0/1 flag buffer — the `offsets` the op requires.

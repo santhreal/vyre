@@ -45,18 +45,6 @@ pub fn bitset_test_bit(buf: &str, bit_idx: u32, out_scalar: &str, words: u32) ->
     )
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(buf: &[u32], bit_idx: u32) -> u32 {
-    let w = (bit_idx / 32) as usize;
-    let b = bit_idx % 32;
-    if w >= buf.len() {
-        0
-    } else {
-        (buf[w] >> b) & 1
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

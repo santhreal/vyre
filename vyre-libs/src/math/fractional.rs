@@ -157,74 +157,8 @@ pub fn try_kernel_to_fixed_16_16_into(
     Ok(())
 }
 
-/// CPU reference: apply a length-`n` GL kernel to a signal `f` of
-/// length `m`. Uses zero-padding for `i - k < 0`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn fractional_derivative_cpu(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
-    let mut kernel = Vec::new();
-    let mut out = Vec::new();
-    try_fractional_derivative_cpu_into(f, alpha, step, &mut kernel, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference into caller-owned kernel and output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn fractional_derivative_cpu_into(
-    f: &[f64],
-    alpha: f64,
-    step: f64,
-    kernel: &mut Vec<f64>,
-    out: &mut Vec<f64>,
-) {
-    try_fractional_derivative_cpu_into(f, alpha, step, kernel, out)
-        .unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference into caller-owned kernel and output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_fractional_derivative_cpu_into(
-    f: &[f64],
-    alpha: f64,
-    step: f64,
-    kernel: &mut Vec<f64>,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    if f.len() > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            f.len() - out.len(),
-            "fractional calculus CPU oracle",
-            "fractional_derivative output",
-        )?;
-    }
-    out.clear();
-    if step <= 0.0 || !step.is_finite() || !alpha.is_finite() {
-        kernel.clear();
-        return Ok(());
-    }
-    let n = f.len();
-    let n_u32 = u32::try_from(n).map_err(|_| {
-        format!(
-            "fractional_derivative CPU oracle received {n} samples, exceeding u32 kernel length. Fix: shard the signal before parity evaluation."
-        )
-    })?;
-    try_grunwald_letnikov_kernel_into(alpha, n_u32, kernel)?;
-    if kernel.len() != n {
-        return Ok(());
-    }
-    let scale = step.powf(-alpha);
-
-    for i in 0..n {
-        let mut acc = 0.0;
-        for k in 0..=i {
-            acc += kernel[k] * f[i - k];
-        }
-        out.push(acc * scale);
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

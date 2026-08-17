@@ -114,4 +114,5 @@ inventory::submit! {
 }
 
 #[cfg(test)]
+#[path = "../tests/internal/mod.rs"]
 mod tests;

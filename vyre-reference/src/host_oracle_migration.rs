@@ -49,7 +49,7 @@ pub fn derive_host_function_inventory(
 ) -> Result<Vec<DiscoveredHostFunction>, String> {
     let mut inventory = Vec::new();
 
-    let target_crates = ["vyre-primitives", "vyre-libs"];
+    let target_crates = ["vyre-reference", "vyre-primitives", "vyre-libs"];
 
     for crate_name in target_crates {
         let src_dir = workspace_root.join(crate_name).join("src");

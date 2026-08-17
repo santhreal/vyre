@@ -197,79 +197,7 @@ pub fn kfac_block_inverse(
     )
 }
 
-/// CPU reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn cpu_ref(blocks_in: &[f32], num_blocks: u32, n: u32) -> Vec<f32> {
-    let n = n as usize;
-    let mut out = Vec::new();
-    let mut mat = Vec::new();
-    let mut inv = Vec::new();
-    cpu_ref_into(
-        blocks_in, num_blocks, n as u32, &mut out, &mut mat, &mut inv,
-    );
-    out
-}
 
-/// CPU reference using caller-owned output and per-block scratch buffers.
-///
-/// Uses flat `n*n` scratch matrices rather than allocating nested vectors for
-/// every block. `out` is overwritten with one inverse block per input block.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    blocks_in: &[f32],
-    num_blocks: u32,
-    n: u32,
-    out: &mut Vec<f32>,
-    mat: &mut Vec<f32>,
-    inv: &mut Vec<f32>,
-) {
-    let n = n as usize;
-    out.clear();
-    out.resize(blocks_in.len(), 0.0);
-    let Some(block_cells) = n.checked_mul(n) else {
-        panic!(
-            "kfac_block_inverse CPU oracle n={n} overflows block cell count. Fix: shard K-FAC blocks before parity comparison."
-        );
-    };
-    mat.clear();
-    mat.resize(block_cells, 0.0);
-    inv.clear();
-    inv.resize(block_cells, 0.0);
-    for b in 0..num_blocks as usize {
-        let block_offset = b * block_cells;
-        for i in 0..n {
-            for j in 0..n {
-                let idx = i * n + j;
-                mat[idx] = blocks_in[block_offset + idx];
-                inv[idx] = if i == j { 1.0 } else { 0.0 };
-            }
-        }
-        // Gauss-Jordan
-        for i in 0..n {
-            let pivot = mat[i * n + i];
-            for j in 0..n {
-                mat[i * n + j] /= pivot;
-                inv[i * n + j] /= pivot;
-            }
-            for k in 0..n {
-                if k != i {
-                    let factor = mat[k * n + i];
-                    for j in 0..n {
-                        mat[k * n + j] -= factor * mat[i * n + j];
-                        inv[k * n + j] -= factor * inv[i * n + j];
-                    }
-                }
-            }
-        }
-        for i in 0..n {
-            for j in 0..n {
-                let idx = i * n + j;
-                out[block_offset + idx] = inv[idx];
-            }
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

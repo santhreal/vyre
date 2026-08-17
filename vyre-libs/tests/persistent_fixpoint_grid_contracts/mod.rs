@@ -1,10 +1,28 @@
+//! Contract tests for `fixpoint::persistent_fixpoint::persistent_fixpoint_grid`,
+//! the grid-correct sibling of `persistent_fixpoint`.
+//! `persistent_fixpoint` drives convergence from an in-kernel
+//! `Node::Loop` whose per-iteration barriers are `MemoryOrdering::SeqCst`,
+//! which is WORKGROUP scope, and whose single shared `changed` word is
+//! cleared by a plain lane-0 store and set by every group's `atomic_or`.
+//! With more than one workgroup that is a race with two faces: a lost set
+//! (a clear erases another group's flag, that group reads 0 and returns
+//! early with unconverged state) and a false verdict (the flag read back
+//! after the dispatch does not describe the convergence actually reached).
+//! `persistent_fixpoint_grid` replaces the in-kernel loop with top-level
+//! waves separated by `MemoryOrdering::GridSync` barriers and gives
+//! `changed` one never-cleared word per iteration, which is what makes its
+//! early exit collective instead of a stranding hazard. Every test below
+//! locks one of those properties and names the defect it excludes.
+#![cfg(feature = "fixpoint")]
+
 use vyre_foundation::ir::{AtomicOp, Expr, MemoryOrdering, Node, Program};
 use vyre_foundation::visit::any_descendant;
 
 use vyre_libs::fixpoint::persistent_fixpoint::{
-    cpu_ref, persistent_fixpoint, persistent_fixpoint_grid, OP_ID_GRID,
+    persistent_fixpoint, persistent_fixpoint_grid, OP_ID_GRID,
     PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
+use vyre_reference::composition_witness::persistent_fixpoint_witness as cpu_ref;
 use vyre_reference::value::Value;
 
 /// Lane index every emitted body is indexed by.

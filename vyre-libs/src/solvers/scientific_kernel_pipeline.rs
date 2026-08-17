@@ -27,27 +27,6 @@ use crate::math::{
 };
 use vyre_foundation::ir::Program;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::{
-    bigint_add_carry::{
-        bigint_add_carry_cpu, bigint_add_carry_cpu_into, resolve_carry_chain_cpu,
-        resolve_carry_chain_cpu_into, BigIntAddCarryError,
-    },
-    conformal::{conformal_rank, predict_interval},
-    info_geometry::{amari_alpha_step_cpu, bhattacharyya_coefficient_cpu, fisher_rao_distance_cpu},
-    mori_zwanzig::{mz_project_step_cpu, mz_project_step_cpu_into},
-    ode_step::rk4_step_cpu,
-    padic::hensel_lift_step_cpu,
-    qsvt::{
-        qsvt_apply_cpu, qsvt_apply_cpu_into, qsvt_block_encode_cpu, qsvt_block_encode_cpu_into,
-    },
-    score_denoise::score_denoise_step_cpu,
-    semiring_gemm::{semiring_gemm_cpu, semiring_gemm_cpu_into},
-    sinkhorn::{sinkhorn_iter_cpu, sinkhorn_iter_cpu_into},
-    sos_certificate::{is_psd_cpu, sos_gram_construct_cpu, sos_gram_construct_cpu_into},
-    tensor_network::{greedy_contract_order_cpu, tn_pair_contract_cpu},
-    tensor_train::{tt_contract_step_cpu_into, tt_full_chain_cpu, tt_full_chain_cpu_with_scratch},
-};
 
 /// Build a Bhattacharyya per-element information-geometry dispatch.
 #[must_use]
@@ -208,19 +187,7 @@ pub fn dispatch_conformal_threshold(scores_sorted: &str, q_hat: &str, n: u32, k:
     conformal_threshold(scores_sorted, q_hat, n, k)
 }
 
-/// Compute the conformal rank used by self-substrate uncertainty gates.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_conformal_rank(n: u32, alpha: f64) -> u32 {
-    conformal_rank(n, alpha)
-}
 
-/// Compute a symmetric conformal prediction interval.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_predict_interval(y: u32, q_hat: u32) -> (u32, u32) {
-    predict_interval(y, q_hat)
-}
 
 /// Build a generic semiring GEMM dispatch.
 #[must_use]
@@ -258,316 +225,34 @@ pub fn dispatch_mz_project_step(p_matrix: &str, f_vec: &str, out: &str, n: u32) 
     mz_project_step(p_matrix, f_vec, out, n)
 }
 
-/// Reference oracle for zeroth-moment FMM scatter.
-///
-/// The primitive module keeps its FMM CPU helpers test-local; self-substrate
-/// needs an exported oracle because clustering and compression passes reuse
-/// the same scatter contract in integration tests.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_p2m_zeroth_moment(charges: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
-    let cell_count = cell_assignment
-        .iter()
-        .copied()
-        .max()
-        .and_then(|cell| usize::try_from(cell).ok())
-        .map_or(0, |cell| cell + 1);
-    let mut moments = vec![0.0; cell_count];
-    for (idx, charge) in charges.iter().copied().enumerate() {
-        if let Some(cell) = cell_assignment
-            .get(idx)
-            .and_then(|cell| usize::try_from(*cell).ok())
-        {
-            if let Some(moment) = moments.get_mut(cell) {
-                *moment += charge;
-            }
-        }
-    }
-    moments
-}
 
-/// CPU Bhattacharyya coefficient reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_bhattacharyya_coefficient(p: &[f64], q: &[f64]) -> f64 {
-    bhattacharyya_coefficient_cpu(p, q)
-}
 
-/// CPU Fisher-Rao distance reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_fisher_rao_distance(p: &[f64], q: &[f64]) -> f64 {
-    fisher_rao_distance_cpu(p, q)
-}
 
-/// CPU Amari-alpha interpolation reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_amari_alpha_step(p: &[f64], q: &[f64], alpha: f64, t: f64) -> Vec<f64> {
-    amari_alpha_step_cpu(p, q, alpha, t)
-}
 
-/// CPU tensor-train contraction reference using caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_tt_contract_step_into(
-    acc_in: &[f64],
-    core_slice: &[f64],
-    r_prev: u32,
-    r_next: u32,
-    out: &mut Vec<f64>,
-) {
-    tt_contract_step_cpu_into(acc_in, core_slice, r_prev, r_next, out);
-}
 
-/// CPU full tensor-train chain reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_tt_full_chain(
-    cores: &[Vec<f64>],
-    ranks: &[u32],
-    mode_dims: &[u32],
-    indices: &[u32],
-) -> f64 {
-    tt_full_chain_cpu(cores, ranks, mode_dims, indices)
-}
 
-/// CPU full tensor-train chain reference using caller-owned scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_tt_full_chain_with_scratch(
-    cores: &[Vec<f64>],
-    ranks: &[u32],
-    mode_dims: &[u32],
-    indices: &[u32],
-    acc: &mut Vec<f64>,
-    next: &mut Vec<f64>,
-) -> f64 {
-    tt_full_chain_cpu_with_scratch(cores, ranks, mode_dims, indices, acc, next)
-}
 
-/// CPU QSVT block-encoding reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_qsvt_block_encode(a: &[f64], n: u32) -> (Vec<f64>, f64) {
-    qsvt_block_encode_cpu(a, n)
-}
 
-/// CPU QSVT block-encoding reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_qsvt_block_encode_into(a: &[f64], n: u32, out: &mut Vec<f64>) -> f64 {
-    qsvt_block_encode_cpu_into(a, n, out)
-}
 
-/// CPU QSVT polynomial-application reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_qsvt_apply(a_scaled: &[f64], v: &[f64], coeffs: &[f64], n: u32) -> Vec<f64> {
-    qsvt_apply_cpu(a_scaled, v, coeffs, n)
-}
 
-/// CPU QSVT polynomial-application reference using caller-owned scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_qsvt_apply_into(
-    a_scaled: &[f64],
-    v: &[f64],
-    coeffs: &[f64],
-    n: u32,
-    out: &mut Vec<f64>,
-    t_prev: &mut Vec<f64>,
-    t_curr: &mut Vec<f64>,
-    t_next: &mut Vec<f64>,
-) {
-    qsvt_apply_cpu_into(a_scaled, v, coeffs, n, out, t_prev, t_curr, t_next);
-}
 
-/// CPU Hensel-lift reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_hensel_lift_step(x: f64, f_x: f64, inv_f_prime: f64) -> f64 {
-    hensel_lift_step_cpu(x, f_x, inv_f_prime)
-}
 
-/// CPU SOS Gram-construction reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sos_gram_construct(monomial_pairs: &[u32], p_coeffs: &[u32], m: u32) -> Vec<u32> {
-    sos_gram_construct_cpu(monomial_pairs, p_coeffs, m)
-}
 
-/// CPU SOS Gram-construction reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sos_gram_construct_into(
-    monomial_pairs: &[u32],
-    p_coeffs: &[u32],
-    m: u32,
-    out: &mut Vec<u32>,
-) {
-    sos_gram_construct_cpu_into(monomial_pairs, p_coeffs, m, out);
-}
 
-/// CPU positive-semidefinite predicate reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_is_psd(matrix: &[f64], n: u32) -> bool {
-    is_psd_cpu(matrix, n)
-}
 
-/// CPU limb add/carry reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_bigint_add_carry(
-    a: &[u32],
-    b: &[u32],
-) -> Result<(Vec<u32>, Vec<u32>), BigIntAddCarryError> {
-    bigint_add_carry_cpu(a, b)
-}
 
-/// CPU limb add/carry reference using caller-owned buffers.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_bigint_add_carry_into(
-    a: &[u32],
-    b: &[u32],
-    sum_partial: &mut Vec<u32>,
-    carry_partial: &mut Vec<u32>,
-) -> Result<(), BigIntAddCarryError> {
-    bigint_add_carry_cpu_into(a, b, sum_partial, carry_partial)
-}
 
-/// CPU carry-chain resolution reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_resolve_carry_chain(
-    sum_partial: &[u32],
-    carry_partial: &[u32],
-) -> Result<(Vec<u32>, u32), BigIntAddCarryError> {
-    resolve_carry_chain_cpu(sum_partial, carry_partial)
-}
 
-/// CPU carry-chain resolution reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_resolve_carry_chain_into(
-    sum_partial: &[u32],
-    carry_partial: &[u32],
-    final_sum: &mut Vec<u32>,
-) -> Result<u32, BigIntAddCarryError> {
-    resolve_carry_chain_cpu_into(sum_partial, carry_partial, final_sum)
-}
 
-/// CPU tensor-network pair contraction reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_tn_pair_contract(a: &[f64], b: &[f64], m: u32, k: u32, n: u32) -> Vec<f64> {
-    tn_pair_contract_cpu(a, b, m, k, n)
-}
 
-/// CPU greedy tensor-network contraction ordering reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_greedy_contract_order(dims: &[u32]) -> Vec<usize> {
-    greedy_contract_order_cpu(dims)
-}
 
-/// CPU RK4 reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_rk4_step(
-    y_prev: &[f64],
-    k1: &[f64],
-    k2: &[f64],
-    k3: &[f64],
-    k4: &[f64],
-    h: f64,
-) -> Vec<f64> {
-    rk4_step_cpu(y_prev, k1, k2, k3, k4, h)
-}
 
-/// CPU Sinkhorn iteration reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_sinkhorn_iter(
-    k: &[f64],
-    a: &[f64],
-    b: &[f64],
-    u: &mut [f64],
-    v: &mut [f64],
-    m: u32,
-    n: u32,
-) {
-    sinkhorn_iter_cpu(k, a, b, u, v, m, n);
-}
 
-/// CPU Sinkhorn iteration reference using caller-owned scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_sinkhorn_iter_into(
-    k: &[f64],
-    a: &[f64],
-    b: &[f64],
-    u: &mut [f64],
-    v: &mut [f64],
-    m: u32,
-    n: u32,
-    kv: &mut Vec<f64>,
-    ktu: &mut Vec<f64>,
-) {
-    sinkhorn_iter_cpu_into(k, a, b, u, v, m, n, kv, ktu);
-}
 
-/// CPU score-denoising reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_score_denoise_step(
-    x: &[f64],
-    score: &[f64],
-    noise: &[f64],
-    alpha: f64,
-    beta: f64,
-    sigma: f64,
-) -> Vec<f64> {
-    score_denoise_step_cpu(x, score, noise, alpha, beta, sigma)
-}
 
-/// CPU semiring GEMM reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_semiring_gemm(
-    a: &[u32],
-    b: &[u32],
-    m: u32,
-    n: u32,
-    k: u32,
-    semiring: Semiring,
-) -> Vec<u32> {
-    semiring_gemm_cpu(a, b, m, n, k, semiring)
-}
 
-/// CPU semiring GEMM reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_semiring_gemm_into(
-    a: &[u32],
-    b: &[u32],
-    m: u32,
-    n: u32,
-    k: u32,
-    semiring: Semiring,
-    c: &mut Vec<u32>,
-) {
-    semiring_gemm_cpu_into(a, b, m, n, k, semiring, c);
-}
 
-/// CPU Mori-Zwanzig projection reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_mz_project_step(p_matrix: &[f64], f_vec: &[f64], n: u32) -> Vec<f64> {
-    mz_project_step_cpu(p_matrix, f_vec, n)
-}
 
-/// CPU Mori-Zwanzig projection reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_mz_project_step_into(p_matrix: &[f64], f_vec: &[f64], n: u32, out: &mut Vec<f64>) {
-    mz_project_step_cpu_into(p_matrix, f_vec, n, out);
-}
 
 #[cfg(test)]
 mod tests {

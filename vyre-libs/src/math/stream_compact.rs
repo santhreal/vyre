@@ -76,33 +76,7 @@ pub fn stream_compact(
     )
 }
 
-/// CPU reference for stream compaction.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(payloads: &[u32], flags: &[u32]) -> (Vec<u32>, u32) {
-    let mut compacted = Vec::new();
-    let live_count = cpu_ref_into(payloads, flags, &mut compacted);
-    (compacted, live_count)
-}
 
-/// CPU reference using a caller-owned compaction buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(payloads: &[u32], flags: &[u32], compacted: &mut Vec<u32>) -> u32 {
-    compacted.clear();
-    compacted.reserve(
-        payloads
-            .iter()
-            .zip(flags.iter())
-            .filter(|(_, flag)| **flag != 0)
-            .count(),
-    );
-    for (&payload, &flag) in payloads.iter().zip(flags.iter()) {
-        if flag != 0 {
-            compacted.push(payload);
-        }
-    }
-    compacted.len() as u32
-}
 
 #[cfg(test)]
 mod tests {

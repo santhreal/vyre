@@ -2,8 +2,8 @@
 //!
 //! Category A composition.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{Expr, Program, UnOp};
 
 use crate::nn::f32_stability::flush_tiny;
 
@@ -30,30 +30,7 @@ pub(crate) fn silu_expr(x: Expr) -> Expr {
 /// `output`. `n` is the element count of both buffers.
 #[must_use]
 pub fn silu(input: &str, output: &str, n: u32) -> Program {
-    let i = Expr::var("i");
-    let x = Expr::load(input, i.clone());
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::buf_len(input)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: silu_expr(x),
-            }],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 1, DataType::F32)
-                .with_count(n.max(1))
-                .with_output_byte_range(0..(n as usize).saturating_mul(4)),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region("vyre-libs::nn::silu", body)],
-    )
+    ElementwiseComposer::f32_unary("vyre-libs::nn::silu", input, output, n, silu_expr)
 }
 
 inventory::submit! {

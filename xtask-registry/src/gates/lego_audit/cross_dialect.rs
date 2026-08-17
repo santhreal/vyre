@@ -54,6 +54,26 @@ pub(super) fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
         return 0;
     }
     let mut flagged = 0usize;
+
+    // Verify that every dialect directory is declared in lib.rs
+    let lib_rs_path = libs_root.join("lib.rs");
+    if let Ok(lib_text) = read_text_bounded(&lib_rs_path) {
+        for dialect in &dialects {
+            let dialect_name = dialect.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let mod_decl_pub = format!("pub mod {dialect_name};");
+            let mod_decl_pub_crate = format!("pub(crate) mod {dialect_name};");
+            let mod_decl_bare = format!("mod {dialect_name};");
+            if !lib_text.contains(&mod_decl_pub)
+                && !lib_text.contains(&mod_decl_pub_crate)
+                && !lib_text.contains(&mod_decl_bare)
+            {
+                report.find(violation(format!(
+                    "  ✗ domain directory `vyre-libs/src/{dialect_name}` is not declared in `vyre-libs/src/lib.rs`. Fix: declare `pub mod {dialect_name};` in `lib.rs` with its feature gate, or remove the unlinked directory."
+                )));
+                flagged += 1;
+            }
+        }
+    }
     for dialect in &dialects {
         let dialect_name = dialect.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let sources = xtask::tree_walk::pruned_by(dialect, |name| {
@@ -384,5 +404,42 @@ mod tests {
             vec![first],
             "a directory that holds no Rust source holds no exemption"
         );
+    }
+
+    /// WHY: every dialect directory must be declared in `lib.rs` and reachable.
+    #[test]
+    fn undeclared_domain_directory_is_flagged_by_cross_dialect_gate() {
+        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+        write_module(libs_src.path(), "math");
+        write_module(libs_src.path(), "unlinked_domain");
+        std::fs::write(libs_src.path().join("lib.rs"), "pub mod math;\n")
+            .expect("write lib.rs");
+
+        let (dialects, errors) = list_dialect_dirs(libs_src.path());
+        assert!(errors.is_empty());
+        assert_eq!(dialects.len(), 2);
+
+        let mut report = Report::clean();
+        let lib_text = std::fs::read_to_string(libs_src.path().join("lib.rs")).unwrap();
+        let mut flagged = 0;
+        for dialect in &dialects {
+            let dialect_name = dialect.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let mod_decl_pub = format!("pub mod {dialect_name};");
+            let mod_decl_pub_crate = format!("pub(crate) mod {dialect_name};");
+            let mod_decl_bare = format!("mod {dialect_name};");
+            if !lib_text.contains(&mod_decl_pub)
+                && !lib_text.contains(&mod_decl_pub_crate)
+                && !lib_text.contains(&mod_decl_bare)
+            {
+                report.find(violation(format!(
+                    "  ✗ domain directory `vyre-libs/src/{dialect_name}` is not declared in `vyre-libs/src/lib.rs`"
+                )));
+                flagged += 1;
+            }
+        }
+        assert_eq!(flagged, 1);
+        assert!(report.findings[0]
+            .message
+            .contains("domain directory `vyre-libs/src/unlinked_domain` is not declared"));
     }
 }

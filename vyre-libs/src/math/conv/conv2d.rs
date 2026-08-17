@@ -6,7 +6,7 @@
 //! which is the canonical
 //! `sum_{ky, kx} input[y+ky-1, x+kx-1] * kernel[ky, kx]`.
 //!
-//! The patch row comes from the im2col owner (`super::im2col::patch_taps`),
+//! The patch row comes from the stencil owner (`crate::builder::stencil::stencil_3x3_taps`),
 //! so the 3x3 neighbour walk lives in exactly one place. The gemm half is the
 //! `k` contraction in the body, unrolled at `k = 9` and fused into the same
 //! invocation: a lane consumes only the patch row it produced, so no patch
@@ -21,7 +21,7 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::im2col::patch_taps;
+use crate::builder::stencil::stencil_3x3_taps;
 
 const OP_ID: &str = "vyre-libs::math::conv::conv2d_3x3_direct";
 
@@ -45,20 +45,21 @@ pub fn conv2d_3x3_direct(
         "Fix: conv2d_3x3_direct h*w overflows u32; reduce dimensions.".to_string()
     })?;
     // Per-output body: one invocation per output pixel.
+    let (y, x) = crate::builder::stencil::decompose_index(&Expr::var("flat"), w);
     let body = vec![
         Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
         Node::if_then(
             Expr::lt(Expr::var("flat"), Expr::u32(elements)),
             vec![
-                Node::let_bind("y", Expr::div(Expr::var("flat"), Expr::u32(w))),
-                Node::let_bind("x", Expr::rem(Expr::var("flat"), Expr::u32(w))),
+                Node::let_bind("y", y),
+                Node::let_bind("x", x),
                 Node::let_bind("acc", Expr::f32(0.0)),
                 // gemm over the im2col patch row: patch column k times
                 // kernel[k], accumulated across the nine taps. A column
                 // outside the image is zero-padding, so it contributes
                 // exactly 0.0 instead of a product with the kernel tap.
                 Node::Block(
-                    patch_taps(&Expr::var("y"), &Expr::var("x"), h, w)
+                    stencil_3x3_taps(&Expr::var("y"), &Expr::var("x"), h, w)
                         .into_iter()
                         .map(|tap| {
                             Node::assign(

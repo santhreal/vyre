@@ -10,7 +10,7 @@
 //!
 //! Both consume one byte per u32 input slot (low 8 bits). The sweep runs random byte strings
 //! (0..=256) plus deterministic anchors: `adler32(b"Wikipedia") == 0x11E60398` and the empty string.
-#![cfg(all(feature = "hash", feature = "cpu-parity"))]
+#![cfg(feature = "hash")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;

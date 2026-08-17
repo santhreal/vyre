@@ -18,6 +18,7 @@ use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/cases/dataflow_irregular/mod.rs"]
 mod tests;
 
 mod closure;

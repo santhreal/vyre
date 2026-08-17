@@ -1,5 +1,5 @@
 //! Property gates for bitset boolean algebra across AND, OR, and NOT.
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
 use vyre_libs::bitset::{and, equal, not, or};

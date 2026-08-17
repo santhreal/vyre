@@ -7,7 +7,7 @@
 //! a crossed output binding diverges. The sweep runs random packed streams (segment_count 1..=256, one
 //! workgroup) with values covering the full 24-bit length / 8-bit value fields, asserting BOTH output
 //! buffers (`segment_lengths_out`=binding 1, `segment_values_out`=binding 2) bit-exact vs the oracle.
-#![cfg(all(feature = "decode", feature = "cpu-parity"))]
+#![cfg(feature = "decode")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;

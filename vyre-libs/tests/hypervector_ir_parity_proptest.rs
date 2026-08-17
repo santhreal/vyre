@@ -12,7 +12,7 @@
 //! The sweep randomizes `dim_words` (1..=16) and `k` (1..=9, spanning even/odd so the tie rule is
 //! exercised both ways), asserting the IR output bit-exact vs the oracle, plus deterministic
 //! all-zeros / all-ones / single-vector anchors.
-#![cfg(all(feature = "hash", feature = "cpu-parity"))]
+#![cfg(feature = "hash")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;

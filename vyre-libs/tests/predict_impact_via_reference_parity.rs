@@ -16,7 +16,6 @@
 //! closure of an adjacency matrix (static-index accumulation), which converges correctly through the
 //! faithful boundary (unlike the data-dependent indirect-scatter fixpoints, see
 //! `BUG-reference-eval-indirect-scatter-fixpoint-1round`).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact, predict_impact_observation_form, predict_impact_observation_form_via,

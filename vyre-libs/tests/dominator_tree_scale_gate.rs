@@ -1,6 +1,5 @@
 //! Tier 8 - Scale gate: 10M+ node graph, no OOM, no panic, completes within budget.
 #![cfg(feature = "graph")]
-#![cfg(feature = "cpu-parity")]
 
 use std::time::Instant;
 use vyre_libs::graph::dominator_tree::{

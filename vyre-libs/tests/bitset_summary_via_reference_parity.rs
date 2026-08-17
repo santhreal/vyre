@@ -9,7 +9,6 @@
 //! Contract (audited CLEAN): per_word_popcount binds input RO(0) + out RW(1) = 2 IC, decode
 //! outputs[0]. Exact integer arithmetic → BIT-EXACT (no tolerance), compared against a fully
 //! independent inline `u32::count_ones` oracle.
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::encoding::bitset_summary::{per_word_popcount_via, total_set_bits_via};
 

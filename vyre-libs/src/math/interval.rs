@@ -84,28 +84,6 @@ pub fn interval_merge_program(
     )
 }
 
-/// CPU oracle for interval merge.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_interval_merge(
-    mins_a: &[u32],
-    maxs_a: &[u32],
-    mins_b: &[u32],
-    maxs_b: &[u32],
-) -> (Vec<u32>, Vec<u32>) {
-    let len = mins_a
-        .len()
-        .min(maxs_a.len())
-        .min(mins_b.len())
-        .min(maxs_b.len());
-    let mut mins = Vec::with_capacity(len);
-    let mut maxs = Vec::with_capacity(len);
-    for i in 0..len {
-        mins.push(mins_a[i].min(mins_b[i]));
-        maxs.push(maxs_a[i].max(maxs_b[i]));
-    }
-    (mins, maxs)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

@@ -132,14 +132,6 @@ pub(crate) fn atomic_nonzero_bool_reduce_u32(
     )
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn cpu_ref_nonzero_bool_reduce(values: &[u32], kind: AtomicBoolReduceKind) -> u32 {
-    let matched = match kind {
-        AtomicBoolReduceKind::AnyNonZero => values.iter().any(|&value| value != 0),
-        AtomicBoolReduceKind::AllNonZero => values.iter().all(|&value| value != 0),
-    };
-    u32::from(matched)
-}
 
 macro_rules! define_bool_reduce_op {
     (
@@ -165,15 +157,6 @@ macro_rules! define_bool_reduce_op {
             )
         }
 
-        /// CPU reference.
-        #[must_use]
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref(values: &[u32]) -> u32 {
-            crate::reduce::atomic_scalar::cpu_ref_nonzero_bool_reduce(
-                values,
-                crate::reduce::atomic_scalar::AtomicBoolReduceKind::$kind,
-            )
-        }
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
@@ -246,13 +229,6 @@ macro_rules! define_u32_reduce_op {
             )
         }
 
-        /// CPU reference.
-        #[must_use]
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref(values: &[u32]) -> u32 {
-            let fold = $fold;
-            values.iter().copied().fold($identity, fold)
-        }
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(

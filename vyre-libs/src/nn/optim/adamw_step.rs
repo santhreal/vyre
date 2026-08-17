@@ -4,8 +4,8 @@
 //! `v = β₂*v + (1-β₂)*g²`
 //! `θ = θ * (1 - lr*wd) - lr * m̂ / (√v̂ + ε)`
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program, UnOp};
 
 use crate::nn::f32_stability::flush_tiny;
 
@@ -28,73 +28,46 @@ pub fn adamw_step(
     eps: f32,
     wd: f32,
 ) -> Program {
-    let i = Expr::var("i");
-    let g = flush_tiny(Expr::load(grads, i.clone()));
-    let m = flush_tiny(Expr::load(m_buf, i.clone()));
-    let v = flush_tiny(Expr::load(v_buf, i.clone()));
-    let p = flush_tiny(Expr::load(params, i.clone()));
+    ElementwiseComposer::new(OP_ID, n)
+        .add_input_storage(params, BufferAccess::ReadWrite, DataType::F32, n)
+        .add_input_storage(grads, BufferAccess::ReadOnly, DataType::F32, n)
+        .add_input_storage(m_buf, BufferAccess::ReadWrite, DataType::F32, n)
+        .add_input_storage(v_buf, BufferAccess::ReadWrite, DataType::F32, n)
+        .build_pointwise_multi(&[m_buf, v_buf, params], |i| {
+            let g = flush_tiny(Expr::load(grads, i.clone()));
+            let m = flush_tiny(Expr::load(m_buf, i.clone()));
+            let v = flush_tiny(Expr::load(v_buf, i.clone()));
+            let p = flush_tiny(Expr::load(params, i));
 
-    // m = β₁*m + (1-β₁)*g
-    let new_m = Expr::add(
-        Expr::mul(Expr::f32(beta1), m),
-        Expr::mul(Expr::f32(1.0 - beta1), g.clone()),
-    );
+            // m = β₁*m + (1-β₁)*g
+            let new_m = Expr::add(
+                Expr::mul(Expr::f32(beta1), m),
+                Expr::mul(Expr::f32(1.0 - beta1), g.clone()),
+            );
 
-    // v = β₂*v + (1-β₂)*g²
-    let new_v = Expr::add(
-        Expr::mul(Expr::f32(beta2), v),
-        Expr::mul(Expr::f32(1.0 - beta2), Expr::mul(g.clone(), g)),
-    );
+            // v = β₂*v + (1-β₂)*g²
+            let new_v = Expr::add(
+                Expr::mul(Expr::f32(beta2), v),
+                Expr::mul(Expr::f32(1.0 - beta2), Expr::mul(g.clone(), g)),
+            );
 
-    // weight decay + adam update: θ = θ*(1-lr*wd) - lr * m / (√v + ε)
-    // (bias correction omitted  -  recipe uses β-schedule instead)
-    let decayed = Expr::mul(p, Expr::f32(1.0 - lr * wd));
-    let denom = Expr::add(
-        Expr::UnOp {
-            op: UnOp::Sqrt,
-            operand: Box::new(new_v.clone()),
-        },
-        Expr::f32(eps),
-    );
-    let new_p = Expr::sub(
-        decayed,
-        Expr::mul(Expr::f32(lr), Expr::div(new_m.clone(), denom)),
-    );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![
-                Node::Store {
-                    buffer: m_buf.into(),
-                    index: i.clone(),
-                    value: flush_tiny(new_m),
+            // weight decay + adam update: θ = θ*(1-lr*wd) - lr * m / (√v + ε)
+            // (bias correction omitted  -  recipe uses β-schedule instead)
+            let decayed = Expr::mul(p, Expr::f32(1.0 - lr * wd));
+            let denom = Expr::add(
+                Expr::UnOp {
+                    op: UnOp::Sqrt,
+                    operand: Box::new(new_v.clone()),
                 },
-                Node::Store {
-                    buffer: v_buf.into(),
-                    index: i.clone(),
-                    value: flush_tiny(new_v),
-                },
-                Node::Store {
-                    buffer: params.into(),
-                    index: i,
-                    value: flush_tiny(new_p),
-                },
-            ],
-        ),
-    ];
+                Expr::f32(eps),
+            );
+            let new_p = Expr::sub(
+                decayed,
+                Expr::mul(Expr::f32(lr), Expr::div(new_m.clone(), denom)),
+            );
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(params, 0, BufferAccess::ReadWrite, DataType::F32).with_count(n),
-            BufferDecl::storage(grads, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(m_buf, 2, BufferAccess::ReadWrite, DataType::F32).with_count(n),
-            BufferDecl::storage(v_buf, 3, BufferAccess::ReadWrite, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+            vec![flush_tiny(new_m), flush_tiny(new_v), flush_tiny(new_p)]
+        })
 }
 
 inventory::submit! {

@@ -11,7 +11,7 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 mod wire_words;
 use wire_words::{alternating, lcg_u32 as lcg, ramp};

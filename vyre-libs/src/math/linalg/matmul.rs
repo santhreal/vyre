@@ -5,10 +5,11 @@
 //! so the optimizer treats it as opaque unless an inline pass
 //! explicitly unrolls.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{DataType, Program};
 
-use crate::builder::{check_tensors, BuildOptions};
+use crate::builder::gemm::ContractionComposer;
+use crate::builder::BuildOptions;
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "vyre-libs::math::matmul";
@@ -44,90 +45,34 @@ impl Matmul {
     /// `a.shape[1] == b.shape[0]` (shared k dim),
     /// `out.shape == [a.shape[0], b.shape[1]]`.
     pub fn build(self) -> Result<Program, TensorRefError> {
-        check_tensors(
-            OP_ID,
-            &[
-                (&self.a, DataType::U32),
-                (&self.b, DataType::U32),
-                (&self.out, DataType::U32),
-            ],
-        )?;
-        if self.a.shape.len() != 2 || self.b.shape.len() != 2 || self.out.shape.len() != 2 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: "a/b/out".into(),
-                found: vec![],
-                expected: vec![0, 0],
-                op: OP_ID,
-            });
-        }
-        let m = self.a.shape[0];
-        let k = self.a.shape[1];
-        let n = self.b.shape[1];
-        if m == 0 || k == 0 || n == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: "a/b/out".into(),
-                found: vec![m, k, n],
-                expected: vec![1, 1, 1],
-                op: OP_ID,
-            });
-        }
-        if self.b.shape[0] != k {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.b.name.as_str().to_string(),
-                found: self.b.shape.to_vec(),
-                expected: vec![k, n],
-                op: OP_ID,
-            });
-        }
-        if self.out.shape.as_ref() != [m, n] {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.out.name.as_str().to_string(),
-                found: self.out.shape.to_vec(),
-                expected: vec![m, n],
-                op: OP_ID,
-            });
-        }
+        let m = if self.a.shape.len() == 2 {
+            self.a.shape[0]
+        } else {
+            0
+        };
+        let k = if self.a.shape.len() == 2 {
+            self.a.shape[1]
+        } else {
+            0
+        };
+        let n = if self.b.shape.len() == 2 {
+            self.b.shape[1]
+        } else {
+            0
+        };
 
-        let body = matmul_body(
-            self.a.name_str(),
-            self.b.name_str(),
-            None,
-            self.out.name_str(),
-            k,
-            n,
-        );
-        let a_count = m
-            .checked_mul(k)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.a.name_str().to_string(),
-                shape: vec![m, k],
-            })?;
-        let b_count = k
-            .checked_mul(n)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.b.name_str().to_string(),
-                shape: vec![k, n],
-            })?;
-        let out_count = m
-            .checked_mul(n)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.out.name_str().to_string(),
-                shape: vec![m, n],
-            })?;
-        let workgroup = linear_workgroup(self.options.workgroup_size.unwrap_or([256, 1, 1]));
-        let generator = self.options.region_generator.unwrap_or(OP_ID);
-
-        Ok(Program::wrapped(
-            vec![
-                BufferDecl::storage(self.a.name_str(), 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(a_count),
-                BufferDecl::storage(self.b.name_str(), 1, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(b_count),
-                BufferDecl::output(self.out.name_str(), 2, DataType::U32).with_count(out_count),
-            ],
-            workgroup,
-            vec![wrap_region(generator, body, None)],
-        ))
+        let mut composer =
+            ContractionComposer::matmul_2d(OP_ID, self.a, self.b, self.out, m, k, n);
+        if let Some(workgroup) = self.options.workgroup_size {
+            composer = composer.with_workgroup_size(workgroup);
+        }
+        if let Some(generator) = self.options.region_generator {
+            composer = composer.with_region_generator(generator);
+        }
+        if let Some(tenant_id) = self.options.tenant_id {
+            composer = composer.with_tenant_id(tenant_id);
+        }
+        composer.build()
     }
 }
 
@@ -166,117 +111,40 @@ impl MatmulBias {
     /// `bias.shape == [n]`,
     /// `out.shape == [a.shape[0], b.shape[1]]`.
     pub fn build(self) -> Result<Program, TensorRefError> {
-        check_tensors(
-            OP_ID_BIAS,
-            &[
-                (&self.a, DataType::U32),
-                (&self.b, DataType::U32),
-                (&self.bias, DataType::U32),
-                (&self.out, DataType::U32),
-            ],
-        )?;
-        if self.a.shape.len() != 2
-            || self.b.shape.len() != 2
-            || self.bias.shape.len() != 1
-            || self.out.shape.len() != 2
-        {
-            return Err(TensorRefError::ShapeMismatch {
-                name: "a/b/bias/out".into(),
-                found: vec![],
-                expected: vec![0, 0],
-                op: OP_ID_BIAS,
-            });
-        }
-        let m = self.a.shape[0];
-        let k = self.a.shape[1];
-        let n = self.b.shape[1];
-        if m == 0 || k == 0 || n == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: "a/b/bias/out".into(),
-                found: vec![m, k, n],
-                expected: vec![1, 1, 1],
-                op: OP_ID_BIAS,
-            });
-        }
-        if self.b.shape[0] != k {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.b.name.as_str().to_string(),
-                found: self.b.shape.to_vec(),
-                expected: vec![k, n],
-                op: OP_ID_BIAS,
-            });
-        }
-        if self.bias.shape[0] != n {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.bias.name.as_str().to_string(),
-                found: self.bias.shape.to_vec(),
-                expected: vec![n],
-                op: OP_ID_BIAS,
-            });
-        }
-        if self.out.shape.as_ref() != [m, n] {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.out.name.as_str().to_string(),
-                found: self.out.shape.to_vec(),
-                expected: vec![m, n],
-                op: OP_ID_BIAS,
-            });
-        }
+        let m = if self.a.shape.len() == 2 {
+            self.a.shape[0]
+        } else {
+            0
+        };
+        let k = if self.a.shape.len() == 2 {
+            self.a.shape[1]
+        } else {
+            0
+        };
+        let n = if self.b.shape.len() == 2 {
+            self.b.shape[1]
+        } else {
+            0
+        };
 
-        let body = matmul_body(
-            self.a.name_str(),
-            self.b.name_str(),
-            Some(self.bias.name_str()),
-            self.out.name_str(),
-            k,
-            n,
+        let mut composer = ContractionComposer::matmul_bias_2d(
+            OP_ID_BIAS, self.a, self.b, self.bias, self.out, m, k, n,
         );
-        let a_count = m
-            .checked_mul(k)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.a.name_str().to_string(),
-                shape: vec![m, k],
-            })?;
-        let b_count = k
-            .checked_mul(n)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.b.name_str().to_string(),
-                shape: vec![k, n],
-            })?;
-        let bias_count = n;
-        let out_count = m
-            .checked_mul(n)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.out.name_str().to_string(),
-                shape: vec![m, n],
-            })?;
-        let workgroup = linear_workgroup(self.options.workgroup_size.unwrap_or([256, 1, 1]));
-        let generator = self.options.region_generator.unwrap_or(OP_ID_BIAS);
-
-        Ok(Program::wrapped(
-            vec![
-                BufferDecl::storage(self.a.name_str(), 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(a_count),
-                BufferDecl::storage(self.b.name_str(), 1, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(b_count),
-                BufferDecl::storage(
-                    self.bias.name_str(),
-                    2,
-                    BufferAccess::ReadOnly,
-                    DataType::U32,
-                )
-                .with_count(bias_count),
-                BufferDecl::output(self.out.name_str(), 3, DataType::U32).with_count(out_count),
-            ],
-            workgroup,
-            vec![wrap_region(generator, body, None)],
-        ))
+        if let Some(workgroup) = self.options.workgroup_size {
+            composer = composer.with_workgroup_size(workgroup);
+        }
+        if let Some(generator) = self.options.region_generator {
+            composer = composer.with_region_generator(generator);
+        }
+        if let Some(tenant_id) = self.options.tenant_id {
+            composer = composer.with_tenant_id(tenant_id);
+        }
+        composer.build()
     }
 }
 
 crate::builder::impl_cat_a_builder_options!(MatmulBias);
 
-const _: fn(&'static str, Vec<Node>) -> Node = wrap_anonymous_region;
 
 /// Build a Program that computes `out = a @ b` where `a` is `m x k`,
 /// `b` is `k x n`, and `out` is `m x n`. The caller supplies buffer
@@ -317,73 +185,6 @@ pub fn matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u
     })
 }
 
-fn matmul_body(a: &str, b: &str, bias: Option<&str>, out: &str, k: u32, n: u32) -> Vec<Node> {
-    // One invocation computes one row-major output slot. Keeping the kernel
-    // 1-D lets each backend derive dispatch geometry from the output length.
-    // kernel 1-D makes dispatch geometry backend-neutral: concrete drivers
-    // and the reference interpreter can derive the grid from output
-    // length without separately knowing matrix rows/cols.
-    let idx = Expr::var("idx");
-    let row = Expr::var("row");
-    let col = Expr::var("col");
-    vec![
-        Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-        Node::let_bind("row", Expr::div(idx.clone(), Expr::u32(n))),
-        Node::let_bind("col", Expr::rem(idx.clone(), Expr::u32(n))),
-        Node::if_then(
-            Expr::lt(idx.clone(), Expr::buf_len(out)),
-            vec![
-                Node::let_bind("acc", Expr::u32(0)),
-                Node::loop_for(
-                    "kk",
-                    Expr::u32(0),
-                    Expr::u32(k),
-                    vec![Node::assign(
-                        "acc",
-                        Expr::add(
-                            Expr::var("acc"),
-                            Expr::mul(
-                                Expr::load(
-                                    a,
-                                    Expr::add(
-                                        Expr::mul(row.clone(), Expr::u32(k)),
-                                        Expr::var("kk"),
-                                    ),
-                                ),
-                                Expr::load(
-                                    b,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("kk"), Expr::u32(n)),
-                                        col.clone(),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index: idx,
-                    value: bias.map_or_else(
-                        || Expr::var("acc"),
-                        |bias| Expr::add(Expr::var("acc"), Expr::load(bias, col)),
-                    ),
-                },
-            ],
-        ),
-    ]
-}
-
-fn linear_workgroup(size: [u32; 3]) -> [u32; 3] {
-    [
-        size[0]
-            .max(1)
-            .saturating_mul(size[1].max(1))
-            .saturating_mul(size[2].max(1)),
-        1,
-        1,
-    ]
-}
 
 #[cfg(test)]
 mod tests {

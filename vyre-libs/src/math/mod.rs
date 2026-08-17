@@ -140,8 +140,6 @@ pub(crate) fn wrap_fixpoint_program(
 /// 1D separable convolution (domain-neutral: blur, signal processing, audio).
 #[cfg(feature = "math-kernels")]
 pub mod conv1d;
-#[cfg(all(feature = "math-kernels", any(test, feature = "cpu-parity")))]
-mod cpu_matrix;
 /// Shared dot-product partial accumulator.
 #[cfg(feature = "math-kernels")]
 pub mod dot_partial;
@@ -362,10 +360,3 @@ pub(crate) mod fixed;
 /// Fixed-point u32 matrix and matrix-vector program builders.
 #[cfg(any(feature = "math-kernels", feature = "graph"))]
 pub(crate) mod fixed_u32_matmul;
-
-/// Chebyshev three-term recurrence host oracle.
-#[cfg(all(
-    any(feature = "math-kernels", feature = "graph"),
-    any(test, feature = "cpu-parity")
-))]
-pub(crate) mod chebyshev_recurrence;

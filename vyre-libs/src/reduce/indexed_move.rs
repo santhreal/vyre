@@ -94,70 +94,7 @@ pub(crate) fn indexed_move_program(
     )
 }
 
-/// CPU oracle for gather/scatter into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn indexed_move_cpu_ref_into(
-    kind: IndexedMoveKind,
-    src: &[u32],
-    indices: &[u32],
-    dst_len: usize,
-    dst: &mut Vec<u32>,
-) {
-    if let Err(error) = try_indexed_move_cpu_ref_into(kind, src, indices, dst_len, dst) {
-        // A parity oracle that clears to empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
-        panic!("vyre-primitives indexed {kind:?} CPU reference failed: {error}");
-    }
-}
 
-/// Fallible CPU oracle for gather/scatter into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn try_indexed_move_cpu_ref_into(
-    kind: IndexedMoveKind,
-    src: &[u32],
-    indices: &[u32],
-    dst_len: usize,
-    dst: &mut Vec<u32>,
-) -> Result<(), String> {
-    match kind {
-        IndexedMoveKind::Gather => {
-            vyre_foundation::allocation::reserve_exact_cleared(dst, indices.len()).map_err(
-                |err| {
-                    format!(
-                        "gather CPU reference could not reserve {} output words: {err}",
-                        indices.len()
-                    )
-                },
-            )?;
-            for &idx in indices {
-                let value = usize::try_from(idx)
-                    .ok()
-                    .and_then(|index| src.get(index))
-                    .copied()
-                    .unwrap_or(0);
-                dst.push(value);
-            }
-        }
-        IndexedMoveKind::Scatter => {
-            vyre_foundation::allocation::reserve_exact_cleared(dst, dst_len).map_err(|err| {
-                format!("scatter CPU reference could not reserve {dst_len} output words: {err}")
-            })?;
-            dst.resize(dst_len, 0);
-            for (src_index, &dst_index) in indices.iter().enumerate() {
-                if let Ok(dst_index) = usize::try_from(dst_index) {
-                    if dst_index >= dst.len() {
-                        continue;
-                    }
-                    if let Some(&value) = src.get(src_index) {
-                        dst[dst_index] = value;
-                    }
-                }
-            }
-        }
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

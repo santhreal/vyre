@@ -11,7 +11,6 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 use std::collections::{BTreeMap, BTreeSet};
 

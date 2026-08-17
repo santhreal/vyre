@@ -149,12 +149,6 @@ pub(crate) fn utf8_shape_counts_from_histogram(histogram: &[u32; 256]) -> (u32, 
     (continuation, expected)
 }
 
-/// Reference oracle for [`utf8_shape_counts`].
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_utf8_shape_counts(histogram: &[u32; 256]) -> (u32, u32) {
-    utf8_shape_counts_from_histogram(histogram)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

@@ -5,7 +5,7 @@
 //! Every test targets both `dedup_regions_cpu` and `dedup_regions_inplace`
 //! to lock the bit-identical post-condition contract.
 
-#![cfg(all(feature = "matching", feature = "cpu-parity"))]
+#![cfg(feature = "matching")]
 
 use std::time::Instant;
 use vyre_libs::matching::{dedup_regions_inplace, RegionTriple};

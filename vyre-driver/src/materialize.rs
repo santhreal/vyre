@@ -890,17 +890,43 @@ impl InstanceCore {
                         .retained_predecessors
                         .get(&canonical)
                         .is_some_and(|priors| priors.contains(&value))
+                    || self
+                        .retained_predecessors
+                        .get(&value)
+                        .is_some_and(|priors| priors.contains(&canonical))
             })
             .copied()
             .ok_or_else(|| {
                 let input = self
                     .module_inputs
                     .get(module_index)
-                    .is_some_and(|values| values.contains(&canonical));
+                    .is_some_and(|values| {
+                        values.contains(&canonical)
+                            || self
+                                .retained_predecessors
+                                .get(&canonical)
+                                .is_some_and(|priors| priors.iter().any(|p| values.contains(p)))
+                            || values.iter().any(|v| {
+                                self.retained_predecessors
+                                    .get(v)
+                                    .is_some_and(|priors| priors.contains(&canonical))
+                            })
+                    });
                 let output = self
                     .module_outputs
                     .get(module_index)
-                    .is_some_and(|values| values.contains(&canonical));
+                    .is_some_and(|values| {
+                        values.contains(&canonical)
+                            || self
+                                .retained_predecessors
+                                .get(&canonical)
+                                .is_some_and(|priors| priors.iter().any(|p| values.contains(p)))
+                            || values.iter().any(|v| {
+                                self.retained_predecessors
+                                    .get(v)
+                                    .is_some_and(|priors| priors.contains(&canonical))
+                            })
+                    });
                 invalid_module(&format!(
                     "canonical artifact value {} for target binding `{name}` is absent from this module's requested directional resource projection (input={input}, output={output})",
                     canonical.0
@@ -3288,5 +3314,119 @@ mod tests {
             .expect("identity lookup must gather both declared inputs");
 
         assert_eq!(gathered, vec![node_bytes.as_slice(), out_bytes.as_slice()]);
+    }
+
+    /// WHY: Section 169.5 / Row 174.5 requires proving exact group/slot lookup, bidirectional
+    /// predecessor lineage resolution, and fail-closed missing identities across multi-stage execution.
+    #[test]
+    fn bidirectional_retained_lineage_and_exact_slot_resolution_fails_closed() {
+        let mut graph = ProgramGraph::new();
+        let state_val = graph
+            .add_external_value(
+                "state_root",
+                contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            )
+            .unwrap();
+
+        let prog = Program::wrapped(
+            vec![
+                BufferDecl::storage("state_buf", 0, BufferAccess::ReadWrite, DataType::U32),
+                BufferDecl::output("out_buf", 1, DataType::U32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                "out_buf",
+                Expr::u32(0),
+                Expr::load("state_buf", Expr::u32(0)),
+            )],
+        );
+
+        let (node_id, outputs) = graph
+            .add_node(
+                "stage_node",
+                prog.clone(),
+                vec![GraphInput {
+                    buffer: "state_buf".into(),
+                    value: state_val,
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_buf".into(),
+                    name: "output_final".into(),
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                    retained_successor_of: Some(state_val),
+                }],
+            )
+            .unwrap();
+        let out_final = outputs[0];
+
+        let req = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            DeviceFacts::unknown(),
+            SearchBudget::new(32, 1_000_000, 8, 0, 1_000_000_000),
+            1_000_000,
+        )
+        .validate()
+        .unwrap();
+        let artifact = compile(&req).unwrap();
+
+        let payload = TargetPayload::new(
+            &artifact,
+            test_format(),
+            test_profile(),
+            vec![TargetEntryPoint {
+                name: "stage_entry".into(),
+                node: ArtifactNodeId(node_id.0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(state_val.0),
+                        group: 0,
+                        slot: 0,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(out_final.0),
+                        group: 0,
+                        slot: 1,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::WriteOnly,
+                    },
+                ],
+            }],
+            vec![1, 2, 3],
+        )
+        .unwrap();
+
+        let core = test_instance_core(&artifact, &payload).unwrap();
+        let plan = BindingPlan::build(&prog).unwrap();
+
+        let in_val = core
+            .value_for_module_binding(&core.module_inputs, 0, &plan.bindings[0])
+            .expect("retained input must resolve");
+        assert_eq!(in_val, ArtifactValueId(state_val.0));
+
+        let out_val = core
+            .value_for_module_binding(&core.module_outputs, 0, &plan.bindings[1])
+            .expect("output binding must resolve");
+        assert_eq!(out_val, ArtifactValueId(out_final.0));
+
+        let mut missing_binding = plan.bindings[0].clone();
+        missing_binding.name = "unmapped_buffer".into();
+        missing_binding.binding = 99;
+        assert!(
+            core.value_for_module_binding(&core.module_inputs, 0, &missing_binding)
+                .is_err(),
+            "unmapped buffer must fail closed with unmapped_buffer"
+        );
+        assert!(
+            core.value_for_module_slot(&core.module_inputs, 0, 0, 99, "unmapped_slot")
+                .is_err(),
+            "unmapped slot must fail closed with invalid_module"
+        );
     }
 }

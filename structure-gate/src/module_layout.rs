@@ -57,9 +57,8 @@ pub struct CrateRoot {
 /// editor shows first and finds half of it. `foo/mod.rs` is the same module
 /// with the file and its children in one place.
 ///
-/// The rule reads `src/` only. An integration test binary is named by its own
-/// file, so `tests/foo.rs` beside `tests/foo/` is a binary next to its
-/// fixtures rather than one module in two places.
+/// Judged over every source tree a crate compiles (`src/`, `tests/`,
+/// `benches/`, `examples/`).
 #[must_use]
 pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
     let mut directories: BTreeSet<&str> = BTreeSet::new();
@@ -79,6 +78,30 @@ pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
             directories.contains(stem).then(|| {
                 format!(
                     "`{file}` sits beside its own directory `{stem}/`; one module is one place, so it belongs at `{stem}/mod.rs`"
+                )
+            })
+        })
+        .collect();
+    failures.sort();
+    failures.dedup();
+    failures
+}
+
+/// Reject any source-test directory under `src/`.
+///
+/// WHY: behavioral tests live in top-level `tests/` directories per the workspace
+/// external-test contract. Keeping a `tests/` directory under `src/` hides tests
+/// from the top-level test runner, creates internal module sprawl, and mixes
+/// production sources with test artifacts.
+#[must_use]
+pub fn source_test_directory_failures(module_files: &[String]) -> Vec<String> {
+    let mut failures: Vec<String> = module_files
+        .iter()
+        .filter_map(|file| {
+            let is_in_tests_dir = file.split('/').any(|segment| segment == "tests");
+            is_in_tests_dir.then(|| {
+                format!(
+                    "`{file}` lives in a `src/**/tests/` directory; behavioral tests must live in the crate's top-level `tests/` directory"
                 )
             })
         })
@@ -377,6 +400,44 @@ mod tests {
         let failures = sibling_module_failures(&paths(&[
             "vyre-libs/src/rule.rs",
             "vyre-driver/src/rule/admission.rs",
+        ]));
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    #[test]
+    fn a_test_module_file_beside_its_own_directory_is_rejected() {
+        let failures = sibling_module_failures(&paths(&[
+            "vyre-libs/tests/adversarial_graph_ops.rs",
+            "vyre-libs/tests/adversarial_graph_ops/toposort_contracts.rs",
+        ]));
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("vyre-libs/tests/adversarial_graph_ops/mod.rs"),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn a_source_test_directory_under_src_is_rejected() {
+        let failures = source_test_directory_failures(&paths(&[
+            "vyre-libs/src/graph/persistent_bfs/tests/validation.rs",
+            "vyre-libs/src/graph/persistent_bfs/mod.rs",
+        ]));
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("vyre-libs/src/graph/persistent_bfs/tests/validation.rs"),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn a_top_level_test_or_clean_source_is_accepted_by_source_test_directory_rule() {
+        let failures = source_test_directory_failures(&paths(&[
+            "vyre-libs/src/graph/persistent_bfs/mod.rs",
+            "vyre-libs/src/lib.rs",
         ]));
 
         assert!(failures.is_empty(), "{failures:?}");

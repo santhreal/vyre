@@ -1,5 +1,5 @@
 //! Property gates for `vyre_libs::text::reference_utf8_validate`.
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 
 use proptest::prelude::*;
 use vyre_foundation::ir::DataType;

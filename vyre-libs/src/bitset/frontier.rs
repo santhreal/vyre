@@ -433,52 +433,6 @@ pub fn materialize_frontier_queue_into(
     )
 }
 
-/// Materialize the queue prefix that fits while returning the full active count.
-///
-/// Device-side frontier compaction exposes overflow pressure by allowing the
-/// observed queue length to exceed the queue storage capacity, while clamping
-/// stores to the resident queue. This host helper mirrors that behavior and
-/// still scans set bits word-by-word instead of walking every node id.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn materialize_frontier_queue_prefix_into(
-    node_count: u32,
-    frontier: &[u32],
-    queue_capacity: usize,
-    queue: &mut Vec<u32>,
-) -> Result<u32, FrontierError> {
-    let expected_words = validate_frontier_shape(node_count, frontier, "input")?;
-    let reserve_words = queue_capacity.min(node_count as usize);
-    vyre_foundation::allocation::reserve_exact_cleared(queue, reserve_words).map_err(|source| {
-        FrontierError::Allocation {
-            name: "frontier_queue",
-            requested_words: reserve_words,
-            source: source.to_string(),
-        }
-    })?;
-    let final_word_index = expected_words.saturating_sub(1);
-    let final_word_mask = frontier_tail_mask(node_count);
-    let mut observed = 0u32;
-    for (word_index, &word) in frontier.iter().enumerate() {
-        let mut bits = if word_index == final_word_index {
-            word & final_word_mask
-        } else {
-            word
-        };
-        while bits != 0 {
-            let bit = bits.trailing_zeros();
-            if queue.len() < queue_capacity {
-                queue.push((word_index as u32 * u32::BITS) + bit);
-            }
-            observed = observed
-                .checked_add(1)
-                .ok_or(FrontierError::PopcountOverflow {
-                    frontier_words: expected_words,
-                })?;
-            bits &= bits - 1;
-        }
-    }
-    Ok(observed)
-}
 
 /// Materialize active node ids when the caller already knows the active count.
 ///

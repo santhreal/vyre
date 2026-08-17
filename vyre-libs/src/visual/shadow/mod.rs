@@ -40,6 +40,8 @@ pub fn box_shadow(
     let s_b = (color_rgba >> 16) & 0xFF;
     let s_a = color_rgba >> 24;
 
+    let (py, px) = crate::builder::stencil::decompose_index(&Expr::var("idx"), img_w);
+
     Program::wrapped(
         vec![
             BufferDecl::storage(output, 0, BufferAccess::ReadWrite, DataType::U32)
@@ -53,8 +55,8 @@ pub fn box_shadow(
                 Node::if_then(
                     Expr::lt(Expr::var("idx"), Expr::u32(count)),
                     vec![
-                        Node::let_bind("px", Expr::rem(Expr::var("idx"), Expr::u32(img_w.max(1)))),
-                        Node::let_bind("py", Expr::div(Expr::var("idx"), Expr::u32(img_w.max(1)))),
+                        Node::let_bind("px", px),
+                        Node::let_bind("py", py),
                         // Signed distance to rect (Chebyshev for box).
                         // dx = abs(px - cx) - hw
                         // dy = abs(py - cy) - hh
@@ -141,21 +143,18 @@ pub fn box_shadow(
                         // Pack output pixel.
                         Node::let_bind(
                             "out_px",
-                            Expr::bitor(
-                                Expr::bitor(
-                                    Expr::u32(s_r),
-                                    Expr::shl(Expr::u32(s_g), Expr::u32(8)),
-                                ),
-                                Expr::bitor(
-                                    Expr::shl(Expr::u32(s_b), Expr::u32(16)),
-                                    Expr::shl(Expr::var("final_a"), Expr::u32(24)),
-                                ),
+                            crate::builder::stencil::pack_rgba(
+                                Expr::u32(s_r),
+                                Expr::u32(s_g),
+                                Expr::u32(s_b),
+                                Expr::var("final_a"),
                             ),
                         ),
                         Node::let_bind(
                             "oidx",
-                            Expr::add(
-                                Expr::mul(Expr::var("py"), Expr::u32(img_w)),
+                            crate::builder::stencil::flat_index(
+                                Expr::var("py"),
+                                img_w,
                                 Expr::var("px"),
                             ),
                         ),

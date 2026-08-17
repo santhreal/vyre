@@ -13,7 +13,7 @@
 //! per-cell clear-then-maybe-set) was never executed. A wrong exclusion radius,
 //! an off-by-one bound, or a stale read all diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "parsing", feature = "cpu-parity"))]
+#![cfg(feature = "parsing")]
 
 use proptest::prelude::*;
 use vyre_libs::parsing::planar_rewrite::{

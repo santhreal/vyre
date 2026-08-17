@@ -66,13 +66,6 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// graphs or raise it for adversarial test corpora.
 pub const DEFAULT_PROVENANCE_MAX_ITERATIONS: u32 = 64;
 
-/// Reusable host buffers for provenance closure reference parity.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[derive(Default, Debug, Clone)]
-pub struct ScallopProvenanceScratch {
-    closure: Vec<u32>,
-    join_scratch: Vec<u32>,
-}
 
 /// Caller-owned GPU dispatch scratch for provenance closure.
 #[derive(Default, Debug)]
@@ -80,20 +73,6 @@ pub struct ScallopProvenanceGpuScratch {
     inputs: Vec<Vec<u8>>,
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-impl ScallopProvenanceScratch {
-    /// Return the current CPU parity closure words.
-    #[must_use]
-    pub fn closure(&self) -> &[u32] {
-        &self.closure
-    }
-
-    /// Return mutable CPU parity closure storage for reuse.
-    #[must_use]
-    pub fn closure_mut(&mut self) -> &mut Vec<u32> {
-        &mut self.closure
-    }
-}
 
 /// Build the GPU-resident provenance-closure Program. The returned
 /// `Program` declares four buffers: `state` (RW), `next` (RW scratch),
@@ -121,53 +100,7 @@ pub fn build_provenance_program(n: u32, max_iterations: u32) -> Program {
     )
 }
 
-/// Reference oracle: compute the transitive lineage closure on the host.
-/// Uses the same algorithm the GPU dispatch runs; this is the parity
-/// target for `build_provenance_program` dispatch outputs.
-///
-/// `state[i,j]` is a bitset of clauses by which `i` derives from `j`.
-/// `join_rules[i,j]` is the static adjacency (clause-bitset for the
-/// direct i⇝j edge under the join rule). Returns the converged
-/// closure.
-///
-/// # Panics
-///
-/// Panics if `state.len() != n*n` or `join_rules.len() != n*n`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_provenance_closure(
-    state: &[u32],
-    join_rules: &[u32],
-    n: u32,
-    max_iterations: u32,
-) -> Vec<u32> {
-    let mut scratch = ScallopProvenanceScratch::default();
-    reference_provenance_closure_with_scratch(state, join_rules, n, max_iterations, &mut scratch);
-    scratch.closure
-}
 
-/// Reference oracle using reusable buffers. Returns the number of fixpoint
-/// iterations and writes the converged closure into `scratch.closure()`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_provenance_closure_with_scratch(
-    state: &[u32],
-    join_rules: &[u32],
-    n: u32,
-    max_iterations: u32,
-    scratch: &mut ScallopProvenanceScratch,
-) -> u32 {
-    use crate::telemetry::{bump, scallop_provenance_calls};
-    bump(&scallop_provenance_calls);
-    scallop_join::cpu_ref_into(
-        state,
-        join_rules,
-        n,
-        1,
-        max_iterations,
-        &mut scratch.closure,
-        &mut scratch.join_scratch,
-    )
-}
 
 /// Convenience: project the closure matrix into a per-output-cell
 /// clause bitset. `out` is the row index; the returned vector has

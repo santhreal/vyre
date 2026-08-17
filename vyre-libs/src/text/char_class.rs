@@ -10,7 +10,8 @@
 //! op coverage and composition audits can distinguish the reusable
 //! substrate from user-facing library wrappers.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 /// `\0`
 pub const C_EOF: u32 = 0;
@@ -145,28 +146,12 @@ pub fn build_char_class_table() -> [u32; 256] {
 }
 
 fn char_class_body(source: &str, classified: &str, n: u32) -> Vec<Node> {
-    vec![Node::Region {
-        generator: vyre_foundation::ir::Ident::from(CHAR_CLASS_OP_ID),
-        source_region: None,
-        body: std::sync::Arc::new(vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(n)),
-                vec![Node::store(
-                    classified,
-                    Expr::var("idx"),
-                    // Canonical masked source-byte → 256-table lookup (ONE-PLACE:
-                    // vyre_primitives::ir_safe), widens the source byte to u32 and masks the
-                    // table index with `& 0xFF` so a >255 element can't read past it.
-                    vyre_primitives::ir_safe::source_byte_table_lookup(
-                        "table",
-                        source,
-                        Expr::var("idx"),
-                    ),
-                )],
-            ),
-        ]),
-    }]
+    let program = ElementwiseComposer::new(CHAR_CLASS_OP_ID, n)
+        .with_anonymous(false)
+        .build_pointwise(classified, |i| {
+            crate::builder::TableStateMachineComposer::source_byte_table_lookup("table", source, i)
+        });
+    program.into_entry_vec()
 }
 
 /// Build a Program that writes one character-class code per source byte.
@@ -209,17 +194,6 @@ fn char_class_with_source_type(
     )
 }
 
-/// Reference oracle: classify each source byte through the lookup table.
-///
-/// Pure function, exposed for fixture generation + harness oracles.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_char_class(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
-    source
-        .iter()
-        .map(|byte| table[usize::from(*byte)])
-        .collect()
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

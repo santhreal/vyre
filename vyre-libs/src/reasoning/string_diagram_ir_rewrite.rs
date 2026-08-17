@@ -51,25 +51,11 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::string_diagram::monoidal_compose;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::graph::string_diagram::monoidal_compose_cpu_into;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Reusable buffers for string-diagram IR rewrites.
 #[derive(Debug, Default)]
 pub struct StringDiagramRewriteScratch {
-    #[cfg(any(test, feature = "cpu-parity"))]
-    gf: Vec<f64>,
-    #[cfg(any(test, feature = "cpu-parity"))]
-    h_after_gf: Vec<f64>,
-    #[cfg(any(test, feature = "cpu-parity"))]
-    hg: Vec<f64>,
-    #[cfg(any(test, feature = "cpu-parity"))]
-    hg_after_f: Vec<f64>,
-    dispatch_inputs: Vec<Vec<u8>>,
-}
-
-impl StringDiagramRewriteScratch {
     /// Create empty reusable rewrite scratch.
     #[must_use]
     pub fn new() -> Self {
@@ -83,35 +69,7 @@ impl StringDiagramRewriteScratch {
 ///
 /// In vyre IR terms: `f` describes how Region F transforms its
 /// `a`-dimensional input buffer into a `b`-dimensional intermediate;
-/// `g` describes how Region G transforms the intermediate into the
-/// `c`-dimensional output. The composed arrow describes the fused
-/// F+G transformation in one step.
-///
-/// # Panics
-///
-/// Panics on size mismatches.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn compose_ir_arrows(f: &[f64], g: &[f64], a: u32, b: u32, c: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    reference_compose_ir_arrows_into(f, g, a, b, c, &mut out);
-    out
-}
 
-/// Sequential composition using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_compose_ir_arrows_into(
-    f: &[f64],
-    g: &[f64],
-    a: u32,
-    b: u32,
-    c: u32,
-    out: &mut Vec<f64>,
-) {
-    use crate::telemetry::{bump, string_diagram_ir_rewrite_calls};
-    bump(&string_diagram_ir_rewrite_calls);
-    monoidal_compose_cpu_into(f, g, a, b, c, out);
-}
 
 /// Primitive-native fixed-point production path for sequential IR-arrow
 /// composition.
@@ -243,70 +201,9 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     decode_u32_output_exact(&outputs[0], out_cells, "compose_ir_arrows_fixed_via", out)
 }
 
-/// Identity arrow on dimension `n`. Composes with any arrow as the
-/// identity  -  `id ∘ f = f` and `f ∘ id = f`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn identity_arrow(n: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    identity_arrow_into(n, &mut out);
-    out
-}
 
-/// Build an identity arrow using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn identity_arrow_into(n: u32, out: &mut Vec<f64>) {
-    let n_us = n as usize;
-    out.clear();
-    out.resize(n_us * n_us, 0.0);
-    for i in 0..n_us {
-        out[i * n_us + i] = 1.0;
-    }
-}
 
-/// Test that composition is associative: `(h ∘ g) ∘ f == h ∘ (g ∘ f)`.
-/// Returns true when the two associativities agree to numerical
-/// precision. Foundational coherence law for monoidal categories.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn composition_associates(
-    f: &[f64],
-    g: &[f64],
-    h: &[f64],
-    a: u32,
-    b: u32,
-    c: u32,
-    d: u32,
-) -> bool {
-    let mut scratch = StringDiagramRewriteScratch::new();
-    composition_associates_with_scratch(f, g, h, a, b, c, d, &mut scratch)
-}
 
-/// Associativity check using caller-owned scratch buffers.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn composition_associates_with_scratch(
-    f: &[f64],
-    g: &[f64],
-    h: &[f64],
-    a: u32,
-    b: u32,
-    c: u32,
-    d: u32,
-    scratch: &mut StringDiagramRewriteScratch,
-) -> bool {
-    reference_compose_ir_arrows_into(f, g, a, b, c, &mut scratch.gf);
-    reference_compose_ir_arrows_into(&scratch.gf, h, a, c, d, &mut scratch.h_after_gf);
-    reference_compose_ir_arrows_into(g, h, b, c, d, &mut scratch.hg);
-    reference_compose_ir_arrows_into(f, &scratch.hg, a, b, d, &mut scratch.hg_after_f);
-    let tol = 1e-9_f64;
-    scratch
-        .h_after_gf
-        .iter()
-        .zip(scratch.hg_after_f.iter())
-        .all(|(a, b)| (a - b).abs() < tol * (1.0 + a.abs() + b.abs()))
-}
 
 #[cfg(test)]
 mod tests {

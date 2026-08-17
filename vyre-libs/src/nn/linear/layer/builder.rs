@@ -1,8 +1,9 @@
 //! Linear builder + the canonical `linear()` Cat-A constructor.
 
-use vyre_foundation::composition::{tag_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::composition::tag_program;
+use vyre_foundation::ir::{DataType, Program};
 
+use crate::builder::gemm::ContractionComposer;
 use crate::prelude::MatmulBias;
 use crate::{
     builder::{check_tensors, BuildOptions},
@@ -281,83 +282,32 @@ fn linear_rows_impl(
     in_dim.checked_mul(out_dim).ok_or_else(|| {
         "Fix: linear_rows in_dim*out_dim overflows u32; shard the projection".to_string()
     })?;
-    let input_count = rows * in_dim;
-    let output_count = rows * out_dim;
-    let weight_count = in_dim * out_dim;
-    let index = Expr::var("index");
-    let row = Expr::div(index.clone(), Expr::u32(out_dim));
-    let column = Expr::rem(index.clone(), Expr::u32(out_dim));
-    let accumulator = bias.map_or_else(
-        || Expr::f32(0.0),
-        |name| Expr::cast(DataType::F32, Expr::load(name, Expr::var("column"))),
-    );
-    let weight_index = if weight_out_in {
-        Expr::add(
-            Expr::mul(Expr::var("column"), Expr::u32(in_dim)),
-            Expr::var("inner"),
-        )
+
+    let x_ref = TensorRef::new(x, dtype.clone(), vec![rows, in_dim]);
+    let w_shape = if weight_out_in {
+        vec![out_dim, in_dim]
     } else {
-        Expr::add(
-            Expr::mul(Expr::var("inner"), Expr::u32(out_dim)),
-            Expr::var("column"),
-        )
+        vec![in_dim, out_dim]
     };
-    let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(index.clone(), Expr::u32(output_count)),
-            vec![
-                Node::let_bind("row", row),
-                Node::let_bind("column", column),
-                Node::let_bind("accumulator", accumulator),
-                Node::loop_for(
-                    "inner",
-                    Expr::u32(0),
-                    Expr::u32(in_dim),
-                    vec![Node::assign(
-                        "accumulator",
-                        Expr::add(
-                            Expr::var("accumulator"),
-                            Expr::mul(
-                                Expr::cast(
-                                    DataType::F32,
-                                    Expr::load(
-                                        x,
-                                        Expr::add(
-                                            Expr::mul(Expr::var("row"), Expr::u32(in_dim)),
-                                            Expr::var("inner"),
-                                        ),
-                                    ),
-                                ),
-                                Expr::cast(DataType::F32, Expr::load(w, weight_index.clone())),
-                            ),
-                        ),
-                    )],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index,
-                    value: Expr::cast(dtype.clone(), Expr::var("accumulator")),
-                },
-            ],
-        ),
-    ];
-    let mut buffers = vec![
-        BufferDecl::storage(x, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(input_count),
-        BufferDecl::storage(w, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(weight_count),
-    ];
-    if let Some(name) = bias {
-        buffers.push(
-            BufferDecl::storage(name, 2, BufferAccess::ReadOnly, dtype.clone()).with_count(out_dim),
-        );
-    }
-    let output_slot = if bias.is_some() { 3 } else { 2 };
-    buffers.push(BufferDecl::output(out, output_slot, dtype).with_count(output_count));
-    Ok(Program::wrapped(
-        buffers,
-        [64, 1, 1],
-        vec![wrap_anonymous_region("vyre-libs::nn::linear_rows", body)],
-    ))
+    let w_ref = TensorRef::new(w, dtype.clone(), w_shape);
+    let bias_ref = bias.map(|b| TensorRef::new(b, dtype.clone(), vec![out_dim]));
+    let out_ref = TensorRef::new(out, dtype.clone(), vec![rows, out_dim]);
+
+    ContractionComposer::batched_rows(
+        "vyre-libs::nn::linear_rows",
+        x_ref,
+        w_ref,
+        bias_ref,
+        out_ref,
+        rows,
+        in_dim,
+        out_dim,
+        dtype,
+        weight_out_in,
+    )
+    .with_region_generator("anonymous::vyre-libs::nn::linear_rows")
+    .build()
+    .map_err(|e| format!("Fix: linear_rows build failed: {e}"))
 }
 
 fn build_linear_program(

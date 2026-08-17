@@ -36,19 +36,6 @@ pub fn is_bitset_equal_program(program: &Program) -> bool {
     )
 }
 
-/// CPU reference: returns 1 iff every word matches, 0 otherwise.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
-    if lhs.len() != rhs.len() {
-        return 0;
-    }
-    if lhs.iter().zip(rhs.iter()).all(|(a, b)| a == b) {
-        1
-    } else {
-        0
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

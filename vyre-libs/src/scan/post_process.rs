@@ -8,10 +8,6 @@
 // Every item that names these is a host oracle, gated the same way, so the
 // imports carry the gate too rather than making a default build of this module
 // reach a CPU reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::matching::{dedup_regions_inplace, RegionTriple};
-#[cfg(any(test, feature = "cpu-parity"))]
-use vyre_foundation::match_result::ByteRange;
 
 /// Post-processing contract violation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,121 +65,9 @@ pub struct PostProcessedMatch {
     pub confidence: f32,
 }
 
-/// Fuse `dedup_regions_inplace`, entropy-per-span, and confidence into one
-/// Reference oracle pass over the input.
-///
-/// Returned vector is sorted by `(pid, start, end)` (the dedup
-/// post-condition). `haystack` is the same byte buffer the matcher scanned.
-///
-/// # Errors
-///
-/// Returns [`PostProcessError::InvalidRange`] if any deduped match points
-/// outside `haystack`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_reference_post_process(
-    matches: &[ByteRange],
-    haystack: &[u8],
-) -> Result<Vec<PostProcessedMatch>, PostProcessError> {
-    let mut triples = Vec::new();
-    let mut out = Vec::new();
-    try_reference_post_process_into(matches, haystack, &mut triples, &mut out)?;
-    Ok(out)
-}
 
-/// Caller-owned variant of [`try_reference_post_process`].
-///
-/// Reuses `triples` and `out` across scans. This is the hot-path API for
-/// daemons and benchmark loops that post-process thousands of small readbacks.
-///
-/// # Errors
-///
-/// Returns [`PostProcessError::InvalidRange`] if any deduped match points
-/// outside `haystack`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_reference_post_process_into(
-    matches: &[ByteRange],
-    haystack: &[u8],
-    triples: &mut Vec<RegionTriple>,
-    out: &mut Vec<PostProcessedMatch>,
-) -> Result<(), PostProcessError> {
-    triples.clear();
-    out.clear();
-    if matches.is_empty() {
-        return Ok(());
-    }
 
-    triples.reserve(matches.len());
-    triples.extend(
-        matches
-            .iter()
-            .map(|m| RegionTriple::new(m.tag, m.start, m.end)),
-    );
-    dedup_regions_inplace(triples);
 
-    out.reserve(triples.len());
-    for &t in triples.iter() {
-        let s = t.start as usize;
-        let e = t.end as usize;
-        if e > haystack.len() || s > e {
-            out.clear();
-            return Err(PostProcessError::InvalidRange {
-                pattern_id: t.pid,
-                start: t.start,
-                end: t.end,
-                haystack_len: haystack.len(),
-            });
-        }
-        let bytes = &haystack[s..e];
-        let entropy = shannon_entropy_bits_per_byte(bytes);
-        let len_score = (bytes.len() as f32 / 16.0).min(1.0);
-        let entropy_score = entropy / 8.0;
-        let confidence = (len_score * entropy_score).clamp(0.0, 1.0);
-        out.push(PostProcessedMatch {
-            pattern_id: t.pid,
-            start: t.start,
-            end: t.end,
-            entropy_bits_per_byte: entropy,
-            confidence,
-        });
-    }
-    Ok(())
-}
-
-/// Infallible reference wrapper for callers whose matcher contract has
-/// already proved all ranges are within `haystack`.
-///
-/// Panics on corrupt match triples. Callers that need recoverable diagnostics
-/// use [`try_reference_post_process`].
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_post_process(matches: &[ByteRange], haystack: &[u8]) -> Vec<PostProcessedMatch> {
-    try_reference_post_process(matches, haystack).unwrap_or_else(|error| {
-        panic!("vyre-libs scan Reference oracle post-process contract failed: {error}")
-    })
-}
-
-/// Shannon entropy in bits/byte. Returns `0.0` on an empty slice. The
-/// implementation is straight `-sum(p_i log2 p_i)` over a 256-bucket
-/// histogram  -  match cost is dominated by the haystack scan, so a
-/// fixed stack histogram here is amortised on every realistic input.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn shannon_entropy_bits_per_byte(bytes: &[u8]) -> f32 {
-    if bytes.is_empty() {
-        return 0.0;
-    }
-    let counts = crate::text::reference_byte_histogram(bytes);
-    let n = bytes.len() as f32;
-    let mut h = 0.0_f32;
-    for c in counts {
-        if c == 0 {
-            continue;
-        }
-        let p = c as f32 / n;
-        h -= p * p.log2();
-    }
-    h
-}
 
 #[cfg(test)]
 mod tests {

@@ -2,12 +2,12 @@
 //!
 //! Category-A composition with a workgroup-tiled sum reduction.
 
-use crate::builder::strided_accumulate_child;
-use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
-use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use crate::builder::reduction::ReductionComposer;
 #[cfg(test)]
 use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+#[cfg(test)]
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+use vyre_foundation::ir::Program;
 
 const OP_ID: &str = "vyre-libs::math::reduce_mean";
 #[cfg(test)]
@@ -40,46 +40,7 @@ fn reduce_mean_invalid_program(input: &str, output: &str) -> Program {
 }
 
 fn reduce_mean_tiled_program(input: &str, output: &str, n: u32) -> Program {
-    let tile = 256_u32;
-    let chunks = n.div_ceil(tile);
-    let mean = ReducePhase {
-        accumulate: strided_accumulate_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            "local_sum",
-            Expr::f32(0.0),
-            "mean_scratch",
-            |idx, acc| Expr::add(acc, Expr::load(input, idx)),
-        ),
-        reductions: vec![workgroup_tree::sum_f32_child(
-            OP_ID,
-            tile,
-            "mean_scratch",
-            WorkgroupReductionScope::FirstWorkgroup,
-        )],
-        publish: vec![Node::Store {
-            buffer: output.into(),
-            index: Expr::u32(0),
-            value: Expr::div(
-                Expr::load("mean_scratch", Expr::u32(0)),
-                Expr::f32(n as f32),
-            ),
-        }],
-    };
-
-    tiled_reduce_program(TiledReduceProgram {
-        generator: OP_ID,
-        buffers: vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::workgroup("mean_scratch", tile, DataType::F32),
-            BufferDecl::output(output, 1, DataType::F32).with_count(1),
-        ],
-        workgroup: [tile, 1, 1],
-        phases: vec![mean],
-        writeback: None,
-    })
+    ReductionComposer::tiled_mean(OP_ID, input, output, n, 256)
 }
 
 #[cfg(test)]

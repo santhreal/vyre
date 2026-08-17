@@ -132,88 +132,10 @@ pub fn bhattacharyya_per_element(p: &str, q: &str, out_per_elem: &str, n: u32) -
 
 // ---- CPU references ----
 
-/// Bhattacharyya coefficient: `Σ sqrt(p_i · q_i)`. Coefficient is
-/// in `[0, 1]`; `0` = orthogonal distributions, `1` = identical.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn bhattacharyya_coefficient_cpu(p: &[f64], q: &[f64]) -> f64 {
-    p.iter()
-        .zip(q.iter())
-        .map(|(&pi, &qi)| (pi.max(0.0) * qi.max(0.0)).sqrt())
-        .sum()
-}
 
-/// Fisher-Rao distance from Bhattacharyya coefficient.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn fisher_rao_distance_cpu(p: &[f64], q: &[f64]) -> f64 {
-    let c = bhattacharyya_coefficient_cpu(p, q).clamp(0.0, 1.0);
-    2.0 * c.acos()
-}
 
-/// Amari α-connection interpolation between two probability vectors.
-///
-/// `α = 1`: exponential (geometric) mixture: `r_i ∝ p_i^t · q_i^(1-t)`.
-/// `α = -1`: linear (mixture-family) mixture: `r_i = t·p_i + (1-t)·q_i`.
-/// `α = 0`: spherical (Fisher-Rao geodesic)  -  slerp on `sqrt(p)`.
-///
-/// Returns the un-normalized blend; caller normalizes if needed.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn amari_alpha_step_cpu(p: &[f64], q: &[f64], alpha: f64, t: f64) -> Vec<f64> {
-    let mut out = Vec::new();
-    try_amari_alpha_step_cpu_into(p, q, alpha, t, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// Amari α-connection interpolation into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn amari_alpha_step_cpu_into(p: &[f64], q: &[f64], alpha: f64, t: f64, out: &mut Vec<f64>) {
-    try_amari_alpha_step_cpu_into(p, q, alpha, t, out).unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible Amari α-connection interpolation into caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_amari_alpha_step_cpu_into(
-    p: &[f64],
-    q: &[f64],
-    alpha: f64,
-    t: f64,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let t = t.clamp(0.0, 1.0);
-    let s = 1.0 - t;
-    let n = p.len().min(q.len());
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "information-geometry CPU oracle",
-            "amari_alpha_step output",
-        )?;
-    }
-    out.clear();
-    p.iter().zip(q.iter()).for_each(|(&pi, &qi)| {
-        if (alpha - 1.0).abs() < 1e-12 {
-            out.push(pi.powf(t) * qi.powf(s));
-        } else if (alpha + 1.0).abs() < 1e-12 {
-            out.push(t * pi + s * qi);
-        } else if alpha.abs() < 1e-12 {
-            let sp = pi.max(0.0).sqrt();
-            let sq = qi.max(0.0).sqrt();
-            let blended = t * sp + s * sq;
-            out.push(blended * blended);
-        } else {
-            // General α-connection: r_i^((1-α)/2) = t · p_i^((1-α)/2) +
-            //                                       (1-t) · q_i^((1-α)/2)
-            let beta = (1.0 - alpha) / 2.0;
-            let blended = t * pi.max(0.0).powf(beta) + s * qi.max(0.0).powf(beta);
-            out.push(blended.powf(1.0 / beta));
-        }
-    });
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

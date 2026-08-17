@@ -285,51 +285,8 @@ fn line_splice_classify_with_source_type(byte_count: u32, source_type: DataType)
 
 // ---------- reference oracle contract ----------
 
-/// Reference oracle for `line_splice_classify`. Returns one `u32 ∈ {0, 1}`
-/// per input byte. The GPU `Program` MUST emit the same vector.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_line_splice_classify(source: &[u8]) -> Vec<u32> {
-    let mut out = Vec::new();
-    try_reference_line_splice_classify_into(source, &mut out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - line-splice classifier reference allocation failed");
-    out
-}
 
-/// Capacity-reusing variant of `reference_line_splice_classify`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_line_splice_classify_into(source: &[u8], out: &mut Vec<u32>) {
-    try_reference_line_splice_classify_into(source, out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - line-splice classifier reference allocation failed");
-}
 
-/// Fallible capacity-reusing variant of `reference_line_splice_classify`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_reference_line_splice_classify_into(
-    source: &[u8],
-    out: &mut Vec<u32>,
-) -> Result<(), String> {
-    vyre_foundation::allocation::reserve_exact_cleared(out, source.len()).map_err(|err| {
-        format!(
-            "line-splice classifier reference could not reserve {} output words: {err}",
-            source.len()
-        )
-    })?;
-    for i in 0..source.len() {
-        let b_m2 = i.checked_sub(2).map(|j| source[j]).unwrap_or(0);
-        let b_m1 = i.checked_sub(1).map(|j| source[j]).unwrap_or(0);
-        let b_0 = source[i];
-        let b_p1 = source.get(i + 1).copied().unwrap_or(0);
-        let case1 = b_0 == b'\\' && b_p1 == b'\n';
-        let case2 = b_0 == b'\\' && b_p1 == b'\r';
-        let case3 = b_m1 == b'\\' && b_0 == b'\n';
-        let case4 = b_m1 == b'\\' && b_0 == b'\r';
-        let case5 = b_m2 == b'\\' && b_m1 == b'\r' && b_0 == b'\n';
-        let dropped = case1 || case2 || case3 || case4 || case5;
-        out.push(u32::from(!dropped));
-    }
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

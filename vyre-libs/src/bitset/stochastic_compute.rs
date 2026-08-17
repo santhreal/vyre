@@ -29,26 +29,8 @@ pub fn stochastic_and_mul(a: &str, b: &str, out: &str, n_words: u32) -> Program 
     binary_word_program(OP_ID, a, b, out, n_words, BitwiseBinaryOp::And)
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-super::define_cpu_ref!(a, b, "vyre-primitives stochastic bitstream cpu_ref failed");
 
-#[cfg(any(test, feature = "cpu-parity"))]
-super::define_cpu_ref_into!(
-    a,
-    b,
-    "vyre-primitives stochastic bitstream cpu_ref_into failed"
-);
 
-/// Fallible CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    let len = a.len().min(b.len());
-    vyre_foundation::allocation::reserve_exact_cleared(out, len).map_err(|err| {
-        format!("stochastic bitstream CPU reference could not reserve {len} words: {err}")
-    })?;
-    out.extend(a.iter().zip(b.iter()).map(|(left, right)| left & right));
-    Ok(())
-}
 
 /// CPU helper: encode `p ∈ [0, 1]` as bitstream of length `len_bits`.
 ///

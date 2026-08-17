@@ -512,18 +512,3 @@ pub(crate) fn lineage_fixpoint_program(
         vec![wrap_anonymous_region(op_id, body)],
     )
 }
-
-/// Accumulate `next` into `current` word by word, reporting whether a bit flipped.
-///
-/// Lineage accumulation is monotone bitwise OR, so the host oracles reach the
-/// fixpoint exactly when no word changes.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn accumulate_lineage_words(current: &mut [u32], next: &[u32]) -> bool {
-    let mut changed = false;
-    for (cell, derived) in current.iter_mut().zip(next.iter()) {
-        let merged = *cell | *derived;
-        changed |= merged != *cell;
-        *cell = merged;
-    }
-    changed
-}

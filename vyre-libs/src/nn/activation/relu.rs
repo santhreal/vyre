@@ -3,8 +3,8 @@
 //! Category A composition  -  one primitive per invocation. Element-wise
 //! so the optimizer can trivially fuse into any upstream operation.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{Expr, Program};
 
 /// Shared unsigned ReLU expression used by the standalone activation builder.
 #[must_use]
@@ -25,35 +25,7 @@ pub(crate) fn relu_f32_expr(x: Expr) -> Expr {
 /// overload replaces the primitive.
 #[must_use]
 pub fn relu(input: &str, output: &str, n: u32) -> Program {
-    let input_decl = BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32);
-    let input_decl = if n == 0 {
-        input_decl
-    } else {
-        input_decl.with_count(n)
-    };
-    let output_decl = BufferDecl::output(output, 1, DataType::U32)
-        .with_count(n.max(1))
-        .with_output_byte_range(0..(n as usize).saturating_mul(4));
-    let i = Expr::var("i");
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::buf_len(input)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i.clone(),
-                // max(0, x): the u32 identity. Swapping DataType to
-                // I32 and replacing with Expr::max(Expr::i32(0), x)
-                // handles the signed case.
-                value: relu_u32_expr(Expr::load(input, i)),
-            }],
-        ),
-    ];
-    Program::wrapped(
-        vec![input_decl, output_decl],
-        [64, 1, 1],
-        vec![wrap_anonymous_region("vyre-libs::nn::relu", body)],
-    )
+    ElementwiseComposer::u32_unary("vyre-libs::nn::relu", input, output, n, relu_u32_expr)
 }
 
 inventory::submit! {

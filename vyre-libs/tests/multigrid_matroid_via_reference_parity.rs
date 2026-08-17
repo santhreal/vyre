@@ -20,7 +20,6 @@
 //! `res / diag` for that case (fixed in `fixed_mul_16_16_expr` + `fixed_sdiv_by_positive_expr`; see
 //! BACKLOG `FIXED-amg-fixed-path-unsigned-mul-negatives`). Every operation is exactly reproducible in
 //! u32, so the oracle here is BIT-EXACT (no tolerance) (the same exact-fixed-point route mz_project used).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::multigrid_matroid_solver::matroid_solve_step_fixed_via;
 

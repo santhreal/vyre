@@ -129,72 +129,9 @@ pub fn try_sheaf_diffusion_step(
     ))
 }
 
-/// CPU reference (f64).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn sheaf_diffusion_step_cpu(
-    stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-) -> Vec<f64> {
-    try_sheaf_diffusion_step_cpu(stalks, restriction_diag, damping)
-        .unwrap_or_else(|error| panic!("{error}"))
-}
 
-/// Fallible CPU reference (f64).
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_sheaf_diffusion_step_cpu(
-    stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-) -> Result<Vec<f64>, String> {
-    let mut out = Vec::new();
-    try_sheaf_diffusion_step_cpu_into(stalks, restriction_diag, damping, &mut out)?;
-    Ok(out)
-}
 
-/// CPU reference (f64), writing into caller-owned storage.
-///
-/// Clears `out` and reuses its allocation so iterative diffusion loops do not
-/// allocate a new vector on every step.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn sheaf_diffusion_step_cpu_into(
-    stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-    out: &mut Vec<f64>,
-) {
-    try_sheaf_diffusion_step_cpu_into(stalks, restriction_diag, damping, out)
-        .unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference (f64), writing into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_sheaf_diffusion_step_cpu_into(
-    stalks: &[f64],
-    restriction_diag: &[f64],
-    damping: f64,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = stalks.len().min(restriction_diag.len());
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "sheaf diffusion CPU oracle",
-            "sheaf_diffusion_step_cpu_into",
-        )?;
-    }
-    out.clear();
-    out.extend(
-        stalks
-            .iter()
-            .zip(restriction_diag.iter())
-            .take(n)
-            .map(|(&s, &r)| s - damping * r * s),
-    );
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

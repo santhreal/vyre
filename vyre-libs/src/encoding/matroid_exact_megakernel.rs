@@ -33,15 +33,7 @@ use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::matroid_intersection_full::cpu_ref_into as matroid_cpu_ref_into;
 use crate::math::matroid_intersection_full::matroid_intersection_full;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::plumbing::host::scratch::{
-    reserve_hash_set_capacity_or_panic, reserve_vec_capacity_or_panic,
-};
-#[cfg(any(test, feature = "cpu-parity"))]
-use rustc_hash::FxHashSet;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for exact megakernel matroid certification.
@@ -50,52 +42,7 @@ pub struct ExactMatroidDispatchScratch {
     inputs: Vec<Vec<u8>>,
 }
 
-/// Reusable buffers for the exact megakernel matroid solver.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[derive(Debug, Default)]
-pub struct ExactMatroidScratch {
-    current: Vec<u32>,
-    next: Vec<u32>,
-    parent: Vec<u32>,
-    visited: Vec<u32>,
-    queue: Vec<usize>,
-    packed_state: Vec<u64>,
-    seen_states: FxHashSet<Vec<u64>>,
-}
 
-#[cfg(any(test, feature = "cpu-parity"))]
-impl ExactMatroidScratch {
-    /// Current selected 0/1 vector from the last solver invocation.
-    #[must_use]
-    pub fn result(&self) -> &[u32] {
-        &self.current
-    }
-
-    /// Move out the result while keeping all other solver allocations reusable.
-    #[must_use]
-    pub fn take_result(&mut self) -> Vec<u32> {
-        std::mem::take(&mut self.current)
-    }
-
-    fn prepare(&mut self, seed_x: &[u32], n: usize, max_augmentations: u32) {
-        self.current.clear();
-        self.current.extend_from_slice(seed_x);
-        self.next.clear();
-        self.next.resize(n, 0);
-        self.packed_state.clear();
-        reserve_vec_capacity_or_panic(
-            &mut self.packed_state,
-            n.div_ceil(64),
-            "exact matroid packed-state scratch",
-        );
-        self.seen_states.clear();
-        reserve_hash_set_capacity_or_panic(
-            &mut self.seen_states,
-            max_augmentations as usize + 1,
-            "exact matroid seen-state scratch",
-        );
-    }
-}
 
 /// Input-shape error from the exact megakernel matroid solver.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -376,173 +323,11 @@ pub fn select_optimal_subset_via_with_scratch_into(
     decode_u32_output_exact(&outputs[0], n, "select_optimal_subset_via", out)
 }
 
-/// Compute the provably-optimal fusion subset via full Edmonds
-/// matroid intersection on the exchange graph.
-///
-/// `sources[i] != 0` marks items eligible to start an augmenting path
-/// (ready to fuse, no exchange-graph blocker on the input side).
-/// `sinks[i] != 0` marks the corresponding sink-side items. `seed_x`
-/// is the initial independent set as a 0/1 vector  -  pass an empty
-/// (all-zero) seed for "find max from scratch", or a partial seed
-/// (e.g. the cheapest singleton) to bootstrap.
-///
-/// Returns the maximum independent set as a 0/1 vector of length n.
-///
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_select_optimal_subset(
-    exchange_adj: &[u32],
-    sources: &[u32],
-    sinks: &[u32],
-    seed_x: &[u32],
-    n: usize,
-    max_augmentations: u32,
-) -> Result<Vec<u32>, ExactMatroidError> {
-    let mut scratch = ExactMatroidScratch::default();
-    reference_select_optimal_subset_into(
-        exchange_adj,
-        sources,
-        sinks,
-        seed_x,
-        n,
-        max_augmentations,
-        &mut scratch,
-    )?;
-    Ok(scratch.take_result())
-}
 
-/// Compute the optimal subset into caller-owned solver scratch.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_select_optimal_subset_into<'a>(
-    exchange_adj: &[u32],
-    sources: &[u32],
-    sinks: &[u32],
-    seed_x: &[u32],
-    n: usize,
-    max_augmentations: u32,
-    scratch: &'a mut ExactMatroidScratch,
-) -> Result<&'a [u32], ExactMatroidError> {
-    validate_full(exchange_adj, sources, sinks, seed_x, n)?;
 
-    use crate::telemetry::{bump, matroid_exact_megakernel_calls};
-    bump(&matroid_exact_megakernel_calls);
 
-    scratch.prepare(seed_x, n, max_augmentations);
-    pack_binary_state(&scratch.current, &mut scratch.packed_state);
-    scratch.seen_states.insert(scratch.packed_state.clone());
 
-    for _ in 0..max_augmentations {
-        matroid_cpu_ref_into(
-            exchange_adj,
-            sources,
-            sinks,
-            &scratch.current,
-            n,
-            &mut scratch.next,
-            &mut scratch.parent,
-            &mut scratch.visited,
-            &mut scratch.queue,
-        );
-        if scratch.next == scratch.current {
-            return Ok(scratch.result());
-        }
-        pack_binary_state(&scratch.next, &mut scratch.packed_state);
-        if !scratch.seen_states.insert(scratch.packed_state.clone()) {
-            if count_selected(&scratch.next) > count_selected(&scratch.current) {
-                std::mem::swap(&mut scratch.current, &mut scratch.next);
-            }
-            return Ok(scratch.result());
-        }
-        std::mem::swap(&mut scratch.current, &mut scratch.next);
-    }
-    Ok(scratch.result())
-}
 
-/// Compute the optimal subset when every node is both an eligible
-/// augmenting-path source and sink.
-///
-/// This is the megakernel planner's certification case. It preserves
-/// [`reference_select_optimal_subset`] semantics for `sources = sinks = vec![1; n]`
-/// without allocating those all-ones vectors on every call.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_select_optimal_subset_all_eligible(
-    exchange_adj: &[u32],
-    seed_x: &[u32],
-    n: usize,
-    max_augmentations: u32,
-) -> Result<Vec<u32>, ExactMatroidError> {
-    let mut scratch = ExactMatroidScratch::default();
-    reference_select_optimal_subset_all_eligible_into(
-        exchange_adj,
-        seed_x,
-        n,
-        max_augmentations,
-        &mut scratch,
-    )?;
-    Ok(scratch.take_result())
-}
-
-/// Compute the all-eligible optimal subset into caller-owned solver scratch.
-///
-/// Returns a view into `scratch.result()`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_select_optimal_subset_all_eligible_into<'a>(
-    exchange_adj: &[u32],
-    seed_x: &[u32],
-    n: usize,
-    max_augmentations: u32,
-    scratch: &'a mut ExactMatroidScratch,
-) -> Result<&'a [u32], ExactMatroidError> {
-    let _expected_adj = validate_common(exchange_adj, seed_x, n)?;
-
-    use crate::telemetry::{bump, matroid_exact_megakernel_calls};
-    bump(&matroid_exact_megakernel_calls);
-
-    scratch.prepare(seed_x, n, max_augmentations);
-    pack_binary_state(&scratch.current, &mut scratch.packed_state);
-    scratch.seen_states.insert(scratch.packed_state.clone());
-
-    for _ in 0..max_augmentations {
-        cpu_ref_all_eligible_into(exchange_adj, &scratch.current, n, &mut scratch.next);
-        if scratch.next == scratch.current {
-            return Ok(scratch.result());
-        }
-        pack_binary_state(&scratch.next, &mut scratch.packed_state);
-        if !scratch.seen_states.insert(scratch.packed_state.clone()) {
-            if count_selected(&scratch.next) > count_selected(&scratch.current) {
-                std::mem::swap(&mut scratch.current, &mut scratch.next);
-            }
-            return Ok(scratch.result());
-        }
-        std::mem::swap(&mut scratch.current, &mut scratch.next);
-    }
-    Ok(scratch.result())
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-fn pack_binary_state(state: &[u32], out: &mut Vec<u64>) {
-    out.clear();
-    out.resize(state.len().div_ceil(64), 0);
-    for (idx, value) in state.iter().enumerate() {
-        if *value != 0 {
-            out[idx / 64] |= 1_u64 << (idx % 64);
-        }
-    }
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-fn cpu_ref_all_eligible_into(exchange_adj: &[u32], set_x: &[u32], n: usize, out: &mut Vec<u32>) {
-    debug_assert_eq!(exchange_adj.len(), n * n);
-    debug_assert_eq!(set_x.len(), n);
-
-    out.clear();
-    out.extend_from_slice(set_x);
-    if n == 0 {
-        return;
-    }
-    out[0] = 1 - out[0];
-}
 
 /// Convenience: count selected items in a 0/1 retention vector.
 #[must_use]

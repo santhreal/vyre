@@ -135,109 +135,9 @@ pub fn decoded_capacity(input_len: u32) -> u32 {
     blocks_for_len(input_len) * 3
 }
 
-/// CPU oracle for the standard RFC 4648 decode table used by the primitive.
-///
-/// The output mirrors the GPU contract: one decoded byte per `u32` slot, with
-/// padded bytes left as zero in the fixed decoded capacity. Invalid input
-/// characters are clamped to zero, matching [`base64_decode_body`].
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn decode_standard_packed_reference(input: &[u8]) -> (Vec<u32>, u32) {
-    match try_decode_standard_packed_reference(input) {
-        Ok(decoded) => decoded,
-        // A decode oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
-        Err(error) => panic!("vyre-primitives base64 decode reference failed: {error}"),
-    }
-}
 
-/// CPU oracle for the standard RFC 4648 decode table into caller-owned storage.
-///
-/// Returns the decoded logical byte length while `out` holds the fixed-capacity
-/// GPU ABI representation: one decoded byte per `u32` slot, including zeroed
-/// padding slots.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn decode_standard_packed_reference_into(input: &[u8], out: &mut Vec<u32>) -> u32 {
-    match try_decode_standard_packed_reference_into(input, out) {
-        Ok(decoded_len) => decoded_len,
-        // Clearing and returning 0 on failure silently masks a parity
-        // divergence (Law 10 / Law 6). Fail loud; callers use the try_ variant.
-        Err(error) => panic!("vyre-primitives base64 decode reference failed: {error}"),
-    }
-}
 
-/// Fallible CPU oracle for the standard RFC 4648 decode table.
-///
-/// This variant is suitable for fuzzing and hostile-input parity tests because
-/// malformed lengths and output staging failures are reported as typed errors
-/// instead of panics.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_decode_standard_packed_reference(
-    input: &[u8],
-) -> Result<(Vec<u32>, u32), Base64DecodeReferenceError> {
-    let mut out = Vec::new();
-    let decoded_len = try_decode_standard_packed_reference_into(input, &mut out)?;
-    Ok((out, decoded_len))
-}
 
-/// Fallible CPU oracle for the standard RFC 4648 decode table into caller-owned storage.
-///
-/// On validation or reservation failure, the caller-owned output buffer is left
-/// unchanged so fuzzers can assert transactional decode behavior.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_decode_standard_packed_reference_into(
-    input: &[u8],
-    out: &mut Vec<u32>,
-) -> Result<u32, Base64DecodeReferenceError> {
-    if input.len() % 4 != 0 {
-        return Err(Base64DecodeReferenceError::InvalidLength { len: input.len() });
-    }
-    let table = standard_decode_table_ref();
-    let blocks = input.len() / 4;
-    let decoded_words = blocks
-        .checked_mul(3)
-        .ok_or(Base64DecodeReferenceError::CapacityOverflow { blocks })?;
-    vyre_foundation::allocation::reserve_exact_cleared(out, decoded_words).map_err(|source| {
-        Base64DecodeReferenceError::Allocation {
-            requested: decoded_words,
-            source: source.to_string(),
-        }
-    })?;
-    out.resize(decoded_words, 0);
-    for block in 0..blocks {
-        let base = block * 4;
-        let vals = [
-            table[usize::from(input[base])],
-            table[usize::from(input[base + 1])],
-            table[usize::from(input[base + 2])],
-            table[usize::from(input[base + 3])],
-        ]
-        .map(|value| if value == INVALID { 0 } else { value });
-        let out_base = block * 3;
-        out[out_base] = (vals[0] << 2) | (vals[1] >> 4);
-        if input[base + 2] != b'=' {
-            out[out_base + 1] = ((vals[1] & 0x0F) << 4) | (vals[2] >> 2);
-        }
-        if input[base + 3] != b'=' {
-            out[out_base + 2] = ((vals[2] & 0x03) << 6) | vals[3];
-        }
-    }
-    let mut decoded_len = u32::try_from(out.len()).map_err(|_| {
-        Base64DecodeReferenceError::DecodedLengthOverflow {
-            decoded_words: out.len(),
-        }
-    })?;
-    if input.len() >= 2 {
-        if input[input.len() - 1] == b'=' {
-            decoded_len = decoded_len.saturating_sub(1);
-        }
-        if input[input.len() - 2] == b'=' {
-            decoded_len = decoded_len.saturating_sub(1);
-        }
-    }
-    Ok(decoded_len)
-}
 
 fn clamp_lookup(name: &str, table: &str) -> Vec<Node> {
     let raw = format!("{name}_raw");
@@ -251,7 +151,7 @@ fn clamp_lookup(name: &str, table: &str) -> Vec<Node> {
         // is what keeps this mask from being forgotten again.
         Node::let_bind(
             raw.as_str(),
-            vyre_primitives::ir_safe::byte_table_lookup(table, Expr::var(name)),
+            crate::builder::TableStateMachineComposer::byte_table_lookup(table, Expr::var(name)),
         ),
         Node::let_bind(
             value.as_str(),
@@ -594,25 +494,9 @@ inventory::submit! {
 // CPU reference implementation
 // ---------------------------------------------------------------------------
 
-/// Build the standard base64 decode table (RFC 4648).
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_base64_table() -> [u32; 256] {
     standard_decode_table()
 }
 
-/// CPU reference: decode a base64-encoded byte slice (standard alphabet,
-/// `=`-padded, length must be a multiple of 4). Returns decoded bytes.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_base64_decode(input: &[u8]) -> Vec<u8> {
-    let (words, decoded_len) = decode_standard_packed_reference(input);
-    let decoded_len = usize::try_from(decoded_len).unwrap_or(words.len());
-    words
-        .into_iter()
-        .take(decoded_len)
-        .map(|word| (word & 0xFF) as u8)
-        .collect()
-}
 #[cfg(test)]
 mod primitive_tests {
     use super::*;

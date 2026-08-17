@@ -9,9 +9,10 @@
 //! contract: pre-fill `dst` with a sentinel, feed an out-of-range index, and
 //! assert the GPU-IR result (via `reference_eval`) equals `cpu_ref`: the
 //! skipped lane must read 0, not the sentinel.
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
-use vyre_libs::reduce::gather::{cpu_ref as gather_cpu_ref, gather as gather_fn};
+use vyre_libs::reduce::gather::gather as gather_fn;
+fn gather_cpu_ref(source: &[u32], indices: &[u32]) -> Vec<u32> { indices.iter().map(|&idx| source.get(idx as usize).copied().unwrap_or(0)).collect() }
 use vyre_libs::reduce::scatter::scatter as scatter_fn;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;

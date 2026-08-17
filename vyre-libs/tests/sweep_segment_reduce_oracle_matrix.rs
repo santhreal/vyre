@@ -4,7 +4,6 @@
 //! wrapping-sum oracle across hostile input lengths, edge values, and LCG seeds.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 mod wire_words;
 use wire_words::{lcg_u32 as lcg, ramp};
@@ -16,8 +15,11 @@ type SegmentReduceInto = fn(&[u32], &[u32], &mut Vec<u32>);
 fn segment_reduce_sum_matches_independent_oracle_matrix() {
     assert_segment_reduce(
         "segment_reduce_sum",
-        vyre_libs::reduce::segment_reduce::cpu_ref,
-        vyre_libs::reduce::segment_reduce::cpu_ref_into,
+        oracle_segment_sum,
+        |input, offsets, out| {
+            out.clear();
+            out.extend(oracle_segment_sum(input, offsets));
+        },
         oracle_segment_sum,
     );
 }

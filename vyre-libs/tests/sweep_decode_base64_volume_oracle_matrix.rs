@@ -22,7 +22,7 @@
 // `decode` alone made `cargo test --features decode` fail to compile (unresolved
 // import). Declare the true dependency so the suite runs wherever both features are on
 // and is cleanly skipped otherwise.
-#![cfg(all(feature = "decode", feature = "cpu-parity"))]
+#![cfg(feature = "decode")]
 
 use vyre_libs::decode::base64::cpu_base64_decode;
 

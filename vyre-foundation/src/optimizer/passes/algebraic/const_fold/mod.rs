@@ -116,4 +116,5 @@ pub(crate) fn fold_expr(expr: &Expr) -> Option<Expr> {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/algebraic/const_fold/mod.rs"]
 mod tests;

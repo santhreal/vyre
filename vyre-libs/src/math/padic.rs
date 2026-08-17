@@ -1,83 +1,77 @@
-//! p-adic numerical analysis primitives (#54, research scaffold).
+//! p-adic and Hensel lift operations on device (M-CONT-16, Section 180.3).
 //!
-//! p-adic numbers (Krasner 1986) give stable arithmetic for problems
-//! ill-conditioned in real numbers. Recent ML work (Robin 2024) uses
-//! p-adic embeddings for stable training of deep networks. Hensel
-//! lifting is the algorithmic core.
+//! Hensel lift step: `x_{k+1} = x_k - f(x_k) / f'(x_k) mod p^{2^k}`.
 //!
-//! This file ships the **single Hensel lift step** primitive  -  given
+//! Given arrays of values `x`, `f_x = f(x)`, and `inv_f_prime = (f'(x))^{-1}`,
+//! computes `x - f(x) * (f'(x))^{-1}` in parallel for each lane using fixed-point
+//! arithmetic. This is the core kernel of p-adic root finding and polynomial
+//! factorization over Q_p / Z_p.
+//!
+//! Used by the algebraic solver stack to lift approximate roots: starting from
 //! an approximate root x of `f(x) ≡ 0 (mod p^k)` and the formal
 //! derivative `f'(x)`, return a refined root accurate `mod p^{2k}`.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-libs::math::hensel_lift_step";
 
-/// Hensel iteration: `x_next = x - f(x) · (f'(x))^{-1}` modulo `p^{2k}`.
-/// Inputs are pre-evaluated `f_x` and `inv_f_prime` from the caller.
+/// Hensel lift step for `n` p-adic roots in parallel.
+///
+/// Output: `out[i] = x[i] - f_x[i] * inv_f_prime[i]` (in 16.16 fixed point).
+/// `n == 0` returns a trap Program.
 #[must_use]
 pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32) -> Program {
     if n == 0 {
         return trap_program(
             OP_ID,
-            Some((out, DataType::U32)),
-            "Fix: hensel_lift_step requires n > 0, got 0.".to_string(),
+            "hensel_lift_step requires n > 0 (use positive degree)",
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
-    let value = Expr::sub(
-        Expr::load(x, t.clone()),
-        crate::math::fixed::fixed_mul_16_16_expr(
-            Expr::load(f_x, t.clone()),
-            Expr::load(inv_f_prime, t.clone()),
-        ),
-    );
-
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(n)),
-        vec![Node::store(out, t, value)],
-    )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(f_x, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(inv_f_prime, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n),
-            BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    ElementwiseComposer::new(OP_ID, n)
+        .with_workgroup_size([256, 1, 1])
+        .add_input_storage(x, BufferAccess::ReadOnly, DataType::U32, n)
+        .add_input_storage(f_x, BufferAccess::ReadOnly, DataType::U32, n)
+        .add_input_storage(inv_f_prime, BufferAccess::ReadOnly, DataType::U32, n)
+        .add_output_storage(out, BufferAccess::ReadWrite, DataType::U32, n)
+        .build_pointwise(out, |i| {
+            Expr::sub(
+                Expr::load(x, i.clone()),
+                crate::math::fixed::fixed_mul_16_16_expr(
+                    Expr::load(f_x, i.clone()),
+                    Expr::load(inv_f_prime, i),
+                ),
+            )
+        })
 }
 
-/// CPU reference (f64)  -  Hensel iteration single step.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn hensel_lift_step_cpu(x: f64, f_x: f64, inv_f_prime: f64) -> f64 {
-    x - f_x * inv_f_prime
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
-        || {
-            hensel_lift_step("x", "f_x", "inv_f_prime", "out", 4)
-        },
+        || hensel_lift_step("x", "f_x", "inv_f_prime", "out", 4),
         Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[10, 20, 30, 40]),
-                vyre_primitives::wire::pack_u32_slice(&[2, 4, 6, 8]),
-                vyre_primitives::wire::pack_u32_slice(&[1u32 << 16; 4]),
-                vyre_primitives::wire::pack_u32_slice(&[0; 4]),
-            ]]
+            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+            let to_fixed = |v: f64| (v * 65536.0).round() as u32;
+            vec![
+                to_bytes(&[to_fixed(2.0), to_fixed(3.0), to_fixed(5.0), to_fixed(7.0)]),
+                to_bytes(&[to_fixed(0.1), to_fixed(0.2), to_fixed(-0.1), to_fixed(0.0)]),
+                to_bytes(&[to_fixed(1.0), to_fixed(0.5), to_fixed(2.0), to_fixed(1.0)]),
+                to_bytes(&[0, 0, 0, 0]),
+            ]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[8, 16, 24, 32])]]
+            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+            let to_fixed = |v: f64| (v * 65536.0).round() as u32;
+            vec![
+                to_bytes(&[to_fixed(2.0), to_fixed(3.0), to_fixed(5.0), to_fixed(7.0)]),
+                to_bytes(&[to_fixed(0.1), to_fixed(0.2), to_fixed(-0.1), to_fixed(0.0)]),
+                to_bytes(&[to_fixed(1.0), to_fixed(0.5), to_fixed(2.0), to_fixed(1.0)]),
+                to_bytes(&[to_fixed(1.9), to_fixed(2.9), to_fixed(5.2), to_fixed(7.0)]),
+            ]
         }),
     )
 }
@@ -90,17 +84,18 @@ mod tests {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
     }
 
+    fn hensel_lift_step_cpu(x: f64, f_x: f64, inv_f_prime: f64) -> f64 {
+        x - f_x * inv_f_prime
+    }
+
     #[test]
     fn cpu_zero_residual_holds_root() {
-        // If f(x) = 0 already, lift step doesn't move x.
         let x_next = hensel_lift_step_cpu(2.5, 0.0, 1.0);
         assert!(approx_eq(x_next, 2.5));
     }
 
     #[test]
     fn cpu_quadratic_root_converges() {
-        // f(x) = x² - 2, find sqrt(2) ≈ 1.414...
-        // Newton/Hensel: x_{k+1} = x_k - (x_k² - 2) / (2 x_k)
         let mut x = 1.5;
         for _ in 0..10 {
             let f_x = x * x - 2.0;
@@ -114,8 +109,8 @@ mod tests {
     fn ir_program_buffer_layout() {
         let p = hensel_lift_step("x", "fx", "ip", "out", 16);
         assert_eq!(p.workgroup_size, [256, 1, 1]);
-        assert_eq!(p.buffers[0].count(), 16);
-        assert_eq!(p.buffers[3].count(), 16);
+        assert_eq!(p.buffers[0].count, 16);
+        assert_eq!(p.buffers[3].count, 16);
     }
 
     #[test]

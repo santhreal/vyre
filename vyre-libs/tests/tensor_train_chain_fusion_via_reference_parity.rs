@@ -13,7 +13,6 @@
 //! core = fixed-point `1.0`, the contraction `acc_out[b] = Σ_a acc_in[a]·1` accumulates the running
 //! rank product exactly (integer·2^16 >> 16 = integer, no rounding), so the final scalar is the exact
 //! product of the nonzero ranks (an independent mathematical oracle the IR must reproduce).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::solvers::tensor_train_chain_fusion::{fusion_pressure_via, should_fuse_chain_via};
 

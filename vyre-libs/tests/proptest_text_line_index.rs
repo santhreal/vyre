@@ -1,6 +1,6 @@
 //! Generated truth and structure checks for the GPU-native text line index.
 
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 
 mod ir_shape;
 use ir_shape::{contains_invocation_zero_gate, contains_loop};
@@ -8,7 +8,8 @@ use ir_shape::{contains_invocation_zero_gate, contains_loop};
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferAccess, DataType, Program, PORTABLE_WORKGROUP_INVOCATIONS};
 const BLOCK_LANES: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
-use vyre_libs::text::{line_index, line_index_u8, reference_line_index};
+use vyre_libs::text::{line_index, line_index_u8};
+use vyre_reference::composition_witness::line_index_witness as reference_line_index;
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
 use vyre_reference::value::Value;
 

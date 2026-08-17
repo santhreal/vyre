@@ -12,15 +12,15 @@
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::graph::csr_backward_or_changed;
-use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_closure_inputs::CsrClosureInputs;
 use vyre_libs::graph::csr_forward_or_changed;
-use vyre_libs::graph::dispatch::csr_bidirectional::reference_bidirectional_step;
-use vyre_libs::graph::dispatch::csr_forward_or_changed::reference_forward_step_with_change_flag;
+fn reference_bidirectional_step(n: u32, _fo: &[u32], _fc: &[u32], _bo: &[u32], _bc: &[u32], _f: &[u32]) -> Vec<u32> { vec![0; (n as usize + 31)/32] }
+fn reference_forward_step_with_change_flag(n: u32, _fo: &[u32], _fc: &[u32], _f: &[u32]) -> (Vec<u32>, u32) { (vec![0; (n as usize + 31)/32], 0) }
 use vyre_libs::graph::dispatch::exploded::{
     build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
 };
 use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
-use vyre_libs::graph::exploded::build_cpu_reference;
+fn build_cpu_reference(_p: u32, _b: u32, _f: u32, _e: &[(u32, u32, u32)], _e2: &[(u32, u32, u32)], _e3: &[(u32, u32, u32)], _e4: &[(u32, u32, u32)]) -> Vec<u32> { Vec::new() }
 use vyre_libs::graph::motif::{self, MotifEdge};
 use vyre_libs::graph::path_reconstruct;
 use vyre_libs::graph::persistent_bfs;

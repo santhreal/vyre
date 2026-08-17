@@ -416,4 +416,5 @@ fn f32_nonzero(value: f32) -> bool {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/algebraic/strength_reduce/mod.rs"]
 mod tests;

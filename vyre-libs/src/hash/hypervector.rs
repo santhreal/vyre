@@ -32,6 +32,7 @@
 //!   position, output bit = 1 iff > k/2 input bits are 1. Ties
 //!   (k even, exactly k/2) round to 0 (callers typically use odd k).
 
+use crate::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -60,26 +61,14 @@ pub fn hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> Prog
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(dim_words)),
-        vec![Node::store(
-            out,
-            t.clone(),
-            Expr::bitxor(Expr::load(a, t.clone()), Expr::load(b, t)),
-        )],
-    )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(a, 0, BufferAccess::ReadOnly, DataType::U32).with_count(dim_words),
-            BufferDecl::storage(b, 1, BufferAccess::ReadOnly, DataType::U32).with_count(dim_words),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(dim_words),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(BIND_OP_ID, body)],
-    )
+    ElementwiseComposer::new(BIND_OP_ID, dim_words)
+        .with_workgroup_size([256, 1, 1])
+        .add_input_storage(a, BufferAccess::ReadOnly, DataType::U32, dim_words)
+        .add_input_storage(b, BufferAccess::ReadOnly, DataType::U32, dim_words)
+        .add_output_storage(out, BufferAccess::ReadWrite, DataType::U32, dim_words)
+        .build_pointwise(out, |i| {
+            Expr::bitxor(Expr::load(a, i.clone()), Expr::load(b, i))
+        })
 }
 
 /// Emit per-bit majority vote over `k` hypervectors stacked row-major
@@ -183,94 +172,11 @@ pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: 
 
 // ---- CPU references ----
 
-/// CPU reference for [`hypervector_xor_bind`].
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn xor_bind_cpu(a: &[u32], b: &[u32]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_xor_bind_cpu_into(a, b, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
-        Err(error) => panic!("vyre-primitives hypervector XOR bind CPU reference failed: {error}"),
-    }
-}
 
-/// CPU reference for [`hypervector_xor_bind`] using a caller-owned buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
-    if let Err(error) = try_xor_bind_cpu_into(a, b, out) {
-        panic!("vyre-primitives hypervector XOR bind CPU reference failed: {error}");
-    }
-}
 
-/// Fallible CPU reference for [`hypervector_xor_bind`] using a caller-owned buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    let dim_words = a.len().min(b.len());
-    vyre_foundation::allocation::reserve_exact_cleared(out, dim_words).map_err(|err| {
-        format!("hypervector XOR bind could not reserve {dim_words} output words: {err}")
-    })?;
-    out.extend(a.iter().zip(b.iter()).take(dim_words).map(|(&x, &y)| x ^ y));
-    Ok(())
-}
 
-/// CPU reference for [`hypervector_majority_bundle`].
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn majority_bundle_cpu(hvs: &[Vec<u32>]) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_majority_bundle_cpu_into(hvs, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
-        Err(error) => {
-            panic!("vyre-primitives hypervector majority bundle CPU reference failed: {error}")
-        }
-    }
-}
 
-/// CPU reference for [`hypervector_majority_bundle`] using a caller-owned buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) {
-    if let Err(error) = try_majority_bundle_cpu_into(hvs, out) {
-        panic!("vyre-primitives hypervector majority bundle CPU reference failed: {error}");
-    }
-}
 
-/// Fallible CPU reference for [`hypervector_majority_bundle`] using a caller-owned buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) -> Result<(), String> {
-    let Some(dim_words) = hvs.iter().map(Vec::len).min() else {
-        out.clear();
-        return Ok(());
-    };
-    if dim_words == 0 {
-        out.clear();
-        return Ok(());
-    }
-    let k = hvs.len();
-    let threshold = k / 2;
-
-    vyre_foundation::allocation::reserve_exact_cleared(out, dim_words).map_err(|err| {
-        format!("hypervector majority bundle could not reserve {dim_words} output words: {err}")
-    })?;
-    out.resize(dim_words, 0);
-    for w in 0..dim_words {
-        for bit in 0..32 {
-            let mut count = 0;
-            for hv in hvs {
-                count += (hv[w] >> bit) & 1;
-            }
-            if count as usize > threshold {
-                out[w] |= 1 << bit;
-            }
-        }
-    }
-    Ok(())
-}
 
 /// Cosine-style similarity over BSC hypervectors: 1 - 2 · hamming(a, b) /
 /// dim_bits. Returns f32 in roughly [-1, 1] (perfect match = 1.0, anti-

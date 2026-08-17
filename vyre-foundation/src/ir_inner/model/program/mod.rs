@@ -27,6 +27,7 @@ pub(crate) mod stats;
 #[cfg(test)]
 mod stats_test;
 #[cfg(test)]
+#[path = "../../../../tests/internal/ir_inner/model/program/mod.rs"]
 mod tests;
 
 #[cfg(test)]

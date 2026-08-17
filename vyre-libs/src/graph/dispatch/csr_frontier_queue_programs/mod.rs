@@ -28,6 +28,7 @@ use crate::graph::dispatch::csr_frontier_queue_scratch::{
 };
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/csr_frontier_queue_programs/mod.rs"]
 mod tests;
 
 // Resident buffer names. Every site binds these handles in this order, so the

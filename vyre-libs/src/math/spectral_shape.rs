@@ -62,41 +62,8 @@ pub fn mp_upper_edge(m: u32, n: u32, sigma_sq: f64) -> f64 {
     sigma_sq * factor
 }
 
-/// CPU reference: clip elementwise to the MP edge.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn mp_edge_clip_cpu(eigenvalues: &[f64], edge: f64) -> Vec<f64> {
-    let mut out = Vec::new();
-    try_mp_edge_clip_cpu_into(eigenvalues, edge, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference: clip elementwise to the MP edge into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn mp_edge_clip_cpu_into(eigenvalues: &[f64], edge: f64, out: &mut Vec<f64>) {
-    try_mp_edge_clip_cpu_into(eigenvalues, edge, out).unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference: clip elementwise to the MP edge into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_mp_edge_clip_cpu_into(
-    eigenvalues: &[f64],
-    edge: f64,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    if eigenvalues.len() > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            eigenvalues.len() - out.len(),
-            "spectral shape CPU oracle",
-            "mp_edge_clip output",
-        )?;
-    }
-    out.clear();
-    out.extend(eigenvalues.iter().map(|&v| v.min(edge)));
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

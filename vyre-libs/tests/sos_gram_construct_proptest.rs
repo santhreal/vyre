@@ -9,7 +9,7 @@
 //! fix protects). It runs the ACTUAL IR through `reference_eval` and asserts bit-for-bit equality with
 //! `sos_gram_construct_cpu`; shrinking auto-minimizes any counterexample. Complements the fixed-input
 //! `sos_gram_oob_parity.rs` regression with randomized breadth over (m, coeff_count, indices, coeffs).
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use proptest::prelude::*;
 use vyre_libs::math::sos_certificate::{sos_gram_construct, sos_gram_construct_cpu};

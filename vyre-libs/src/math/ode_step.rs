@@ -93,76 +93,8 @@ pub fn rk4_step(
     )
 }
 
-/// CPU reference using f64 internally for precision; callers convert
-/// to/from their fixed-point convention at the boundary.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn rk4_step_cpu(
-    y_prev: &[f64],
-    k1: &[f64],
-    k2: &[f64],
-    k3: &[f64],
-    k4: &[f64],
-    h: f64,
-) -> Vec<f64> {
-    let n = y_prev
-        .len()
-        .min(k1.len())
-        .min(k2.len())
-        .min(k3.len())
-        .min(k4.len());
 
-    let mut out = Vec::with_capacity(n);
-    rk4_step_cpu_into(y_prev, k1, k2, k3, k4, h, &mut out);
-    out
-}
 
-/// CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn rk4_step_cpu_into(
-    y_prev: &[f64],
-    k1: &[f64],
-    k2: &[f64],
-    k3: &[f64],
-    k4: &[f64],
-    h: f64,
-    out: &mut Vec<f64>,
-) {
-    try_rk4_step_cpu_into(y_prev, k1, k2, k3, k4, h, out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - rk4_step_cpu_into failed: output allocation failed");
-}
-
-/// Fallible CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_rk4_step_cpu_into(
-    y_prev: &[f64],
-    k1: &[f64],
-    k2: &[f64],
-    k3: &[f64],
-    k4: &[f64],
-    h: f64,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = y_prev
-        .len()
-        .min(k1.len())
-        .min(k2.len())
-        .min(k3.len())
-        .min(k4.len());
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "RK4 CPU oracle",
-            "next-state output",
-        )?;
-    }
-    out.clear();
-    for i in 0..n {
-        out.push(y_prev[i] + (h / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]));
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

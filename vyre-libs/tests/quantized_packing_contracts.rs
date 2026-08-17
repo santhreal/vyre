@@ -1,8 +1,8 @@
 //! Packed INT4 edge and oracle contracts.
 
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
-#[cfg(all(feature = "math", feature = "cpu-parity"))]
+#[cfg(feature = "math")]
 #[test]
 fn generated_i4_cpu_oracle_matrix_preserves_packing_and_top1_semantics() {
     use vyre_libs::math::quantized::{

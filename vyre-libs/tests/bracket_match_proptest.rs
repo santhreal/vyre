@@ -14,7 +14,7 @@
 //! cases a single hand fixture cannot reach. Each result is asserted BIT-EXACT vs `bracket_match_cpu_ref`
 //! (`match_pairs`: bidirectional links, `BRACKET_MATCH_NONE` for unmatched). Any divergence is a real
 //! IR/oracle defect.
-#![cfg(all(feature = "matching", feature = "cpu-parity"))]
+#![cfg(feature = "matching")]
 
 use proptest::prelude::*;
 use vyre_libs::matching::{

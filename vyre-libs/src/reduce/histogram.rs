@@ -128,49 +128,8 @@ pub fn histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins:
     )
 }
 
-/// CPU reference.
-///
-/// Returns a `Vec<u32>` of length `num_bins`.  Out-of-range input
-/// values are ignored (matches the GPU drop behaviour).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(input: &[u32], num_bins: u32) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_cpu_ref_into(input, num_bins, &mut out) {
-        Ok(()) => out,
-        // A parity oracle that returns empty on failure makes the GPU-vs-CPU
-        // assertion pass on empty==empty, silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use try_cpu_ref_into.
-        Err(error) => panic!("vyre-primitives histogram CPU reference failed: {error}"),
-    }
-}
 
-/// CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(input: &[u32], num_bins: u32, out: &mut Vec<u32>) {
-    if let Err(error) = try_cpu_ref_into(input, num_bins, out) {
-        panic!("vyre-primitives histogram CPU reference failed: {error}");
-    }
-}
 
-/// Fallible CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(input: &[u32], num_bins: u32, out: &mut Vec<u32>) -> Result<(), String> {
-    let num_bins = usize::try_from(num_bins)
-        .map_err(|_| format!("histogram bin count {num_bins} does not fit host usize"))?;
-    vyre_foundation::allocation::reserve_exact_cleared(out, num_bins).map_err(|err| {
-        format!("histogram CPU reference could not reserve {num_bins} bins: {err}")
-    })?;
-    out.resize(num_bins, 0);
-    for &bin in input {
-        if let Ok(bin) = usize::try_from(bin) {
-            if let Some(slot) = out.get_mut(bin) {
-                *slot = slot.wrapping_add(1);
-            }
-        }
-    }
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

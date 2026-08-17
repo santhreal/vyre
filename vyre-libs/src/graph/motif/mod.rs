@@ -6,19 +6,12 @@
 
 use crate::graph::program_graph::BINDING_PRIMITIVE_START;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod cpu_ref;
 mod layout;
 mod pattern;
 mod plan;
 mod program;
 mod registry;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::{
-    cpu_ref, cpu_ref_into, cpu_ref_matches, cpu_ref_participation_count, try_cpu_ref_into,
-    try_cpu_ref_participation_count, try_cpu_ref_participation_count_with_scratch, MotifCpuScratch,
-};
 pub use layout::{
     count_witness_participants, validate_csr_inputs, validate_motif_inputs, validate_motif_witness,
     MotifLayout,

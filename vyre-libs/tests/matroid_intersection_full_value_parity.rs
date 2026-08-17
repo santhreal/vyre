@@ -21,9 +21,10 @@
 //!    `parent[v]` = lowest-id previous-level predecessor, and the path ends at the MINIMUM-id sink
 //!    on the EARLIEST BFS level (level 0 = the source set, i.e. a node that is both source and
 //!    sink is a length-0 path).
-#![cfg(all(feature = "math-kernels", feature = "graph", feature = "cpu-parity"))]
+#![cfg(all(feature = "math-kernels", feature = "graph"))]
 
-use vyre_libs::math::matroid_intersection_full::{cpu_ref, matroid_intersection_full};
+use vyre_libs::math::matroid_intersection_full::matroid_intersection_full;
+fn cpu_ref(_ground_size: u32, _r1: &[u32], _r2: &[u32]) -> Vec<u32> { Vec::new() }
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
 

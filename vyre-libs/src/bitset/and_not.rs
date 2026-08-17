@@ -22,31 +22,8 @@ pub fn bitset_and_not(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
     binary_word_program(OP_ID, lhs, rhs, out, words, BitwiseBinaryOp::AndNot)
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-super::define_cpu_ref!(lhs, rhs, "vyre-primitives bitset_and_not cpu_ref failed");
 
-#[cfg(any(test, feature = "cpu-parity"))]
-super::define_cpu_ref_into!(
-    lhs,
-    rhs,
-    "vyre-primitives bitset_and_not cpu_ref_into failed"
-);
 
-/// Fallible CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    let len = lhs.len().min(rhs.len());
-    if len > out.capacity() {
-        out.try_reserve(len - out.len()).map_err(|err| {
-            format!(
-                "bitset_and_not CPU oracle failed to reserve {len} output words: {err}. Fix: shard the bitset before parity evaluation."
-            )
-        })?;
-    }
-    out.clear();
-    out.extend(lhs.iter().zip(rhs.iter()).map(|(a, b)| a & !b));
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -70,6 +47,17 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
+        let len = lhs.len().min(rhs.len());
+        lhs[..len].iter().zip(&rhs[..len]).map(|(&a, &b)| a & !b).collect()
+    }
+    fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
+        *out = cpu_ref(lhs, rhs);
+    }
+    fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<(), ()> {
+        cpu_ref_into(lhs, rhs, out);
+        Ok(())
+    }
 
     #[test]
     fn per_word_and_not() {

@@ -13,7 +13,6 @@
 //! binds input RO(0) + segment_offsets RO(1) + output RW(2) = 3 IC; histogram binds input RO(0) +
 //! output RW(1) = 2 IC. All decode outputs[0] = the sole writable buffer. Every op is exact integer
 //! arithmetic → BIT-EXACT (no tolerance).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::encoding::reduction_metrics::{
     histogram_atomic_scatter_via, reduce_all_via, reduce_any_via, reduce_count_non_zero_via,

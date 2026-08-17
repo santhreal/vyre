@@ -263,84 +263,9 @@ pub fn jacobi_smooth_step_serial_body(
     )]
 }
 
-/// CPU reference: one weighted Jacobi step in f64.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn jacobi_smooth_step_cpu(a: &[f64], b: &[f64], x_in: &[f64], omega: f64, n: u32) -> Vec<f64> {
-    try_jacobi_smooth_step_cpu(a, b, x_in, omega, n).unwrap_or_else(|error| panic!("{error}"))
-}
 
-/// Fallible CPU reference: one weighted Jacobi step in f64.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_jacobi_smooth_step_cpu(
-    a: &[f64],
-    b: &[f64],
-    x_in: &[f64],
-    omega: f64,
-    n: u32,
-) -> Result<Vec<f64>, String> {
-    let mut out = Vec::new();
-    try_jacobi_smooth_step_cpu_into(a, b, x_in, omega, n, &mut out)?;
-    Ok(out)
-}
 
-/// CPU reference: one weighted Jacobi step in f64, writing into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn jacobi_smooth_step_cpu_into(
-    a: &[f64],
-    b: &[f64],
-    x_in: &[f64],
-    omega: f64,
-    n: u32,
-    out: &mut Vec<f64>,
-) {
-    try_jacobi_smooth_step_cpu_into(a, b, x_in, omega, n, out)
-        .unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference: one weighted Jacobi step in f64, writing into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_jacobi_smooth_step_cpu_into(
-    a: &[f64],
-    b: &[f64],
-    x_in: &[f64],
-    omega: f64,
-    n: u32,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = n as usize;
-    n.checked_mul(n).ok_or_else(|| {
-        format!(
-            "jacobi_smooth_step CPU oracle n={n} overflows dense matrix indexing. Fix: shard or sparsify the AMG level before parity evaluation."
-        )
-    })?;
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "AMG Jacobi CPU oracle",
-            "jacobi_smooth_step output",
-        )?;
-    }
-    out.clear();
-    for i in 0..n {
-        let mut ax_i = 0.0;
-        for j in 0..n {
-            let a_ij = a.get(i * n + j).copied().unwrap_or(0.0);
-            let x_j = x_in.get(j).copied().unwrap_or(0.0);
-            ax_i += a_ij * x_j;
-        }
-        let res = b.get(i).copied().unwrap_or(0.0) - ax_i;
-        let diag_value = a.get(i * n + i).copied().unwrap_or(0.0);
-        let diag = if diag_value.abs() > 1e-30 {
-            diag_value
-        } else {
-            1.0
-        };
-        out.push(x_in.get(i).copied().unwrap_or(0.0) + omega * res / diag);
-    }
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

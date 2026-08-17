@@ -35,4 +35,5 @@ mod nested_byte_rows;
 mod public_api_snapshot_inventory;
 mod relation_import_certificates;
 mod subcommand_dispatch;
+mod test_mutation_hygiene;
 mod testing_guides;

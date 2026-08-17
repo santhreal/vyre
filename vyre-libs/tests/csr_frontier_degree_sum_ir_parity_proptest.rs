@@ -10,7 +10,7 @@
 //! lanes hit the one output word concurrently) all diverge here and nowhere
 //! else. Pins the kernel against `reference_eval`.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use vyre_libs::graph::csr_frontier_degree_sum::{

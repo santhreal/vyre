@@ -4,7 +4,6 @@
 //! backward union oracle on 1024 generated CSR/frontier shapes.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 use vyre_foundation::ir::Program;
 use vyre_libs::graph::csr_bidirectional;

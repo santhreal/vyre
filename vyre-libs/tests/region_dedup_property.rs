@@ -12,7 +12,7 @@
 //! `start ∈ 0..=255`, `end = start + (0..=32)`. Bounded ranges keep
 //! shrinking fast and exercise both clusters and isolated spans.
 
-#![cfg(all(feature = "matching", feature = "cpu-parity"))]
+#![cfg(feature = "matching")]
 
 use proptest::prelude::*;
 use vyre_libs::matching::{dedup_regions_inplace, RegionTriple};

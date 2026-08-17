@@ -24,10 +24,28 @@
 /// cooperative walk already enables it.
 #[cfg(feature = "reduce")]
 pub(crate) mod cooperative;
-pub(crate) mod elementwise;
+#[cfg(feature = "graph")]
+pub mod csr;
+#[cfg(feature = "graph")]
+pub use csr::CsrTraversalComposer;
+pub mod elementwise;
+pub use elementwise::ElementwiseComposer;
+/// Canonical matrix multiplication and contraction IR composer.
+pub mod gemm;
+pub use gemm::{
+    ContractionComposer, ContractionEpilogue, ContractionGeometry, ContractionSemiring,
+    ContractionTiling,
+};
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
+pub(crate) mod reduction;
+/// Shared table-walking state machine / DFA composer.
+pub mod state_machine;
+pub use state_machine::TableStateMachineComposer;
+/// Canonical 2D grid, coordinate decomposition, stencil, and pixel composer.
+pub mod stencil;
+pub use stencil::{Grid2DComposer, Grid2DShape};
 /// The two shared child regions registered as operations in their own right.
 ///
 /// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and
@@ -36,7 +54,6 @@ pub mod range_ordering;
 /// composes them without asking for their registrations.
 #[cfg(feature = "builder-ops")]
 mod registrations;
-pub(crate) mod tiled_reduce;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
@@ -438,105 +455,7 @@ pub(crate) fn build_elementwise_binary<F>(
 where
     F: Fn(vyre_foundation::ir::Expr, vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr,
 {
-    check_tensors(
-        op_id,
-        &[
-            (&a, vyre_foundation::ir::DataType::U32),
-            (&b, vyre_foundation::ir::DataType::U32),
-            (&out, vyre_foundation::ir::DataType::U32),
-        ],
-    )?;
-
-    if a.shape != b.shape || a.shape != out.shape {
-        return Err(
-            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-                name: "elementwise_binary".into(),
-                found: vec![],
-                expected: vec![],
-                op: op_id,
-            },
-        );
-    }
-
-    let a_count = a.element_count().ok_or_else(|| {
-        crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow {
-            name: a.name_str().to_string(),
-            shape: a.shape.to_vec(),
-        }
-    })?;
-    let out_count = out.element_count().ok_or_else(|| {
-        crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow {
-            name: out.name_str().to_string(),
-            shape: out.shape.to_vec(),
-        }
-    })?;
-    if out_count < a_count {
-        return Err(
-            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-                name: out.name_str().to_string(),
-                found: out.shape.to_vec(),
-                expected: a.shape.to_vec(),
-                op: op_id,
-            },
-        );
-    }
-
-    let n = a_count;
-    let body = vec![
-        vyre_foundation::ir::Node::let_bind(
-            "idx",
-            vyre_foundation::ir::Expr::InvocationId { axis: 0 },
-        ),
-        vyre_foundation::ir::Node::if_then(
-            vyre_foundation::ir::Expr::lt(
-                vyre_foundation::ir::Expr::var("idx"),
-                vyre_foundation::ir::Expr::u32(n),
-            ),
-            vec![vyre_foundation::ir::Node::store(
-                out.name_str(),
-                vyre_foundation::ir::Expr::var("idx"),
-                f(
-                    vyre_foundation::ir::Expr::load(
-                        a.name_str(),
-                        vyre_foundation::ir::Expr::var("idx"),
-                    ),
-                    vyre_foundation::ir::Expr::load(
-                        b.name_str(),
-                        vyre_foundation::ir::Expr::var("idx"),
-                    ),
-                ),
-            )],
-        ),
-    ];
-
-    let group = options.workgroup_size.unwrap_or([64, 1, 1]);
-
-    Ok(vyre_foundation::ir::Program::wrapped(
-        vec![
-            vyre_foundation::ir::BufferDecl::storage(
-                a.name_str(),
-                0,
-                vyre_foundation::ir::BufferAccess::ReadOnly,
-                vyre_foundation::ir::DataType::U32,
-            )
-            .with_count(n),
-            vyre_foundation::ir::BufferDecl::storage(
-                b.name_str(),
-                1,
-                vyre_foundation::ir::BufferAccess::ReadOnly,
-                vyre_foundation::ir::DataType::U32,
-            )
-            .with_count(n),
-            vyre_foundation::ir::BufferDecl::output(
-                out.name_str(),
-                2,
-                vyre_foundation::ir::DataType::U32,
-            )
-            .with_count(n),
-        ],
-        group,
-        vec![wrap_anonymous_region(op_id, body)],
-    ))
+    ElementwiseComposer::try_binary(op_id, a, b, out, options, f)
 }
 
 pub(crate) fn build_elementwise_unary<F>(
@@ -549,73 +468,7 @@ pub(crate) fn build_elementwise_unary<F>(
 where
     F: Fn(vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr,
 {
-    check_tensors(
-        op_id,
-        &[
-            (&a, vyre_foundation::ir::DataType::U32),
-            (&out, vyre_foundation::ir::DataType::U32),
-        ],
-    )?;
-
-    if a.shape != out.shape {
-        return Err(
-            crate::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch {
-                name: "elementwise_unary".into(),
-                found: vec![],
-                expected: vec![],
-                op: op_id,
-            },
-        );
-    }
-
-    let n = a.element_count().ok_or_else(|| {
-        crate::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow {
-            name: a.name_str().to_string(),
-            shape: a.shape.to_vec(),
-        }
-    })?;
-    let body = vec![
-        vyre_foundation::ir::Node::let_bind(
-            "idx",
-            vyre_foundation::ir::Expr::InvocationId { axis: 0 },
-        ),
-        vyre_foundation::ir::Node::if_then(
-            vyre_foundation::ir::Expr::lt(
-                vyre_foundation::ir::Expr::var("idx"),
-                vyre_foundation::ir::Expr::u32(n),
-            ),
-            vec![vyre_foundation::ir::Node::store(
-                out.name_str(),
-                vyre_foundation::ir::Expr::var("idx"),
-                f(vyre_foundation::ir::Expr::load(
-                    a.name_str(),
-                    vyre_foundation::ir::Expr::var("idx"),
-                )),
-            )],
-        ),
-    ];
-
-    let group = options.workgroup_size.unwrap_or([64, 1, 1]);
-
-    Ok(vyre_foundation::ir::Program::wrapped(
-        vec![
-            vyre_foundation::ir::BufferDecl::storage(
-                a.name_str(),
-                0,
-                vyre_foundation::ir::BufferAccess::ReadOnly,
-                vyre_foundation::ir::DataType::U32,
-            )
-            .with_count(n),
-            vyre_foundation::ir::BufferDecl::output(
-                out.name_str(),
-                1,
-                vyre_foundation::ir::DataType::U32,
-            )
-            .with_count(n),
-        ],
-        group,
-        vec![wrap_anonymous_region(op_id, body)],
-    ))
+    ElementwiseComposer::try_unary(op_id, a, out, options, f)
 }
 
 #[cfg(test)]

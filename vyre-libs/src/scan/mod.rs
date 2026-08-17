@@ -46,11 +46,6 @@ pub use hit_buffer::{
     emit_hit_then_compact_with_layout, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
     HIT_BUFFER_OVERFLOW_COUNT,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use post_process::{
-    reference_post_process, shannon_entropy_bits_per_byte, try_reference_post_process,
-    try_reference_post_process_into,
-};
 pub use post_process::{PostProcessError, PostProcessedMatch};
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use regex_anchored_window::{
@@ -84,15 +79,3 @@ pub use scan_program::{build as build_scan_program, ScanProgram};
 pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 
 pub use vyre_foundation::execution_plan::fusion::{fuse_programs, fuse_programs_vec, FusionError};
-
-#[cfg(feature = "cpu-parity")]
-use crate::matching::dedup_regions_cpu as primitive_dedup_regions_cpu;
-#[cfg(feature = "cpu-parity")]
-use crate::matching::RegionTriple;
-
-/// Reference region deduplication helper for parity tests.
-#[cfg(feature = "cpu-parity")]
-#[must_use]
-pub fn dedup_regions_reference(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    primitive_dedup_regions_cpu(input)
-}

@@ -178,61 +178,9 @@ fn run_element(in_buf: &str, run_base: &Expr, step: u32, n: u32) -> Expr {
     )
 }
 
-/// CPU-reference prefix scan. Conformance tests verify the GPU
-/// Program produces the same output for every input.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> {
-    let mut out = Vec::new();
-    try_cpu_ref_into(input, kind, &mut out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - prefix_scan cpu_ref failed: output allocation failed");
-    out
-}
 
-/// Fallible CPU-reference prefix scan.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref(input: &[u32], kind: ScanKind) -> Result<Vec<u32>, String> {
-    let mut out = Vec::new();
-    try_cpu_ref_into(input, kind, &mut out)?;
-    Ok(out)
-}
 
-/// CPU-reference prefix scan using a caller-owned output buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) {
-    try_cpu_ref_into(input, kind, out)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - prefix_scan cpu_ref_into failed: output allocation failed");
-}
 
-/// Fallible CPU-reference prefix scan using a caller-owned output buffer.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) -> Result<(), String> {
-    if input.len() > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            input.len() - out.len(),
-            "prefix scan CPU oracle",
-            "scan output",
-        )?;
-    }
-    out.clear();
-    let mut acc = 0_u32;
-    match kind {
-        ScanKind::InclusiveSum => {
-            for &x in input {
-                acc = acc.wrapping_add(x);
-                out.push(acc);
-            }
-        }
-        ScanKind::ExclusiveSum => {
-            for &x in input {
-                out.push(acc);
-                acc = acc.wrapping_add(x);
-            }
-        }
-    }
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {

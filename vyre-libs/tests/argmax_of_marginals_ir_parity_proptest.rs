@@ -12,7 +12,7 @@
 //! the lowest-index tie rule, the all-picked sentinel) was never executed. A `>=`
 //! vs `>` tie error, a missing exclusion, or a wrong sentinel all diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use proptest::prelude::*;
 use vyre_libs::math::submodular_greedy::{argmax_of_marginals, argmax_of_marginals_cpu, NO_WINNER};

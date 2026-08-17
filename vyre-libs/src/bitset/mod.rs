@@ -8,49 +8,9 @@
 //! element `w * 32 + i`. Sizes are declared at `Program` build
 //! time so the backend can allocate + validate layout up front.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn expect_cpu_ref(result: Result<(), String>, context: &str) {
-    if let Err(error) = result {
-        panic!("{context}: {error}");
-    }
-}
 
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) fn build_cpu_ref<T>(
-    fill: impl FnOnce(&mut Vec<T>) -> Result<(), String>,
-    context: &str,
-) -> Vec<T> {
-    let mut out = Vec::new();
-    expect_cpu_ref(fill(&mut out), context);
-    out
-}
 
-#[cfg(any(test, feature = "cpu-parity"))]
-macro_rules! define_cpu_ref {
-    ($lhs:ident, $rhs:ident, $context:literal) => {
-        /// CPU reference allocating its output.
-        #[must_use]
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref($lhs: &[u32], $rhs: &[u32]) -> Vec<u32> {
-            super::build_cpu_ref(|out| try_cpu_ref_into($lhs, $rhs, out), $context)
-        }
-    };
-}
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) use define_cpu_ref;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-macro_rules! define_cpu_ref_into {
-    ($lhs:ident, $rhs:ident, $context:literal) => {
-        /// CPU reference into caller-owned storage.
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref_into($lhs: &[u32], $rhs: &[u32], out: &mut Vec<u32>) {
-            super::expect_cpu_ref(try_cpu_ref_into($lhs, $rhs, out), $context);
-        }
-    };
-}
-#[cfg(any(test, feature = "cpu-parity"))]
-pub(crate) use define_cpu_ref_into;
 
 /// Per-word bitwise AND over two packed bitsets.
 pub mod and {

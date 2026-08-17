@@ -306,79 +306,7 @@ fn bellman_single_word_harness(buffers: BellmanBuffers<'_>, extents: BellmanExte
     bellman_wrap(&inner, buffers, extents, 1)
 }
 
-/// CPU reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn cpu_ref(
-    src: &[u32],
-    dst: &[u32],
-    weight: &[u32],
-    dist: &[u32],
-    n_nodes: u32,
-    max_iterations: u32,
-) -> (Vec<u32>, u32) {
-    let mut current = Vec::new();
-    let mut next = Vec::new();
-    let iters = cpu_ref_into(
-        src,
-        dst,
-        weight,
-        dist,
-        n_nodes,
-        max_iterations,
-        &mut current,
-        &mut next,
-    );
-    (current, iters)
-}
 
-/// CPU reference using caller-owned current and next-distance buffers.
-///
-/// `current` is overwritten with the final distance vector. `next` is retained
-/// as monotone relaxation scratch so repeated parity checks do not allocate
-/// fresh `Vec`s or clone the initial distance vector.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[allow(clippy::too_many_arguments)]
-pub fn cpu_ref_into(
-    src: &[u32],
-    dst: &[u32],
-    weight: &[u32],
-    dist: &[u32],
-    n_nodes: u32,
-    max_iterations: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) -> u32 {
-    let n = n_nodes as usize;
-    let edge_count = src.len().min(dst.len()).min(weight.len());
-    current.clear();
-    current.resize(n, u32::MAX);
-    for (out, &value) in current.iter_mut().zip(dist.iter()) {
-        *out = value;
-    }
-    next.clear();
-    next.extend_from_slice(current);
-    for iter in 0..max_iterations {
-        for i in 0..edge_count {
-            let u = src[i] as usize;
-            let v = dst[i] as usize;
-            if u >= n || v >= n {
-                continue;
-            }
-            let w = weight[i];
-            let du = current[u];
-            if du != u32::MAX {
-                let alt = du.saturating_add(w);
-                next[v] = next[v].min(alt);
-            }
-        }
-        if next.as_slice() == current.as_slice() {
-            return iter;
-        }
-        current.copy_from_slice(&next);
-    }
-    max_iterations
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

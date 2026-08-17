@@ -134,6 +134,7 @@ mod ternary_op;
 /// Specification element.
 mod test_descriptor;
 #[cfg(test)]
+#[path = "../tests/internal/mod.rs"]
 mod tests;
 /// Unary operator enum  -  single-operand element-wise primitives.
 /// Specification element.

@@ -3,11 +3,10 @@
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
-use crate::builder::{check_tensors, BuildOptions};
+use crate::builder::gemm::ContractionComposer;
+use crate::builder::BuildOptions;
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
-use super::mma_fragment::MmaCapabilityRecord;
-use super::program::{build_matmul_tiled_program, MatmulTiledProgramSpec};
 use super::shape::MatrixShape;
 use super::tensor_core_policy::{
     plan_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities, MatmulKernelPath,
@@ -78,98 +77,35 @@ impl MatmulTiledCore {
     }
 
     fn build(self) -> Result<Program, TensorRefError> {
-        let dtype = self.a.dtype.clone();
-        let tensors = if let Some(bias) = self.bias.as_ref() {
-            vec![
-                (&self.a, dtype.clone()),
-                (&self.b, dtype.clone()),
-                (bias, dtype.clone()),
-                (&self.out, dtype.clone()),
-            ]
+        let m = if self.a.shape.len() == 2 {
+            self.a.shape[0]
         } else {
-            vec![
-                (&self.a, dtype.clone()),
-                (&self.b, dtype.clone()),
-                (&self.out, dtype.clone()),
-            ]
+            0
         };
-        check_tensors(self.op_id, &tensors)?;
-
-        if self.tile == 0 {
-            return Err(TensorRefError::ShapeMismatch {
-                name: "tile".into(),
-                found: vec![0],
-                expected: vec![1],
-                op: self.op_id,
-            });
-        }
-
-        let shape_name = if self.bias.is_some() {
-            "a/b/bias/out"
+        let k = if self.a.shape.len() == 2 {
+            self.a.shape[1]
         } else {
-            "a/b/out"
+            0
         };
-        let bias_shape_is_valid = self.bias.as_ref().is_none_or(|bias| bias.shape.len() == 1);
-        if self.a.shape.len() != 2
-            || self.b.shape.len() != 2
-            || !bias_shape_is_valid
-            || self.out.shape.len() != 2
-        {
-            return Err(TensorRefError::ShapeMismatch {
-                name: shape_name.into(),
-                found: vec![],
-                expected: vec![0, 0],
-                op: self.op_id,
-            });
-        }
+        let n = if self.b.shape.len() == 2 {
+            self.b.shape[1]
+        } else {
+            0
+        };
 
-        let m = self.a.shape[0];
-        let k = self.a.shape[1];
-        let n = self.b.shape[1];
-        if self.b.shape[0] != k {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.b.name.as_str().to_string(),
-                found: self.b.shape.to_vec(),
-                expected: vec![k, n],
-                op: self.op_id,
-            });
+        let mut composer = ContractionComposer::tiled_2d(
+            self.op_id, self.a, self.b, self.bias, self.out, m, k, n, self.tile,
+        );
+        if let Some(workgroup) = self.options.workgroup_size {
+            composer = composer.with_workgroup_size(workgroup);
         }
-        if let Some(bias) = self.bias.as_ref() {
-            if bias.shape[0] != n {
-                return Err(TensorRefError::ShapeMismatch {
-                    name: bias.name.as_str().to_string(),
-                    found: bias.shape.to_vec(),
-                    expected: vec![n],
-                    op: self.op_id,
-                });
-            }
+        if let Some(generator) = self.options.region_generator {
+            composer = composer.with_region_generator(generator);
         }
-        if self.out.shape.as_ref() != [m, n] {
-            return Err(TensorRefError::ShapeMismatch {
-                name: self.out.name.as_str().to_string(),
-                found: self.out.shape.to_vec(),
-                expected: vec![m, n],
-                op: self.op_id,
-            });
+        if let Some(tenant_id) = self.options.tenant_id {
+            composer = composer.with_tenant_id(tenant_id);
         }
-
-        build_matmul_tiled_program(MatmulTiledProgramSpec {
-            op_id: self.op_id,
-            a: self.a.name_str(),
-            b: self.b.name_str(),
-            bias: self.bias.as_ref().map(TensorRef::name_str),
-            out: self.out.name_str(),
-            m,
-            k,
-            n,
-            tile: self.tile,
-            workgroup: self.options.workgroup_size.unwrap_or([16, 16, 1]),
-            generator: self.options.region_generator.unwrap_or(self.op_id),
-            dtype,
-            a_tile_name: "matmul_a_tile",
-            b_tile_name: "matmul_b_tile",
-            mma_capabilities: MmaCapabilityRecord::all_descriptor_mma_shapes(),
-        })
+        composer.build()
     }
 }
 

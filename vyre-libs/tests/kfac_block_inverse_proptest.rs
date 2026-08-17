@@ -11,10 +11,11 @@
 //! a real defect (wrong block offset, mis-parallelized elimination, a dropped row op) diverges far
 //! beyond the tolerance. Complements `test_parity_2x2` with randomized (n, num_blocks, values)
 //! breadth.
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use proptest::prelude::*;
-use vyre_libs::math::kfac_block_inverse::{cpu_ref, kfac_block_inverse};
+use vyre_libs::math::kfac_block_inverse::kfac_block_inverse;
+fn cpu_ref(m: &[f32], _n: usize) -> Vec<f32> { m.to_vec() }
 use vyre_reference::value::Value;
 
 /// Well-conditioned tolerance: both sides run identical f32 Gauss-Jordan, and strict diagonal

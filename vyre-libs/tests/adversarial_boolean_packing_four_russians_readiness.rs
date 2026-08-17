@@ -12,22 +12,22 @@ use gate_fixtures::u32_bytes;
 //
 // GPU acquisition: none  -  all assertions use CPU reference oracles.
 
-use vyre_libs::bitset::and::cpu_ref as bitset_and_ref;
-use vyre_libs::bitset::and_not::cpu_ref as bitset_and_not_ref;
-use vyre_libs::bitset::any::cpu_ref as bitset_any_ref;
+use vyre_reference::composition_witness::bitset_and_witness as bitset_and_ref;
+use vyre_reference::composition_witness::bitset_and_not_witness as bitset_and_not_ref;
+fn bitset_any_ref(input: &[u32]) -> u32 { if input.iter().any(|&w| w != 0) { 1 } else { 0 } }
 use vyre_libs::bitset::bitset_words;
-use vyre_libs::bitset::contains::cpu_ref as bitset_contains_ref;
-use vyre_libs::bitset::equal::cpu_ref as bitset_equal_ref;
+use vyre_reference::composition_witness::bitset_contains_witness as bitset_contains_ref;
+use vyre_reference::composition_witness::bitset_equal_witness as bitset_equal_ref;
 use vyre_libs::bitset::four_russians::{
     binary_byte_lut, cached_binary_byte_lut, cpu_ref as four_russians_cpu_ref,
     four_russians_apply_byte_lut, BooleanTileOp,
 };
-use vyre_libs::bitset::not::cpu_ref as bitset_not_ref;
-use vyre_libs::bitset::or::cpu_ref as bitset_or_ref;
-use vyre_libs::bitset::popcount::cpu_ref as bitset_popcount_ref;
-use vyre_libs::bitset::subset_of::cpu_ref as bitset_subset_of_ref;
-use vyre_libs::bitset::test_bit::cpu_ref as bitset_test_bit_ref;
-use vyre_libs::bitset::xor::cpu_ref as bitset_xor_ref;
+use vyre_reference::composition_witness::bitset_not_witness as bitset_not_ref;
+use vyre_reference::composition_witness::bitset_or_witness as bitset_or_ref;
+use vyre_reference::composition_witness::bitset_popcount_witness as bitset_popcount_ref;
+use vyre_reference::composition_witness::bitset_subset_of_witness as bitset_subset_of_ref;
+use vyre_reference::composition_witness::bitset_test_bit_witness as bitset_test_bit_ref;
+use vyre_reference::composition_witness::bitset_xor_witness as bitset_xor_ref;
 use vyre_reference::value::Value;
 
 // ---------------------------------------------------------------------------

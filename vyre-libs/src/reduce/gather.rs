@@ -22,8 +22,6 @@
 
 use vyre_foundation::ir::Program;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use super::indexed_move::{indexed_move_cpu_ref_into, try_indexed_move_cpu_ref_into};
 use super::indexed_move::{indexed_move_program, IndexedMoveKind};
 
 /// Canonical op id.
@@ -38,27 +36,8 @@ pub fn gather(src: &str, indices: &str, dst: &str, count: u32) -> Program {
     indexed_move_program(OP_ID, src, indices, dst, count, IndexedMoveKind::Gather)
 }
 
-/// CPU reference.
-///
-/// Returns a `Vec<u32>` of length `indices.len()`. Out-of-range
-/// indices produce zero, matching the guarded GPU load contract.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(src: &[u32], indices: &[u32]) -> Vec<u32> {
-    super::collect_cpu_reference("gather", |out| try_cpu_ref_into(src, indices, out))
-}
 
-/// CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(src: &[u32], indices: &[u32], out: &mut Vec<u32>) {
-    indexed_move_cpu_ref_into(IndexedMoveKind::Gather, src, indices, indices.len(), out);
-}
 
-/// Fallible CPU reference into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(src: &[u32], indices: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
-    try_indexed_move_cpu_ref_into(IndexedMoveKind::Gather, src, indices, indices.len(), out)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

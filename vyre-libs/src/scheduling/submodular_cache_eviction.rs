@@ -56,8 +56,6 @@
 use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::submodular_greedy::argmax_of_marginals_cpu;
 use crate::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
 use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -69,61 +67,7 @@ pub struct SubmodularEvictionGpuScratch {
     winner: Vec<u32>,
 }
 
-/// Compute the retention set: K pipelines to KEEP cached. `gains[i]`
-/// is the expected hit rate for pipeline i conditional on prior
-/// retentions; `n` is the total pipeline count; `k` is the cache
-/// capacity.
-///
-/// Returns a 0/1 vector of length n: 1 = retain, 0 = evict.
-///
-/// The caller is responsible for updating the gains table to reflect
-/// diminishing returns  -  if pipelines i and j have correlated access
-/// patterns, picking i should reduce j's marginal gain. For a simple
-/// independent-access model the unmodified gains suffice; richer
-/// models pass an updated `gains` slice per step.
-///
-/// # Panics
-///
-/// Panics if `gains.len() != n` or `k > n`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
-    let mut picked = Vec::with_capacity(n as usize);
-    reference_select_retention_set_into(gains, n, k, &mut picked);
-    picked
-}
 
-/// Compute the retention set into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_select_retention_set_into(
-    gains: &mut [u32],
-    n: u32,
-    k: u32,
-    picked: &mut Vec<u32>,
-) {
-    use crate::telemetry::{bump, submodular_cache_eviction_calls};
-    bump(&submodular_cache_eviction_calls);
-    assert_eq!(gains.len(), n as usize);
-    assert!(k <= n, "Fix: k must not exceed n.");
-
-    picked.clear();
-    picked.resize(n as usize, 0);
-    let mut keep_count = 0u32;
-    while keep_count < k {
-        let (winner, _) = argmax_of_marginals_cpu(gains, picked);
-        if winner == NO_WINNER {
-            break;
-        }
-        picked[winner as usize] = 1;
-        // Zero the picked element's gain so subsequent argmax
-        // ignores it. Richer models would compute conditional
-        // marginal gains; the simple model treats access as
-        // independent and only decreases by the picked-itself
-        // gain.
-        gains[winner as usize] = 0;
-        keep_count += 1;
-    }
-}
 
 /// Compute the retention set through the GPU-dispatchable submodular argmax primitive.
 ///

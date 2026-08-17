@@ -7,8 +7,6 @@
 use vyre_foundation::ir::Program;
 
 use crate::graph::csr_frontier_step::define_csr_frontier_step_cpu_ref;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::graph::csr_frontier_step::CsrFrontierStepKind;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::traversal::forward_edge_program;
 

@@ -32,3 +32,7 @@ vyre-foundation.workspace = true
 # integration tests/benches assert against these crates' public APIs
 vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 proptest.workspace = true
+
+[[test]]
+name = "pattern_analysis_contracts"
+path = "tests/pattern_analysis_contracts/mod.rs"

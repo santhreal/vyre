@@ -21,7 +21,6 @@
 //! strongly-connected-component driver, and `gpu_dispatch` every
 //! dispatcher-backed wrapper. The host closures are the foundation substrate's
 //! own, re-exported here so this module's documented paths keep resolving;
-//! `reference_gemm` adds the call counter and nothing else.
 //!
 //! The semiring these analyses select is `vyre_spec::Semiring`, published by
 //! `math::semiring_gemm` because that is the composition it parameterizes. This
@@ -33,7 +32,6 @@ mod delta_maintenance;
 mod dense_matrix;
 mod fixpoint_comparison;
 mod gpu_dispatch;
-mod reference_gemm;
 mod scc_decomposition;
 
 pub use delta_maintenance::compare_delta_maintained_reachability;
@@ -45,12 +43,6 @@ pub use gpu_dispatch::{
     scc_components_via_substrate_with_scratch_via, semiring_gemm_via, semiring_gemm_via_bool_or,
     semiring_gemm_via_into, semiring_gemm_via_lineage, semiring_gemm_via_min_plus,
     semiring_gemm_via_with_scratch_into, shortest_path_closure_via,
-};
-pub use reference_gemm::{reference_semiring_gemm, reference_semiring_gemm_into};
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use scc_decomposition::{
-    forward_backward_bitsets_for_pivot, forward_backward_bitsets_for_pivot_into,
-    reference_scc_components_via_substrate_into, scc_components_via_substrate,
 };
 
 /// Caller-owned dispatch scratch for repeated semiring-GEMM GPU calls.
@@ -162,16 +154,4 @@ pub struct DeltaDataflowReport {
     pub delta_closure: Vec<u32>,
     /// Closure produced by full recompute after applying the batch.
     pub full_recompute_closure: Vec<u32>,
-}
-
-/// Reusable buffers for SCC/dataflow closure queries.
-#[derive(Debug, Default)]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub struct DataflowFixpointScratch {
-    pub(super) fwd_closure: Vec<u32>,
-    pub(super) bwd_closure: Vec<u32>,
-    pub(super) transpose: Vec<u32>,
-    pub(super) forward: Vec<u32>,
-    pub(super) backward: Vec<u32>,
-    pub(super) next_components: Vec<u32>,
 }

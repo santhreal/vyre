@@ -101,20 +101,6 @@ pub fn try_conformal_rank(n: u32, alpha: f64) -> Option<u32> {
     Some(rank.clamp(1, n))
 }
 
-/// CPU reference: given UNSORTED scores + target miscoverage α, return
-/// the threshold value q̂ that the GPU would produce after a sort + the
-/// `conformal_threshold` Program.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn conformal_threshold_cpu(scores: &[u32], alpha: f64) -> u32 {
-    let n = scores.len() as u32;
-    let Some(k) = try_conformal_rank(n, alpha) else {
-        return 0;
-    };
-    let mut sorted = scores.to_vec();
-    sorted.sort_unstable();
-    sorted[(k - 1) as usize]
-}
 
 /// CPU reference: prediction interval `[y - q_hat, y + q_hat]`. Tiny
 /// helper that pairs with the threshold; not a primitive (one

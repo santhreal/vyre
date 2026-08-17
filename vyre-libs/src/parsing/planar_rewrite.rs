@@ -148,12 +148,6 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
     )
 }
 
-/// Reference oracle: greedy non-overlapping selection of `k × k` matches.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_planar_rewrite_schedule(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
-    vyre_foundation::optimizer::planar_rewrite_schedule_mask(candidates, h, w, k)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

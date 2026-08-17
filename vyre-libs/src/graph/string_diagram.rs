@@ -51,76 +51,9 @@ pub fn try_monoidal_compose(
     try_fixed_u32_matmul(f, g, out, a, b, c, &MATMUL_CONTEXT)
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn monoidal_compose_cpu(f: &[f64], g: &[f64], a: u32, b: u32, c: u32) -> Vec<f64> {
-    try_monoidal_compose_cpu(f, g, a, b, c).unwrap_or_else(|error| panic!("{error}"))
-}
 
-/// Fallible CPU reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_monoidal_compose_cpu(
-    f: &[f64],
-    g: &[f64],
-    a: u32,
-    b: u32,
-    c: u32,
-) -> Result<Vec<f64>, String> {
-    let mut out = Vec::new();
-    try_monoidal_compose_cpu_into(f, g, a, b, c, &mut out)?;
-    Ok(out)
-}
 
-/// CPU reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn monoidal_compose_cpu_into(f: &[f64], g: &[f64], a: u32, b: u32, c: u32, out: &mut Vec<f64>) {
-    try_monoidal_compose_cpu_into(f, g, a, b, c, out).unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference using caller-owned output storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_monoidal_compose_cpu_into(
-    f: &[f64],
-    g: &[f64],
-    a: u32,
-    b: u32,
-    c: u32,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let a = a as usize;
-    let b = b as usize;
-    let c = c as usize;
-    let _f_cells = a.checked_mul(b).ok_or_else(|| {
-        "monoidal_compose CPU oracle f shape overflows cell count. Fix: reduce a*b before parity comparison.".to_string()
-    })?;
-    let _g_cells = b.checked_mul(c).ok_or_else(|| {
-        "monoidal_compose CPU oracle g shape overflows cell count. Fix: reduce b*c before parity comparison.".to_string()
-    })?;
-    let out_cells = a.checked_mul(c).ok_or_else(|| {
-        "monoidal_compose CPU oracle output shape overflows cell count. Fix: reduce a*c before parity comparison.".to_string()
-    })?;
-    if out_cells > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            out_cells - out.len(),
-            "string diagram CPU oracle",
-            "monoidal_compose CPU output",
-        )?;
-    }
-    out.clear();
-    out.resize(out_cells, 0.0);
-    for i in 0..a {
-        for j in 0..c {
-            for k in 0..b {
-                let f_value = f.get(i * b + k).copied().unwrap_or(0.0);
-                let g_value = g.get(k * c + j).copied().unwrap_or(0.0);
-                out[i * c + j] += f_value * g_value;
-            }
-        }
-    }
-    Ok(())
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

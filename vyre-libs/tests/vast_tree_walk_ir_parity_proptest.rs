@@ -18,7 +18,7 @@
 //! is idempotent - every lane performs the identical deterministic walk and
 //! writes identical output words.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use vyre_foundation::vast::{NODE_STRIDE_U32, SENTINEL};

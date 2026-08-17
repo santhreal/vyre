@@ -1,12 +1,13 @@
-//! Property gates for `vyre_libs::text::reference_char_class`.
+//! Property gates for `vyre_reference::composition_witness::char_class_witness`.
 
-#![cfg(all(feature = "text", feature = "cpu-parity"))]
+#![cfg(feature = "text")]
 mod text_char_class_runner;
 
 use proptest::prelude::*;
 use text_char_class_runner::run_packed_u8_program;
 use vyre_foundation::ir::DataType;
-use vyre_libs::text::{build_char_class_table, char_class_u8, reference_char_class};
+use vyre_libs::text::{build_char_class_table, char_class_u8};
+use vyre_reference::composition_witness::char_class_witness as reference_char_class;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]

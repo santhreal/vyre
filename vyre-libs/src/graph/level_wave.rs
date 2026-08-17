@@ -196,23 +196,6 @@ pub fn level_wave_program_with_buffers_and_op_id(
     )
 }
 
-/// CPU oracle. Iterates depth waves on the host and calls
-/// `step_for_lane(lane, depth)` exactly once per (lane, depth ==
-/// depth_for_lane`lane`). Used by the conformance harness to verify
-/// that the GPU kernel respects the depth ordering.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref<F>(depths: &[u32], max_depth: u32, mut step_for_lane: F)
-where
-    F: FnMut(u32, u32),
-{
-    for current_depth in 0..max_depth {
-        for (lane_idx, lane_depth) in depths.iter().enumerate() {
-            if *lane_depth == current_depth {
-                step_for_lane(lane_idx as u32, current_depth);
-            }
-        }
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

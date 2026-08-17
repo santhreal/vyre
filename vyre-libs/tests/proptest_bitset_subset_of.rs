@@ -1,8 +1,8 @@
 //! Property gates for `bitset::subset_of::cpu_ref` - subset predicate laws.
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_libs::bitset::subset_of::cpu_ref;
+use vyre_reference::composition_witness::bitset_subset_of_witness;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -59,7 +59,7 @@ proptest! {
         a in proptest::collection::vec(any::<u32>(), 0..=8),
         b in proptest::collection::vec(any::<u32>(), 0..=8),
     ) {
-        let and_ab = vyre_libs::bitset::and::cpu_ref(&a, &b);
+        let and_ab = vyre_reference::composition_witness::bitset_and_witness(&a, &b);
         prop_assert_eq!(cpu_ref(&and_ab, &a), 1, "a & b must be subset of a");
         prop_assert_eq!(cpu_ref(&and_ab, &b), 1, "a & b must be subset of b");
     }

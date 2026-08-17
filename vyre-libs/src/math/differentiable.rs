@@ -120,99 +120,11 @@ pub fn softmax_step(pre_exp: &str, out: &str, n: u32) -> Program {
     )
 }
 
-/// CPU reference: softmax in f64 for clarity.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn softmax_cpu(x: &[f64]) -> Vec<f64> {
-    let mut out = Vec::new();
-    try_softmax_cpu_into(x, &mut out).unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference: softmax in f64 using caller-owned output.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn softmax_cpu_into(x: &[f64], out: &mut Vec<f64>) {
-    try_softmax_cpu_into(x, out).unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference: softmax in f64 using caller-owned output.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_softmax_cpu_into(x: &[f64], out: &mut Vec<f64>) -> Result<(), String> {
-    if x.len() > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            x.len() - out.len(),
-            "differentiable math CPU oracle",
-            "softmax_cpu output",
-        )?;
-    }
-    out.clear();
-    if x.is_empty() {
-        return Ok(());
-    }
-    let max = x.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let mut sum = 0.0;
-    for &value in x {
-        let exp = (value - max).exp();
-        sum += exp;
-        out.push(exp);
-    }
-    for value in out.iter_mut() {
-        *value /= sum;
-    }
-    Ok(())
-}
 
-/// CPU reference: differentiable argmax via temperature-scaled softmax.
-/// Higher `temperature` → softer assignment; `temperature → 0+`
-/// recovers hard argmax. Returns the soft-assignment vector that sums
-/// to 1 (probability over indices).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn differentiable_argmax_cpu(x: &[f64], temperature: f64) -> Vec<f64> {
-    let mut scaled = Vec::new();
-    let mut out = Vec::new();
-    try_differentiable_argmax_cpu_into(x, temperature, &mut scaled, &mut out)
-        .unwrap_or_else(|error| panic!("{error}"));
-    out
-}
 
-/// CPU reference: differentiable argmax using caller-owned scratch and output.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn differentiable_argmax_cpu_into(
-    x: &[f64],
-    temperature: f64,
-    scaled: &mut Vec<f64>,
-    out: &mut Vec<f64>,
-) {
-    try_differentiable_argmax_cpu_into(x, temperature, scaled, out)
-        .unwrap_or_else(|error| panic!("{error}"));
-}
 
-/// Fallible CPU reference: differentiable argmax using caller-owned scratch and output.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_differentiable_argmax_cpu_into(
-    x: &[f64],
-    temperature: f64,
-    scaled: &mut Vec<f64>,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    if x.len() > scaled.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            scaled,
-            x.len() - scaled.len(),
-            "differentiable math CPU oracle",
-            "differentiable_argmax_cpu scaled logits",
-        )?;
-    }
-    scaled.clear();
-    if temperature <= 0.0 || !temperature.is_finite() {
-        out.clear();
-        return Ok(());
-    }
-    scaled.extend(x.iter().map(|&v| v / temperature));
-    try_softmax_cpu_into(scaled, out)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

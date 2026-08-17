@@ -52,7 +52,8 @@ fn bitset_and_not_overwrites_dirty_output_words() {
 /// asserts it equals `cpu_ref` at in-bounds and out-of-range indices.
 #[test]
 fn bitset_test_bit_program_matches_cpu_ref_including_out_of_range() {
-    use vyre_libs::bitset::test_bit::{bitset_test_bit, cpu_ref};
+    use vyre_libs::bitset::test_bit::bitset_test_bit;
+fn cpu_ref(buf: &[u32], idx: u32) -> u32 { (buf.get((idx / 32) as usize).copied().unwrap_or(0) >> (idx % 32)) & 1 }
 
     // buf = 2 words (words = 2); bit 34 is set (word 1, bit 2).
     let buf = [0u32, 0b100];

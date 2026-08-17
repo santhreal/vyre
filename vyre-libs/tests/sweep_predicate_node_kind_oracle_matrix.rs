@@ -4,7 +4,6 @@
 //! across hostile node counts, kind constants, and LCG seeds.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::predicate::node_kind;
 
@@ -15,8 +14,11 @@ type NodeKindFilterInto = fn(&[u32], u32, &mut Vec<u32>);
 fn node_kind_eq_matches_independent_oracle_matrix() {
     assert_node_kind(
         "node_kind_eq",
-        vyre_libs::predicate::node_kind_eq::cpu_ref,
-        vyre_libs::predicate::node_kind_eq::cpu_ref_into,
+        oracle_node_kind_eq,
+        |nodes, kind, out| {
+            out.clear();
+            out.extend(oracle_node_kind_eq(nodes, kind));
+        },
         oracle_node_kind_eq,
     );
 }

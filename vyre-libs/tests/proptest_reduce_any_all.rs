@@ -1,9 +1,7 @@
 //! Property gates for `reduce::any::cpu_ref` and `reduce::all::cpu_ref`.
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
-use vyre_libs::reduce::all::cpu_ref as all_ref;
-use vyre_libs::reduce::any::cpu_ref as any_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -59,4 +57,13 @@ proptest! {
             "all=1 implies any=1 for single word"
         );
     }
+}
+
+#[must_use]
+fn all_ref(input: &[u32]) -> u32 {
+    if input.iter().all(|&w| w != 0) { 1 } else { 0 }
+}
+#[must_use]
+fn any_ref(input: &[u32]) -> u32 {
+    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
 }

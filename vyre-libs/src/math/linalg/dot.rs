@@ -3,12 +3,16 @@
 //! Category A composition: reads two equally-sized u32 buffers,
 //! multiplies element-wise, and reduces through workgroup scratch.
 
-use vyre_foundation::composition::{trap_program, wrap_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::composition::trap_program;
+#[cfg(test)]
+use vyre_foundation::composition::wrap_region;
+#[cfg(test)]
+use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Node};
+use vyre_foundation::ir::{DataType, Program};
 
-use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
+use crate::builder::reduction::ReductionComposer;
 use crate::{
-    builder::{check_tensors, strided_accumulate_child, BuildOptions},
+    builder::{check_tensors, BuildOptions},
     plumbing::operand::tensor_ref::{TensorRef, TensorRefError},
 };
 
@@ -88,21 +92,8 @@ impl Dot {
         let out = self.out.name_str();
         let workgroup = self.options.workgroup_size.unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1);
-        let region = wrap_region(
-            self.options.region_generator.unwrap_or(OP_ID),
-            dot_tiled_body(lhs, rhs, out, n, tile),
-            None,
-        );
-        Ok(Program::wrapped(
-            vec![
-                BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-                BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-                BufferDecl::workgroup("dot_scratch", tile, DataType::U32),
-                BufferDecl::output(out, 2, DataType::U32).with_count(1),
-            ],
-            workgroup,
-            vec![region],
-        ))
+        let generator = self.options.region_generator.unwrap_or(OP_ID);
+        Ok(ReductionComposer::tiled_dot(generator, lhs, rhs, out, n, tile))
     }
 }
 
@@ -134,44 +125,6 @@ pub fn dot(lhs: &str, rhs: &str, out: &str, n: u32) -> Result<Program, String> {
     .map_err(|error| format!("Fix: {OP_ID} build failed: {error}"))
 }
 
-fn dot_tiled_body(lhs: &str, rhs: &str, out: &str, n: u32, tile: u32) -> Vec<Node> {
-    let chunks = n.div_ceil(tile);
-    let local = Expr::var("local");
-    let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        strided_accumulate_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            "local_acc",
-            Expr::u32(0),
-            "dot_scratch",
-            |idx, acc| {
-                Expr::add(
-                    acc,
-                    Expr::mul(Expr::load(lhs, idx.clone()), Expr::load(rhs, idx)),
-                )
-            },
-        ),
-        Node::barrier(),
-    ];
-    body.push(workgroup_tree::sum_u32_child(
-        OP_ID,
-        tile,
-        "dot_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(Node::if_then(
-        Expr::and(Expr::is_first_workgroup(), Expr::eq(local, Expr::u32(0))),
-        vec![Node::Store {
-            buffer: out.into(),
-            index: Expr::u32(0),
-            value: Expr::load("dot_scratch", Expr::u32(0)),
-        }],
-    ));
-    body
-}
 
 #[cfg(test)]
 fn dot_reference_body(lhs: &str, rhs: &str, out: &str, n: u32) -> Vec<Node> {

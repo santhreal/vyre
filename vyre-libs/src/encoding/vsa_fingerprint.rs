@@ -9,8 +9,6 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::hash::hypervector::xor_bind_cpu;
 use crate::hash::hypervector::{hamming_similarity, hypervector_xor_bind};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -41,14 +39,6 @@ pub fn vsa_fingerprint_words(program: &vyre_foundation::ir::Program) -> [u32; 8]
     vyre_primitives::wire::decode_u32x8_le_bytes(&fingerprint)
 }
 
-/// Fingerprint a Program from a (kind, signature, region) triple.
-/// Caller supplies pre-computed hypervectors for each component.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_fingerprint(kind_hv: &[u32], signature_hv: &[u32], region_hv: &[u32]) -> Vec<u32> {
-    let bound1 = xor_bind_cpu(kind_hv, signature_hv);
-    xor_bind_cpu(&bound1, region_hv)
-}
 
 /// Fingerprint a Program component triple through GPU-dispatchable XOR binding primitives.
 ///

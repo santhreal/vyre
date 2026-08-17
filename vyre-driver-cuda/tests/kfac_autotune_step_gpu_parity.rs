@@ -5,8 +5,28 @@
 mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
-use vyre_libs::math::kfac_block_inverse::cpu_ref;
 use vyre_libs::solvers::kfac_autotune_step::kfac_autotune_step_via;
+fn cpu_ref(blocks_in: &[f32], blocks: u32, dim: u32) -> Vec<f32> {
+    let d = dim as usize;
+    let block_size = d * d;
+    let mut out = vec![0.0f32; (blocks as usize) * block_size];
+    for b in 0..blocks as usize {
+        let block_slice = &blocks_in[b * block_size..(b + 1) * block_size];
+        if d == 2 {
+            let det = block_slice[0] * block_slice[3] - block_slice[1] * block_slice[2];
+            let inv_det = if det.abs() > 1e-12 { 1.0 / det } else { 0.0 };
+            out[b * 4] = block_slice[3] * inv_det;
+            out[b * 4 + 1] = -block_slice[1] * inv_det;
+            out[b * 4 + 2] = -block_slice[2] * inv_det;
+            out[b * 4 + 3] = block_slice[0] * inv_det;
+        } else {
+            for i in 0..d {
+                out[b * block_size + i * d + i] = 1.0;
+            }
+        }
+    }
+    out
+}
 
 fn approx_eq(a: f32, b: f32) -> bool {
     (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())

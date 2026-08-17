@@ -13,12 +13,13 @@
 //! lengths 0..=8 (so EMPTY segments and long segments coexist), random `input` including values large
 //! enough to force wrapping accumulation. Each `output[seg]` is asserted bit-exact vs `cpu_ref`. A
 //! deterministic case pins overflow wrap and an all-empty-segments layout.
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::reduce::segment_reduce::{cpu_ref, segment_reduce_sum};
+use vyre_libs::reduce::segment_reduce::segment_reduce_sum;
+fn cpu_ref(input: &[u32], offsets: &[u32]) -> Vec<u32> { if offsets.len() < 2 { return Vec::new(); } offsets.windows(2).map(|w| input[w[0] as usize..w[1] as usize.min(input.len())].iter().copied().fold(0u32, u32::wrapping_add)).collect() }
 
 /// Build CSR offsets from per-segment lengths; returns (offsets, total).
 fn offsets_from_lengths(lengths: &[u32]) -> (Vec<u32>, u32) {

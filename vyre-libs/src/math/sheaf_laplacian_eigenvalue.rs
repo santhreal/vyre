@@ -157,90 +157,9 @@ pub fn sheaf_laplacian_eigenvalue(
     )
 }
 
-/// CPU reference: dominant eigenpair of the diagonal sheaf Laplacian.
-///
-/// Returns `(max_i r[i], e_argmax)` over the first `v_init.len()` diagonal entries. `iterations`
-/// is accepted for interface stability but the closed-form answer is iteration-independent, and the
-/// starting vector `v_init` is used only to size the output eigenvector.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(restriction_diag: &[f64], v_init: &[f64], iterations: u32) -> (f64, Vec<f64>) {
-    let mut v = Vec::new();
-    let mut v_next = Vec::new();
-    let lambda = try_cpu_ref_into(restriction_diag, v_init, iterations, &mut v, &mut v_next)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sheaf_laplacian_eigenvalue cpu_ref failed: invalid CPU buffers");
-    (lambda, v)
-}
 
-/// Fallible CPU reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref(
-    restriction_diag: &[f64],
-    v_init: &[f64],
-    iterations: u32,
-) -> Result<(f64, Vec<f64>), String> {
-    let mut v = Vec::new();
-    let mut v_next = Vec::new();
-    let lambda = try_cpu_ref_into(restriction_diag, v_init, iterations, &mut v, &mut v_next)?;
-    Ok((lambda, v))
-}
 
-/// CPU reference writing the eigenvector into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    restriction_diag: &[f64],
-    v_init: &[f64],
-    iterations: u32,
-    v: &mut Vec<f64>,
-    v_next: &mut Vec<f64>,
-) -> f64 {
-    try_cpu_ref_into(restriction_diag, v_init, iterations, v, v_next)
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - sheaf_laplacian_eigenvalue cpu_ref_into failed: invalid CPU buffers")
-}
 
-/// Fallible CPU reference writing the eigenvector into caller-owned storage.
-///
-/// `v_next` is retained as a caller-owned scratch for interface stability (the closed form needs no
-/// intermediate vector); it is truncated to the output length so stale tails cannot leak.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(
-    restriction_diag: &[f64],
-    v_init: &[f64],
-    iterations: u32,
-    v: &mut Vec<f64>,
-    v_next: &mut Vec<f64>,
-) -> Result<f64, String> {
-    let _ = iterations;
-    if restriction_diag.len() < v_init.len() {
-        return Err(format!(
-            "sheaf_laplacian_eigenvalue CPU oracle restriction_diag too short: got {}, need {}.",
-            restriction_diag.len(),
-            v_init.len()
-        ));
-    }
-    let len = v_init.len();
-    reserve_eigen_tmp(v, len, "eigenvector output")?;
-    reserve_eigen_tmp(v_next, len, "next-vector scratch")?;
-    v.clear();
-    v.resize(len, 0.0);
-    v_next.clear();
-    v_next.resize(len, 0.0);
-
-    // Dominant eigenpair of diag(r): the max diagonal entry and its (first) arg-max index. Running
-    // max starts at 0.0, matching the unsigned 16.16 IR path where all diagonal entries are >= 0.
-    let mut max_r = 0.0f64;
-    let mut argmax = 0usize;
-    for (i, &ri) in restriction_diag.iter().take(len).enumerate() {
-        if ri > max_r {
-            max_r = ri;
-            argmax = i;
-        }
-    }
-    if len > 0 {
-        v[argmax] = 1.0;
-    }
-    Ok(max_r)
-}
 
 crate::plumbing::host::scratch::define_reserve_capacity!(
     reserve_eigen_tmp,

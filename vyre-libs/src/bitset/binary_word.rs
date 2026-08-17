@@ -4,11 +4,8 @@
 //! and buffer contracts, but the IR shape is intentionally centralized here so
 //! new bitset binary ops do not fork the same load/op/store kernel body.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
-};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program, PORTABLE_WORKGROUP_INVOCATIONS};
 
 /// Supported per-word bitwise binary operators.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -44,21 +41,14 @@ pub(crate) fn binary_word_program(
     words: u32,
     op: BitwiseBinaryOp,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
-    let value = op.apply(Expr::load(lhs, t.clone()), Expr::load(rhs, t.clone()));
-    let body = vec![Node::store(out, t.clone(), value)];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(out, 2, BufferAccess::WriteOnly, DataType::U32).with_count(words),
-        ],
-        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
-        )],
-    )
+    ElementwiseComposer::new(op_id, words)
+        .with_workgroup_size([PORTABLE_WORKGROUP_INVOCATIONS, 1, 1])
+        .add_input_storage(lhs, BufferAccess::ReadOnly, DataType::U32, words)
+        .add_input_storage(rhs, BufferAccess::ReadOnly, DataType::U32, words)
+        .add_output_storage(out, BufferAccess::WriteOnly, DataType::U32, words)
+        .build_pointwise(out, |i| {
+            op.apply(Expr::load(lhs, i.clone()), Expr::load(rhs, i))
+        })
 }
 
 /// Build `target[w] = target[w] <op> operand[w]` over packed u32 words.
@@ -100,25 +90,13 @@ fn target_operand_word_program<F>(
 where
     F: Fn(Expr, Expr) -> Expr,
 {
-    let t = Expr::InvocationId { axis: 0 };
-    let value = value(
-        Expr::load(target, t.clone()),
-        Expr::load(operand, t.clone()),
-    );
-    let body = vec![Node::store(target, t.clone(), value)];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(target, 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(operand, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-        ],
-        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
-        )],
-    )
+    ElementwiseComposer::new(op_id, words)
+        .with_workgroup_size([PORTABLE_WORKGROUP_INVOCATIONS, 1, 1])
+        .add_input_storage(target, BufferAccess::ReadWrite, DataType::U32, words)
+        .add_input_storage(operand, BufferAccess::ReadOnly, DataType::U32, words)
+        .build_pointwise(target, |i| {
+            value(Expr::load(target, i.clone()), Expr::load(operand, i))
+        })
 }
 
 macro_rules! define_bitwise_binary_op {
@@ -150,43 +128,8 @@ macro_rules! define_bitwise_binary_op {
             binary_word_program(OP_ID, lhs, rhs, out, words, BitwiseBinaryOp::$op_kind)
         }
 
-        /// CPU reference.
-        #[must_use]
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
-            let mut out = Vec::new();
-            match try_cpu_ref_into(lhs, rhs, &mut out) {
-                Ok(()) => out,
-                // A parity oracle that returns empty on failure makes the
-                // GPU-vs-CPU assertion pass on empty==empty, silently masking a
-                // divergence (Law 10 / Law 6). Fail loud; use try_cpu_ref_into.
-                Err(error) => panic!("vyre-primitives {OP_ID} cpu_ref failed: {error}"),
-            }
-        }
 
-        /// CPU reference into caller-owned storage.
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
-            if let Err(error) = try_cpu_ref_into(lhs, rhs, out) {
-                panic!("vyre-primitives {OP_ID} cpu_ref_into failed: {error}");
-            }
-        }
 
-        /// Fallible CPU reference into caller-owned storage.
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn try_cpu_ref_into(
-            lhs: &[u32],
-            rhs: &[u32],
-            out: &mut Vec<u32>,
-        ) -> Result<(), String> {
-            let combine = $combine;
-            let len = lhs.len().min(rhs.len());
-            vyre_foundation::allocation::reserve_exact_cleared(out, len).map_err(|err| {
-                format!("bitwise binary CPU reference could not reserve {len} output words: {err}")
-            })?;
-            out.extend(lhs.iter().zip(rhs.iter()).map(|(a, b)| combine(*a, *b)));
-            Ok(())
-        }
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
@@ -210,6 +153,17 @@ macro_rules! define_bitwise_binary_op {
         #[cfg(test)]
         mod tests {
             use super::*;
+            fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
+                let combine = $combine;
+                lhs.iter().zip(rhs.iter()).map(|(&a, &b)| combine(a, b)).collect()
+            }
+            fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
+                *out = cpu_ref(lhs, rhs);
+            }
+            fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<(), ()> {
+                cpu_ref_into(lhs, rhs, out);
+                Ok(())
+            }
 
             #[test]
             fn sample_matches_expected() {
@@ -371,15 +325,6 @@ macro_rules! define_bitwise_in_place_op {
             in_place_binary_word_program(OP_ID, target, operand, words, BitwiseBinaryOp::$op_kind)
         }
 
-        /// CPU reference. Mutates `target` in place.
-        #[cfg(any(test, feature = "cpu-parity"))]
-        pub fn cpu_ref(target: &mut [u32], operand: &[u32]) {
-            let combine = $combine;
-            let n = target.len().min(operand.len());
-            for i in 0..n {
-                target[i] = combine(target[i], operand[i]);
-            }
-        }
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
@@ -402,6 +347,12 @@ macro_rules! define_bitwise_in_place_op {
         #[cfg(test)]
         mod tests {
             use super::*;
+            fn cpu_ref(target: &mut [u32], operand: &[u32]) {
+                let combine = $combine;
+                for (t, &o) in target.iter_mut().zip(operand.iter()) {
+                    *t = combine(*t, o);
+                }
+            }
 
             #[test]
             fn inventory_case_matches_cpu_reference() {

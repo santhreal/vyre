@@ -212,6 +212,51 @@ fn state_transition_analysis_preserves_explicit_generations() {
         .all(|allocation| allocation.reusable_slot.is_none()));
 }
 
+/// WHY: a retained-to-output transition terminates loop-carried state into a caller-visible
+/// Program result buffer. Analysis must validate the transition and assign dedicated storage.
+#[test]
+fn caller_output_retained_transition_analysis_succeeds() {
+    let retained = contract(BufferAccess::ReadWrite, ValueLifetime::Retained);
+    let mut graph = ProgramGraph::new();
+    let prior = graph
+        .add_external_value("cache.0", retained.clone())
+        .expect("Fix: initial retained state must register");
+    let program = Program::wrapped(
+        vec![BufferDecl::output("cache", 0, DataType::F32)],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    let (_, outputs) = graph
+        .add_node(
+            "decode.final",
+            program,
+            vec![GraphInput {
+                buffer: "cache".into(),
+                value: prior,
+                contract: retained,
+            }],
+            vec![GraphOutput {
+                buffer: "cache".into(),
+                name: "cache.output".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: Some(prior),
+            }],
+        )
+        .expect("Fix: caller-visible output transition must connect");
+
+    let analysis = graph
+        .analyze()
+        .expect("Fix: caller-output retained transition must pass graph analysis");
+    assert_eq!(analysis.schedule, vec![GraphNodeId(0)]);
+    assert_eq!(analysis.reusable_slot_count, 0);
+    assert_eq!(analysis.allocations[0].value, prior);
+    assert_eq!(analysis.allocations[1].value, outputs[0]);
+    assert!(analysis
+        .allocations
+        .iter()
+        .all(|allocation| allocation.reusable_slot.is_none()));
+}
+
 /// Ensures serialized compositions derive exactly the same schedule and memory facts after validation.
 #[test]
 fn wire_round_trip_preserves_complete_graph_analysis() {

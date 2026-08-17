@@ -8,6 +8,7 @@
 mod dispatch;
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/csr_frontier_queue_batch_resident/mod.rs"]
 mod tests;
 
 pub use dispatch::{resident_csr_queue_batch_budgeted_into, resident_csr_queue_batch_into};

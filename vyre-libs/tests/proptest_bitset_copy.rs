@@ -1,9 +1,8 @@
 //! Property gates for `vyre_libs::bitset::copy::cpu_ref`.
 
-#![cfg(all(feature = "bitset", feature = "cpu-parity"))]
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_libs::bitset::copy::cpu_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -49,4 +48,9 @@ proptest! {
         cpu_ref(&mut target, &[]);
         prop_assert_eq!(target, original);
     }
+}
+
+fn cpu_ref(target: &mut [u32], source: &[u32]) {
+    let n = target.len().min(source.len());
+    target[..n].copy_from_slice(&source[..n]);
 }

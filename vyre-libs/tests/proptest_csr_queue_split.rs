@@ -1,6 +1,6 @@
 //! Property gates for mixed scalar plus row-strided CSR queue traversal.
 
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;

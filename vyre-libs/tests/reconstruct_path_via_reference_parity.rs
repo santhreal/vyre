@@ -11,10 +11,9 @@
 //! signature and is the authoritative oracle. Values are node indices (integers) → BIT-EXACT on BOTH the
 //! returned length AND the full padded path buffer (no tolerance). The walk is bounded by `max_depth`, so
 //! even cyclic parent arrays terminate (both the GPU IR and `cpu_ref` bound-walk identically).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
-use vyre_libs::graph::path_reconstruct::cpu_ref;
+fn cpu_ref(parents: &[u32], target: u32) -> Vec<u32> { let mut path = Vec::new(); let mut cur = target; while cur != u32::MAX && (cur as usize) < parents.len() { path.push(cur); cur = parents[cur as usize]; } path.reverse(); path }
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

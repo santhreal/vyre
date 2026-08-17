@@ -2,7 +2,8 @@
 
 use vyre_foundation::ir::Program;
 
-use super::atomic_scalar::{atomic_reduce_u32, AtomicReduceKind};
+use crate::builder::reduction::ReductionComposer;
+use super::atomic_scalar::AtomicReduceKind;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::reduce::sum";
@@ -10,15 +11,9 @@ pub const OP_ID: &str = "vyre-libs::reduce::sum";
 /// Build a Program: `out[0] = (Σ values_i) mod 2^32`.
 #[must_use]
 pub fn reduce_sum(values: &str, out: &str, count: u32) -> Program {
-    atomic_reduce_u32(values, out, count, AtomicReduceKind::Sum, OP_ID)
+    ReductionComposer::atomic_scalar_reduction(OP_ID, values, out, count, AtomicReduceKind::Sum)
 }
 
-/// CPU reference.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(values: &[u32]) -> u32 {
-    values.iter().copied().fold(0u32, u32::wrapping_add)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

@@ -83,8 +83,6 @@
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::math::scallop_persistent::accumulate_lineage_words;
 use crate::math::scallop_persistent::{
     lineage_fixpoint_program, single_word_lineage_body, single_word_lineage_grid_sync_body,
     wide_lineage_body, wide_lineage_grid_sync_body, LineageFixpoint,
@@ -189,137 +187,7 @@ pub fn scallop_join(
     lineage_fixpoint_program(OP_ID, &spec, SCALLOP_JOIN_WORKGROUP_SIZE, body)
 }
 
-/// CPU reference. Iterates the Lineage-semiring join over `w`-word cells
-/// until the result no longer changes or `max_iterations` is reached. Returns
-/// `(final_state, iterations_run)`.
-///
-/// The Datalog fixpoint is monotone under Lineage (combine + accumulate
-/// are both OR-of-bitset, which only sets bits, never clears them), so
-/// it converges in at most `n^2` iterations. The `max_iterations` cap
-/// is a defensive safety bound  -  a non-monotone caller (which would be
-/// a contract violation) is detected and reported as the iteration
-/// count returning the cap itself.
-///
-/// # Panics
-///
-/// Panics if `state.len() != n*n*w` or `join_rules.len() != n*n*w`.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn cpu_ref(
-    state: &[u32],
-    join_rules: &[u32],
-    n: u32,
-    w: u32,
-    max_iterations: u32,
-) -> (Vec<u32>, u32) {
-    let mut current = Vec::new();
-    let mut next = Vec::new();
-    let iters = cpu_ref_into(
-        state,
-        join_rules,
-        n,
-        w,
-        max_iterations,
-        &mut current,
-        &mut next,
-    );
-    (current, iters)
-}
 
-/// CPU reference using caller-owned state and scratch buffers.
-///
-/// `current` is overwritten with the final fixpoint state. `next` is a
-/// scratch GEMM target retained for reuse across calls.
-///
-/// Combine treats a cell as one value: an all-zero cell on either side
-/// absorbs to all-zero, otherwise the words are OR'd. At `w = 1` this is
-/// exactly [`crate::math::semiring_gemm::Semiring::Lineage`] over single
-/// words.
-///
-/// # Panics
-///
-/// Panics if `state.len() != n*n*w` or `join_rules.len() != n*n*w`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    state: &[u32],
-    join_rules: &[u32],
-    n: u32,
-    w: u32,
-    max_iterations: u32,
-    current: &mut Vec<u32>,
-    next: &mut Vec<u32>,
-) -> u32 {
-    let words = n
-        .checked_mul(n)
-        .and_then(|cells| cells.checked_mul(w))
-        .and_then(|value| usize::try_from(value).ok())
-        .unwrap_or_else(|| {
-            panic!(
-                "scallop_join CPU oracle n={n} w={w} overflows relation matrix word count. Fix: shard the relation matrix before parity comparison."
-            )
-        });
-    let width = w as usize;
-    assert_eq!(
-        state.len(),
-        words,
-        "scallop_join CPU oracle received state_len={} for n={n} w={w}. Fix: pass a complete n*n*w state matrix before parity comparison.",
-        state.len()
-    );
-    assert_eq!(
-        join_rules.len(),
-        words,
-        "scallop_join CPU oracle received join_rules_len={} for n={n} w={w}. Fix: pass a complete n*n*w rule matrix before parity comparison.",
-        join_rules.len()
-    );
-    current.clear();
-    current.extend_from_slice(state);
-    next.clear();
-    next.resize(words, 0);
-
-    let cell_nonzero = |buffer: &[u32], start: usize| {
-        let end = start.checked_add(width).unwrap_or_else(|| {
-            panic!(
-                "scallop_join CPU oracle cell range overflow at start={start} width={width}. Fix: shard the relation matrix before parity comparison."
-            )
-        });
-        buffer
-            .get(start..end)
-            .map(|cell| cell.iter().any(|&x| x != 0))
-            .unwrap_or(false)
-    };
-
-    for iter in 0..max_iterations {
-        next.fill(0);
-        for i in 0..n {
-            for j in 0..n {
-                let c_idx = ((i * n + j) * w) as usize;
-                for kk in 0..n {
-                    let a_idx = ((i * n + kk) * w) as usize;
-                    let b_idx = ((kk * n + j) * w) as usize;
-
-                    if cell_nonzero(current, a_idx) && cell_nonzero(join_rules, b_idx) {
-                        for word_idx in 0..width {
-                            let a_word = current[a_idx + word_idx];
-                            let b_word = join_rules[b_idx + word_idx];
-                            if let Some(dst) = next.get_mut(c_idx + word_idx) {
-                                *dst |= a_word | b_word;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Datalog monotonicity: each iteration's output is a
-        // bitwise-OR-superset of the input on every cell. Take the OR of
-        // current and next so the initial seed facts persist across
-        // iterations (the transfer step by itself replaces, not accumulates).
-        if !accumulate_lineage_words(current, next) {
-            return iter;
-        }
-    }
-    max_iterations
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

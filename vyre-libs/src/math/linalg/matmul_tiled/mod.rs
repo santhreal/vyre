@@ -23,9 +23,9 @@
 
 mod body;
 mod mma_body;
-mod mma_fragment;
+pub(crate) mod mma_fragment;
 mod ops;
-mod program;
+pub(crate) mod program;
 mod shape;
 mod tensor_core_policy;
 mod tile_coords;

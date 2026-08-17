@@ -8,12 +8,13 @@
 //! `[start, end)` window across the full `0..=256` range, rebuilding the Program per case so the
 //! constant-folded loop bounds are actually exercised. Empty windows (`start == end`), full-range
 //! windows, and single-bin windows are all reachable. Each result is asserted bit-exact vs `cpu_ref`.
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::reduce::range_counts::{cpu_ref, range_counts_u32};
+use vyre_libs::reduce::range_counts::range_counts_u32;
+fn cpu_ref(input: &[u32], lo: u32, hi: u32) -> u32 { input.iter().filter(|&&x| x >= lo && x < hi).count() as u32 }
 
 const BINS: usize = 256;
 

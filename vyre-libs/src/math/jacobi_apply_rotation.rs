@@ -24,7 +24,7 @@ pub const OP_ID: &str = "vyre-libs::math::jacobi_apply_rotation";
 
 /// `row * n + col` flat index for an `n`-column row-major matrix.
 fn cell(row: &Expr, n: u32, col: &Expr) -> Expr {
-    Expr::add(Expr::mul(row.clone(), Expr::u32(n)), col.clone())
+    crate::builder::stencil::flat_index(row.clone(), n, col.clone())
 }
 
 /// Emit the rotation that annihilates `a[p, q]`, applied to `a` and accumulated

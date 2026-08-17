@@ -18,7 +18,6 @@
 //! MODULO `canonicalize_parent_to_roots` (the GPU CAS-min contract agrees with the sequential reference
 //! only up to intermediate parent links, not byte-for-byte), so the assertion is a full partition-equality
 //! check (exact, no tolerance).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::dispatch::union_find_emit::{
     canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,

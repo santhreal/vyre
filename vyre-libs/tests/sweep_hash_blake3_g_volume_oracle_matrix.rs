@@ -1,7 +1,7 @@
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "hash", feature = "cpu-parity"))]
+#![cfg(feature = "hash")]
 
 mod wire_words;
 use wire_words::oracle_blake3_g;

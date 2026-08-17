@@ -131,67 +131,7 @@ pub fn scc_decompose(
     )
 }
 
-/// CPU reference: intersect two bitsets, stamp `pivot` into
-/// `component[v]` for each `v` in the intersection.
-///
-/// `component_in` is the running component vector carried across
-/// pivots. For the first pivot pass callers typically pass
-/// `&vec![u32::MAX; node_count]`; subsequent passes feed back the
-/// previous return value so this pivot's hits only overwrite
-/// unassigned slots (or any slot  -  the scc_decompose composition
-/// walks pivots in descending reach order so re-stamping is safe).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    forward: &[u32],
-    backward: &[u32],
-    component_in: &[u32],
-    pivot: u32,
-) -> Vec<u32> {
-    let mut out = Vec::new();
-    cpu_ref_into(node_count, forward, backward, component_in, pivot, &mut out);
-    out
-}
 
-/// CPU reference writing into caller-owned storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    node_count: u32,
-    forward: &[u32],
-    backward: &[u32],
-    component_in: &[u32],
-    pivot: u32,
-    out: &mut Vec<u32>,
-) {
-    let expected_words = crate::bitset::bitset_words(node_count) as usize;
-    assert!(
-        forward.len() >= expected_words && backward.len() >= expected_words,
-        "scc_decompose CPU oracle received forward_len={} backward_len={} for node_count={node_count} requiring {expected_words} words. Fix: pass complete reachability bitsets before parity comparison.",
-        forward.len(),
-        backward.len()
-    );
-    assert_eq!(
-        component_in.len(),
-        node_count as usize,
-        "scc_decompose CPU oracle received component_len={} for node_count={node_count}. Fix: pass one component slot per node before parity comparison.",
-        component_in.len()
-    );
-    out.clear();
-    out.extend_from_slice(component_in);
-    for v in 0..node_count {
-        let word = (v / 32) as usize;
-        let bit = 1u32 << (v % 32);
-        let fwd = forward[word] & bit != 0;
-        let bwd = backward[word] & bit != 0;
-        if fwd && bwd && (v as usize) < out.len() && out[v as usize] == u32::MAX {
-            // PHASE7_GRAPH HIGH: first pivot wins. Match the GPU
-            // kernel's "only stamp if unassigned" semantics so cpu_ref
-            // is bit-identical to the GPU output.
-            out[v as usize] = pivot;
-        }
-    }
-}
 
 #[cfg(test)]
 mod regression_tests {

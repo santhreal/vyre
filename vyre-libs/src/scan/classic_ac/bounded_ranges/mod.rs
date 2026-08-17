@@ -19,8 +19,6 @@ use crate::scan::builders::{
 
 use crate::matching::CompiledDfa;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use super::ClassicAcAutomaton;
 
 mod prefilter;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
@@ -56,13 +54,7 @@ pub(in crate::scan) use regex_exact::regex_exact_ranges_program;
 /// yields: a direct element load for an unpacked haystack, or the masked byte
 /// [`ac_transition_step_nodes`] unpacks from a u32 word.
 pub(in crate::scan) fn ac_advance_state_node(transitions: &str, byte: Expr) -> Node {
-    Node::assign(
-        "state",
-        Expr::load(
-            transitions,
-            Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), byte),
-        ),
-    )
+    crate::builder::TableStateMachineComposer::new(transitions).advance_node(byte)
 }
 
 /// One byte of the walk over a PACKED haystack: unpack the byte at `idx` from
@@ -882,37 +874,6 @@ pub fn try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
     )
 }
 
-/// CPU reference for [`classic_ac_bounded_ranges_program`]. Returns
-/// `(pattern_id, start, end)` triples reconstructed from
-/// `output_records` plus the pattern length table.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn classic_ac_bounded_ranges_scan(
-    ac: &ClassicAcAutomaton,
-    pattern_lengths: &[u32],
-    haystack: &[u8],
-) -> Vec<(u32, u32, u32)> {
-    let dfa = &ac.dfa;
-    let mut state = 0u32;
-    let mut out = Vec::new();
-    for (pos, &b) in haystack.iter().enumerate() {
-        state = dfa.transitions[(state as usize) * 256 + (b as usize)];
-        let begin = dfa.output_offsets[state as usize] as usize;
-        let end_off = dfa.output_offsets[state as usize + 1] as usize;
-        for &pid in &dfa.output_records[begin..end_off] {
-            // Index directly so an OOB pid panics here rather than silently
-            // producing a zero-length hit. A mismatch between pattern_count
-            // and the actual max pid in output_records is a caller bug; the
-            // GPU kernel does an unchecked load that is UB on the same input,
-            // so the CPU reference must fail loud-and-early instead of clamping.
-            let pat_len = pattern_lengths[pid as usize];
-            let end_pos = (pos as u32).saturating_add(1);
-            let start = end_pos.saturating_sub(pat_len);
-            out.push((pid, start, end_pos));
-        }
-    }
-    out
-}
 
 #[cfg(test)]
 mod tests {

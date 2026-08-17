@@ -13,7 +13,6 @@
 //! `fixed_mul(x,y)` = the SIGNED 16.16 multiply (bits [16..48] of the i64 product, matching the corrected
 //! `fixed_mul_16_16_expr`), bit-exactly reproducible in u32, so this is a zero-tolerance oracle (the same
 //! exact-fixed-point route mz_project / natural_gradient use).
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::reasoning::string_diagram_ir_rewrite::compose_ir_arrows_fixed_via;
 

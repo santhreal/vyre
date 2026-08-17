@@ -13,7 +13,7 @@
 //! `resolve_carry_chain_cpu`, so a self-consistent-but-wrong oracle+IR pair
 //! cannot both hide.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "math", feature = "cpu-parity"))]
+#![cfg(feature = "math")]
 
 use proptest::prelude::*;
 use vyre_libs::math::bigint_add_carry::{

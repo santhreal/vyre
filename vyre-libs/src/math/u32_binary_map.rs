@@ -1,8 +1,7 @@
 //! Shared u32 binary elementwise map builder for math primitives.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 fn u32_two_input_map_program<F>(
     op_id: &'static str,
@@ -17,24 +16,16 @@ fn u32_two_input_map_program<F>(
 where
     F: Fn(Expr, Expr) -> Expr,
 {
-    let lane = Expr::InvocationId { axis: 0 };
-    let value = op(
-        Expr::load(lhs, lane.clone()),
-        Expr::load(rhs, rhs_index(&lane)),
-    );
-    let body = vec![Node::if_then(
-        Expr::lt(lane.clone(), Expr::u32(count)),
-        vec![Node::store(out, lane, value)],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
-            BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(rhs_count),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(op_id, body)],
+    ElementwiseComposer::binary_broadcast_rhs(
+        op_id,
+        lhs,
+        rhs,
+        out,
+        count,
+        rhs_count,
+        DataType::U32,
+        rhs_index,
+        op,
     )
 }
 

@@ -396,4 +396,5 @@ fn put_metadata_payload(
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/serial/wire/encode/to_wire/mod.rs"]
 mod tests;

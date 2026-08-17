@@ -13,7 +13,8 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::label::resolve_family::{cpu_ref, resolve_family};
+use vyre_libs::label::resolve_family::resolve_family;
+use vyre_reference::composition_witness::resolve_family_witness as cpu_ref;
 
 fn run_ir(node_tags: &[u32], family_mask: u32) -> Vec<u32> {
     let node_count = node_tags.len() as u32;

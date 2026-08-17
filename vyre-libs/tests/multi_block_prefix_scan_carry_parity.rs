@@ -15,7 +15,7 @@
 //! each block's exclusive prefix-of-block-totals (the carry) to every element. This
 //! pins exactly that: GPU program == cpu_ref, byte-for-byte, spanning 2-4 Pass-A
 //! blocks, plus an explicit carry check at the first block boundary.
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::Program;

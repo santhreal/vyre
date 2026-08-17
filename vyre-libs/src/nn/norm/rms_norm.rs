@@ -5,7 +5,7 @@
 
 use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use crate::{
-    builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram},
+    builder::reduction::{ReductionComposer, ReductionPhase},
     builder::{strided_accumulate_child, strided_writeback_child},
     nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX},
 };
@@ -44,7 +44,7 @@ fn invalid_rms_program(op_id: &'static str, output: &str) -> Program {
 fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Program {
     let tile = 256_u32.min(n).max(1);
     let chunks = n.div_ceil(tile);
-    let sum_of_squares = ReducePhase {
+    let sum_of_squares = ReductionPhase {
         accumulate: strided_accumulate_child(
             OP_ID,
             tile,
@@ -71,29 +71,30 @@ fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Progra
         }],
     };
 
-    tiled_reduce_program(TiledReduceProgram {
-        generator: OP_ID,
-        buffers: vec![
+    ReductionComposer::new(
+        OP_ID,
+        vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("rms_scratch", tile, DataType::F32),
             BufferDecl::workgroup("rms_scale", 1, DataType::F32),
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
-        workgroup: [tile, 1, 1],
-        phases: vec![sum_of_squares],
-        writeback: Some(strided_writeback_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            output,
-            vec![Node::let_bind(
-                "scale",
-                Expr::load("rms_scale", Expr::u32(0)),
-            )],
-            |idx| Expr::mul(Expr::load(input, idx), Expr::var("scale")),
-        )),
-    })
+        [tile, 1, 1],
+    )
+    .with_phase(sum_of_squares)
+    .with_writeback(strided_writeback_child(
+        OP_ID,
+        tile,
+        chunks,
+        n,
+        output,
+        vec![Node::let_bind(
+            "scale",
+            Expr::load("rms_scale", Expr::u32(0)),
+        )],
+        |idx| Expr::mul(Expr::load(input, idx), Expr::var("scale")),
+    ))
+    .build()
 }
 
 fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Program {

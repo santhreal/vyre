@@ -46,9 +46,24 @@ pub(crate) mod builder;
 /// and what the host does to launch it.
 pub(crate) mod plumbing;
 
+#[cfg(feature = "graph")]
+pub use builder::csr;
+pub use builder::elementwise;
+pub use builder::gemm;
+pub use builder::{
+    ContractionComposer, ContractionEpilogue, ContractionGeometry, ContractionSemiring,
+    ContractionTiling,
+};
 pub use builder::range_ordering;
+pub use builder::state_machine;
+pub use builder::stencil;
+#[cfg(feature = "graph")]
+pub use builder::CsrTraversalComposer;
+pub use builder::ElementwiseComposer;
+pub use builder::TableStateMachineComposer;
 pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};
+pub use builder::{Grid2DComposer, Grid2DShape};
 pub use plumbing::host::dispatch_buffers;
 pub use plumbing::operand::buffer_names;
 pub use plumbing::operand::tensor_ref::{
@@ -240,11 +255,7 @@ pub mod matching;
 #[cfg(feature = "nfa")]
 pub mod nfa;
 
-#[cfg(any(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "math-broadcast"
-))]
+#[cfg(feature = "nn-norm")]
 pub(crate) use builder::elementwise::{f32_elementwise_mul, F32MulRhs};
 #[cfg(feature = "nn-linear-4bit")]
 pub(crate) use math::linalg::{

@@ -291,30 +291,6 @@ fn line_start_flags_program(
     ))
 }
 
-/// Reference oracle: same line-counting semantics as the GPU kernel.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
-    let mut out = Vec::with_capacity(source.len());
-    let mut line: u32 = 0;
-    let mut prev_was_cr = false;
-    for &byte in source {
-        // Lone `\r` (not followed by `\n`) means the current byte
-        // belongs to the next line  -  increment BEFORE recording this
-        // byte's line number.
-        if prev_was_cr && byte != b'\n' {
-            line += 1;
-        }
-        out.push(line);
-        if byte == b'\n' {
-            line += 1;
-            prev_was_cr = false;
-        } else {
-            prev_was_cr = byte == b'\r';
-        }
-    }
-    out
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

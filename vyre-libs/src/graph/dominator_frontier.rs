@@ -581,138 +581,9 @@ pub fn try_dominator_frontier(
     ))
 }
 
-/// CPU oracle: returns the dominance-frontier bitset for the seed set.
-///
-/// `dom_offsets` / `dom_targets` encode the dominance closure by dominator:
-/// row `n` contains every node dominated by `n`, including `n`.
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref(
-    node_count: u32,
-    dom_offsets: &[u32],
-    dom_targets: &[u32],
-    pred_offsets: &[u32],
-    pred_targets: &[u32],
-    seed: &[u32],
-) -> Vec<u32> {
-    try_cpu_ref(
-        node_count,
-        dom_offsets,
-        dom_targets,
-        pred_offsets,
-        pred_targets,
-        seed,
-    )
-    .expect("Fix: reject malformed oracle input via try_* APIs; do not call panicking wrappers on hostile data - dominator_frontier CPU oracle received malformed input or could not reserve output")
-}
 
-/// Fallible CPU oracle: returns the dominance-frontier bitset for the seed set.
-///
-/// This is the primitive-owned entry point for wrappers and generated tests that
-/// must reject hostile CSR/seed inputs without panicking.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref(
-    node_count: u32,
-    dom_offsets: &[u32],
-    dom_targets: &[u32],
-    pred_offsets: &[u32],
-    pred_targets: &[u32],
-    seed: &[u32],
-) -> Result<Vec<u32>, String> {
-    let mut frontier = Vec::new();
-    try_cpu_ref_into(
-        node_count,
-        dom_offsets,
-        dom_targets,
-        pred_offsets,
-        pred_targets,
-        seed,
-        &mut frontier,
-    )?;
-    Ok(frontier)
-}
 
-/// CPU oracle into caller-owned output storage.
-///
-/// `dom_offsets` / `dom_targets` encode the dominance closure by dominator:
-/// row `n` contains every node dominated by `n`, including `n`.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn cpu_ref_into(
-    node_count: u32,
-    dom_offsets: &[u32],
-    dom_targets: &[u32],
-    pred_offsets: &[u32],
-    pred_targets: &[u32],
-    seed: &[u32],
-    frontier: &mut Vec<u32>,
-) {
-    try_cpu_ref_into(
-        node_count,
-        dom_offsets,
-        dom_targets,
-        pred_offsets,
-        pred_targets,
-        seed,
-        frontier,
-    )
-    .expect("Fix: reject malformed oracle input via try_* APIs; do not call panicking wrappers on hostile data - dominator_frontier CPU oracle received malformed input or could not reserve output")
-}
 
-/// Fallible CPU oracle into caller-owned output storage.
-///
-/// On error, `frontier` is left unchanged so dispatch wrappers and parity tests
-/// can surface malformed input as a typed finding instead of losing the last
-/// useful diagnostic output.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_cpu_ref_into(
-    node_count: u32,
-    dom_offsets: &[u32],
-    dom_targets: &[u32],
-    pred_offsets: &[u32],
-    pred_targets: &[u32],
-    seed: &[u32],
-    frontier: &mut Vec<u32>,
-) -> Result<(), String> {
-    let layout = validate_dominator_frontier_inputs(
-        node_count,
-        dom_offsets,
-        dom_targets,
-        pred_offsets,
-        pred_targets,
-        seed,
-    )?;
-    let words = layout.words;
-    crate::plumbing::host::scratch::reserve_items(
-        frontier,
-        words,
-        "dominator frontier CPU oracle",
-        "frontier output",
-    )?;
-    frontier.clear();
-    frontier.resize(words, 0);
-    for n in 0..node_count {
-        let n_word = (n / 32) as usize;
-        let n_bit = 1u32 << (n % 32);
-        if seed[n_word] & n_bit == 0 {
-            continue;
-        }
-        for m in 0..node_count {
-            let pred_start = pred_offsets[m as usize] as usize;
-            let pred_end = pred_offsets[m as usize + 1] as usize;
-            let dominates_a_predecessor = pred_targets[pred_start..pred_end]
-                .iter()
-                .copied()
-                .any(|pred| dominates(dom_offsets, dom_targets, n, pred));
-            let strictly_dominates_m = n != m && dominates(dom_offsets, dom_targets, n, m);
-            if dominates_a_predecessor && !strictly_dominates_m {
-                let m_word = (m / 32) as usize;
-                let m_bit = 1u32 << (m % 32);
-                frontier[m_word] |= m_bit;
-            }
-        }
-    }
-    Ok(())
-}
 
 /// Number of nodes flagged in a dominance-frontier bitset.
 #[must_use]
@@ -806,12 +677,6 @@ pub fn validate_dominator_frontier_inputs(
     })
 }
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn dominates(dom_offsets: &[u32], dom_targets: &[u32], dominator: u32, node: u32) -> bool {
-    let start = dom_offsets[dominator as usize] as usize;
-    let end = dom_offsets[dominator as usize + 1] as usize;
-    dom_targets[start..end].contains(&node)
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

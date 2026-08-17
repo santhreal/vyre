@@ -11,7 +11,7 @@
 //! read at `dst`, per-src atomic mark) was never executed. A broken short-circuit,
 //! a dst/src word-index swap, or a lost atomic mark all diverge here.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 mod graph_sweep_fixtures;
 use graph_sweep_fixtures::{bitset_words, frontier_step_out};
@@ -19,7 +19,8 @@ use graph_sweep_fixtures::{bitset_words, frontier_step_out};
 mod csr_sweep;
 
 use proptest::prelude::*;
-use vyre_libs::graph::csr_backward_traverse::{cpu_ref, csr_backward_traverse};
+use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;
+use vyre_reference::composition_witness::csr_forward_traverse_witness as cpu_ref;
 
 /// Drive the real reverse-step IR and return the `frontier_out` word bitset.
 fn gpu_backward_step(

@@ -155,4 +155,5 @@ fn is_coalesceable_if(node: &Node) -> bool {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/cleanup/branch_coalesce/mod.rs"]
 mod tests;

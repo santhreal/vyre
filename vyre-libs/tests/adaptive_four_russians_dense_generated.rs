@@ -3,7 +3,7 @@
 //! Dense adaptive traversal previously had only row-scan bitmatrix execution.
 //! These tests keep the new source-column byte-tile path equivalent to that
 //! oracle across generated graph shapes and frontier densities.
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 mod gate_fixtures;
 use gate_fixtures::u32_bytes;

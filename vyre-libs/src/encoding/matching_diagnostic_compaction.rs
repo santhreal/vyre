@@ -24,11 +24,6 @@ use crate::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_primitives::wire::pack_u32_slice;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::matching::{
-    bracket_match_cpu_ref as primitive_bracket_match, dedup_regions_cpu, dedup_regions_inplace,
-    sort_regions_cpu,
-};
 
 /// Caller-owned dispatch scratch for matching diagnostic compaction.
 #[derive(Debug, Default)]
@@ -324,33 +319,9 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
     )
 }
 
-/// Sort and dedup diagnostic regions on the CPU parity path.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_dedup_regions(regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    dedup_regions_cpu(regions)
-}
 
-/// Sort diagnostic regions on the CPU parity path.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_sort_regions(mut regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    sort_regions_cpu(&mut regions);
-    regions
-}
 
-/// Dedup diagnostic regions in place on the CPU parity path.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_dedup_regions_inplace(regions: &mut Vec<RegionTriple>) {
-    dedup_regions_inplace(regions);
-}
 
-/// Match diagnostic brace tokens on the CPU parity path.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_bracket_pairs(kinds: &[u32], max_depth: u32) -> Vec<u32> {
-    primitive_bracket_match(kinds, max_depth)
-}
 
 /// Build a compact fixture token stream for one nested diagnostic block.
 #[must_use]

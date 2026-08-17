@@ -8,9 +8,10 @@
 //! via `reference_eval`: the atomic scatter must produce exactly the per-bin
 //! counts, dropping out-of-range input values (matching the GPU `bin < num_bins`
 //! gate and the cpu_ref's `out.get_mut(bin)` skip).
-#![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+#![cfg(feature = "reduce")]
 
-use vyre_libs::reduce::histogram::{cpu_ref, histogram_atomic_scatter};
+use vyre_libs::reduce::histogram::histogram_atomic_scatter;
+fn cpu_ref(input: &[u32], num_bins: u32) -> Vec<u32> { let mut out = vec![0u32; num_bins as usize]; for &x in input { if (x as usize) < out.len() { out[x as usize] += 1; } } out }
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
 

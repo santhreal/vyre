@@ -121,7 +121,8 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         let mut state = 0u32;
         for step in 0..window {
             let byte = haystack[origin_idx + step];
-            state = self.dfa.transitions[state as usize * 256 + byte as usize];
+            let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(state, byte);
+            state = self.dfa.transitions[trans_idx];
             if Some(state) == self.dead_state {
                 // Dead sink: self-loops forever, never accepts, no match can
                 // follow, so stop replaying this origin.
@@ -192,7 +193,8 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         let mut longest: Vec<(u32, u32)> = Vec::new();
         for step in 0..window {
             let byte = haystack[origin_idx + step];
-            state = self.dfa.transitions[state as usize * 256 + byte as usize];
+            let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(state, byte);
+            state = self.dfa.transitions[trans_idx];
             if Some(state) == self.dead_state {
                 // Dead sink: never accepts again, so no longer match can follow.
                 break;
@@ -529,7 +531,8 @@ mod tests {
             let window = (dfa.max_pattern_len as usize).min(haystack.len() - origin);
             let mut state = 0u32;
             for step in 0..window {
-                state = dfa.transitions[state as usize * 256 + haystack[origin + step] as usize];
+                let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(state, haystack[origin + step]);
+                state = dfa.transitions[trans_idx];
                 let lo = dfa.output_offsets[state as usize] as usize;
                 let hi = dfa.output_offsets[state as usize + 1] as usize;
                 for &pid in &dfa.output_records[lo..hi] {

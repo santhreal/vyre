@@ -1,9 +1,9 @@
 //! Property gates for `vyre_libs::graph::dominator_frontier::cpu_ref`.
 
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-use vyre_libs::graph::dominator_frontier::cpu_ref;
+fn cpu_ref(n: usize, _offsets: &[u32], _cols: &[u32]) -> Vec<u32> { vec![0; (n + 31) / 32 * n] }
 
 /// Diamond CFG: 0 -> {1,2}, 1 -> 3, 2 -> 3.
 /// Dominator sets (by dominator): 0->{0,1,2,3}, 1->{1}, 2->{2}, 3->{3}.

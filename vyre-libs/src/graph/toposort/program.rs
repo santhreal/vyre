@@ -28,6 +28,43 @@ pub fn toposort_program(
 ) -> Program {
     let lane0 = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
 
+    let csr =
+        crate::builder::csr::CsrTraversalComposer::new(OP_ID, OP_ID, node_count).with_buffers(
+            crate::builder::csr::CsrBuffers::new(offsets_buf, targets_buf, None),
+        );
+    let [edge_start, edge_end] = csr.emit_row_offsets(Expr::var("v"), "edge_start", "edge_end");
+    let step_inner = vec![
+        Node::let_bind("v", Expr::load(queue_scratch, Expr::var("read_head"))),
+        Node::assign("read_head", Expr::add(Expr::var("read_head"), Expr::u32(1))),
+        Node::store(order_out, Expr::var("out_idx"), Expr::var("v")),
+        Node::assign("out_idx", Expr::add(Expr::var("out_idx"), Expr::u32(1))),
+        edge_start,
+        edge_end,
+        Node::loop_for(
+            "e",
+            Expr::var("edge_start"),
+            Expr::var("edge_end"),
+            vec![
+                Node::let_bind("u", Expr::load(targets_buf, Expr::var("e"))),
+                Node::let_bind(
+                    "new_deg",
+                    Expr::sub(Expr::load(indeg_scratch, Expr::var("u")), Expr::u32(1)),
+                ),
+                Node::store(indeg_scratch, Expr::var("u"), Expr::var("new_deg")),
+                Node::if_then(
+                    Expr::eq(Expr::var("new_deg"), Expr::u32(0)),
+                    vec![
+                        Node::store(queue_scratch, Expr::var("write_head"), Expr::var("u")),
+                        Node::assign(
+                            "write_head",
+                            Expr::add(Expr::var("write_head"), Expr::u32(1)),
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ];
+
     let body = vec![
         // Zero out indeg_scratch.
         Node::loop_for(
@@ -69,7 +106,6 @@ pub fn toposort_program(
                 ],
             )],
         ),
-        // Pop / decrement / push until the queue is empty.
         Node::let_bind("read_head", Expr::u32(0)),
         Node::let_bind("out_idx", Expr::u32(0)),
         Node::loop_for(
@@ -78,48 +114,10 @@ pub fn toposort_program(
             Expr::u32(node_count),
             vec![Node::if_then(
                 Expr::lt(Expr::var("read_head"), Expr::var("write_head")),
-                vec![
-                    Node::let_bind("v", Expr::load(queue_scratch, Expr::var("read_head"))),
-                    Node::assign("read_head", Expr::add(Expr::var("read_head"), Expr::u32(1))),
-                    Node::store(order_out, Expr::var("out_idx"), Expr::var("v")),
-                    Node::assign("out_idx", Expr::add(Expr::var("out_idx"), Expr::u32(1))),
-                    Node::let_bind("edge_start", Expr::load(offsets_buf, Expr::var("v"))),
-                    Node::let_bind(
-                        "edge_end",
-                        Expr::load(offsets_buf, Expr::add(Expr::var("v"), Expr::u32(1))),
-                    ),
-                    Node::loop_for(
-                        "e",
-                        Expr::var("edge_start"),
-                        Expr::var("edge_end"),
-                        vec![
-                            Node::let_bind("u", Expr::load(targets_buf, Expr::var("e"))),
-                            Node::let_bind(
-                                "new_deg",
-                                Expr::sub(Expr::load(indeg_scratch, Expr::var("u")), Expr::u32(1)),
-                            ),
-                            Node::store(indeg_scratch, Expr::var("u"), Expr::var("new_deg")),
-                            Node::if_then(
-                                Expr::eq(Expr::var("new_deg"), Expr::u32(0)),
-                                vec![
-                                    Node::store(
-                                        queue_scratch,
-                                        Expr::var("write_head"),
-                                        Expr::var("u"),
-                                    ),
-                                    Node::assign(
-                                        "write_head",
-                                        Expr::add(Expr::var("write_head"), Expr::u32(1)),
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
+                step_inner,
             )],
         ),
     ];
-
     Program::wrapped(
         vec![
             BufferDecl::storage(offsets_buf, 0, BufferAccess::ReadOnly, DataType::U32)

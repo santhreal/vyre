@@ -72,101 +72,11 @@ pub fn iht_threshold(z: &str, threshold: &str, out: &str, n: u32) -> Program {
     )
 }
 
-/// CPU reference: keep top-k absolute values; zero the rest. Returns
-/// the kept values + the threshold (k-th largest `|z|`).
-#[must_use]
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn iht_top_k_cpu(z: &[f64], k: usize) -> (Vec<f64>, f64) {
-    try_iht_top_k_cpu(z, k).unwrap_or_else(|error| panic!("{error}"))
-}
 
-/// Caller-owned workspace for IHT top-k CPU thresholding.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[derive(Debug, Default, Clone)]
-pub struct IhtTopKScratch {
-    /// Sorted candidate indices ordered by finite absolute magnitude descending.
-    pub order: Vec<usize>,
-}
 
-#[cfg(any(test, feature = "cpu-parity"))]
-impl IhtTopKScratch {
-    /// Create empty reusable IHT top-k scratch.
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
 
-/// Fallible CPU reference: keep top-k absolute values; zero the rest.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_iht_top_k_cpu(z: &[f64], k: usize) -> Result<(Vec<f64>, f64), String> {
-    let mut out = Vec::new();
-    let mut scratch = IhtTopKScratch::new();
-    let threshold = try_iht_top_k_cpu_into(z, k, &mut out, &mut scratch)?;
-    Ok((out, threshold))
-}
 
-/// Fallible CPU reference using caller-owned output and scratch storage.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub fn try_iht_top_k_cpu_into(
-    z: &[f64],
-    k: usize,
-    out: &mut Vec<f64>,
-    scratch: &mut IhtTopKScratch,
-) -> Result<f64, String> {
-    let n = z.len();
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "IHT sparse-recovery CPU oracle",
-            "iht_top_k output",
-        )?;
-    }
-    if n > scratch.order.capacity() {
-        let additional = n - scratch.order.len();
-        crate::plumbing::host::scratch::reserve_items(
-            &mut scratch.order,
-            additional,
-            "IHT sparse-recovery CPU oracle",
-            "iht_top_k sorted indices",
-        )?;
-    }
-    if k >= n {
-        out.clear();
-        out.extend_from_slice(z);
-        scratch.order.clear();
-        return Ok(0.0);
-    }
-    if k == 0 {
-        out.clear();
-        out.resize(n, 0.0);
-        scratch.order.clear();
-        return Ok(f64::INFINITY);
-    }
-    // Sort indices by |z| descending; threshold = |z[order[k-1]]|.
-    scratch.order.clear();
-    scratch.order.extend(0..n);
-    scratch
-        .order
-        .sort_by(|&i, &j| finite_abs_score(z[j]).total_cmp(&finite_abs_score(z[i])));
-    let threshold = z[scratch.order[k - 1]].abs();
-    out.clear();
-    out.resize(n, 0.0);
-    for &i in &scratch.order[..k] {
-        out[i] = z[i];
-    }
-    Ok(threshold)
-}
 
-#[cfg(any(test, feature = "cpu-parity"))]
-fn finite_abs_score(value: f64) -> f64 {
-    let abs = value.abs();
-    if abs.is_nan() {
-        f64::NEG_INFINITY
-    } else {
-        abs
-    }
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

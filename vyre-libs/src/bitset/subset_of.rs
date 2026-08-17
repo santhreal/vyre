@@ -15,25 +15,6 @@ pub fn bitset_subset_of(lhs: &str, rhs: &str, out_scalar: &str, words: u32) -> P
     bitset_relation_program(OP_ID, lhs, rhs, out_scalar, words, BitsetRelation::SubsetOf)
 }
 
-/// CPU reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
-    let n = lhs.len().min(rhs.len());
-    for i in 0..n {
-        if (lhs[i] & !rhs[i]) != 0 {
-            return 0;
-        }
-    }
-    if lhs.len() > rhs.len() {
-        for &word in &lhs[n..] {
-            if word != 0 {
-                return 0;
-            }
-        }
-    }
-    1
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(

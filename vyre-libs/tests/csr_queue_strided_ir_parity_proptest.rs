@@ -20,7 +20,7 @@
 //! fires. Per-lane guards (`queue_idx < queue_len`, `src < node_count`) drop the
 //! over-fire.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "graph", feature = "cpu-parity"))]
+#![cfg(feature = "graph")]
 
 use proptest::prelude::*;
 use vyre_libs::graph::csr_queue_strided::{

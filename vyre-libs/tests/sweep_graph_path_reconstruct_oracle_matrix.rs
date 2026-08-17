@@ -4,7 +4,6 @@
 //! independent parent-walk oracle across thousands of generated parent trees.
 
 #![forbid(unsafe_code)]
-#![cfg(feature = "cpu-parity")]
 
 use vyre_libs::graph::path_reconstruct;
 
