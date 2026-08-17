@@ -100,12 +100,19 @@ fn assert_walk_is_closed_under_the_module_tree(files: &[(String, String)], src: 
     );
 }
 
-/// The names of the `mod name;` declarations in `text`, ignoring inline modules.
+/// The names of the `mod name;` declarations in `text`, ignoring inline modules and `#[path]` overrides.
 fn file_backed_modules(text: &str) -> Vec<&str> {
     let mut out = Vec::new();
+    let mut has_path_override = false;
     for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("#[path") {
+            has_path_override = true;
+            continue;
+        }
         let code = line.split("//").next().unwrap_or(line).trim();
         let Some(rest) = code.strip_suffix(';') else {
+            has_path_override = false;
             continue;
         };
         let rest = rest.trim_start_matches("pub ");
@@ -115,10 +122,11 @@ fn file_backed_modules(text: &str) -> Vec<&str> {
         };
         if let Some(name) = rest.strip_prefix("mod ") {
             let name = name.trim();
-            if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            if !has_path_override && !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
                 out.push(name);
             }
         }
+        has_path_override = false;
     }
     out
 }
@@ -634,15 +642,28 @@ fn every_routed_convergence_op_registers_with_the_routing_contract() {
         } else {
             stem
         };
+        let dir_without_src = directory.strip_prefix("src/").unwrap_or(directory);
         let beside = format!("{directory}/tests/mod.rs");
-        let registered = [path.as_str(), named_directory.as_str(), beside.as_str()]
-            .iter()
-            .any(|candidate| {
-                by_path.get(*candidate).is_some_and(|text| {
-                    text.contains("assert_routes_on_dispatch_span")
-                        && (*candidate == path.as_str() || text.contains(op))
-                })
-            });
+        let internal_dir = format!("tests/internal/{dir_without_src}/mod.rs");
+        let internal_op = format!("tests/internal/{op}/mod.rs");
+        let candidates = [
+            path.as_str(),
+            named_directory.as_str(),
+            beside.as_str(),
+            internal_dir.as_str(),
+            internal_op.as_str(),
+        ];
+        let registered = candidates.iter().any(|candidate| {
+            if let Some(text) = by_path.get(*candidate) {
+                text.contains("assert_routes_on_dispatch_span")
+                    && (*candidate == path.as_str() || text.contains(op))
+            } else if let Ok(text) = std::fs::read_to_string(vyre_crate_directory(SUBJECT_CRATE).join(candidate)) {
+                text.contains("assert_routes_on_dispatch_span")
+                    && (*candidate == path.as_str() || text.contains(op))
+            } else {
+                false
+            }
+        });
         if !registered {
             unregistered.push(path.clone());
         }
@@ -681,6 +702,99 @@ fn no_op_re_asserts_the_routing_obligations_privately() {
         "Fix: these files observe both `count_grid_sync` and `declared_words`, which together are the persistent-fixpoint routing obligations. Register the op with `fixpoint::routing_contract::assert_routes_on_dispatch_span` instead; a rule asserted once per op is a rule that can be weakened for one op:\n  {}",
         offenders.join("\n  ")
     );
+}
+
+/// No production source file may call `persistent_fixpoint` or
+/// `persistent_fixpoint_grid` directly.
+///
+/// A direct call bypasses [`crate::fixpoint::persistent_fixpoint::routed_persistent_fixpoint`],
+/// which owns the single-workgroup vs grid-sync routing decision and the
+/// convergence-flag width that goes with it. Above one workgroup width a direct
+/// call to `persistent_fixpoint` exposes the launch to the lost-set race and
+/// false convergence, while a direct call to `persistent_fixpoint_grid` forces a
+/// cooperative launch at one workgroup for nothing.
+///
+/// Production source text is stripped of inline test modules (`mod tests`) and
+/// `#[cfg(test)]` sections before matching, so tests that deliberately drive the
+/// pre-routing single-word harness for divergence verification are preserved,
+/// while any new production caller fails until routed.
+#[test]
+fn no_production_op_calls_unrouted_persistent_fixpoint() {
+    let files = source_files();
+    let mut offenders = Vec::new();
+    for (path, text) in &files {
+        if ROUTING_OWNERS.contains(&path.as_str()) {
+            continue;
+        }
+        let prod = non_test_source_text(text);
+        if calls_unrouted_persistent_fixpoint(&prod) {
+            offenders.push(path.clone());
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "Fix: these production source files call `persistent_fixpoint` or `persistent_fixpoint_grid` directly without routing through `routed_persistent_fixpoint`. Direct calls bypass the multi-workgroup GridSync switch and race when the dispatch span exceeds 256 lanes. Route through `routed_persistent_fixpoint` and register with `fixpoint::routing_contract::assert_routes_on_dispatch_span`:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+/// Strip test modules and `#[cfg(test)]` attributes from `text` so only production
+/// code is inspected.
+fn non_test_source_text(text: &str) -> String {
+    let mut out = String::new();
+    let mut in_test_module = false;
+    let mut depth = 0usize;
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("#[cfg(test)]") || trimmed.starts_with("mod tests") {
+            in_test_module = true;
+        }
+        if in_test_module {
+            for c in trimmed.chars() {
+                if c == '{' {
+                    depth += 1;
+                } else if c == '}' {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        in_test_module = false;
+                    }
+                }
+            }
+            if trimmed.ends_with(';') && depth == 0 {
+                in_test_module = false;
+            }
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
+/// Detect calls to `persistent_fixpoint(...)` or `persistent_fixpoint_grid(...)` that are
+/// not calls to `routed_persistent_fixpoint(...)`.
+fn calls_unrouted_persistent_fixpoint(text: &str) -> bool {
+    let is_ident_char = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    for target in [
+        "persistent_fixpoint(",
+        "persistent_fixpoint_grid(",
+        "persistent_fixpoint (",
+        "persistent_fixpoint_grid (",
+    ] {
+        let mut rem = text;
+        while let Some(idx) = rem.find(target) {
+            let prefix = &rem[..idx];
+            if let Some(last_char) = prefix.chars().last() {
+                if !is_ident_char(last_char) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+            rem = &rem[idx + target.len()..];
+        }
+    }
+    false
 }
 
 /// Keeps the crate directory resolution honest for both axes: a stale path

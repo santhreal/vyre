@@ -618,7 +618,7 @@ mod tests {
         let dispatcher =
             StaticOutputs::new("semiring gemm dispatch", vec![u32_slice_to_le_bytes(&[7])])
                 .expecting_grid([1, 1, 1])
-                .expecting_inputs(&[3]);
+                .expecting_inputs(&[2]);
         let mut c = Vec::with_capacity(4);
         let ptr = c.as_ptr();
         semiring_gemm_via_into(&dispatcher, &[2], &[3], 1, 1, 1, Semiring::Real, &mut c)
@@ -634,7 +634,7 @@ mod tests {
             vec![u32_slice_to_le_bytes(&[7]), u32_slice_to_le_bytes(&[0])],
         )
         .expecting_grid([1, 1, 1])
-        .expecting_inputs(&[3]);
+        .expecting_inputs(&[2]);
         let err = semiring_gemm_via(&dispatcher, &[2], &[3], 1, 1, 1, Semiring::Real)
             .expect_err("extra outputs must be rejected");
         assert!(
@@ -647,7 +647,7 @@ mod tests {
     fn semiring_via_rejects_trailing_output_bytes() {
         let dispatcher = StaticOutputs::new("semiring gemm dispatch", vec![vec![7, 0, 0, 0, 1]])
             .expecting_grid([1, 1, 1])
-            .expecting_inputs(&[3]);
+            .expecting_inputs(&[2]);
         let err = semiring_gemm_via(&dispatcher, &[2], &[3], 1, 1, 1, Semiring::Real)
             .expect_err("trailing output bytes must be rejected");
         assert!(
@@ -675,7 +675,7 @@ mod tests {
                 vec![semiring_step_b],
                 vec![components_done],
             ],
-            expected_input_counts: vec![3; 10],
+            expected_input_counts: vec![2, 2, 2, 2, 3, 2, 2, 2, 2, 3],
             cursor: Cell::new(0),
         };
         let mut scratch = SccComponentsGpuScratch::default();
@@ -739,7 +739,7 @@ mod tests {
                 vec![semiring_step_b],
                 vec![packed_bitsets.clone(), packed_bitsets],
             ],
-            expected_input_counts: vec![3, 3, 3, 3, 4],
+            expected_input_counts: vec![2, 2, 2, 2, 4],
             cursor: Cell::new(0),
         };
         let (fwd, bwd) = forward_backward_bitsets_for_pivot_via(&dispatcher, &adj, 0, 2).unwrap();
@@ -765,7 +765,7 @@ mod tests {
                     packed_bitsets,
                 ],
             ],
-            expected_input_counts: vec![3, 3, 3, 3, 4],
+            expected_input_counts: vec![2, 2, 2, 2, 4],
             cursor: Cell::new(0),
         };
         let err = forward_backward_bitsets_for_pivot_via(&dispatcher, &adj, 0, 2).unwrap_err();
