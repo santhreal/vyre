@@ -38,8 +38,9 @@ struct MetadataConditionPrepared {
 
 pub(super) const METADATA_RECORDS: u32 = 1_048_576;
 
-pub(super) const METADATA_OUTPUT_RESET_BYTES: u64 = 4;
+pub(super) const METADATA_WORKGROUP_SIZE: u32 = 512;
 
+pub(super) const METADATA_OUTPUT_RESET_BYTES: u64 = 4;
 impl BenchCase for MetadataConditionBatch {
     fn id(&self) -> BenchId {
         BenchId("metadata.condition.filesize_header.1m".to_string())
@@ -88,6 +89,7 @@ impl BenchCase for MetadataConditionBatch {
         let mut filesize = Vec::with_capacity(METADATA_RECORDS as usize);
         let mut header = Vec::with_capacity(METADATA_RECORDS as usize);
         let mut entropy = Vec::with_capacity(METADATA_RECORDS as usize);
+        let mut packed_records = Vec::with_capacity(METADATA_RECORDS as usize);
         let mut expected = 0u32;
         for index in 0..METADATA_RECORDS {
             let size = 1024 + (index.wrapping_mul(13) % 131_072);
@@ -101,12 +103,14 @@ impl BenchCase for MetadataConditionBatch {
             filesize.push(size);
             header.push(hdr);
             entropy.push(ent);
+
+            let size_offset = size - 1024;
+            let entropy_offset = ent - 5000;
+            let is_pe = u32::from(hdr == 0x0000_4550);
+            let packed = size_offset | (entropy_offset << 17) | (is_pe << 30);
+            packed_records.push(packed);
         }
-        let inputs = vec![
-            encode_u32_words(&filesize),
-            encode_u32_words(&header),
-            encode_u32_words(&entropy),
-        ];
+        let inputs = vec![encode_u32_words(&packed_records)];
         let input_bytes_total = input_bytes_total(&inputs);
         let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
             ctx,
@@ -186,7 +190,7 @@ impl BenchCase for MetadataConditionBatch {
             sample.resident_used,
             sample.reset_bytes,
         );
-        let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
+        let logical_bytes_touched = (u64::from(METADATA_RECORDS) * 12).saturating_add(output_bytes);
         let mut custom = vec![
             MetricPoint {
                 name: "metadata_records".to_string(),
@@ -219,7 +223,7 @@ impl BenchCase for MetadataConditionBatch {
     fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
         prepared
             .downcast_ref::<MetadataConditionPrepared>()
-            .map(|prepared| (prepared.input_bytes_total, METADATA_OUTPUT_RESET_BYTES))
+            .map(|_| (u64::from(METADATA_RECORDS) * 12, METADATA_OUTPUT_RESET_BYTES))
             .unwrap_or((
                 u64::from(METADATA_RECORDS) * 12,
                 METADATA_OUTPUT_RESET_BYTES,
@@ -257,15 +261,11 @@ pub(super) fn metadata_condition_program() -> Program {
     Program::wrapped(
         vec![
             BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-            BufferDecl::storage("filesize", 1, BufferAccess::ReadOnly, DataType::U32)
+            BufferDecl::storage("metadata_records", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(METADATA_RECORDS),
-            BufferDecl::storage("header", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(METADATA_RECORDS),
-            BufferDecl::storage("entropy_x1000", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(METADATA_RECORDS),
-            BufferDecl::workgroup("warp_scratch", 64, DataType::U32),
+            BufferDecl::workgroup("warp_scratch", 1024, DataType::U32),
         ],
-        [512, 1, 1],
+        [METADATA_WORKGROUP_SIZE, 1, 1],
         vec![
             Node::let_bind("idx", Expr::gid_x()),
             Node::let_bind("lid", Expr::local_x()),
@@ -277,27 +277,44 @@ pub(super) fn metadata_condition_program() -> Program {
             ),
             Node::let_bind(
                 "num_warps",
-                Expr::div(Expr::u32(512), Expr::var("subgroup_sz")),
+                Expr::div(Expr::u32(METADATA_WORKGROUP_SIZE), Expr::var("subgroup_sz")),
             ),
-            Node::let_bind("is_match", Expr::bool(false)),
-            Node::if_then(
-                Expr::and(
-                    Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS)),
-                    Expr::gt(
-                        Expr::load("entropy_x1000", Expr::var("idx")),
-                        Expr::u32(7200),
-                    ),
+            Node::let_bind("in_bounds", Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS))),
+            Node::let_bind(
+                "safe_idx",
+                Expr::select(Expr::var("in_bounds"), Expr::var("idx"), Expr::u32(0)),
+            ),
+            Node::let_bind("packed", Expr::load("metadata_records", Expr::var("safe_idx"))),
+            Node::let_bind(
+                "size_offset",
+                Expr::bitand(Expr::var("packed"), Expr::u32(0x0001_FFFF)),
+            ),
+            Node::let_bind(
+                "entropy_offset",
+                Expr::bitand(
+                    Expr::shr(Expr::var("packed"), Expr::u32(17)),
+                    Expr::u32(0x0000_1FFF),
                 ),
-                vec![Node::assign(
-                    "is_match",
+            ),
+            Node::let_bind(
+                "is_pe",
+                Expr::ne(
+                    Expr::bitand(Expr::var("packed"), Expr::u32(0x4000_0000)),
+                    Expr::u32(0),
+                ),
+            ),
+            Node::let_bind(
+                "is_match",
+                Expr::and(
+                    Expr::var("in_bounds"),
                     Expr::and(
-                        Expr::gt(Expr::load("filesize", Expr::var("idx")), Expr::u32(4096)),
-                        Expr::eq(
-                            Expr::load("header", Expr::var("idx")),
-                            Expr::u32(0x0000_4550),
+                        Expr::var("is_pe"),
+                        Expr::and(
+                            Expr::gt(Expr::var("size_offset"), Expr::u32(3072)),
+                            Expr::gt(Expr::var("entropy_offset"), Expr::u32(2200)),
                         ),
                     ),
-                )],
+                ),
             ),
             Node::let_bind(
                 "warp_matches",
@@ -312,18 +329,41 @@ pub(super) fn metadata_condition_program() -> Program {
                 )],
             ),
             Node::barrier(),
-            Node::let_bind(
-                "warp_partial",
-                Expr::select(
-                    Expr::and(
-                        Expr::eq(Expr::var("warp_id"), Expr::u32(0)),
-                        Expr::lt(Expr::var("lane_id"), Expr::var("num_warps")),
-                    ),
-                    Expr::load("warp_scratch", Expr::var("lane_id")),
+            Node::let_bind("lane_partial", Expr::u32(0)),
+            Node::if_then(
+                Expr::eq(Expr::var("warp_id"), Expr::u32(0)),
+                vec![Node::loop_for(
+                    "round",
                     Expr::u32(0),
-                ),
+                    Expr::div(
+                        Expr::add(
+                            Expr::var("num_warps"),
+                            Expr::sub(Expr::var("subgroup_sz"), Expr::u32(1)),
+                        ),
+                        Expr::var("subgroup_sz"),
+                    ),
+                    vec![
+                        Node::let_bind(
+                            "scratch_idx",
+                            Expr::add(
+                                Expr::var("lane_id"),
+                                Expr::mul(Expr::var("round"), Expr::var("subgroup_sz")),
+                            ),
+                        ),
+                        Node::if_then(
+                            Expr::lt(Expr::var("scratch_idx"), Expr::var("num_warps")),
+                            vec![Node::assign(
+                                "lane_partial",
+                                Expr::add(
+                                    Expr::var("lane_partial"),
+                                    Expr::load("warp_scratch", Expr::var("scratch_idx")),
+                                ),
+                            )],
+                        ),
+                    ],
+                )],
             ),
-            Node::let_bind("wg_total", Expr::subgroup_add(Expr::var("warp_partial"))),
+            Node::let_bind("wg_total", Expr::subgroup_add(Expr::var("lane_partial"))),
             Node::if_then(
                 Expr::and(
                     Expr::eq(Expr::var("lid"), Expr::u32(0)),
