@@ -57,16 +57,7 @@ fn synthetic_count_program(pattern: SyntheticPattern, records: u32) -> Program {
 }
 
 fn condition_eval_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["match_mask", "rule_mask", "metadata_mask"],
-        ["match_word", "rule_word", "metadata_word"],
-        "condition_hits",
-        "condition_lane",
-        TripleMaskPredicate::AllSet,
-        CONDITION_LANES,
-        CONDITION_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["match_mask", "rule_mask", "metadata_mask"], ["match_word", "rule_word", "metadata_word"], "condition_hits", TripleMaskPredicate::AllSet, CONDITION_LANES, CONDITION_THRESHOLD)
 }
 
 pub(super) fn string_bitmap_scatter_program(records: u32) -> Program {
@@ -135,32 +126,33 @@ enum TripleMaskPredicate {
     FirstTwoSetThirdClear,
 }
 
-#[allow(clippy::too_many_arguments)]
 fn triple_mask_threshold_count_program(
     records: u32,
     buffers: [&'static str; 3],
     words: [&'static str; 3],
     hits: &'static str,
-    lane: &'static str,
     predicate: TripleMaskPredicate,
     lanes: u32,
     threshold: u32,
 ) -> Program {
-    let bit_is_set = |word: &'static str| {
-        Expr::ne(
-            Expr::bitand(Expr::var(word), Expr::shl(Expr::u32(1), Expr::var(lane))),
-            Expr::u32(0),
-        )
+    let combined_word = match predicate {
+        TripleMaskPredicate::AllSet => Expr::bitand(
+            Expr::var(words[0]),
+            Expr::bitand(Expr::var(words[1]), Expr::var(words[2])),
+        ),
+        TripleMaskPredicate::FirstAndEither => Expr::bitand(
+            Expr::var(words[0]),
+            Expr::bitor(Expr::var(words[1]), Expr::var(words[2])),
+        ),
+        TripleMaskPredicate::FirstTwoSetThirdClear => Expr::bitand(
+            Expr::var(words[0]),
+            Expr::bitand(Expr::var(words[1]), Expr::bitnot(Expr::var(words[2]))),
+        ),
     };
-    let first = bit_is_set(words[0]);
-    let second = bit_is_set(words[1]);
-    let third = bit_is_set(words[2]);
-    let condition = match predicate {
-        TripleMaskPredicate::AllSet => Expr::and(first, Expr::and(second, third)),
-        TripleMaskPredicate::FirstAndEither => Expr::and(first, Expr::or(second, third)),
-        TripleMaskPredicate::FirstTwoSetThirdClear => {
-            Expr::and(first, Expr::and(second, Expr::eq(third, Expr::bool(false))))
-        }
+    let masked_word = if lanes < 32 {
+        Expr::bitand(combined_word, Expr::u32((1u32 << lanes) - 1))
+    } else {
+        combined_word
     };
     Program::wrapped(
         vec![
@@ -181,16 +173,7 @@ fn triple_mask_threshold_count_program(
                     Node::let_bind(words[0], load_u32(buffers[0])),
                     Node::let_bind(words[1], load_u32(buffers[1])),
                     Node::let_bind(words[2], load_u32(buffers[2])),
-                    Node::let_bind(hits, Expr::u32(0)),
-                    Node::loop_for(
-                        lane,
-                        Expr::u32(0),
-                        Expr::u32(lanes),
-                        vec![Node::if_then(
-                            condition,
-                            vec![Node::assign(hits, Expr::add(Expr::var(hits), Expr::u32(1)))],
-                        )],
-                    ),
+                    Node::let_bind(hits, Expr::popcount(masked_word)),
                     Node::if_then(
                         Expr::ge(Expr::var(hits), Expr::u32(threshold)),
                         vec![Node::let_bind(
@@ -205,29 +188,11 @@ fn triple_mask_threshold_count_program(
 }
 
 fn offset_count_aggregation_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["offset_mask", "length_mask", "count_mask"],
-        ["offset_word", "length_word", "count_word"],
-        "aggregation_hits",
-        "aggregation_lane",
-        TripleMaskPredicate::AllSet,
-        AGGREGATION_LANES,
-        AGGREGATION_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["offset_mask", "length_mask", "count_mask"], ["offset_word", "length_word", "count_word"], "aggregation_hits", TripleMaskPredicate::AllSet, AGGREGATION_LANES, AGGREGATION_THRESHOLD)
 }
 
 fn entropy_window_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["byte_class_mask", "transition_mask", "rarity_mask"],
-        ["byte_class_word", "transition_word", "rarity_word"],
-        "entropy_score",
-        "entropy_lane",
-        TripleMaskPredicate::FirstAndEither,
-        ENTROPY_LANES,
-        ENTROPY_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["byte_class_mask", "transition_mask", "rarity_mask"], ["byte_class_word", "transition_word", "rarity_word"], "entropy_score", TripleMaskPredicate::FirstAndEither, ENTROPY_LANES, ENTROPY_THRESHOLD)
 }
 
 fn quantified_condition_loops_program(records: u32) -> Program {
@@ -316,68 +281,23 @@ fn quantified_condition_loops_program(records: u32) -> Program {
 }
 
 fn alias_reaching_def_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["def_mask", "use_mask", "kill_mask"],
-        ["def_word", "use_word", "kill_word"],
-        "reaching_aliases",
-        "alias_lane",
-        TripleMaskPredicate::FirstTwoSetThirdClear,
-        ALIAS_LANES,
-        ALIAS_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["def_mask", "use_mask", "kill_mask"], ["def_word", "use_word", "kill_word"], "reaching_aliases", TripleMaskPredicate::FirstTwoSetThirdClear, ALIAS_LANES, ALIAS_THRESHOLD)
 }
 
 fn ifds_witness_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["frontier_mask", "transfer_mask", "witness_mask"],
-        ["frontier_word", "transfer_word", "witness_word"],
-        "witness_hits",
-        "ifds_lane",
-        TripleMaskPredicate::AllSet,
-        IFDS_LANES,
-        IFDS_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["frontier_mask", "transfer_mask", "witness_mask"], ["frontier_word", "transfer_word", "witness_word"], "witness_hits", TripleMaskPredicate::AllSet, IFDS_LANES, IFDS_THRESHOLD)
 }
 
 fn ast_motif_traversal_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["node_kind_mask", "depth_mask", "motif_mask"],
-        ["node_kind_word", "depth_word", "motif_word"],
-        "ast_hits",
-        "ast_lane",
-        TripleMaskPredicate::AllSet,
-        C_AST_LANES,
-        C_AST_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["node_kind_mask", "depth_mask", "motif_mask"], ["node_kind_word", "depth_word", "motif_word"], "ast_hits", TripleMaskPredicate::AllSet, C_AST_LANES, C_AST_THRESHOLD)
 }
 
 fn megakernel_queue_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["queue_mask", "predicate_mask", "dispatch_mask"],
-        ["queue_word", "predicate_word", "dispatch_word"],
-        "queued_hits",
-        "queue_lane",
-        TripleMaskPredicate::AllSet,
-        MEGAKERNEL_QUEUE_LANES,
-        MEGAKERNEL_QUEUE_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["queue_mask", "predicate_mask", "dispatch_mask"], ["queue_word", "predicate_word", "dispatch_word"], "queued_hits", TripleMaskPredicate::AllSet, MEGAKERNEL_QUEUE_LANES, MEGAKERNEL_QUEUE_THRESHOLD)
 }
 
 fn egraph_saturation_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(
-        records,
-        ["opcode_mask", "lhs_class_mask", "rhs_class_mask"],
-        ["opcode_word", "lhs_word", "rhs_word"],
-        "rewrite_hits",
-        "rewrite_lane",
-        TripleMaskPredicate::AllSet,
-        EGRAPH_LANES,
-        EGRAPH_THRESHOLD,
-    )
+    triple_mask_threshold_count_program(records, ["opcode_mask", "lhs_class_mask", "rhs_class_mask"], ["opcode_word", "lhs_word", "rhs_word"], "rewrite_hits", TripleMaskPredicate::AllSet, EGRAPH_LANES, EGRAPH_THRESHOLD)
 }
 
 fn pattern_condition(pattern: SyntheticPattern) -> Expr {
