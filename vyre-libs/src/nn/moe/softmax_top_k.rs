@@ -160,7 +160,6 @@ fn softmax_top_k_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         fixture_f32_bytes(&scores),
         vec![0u8; 4 * 2],
         vec![0u8; 4 * 2],
-        vec![0u8; 4 * 2],
     ]]
 }
 

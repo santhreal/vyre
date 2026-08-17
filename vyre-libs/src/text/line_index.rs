@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn geometry_lowering_produces_valid_non_trapping_programs() {
-        use vyre_foundation::geometry::LaunchGeometry;
+        use vyre_foundation::LaunchGeometry;
 
         for width in [256u32, 512, 1024] {
             let geo = LaunchGeometry {

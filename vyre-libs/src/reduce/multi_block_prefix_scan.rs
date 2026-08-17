@@ -1170,7 +1170,7 @@ mod tests {
             let actual = run_full_scan(&prog, &input);
             assert_eq!(actual, cpu_ref(&input));
 
-            let geom = vyre_foundation::geometry::LaunchGeometry {
+            let geom = vyre_foundation::LaunchGeometry {
                 workgroup: [lanes, 1, 1],
                 ..Default::default()
             };

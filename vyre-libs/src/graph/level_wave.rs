@@ -221,7 +221,7 @@ inventory::submit! {
             level_wave_program_with_buffers(
                 vec![Node::store("out", Expr::InvocationId { axis: 0 }, Expr::u32(1))],
                 "depths",
-                vec![BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(4)],
+                vec![BufferDecl::output("out", 1, DataType::U32).with_count(4)],
                 4,
                 4,
             )

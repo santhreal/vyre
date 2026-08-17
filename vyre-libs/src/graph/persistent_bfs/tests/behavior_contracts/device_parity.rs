@@ -30,7 +30,7 @@
 //!   iteration for any numbering.
 
 use super::*;
-use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use vyre_driver::grid_sync::{
     contains_grid_sync, dispatch_with_grid_sync_split, dispatch_with_grid_sync_split_via,
 };

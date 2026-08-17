@@ -1415,6 +1415,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   member per declared feature from tracked manifests and compiles each alone on
   the toolchain `[workspace.package].rust-version` names, which must be
   installed.
+- Compiler finalist evaluation binds representative workload inputs rather than
+  zero-filled buffers so valid production traps do not abort compile-time
+  device timing. `CompileRequest` owns representative bytes keyed by
+  `GraphValueId`, and `RequestIdentity` commits to their ordered digests and
+  lengths. `DeviceFinalists` fails closed on missing or mismatched host
+  resources. `ProductionSession::compile_with_representative_inputs` and
+  `ExecutionRoute::open_with_representative_inputs` accept Program host-input
+  order. Runtime-sized host buffers keep dynamic target IR while their
+  representative bytes establish exact artifact resource counts.
 - Harness selection and convergence-flag width for the persistent fixpoint are
   one decision with one owner, `routed_persistent_fixpoint`, which returns both
   halves together. The grid form indexes `changed[iteration]`, so taking the
@@ -3966,6 +3975,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   operation registries, CUDA-first backend evidence, typed cross-program
   composition, and explicit runtime/compiler/driver megakernel boundaries. The
   earlier device-bytecode-interpreter RFC is retained as superseded rationale.
+- Artifact materialization now maps target resources to Program inputs by
+  canonical identity instead of backend descriptor position, excludes
+  backend-allocated read-write outputs from prior host inputs, and rejects
+  conformance fixture byte lengths that disagree with the canonical Program ABI
+  before device measurement.
 - Two rewrites that enumerated `Node` themselves reached fewer operands than
   the analysis that fed them. Cross-scope CSE recorded occurrences inside the
   offset and size of an asynchronous copy and the address of a trap, but its
@@ -4275,6 +4289,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   module written in its own file counted as production code. A crate whose only
   builders are test fixtures now reports zero builders and is held honest by a
   production-file guard instead of a floor.
+- CPU-parity integration tests now declare their required Cargo features.
+  Default-feature `vyre-libs` test builds no longer import reference-only
+  symbols that are intentionally absent from production builds.
 - Workspace crate ownership now comes from one manifest-checked registry. The
   tier gate rejects missing crates, undeclared production edges, and stale
   generated graph or ownership guides, while planned compiler boundaries stay
@@ -4366,6 +4383,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   cooperative launches, and CUDA graph capture refuses a trap-declaring program
   up front because a capture cannot synchronize and so could not read the
   record back.
+- Compiled CUDA pipelines route trap-declaring and cooperative programs to
+  direct stream-ordered dispatch instead of CUDA graph capture, preserving
+  fail-closed trap readback without graph capture replay failures. Canonical
+  text line indexing declares exact portable workgroup geometry requirements
+  (256 invocations), validates explicit block lane powers of two, and
+  propagates lowering widths uniformly across flag and scan passes so fusion
+  never fails with workgroup geometry mismatches.
 - The declaration-prefix walk in front of a VAST row is owned by
   `parsing::c::parse::vast::declaration_prefix_scan`. The precomputed-context
   declaration classifier walked the prefix forwards with no delimiter depth, so
@@ -4635,6 +4659,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every other artifact inspector. Its private copy accepted only an integer
   p50, so an artifact recording a float percentile was reported as missing the
   metric entirely.
+- Materialized artifact execution preserves every mutable carrier across
+  multi-segment dispatches and resolves fused-module resources by authenticated
+  identity. Schema version 7 records canonical retained-predecessor lineage
+  plus named entry input and output bindings. `InstanceCore` derives module
+  resources from exact target binding metadata, updates antecedent retained
+  values after dispatch, and rejects missing or mismatched resource identities
+  instead of falling back to positional descriptor order.
 - The fusion-alias hazard rule `V116` has one owner, the whole-program pass in
   `vyre-foundation/src/validate/fusion_safety.rs`, which both the production
   single-pass validator and the legacy differential arm call. Production
@@ -5246,6 +5277,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   backend uses once it has probed one, and a scheduler built without an adapter
   states the conservative fallback at the place that chose it instead of
   leaving it to whichever pass reached for a profile first.
+- Single-program artifact graphs now classify every backend-allocated buffer,
+  including read-write pipeline live-outs, as an output. Artifact submission no
+  longer asks callers to provide internal fused-pipeline storage as a host
+  input.
 - The `types` feature of `vyre-primitives` now depends on `vyre-foundation`,
   which its shape-predicate evaluator has always aliased. Enabling only that
   feature against the published crate failed to compile; in-workspace builds
@@ -5584,6 +5619,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   of its own exhaustive `match node`. A node variant that carries a body would
   have had to be added to both lists, and the scan's copy is the one a reader
   would not think to check when adding one.
+- Restored public Target export in vyre-driver, scan database wire header and
+  budget types in vyre-foundation, lower and WORKGROUP_SLOT_BASE in vyre-lower,
+  and public submodule paths in vyre-spec to maintain SemVer compatibility with
+  published releases.
 - Megakernel selection charges a workgroup tile once per fusion group instead
   of once per member, so a group whose members share a tile by name is no
   longer pushed over the device scratch budget and ranked below the pair it
