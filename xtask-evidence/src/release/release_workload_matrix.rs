@@ -132,4 +132,20 @@ mod tests {
              disagrees with the case registry."
         );
     }
+
+    /// WHY: The authoritative descriptor and workload-matrix producer must agree on
+    /// the exact output path so comparison is immutable and write mutations
+    /// are never undeclared.
+    #[test]
+    fn authoritative_descriptor_declares_exact_release_workload_matrix_artifact() {
+        let descriptor = xtask::gate_metadata::descriptor_by_name("release-workload-matrix");
+        let mut expected: Vec<&str> = vec![ARTIFACT];
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "Fix: release-workload-matrix gate descriptor must declare exactly the canonical workload evidence artifact (`{ARTIFACT}`)"
+        );
+    }
 }

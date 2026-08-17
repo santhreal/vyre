@@ -1127,11 +1127,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "release-workload-matrix",
-        help: "Hold release/evidence/workloads/release-workload-matrix.json to the live operation \\        registry and the benchmark and conformance matrices. Proves every Category A and \\        Category C operation is assigned to a workload family, that every family carries at \\        least one benchmark case, and that no operation is claimed by multiple families. \\        Proves nothing about execution: reads the three source manifests.",
+        help: "Rebuild release/evidence/benchmarks/release-workload-matrix.json from the benchmark case \
+        registry and the bench target manifest, and report each line the committed artifact \
+        disagrees on. Proves every required release workload family matches at least one \
+        registered case, that each family naming a CPU state-of-the-art baseline has one, and \
+        that the matrix carries no blockers. Proves nothing about any measurement: no benchmark \
+        runs here and no artifact any family names is read.",
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/workloads/release-workload-matrix.json"],
+        artifacts: &["release/evidence/benchmarks/release-workload-matrix.json"],
         prerequisites: &[],
         proof: "xtask_evidence::release::release_workload_matrix::tests::the_committed_matrix_body_is_what_the_registry_derives",
     },
