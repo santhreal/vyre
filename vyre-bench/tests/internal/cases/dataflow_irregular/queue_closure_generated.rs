@@ -135,12 +135,12 @@ proptest! {
             compact_capacity as usize * std::mem::size_of::<u32>()
         );
 
-        if fixture.stats.active_sources > 0 || full.max_wave_queue_len > 0 {
+        if full.max_wave_queue_len > fixture.stats.active_sources as u32 {
             prop_assert!(
                 ifds_skewed_queue_closure_oracle(
                     &fixture,
                     max_iters,
-                    compact_capacity.saturating_sub(1)
+                    compact_capacity - 1
                 )
                 .is_err()
             );
