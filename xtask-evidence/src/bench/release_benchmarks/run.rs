@@ -34,13 +34,13 @@ impl xtask::gate::GateBehavior for ReleaseBenchmarksGate {
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
-        for path in [
-            "release/evidence/benchmarks/benchmark-matrix.json",
-            "release/evidence/benchmarks/evidence-benchmark-matrix.json",
-        ] {
-            report.produced(path);
+        for path in xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS {
+            report.produced(*path);
         }
-        report.cover_complete("release benchmark suites", 2);
+        report.cover_complete(
+            "release benchmark suites",
+            xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS.len(),
+        );
         let config = match parse_args(&ctx.args) {
             Ok(Parsed::Run(config)) => config,
             Ok(Parsed::Usage) => {
@@ -1036,6 +1036,76 @@ mod tests {
         assert!(
             !should_write_optimization_manifest(&config, false),
             "Fix: auxiliary optimization evidence must not refresh after workload benchmark failures."
+        );
+    }
+
+    #[test]
+    fn authoritative_descriptor_declares_exact_release_benchmarks_artifacts() {
+        let descriptor = xtask::gate_metadata::descriptor_by_name("release-benchmarks");
+        let mut expected = xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS.to_vec();
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "Fix: release-benchmarks gate descriptor must declare exactly the canonical benchmark evidence artifacts"
+        );
+    }
+
+    #[test]
+    fn release_benchmarks_closure_covers_all_derived_workloads() {
+        let registry = vyre_bench::registry::collect_all();
+        let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);
+        let derived_workload_artifacts: std::collections::BTreeSet<String> = matrix
+            .families
+            .iter()
+            .map(|family| family.evidence_artifact.clone())
+            .collect();
+
+        for artifact in &derived_workload_artifacts {
+            assert!(
+                xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS.contains(&artifact.as_str()),
+                "Fix: newly registered release workload `{artifact}` must be declared in RELEASE_BENCHMARKS_ARTIFACTS"
+            );
+        }
+
+        let auxiliary_artifacts = [
+            "release/evidence/benchmarks/bench-release-axes.json",
+            "release/evidence/benchmarks/cpu-only-100x-proof.json",
+            "release/evidence/benchmarks/cuda-release-suite.json",
+            "release/evidence/benchmarks/dataflow-analysis-release.json",
+            xtask::artifact_paths::FRONTIER_LEADERBOARD_ARTIFACT,
+            "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
+            "release/evidence/benchmarks/megakernel-condition-cuda.json",
+            "release/evidence/benchmarks/megakernel-latency-cuda.json",
+        ];
+        let mut expected_full_set: std::collections::BTreeSet<String> = auxiliary_artifacts
+            .iter()
+            .map(|artifact| (*artifact).to_string())
+            .collect();
+        expected_full_set.extend(derived_workload_artifacts);
+
+        let declared_set: std::collections::BTreeSet<String> =
+            xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS
+                .iter()
+                .map(|artifact| (*artifact).to_string())
+                .collect();
+
+        assert_eq!(
+            declared_set, expected_full_set,
+            "Fix: RELEASE_BENCHMARKS_ARTIFACTS must match the canonical derived release benchmark inventory exactly without drift"
+        );
+
+        let descriptor = xtask::gate_metadata::descriptor_by_name("release-benchmarks");
+        let descriptor_set: std::collections::BTreeSet<String> = descriptor
+            .artifacts
+            .iter()
+            .map(|artifact| (*artifact).to_string())
+            .collect();
+
+        assert_eq!(
+            descriptor_set, expected_full_set,
+            "Fix: authoritative GateDescriptor for `release-benchmarks` must match the canonical derived release benchmark inventory exactly"
         );
     }
 }

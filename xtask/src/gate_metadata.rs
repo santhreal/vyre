@@ -1077,13 +1077,17 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "release-benchmarks",
-        help: "Hold release/evidence/benchmarks/benchmark-matrix.json and \\        evidence-benchmark-matrix.json to the live benchmark registry and the committed evidence \\        measurements. Proves every measured benchmark case in the release suite exists in the \\        registry, that no case is duplicated, that measured speedups are positive and \\        reproducible, and that no required release metric is missing. The evidence is read \\        from disk; --write updates the markdown summary tables.",
+        help: "Hold release benchmark evidence artifacts under release/evidence/benchmarks/ to the \
+        live benchmark registry and the committed evidence measurements. Proves every measured \
+        benchmark case in the release suite exists in the registry, that no case is duplicated, \
+        that measured speedups are positive and reproducible, and that no required release metric \
+        is missing. The evidence is read from disk; --write updates the recorded artifacts.",
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/benchmarks/benchmark-matrix.json", "release/evidence/benchmarks/evidence-benchmark-matrix.json"],
+        artifacts: crate::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS,
         prerequisites: &[],
-        proof: "xtask_evidence::bench::release_benchmarks::artifact_metrics::tests::a_missing_artifact_returns_its_read_error",
+        proof: "xtask_evidence::bench::release_benchmarks::run::tests::authoritative_descriptor_declares_exact_release_benchmarks_artifacts",
     },
     GateDescriptor {
         name: "release-conformance",

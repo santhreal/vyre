@@ -25,13 +25,7 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
         "backend-matrix" => &["release/evidence/backends/backend-matrix.json"],
         "conformance-matrix" => &["release/evidence/conformance/conformance-matrix.json"],
         "release-workload-matrix" => &["release/evidence/benchmarks/release-workload-matrix.json"],
-        "release-benchmarks" => &[
-            "release/evidence/benchmarks/cuda-release-suite.json",
-            "release/evidence/benchmarks/bench-release-axes.json",
-            "release/evidence/benchmarks/cpu-only-100x-proof.json",
-            FRONTIER_LEADERBOARD_ARTIFACT,
-            "release/evidence/optimization/pass-family-benchmark-manifest.json",
-        ],
+        "release-benchmarks" => xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS,
         "hygiene-matrix" => &[
             "release/evidence/hygiene/hygiene-matrix.json",
             "release/evidence/hygiene/implementation-intake.json",
