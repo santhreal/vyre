@@ -116,7 +116,7 @@ impl IntraDeviceExpertScheduler {
     pub fn new(limits: IntraDeviceExpertQueueLimits) -> Self {
         let mut queues = BTreeMap::new();
         for expert_id in 0..limits.num_experts {
-            queues.insert(expert_id, VecDeque::new());
+            queues.insert(expert_id, VecDeque::with_capacity(limits.max_queued_per_expert));
         }
         Self {
             limits,
