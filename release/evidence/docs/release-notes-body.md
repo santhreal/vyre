@@ -5003,10 +5003,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   the module that defines it; that one is now fully qualified. The five links
   naming a private item are plain code spans, because a link to an item a
   reader cannot reach is not a link.
-- Weighted paged-corpus scans now expose per-device timing and byte balance.
-  The physical two-adapter benchmark verifies exact single-device parity and
-  records paired end-to-end speedup, topology, staging overhead, and raw
-  samples.
 - The pre-emission scan that decides which buffers Naga emits as `atomic<...>`
   and which keep `BufferAccess::ReadWrite` takes descent, operand positions and
   per-node buffer direction from the exhaustive owners in
