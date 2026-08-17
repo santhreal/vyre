@@ -313,7 +313,6 @@ pub(super) fn write_release_axes(workspace_root: &Path) -> Result<(), String> {
             blockers.push(format!(
                 "CUDA release axis artifact `{artifact}` has nonzero or missing summary.failed"
             ));
-            continue;
         }
         source_artifacts.push(artifact.to_string());
         reports.push(value);

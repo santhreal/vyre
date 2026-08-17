@@ -442,10 +442,10 @@ fn quantified_row_matches(any_mask: u32, all_mask: u32, threshold_mask: u32) -> 
     let mut threshold_hits = 0u32;
     for lane in 0..QUANTIFIED_LANES {
         let bit = 1u32 << lane;
-        any_seen |= any_mask & bit != 0;
         if all_mask & bit == 0 {
             return false;
         }
+        any_seen |= any_mask & bit != 0;
         threshold_hits += u32::from(threshold_mask & bit != 0);
     }
     any_seen && threshold_hits >= QUANTIFIED_THRESHOLD
