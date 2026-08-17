@@ -166,7 +166,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/benchmarks/release-benchmarks.json"],
+        artifacts: &[],
         prerequisites: &[],
         proof: "xtask_evidence::bench::bench_release::tests::bench_release_rejects_case_backend_drift_under_cuda_axes",
     },
