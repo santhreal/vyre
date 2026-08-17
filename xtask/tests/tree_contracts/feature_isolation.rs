@@ -3,7 +3,7 @@
 //! WHY: a crate can compile under its default features and under
 //! `--all-features` and still be uncompilable under one feature on its own,
 //! because `--all-features` is a union that supplies whatever a feature forgot
-//! to require. `vyre-libs --features matching-regex` was one instance of that
+//! to require. `vyre-libs --features pattern-regex` was one instance of that
 //! class. Fixing the instance closes nothing, so the gate judges every
 //! (member, feature) pair, and these contracts hold the gate to the two
 //! properties that make it a class closure rather than a second instance fix:

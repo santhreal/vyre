@@ -20,7 +20,7 @@
 // BRACKET_KIND_OTHER gate can import it).
 #![allow(dead_code, unreachable_pub)]
 
-use vyre_libs::scan::classic_ac::{
+use vyre_libs::pattern::classic_ac::{
     classic_ac_compile, presence_by_region_words, ClassicAcAutomaton,
 };
 

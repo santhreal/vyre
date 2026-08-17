@@ -185,6 +185,14 @@ fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
     if carries_rust_source(&root.join(&moved)) {
         return moved;
     }
+    if (crate_name == "vyre-libs" || crate_name == "vyre-primitives")
+        && (domain == "matching" || domain == "scan")
+    {
+        let pattern = "vyre-libs/src/pattern".to_string();
+        if carries_rust_source(&root.join(&pattern)) {
+            return pattern;
+        }
+    }
     for relative in [format!("{crate_name}/src"), "vyre-libs/src".to_string()] {
         if let Some(found) = source_directory_named(&root.join(&relative), domain) {
             let found = found.to_string_lossy().replace('\\', "/");

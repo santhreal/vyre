@@ -7,20 +7,20 @@
 //! and no absent pattern set (precision). This is the per-output-mode equivalent
 //! of `bounded_ranges_suffix3_prefilter_reference_eval_matches_cpu_oracle`.
 
-#![cfg(all(feature = "matching-substring", feature = "cpu-parity"))]
+#![cfg(all(feature = "pattern-substring", feature = "cpu-parity"))]
 
 mod wire_words;
 use wire_words::{decode_u32_words as decode_u32, Lcg};
 
 use std::collections::BTreeSet;
 
-use vyre_libs::scan::classic_ac::{
+use vyre_libs::pattern::classic_ac::{
     classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
     classic_ac_compile, presence_bitmap_words,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
-use vyre_libs::scan::pack_haystack_u32;
+use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
 
 /// Small alphabet so literals collide and the DFA / prefilter actually exercise

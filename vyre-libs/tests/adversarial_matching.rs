@@ -1,9 +1,9 @@
 //! Failure-oriented adversarial tests for matching primitives.
 //!
 //! Focus: hostile boundaries, overflow, invalid offsets, property invariants.
-#![cfg(feature = "matching")]
+#![cfg(feature = "pattern")]
 
-use vyre_libs::matching::{
+use vyre_libs::pattern::{
     dfa_compile, dfa_compile_with_budget, DfaCompileError, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
     BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
 };

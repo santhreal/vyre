@@ -18,10 +18,10 @@
 //! leftmost-longest end; vyre `BACKLOG.md` item 18/27). Locking the range contract
 //! belongs with that fix, not here, so this suite stays green and pins the
 //! correct-today semantics as a regression floor beneath the range work.
-#![cfg(feature = "matching-regex")]
+#![cfg(feature = "pattern-regex")]
 
 use proptest::prelude::*;
-use vyre_libs::scan::build_regex_dfa_unanchored;
+use vyre_libs::pattern::build_regex_dfa_unanchored;
 
 /// Build the unanchored DFA and run the production single-pass scan (mirrors
 /// `regex_dfa.rs`): follow one transition per byte off the public transition table;

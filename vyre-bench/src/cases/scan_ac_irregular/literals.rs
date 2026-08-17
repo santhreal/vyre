@@ -12,13 +12,13 @@ use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
-use vyre_libs::scan::classic_ac::{
+use vyre_libs::pattern::classic_ac::{
     classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     ClassicAcAutomaton, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
-use vyre_libs::scan::pack_haystack_u32;
+use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
 
 use super::baseline::cpu_aho_overlapping_matches;
@@ -108,7 +108,7 @@ impl BenchCase for ScanAcIrregularLiterals {
             min_vram_bytes: Some(32 * 1024 * 1024),
             min_input_bytes: Some(HAYSTACK_BYTES as u64),
             feature_set: vec![
-                "matching-dfa".to_string(),
+                "pattern-dfa".to_string(),
                 "packed-byte".to_string(),
                 "aho-corasick".to_string(),
             ],

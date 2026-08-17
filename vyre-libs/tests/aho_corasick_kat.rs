@@ -9,11 +9,11 @@
 //!   - Regression vectors for ambiguous patterns that share long
 //!     suffixes, which stress the failure-link collapse logic.
 
-#![cfg(feature = "matching-dfa")]
+#![cfg(feature = "pattern-dfa")]
 #![allow(deprecated)]
 mod wire_words;
-use vyre_libs::matching::{dfa_compile, CompiledDfa};
-use vyre_libs::scan::aho_corasick;
+use vyre_libs::pattern::{dfa_compile, CompiledDfa};
+use vyre_libs::pattern::aho_corasick;
 use vyre_reference::value::Value;
 use wire_words::{decode_u32_words, u32_bytes};
 

@@ -56,8 +56,8 @@ two crates one crate that cannot be built, reviewed or published apart.
 - Every edge above is declared in `docs/CRATE_OWNERSHIP.toml`. An edge in
   `Cargo.toml` that the registry does not carry, and a registry row no manifest
   declares, both fail.
-- The crate declares 8 features beyond `default`: `matching-dfa`,
-  `matching-nfa`, `matching-substring`, `math-linalg`, `math-scan`,
+- The crate declares 8 features beyond `default`: `pattern-dfa`,
+  `pattern-nfa`, `pattern-substring`, `math-linalg`, `math-scan`,
   `nn-attention`, `parity-testing`, `wgpu`. Each builds alone.
 - The public surface is recorded in `docs/public-api/vyre-driver-wgpu.txt`. An
   item added, removed or moved changes that file in the same change.

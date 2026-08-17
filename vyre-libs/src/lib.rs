@@ -9,9 +9,9 @@
 //! let program = dot("x", "y", "result", 128)?;
 //! ```
 //!
-//! Product dialects include `math`, `nn`, `scan`, `hash`, `decode`, `parsing`,
+//! Product dialects include `math`, `nn`, `pattern`, `hash`, `decode`, `parsing`,
 //! `security`, `visual`, `logical`, and `rule`. `hash` replaced `crypto`.
-//! `scan` replaced `matching`. Compiler-internal domains (`device`,
+//! `pattern` replaced `matching` and `scan`. Compiler-internal domains (`device`,
 //! `solvers`, `encoding`, `analysis`, `scheduling`, `reasoning`,
 //! `graph-dispatch`, `telemetry`) are compositions too. They are feature-gated
 //! and are not in `full` because they submit no `OperationRegistration`.
@@ -27,8 +27,8 @@
 //! optimizer treats regions as atomic until an explicit inline pass unrolls
 //! them.
 //!
-//! Defaults enable a math / linear / matching / decode core. `crypto` and
-//! `matching-regex` are opt-in. Turn defaults off with
+//! Defaults enable a math / linear / pattern / decode core. `crypto` and
+//! `pattern-regex` are opt-in. Turn defaults off with
 //! `default-features = false` and enable the dialect you need.
 
 // Semantic catalog entries are immutable values over static identifiers and
@@ -131,17 +131,19 @@ pub mod nn;
 #[cfg(feature = "llm")]
 pub mod llm;
 
-/// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
-/// program builders plus immutable compilation artifacts.
+/// Pattern analysis, matching, and scanning domain: neutral substring, DFA, NFA,
+/// and regex program builders, bracket matching, and compilation artifacts.
 #[cfg(any(
-    feature = "matching-substring",
-    feature = "matching-dfa",
-    feature = "matching-nfa"
+    feature = "pattern-substring",
+    feature = "pattern-dfa",
+    feature = "pattern-nfa",
+    feature = "pattern-regex",
+    feature = "pattern-kernels",
 ))]
-pub mod scan;
+pub mod pattern;
 
 /// Decode / decompression compositions  -  base64, hex, DEFLATE (stored),
-/// more coming. Pairs with `vyre-libs::matching::dfa` in the fused
+/// more coming. Pairs with `vyre-libs::pattern::dfa` in the fused
 /// decode→scan pipeline (Innovation I.1).
 #[cfg(feature = "decode")]
 pub mod decode;
@@ -245,11 +247,6 @@ pub mod opt;
 /// complex operations.
 #[cfg(feature = "topology")]
 pub mod topology;
-
-/// Pattern-matching kernels. Distinct from `scan`, which is the neutral
-/// program-builder dialect over them.
-#[cfg(feature = "matching-kernels")]
-pub mod matching;
 
 /// NFA kernels: subgroup-cooperative simulator.
 #[cfg(feature = "nfa")]

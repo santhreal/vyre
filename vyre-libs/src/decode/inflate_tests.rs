@@ -7,7 +7,7 @@ use super::inflate::{
     INFLATED_LEN_BUFFER, RESERVED_BTYPE_FIX, STORED_HEADER_FIX,
 };
 use crate::buffer_names::fixed_name;
-use crate::matching::{dfa_compile, CompiledDfa};
+use crate::pattern::{dfa_compile, CompiledDfa};
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::value::Value;
 
@@ -128,7 +128,7 @@ fn cpu_reference_names_dynamic_huffman_gap() {
 }
 
 #[test]
-#[cfg(feature = "matching-dfa")]
+#[cfg(feature = "pattern-dfa")]
 fn fused_stored_block_matches_parity_with_separate_inflate_then_aho() {
     let patterns: [&[u8]; 1] = [b"ell"];
     let compiled = dfa_compile(&patterns);
@@ -194,7 +194,7 @@ fn fused_stored_block_matches_parity_with_separate_inflate_then_aho() {
     let decoded_len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
 
     // --- Separate aho ---
-    let aho_program = crate::scan::aho_corasick(
+    let aho_program = crate::pattern::aho_corasick(
         "haystack",
         "transitions",
         "accept",

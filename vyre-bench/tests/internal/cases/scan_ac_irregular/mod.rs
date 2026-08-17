@@ -14,7 +14,7 @@ use super::{
 };
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::ByteRange;
-use vyre_libs::scan::classic_ac::{
+use vyre_libs::pattern::classic_ac::{
     classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
@@ -227,7 +227,7 @@ fn bounded_count_program_reference_eval_matches_cpu_cardinality() {
         .unwrap()
         .len() as u32;
     let program = with_reference_dispatch_lanes(
-        vyre_libs::scan::classic_ac::build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa),
+        vyre_libs::pattern::classic_ac::build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa),
         haystack.len() as u32,
     );
     let mut inputs = count::scan_ac_count_inputs(&ac, &haystack);
