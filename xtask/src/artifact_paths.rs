@@ -18,6 +18,7 @@ pub const LEGO_AUDIT_DUPLICATES_ARTIFACT: &str =
 pub const RELEASE_BENCHMARKS_ARTIFACTS: &[&str] = &[
     "release/evidence/benchmarks/bench-release-axes.json",
     "release/evidence/benchmarks/cpu-only-100x-proof.json",
+    "release/evidence/benchmarks/cuda-ptx-patterns.json",
     "release/evidence/benchmarks/cuda-release-suite.json",
     "release/evidence/benchmarks/dataflow-analysis-release.json",
     FRONTIER_LEADERBOARD_ARTIFACT,
@@ -41,4 +42,6 @@ pub const RELEASE_BENCHMARKS_ARTIFACTS: &[&str] = &[
     "release/evidence/benchmarks/workload-15-adaptive-routing.json",
     "release/evidence/benchmarks/workload-16-quantized-linear.json",
     "release/evidence/benchmarks/workload-17-egraph-saturation.json",
+    "release/evidence/optimization/optimizer-impact-cuda.json",
+    "release/evidence/optimization/pass-family-benchmark-manifest.json",
 ];

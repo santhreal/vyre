@@ -1072,12 +1072,15 @@ mod tests {
         let auxiliary_artifacts = [
             "release/evidence/benchmarks/bench-release-axes.json",
             "release/evidence/benchmarks/cpu-only-100x-proof.json",
+            "release/evidence/benchmarks/cuda-ptx-patterns.json",
             "release/evidence/benchmarks/cuda-release-suite.json",
             "release/evidence/benchmarks/dataflow-analysis-release.json",
             xtask::artifact_paths::FRONTIER_LEADERBOARD_ARTIFACT,
             "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
             "release/evidence/benchmarks/megakernel-condition-cuda.json",
             "release/evidence/benchmarks/megakernel-latency-cuda.json",
+            "release/evidence/optimization/optimizer-impact-cuda.json",
+            "release/evidence/optimization/pass-family-benchmark-manifest.json",
         ];
         let mut expected_full_set: std::collections::BTreeSet<String> = auxiliary_artifacts
             .iter()
