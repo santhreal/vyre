@@ -18,7 +18,7 @@ use crate::math::symmetric_eigen_jacobi::{
 
 /// `row * cols + col` flat index for a row-major matrix.
 fn tt_idx(row: Expr, cols: u32, col: Expr) -> Expr {
-    Expr::add(Expr::mul(row, Expr::u32(cols)), col)
+    crate::builder::stencil::flat_index(row, cols, col)
 }
 
 /// Op id.

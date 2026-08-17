@@ -114,10 +114,8 @@ pub fn try_linear_gradient(
     body.push(Node::if_then(
         Expr::lt(Expr::var("idx"), Expr::u32(count)),
         {
-            let mut inner = vec![
-                Node::let_bind("px", Expr::rem(Expr::var("idx"), Expr::u32(width.max(1)))),
-                Node::let_bind("py", Expr::div(Expr::var("idx"), Expr::u32(width.max(1)))),
-            ];
+            let (py, px) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
+            let mut inner = vec![Node::let_bind("px", px), Node::let_bind("py", py)];
 
             // Compute dot product: dp = px * dx + py * dy
             // Handle signed direction with select.
@@ -269,23 +267,16 @@ pub fn try_linear_gradient(
             // Pack output.
             inner.push(Node::let_bind(
                 "packed",
-                Expr::bitor(
-                    Expr::bitor(
-                        Expr::var("out_r"),
-                        Expr::shl(Expr::var("out_g"), Expr::u32(8)),
-                    ),
-                    Expr::bitor(
-                        Expr::shl(Expr::var("out_b"), Expr::u32(16)),
-                        Expr::shl(Expr::var("out_a"), Expr::u32(24)),
-                    ),
+                crate::builder::stencil::pack_rgba(
+                    Expr::var("out_r"),
+                    Expr::var("out_g"),
+                    Expr::var("out_b"),
+                    Expr::var("out_a"),
                 ),
             ));
             inner.push(Node::let_bind(
                 "oidx",
-                Expr::add(
-                    Expr::mul(Expr::var("py"), Expr::u32(width)),
-                    Expr::var("px"),
-                ),
+                crate::builder::stencil::flat_index(Expr::var("py"), width, Expr::var("px")),
             ));
             inner.push(Node::store(output, Expr::var("oidx"), Expr::var("packed")));
             inner

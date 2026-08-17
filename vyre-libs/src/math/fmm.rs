@@ -277,8 +277,9 @@ pub fn m2l_zeroth_f32_step(
                             "distance",
                             Expr::load(
                                 cell_distances,
-                                Expr::add(
-                                    Expr::mul(target.clone(), Expr::u32(n_cells)),
+                                crate::builder::stencil::flat_index(
+                                    target.clone(),
+                                    n_cells,
                                     Expr::var("source"),
                                 ),
                             ),

@@ -38,158 +38,97 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
                             // Load foreground and background pixels.
                             Node::let_bind("fg_px", Expr::load(fg, Expr::var("idx"))),
                             Node::let_bind("bg_px", Expr::load(bg, Expr::var("idx"))),
-                            // Unpack fg.
                             Node::let_bind(
                                 "fg_r",
-                                Expr::bitand(Expr::var("fg_px"), Expr::u32(0xFF)),
+                                crate::builder::stencil::unpack_channel("fg_px", 0),
                             ),
                             Node::let_bind(
                                 "fg_g",
-                                Expr::bitand(
-                                    Expr::shr(Expr::var("fg_px"), Expr::u32(8)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel("fg_px", 8),
                             ),
                             Node::let_bind(
                                 "fg_b",
-                                Expr::bitand(
-                                    Expr::shr(Expr::var("fg_px"), Expr::u32(16)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel("fg_px", 16),
                             ),
-                            Node::let_bind("fg_a", Expr::shr(Expr::var("fg_px"), Expr::u32(24))),
-                            // Unpack bg.
+                            Node::let_bind(
+                                "fg_a",
+                                crate::builder::stencil::unpack_channel("fg_px", 24),
+                            ),
                             Node::let_bind(
                                 "bg_r",
-                                Expr::bitand(Expr::var("bg_px"), Expr::u32(0xFF)),
+                                crate::builder::stencil::unpack_channel("bg_px", 0),
                             ),
                             Node::let_bind(
                                 "bg_g",
-                                Expr::bitand(
-                                    Expr::shr(Expr::var("bg_px"), Expr::u32(8)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel("bg_px", 8),
                             ),
                             Node::let_bind(
                                 "bg_b",
-                                Expr::bitand(
-                                    Expr::shr(Expr::var("bg_px"), Expr::u32(16)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel("bg_px", 16),
                             ),
-                            Node::let_bind("bg_a", Expr::shr(Expr::var("bg_px"), Expr::u32(24))),
+                            Node::let_bind(
+                                "bg_a",
+                                crate::builder::stencil::unpack_channel("bg_px", 24),
+                            ),
                             // inv_a = 255 - fg_a
                             Node::let_bind("inv_a", Expr::sub(Expr::u32(255), Expr::var("fg_a"))),
-                            // Porter-Duff over per channel:
-                            //   out_c = fg_c + bg_c * inv_a / 255
-                            //   division by 255 ≈ (x * 257 + 256) >> 16
-                            // Simplified: (bg_c * inv_a + 127) / 255
-                            //   ≈ (bg_c * inv_a * 257 + 256) >> 16
-                            // But for GPU integer math, the simplest correct
-                            // form is: (bg_c * inv_a + 128) / 255
-                            //   ≈ ((bg_c * inv_a + 128) * 257) >> 16
+                            // Porter-Duff over per channel.
                             Node::let_bind(
                                 "out_r",
-                                Expr::add(
+                                crate::builder::stencil::blend_channel_porter_duff(
                                     Expr::var("fg_r"),
-                                    super::wide_mul_shr_u32(
-                                        Expr::add(
-                                            Expr::mul(Expr::var("bg_r"), Expr::var("inv_a")),
-                                            Expr::u32(128),
-                                        ),
-                                        Expr::u32(257),
-                                        16,
-                                    ),
+                                    Expr::var("bg_r"),
+                                    Expr::var("inv_a"),
                                 ),
                             ),
                             Node::let_bind(
                                 "out_g",
-                                Expr::add(
+                                crate::builder::stencil::blend_channel_porter_duff(
                                     Expr::var("fg_g"),
-                                    super::wide_mul_shr_u32(
-                                        Expr::add(
-                                            Expr::mul(Expr::var("bg_g"), Expr::var("inv_a")),
-                                            Expr::u32(128),
-                                        ),
-                                        Expr::u32(257),
-                                        16,
-                                    ),
+                                    Expr::var("bg_g"),
+                                    Expr::var("inv_a"),
                                 ),
                             ),
                             Node::let_bind(
                                 "out_b",
-                                Expr::add(
+                                crate::builder::stencil::blend_channel_porter_duff(
                                     Expr::var("fg_b"),
-                                    super::wide_mul_shr_u32(
-                                        Expr::add(
-                                            Expr::mul(Expr::var("bg_b"), Expr::var("inv_a")),
-                                            Expr::u32(128),
-                                        ),
-                                        Expr::u32(257),
-                                        16,
-                                    ),
+                                    Expr::var("bg_b"),
+                                    Expr::var("inv_a"),
                                 ),
                             ),
-                            // out_a = fg_a + bg_a * inv_a / 255
                             Node::let_bind(
                                 "out_a",
-                                Expr::add(
+                                crate::builder::stencil::blend_channel_porter_duff(
                                     Expr::var("fg_a"),
-                                    super::wide_mul_shr_u32(
-                                        Expr::add(
-                                            Expr::mul(Expr::var("bg_a"), Expr::var("inv_a")),
-                                            Expr::u32(128),
-                                        ),
-                                        Expr::u32(257),
-                                        16,
-                                    ),
+                                    Expr::var("bg_a"),
+                                    Expr::var("inv_a"),
                                 ),
                             ),
-                            // Clamp to 255 using select.
+                            // Clamp to 255 and pack RGBA.
                             Node::let_bind(
                                 "cr",
-                                Expr::select(
-                                    Expr::gt(Expr::var("out_r"), Expr::u32(255)),
-                                    Expr::u32(255),
-                                    Expr::var("out_r"),
-                                ),
+                                crate::builder::stencil::clamp_u8(Expr::var("out_r")),
                             ),
                             Node::let_bind(
                                 "cg",
-                                Expr::select(
-                                    Expr::gt(Expr::var("out_g"), Expr::u32(255)),
-                                    Expr::u32(255),
-                                    Expr::var("out_g"),
-                                ),
+                                crate::builder::stencil::clamp_u8(Expr::var("out_g")),
                             ),
                             Node::let_bind(
                                 "cb",
-                                Expr::select(
-                                    Expr::gt(Expr::var("out_b"), Expr::u32(255)),
-                                    Expr::u32(255),
-                                    Expr::var("out_b"),
-                                ),
+                                crate::builder::stencil::clamp_u8(Expr::var("out_b")),
                             ),
                             Node::let_bind(
                                 "ca",
-                                Expr::select(
-                                    Expr::gt(Expr::var("out_a"), Expr::u32(255)),
-                                    Expr::u32(255),
-                                    Expr::var("out_a"),
-                                ),
+                                crate::builder::stencil::clamp_u8(Expr::var("out_a")),
                             ),
-                            // Pack RGBA.
                             Node::let_bind(
                                 "packed",
-                                Expr::bitor(
-                                    Expr::bitor(
-                                        Expr::var("cr"),
-                                        Expr::shl(Expr::var("cg"), Expr::u32(8)),
-                                    ),
-                                    Expr::bitor(
-                                        Expr::shl(Expr::var("cb"), Expr::u32(16)),
-                                        Expr::shl(Expr::var("ca"), Expr::u32(24)),
-                                    ),
+                                crate::builder::stencil::pack_rgba(
+                                    Expr::var("cr"),
+                                    Expr::var("cg"),
+                                    Expr::var("cb"),
+                                    Expr::var("ca"),
                                 ),
                             ),
                             Node::store(output, Expr::var("idx"), Expr::var("packed")),

@@ -26,16 +26,7 @@ const OP_ID: &str = "vyre-libs::visual::glyph_grid";
 ///
 /// The alpha channel needs no mask because nothing remains above it.
 fn channel(pixel: &str, shift: u32) -> Expr {
-    let shifted = if shift == 0 {
-        Expr::var(pixel)
-    } else {
-        Expr::shr(Expr::var(pixel), Expr::u32(shift))
-    };
-    if shift == 24 {
-        shifted
-    } else {
-        Expr::bitand(shifted, Expr::u32(0xFF))
-    }
+    crate::builder::stencil::unpack_channel(pixel, shift)
 }
 
 /// Blend one channel of the foreground over the background by `coverage`.
@@ -45,16 +36,11 @@ fn channel(pixel: &str, shift: u32) -> Expr {
 /// composite op uses. The numerator peaks at `255 * 255`, since the two weights
 /// sum to 255, so the result saturates at exactly 255 and needs no clamp.
 fn blend_channel(shift: u32) -> Expr {
-    super::wide_mul_shr_u32(
-        Expr::add(
-            Expr::add(
-                Expr::mul(channel("fg_px", shift), Expr::var("cov")),
-                Expr::mul(channel("bg_px", shift), Expr::var("inv_cov")),
-            ),
-            Expr::u32(128),
-        ),
-        Expr::u32(257),
-        16,
+    crate::builder::stencil::blend_channel_coverage(
+        channel("fg_px", shift),
+        channel("bg_px", shift),
+        Expr::var("cov"),
+        Expr::var("inv_cov"),
     )
 }
 
@@ -141,8 +127,9 @@ pub fn glyph_grid_blend(
                             "texel",
                             Expr::add(
                                 Expr::mul(Expr::var("glyph"), Expr::u32(cell_area)),
-                                Expr::add(
-                                    Expr::mul(Expr::var("py"), Expr::u32(shape.cell_width)),
+                                crate::builder::stencil::flat_index(
+                                    Expr::var("py"),
+                                    shape.cell_width,
                                     Expr::var("px"),
                                 ),
                             ),
@@ -163,15 +150,11 @@ pub fn glyph_grid_blend(
                         body.push(Node::let_bind("out_a", blend_channel(24)));
                         body.push(Node::let_bind(
                             "packed",
-                            Expr::bitor(
-                                Expr::bitor(
-                                    Expr::var("out_r"),
-                                    Expr::shl(Expr::var("out_g"), Expr::u32(8)),
-                                ),
-                                Expr::bitor(
-                                    Expr::shl(Expr::var("out_b"), Expr::u32(16)),
-                                    Expr::shl(Expr::var("out_a"), Expr::u32(24)),
-                                ),
+                            crate::builder::stencil::pack_rgba(
+                                Expr::var("out_r"),
+                                Expr::var("out_g"),
+                                Expr::var("out_b"),
+                                Expr::var("out_a"),
                             ),
                         ));
                         body.push(Node::store(output, Expr::var("idx"), Expr::var("packed")));

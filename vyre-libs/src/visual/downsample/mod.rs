@@ -19,6 +19,13 @@ pub fn downsample_2x(input: &str, output: &str, width: u32, height: u32) -> Prog
     let out_h = height / 2;
     let input_count = width.saturating_mul(height);
     let output_count = out_w.saturating_mul(out_h);
+    let (oy, ox) = crate::builder::stencil::decompose_index(&Expr::var("idx"), out_w);
+    let [p00_idx, p10_idx, p01_idx, p11_idx] =
+        crate::builder::stencil::downsample_2x_source_indices(
+            &Expr::var("oy"),
+            &Expr::var("ox"),
+            width,
+        );
 
     Program::wrapped(
         vec![
@@ -35,58 +42,13 @@ pub fn downsample_2x(input: &str, output: &str, width: u32, height: u32) -> Prog
                 Node::if_then(
                     Expr::lt(Expr::var("idx"), Expr::u32(output_count)),
                     vec![
-                        Node::let_bind("ox", Expr::rem(Expr::var("idx"), Expr::u32(out_w.max(1)))),
-                        Node::let_bind("oy", Expr::div(Expr::var("idx"), Expr::u32(out_w.max(1)))),
-                        // Source pixel coordinates.
-                        Node::let_bind("sx", Expr::mul(Expr::var("ox"), Expr::u32(2))),
-                        Node::let_bind("sy", Expr::mul(Expr::var("oy"), Expr::u32(2))),
+                        Node::let_bind("ox", ox),
+                        Node::let_bind("oy", oy),
                         // Load 4 source pixels.
-                        Node::let_bind(
-                            "p00",
-                            Expr::load(
-                                input,
-                                Expr::add(
-                                    Expr::mul(Expr::var("sy"), Expr::u32(width)),
-                                    Expr::var("sx"),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "p10",
-                            Expr::load(
-                                input,
-                                Expr::add(
-                                    Expr::mul(Expr::var("sy"), Expr::u32(width)),
-                                    Expr::add(Expr::var("sx"), Expr::u32(1)),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "p01",
-                            Expr::load(
-                                input,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::var("sy"), Expr::u32(1)),
-                                        Expr::u32(width),
-                                    ),
-                                    Expr::var("sx"),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "p11",
-                            Expr::load(
-                                input,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::var("sy"), Expr::u32(1)),
-                                        Expr::u32(width),
-                                    ),
-                                    Expr::add(Expr::var("sx"), Expr::u32(1)),
-                                ),
-                            ),
-                        ),
+                        Node::let_bind("p00", Expr::load(input, p00_idx)),
+                        Node::let_bind("p10", Expr::load(input, p10_idx)),
+                        Node::let_bind("p01", Expr::load(input, p01_idx)),
+                        Node::let_bind("p11", Expr::load(input, p11_idx)),
                         // Average each channel: (c0+c1+c2+c3+2) >> 2
                         // R channel
                         Node::let_bind(
@@ -195,22 +157,19 @@ pub fn downsample_2x(input: &str, output: &str, width: u32, height: u32) -> Prog
                         // Pack RGBA.
                         Node::let_bind(
                             "packed",
-                            Expr::bitor(
-                                Expr::bitor(
-                                    Expr::var("r"),
-                                    Expr::shl(Expr::var("g"), Expr::u32(8)),
-                                ),
-                                Expr::bitor(
-                                    Expr::shl(Expr::var("b"), Expr::u32(16)),
-                                    Expr::shl(Expr::var("a"), Expr::u32(24)),
-                                ),
+                            crate::builder::stencil::pack_rgba(
+                                Expr::var("r"),
+                                Expr::var("g"),
+                                Expr::var("b"),
+                                Expr::var("a"),
                             ),
                         ),
                         // Write output.
                         Node::let_bind(
                             "oidx",
-                            Expr::add(
-                                Expr::mul(Expr::var("oy"), Expr::u32(out_w)),
+                            crate::builder::stencil::flat_index(
+                                Expr::var("oy"),
+                                out_w,
                                 Expr::var("ox"),
                             ),
                         ),

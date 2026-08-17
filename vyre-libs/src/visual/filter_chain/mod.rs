@@ -40,11 +40,7 @@ pub fn filter_chain(
     let clamp255 = |name: &str| -> Vec<Node> {
         vec![Node::assign(
             name,
-            Expr::select(
-                Expr::gt(Expr::var(name), Expr::u32(255)),
-                Expr::u32(255),
-                Expr::var(name),
-            ),
+            crate::builder::stencil::clamp_u8(Expr::var(name)),
         )]
     };
 
@@ -65,22 +61,22 @@ pub fn filter_chain(
                         let mut body = vec![
                             Node::let_bind("pixel", Expr::load(pixels, Expr::var("idx"))),
                             // Unpack RGBA.
-                            Node::let_bind("r", Expr::bitand(Expr::var("pixel"), Expr::u32(0xFF))),
+                            Node::let_bind(
+                                "r",
+                                crate::builder::stencil::unpack_channel("pixel", 0),
+                            ),
                             Node::let_bind(
                                 "g",
-                                Expr::bitand(
-                                    Expr::shr(Expr::var("pixel"), Expr::u32(8)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel("pixel", 8),
                             ),
                             Node::let_bind(
                                 "b",
-                                Expr::bitand(
-                                    Expr::shr(Expr::var("pixel"), Expr::u32(16)),
-                                    Expr::u32(0xFF),
-                                ),
+                                crate::builder::stencil::unpack_channel("pixel", 16),
                             ),
-                            Node::let_bind("a", Expr::shr(Expr::var("pixel"), Expr::u32(24))),
+                            Node::let_bind(
+                                "a",
+                                crate::builder::stencil::unpack_channel("pixel", 24),
+                            ),
                             // 1. Brightness: channel = channel * brightness >> 16
                             Node::assign(
                                 "r",
@@ -246,15 +242,11 @@ pub fn filter_chain(
                         // Pack and write.
                         body.push(Node::let_bind(
                             "out",
-                            Expr::bitor(
-                                Expr::bitor(
-                                    Expr::var("r"),
-                                    Expr::shl(Expr::var("g"), Expr::u32(8)),
-                                ),
-                                Expr::bitor(
-                                    Expr::shl(Expr::var("b"), Expr::u32(16)),
-                                    Expr::shl(Expr::var("a"), Expr::u32(24)),
-                                ),
+                            crate::builder::stencil::pack_rgba(
+                                Expr::var("r"),
+                                Expr::var("g"),
+                                Expr::var("b"),
+                                Expr::var("a"),
                             ),
                         ));
                         body.push(Node::store(pixels, Expr::var("idx"), Expr::var("out")));

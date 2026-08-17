@@ -36,6 +36,9 @@ pub(crate) mod reduction;
 /// Shared table-walking state machine / DFA composer.
 pub mod state_machine;
 pub use state_machine::TableStateMachineComposer;
+/// Canonical 2D grid, coordinate decomposition, stencil, and pixel composer.
+pub mod stencil;
+pub use stencil::{Grid2DComposer, Grid2DShape};
 /// The two shared child regions registered as operations in their own right.
 ///
 /// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and
