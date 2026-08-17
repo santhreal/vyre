@@ -20,17 +20,19 @@ use artifact_status::{
     ReleaseEvidenceArtifactStatus,
 };
 use evidence_index::{build_evidence_index, ReleaseEvidenceIndex};
-pub(crate) use expected_artifacts::expected_artifacts_for_command;
+pub(crate) use expected_artifacts::expected_artifacts_for_args;
 use expected_artifacts::{
     build_expected_artifact_registry, ReleaseExpectedArtifactCommand,
     ReleaseExpectedArtifactRegistry, COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY, COMMAND_MODE_SPAWNED,
     EXPECTED_ARTIFACT_REGISTRY, RELEASE_EVIDENCE_GENERATOR_COMMAND, RELEASE_EVIDENCE_RUN_ARTIFACT,
 };
+#[cfg(test)]
+use xtask::artifact_paths::FRONTIER_LEADERBOARD_ARTIFACT;
 use xtask::artifact_paths::{LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT};
 
-/// Bumped from 4: the record no longer carries spawn outcomes, because nothing
-/// is spawned. Each generator is a registered gate the sweep runs on its own.
-const RELEASE_EVIDENCE_RUN_SCHEMA_VERSION: u32 = 5;
+/// Bumped from 5: command identity and artifact ownership now use the complete
+/// argument vector, including backend-specific measured-evidence invocations.
+const RELEASE_EVIDENCE_RUN_SCHEMA_VERSION: u32 = 6;
 
 const COMMANDS: &[EvidenceCommand] = &[
     EvidenceCommand::required(&["docs-check"]),
@@ -38,7 +40,22 @@ const COMMANDS: &[EvidenceCommand] = &[
     EvidenceCommand::required(&["backend-matrix"]),
     EvidenceCommand::required(&["conformance-matrix"]),
     EvidenceCommand::required(&["release-workload-matrix", "--enforce"]),
-    EvidenceCommand::external_required(&["release-benchmarks", "--backend", "cuda"]),
+    EvidenceCommand::external_required(&[
+        "release-benchmarks",
+        "--backend",
+        "cuda",
+        "--measured-samples",
+        "30",
+        "--write",
+    ]),
+    EvidenceCommand::external_required(&[
+        "release-benchmarks",
+        "--backend",
+        "wgpu",
+        "--measured-samples",
+        "30",
+        "--write",
+    ]),
     EvidenceCommand::required(&["hygiene-matrix"]),
     EvidenceCommand::required(&["metadata-matrix"]),
     EvidenceCommand::required(&["feature-matrix"]),
@@ -168,7 +185,7 @@ fn inspect(workspace_root: &Path) -> Inspection {
     let mut records = Vec::new();
     for command in COMMANDS {
         let label = format!("xtask {}", command.args.join(" "));
-        let expected = expected_artifacts_for_command(command.subcommand());
+        let expected = expected_artifacts_for_args(command.args);
         if command.required && expected.is_empty() {
             failures.push(format!(
                 "`{label}` is required but declares no expected artifacts"
@@ -177,7 +194,7 @@ fn inspect(workspace_root: &Path) -> Inspection {
         let artifact_statuses = inspect_expected_artifacts_with_mode(
             workspace_root,
             command.args,
-            expected,
+            &expected,
             command.mode(),
         );
         for artifact in &artifact_statuses {
@@ -197,7 +214,7 @@ fn inspect(workspace_root: &Path) -> Inspection {
         records.push(ReleaseEvidenceCommandRecord {
             args: command.args.to_vec(),
             required: command.required,
-            expected_artifacts: expected.to_vec(),
+            expected_artifacts: expected,
             mode: command.mode(),
             artifact_statuses,
         });
@@ -355,31 +372,59 @@ pub fn judge_committed_run(run: &serde_json::Value, subject: &str, failures: &mu
         .and_then(serde_json::Value::as_array)
         .map_or(&[][..], Vec::as_slice);
     for command in COMMANDS.iter().filter(|command| command.required) {
-        let subcommand = command.subcommand();
-        let Some(record) = records.iter().find(|record| {
-            record
-                .get("args")
-                .and_then(serde_json::Value::as_array)
-                .and_then(|args| args.first())
-                .and_then(serde_json::Value::as_str)
-                == Some(subcommand)
-        }) else {
+        let label = format!("xtask {}", command.args.join(" "));
+        let Some(record) = records
+            .iter()
+            .find(|record| record_matches_args(record, command.args))
+        else {
             failures.push(format!(
-                "{subject} release-evidence-run is missing required generator `{subcommand}`"
+                "{subject} release-evidence-run is missing required generator `{label}`"
             ));
             continue;
         };
-        judge_committed_command(record, subject, subcommand, failures);
+        judge_committed_command(
+            record,
+            subject,
+            command.args,
+            command.required,
+            command.mode(),
+            failures,
+        );
     }
+}
+
+fn record_matches_args(record: &serde_json::Value, expected: &[&str]) -> bool {
+    let Some(actual) = record.get("args").and_then(serde_json::Value::as_array) else {
+        return false;
+    };
+    actual.len() == expected.len()
+        && actual
+            .iter()
+            .zip(expected)
+            .all(|(actual, expected)| actual.as_str() == Some(*expected))
 }
 
 /// Judge one committed command record against the artifacts its generator owes.
 fn judge_committed_command(
     record: &serde_json::Value,
     subject: &str,
-    subcommand: &str,
+    command_args: &[&str],
+    command_required: bool,
+    command_mode: &str,
     failures: &mut Vec<String>,
 ) {
+    let label = format!("xtask {}", command_args.join(" "));
+    let expected_artifacts = expected_artifacts_for_args(command_args);
+    if record.get("required").and_then(serde_json::Value::as_bool) != Some(command_required) {
+        failures.push(format!(
+            "{subject} release-evidence-run generator `{label}` required state does not match {command_required}"
+        ));
+    }
+    if record.get("mode").and_then(serde_json::Value::as_str) != Some(command_mode) {
+        failures.push(format!(
+            "{subject} release-evidence-run generator `{label}` mode does not match `{command_mode}`"
+        ));
+    }
     let declared = record
         .get("expected_artifacts")
         .and_then(serde_json::Value::as_array)
@@ -388,26 +433,85 @@ fn judge_committed_command(
         .get("artifact_statuses")
         .and_then(serde_json::Value::as_array)
         .map_or(&[][..], Vec::as_slice);
-    for expected in expected_artifacts_for_command(subcommand) {
+    if declared.len() != expected_artifacts.len() {
+        failures.push(format!(
+            "{subject} release-evidence-run generator `{label}` declares {} artifacts, expected exactly {}",
+            declared.len(),
+            expected_artifacts.len()
+        ));
+    }
+    for artifact in declared {
+        match artifact.as_str() {
+            Some(artifact) if expected_artifacts.contains(&artifact) => {}
+            Some(artifact) => failures.push(format!(
+                "{subject} release-evidence-run generator `{label}` declares unowned artifact `{artifact}`"
+            )),
+            None => failures.push(format!(
+                "{subject} release-evidence-run generator `{label}` declares a non-string artifact"
+            )),
+        }
+    }
+    if statuses.len() != expected_artifacts.len() {
+        failures.push(format!(
+            "{subject} release-evidence-run generator `{label}` carries {} artifact statuses, expected exactly {}",
+            statuses.len(),
+            expected_artifacts.len()
+        ));
+    }
+    for status in statuses {
+        let Some(path) = status.get("path").and_then(serde_json::Value::as_str) else {
+            failures.push(format!(
+                "{subject} release-evidence-run generator `{label}` carries an artifact status without a string path"
+            ));
+            continue;
+        };
+        if !expected_artifacts
+            .iter()
+            .any(|expected| Path::new(path).ends_with(Path::new(expected)))
+        {
+            failures.push(format!(
+                "{subject} release-evidence-run generator `{label}` carries status for unowned artifact `{path}`"
+            ));
+        }
+    }
+    for expected in &expected_artifacts {
         if !declared
             .iter()
             .any(|artifact| artifact.as_str() == Some(*expected))
         {
             failures.push(format!(
-                "{subject} release-evidence-run generator `{subcommand}` does not declare expected artifact `{expected}`"
+                "{subject} release-evidence-run generator `{label}` does not declare expected artifact `{expected}`"
             ));
         }
         let Some(status) = statuses.iter().find(|status| {
             status
                 .get("path")
                 .and_then(serde_json::Value::as_str)
-                .is_some_and(|path| path.ends_with(expected))
+                .is_some_and(|path| Path::new(path).ends_with(Path::new(expected)))
         }) else {
             failures.push(format!(
-                "{subject} release-evidence-run generator `{subcommand}` has no artifact status for `{expected}`"
+                "{subject} release-evidence-run generator `{label}` has no artifact status for `{expected}`"
             ));
             continue;
         };
+        if status
+            .get("generator_command")
+            .and_then(serde_json::Value::as_str)
+            != Some(label.as_str())
+        {
+            failures.push(format!(
+                "{subject} release-evidence-run artifact `{expected}` generator provenance does not match `{label}`"
+            ));
+        }
+        if status
+            .get("command_mode")
+            .and_then(serde_json::Value::as_str)
+            != Some(command_mode)
+        {
+            failures.push(format!(
+                "{subject} release-evidence-run artifact `{expected}` command mode does not match `{command_mode}`"
+            ));
+        }
         let exists = status
             .get("exists")
             .and_then(serde_json::Value::as_bool)
@@ -425,7 +529,7 @@ fn judge_committed_command(
             .collect::<Vec<_>>();
         if !exists || bytes == 0 || read_error.is_some() || !missing_provenance.is_empty() {
             failures.push(format!(
-                "{subject} release-evidence-run generator `{subcommand}` artifact `{expected}` exists={exists} bytes={bytes} read_error={} missing={}",
+                "{subject} release-evidence-run generator `{label}` artifact `{expected}` exists={exists} bytes={bytes} read_error={} missing={}",
                 read_error.unwrap_or("none"),
                 if missing_provenance.is_empty() {
                     "none".to_string()
@@ -516,7 +620,12 @@ mod tests {
     #[test]
     fn duplicate_family_reports_are_release_indexed() {
         let tmp = tempfile::tempdir().unwrap();
-        for artifact in expected_artifacts_for_command("whats-similar") {
+        for artifact in expected_artifacts_for_args(&[
+            "whats-similar",
+            "--all",
+            "--duplicate-report-json",
+            REGISTERED_OP_DUPLICATES_ARTIFACT,
+        ]) {
             let artifact_path = tmp.path().join(artifact);
             std::fs::create_dir_all(artifact_path.parent().unwrap()).unwrap();
             std::fs::write(
@@ -534,12 +643,22 @@ mod tests {
                 "--duplicate-report-json",
                 "release/evidence/dedup/registered-op-duplicates.json",
             ],
-            expected_artifacts_for_command("whats-similar"),
+            &expected_artifacts_for_args(&[
+                "whats-similar",
+                "--all",
+                "--duplicate-report-json",
+                REGISTERED_OP_DUPLICATES_ARTIFACT,
+            ]),
         );
 
         assert_eq!(
-            expected_artifacts_for_command("lego-audit"),
-            &["release/evidence/dedup/lego-audit-duplicates.json"]
+            expected_artifacts_for_args(&[
+                "lego-audit",
+                "--report-only",
+                "--duplicate-report-json",
+                LEGO_AUDIT_DUPLICATES_ARTIFACT,
+            ]),
+            vec![LEGO_AUDIT_DUPLICATES_ARTIFACT]
         );
         assert_eq!(statuses.len(), 1);
         let status = &statuses[0];
@@ -554,26 +673,56 @@ mod tests {
         assert!(status.blockers.is_empty(), "{:?}", status.blockers);
     }
 
-    /// WHY: the lookup is keyed on the subcommand, and the census asked it for a
-    /// rendered command line ("xtask release-workload-matrix --enforce"), so every
-    /// row missed and all fourteen required generators read as declaring no
-    /// artifact at all. The table is enumerated here at run time, so adding a
-    /// generator without listing what it owes turns this red instead of producing
-    /// a census that reports fourteen defects nobody can act on.
+    /// WHY: artifact ownership is keyed on the complete generator arguments.
+    /// Backend-specific producers share a subcommand but own disjoint outputs,
+    /// so a new command or argument variant must turn this test red until its
+    /// exact artifact set is declared.
     #[test]
     fn every_required_generator_declares_the_artifacts_it_owes() {
         let undeclared: Vec<&str> = COMMANDS
             .iter()
             .filter(|command| {
-                command.required && expected_artifacts_for_command(command.subcommand()).is_empty()
+                command.required && expected_artifacts_for_args(command.args).is_empty()
             })
             .map(EvidenceCommand::subcommand)
             .collect();
         assert_eq!(
             undeclared,
             Vec::<&str>::new(),
-            "Fix: list the artifacts each of these generators owes in expected_artifacts_for_command"
+            "Fix: list the artifacts each exact generator invocation owes in expected_artifacts_for_args"
         );
+    }
+
+    /// WHY: measured evidence provenance names the invocation that produced the
+    /// bytes, including the release sample floor and write mode. Backend-only
+    /// identity would accept a comparison run or a differently sampled suite.
+    #[test]
+    fn measured_evidence_census_uses_canonical_complete_arguments() {
+        let external = COMMANDS
+            .iter()
+            .filter(|command| !command.in_sweep)
+            .map(|command| command.args)
+            .collect::<Vec<_>>();
+        let expected: Vec<&[&str]> = vec![
+            &[
+                "release-benchmarks",
+                "--backend",
+                "cuda",
+                "--measured-samples",
+                "30",
+                "--write",
+            ],
+            &[
+                "release-benchmarks",
+                "--backend",
+                "wgpu",
+                "--measured-samples",
+                "30",
+                "--write",
+            ],
+        ];
+
+        assert_eq!(external, expected);
     }
 
     #[test]
@@ -685,7 +834,7 @@ mod tests {
             .collect(),
         )]);
 
-        assert_eq!(registry.schema_version, 2);
+        assert_eq!(registry.schema_version, 3);
         assert_eq!(registry.command_count, 2);
         assert_eq!(registry.artifact_count, 4);
         assert_eq!(
@@ -710,7 +859,7 @@ mod tests {
 
         assert!(blockers
             .iter()
-            .any(|blocker| blocker.contains("schema_version=2")));
+            .any(|blocker| blocker.contains("schema_version=3")));
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("command_count")));
@@ -791,7 +940,8 @@ mod tests {
         let commands = COMMANDS
             .iter()
             .map(|command| {
-                let expected = expected_artifacts_for_command(command.subcommand());
+                let expected = expected_artifacts_for_args(command.args);
+                let generator_command = format!("xtask {}", command.args.join(" "));
                 serde_json::json!({
                     "args": command.args,
                     "required": command.required,
@@ -804,6 +954,8 @@ mod tests {
                             "exists": true,
                             "bytes": 1,
                             "read_error": serde_json::Value::Null,
+                            "generator_command": generator_command.as_str(),
+                            "command_mode": command.mode(),
                             "source_fingerprint": "git:0000000000000000000000000000000000000000",
                             "freshness_fingerprint": "source-tree-v1:0000",
                             "blockers": [],
@@ -920,6 +1072,159 @@ mod tests {
             failures
                 .iter()
                 .any(|failure| failure.contains("missing=freshness_fingerprint")),
+            "{failures:?}"
+        );
+    }
+
+    /// WHY: CUDA and WGPU share a subcommand but are distinct required
+    /// generators. Matching only the first argument silently accepted a second
+    /// CUDA record in place of the WGPU evidence.
+    #[test]
+    fn backend_specific_generator_identity_uses_all_arguments() {
+        let mut run = clean_committed_run();
+        let records = run["commands"].as_array_mut().unwrap();
+        let wgpu = records
+            .iter_mut()
+            .find(|record| {
+                record_matches_args(
+                    record,
+                    &[
+                        "release-benchmarks",
+                        "--backend",
+                        "wgpu",
+                        "--measured-samples",
+                        "30",
+                        "--write",
+                    ],
+                )
+            })
+            .expect("clean fixture must contain WGPU measured evidence");
+        wgpu["args"][2] = serde_json::json!("cuda");
+
+        let failures = judge(&run);
+
+        assert!(failures.iter().any(|failure| {
+            failure.contains("missing required generator")
+                && failure.contains("release-benchmarks --backend wgpu")
+        }));
+    }
+
+    #[test]
+    fn backend_specific_generator_rejects_unowned_artifacts() {
+        let mut run = clean_committed_run();
+        let records = run["commands"].as_array_mut().unwrap();
+        let wgpu = records
+            .iter_mut()
+            .find(|record| {
+                record_matches_args(
+                    record,
+                    &[
+                        "release-benchmarks",
+                        "--backend",
+                        "wgpu",
+                        "--measured-samples",
+                        "30",
+                        "--write",
+                    ],
+                )
+            })
+            .expect("clean fixture must contain WGPU measured evidence");
+        wgpu["expected_artifacts"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!(FRONTIER_LEADERBOARD_ARTIFACT));
+        wgpu["artifact_statuses"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "path": FRONTIER_LEADERBOARD_ARTIFACT,
+                "exists": true,
+                "bytes": 1,
+                "read_error": serde_json::Value::Null,
+                "source_fingerprint": "git:0000000000000000000000000000000000000000",
+                "freshness_fingerprint": "source-tree-v1:0000",
+                "blockers": [],
+            }));
+
+        let failures = judge(&run);
+
+        assert!(failures.iter().any(|failure| {
+            failure.contains("unowned artifact") && failure.contains(FRONTIER_LEADERBOARD_ARTIFACT)
+        }));
+    }
+
+    /// WHY: artifact ownership is path-component exact. A filename prefix that
+    /// merely ends with the expected bytes is not the producer-owned artifact.
+    #[test]
+    fn artifact_status_suffix_spoof_is_rejected() {
+        let mut run = clean_committed_run();
+        let expected = run["commands"][0]["expected_artifacts"][0]
+            .as_str()
+            .expect("clean fixture artifact must be a string")
+            .to_string();
+        run["commands"][0]["artifact_statuses"][0]["path"] =
+            serde_json::json!(format!("spoof-{expected}"));
+
+        let failures = judge(&run);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("unowned artifact")),
+            "{failures:?}"
+        );
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("has no artifact status")),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn committed_generator_and_status_provenance_must_match_the_command() {
+        let mut run = clean_committed_run();
+        let records = run["commands"].as_array_mut().unwrap();
+        let wgpu = records
+            .iter_mut()
+            .find(|record| {
+                record_matches_args(
+                    record,
+                    &[
+                        "release-benchmarks",
+                        "--backend",
+                        "wgpu",
+                        "--measured-samples",
+                        "30",
+                        "--write",
+                    ],
+                )
+            })
+            .expect("clean fixture must contain WGPU measured evidence");
+        wgpu["required"] = serde_json::json!(false);
+        wgpu["mode"] = serde_json::json!(COMMAND_MODE_SPAWNED);
+        wgpu["artifact_statuses"][0]["generator_command"] =
+            serde_json::json!("xtask release-benchmarks --backend cuda");
+        wgpu["artifact_statuses"][0]["command_mode"] = serde_json::json!(COMMAND_MODE_SPAWNED);
+
+        let failures = judge(&run);
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("required state")),
+            "{failures:?}"
+        );
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("mode does not match")),
+            "{failures:?}"
+        );
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("generator provenance")),
             "{failures:?}"
         );
     }

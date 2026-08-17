@@ -97,7 +97,7 @@ expected_skips = "The default command omits tests marked `#[ignore]`. The ignore
 evidence_outputs = ["release/evidence/conformance/release-all-backends-certificate.json", "Command status and exact cross-backend results"]
 
 [package.vyre-bench]
-commands = ["./cargo_full test -p vyre-bench --all-features", "./cargo_full run --bin xtask -- release-benchmarks --backend cuda"]
+commands = ["./cargo_full test -p vyre-bench --all-features", "./cargo_full run --bin xtask -- release-benchmarks --backend cuda --measured-samples 30 --write", "./cargo_full run --bin xtask -- release-benchmarks --backend wgpu --measured-samples 30 --write"]
 hardware = "Benchmark unit tests are host-capable. Release measurements require the backend and device named by the benchmark command; probe failure invalidates the run."
 expected_skips = "Ignored physical benchmarks are absent from the default test command. A release benchmark command must execute its requested device and preserve raw samples; it cannot report a synthetic or skipped result."
 evidence_outputs = ["release/evidence/benchmarks/", "Raw per-sample benchmark records", "Generated suite summaries and source-tree fingerprints"]

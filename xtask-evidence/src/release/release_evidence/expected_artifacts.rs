@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use serde::Serialize;
 
 use xtask::artifact_paths::{
@@ -7,7 +9,7 @@ use xtask::artifact_paths::{
 
 pub(crate) const EXPECTED_ARTIFACT_REGISTRY: &str =
     "release/evidence/final/expected-artifacts.json";
-const EXPECTED_ARTIFACT_REGISTRY_SCHEMA_VERSION: u32 = 2;
+const EXPECTED_ARTIFACT_REGISTRY_SCHEMA_VERSION: u32 = 3;
 pub(crate) const RELEASE_EVIDENCE_GENERATOR_COMMAND: &str = "xtask release-evidence";
 pub(crate) const RELEASE_EVIDENCE_RUN_ARTIFACT: &str =
     "release/evidence/final/release-evidence-run.json";
@@ -16,45 +18,54 @@ pub(crate) const RELEASE_EVIDENCE_EXPECTED_ARTIFACTS: &[&str] =
 pub(crate) const COMMAND_MODE_SPAWNED: &str = "spawned";
 pub(crate) const COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY: &str = "external-artifacts-only";
 
-pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'static str] {
-    match command {
-        "version-matrix" => &[
-            "release/evidence/version/version-matrix.json",
-            "release/evidence/version/release-tag-plan.json",
-        ],
-        "backend-matrix" => &["release/evidence/backends/backend-matrix.json"],
-        "conformance-matrix" => &["release/evidence/conformance/conformance-matrix.json"],
-        "release-workload-matrix" => &["release/evidence/benchmarks/release-workload-matrix.json"],
-        "release-benchmarks" => xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS,
-        "hygiene-matrix" => &[
-            "release/evidence/hygiene/hygiene-matrix.json",
-            "release/evidence/hygiene/implementation-intake.json",
-            "release/evidence/hygiene/threshold-policy.json",
-            "release/evidence/hygiene/no-stubs-scan.json",
-            "release/evidence/hygiene/no-hidden-fallback-scan.json",
-            "release/evidence/hygiene/resource-bound-scan.json",
-            "release/evidence/hygiene/error-surface-scan.json",
-            "release/evidence/hygiene/cargo-wrapper-scan.json",
-        ],
-        "docs-check" => &["docs/DOCS.toml", "docs/SUMMARY.md", "docs/INDEX.md"],
-        "metadata-matrix" => &["release/evidence/metadata/metadata-matrix.json"],
-        "feature-matrix" => &["release/evidence/metadata/feature-matrix.json"],
-        "package-readiness" => &["release/evidence/package/publish-readiness.json"],
-        "optimization-corpus" => &[
-            "release/evidence/optimization/optimization-corpus.json",
-            "release/evidence/optimization/optimization-corpus-contracts.json",
-            "release/evidence/optimization/optimization-family-manifest.json",
-            "release/evidence/optimization/optimization-case-manifest.json",
-            "release/evidence/optimization/optimizer-pass-manifest.json",
-        ],
-        "optimization-matrix" => {
-            &["release/evidence/optimization/optimization-integration-matrix.json"]
+pub(crate) fn expected_artifacts_for_args(args: &[&str]) -> Vec<&'static str> {
+    let Some(&subcommand) = args.first() else {
+        return Vec::new();
+    };
+    if subcommand == "release-benchmarks" {
+        let mut backends = args
+            .windows(2)
+            .filter_map(|pair| (pair[0] == "--backend").then_some(pair[1]));
+        let Some(backend) = backends.next() else {
+            return Vec::new();
+        };
+        if backends.next().is_some() {
+            return Vec::new();
         }
-        "whats-similar" => &[REGISTERED_OP_DUPLICATES_ARTIFACT],
-        "lego-audit" => &[LEGO_AUDIT_DUPLICATES_ARTIFACT],
-        "release-evidence" => RELEASE_EVIDENCE_EXPECTED_ARTIFACTS,
-        _ => &[],
+        return xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS
+            .iter()
+            .copied()
+            .filter(|artifact| {
+                let is_wgpu = artifact
+                    .strip_prefix("release/evidence/benchmarks/")
+                    .is_some_and(|name| name.starts_with("wgpu-"));
+                match backend {
+                    "cuda" => !is_wgpu,
+                    "wgpu" => is_wgpu,
+                    _ => false,
+                }
+            })
+            .collect();
     }
+    let duplicate_report = match subcommand {
+        "whats-similar" => Some(REGISTERED_OP_DUPLICATES_ARTIFACT),
+        "lego-audit" => Some(LEGO_AUDIT_DUPLICATES_ARTIFACT),
+        _ => None,
+    };
+    if let Some(expected_report) = duplicate_report {
+        let mut reports = args
+            .windows(2)
+            .filter_map(|pair| (pair[0] == "--duplicate-report-json").then_some(pair[1]));
+        return match (reports.next(), reports.next()) {
+            (Some(actual), None) if actual == expected_report => vec![expected_report],
+            _ => Vec::new(),
+        };
+    }
+    expected_artifacts_for_subcommand(subcommand).to_vec()
+}
+
+fn expected_artifacts_for_subcommand(command: &str) -> &'static [&'static str] {
+    xtask::gate_metadata::descriptor(command).map_or(&[], |descriptor| descriptor.artifacts)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -202,6 +213,7 @@ pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {
         );
     }
     let mut artifact_count = 0usize;
+    let mut artifact_owners = BTreeMap::new();
     for (index, command) in commands.iter().enumerate() {
         if command
             .get("generator_command")
@@ -248,6 +260,19 @@ pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {
             continue;
         };
         artifact_count += artifacts.len();
+        for (artifact_index, artifact) in artifacts.iter().enumerate() {
+            let Some(artifact) = artifact.as_str().filter(|artifact| !artifact.is_empty()) else {
+                blockers.push(format!(
+                    "expected artifact registry command[{index}].expected_artifacts[{artifact_index}] must be a non-empty string"
+                ));
+                continue;
+            };
+            if let Some(previous_owner) = artifact_owners.insert(artifact, generator_command) {
+                blockers.push(format!(
+                    "expected artifact registry artifact `{artifact}` has multiple owners: `{previous_owner}` and `{generator_command}`"
+                ));
+            }
+        }
         let Some(contracts) = command
             .get("artifact_contracts")
             .and_then(|raw| raw.as_array())
@@ -400,15 +425,49 @@ fn is_frontier_leaderboard_contract(contract: &serde_json::Value) -> bool {
 mod tests {
     use super::*;
 
+    /// WHY: one subcommand produces two disjoint backend-owned artifact sets.
+    /// New artifacts are derived from the canonical producer list, so they
+    /// cannot enter either set without this partition remaining exhaustive.
+    #[test]
+    fn release_benchmark_artifacts_have_one_backend_owner() {
+        let cuda = expected_artifacts_for_args(&["release-benchmarks", "--backend", "cuda"]);
+        let wgpu = expected_artifacts_for_args(&["release-benchmarks", "--backend", "wgpu"]);
+        assert!(!cuda.is_empty());
+        assert!(!wgpu.is_empty());
+        assert!(cuda.iter().all(|artifact| !artifact
+            .strip_prefix("release/evidence/benchmarks/")
+            .is_some_and(|name| name.starts_with("wgpu-"))));
+        assert!(wgpu.iter().all(|artifact| artifact
+            .strip_prefix("release/evidence/benchmarks/")
+            .is_some_and(|name| name.starts_with("wgpu-"))));
+        assert!(cuda.iter().all(|artifact| !wgpu.contains(artifact)));
+        assert_eq!(
+            cuda.len() + wgpu.len(),
+            xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS.len()
+        );
+        assert!(expected_artifacts_for_args(&["release-benchmarks"]).is_empty());
+        assert!(
+            expected_artifacts_for_args(&["release-benchmarks", "--backend", "unknown"]).is_empty()
+        );
+        assert!(expected_artifacts_for_args(&[
+            "release-benchmarks",
+            "--backend",
+            "cuda",
+            "--backend",
+            "wgpu"
+        ])
+        .is_empty());
+    }
+
     #[test]
     fn release_benchmarks_expected_artifact_declares_frontier_leaderboard_contract() {
         let command = ReleaseExpectedArtifactCommand::new_with_mode(
             "xtask release-benchmarks --backend cuda".to_string(),
             COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY.to_string(),
             true,
-            expected_artifacts_for_command("release-benchmarks")
-                .iter()
-                .map(|artifact| (*artifact).to_string())
+            expected_artifacts_for_args(&["release-benchmarks", "--backend", "cuda"])
+                .into_iter()
+                .map(str::to_string)
                 .collect(),
         );
 
@@ -443,7 +502,7 @@ mod tests {
     #[test]
     fn expected_artifact_registry_rejects_release_benchmarks_without_frontier_contract() {
         let registry = br#"{
-  "schema_version": 2,
+  "schema_version": 3,
   "command_count": 2,
   "artifact_count": 3,
   "commands": [
@@ -479,7 +538,7 @@ mod tests {
     #[test]
     fn expected_artifact_registry_rejects_malformed_contract_rows() {
         let registry = br#"{
-  "schema_version": 2,
+  "schema_version": 3,
   "command_count": 2,
       "artifact_count": 3,
   "commands": [
@@ -529,7 +588,7 @@ mod tests {
     #[test]
     fn expected_artifact_registry_rejects_spawned_release_benchmark_frontier_contract() {
         let registry = br#"{
-  "schema_version": 2,
+  "schema_version": 3,
   "command_count": 2,
   "artifact_count": 3,
   "commands": [
@@ -573,7 +632,7 @@ mod tests {
     #[test]
     fn expected_artifact_registry_rejects_contract_command_provenance_drift() {
         let registry = br#"{
-  "schema_version": 2,
+  "schema_version": 3,
   "command_count": 2,
   "artifact_count": 2,
   "commands": [
@@ -615,5 +674,38 @@ mod tests {
         assert!(blockers
             .iter()
             .any(|blocker| blocker.contains("command_required must match")));
+    }
+
+    #[test]
+    fn expected_artifact_registry_rejects_multiple_artifact_owners() {
+        let registry = br#"{
+  "schema_version": 3,
+  "command_count": 2,
+  "artifact_count": 2,
+  "commands": [
+    {
+      "generator_command": "xtask first",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": ["release/evidence/shared.json"],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask release-evidence",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": ["release/evidence/shared.json"],
+      "artifact_contracts": []
+    }
+  ]
+}"#;
+
+        let blockers = expected_artifact_registry_blockers(registry);
+
+        assert!(blockers.iter().any(|blocker| {
+            blocker.contains("multiple owners")
+                && blocker.contains("xtask first")
+                && blocker.contains("xtask release-evidence")
+        }));
     }
 }

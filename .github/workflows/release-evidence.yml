@@ -55,7 +55,8 @@ jobs:
 
       - name: Release benchmark artifacts
         run: |
-          ./cargo_full run -p xtask -- release-benchmarks --write
+          ./cargo_full run -p xtask -- release-benchmarks --backend cuda --measured-samples 30 --write
+          ./cargo_full run -p xtask -- release-benchmarks --backend wgpu --measured-samples 30 --write
           ./cargo_full run -p xtask -- bench-release
 
   prepublish:

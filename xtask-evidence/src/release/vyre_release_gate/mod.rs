@@ -293,29 +293,24 @@ fn uses_caller_selected_output(evidence: &str) -> bool {
             .any(|word| word == "--output" || word.starts_with("--output="))
 }
 
-/// The xtask subcommand a command-form evidence line runs.
+/// The complete xtask argument vector a command-form evidence line runs.
 ///
-/// The manifest spells a producer as the wrapper invocation that runs it, so the
-/// subcommand is the token after the `--` separator.
-fn manifest_command_subcommand(evidence: &str) -> Option<&str> {
+/// The manifest spells a producer as the wrapper invocation that runs it, so
+/// arguments begin after the `--` separator.
+fn manifest_command_args(evidence: &str) -> Option<Vec<&str>> {
     let mut words = evidence.split_whitespace().skip_while(|word| *word != "--");
     words.next()?;
-    words.next()
+    let args = words.collect::<Vec<_>>();
+    (!args.is_empty()).then_some(args)
 }
 
 /// Every artifact a requirement's own producers write and the requirement does
-/// not list, as `(subcommand, artifact)`.
+/// not list, as `(complete command arguments, artifact)`.
 ///
-/// This replaces a hand-set `minimum_evidence` integer. A count is correct only
-/// while somebody keeps it level with the list beside it: `release-hygiene`
-/// required 16 and carried 13 because an earlier commit removed three evidence
-/// paths no producer had ever written and left the floor alone, so the gate
-/// reported a shortfall that named nothing and the list stayed wrong. The
-/// relation that actually matters is that the requirement lists what its own
-/// generators produce, and `expected_artifacts_for_command` is where that
-/// producer set is already declared, so it is derived here rather than tallied.
-/// A generator that grows an artifact makes every requirement running it red
-/// until the artifact is listed.
+/// This replaces a hand-set `minimum_evidence` integer. The relation that
+/// matters is whether the requirement lists every artifact owned by each exact
+/// generator invocation. Backend variants may share a subcommand while owning
+/// disjoint artifacts, so argument identity cannot be discarded.
 fn unlisted_produced_artifacts(
     requirement: &gate_inputs::Requirement,
 ) -> Vec<(String, &'static str)> {
@@ -333,17 +328,18 @@ fn unlisted_produced_artifacts(
         if !is_manifest_command_evidence(evidence) {
             continue;
         }
-        let Some(subcommand) = manifest_command_subcommand(evidence) else {
+        let Some(command_args) = manifest_command_args(evidence) else {
             continue;
         };
+        let command = command_args.join(" ");
         for artifact in
-            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command(
-                subcommand,
+            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_args(
+                &command_args,
             )
         {
             let relative = artifact.trim_start_matches("release/");
             if !listed.contains(relative) {
-                missing.push((subcommand.to_string(), *artifact));
+                missing.push((command.clone(), artifact));
             }
         }
     }
@@ -364,28 +360,22 @@ mod tests {
         }
     }
 
-    /// The subcommand is the word after the wrapper's `--` separator, and a
-    /// command with no separator names no subcommand.
+    /// Arguments are every word after the wrapper's `--` separator; a command
+    /// with no separator or no trailing arguments names no generator.
     #[test]
-    fn subcommand_is_read_from_the_wrapper_invocation() {
+    fn command_args_are_read_from_the_wrapper_invocation() {
         assert_eq!(
-            manifest_command_subcommand("cargo_full run -p xtask --bin xtask -- version-matrix"),
-            Some("version-matrix")
+            manifest_command_args("cargo_full run -p xtask --bin xtask -- version-matrix"),
+            Some(vec!["version-matrix"])
         );
         assert_eq!(
-            manifest_command_subcommand(
+            manifest_command_args(
                 "cargo_full run -p xtask --bin xtask -- backend-matrix --backend cuda"
             ),
-            Some("backend-matrix")
+            Some(vec!["backend-matrix", "--backend", "cuda"])
         );
-        assert_eq!(
-            manifest_command_subcommand("cargo_full test --workspace"),
-            None
-        );
-        assert_eq!(
-            manifest_command_subcommand("cargo_full run -p xtask --"),
-            None
-        );
+        assert_eq!(manifest_command_args("cargo_full test --workspace"), None);
+        assert_eq!(manifest_command_args("cargo_full run -p xtask --"), None);
     }
 
     /// Evidence producers own fixed paths; the release manifest cannot select one per invocation.
@@ -411,9 +401,9 @@ mod tests {
     #[test]
     fn a_complete_listing_reports_nothing() {
         let produced =
-            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command(
+            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_args(&[
                 "version-matrix",
-            );
+            ]);
         assert!(
             !produced.is_empty(),
             "Fix: fixture subcommand must produce artifacts"
@@ -441,9 +431,9 @@ mod tests {
     #[test]
     fn an_omitted_artifact_is_named_with_its_producer() {
         let produced =
-            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_command(
+            crate::release::release_evidence::expected_artifacts::expected_artifacts_for_args(&[
                 "version-matrix",
-            );
+            ]);
         let omitted = produced
             .first()
             .copied()

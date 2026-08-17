@@ -6,6 +6,7 @@ required_status = "release-evidence / Generate measured evidence"
 triggers = ["workflow_dispatch", "push"]
 steps = [
   { gate = "release-conformance", args = ["--write"] },
-  { gate = "release-benchmarks", args = ["--write"] },
+  { gate = "release-benchmarks", args = ["--backend", "cuda", "--measured-samples", "30", "--write"] },
+  { gate = "release-benchmarks", args = ["--backend", "wgpu", "--measured-samples", "30", "--write"] },
   { gate = "bench-release", args = [] },
 ]
