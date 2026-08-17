@@ -454,4 +454,21 @@ mod tests {
                 .collect::<Vec<_>>()
         );
     }
+
+    /// WHY: The authoritative descriptor and launch-state producer must agree on
+    /// the exact output path so comparison is immutable and write mutations
+    /// are never undeclared.
+    #[test]
+    fn authoritative_descriptor_declares_exact_launch_state_artifact() {
+        let descriptor = crate::gate_metadata::descriptor_by_name("launch-state");
+        let mut expected: Vec<&str> = vec![super::ARTIFACT];
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "Fix: launch-state gate descriptor must declare exactly the canonical public launch state artifact (`{}`)",
+            super::ARTIFACT
+        );
+    }
 }
