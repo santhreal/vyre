@@ -4838,6 +4838,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `abstraction-gate` from 32 to 23.
 - The hygiene matrix gate now declares all eight release-evidence artifacts
   that its canonical writer produces.
+- The hygiene matrix now records every source-only structural contract,
+  including oracle-elimination mutations, without misclassifying descriptive
+  build-wrapper text as an executable command.
 - Call inlining expands a call in every operand position. The caller side and
   the callee side each enumerated `Node` themselves and had diverged: the
   caller copied the `AsyncLoad` and `AsyncStore` offset and size and the `Trap`
