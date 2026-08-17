@@ -2,43 +2,22 @@
 //!
 //! Category-A compositions over `UnOp::Unpack*` primitives.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 /// Unpack 4-bit values from a u32 buffer into f32.
 /// Input: `n/8` u32s (each holds 8 4-bit values), Output: `n` f32s.
 #[must_use]
 pub fn unpack_4bit_f32(input: &str, output: &str, n: u32) -> Program {
-    let i = Expr::var("i");
-    let u32_idx = Expr::div(i.clone(), Expr::u32(8));
-    let shift = Expr::mul(Expr::rem(i.clone(), Expr::u32(8)), Expr::u32(4));
-
-    // Logic: (val >> shift) & 0xF
-    let val = Expr::bitand(Expr::shr(Expr::load(input, u32_idx), shift), Expr::u32(0xF));
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: Expr::cast(DataType::F32, val),
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n / 8),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::representation::unpack_4bit_f32",
-            body,
-        )],
-    )
+    ElementwiseComposer::new("vyre-libs::representation::unpack_4bit_f32", n)
+        .add_input(input, DataType::U32, n / 8)
+        .add_output(output, DataType::F32, n)
+        .build_pointwise(output, |i| {
+            let u32_idx = Expr::div(i.clone(), Expr::u32(8));
+            let shift = Expr::mul(Expr::rem(i, Expr::u32(8)), Expr::u32(4));
+            let val = Expr::bitand(Expr::shr(Expr::load(input, u32_idx), shift), Expr::u32(0xF));
+            Expr::cast(DataType::F32, val)
+        })
 }
 
 inventory::submit! {

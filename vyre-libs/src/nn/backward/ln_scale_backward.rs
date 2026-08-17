@@ -4,8 +4,8 @@
 //! Backward: `grad_x[i] = grad_out[i] * scale[i]`
 //!           `grad_scale[i] = grad_out[i] * x[i]`
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
 
 const OP_ID: &str = "vyre-libs::nn::ln_scale_backward";
 
@@ -21,42 +21,18 @@ pub fn ln_scale_backward(
     grad_scale: &str,
     n: u32,
 ) -> Program {
-    let i = Expr::var("i");
-    let x = Expr::load(input, i.clone());
-    let s = Expr::load(scale, i.clone());
-    let dy = Expr::load(grad_out, i.clone());
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![
-                Node::Store {
-                    buffer: grad_x.into(),
-                    index: i.clone(),
-                    value: Expr::mul(dy.clone(), s),
-                },
-                Node::Store {
-                    buffer: grad_scale.into(),
-                    index: i,
-                    value: Expr::mul(dy, x),
-                },
-            ],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(scale, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(grad_out, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(grad_x, 3, DataType::F32).with_count(n),
-            BufferDecl::storage(grad_scale, 4, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    ElementwiseComposer::new(OP_ID, n)
+        .add_input(input, DataType::F32, n)
+        .add_input(scale, DataType::F32, n)
+        .add_input(grad_out, DataType::F32, n)
+        .add_output(grad_x, DataType::F32, n)
+        .add_output_storage(grad_scale, BufferAccess::ReadWrite, DataType::F32, n)
+        .build_pointwise_multi(&[grad_x, grad_scale], |i| {
+            let x = Expr::load(input, i.clone());
+            let s = Expr::load(scale, i.clone());
+            let dy = Expr::load(grad_out, i);
+            vec![Expr::mul(dy.clone(), s), Expr::mul(dy, x)]
+        })
 }
 
 inventory::submit! {

@@ -2,8 +2,8 @@
 //!
 //! `grad_gate = grad_out * σ(g) * (1-σ(g)) * (branch - skip)`
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program, UnOp};
 
 const OP_ID: &str = "vyre-libs::nn::skip_gate_backward";
 
@@ -17,56 +17,40 @@ pub fn skip_gate_backward(
     grad_gate: &str,
     n: u32,
 ) -> Program {
-    let i = Expr::var("i");
-    let g = Expr::load(gate, i.clone());
-    let b = Expr::load(branch, i.clone());
-    let s = Expr::load(skip, i.clone());
-    let dy = Expr::load(grad_out, i.clone());
+    ElementwiseComposer::new(OP_ID, n)
+        .add_input(gate, DataType::F32, n)
+        .add_input(branch, DataType::F32, n)
+        .add_input(skip, DataType::F32, n)
+        .add_input(grad_out, DataType::F32, n)
+        .add_output(grad_gate, DataType::F32, n)
+        .build_pointwise(grad_gate, |i| {
+            let g = Expr::load(gate, i.clone());
+            let b = Expr::load(branch, i.clone());
+            let s = Expr::load(skip, i.clone());
+            let dy = Expr::load(grad_out, i);
 
-    let sig = Expr::div(
-        Expr::f32(1.0),
-        Expr::add(
-            Expr::f32(1.0),
-            Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(Expr::UnOp {
-                    op: UnOp::Negate,
-                    operand: Box::new(g),
-                }),
-            },
-        ),
-    );
-    let grad = Expr::mul(
-        dy,
-        Expr::mul(
-            Expr::mul(sig.clone(), Expr::sub(Expr::f32(1.0), sig)),
-            Expr::sub(b, s),
-        ),
-    );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: grad_gate.into(),
-                index: i,
-                value: grad,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(gate, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(branch, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(skip, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(grad_out, 3, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(grad_gate, 4, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+            let sig = Expr::div(
+                Expr::f32(1.0),
+                Expr::add(
+                    Expr::f32(1.0),
+                    Expr::UnOp {
+                        op: UnOp::Exp,
+                        operand: Box::new(Expr::UnOp {
+                            op: UnOp::Negate,
+                            operand: Box::new(g),
+                        }),
+                    },
+                ),
+            );
+            let grad = Expr::mul(
+                dy,
+                Expr::mul(
+                    Expr::mul(sig.clone(), Expr::sub(Expr::f32(1.0), sig)),
+                    Expr::sub(b, s),
+                ),
+            );
+            grad
+        })
 }
 
 inventory::submit! {

@@ -4,8 +4,9 @@
 //! shape-broadcasting version (NumPy semantics) belongs in a future
 //! `broadcast_shaped` function that takes source + target shapes.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{DataType, Program};
 
 /// Broadcast a scalar into every element of `dst`. `n` is the target
 /// element count  -  `dst` receives `n × sizeof(U32)` bytes.
@@ -18,28 +19,7 @@ pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
             "Fix: broadcast requires n > 0.".to_string(),
         );
     }
-    let output = BufferDecl::output(dst, 1, DataType::U32)
-        .with_count(n)
-        .with_output_byte_range(0..(n as usize).saturating_mul(4));
-    let body = vec![
-        Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(Expr::var("idx"), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: dst.into(),
-                index: Expr::var("idx"),
-                value: Expr::load(src, Expr::u32(0)),
-            }],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(src, 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            output,
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region("vyre-libs::math::broadcast", body)],
-    )
+    ElementwiseComposer::broadcast_scalar("vyre-libs::math::broadcast", src, dst, n, DataType::U32)
 }
 
 inventory::submit! {

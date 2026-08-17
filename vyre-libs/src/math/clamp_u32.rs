@@ -9,43 +9,24 @@
 //!
 //! CPU reference: `u32::clamp` bit-exact.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 const OP_ID: &str = "vyre-libs::math::clamp_u32";
 
 /// Map `out[i] = input[i].clamp(lo[i], hi[i])` over n elements.
 #[must_use]
 pub fn clamp_u32(input: &str, lo: &str, hi: &str, out: &str, n: u32) -> Program {
-    let body = vec![wrap_anonymous_region(
+    ElementwiseComposer::ternary(
         OP_ID,
-        vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(n)),
-                vec![Node::store(
-                    out,
-                    Expr::var("idx"),
-                    Expr::min(
-                        Expr::max(
-                            Expr::load(input, Expr::var("idx")),
-                            Expr::load(lo, Expr::var("idx")),
-                        ),
-                        Expr::load(hi, Expr::var("idx")),
-                    ),
-                )],
-            ),
-        ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(lo, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(hi, 2, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 3, DataType::U32).with_count(n),
-        ],
-        [64, 1, 1],
-        body,
+        input,
+        lo,
+        hi,
+        DataType::U32,
+        out,
+        DataType::U32,
+        n,
+        |x, l, h| Expr::min(Expr::max(x, l), h),
     )
 }
 

@@ -4,11 +4,8 @@
 //! and buffer contracts, but the IR shape is intentionally centralized here so
 //! new bitset binary ops do not fork the same load/op/store kernel body.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
-};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program, PORTABLE_WORKGROUP_INVOCATIONS};
 
 /// Supported per-word bitwise binary operators.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -44,21 +41,14 @@ pub(crate) fn binary_word_program(
     words: u32,
     op: BitwiseBinaryOp,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
-    let value = op.apply(Expr::load(lhs, t.clone()), Expr::load(rhs, t.clone()));
-    let body = vec![Node::store(out, t.clone(), value)];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(lhs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(rhs, 1, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(out, 2, BufferAccess::WriteOnly, DataType::U32).with_count(words),
-        ],
-        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
-        )],
-    )
+    ElementwiseComposer::new(op_id, words)
+        .with_workgroup_size([PORTABLE_WORKGROUP_INVOCATIONS, 1, 1])
+        .add_input_storage(lhs, BufferAccess::ReadOnly, DataType::U32, words)
+        .add_input_storage(rhs, BufferAccess::ReadOnly, DataType::U32, words)
+        .add_output_storage(out, BufferAccess::WriteOnly, DataType::U32, words)
+        .build_pointwise(out, |i| {
+            op.apply(Expr::load(lhs, i.clone()), Expr::load(rhs, i))
+        })
 }
 
 /// Build `target[w] = target[w] <op> operand[w]` over packed u32 words.
@@ -100,25 +90,13 @@ fn target_operand_word_program<F>(
 where
     F: Fn(Expr, Expr) -> Expr,
 {
-    let t = Expr::InvocationId { axis: 0 };
-    let value = value(
-        Expr::load(target, t.clone()),
-        Expr::load(operand, t.clone()),
-    );
-    let body = vec![Node::store(target, t.clone(), value)];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(target, 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(operand, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-        ],
-        [PORTABLE_WORKGROUP_INVOCATIONS, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
-        )],
-    )
+    ElementwiseComposer::new(op_id, words)
+        .with_workgroup_size([PORTABLE_WORKGROUP_INVOCATIONS, 1, 1])
+        .add_input_storage(target, BufferAccess::ReadWrite, DataType::U32, words)
+        .add_input_storage(operand, BufferAccess::ReadOnly, DataType::U32, words)
+        .build_pointwise(target, |i| {
+            value(Expr::load(target, i.clone()), Expr::load(operand, i))
+        })
 }
 
 macro_rules! define_bitwise_binary_op {
