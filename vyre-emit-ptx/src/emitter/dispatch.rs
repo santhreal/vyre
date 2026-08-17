@@ -7,7 +7,7 @@
 
 use std::fmt::Write as _;
 
-use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{DataType, MemoryOrdering};
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 use super::memory::AsyncCopyDirection;
@@ -135,6 +135,112 @@ impl BodyCtx<'_> {
                 let guard =
                     self.store_guard_for_index(binding_slot, index_op_id, memory_class, None)?;
                 self.emit_store_value(guard, address, &element_type, value_reg)?;
+            }
+            VectorLoadGlobal { width } => {
+                let (binding_slot, index_op_id) = read_two_operands(op, "VectorLoadGlobal")?;
+                let binding = self.binding_for_slot(binding_slot)?;
+                let element_type = binding.element_type.clone();
+                let memory_class = binding.memory_class;
+                let elem_ty = PtxType::from_dtype(&element_type)?;
+                let vector_ty = match (element_type.min_bytes(), elem_ty) {
+                    (1, _) => PtxType::U32,
+                    (2, _) => PtxType::B16,
+                    (_, ty) => ty,
+                };
+                let final_addr = self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
+                let load_space = self.load_space_for(binding_slot, memory_class);
+                let mut regs = smallvec::SmallVec::<[crate::reg::Reg; 4]>::new();
+                for _ in 0..*width {
+                    regs.push(self.alloc(vector_ty));
+                }
+                let (mnemonic_prefix, cache_suffix) = if load_space == ".global"
+                    && self.read_only_cache_slots.contains(&binding_slot)
+                {
+                    ("ld.global", ".nc")
+                } else {
+                    ("ld.global", "")
+                };
+                let _ = write!(
+                    self.text,
+                    "    {mnemonic_prefix}{cache_suffix}.v{}.{}    ",
+                    width,
+                    vector_ty.ptx_type_str()
+                );
+                crate::reg::write_reg_tuple(&mut self.text, &regs);
+                self.text.push_str(", ");
+                self.write_mem_operand(final_addr)?;
+                self.text.push_str(";\n");
+                let mut canonical_regs = smallvec::SmallVec::<[crate::reg::Reg; 4]>::new();
+                for &reg in &regs {
+                    let canonical = if matches!(element_type, DataType::Bool) {
+                        let pred = self.alloc(PtxType::Bool);
+                        let _ = writeln!(self.text, "    setp.ne.u32    {pred}, {reg}, 0;");
+                        pred
+                    } else {
+                        self.canonicalize_f32(reg)
+                    };
+                    canonical_regs.push(canonical);
+                }
+                if let Some(res) = op.result {
+                    self.vector_regs.insert(res, canonical_regs);
+                }
+            }
+            VectorStoreGlobal { width } => {
+                let binding_slot = *op.operands.first().ok_or_else(|| {
+                    EmitError::InvalidDescriptor("VectorStoreGlobal missing slot".into())
+                })?;
+                let index_op_id = *op.operands.get(1).ok_or_else(|| {
+                    EmitError::InvalidDescriptor("VectorStoreGlobal missing index".into())
+                })?;
+                let binding = self.binding_for_slot(binding_slot)?;
+                let element_type = binding.element_type.clone();
+                let elem_ty = PtxType::from_dtype(&element_type)?;
+                let vector_ty = match (element_type.min_bytes(), elem_ty) {
+                    (1, _) => PtxType::U32,
+                    (2, _) => PtxType::B16,
+                    (_, ty) => ty,
+                };
+                let final_addr = self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
+                let mut regs = smallvec::SmallVec::<[crate::reg::Reg; 4]>::new();
+                for &val_id in &op.operands[2..] {
+                    let value = self.lookup_operand(val_id)?;
+                    regs.push(if matches!(element_type, DataType::Bool) {
+                        let pred = self.pred_from_boolish(value);
+                        let word = self.alloc(PtxType::U32);
+                        let _ = writeln!(self.text, "    selp.u32    {word}, 1, 0, {pred};");
+                        word
+                    } else if elem_ty == PtxType::F32 {
+                        self.canonicalize_f32(value)
+                    } else {
+                        value
+                    });
+                }
+                let _ = write!(
+                    self.text,
+                    "    st.global.v{}.{}    ",
+                    width,
+                    vector_ty.ptx_type_str()
+                );
+                self.write_mem_operand(final_addr)?;
+                self.text.push_str(", ");
+                crate::reg::write_reg_tuple(&mut self.text, &regs);
+                self.text.push_str(";\n");
+            }
+            ExtractLane { lane } => {
+                let vec_id = *op.operands.first().ok_or_else(|| {
+                    EmitError::InvalidDescriptor("ExtractLane missing vector operand".into())
+                })?;
+                let regs = self.vector_regs.get(&vec_id).ok_or_else(|| {
+                    EmitError::InvalidDescriptor(format!(
+                        "ExtractLane: vector value {vec_id} has no recorded vector registers"
+                    ))
+                })?;
+                let reg = *regs.get(*lane as usize).ok_or_else(|| {
+                    EmitError::InvalidDescriptor(format!(
+                        "ExtractLane: lane index {lane} out of bounds for vector {vec_id}"
+                    ))
+                })?;
+                self.bind_result(op, reg)?;
             }
             BinOpKind(bin_op) => {
                 let left_id = *op

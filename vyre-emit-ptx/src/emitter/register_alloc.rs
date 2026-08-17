@@ -49,6 +49,7 @@ impl<'a> BodyCtx<'a> {
             next_u64: 1,
             next_label: 0,
             operand_to_reg: FxHashMap::with_capacity_and_hasher(op_capacity, Default::default()),
+            vector_regs: FxHashMap::with_capacity_and_hasher(op_capacity / 4, Default::default()),
             u32_literals: FxHashMap::with_capacity_and_hasher(op_capacity / 4, Default::default()),
             slot_to_ptr: FxHashMap::with_capacity_and_hasher(slot_count, Default::default()),
             slot_to_shared_symbol: FxHashMap::with_capacity_and_hasher(

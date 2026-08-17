@@ -132,6 +132,7 @@ fn is_eligible(kind: &KernelOpKind) -> bool {
             | KernelOpKind::Select
             | KernelOpKind::Cast { .. }
             | KernelOpKind::BufferLength
+            | KernelOpKind::ExtractLane { .. }
     )
 }
 

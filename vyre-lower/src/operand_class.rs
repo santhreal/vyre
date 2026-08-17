@@ -38,18 +38,25 @@ pub fn classify_operand(kind: &KernelOpKind, pos: usize) -> OperandClass {
         SubgroupLocalId | SubgroupSize => OperandClass::Other,
         LoopIndex { .. } => OperandClass::Other,
         BufferLength => OperandClass::Other,
-        LoadGlobal | LoadShared | LoadConstant => {
+        LoadGlobal | LoadShared | LoadConstant | VectorLoadGlobal { .. } => {
             if pos == 0 {
                 OperandClass::Other
             } else {
                 OperandClass::ResultRef
             }
         }
-        StoreGlobal | StoreShared => {
+        StoreGlobal | StoreShared | VectorStoreGlobal { .. } => {
             if pos == 0 {
                 OperandClass::Other
             } else {
                 OperandClass::ResultRef
+            }
+        }
+        ExtractLane { .. } => {
+            if pos == 0 {
+                OperandClass::ResultRef
+            } else {
+                OperandClass::Other
             }
         }
         Copy | BinOpKind(_) | UnOpKind(_) | Fma | MatrixMma { .. } | Select | Cast { .. } => {

@@ -77,7 +77,8 @@ impl BodyCtx<'_> {
             | KernelOpKind::UnOpKind(_)
             | KernelOpKind::BinOpKind(_)
             | KernelOpKind::Fma
-            | KernelOpKind::Select => self.operands_uniform(&op.operands),
+            | KernelOpKind::Select
+            | KernelOpKind::ExtractLane { .. } => self.operands_uniform(&op.operands),
             // Global and constant memory is one address space for the entire
             // grid, so every invocation reading a grid-uniform address observes
             // the same value. Operand 0 is an inline binding slot, not a result
@@ -92,7 +93,9 @@ impl BodyCtx<'_> {
             // `LoadShared` is deliberately absent: shared memory is per-CTA, so
             // equal addresses in different CTAs are different storage and the
             // value is not grid-uniform.
-            KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant => op
+            KernelOpKind::LoadGlobal
+            | KernelOpKind::LoadConstant
+            | KernelOpKind::VectorLoadGlobal { .. } => op
                 .operands
                 .get(1)
                 .is_some_and(|index| self.is_uniform(*index)),

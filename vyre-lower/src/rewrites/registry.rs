@@ -166,17 +166,17 @@ pub fn classify_rule(rule: LoweringRewriteRule) -> RewriteApplicabilityContract 
         LoweringRewriteRule::VectorLoadFusion => RewriteApplicabilityContract {
             rule,
             id: "vector_load_fusion",
-            ownership: RewriteOwnership::EmitterOwned {
-                emitter_role: "PTX ld.global.v2/v4 and Naga vector-load instruction emission",
-            },
+            ownership: RewriteOwnership::LoweringOwned,
             preserves_program_semantics: true,
             consumed_analysis: Some("analyses::vec_pack"),
-            target_structure: "naga::ir::Module / PTX / SPIR-V",
-            rationale: "KernelDescriptor carries no dialect-specific or vector-memory op kinds by specification. Vector packing is an emitter-owned instruction-selection strategy driven by target capabilities and memory alignment facts, while high-level semantic vectorization is owned by vyre-foundation.",
+            target_structure: "KernelDescriptor",
+            rationale: "Fuses and canonicalizes verified unit-stride adjacent global memory load and store chains at vec2/vec4 widths when proven aligned, alias-free, side-effect-free, and within scheduling boundaries.",
             preconditions: &[
-                "Adjacent scalar loads on the same buffer",
-                "Consecutive index offsets with single base",
-                "Target architecture alignment requirements satisfied",
+                "Adjacent scalar loads or stores on the same global buffer",
+                "Unit-stride consecutive offsets with identical base expression",
+                "Proven alignment to vector transaction width (vec2 or vec4)",
+                "No alias uncertainty, intervening side effect, structured control boundary, or scheduling fence",
+                "Supported vector width (vec2 or vec4)",
             ],
         },
         LoweringRewriteRule::SharedMemPromote => RewriteApplicabilityContract {
@@ -300,22 +300,25 @@ mod tests {
                 LoweringRewriteRule::RepresentationCanonicalize,
                 LoweringRewriteRule::ConstBufferPromote,
                 LoweringRewriteRule::DeadOpElimination,
+                LoweringRewriteRule::VectorLoadFusion,
             ]
         );
         for rule in owned {
             let contract = rule.contract();
             assert!(contract.preserves_program_semantics);
             assert_eq!(contract.target_structure, "KernelDescriptor");
+            assert!(rule.is_lowering_owned());
         }
     }
 
     #[test]
-    fn vector_load_fusion_is_emitter_owned() {
+    fn vector_load_fusion_is_lowering_owned() {
         let contract = LoweringRewriteRule::VectorLoadFusion.contract();
-        assert!(matches!(contract.ownership, RewriteOwnership::EmitterOwned { .. }));
-        assert!(!contract.rule.is_lowering_owned());
+        assert_eq!(contract.ownership, RewriteOwnership::LoweringOwned);
+        assert!(contract.rule.is_lowering_owned());
+        assert!(contract.preserves_program_semantics);
+        assert_eq!(contract.consumed_analysis, Some("analyses::vec_pack"));
     }
-
     #[test]
     fn loop_licm_and_cse_are_foundation_optimizer_owned() {
         let licm = LoweringRewriteRule::LoopLicmLoadHoist.contract();

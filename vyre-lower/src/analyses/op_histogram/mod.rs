@@ -156,14 +156,21 @@ fn bump(kind: &KernelOpKind, h: &mut OpHistogram) {
     use KernelOpKind::*;
     match kind {
         Literal => h.literal += 1,
-        Copy | BinOpKind(_) | UnOpKind(_) | Fma | MatrixMma { .. } | Select | Cast { .. } => {
-            h.arithmetic += 1
-        }
+        Copy
+        | BinOpKind(_)
+        | UnOpKind(_)
+        | Fma
+        | MatrixMma { .. }
+        | Select
+        | Cast { .. }
+        | ExtractLane { .. } => h.arithmetic += 1,
         LoadGlobal
         | LoadShared
         | LoadConstant
         | StoreGlobal
         | StoreShared
+        | VectorLoadGlobal { .. }
+        | VectorStoreGlobal { .. }
         | LoopCarrierInit { .. }
         | LoopCarrierEnd { .. }
         | Atomic { .. }

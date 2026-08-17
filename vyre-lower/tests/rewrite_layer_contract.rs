@@ -4,11 +4,12 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::descriptor_builder::lit;
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
 use vyre_lower::rewrites::{
     all_registered_contracts, apply_lowering_rewrites, canonicalize_for_emit, classify_rule,
-    lowering_owned_rules, rewrite_const_buffer_promote, rewrite_dead_ops, LoweringRewriteRule,
-    RewriteOwnership, ALL_REWRITE_RULES,
+    lowering_owned_rules, rewrite_const_buffer_promote, rewrite_dead_ops, rewrite_vector_memory,
+    rewrite_vector_memory_with_alias_facts, LoweringRewriteRule, RewriteOwnership,
+    ALL_REWRITE_RULES,
 };
 use vyre_lower::{
     verify, BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
@@ -105,6 +106,7 @@ fn lowering_owned_rewrites_preserve_program_semantics() {
             LoweringRewriteRule::RepresentationCanonicalize,
             LoweringRewriteRule::ConstBufferPromote,
             LoweringRewriteRule::DeadOpElimination,
+            LoweringRewriteRule::VectorLoadFusion,
         ],
         "only verified profitable backend-neutral transforms belong in lowering"
     );
@@ -127,14 +129,6 @@ fn lowering_owned_rewrites_preserve_program_semantics() {
 
 #[test]
 fn non_lowering_rules_are_explicitly_classified_and_refused_by_lowering() {
-    // VectorLoadFusion is an emitter-owned instruction-selection strategy.
-    let vec_pack = LoweringRewriteRule::VectorLoadFusion.contract();
-    assert!(matches!(
-        vec_pack.ownership,
-        RewriteOwnership::EmitterOwned { .. }
-    ));
-    assert!(!vec_pack.rule.is_lowering_owned());
-
     // Texture promotion is an emitter-owned binding decoration strategy.
     let texture = LoweringRewriteRule::TexturePromote.contract();
     assert!(matches!(
@@ -175,7 +169,6 @@ fn non_lowering_rules_are_explicitly_classified_and_refused_by_lowering() {
     ));
     assert!(!layout.rule.is_lowering_owned());
 }
-
 #[test]
 fn const_buffer_promotion_rewrite_transforms_eligible_bindings_and_loads() {
     let desc = KernelDescriptor {
@@ -251,6 +244,529 @@ fn const_buffer_promotion_rewrite_transforms_eligible_bindings_and_loads() {
 
     // Verifier succeeds.
     assert!(verify(&rewritten).is_ok());
+}
+#[test]
+fn vector_memory_rewrite_transforms_eligible_load_and_store_chains_at_vec2_and_vec4() {
+    // Positive vec4 load chain
+    let mut load_ops = Vec::new();
+    let mut literals = Vec::new();
+    for i in 0..4u32 {
+        literals.push(LiteralValue::U32(i));
+        load_ops.push(lit(i, i));
+        load_ops.push(op(KernelOpKind::LoadGlobal, [0, i], 10 + i));
+    }
+    load_ops.push(effect(KernelOpKind::StoreGlobal, [1, 0, 10]));
+
+    let desc = descriptor("vec4_load_kernel")
+        .slot(BindingSlot {
+            slot: 0,
+            name: "in_table".into(),
+            element_type: DataType::F32,
+            memory_class: MemoryClass::Global,
+            visibility: BindingVisibility::ReadOnly,
+            element_count: Some(512),
+        })
+        .slot(global_rw(1, DataType::F32, "out_table"))
+        .dispatch(64, 1, 1)
+        .body(body().literals(literals).ops(load_ops))
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(
+        rewritten.body.ops[4].kind,
+        KernelOpKind::VectorLoadGlobal { width: 4 }
+    );
+    assert_eq!(
+        rewritten.body.ops[5].kind,
+        KernelOpKind::ExtractLane { lane: 0 }
+    );
+    assert_eq!(
+        rewritten.body.ops[6].kind,
+        KernelOpKind::ExtractLane { lane: 1 }
+    );
+    assert_eq!(
+        rewritten.body.ops[7].kind,
+        KernelOpKind::ExtractLane { lane: 2 }
+    );
+    assert_eq!(
+        rewritten.body.ops[8].kind,
+        KernelOpKind::ExtractLane { lane: 3 }
+    );
+    assert_eq!(rewritten.body.ops[5].result, Some(10));
+    assert_eq!(rewritten.body.ops[6].result, Some(11));
+    assert_eq!(rewritten.body.ops[7].result, Some(12));
+    assert_eq!(rewritten.body.ops[8].result, Some(13));
+    assert!(verify(&rewritten).is_ok());
+    // Positive vec2 store chain
+    let store_desc = descriptor("vec2_store_kernel")
+        .slot(global_rw(0, DataType::U32, "out_buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(100),
+                    LiteralValue::U32(200),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    effect(KernelOpKind::StoreGlobal, [0, 1, 3]),
+                ]),
+        )
+        .build();
+
+    let rewritten_store = rewrite_vector_memory(&store_desc);
+    assert_eq!(rewritten_store.body.ops.len(), 5);
+    assert_eq!(
+        rewritten_store.body.ops[4].kind,
+        KernelOpKind::VectorStoreGlobal { width: 2 }
+    );
+    assert_eq!(rewritten_store.body.ops[4].operands, vec![0, 0, 2, 3]);
+    assert!(verify(&rewritten_store).is_ok());
+    // Positive vec4 store chain
+    let vec4_store_desc = descriptor("vec4_store_kernel")
+        .slot(global_rw(0, DataType::U32, "out_buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(2),
+                    LiteralValue::U32(3),
+                    LiteralValue::U32(10),
+                    LiteralValue::U32(20),
+                    LiteralValue::U32(30),
+                    LiteralValue::U32(40),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    lit(4, 4),
+                    lit(5, 5),
+                    lit(6, 6),
+                    lit(7, 7),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 4]),
+                    effect(KernelOpKind::StoreGlobal, [0, 1, 5]),
+                    effect(KernelOpKind::StoreGlobal, [0, 2, 6]),
+                    effect(KernelOpKind::StoreGlobal, [0, 3, 7]),
+                ]),
+        )
+        .build();
+
+    let rewritten_vec4_store = rewrite_vector_memory(&vec4_store_desc);
+    assert_eq!(rewritten_vec4_store.body.ops.len(), 9);
+    assert_eq!(
+        rewritten_vec4_store.body.ops[8].kind,
+        KernelOpKind::VectorStoreGlobal { width: 4 }
+    );
+    assert_eq!(rewritten_vec4_store.body.ops[8].operands, vec![0, 0, 4, 5, 6, 7]);
+    assert!(verify(&rewritten_vec4_store).is_ok());
+}
+
+#[test]
+fn vector_memory_rewrite_rejects_misaligned_accesses() {
+    // Offset 1 is misaligned for vec2 (requires % 2 == 0)
+    let desc = descriptor("misaligned_vec2")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(2),
+                    LiteralValue::U32(10),
+                    LiteralValue::U32(20),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    effect(KernelOpKind::StoreGlobal, [0, 1, 3]),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "misaligned base offset must remain scalar");
+}
+
+#[test]
+fn vector_memory_rewrite_rejects_aliasing_hazards() {
+    use vyre_lower::analyses::alias_facts::AliasFactSet;
+
+    let desc = descriptor("alias_hazard")
+        .slot(global_rw(0, DataType::U32, "buf_a"))
+        .slot(global_rw(1, DataType::U32, "buf_b"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(10),
+                    LiteralValue::U32(20),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 10),
+                    // Intervening write to same buffer between loads is a RAW hazard
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    op(KernelOpKind::LoadGlobal, [0, 1], 11),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "intervening write to same slot must reject load vectorization");
+
+    // Intervening write to different slot with unproven alias
+    let mut alias_facts = AliasFactSet::default();
+    // Do not insert no-alias fact
+    let rewritten_alias = rewrite_vector_memory_with_alias_facts(&desc, &alias_facts);
+    assert_eq!(rewritten_alias, desc);
+}
+
+#[test]
+fn vector_memory_rewrite_rejects_intervening_side_effects() {
+    let desc = descriptor("side_effect_hazard")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(10),
+                    LiteralValue::U32(20),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    // Intervening Atomic side effect
+                    op(
+                        KernelOpKind::Atomic {
+                            op: vyre_foundation::ir::AtomicOp::Add,
+                            ordering: vyre_foundation::ir::MemoryOrdering::Relaxed,
+                        },
+                        [0, 0, 2],
+                        4,
+                    ),
+                    effect(KernelOpKind::StoreGlobal, [0, 1, 3]),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "intervening atomic effect must reject vectorization");
+}
+
+#[test]
+fn vector_memory_rewrite_rejects_scheduling_fences() {
+    let desc = descriptor("fence_hazard")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(10),
+                    LiteralValue::U32(20),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    effect(
+                        KernelOpKind::Barrier {
+                            ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
+                        },
+                        [],
+                    ),
+                    effect(KernelOpKind::StoreGlobal, [0, 1, 3]),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "intervening barrier fence must reject vectorization");
+}
+
+#[test]
+fn vector_memory_rewrite_rejects_structured_control_boundaries() {
+    let desc = descriptor("structured_control_hazard")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(10),
+                    LiteralValue::U32(20),
+                    LiteralValue::Bool(true),
+                ])
+                .child(body().ops([effect(KernelOpKind::StoreGlobal, [0, 1, 3])]))
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    lit(4, 4),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    effect(KernelOpKind::StructuredIfThen, [4, 0]),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "accesses across structured control boundary must not be fused across bodies");
+}
+
+#[test]
+fn vector_memory_rewrite_rejects_unsupported_widths() {
+    // Width 3 starting at 0: unsupported width (must be vec2 or vec4)
+    // Note: a 3-element chain starting at 0 has an aligned vec2 prefix [0, 1],
+    // so it canonicalizes the vec2 prefix and leaves element 2 scalar.
+    // Width 1 is not a chain at all.
+    let desc = descriptor("singleton")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(0), LiteralValue::U32(10)])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "single store is not a vector chain");
+}
+
+#[test]
+fn vector_memory_rewrite_rejects_value_dependency_hazards() {
+    // Value of second store is computed between the stores from an impure or dependent op
+    let desc = descriptor("value_dependency_hazard")
+        .slot(global_rw(0, DataType::U32, "buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(10),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    // Op 4 computes the value for the second store
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [2, 2], 4),
+                    effect(KernelOpKind::StoreGlobal, [0, 1, 4]),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "intervening value computation between stores must reject store fusion");
+}
+
+#[test]
+fn vector_load_fusion_collapses_memory_ops_and_preserves_ssa_projections() {
+    // 4 contiguous LoadGlobal ops feeding downstream BinOp Add consumers
+    let desc = descriptor("contiguous_load_ssa_projections")
+        .slot(global_rw(0, DataType::F32, "in_buf"))
+        .slot(global_rw(1, DataType::F32, "out_buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(2),
+                    LiteralValue::U32(3),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 10),
+                    op(KernelOpKind::LoadGlobal, [0, 1], 11),
+                    op(KernelOpKind::LoadGlobal, [0, 2], 12),
+                    op(KernelOpKind::LoadGlobal, [0, 3], 13),
+                    // Downstream SSA consumers reading load results
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [10, 11], 20),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [12, 13], 21),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 20]),
+                    effect(KernelOpKind::StoreGlobal, [1, 1, 21]),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+
+    // Verify exact op sequence: 4 literals, 1 VectorLoadGlobal, 4 ExtractLane, 2 BinOp Add, 1 VectorStoreGlobal
+    assert_eq!(rewritten.body.ops.len(), 12);
+    assert_eq!(
+        rewritten.body.ops[4].kind,
+        KernelOpKind::VectorLoadGlobal { width: 4 }
+    );
+    assert_eq!(rewritten.body.ops[4].operands, vec![0, 0]);
+    let vec_res = rewritten.body.ops[4].result.expect("VectorLoadGlobal must define result");
+
+    assert_eq!(
+        rewritten.body.ops[5].kind,
+        KernelOpKind::ExtractLane { lane: 0 }
+    );
+    assert_eq!(rewritten.body.ops[5].operands, vec![vec_res]);
+    assert_eq!(rewritten.body.ops[5].result, Some(10));
+
+    assert_eq!(
+        rewritten.body.ops[6].kind,
+        KernelOpKind::ExtractLane { lane: 1 }
+    );
+    assert_eq!(rewritten.body.ops[6].operands, vec![vec_res]);
+    assert_eq!(rewritten.body.ops[6].result, Some(11));
+
+    assert_eq!(
+        rewritten.body.ops[7].kind,
+        KernelOpKind::ExtractLane { lane: 2 }
+    );
+    assert_eq!(rewritten.body.ops[7].operands, vec![vec_res]);
+    assert_eq!(rewritten.body.ops[7].result, Some(12));
+
+    assert_eq!(
+        rewritten.body.ops[8].kind,
+        KernelOpKind::ExtractLane { lane: 3 }
+    );
+    assert_eq!(rewritten.body.ops[8].operands, vec![vec_res]);
+    assert_eq!(rewritten.body.ops[8].result, Some(13));
+
+    // Downstream consumers preserve operand result identities
+    assert_eq!(
+        rewritten.body.ops[9].kind,
+        KernelOpKind::BinOpKind(BinOp::Add)
+    );
+    assert_eq!(rewritten.body.ops[9].operands, vec![10, 11]);
+    assert_eq!(rewritten.body.ops[9].result, Some(20));
+
+    assert_eq!(
+        rewritten.body.ops[10].kind,
+        KernelOpKind::BinOpKind(BinOp::Add)
+    );
+    assert_eq!(rewritten.body.ops[10].operands, vec![12, 13]);
+    assert_eq!(rewritten.body.ops[10].result, Some(21));
+
+    assert_eq!(
+        rewritten.body.ops[11].kind,
+        KernelOpKind::VectorStoreGlobal { width: 2 }
+    );
+    assert_eq!(rewritten.body.ops[11].operands, vec![1, 0, 20, 21]);
+
+    assert!(verify(&rewritten).is_ok());
+}
+
+#[test]
+fn vector_store_fusion_collapses_op_counts() {
+    let desc = descriptor("contiguous_store_op_collapse")
+        .slot(global_rw(0, DataType::U32, "out_buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(2),
+                    LiteralValue::U32(3),
+                    LiteralValue::U32(100),
+                    LiteralValue::U32(200),
+                    LiteralValue::U32(300),
+                    LiteralValue::U32(400),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    lit(4, 4),
+                    lit(5, 5),
+                    lit(6, 6),
+                    lit(7, 7),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 4]),
+                    effect(KernelOpKind::StoreGlobal, [0, 1, 5]),
+                    effect(KernelOpKind::StoreGlobal, [0, 2, 6]),
+                    effect(KernelOpKind::StoreGlobal, [0, 3, 7]),
+                ]),
+        )
+        .build();
+
+    let before_op_count = desc.body.ops.len();
+    let rewritten = rewrite_vector_memory(&desc);
+    let after_op_count = rewritten.body.ops.len();
+
+    // Exactly 3 store ops eliminated (4 scalar stores collapsed into 1 vector store)
+    assert_eq!(before_op_count - after_op_count, 3);
+    assert_eq!(
+        rewritten.body.ops[8].kind,
+        KernelOpKind::VectorStoreGlobal { width: 4 }
+    );
+    assert_eq!(rewritten.body.ops[8].operands, vec![0, 0, 4, 5, 6, 7]);
+    assert!(verify(&rewritten).is_ok());
+}
+
+#[test]
+fn vector_memory_rewrite_preserves_scalar_for_unsupported_byte_types() {
+    // Byte-element buffer (U8) is not in supported 4-byte scalar set for vector memory rewrite
+    let desc = descriptor("u8_buffer_load")
+        .slot(global_rw(0, DataType::U8, "byte_buf"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(2),
+                    LiteralValue::U32(3),
+                ])
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 10),
+                    op(KernelOpKind::LoadGlobal, [0, 1], 11),
+                    op(KernelOpKind::LoadGlobal, [0, 2], 12),
+                    op(KernelOpKind::LoadGlobal, [0, 3], 13),
+                ]),
+        )
+        .build();
+
+    let rewritten = rewrite_vector_memory(&desc);
+    assert_eq!(rewritten, desc, "byte-element buffer must remain scalar");
 }
 
 #[test]

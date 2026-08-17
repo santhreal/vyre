@@ -42,6 +42,7 @@ pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
         // control-flow exit, or a body this crate cannot see through.
         KernelOpKind::StoreGlobal
         | KernelOpKind::StoreShared
+        | KernelOpKind::VectorStoreGlobal { .. }
         | KernelOpKind::LoopCarrierInit { .. }
         | KernelOpKind::LoopCarrierEnd { .. }
         | KernelOpKind::Atomic { .. }
@@ -71,6 +72,8 @@ pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
         | KernelOpKind::LoadGlobal
         | KernelOpKind::LoadShared
         | KernelOpKind::LoadConstant
+        | KernelOpKind::VectorLoadGlobal { .. }
+        | KernelOpKind::ExtractLane { .. }
         | KernelOpKind::BufferLength
         | KernelOpKind::BinOpKind(_)
         | KernelOpKind::UnOpKind(_)

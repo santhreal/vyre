@@ -200,6 +200,7 @@ impl KernelDescriptor {
                 let effecting = match op.kind {
                     StoreGlobal
                     | StoreShared
+                    | VectorStoreGlobal { .. }
                     | LoopCarrierInit { .. }
                     | LoopCarrierEnd { .. }
                     | Atomic { .. }
@@ -235,6 +236,8 @@ impl KernelDescriptor {
                     | LoadGlobal
                     | LoadShared
                     | LoadConstant
+                    | VectorLoadGlobal { .. }
+                    | ExtractLane { .. }
                     | BufferLength
                     | BinOpKind(_)
                     | UnOpKind(_)

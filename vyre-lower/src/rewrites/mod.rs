@@ -11,6 +11,7 @@ pub mod canonicalize;
 pub mod const_buffer_promote;
 pub mod dead_op;
 pub mod registry;
+pub mod vector_memory;
 
 pub use canonicalize::canonicalize_for_emit;
 pub use const_buffer_promote::{
@@ -21,18 +22,21 @@ pub use registry::{
     all_registered_contracts, classify_rule, lowering_owned_rules, LoweringRewriteRule,
     RewriteApplicabilityContract, RewriteOwnership, ALL_REWRITE_RULES,
 };
+pub use vector_memory::{rewrite_vector_memory, rewrite_vector_memory_with_alias_facts};
 
 use crate::KernelDescriptor;
 
 /// Apply all verified profitable lowering-owned structural rewrites in canonical sequence.
 ///
 /// 1. Promotes qualified read-only global buffers to constant memory.
-/// 2. Eliminates unreferenced dead pure operations.
-/// 3. Orders pure same-body SSA producers before consumers.
+/// 2. Canonicalizes verified adjacent global load and store chains into vec2/vec4 vector memory transactions.
+/// 3. Eliminates unreferenced dead pure operations.
+/// 4. Orders pure same-body SSA producers before consumers.
 #[must_use]
 pub fn apply_lowering_rewrites(desc: &KernelDescriptor) -> KernelDescriptor {
     let with_const = rewrite_const_buffer_promote(desc);
-    let with_dce = rewrite_dead_ops(&with_const);
+    let with_vec = rewrite_vector_memory(&with_const);
+    let with_dce = rewrite_dead_ops(&with_vec);
     canonicalize_for_emit(&with_dce)
 }
 
