@@ -205,7 +205,6 @@ mod tests {
                 Value::from(f32_bytes(&scores)),
                 Value::from(vec![0u8; 2 * 4]),
                 Value::from(vec![0u8; 2 * 4]),
-                Value::from(vec![0u8; 2 * 4]),
             ],
         )
         .unwrap();
@@ -237,7 +236,6 @@ mod tests {
             &program,
             &[
                 Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 3 * 4]),
                 Value::from(vec![0u8; 3 * 4]),
                 Value::from(vec![0u8; 3 * 4]),
             ],
