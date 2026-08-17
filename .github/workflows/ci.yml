@@ -27,6 +27,7 @@ jobs:
           rustup default "${{ matrix.rust-toolchain }}"
 
       - name: cargo_full fmt
+        if: matrix.os != 'windows-latest'
         shell: bash
         run: ./cargo_full fmt --check
 
