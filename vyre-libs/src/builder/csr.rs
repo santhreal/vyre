@@ -353,6 +353,15 @@ impl<'a> CsrBuffers<'a> {
     }
 }
 
+impl CsrBuffers<'static> {
+    /// Canonical buffer names for CSR edge traversal.
+    pub const CANONICAL: Self = Self {
+        offsets: NAME_EDGE_OFFSETS,
+        targets: NAME_EDGE_TARGETS,
+        edge_kind_mask: Some(NAME_EDGE_KIND_MASK),
+    };
+}
+
 impl<'a> Default for CsrBuffers<'a> {
     fn default() -> Self {
         Self {
