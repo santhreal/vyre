@@ -8,9 +8,6 @@
 
 mod dispatch;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod reference;
-
 #[cfg(test)]
 #[path = "../../../../tests/internal/graph/dispatch/csr_forward_or_changed/mod.rs"]
 mod tests;
@@ -19,12 +16,3 @@ pub use dispatch::{
     forward_closure_via_change_flag_gpu, forward_closure_via_change_flag_gpu_into,
     forward_closure_via_change_flag_gpu_with_scratch_into, ForwardChangedGpuScratch,
 };
-
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::{
-    reference_forward_closure_via_change_flag, reference_forward_closure_via_change_flag_into,
-    reference_forward_step_with_change_flag,
-};
-
-#[cfg(test)]
-pub(crate) use crate::graph::csr_forward_or_changed::cpu_ref as csr_foc_cpu;

@@ -635,6 +635,26 @@ pub fn cpu_ref(parent: &[u32], target: u32, max_depth: u32, scratch: &mut Vec<u3
     len
 }
 
+/// Reconstruct path from `target` toward the root, writing into `scratch`.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn reference_reconstruct_path(
+    parent: &[u32],
+    target: u32,
+    max_depth: u32,
+    scratch: &mut Vec<u32>,
+) -> u32 {
+    cpu_ref(parent, target, max_depth, scratch)
+}
+
+/// Reconstruct the exact path from `target` to root as a vector.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn reference_path_to_root(parent: &[u32], target: u32, max_depth: u32) -> Vec<u32> {
+    let mut scratch = Vec::new();
+    let len = cpu_ref(parent, target, max_depth, &mut scratch);
+    scratch.truncate(len as usize);
+    scratch
+}
+
 /// Fallible CPU reference for the batched path-reconstruction contract.
 ///
 /// This is the allocation-safe entry point for wrappers that run CPU parity on

@@ -1,12 +1,10 @@
 //! Resident CSR frontier-queue Program construction.
 //!
 //! Three resident entry points run the same queue-driven CSR traversal against
-//! different resident-buffer protocols: the single-query resident path
-//! (`csr_frontier_queue_resident`), the batched resident path
-//! (`csr_frontier_queue_batch_resident`), and adaptive traversal's sparse-queue
-//! mode (`adaptive_traverse`). They differ only in which resident handles they
-//! bind, which frontier upload buffer they read, and how they cache the
-//! resulting Programs.
+//! different resident-buffer protocols: the single-query resident path,
+//! the batched resident path, and adaptive traversal's sparse-queue mode.
+//! They differ only in which resident handles they bind, which frontier upload
+//! buffer they read, and how they cache the resulting Programs.
 //!
 //! The Programs themselves are built here, once, out of the `vyre-primitives`
 //! queue-step builders. Nothing in this crate re-implements the queue bound
@@ -23,13 +21,9 @@ use crate::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::DispatchError;
 
-use crate::graph::dispatch::csr_frontier_queue_scratch::{
+use super::scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
-
-#[cfg(test)]
-#[path = "../../../../tests/internal/graph/dispatch/csr_frontier_queue_programs/mod.rs"]
-mod tests;
 
 // Resident buffer names. Every site binds these handles in this order, so the
 // names live here once instead of as string literals at three call sites.
@@ -153,10 +147,7 @@ pub(crate) fn resident_csr_queue_atomic_word_scan_program(
 }
 
 /// Popcount every frontier word into per-word partials and per-block totals.
-pub(crate) fn resident_csr_queue_word_counts_program(
-    frontier_in: &str,
-    node_count: u32,
-) -> Program {
+pub(crate) fn resident_csr_queue_word_counts_program(frontier_in: &str, node_count: u32) -> Program {
     frontier_word_counts_scan_pass_a(frontier_in, WORD_PARTIALS, BLOCK_TOTALS, node_count)
 }
 
@@ -167,10 +158,6 @@ pub(crate) fn resident_csr_queue_block_offsets_program(node_count: u32) -> Progr
 }
 
 /// Scatter active sources into queue order from the word-prefix scan.
-///
-/// `precomputed_block_offsets` selects the variant that reads offsets produced
-/// by [`resident_csr_queue_block_offsets_program`] instead of summing block
-/// totals inline.
 pub(crate) fn resident_csr_queue_word_prefix_queue_program(
     frontier_in: &str,
     node_count: u32,
@@ -201,9 +188,6 @@ pub(crate) fn resident_csr_queue_word_prefix_queue_program(
 }
 
 /// Programs that turn a packed input frontier into an active-source queue.
-///
-/// Which fields are populated is a function of the materializer alone, so the
-/// resident sites clear and refill their whole cached set from one value.
 pub(crate) struct ResidentCsrQueueMaterializerPrograms {
     pub(crate) clear_frontier_out: Option<Program>,
     pub(crate) queue_len_init: Option<Program>,
@@ -268,30 +252,21 @@ pub(crate) struct ResidentCsrQueueProgramShape {
 }
 
 /// Every Program a resident CSR queue step can launch, cached as one set.
-///
-/// The single-query and batched resident sites each used to hold eight
-/// `Option<Program>` fields, refill all eight from one materializer build, and
-/// unwrap each one with its own diagnostic. The set is built and read here so
-/// that a half-refilled cache is unrepresentable: `ensure` either replaces the
-/// whole set or leaves the previous shape in place.
 #[derive(Debug, Default)]
 pub(crate) struct ResidentCsrQueuePrograms {
-    clear_frontier_out: Option<Program>,
-    queue_len_init: Option<Program>,
-    word_counts: Option<Program>,
-    word_block_offsets: Option<Program>,
-    queue: Option<Program>,
-    high_len_init: Option<Program>,
-    split_low: Option<Program>,
-    traverse: Option<Program>,
-    shape: Option<ResidentCsrQueueProgramShape>,
+    pub(crate) clear_frontier_out: Option<Program>,
+    pub(crate) queue_len_init: Option<Program>,
+    pub(crate) word_counts: Option<Program>,
+    pub(crate) word_block_offsets: Option<Program>,
+    pub(crate) queue: Option<Program>,
+    pub(crate) high_len_init: Option<Program>,
+    pub(crate) split_low: Option<Program>,
+    pub(crate) traverse: Option<Program>,
+    pub(crate) shape: Option<ResidentCsrQueueProgramShape>,
 }
 
 impl ResidentCsrQueuePrograms {
     /// Build the whole set for `shape` unless it is already cached.
-    ///
-    /// `frontier_in` names the resident buffer the materializer reads, which
-    /// is the one thing the three resident protocols do not agree on.
     pub(crate) fn ensure(
         &mut self,
         frontier_in: &str,

@@ -54,7 +54,9 @@ mod sparse_dense_step;
 mod test_graphs;
 
 #[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_reference::{cpu_dense_step, cpu_four_russians_dense_step, cpu_sparse_dense_step};
+pub use cpu_reference::{
+    adaptive_traverse_step, cpu_dense_step, cpu_four_russians_dense_step, cpu_sparse_dense_step,
+};
 pub use dense_step::adaptive_dense_step;
 pub use four_russians::{
     adaptive_four_russians_dense_step, four_russians_dense_columns_from_adj_rows,

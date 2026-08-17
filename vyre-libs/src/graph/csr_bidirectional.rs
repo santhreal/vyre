@@ -128,6 +128,13 @@ pub fn cpu_ref_into(
     .unwrap_or_else(|err| panic!("csr_bidirectional CPU oracle received malformed input. {err}"));
 }
 
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use cpu_ref as reference_bidirectional_step;
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use cpu_ref_closure as reference_bidirectional_closure;
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use cpu_ref_closure_into as reference_bidirectional_closure_into;
+
 /// Fallible CPU reference writing one bidirectional step into caller storage.
 ///
 /// The output buffer is not cleared or resized until validation and reservation

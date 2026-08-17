@@ -7,8 +7,6 @@
 //! caller knows whether any new nodes were added across all steps.
 
 mod dispatch;
-#[cfg(any(test, feature = "cpu-parity"))]
-mod reference;
 mod resident;
 mod resident_scratch;
 #[cfg(test)]
@@ -16,8 +14,6 @@ mod resident_scratch;
 mod tests;
 
 pub use dispatch::*;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::*;
 pub use resident::*;
 pub use resident_scratch::{
     PersistentBfsGpuScratch, PersistentBfsPlanCacheSnapshot, PersistentBfsResidentScratch,

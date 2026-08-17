@@ -22,13 +22,6 @@ use crate::graph::path_reconstruct::PathReconstructStaticInputKey;
 #[cfg(test)]
 use vyre_foundation::ir::Program;
 
-#[cfg(test)]
-mod reference;
-#[cfg(test)]
-use reference::path_reconstruct_cpu;
-#[cfg(test)]
-pub use reference::{reference_path_to_root, reference_reconstruct_path};
-
 /// Caller-owned GPU dispatch scratch for path reconstruction.
 #[derive(Debug, Default)]
 pub struct PathReconstructGpuScratch {

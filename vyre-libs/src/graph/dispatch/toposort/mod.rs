@@ -8,8 +8,6 @@
 
 mod dispatch;
 #[cfg(test)]
-mod reference;
-#[cfg(test)]
 #[path = "../../../../tests/internal/graph/dispatch/toposort/mod.rs"]
 mod tests;
 
@@ -19,9 +17,6 @@ use crate::graph::toposort::ToposortCsrStaticInputKey;
 pub use dispatch::{
     topo_order_csr_via, topo_order_csr_via_with_scratch, topo_order_csr_via_with_scratch_into,
 };
-#[cfg(test)]
-pub use reference::{reference_all_reachable, reference_reachable_set, reference_topo_order};
-
 /// Caller-owned GPU dispatch scratch for topological-sort CSR queries.
 #[derive(Debug, Default)]
 pub struct ToposortGpuScratch {

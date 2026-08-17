@@ -1,6 +1,9 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::toposort::{toposort as toposort_cpu, toposort_csr_into, ToposortError};
+use crate::graph::toposort::{
+    reference_all_reachable, reference_reachable_set, reference_topo_order,
+    toposort as toposort_cpu, toposort_csr_into, ToposortError,
+};
 use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};

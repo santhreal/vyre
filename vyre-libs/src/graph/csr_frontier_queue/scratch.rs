@@ -76,9 +76,7 @@ pub(crate) struct ResidentCsrQueueFrontierStats {
     pub(crate) max_nonzero_words: usize,
 }
 
-pub(crate) fn resident_csr_queue_materializer(
-    frontier_words: usize,
-) -> ResidentCsrQueueMaterializer {
+pub(crate) fn resident_csr_queue_materializer(frontier_words: usize) -> ResidentCsrQueueMaterializer {
     if frontier_words >= WORD_PREFIX_MIN_FRONTIER_WORDS {
         ResidentCsrQueueMaterializer::DeterministicWordPrefix
     } else {
@@ -102,9 +100,7 @@ pub(crate) const fn resident_csr_queue_materializer_for_stats(
 }
 
 #[cfg(test)]
-pub(crate) const fn resident_csr_queue_traverse_kind(
-    max_row_degree: u32,
-) -> ResidentCsrQueueTraverseKind {
+pub(crate) const fn resident_csr_queue_traverse_kind(max_row_degree: u32) -> ResidentCsrQueueTraverseKind {
     if max_row_degree >= STRIDED_FORWARD_MIN_ROW_DEGREE {
         ResidentCsrQueueTraverseKind::RowStrided
     } else {
@@ -364,10 +360,6 @@ pub(crate) fn resident_csr_queue_scratch_bytes_per_query_for_materializer_and_tr
 }
 
 /// Resident buffers one CSR frontier-queue query owns, in allocation order.
-///
-/// The single-query and batched sites allocate the same slots from the same
-/// plan, so a materializer or traverse kind that gains a buffer gains it in
-/// both without a second edit.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct ResidentCsrQueueSlots {
     pub(crate) frontier: u64,
@@ -427,11 +419,6 @@ impl ResidentCsrQueueSlots {
 }
 
 /// Byte lengths one query's resident slots need, in allocation order.
-///
-/// Four base slots are always present; deterministic word prefix adds two and
-/// mixed split adds two. This is the only place that arithmetic lives: the
-/// memory plan quotes `total_bytes` and the dispatch sites allocate
-/// `byte_lengths`, so a quote can never describe a different allocation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct ResidentCsrQueueSlotPlan {
     lengths: [usize; SLOT_CAPACITY],

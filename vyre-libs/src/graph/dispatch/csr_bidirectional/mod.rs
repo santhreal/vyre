@@ -16,18 +16,8 @@ pub use dispatch::{
     bidirectional_step_via, bidirectional_step_via_into, bidirectional_step_via_with_scratch_into,
 };
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod reference;
 #[cfg(test)]
 use crate::graph::csr_bidirectional::can_dispatch_edge_buffers_without_padding;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::{
-    reference_bidirectional_closure, reference_bidirectional_closure_into,
-    reference_bidirectional_step,
-};
-#[cfg(test)]
-use reference::{reference_csr_bidir, reference_csr_bidir_closure};
-
 use crate::graph::csr_bidirectional::{CsrBidirectionalProgramKey, CsrBidirectionalStaticInputKey};
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
 

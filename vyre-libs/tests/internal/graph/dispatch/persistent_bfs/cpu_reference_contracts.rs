@@ -1,7 +1,11 @@
-use super::super::*;
 use crate::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
 use crate::graph::persistent_bfs::cpu_ref as reference_persistent_bfs;
+use crate::graph::persistent_bfs::{bfs_expand, try_cpu_ref as try_bfs_expand};
 
+fn forward_reach(graph: CsrGraphView<'_>, seed: &[u32], max_iters: u32) -> Vec<u32> {
+    let (out, _) = bfs_expand(CsrClosureInputs::allow_all(graph, max_iters), seed);
+    out
+}
 #[test]
 fn checked_reference_surfaces_bad_frontier_width() {
     let offsets = vec![0u32; 65];

@@ -2,7 +2,7 @@ use super::super::*;
 use super::recording_dispatcher::RecordingBatchDispatcher;
 use crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
-use crate::graph::dispatch::csr_frontier_queue_scratch::{
+use crate::graph::csr_frontier_queue::scratch::{
     resident_csr_queue_split_low_grid, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
 

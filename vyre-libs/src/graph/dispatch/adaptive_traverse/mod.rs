@@ -6,8 +6,6 @@
 //! `graph::adaptive_traverse`, which is also the public path to the mode and
 //! kernel selectors; this facade owns resident scratch and layout identity.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod reference;
 mod resident;
 mod resident_scratch;
 mod resident_steps;
@@ -21,8 +19,6 @@ use crate::graph::adaptive_traverse::AdaptiveTraversalMode;
 use crate::graph::adaptive_traverse::{
     select_adaptive_traversal_mode, select_dense_traversal_kernel, DenseTraversalKernel,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::*;
 pub use resident::{
     ResidentAdaptiveFourRussiansDenseGraph, ResidentAdaptiveSparseQueueGraph,
     ResidentAdaptiveTraversalGraph,

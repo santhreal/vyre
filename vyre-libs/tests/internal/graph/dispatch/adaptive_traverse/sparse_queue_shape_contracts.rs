@@ -2,7 +2,7 @@ use super::super::*;
 use super::recording_dispatcher::{
     graph_of, Frontier, RecordingResidentDispatcher, SparseQueueRun,
 };
-use crate::graph::dispatch::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
+use crate::graph::csr_frontier_queue::scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 
 #[test]
 fn sparse_queue_step_accepts_csr_only_resident_graph() {

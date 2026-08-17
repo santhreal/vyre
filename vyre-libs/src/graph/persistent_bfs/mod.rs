@@ -23,7 +23,8 @@ mod tests;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use cpu_ref::{
-    cpu_ref, try_cpu_ref, try_cpu_ref_converged, try_cpu_ref_density, try_cpu_ref_into,
+    cpu_ref, cpu_ref as bfs_expand, try_cpu_ref, try_cpu_ref_converged,
+    try_cpu_ref_converged as try_bfs_expand_converged, try_cpu_ref_density, try_cpu_ref_into,
     PersistentBfsConvergence,
 };
 pub use hash::{persistent_bfs_layout_hash, persistent_bfs_program_layout_hash};
