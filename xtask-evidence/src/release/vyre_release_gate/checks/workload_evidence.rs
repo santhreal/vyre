@@ -30,8 +30,7 @@ pub(crate) fn first_json_evidence_with_path(
         .evidence
         .iter()
         .find(|path| {
-            (path.as_str() == suffix || path.ends_with(&format!("/{suffix}")))
-                && !path.starts_with("cargo_full ")
+            Path::new(path).ends_with(Path::new(suffix)) && !path.starts_with("cargo_full ")
         });
     let Some(evidence) = evidence else {
         failures.push(format!(
