@@ -9,9 +9,6 @@ use vyre_foundation::ir::{DataType, Program};
 
 use crate::bitset::bitset_words;
 use crate::graph::csr_backward_traverse::csr_backward_traverse;
-use crate::graph::csr_closure_entry_points::{
-    define_panicking_csr_closure_entry_points, define_try_csr_closure_entry_points,
-};
 use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::csr_frontier_step::csr_frontier_step_dispatch_grid;
 use crate::graph::program_graph::ProgramGraphShape;
@@ -53,11 +50,6 @@ pub fn csr_bidirectional(
         )
     })
 }
-
-
-
-
-
 
 /// Validated dispatch layout for bidirectional CSR traversal.
 ///
@@ -149,6 +141,7 @@ impl CsrBidirectionalDispatchPlan {
     /// Return true when both logical edge arrays already match the physical
     /// edge-buffer storage required by this plan and can be dispatched without
     /// staging padded scratch.
+    #[cfg(test)]
     #[must_use]
     pub const fn edge_buffers_can_dispatch_unpadded(
         &self,
@@ -225,6 +218,7 @@ impl CsrBidirectionalDispatchPlan {
 /// Empty logical edge arrays intentionally return false for the canonical
 /// one-word padded storage case, keeping that padding contract owned by the
 /// primitive instead of each dispatch consumer.
+#[cfg(test)]
 #[must_use]
 pub const fn can_dispatch_edge_buffers_without_padding(
     edge_targets_len: usize,
@@ -361,6 +355,7 @@ pub fn plan_csr_bidirectional_step(
 ///
 /// Returns caller-mapped errors for malformed seed width, reservation failure,
 /// step execution failure, or frontier shape drift.
+#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 pub fn run_csr_bidirectional_closure_plan_with_step<E, MapError, Step>(
     plan: &CsrBidirectionalDispatchPlan,
@@ -633,39 +628,6 @@ mod dispatch_plan_tests {
     }
 }
 
-define_try_csr_closure_entry_points! {
-    allocating: try_cpu_ref_closure {
-        /// Fallible CPU reference: bidirectional closure to fixpoint or `max_iters`.
-    },
-    borrowing: try_cpu_ref_closure_into {
-        /// Fallible CPU reference: closure into caller-owned buffers.
-    },
-    hooked: try_cpu_ref_closure_into_with_step_hook,
-    step_hook: || {},
-}
-
-define_panicking_csr_closure_entry_points! {
-    allocating: cpu_ref_closure from try_cpu_ref_closure {
-        /// CPU reference: iterate bidirectional one-step reach to fixpoint or `max_iters`.
-        ///
-        /// This computes the connected-neighborhood closure of `seed` under
-        /// `allow_mask` using the same one-step oracle as [`cpu_ref`]. It lives in
-        /// primitives so consumers do not fork fixpoint semantics.
-    },
-    borrowing: cpu_ref_closure_into from try_cpu_ref_closure_into {
-        /// CPU reference: closure into caller-owned buffers.
-    },
-    hooked: cpu_ref_closure_into_with_step_hook from try_cpu_ref_closure_into_with_step_hook {
-        /// CPU reference: closure into caller-owned buffers with a per-step hook.
-        ///
-        /// Consumers use `on_step` for telemetry only; closure semantics remain
-        /// owned by this primitive module.
-    },
-    diagnostic: "csr_bidirectional closure CPU oracle received malformed input.",
-    hook_bound: FnMut()
-}
-
-
 /// Merge a bidirectional step frontier into the accumulated closure.
 ///
 /// Returns `true` when at least one bit was newly set. This helper owns the
@@ -675,6 +637,7 @@ define_panicking_csr_closure_entry_points! {
 ///
 /// Panics when the two frontier slices differ in length. That is a caller
 /// contract violation: both slices must be bitsets for the same `node_count`.
+#[cfg(test)]
 #[must_use]
 pub fn merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool {
     // Fail fast on a caller contract violation (mismatched bitset lengths).
@@ -685,6 +648,7 @@ pub fn merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool {
 }
 
 /// Fallible variant of [`merge_frontier_or_changed`].
+#[cfg(test)]
 pub fn try_merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> Result<bool, String> {
     if current.len() != next.len() {
         return Err(format!(
@@ -711,7 +675,149 @@ fn csr_bidir_u32_to_usize(value: u32, label: &'static str) -> Result<usize, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::csr_closure_inputs::graphs;
+    use crate::graph::csr_closure_inputs::{graphs, CsrClosureInputs};
+    use vyre_reference::composition_witness::{
+        csr_bidirectional_closure_witness_into, csr_bidirectional_step_witness_into,
+    };
+
+    fn try_cpu_ref_into(
+        node_count: u32,
+        edge_offsets: &[u32],
+        edge_targets: &[u32],
+        edge_kind_mask: &[u32],
+        frontier_in: &[u32],
+        allow_mask: u32,
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let layout = validate_csr_inputs(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            frontier_in,
+        )?;
+        csr_bidirectional_step_witness_into(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            frontier_in,
+            allow_mask,
+            out,
+        );
+        if out.len() < layout.words as usize {
+            out.resize(layout.words as usize, 0);
+        }
+        Ok(())
+    }
+
+    fn try_cpu_ref(
+        node_count: u32,
+        edge_offsets: &[u32],
+        edge_targets: &[u32],
+        edge_kind_mask: &[u32],
+        frontier_in: &[u32],
+        allow_mask: u32,
+    ) -> Result<Vec<u32>, String> {
+        let mut out = Vec::new();
+        try_cpu_ref_into(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            frontier_in,
+            allow_mask,
+            &mut out,
+        )?;
+        Ok(out)
+    }
+
+    fn cpu_ref_into(
+        node_count: u32,
+        edge_offsets: &[u32],
+        edge_targets: &[u32],
+        edge_kind_mask: &[u32],
+        frontier_in: &[u32],
+        allow_mask: u32,
+        out: &mut Vec<u32>,
+    ) {
+        try_cpu_ref_into(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            frontier_in,
+            allow_mask,
+            out,
+        )
+        .expect("cpu_ref_into failed");
+    }
+
+    fn cpu_ref(
+        node_count: u32,
+        edge_offsets: &[u32],
+        edge_targets: &[u32],
+        edge_kind_mask: &[u32],
+        frontier_in: &[u32],
+        allow_mask: u32,
+    ) -> Vec<u32> {
+        try_cpu_ref(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            frontier_in,
+            allow_mask,
+        )
+        .expect("cpu_ref failed")
+    }
+
+    fn try_cpu_ref_closure_into(
+        inputs: CsrClosureInputs<'_>,
+        seed: &[u32],
+        current: &mut Vec<u32>,
+        next: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let _layout = validate_csr_inputs(
+            inputs.graph.node_count,
+            inputs.graph.edge_offsets,
+            inputs.graph.edge_targets,
+            inputs.graph.edge_kind_mask,
+            seed,
+        )?;
+        csr_bidirectional_closure_witness_into(
+            inputs.graph.node_count,
+            inputs.graph.edge_offsets,
+            inputs.graph.edge_targets,
+            inputs.graph.edge_kind_mask,
+            seed,
+            inputs.allow_mask,
+            inputs.max_iters,
+            current,
+            next,
+        );
+        Ok(())
+    }
+
+    fn try_cpu_ref_closure(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> Result<Vec<u32>, String> {
+        let mut current = Vec::new();
+        let mut next = Vec::new();
+        try_cpu_ref_closure_into(inputs, seed, &mut current, &mut next)?;
+        Ok(current)
+    }
+
+    fn cpu_ref_closure_into(
+        inputs: CsrClosureInputs<'_>,
+        seed: &[u32],
+        current: &mut Vec<u32>,
+        next: &mut Vec<u32>,
+    ) {
+        try_cpu_ref_closure_into(inputs, seed, current, next).expect("cpu_ref_closure_into failed");
+    }
+
+    fn cpu_ref_closure(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> Vec<u32> {
+        try_cpu_ref_closure(inputs, seed).expect("cpu_ref_closure failed")
+    }
 
     #[test]
     fn forward_step_propagates() {

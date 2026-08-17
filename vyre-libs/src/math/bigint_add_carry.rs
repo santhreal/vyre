@@ -63,6 +63,7 @@ pub const BIGINT_ADD_CARRY_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 ///
 /// One lane per limb, over the [`vyre_primitives::lane_grid`] owner, so the
 /// zero-limb case still yields a launchable grid.
+#[cfg(test)]
 #[must_use]
 pub const fn bigint_add_carry_dispatch_grid(limb_count: u32) -> [u32; 3] {
     vyre_primitives::lane_grid(limb_count, BIGINT_ADD_CARRY_WORKGROUP_SIZE[0])
@@ -165,11 +166,6 @@ pub fn bigint_add_carry(limb_count: u32) -> Program {
     Program::wrapped(buffers, BIGINT_ADD_CARRY_WORKGROUP_SIZE, entry)
 }
 
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -184,8 +180,18 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[3, 0, 4, u32::MAX - 1]),
-                vyre_primitives::wire::pack_u32_slice(&[0, 1, 1, 1]),
+                vec![
+                    0x03, 0x00, 0x00, 0x00, // 3
+                    0x00, 0x00, 0x00, 0x00, // 0
+                    0x04, 0x00, 0x00, 0x00, // 4
+                    0xfe, 0xff, 0xff, 0xff, // u32::MAX - 1
+                ],
+                vec![
+                    0x00, 0x00, 0x00, 0x00, // 0
+                    0x01, 0x00, 0x00, 0x00, // 1
+                    0x01, 0x00, 0x00, 0x00, // 1
+                    0x01, 0x00, 0x00, 0x00, // 1
+                ],
             ]]
         }),
     )
@@ -194,6 +200,74 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum BigIntAddCarryError {
+        LimbCountMismatch { a_len: usize, b_len: usize },
+        SplitCarryLengthMismatch { sum_len: usize, carry_len: usize },
+    }
+
+    fn bigint_add_carry_cpu_into(
+        a: &[u32],
+        b: &[u32],
+        sum: &mut Vec<u32>,
+        carry: &mut Vec<u32>,
+    ) -> Result<(), BigIntAddCarryError> {
+        if a.len() != b.len() {
+            return Err(BigIntAddCarryError::LimbCountMismatch {
+                a_len: a.len(),
+                b_len: b.len(),
+            });
+        }
+        vyre_reference::composition_witness::bigint_add_carry_witness_into(a, b, sum, carry)
+            .map_err(|_| BigIntAddCarryError::LimbCountMismatch {
+                a_len: a.len(),
+                b_len: b.len(),
+            })?;
+        Ok(())
+    }
+
+    fn bigint_add_carry_cpu(
+        a: &[u32],
+        b: &[u32],
+    ) -> Result<(Vec<u32>, Vec<u32>), BigIntAddCarryError> {
+        let mut sum = Vec::new();
+        let mut carry = Vec::new();
+        bigint_add_carry_cpu_into(a, b, &mut sum, &mut carry)?;
+        Ok((sum, carry))
+    }
+
+    fn resolve_carry_chain_cpu_into(
+        sum_partial: &[u32],
+        carry_partial: &[u32],
+        out: &mut Vec<u32>,
+    ) -> Result<u32, BigIntAddCarryError> {
+        if sum_partial.len() != carry_partial.len() {
+            return Err(BigIntAddCarryError::SplitCarryLengthMismatch {
+                sum_len: sum_partial.len(),
+                carry_len: carry_partial.len(),
+            });
+        }
+        let c = vyre_reference::composition_witness::resolve_bigint_carry_chain_witness_into(
+            sum_partial,
+            carry_partial,
+            out,
+        )
+        .map_err(|_| BigIntAddCarryError::SplitCarryLengthMismatch {
+            sum_len: sum_partial.len(),
+            carry_len: carry_partial.len(),
+        })?;
+        Ok(c)
+    }
+
+    fn resolve_carry_chain_cpu(
+        sum_partial: &[u32],
+        carry_partial: &[u32],
+    ) -> Result<(Vec<u32>, u32), BigIntAddCarryError> {
+        let mut out = Vec::new();
+        let c = resolve_carry_chain_cpu_into(sum_partial, carry_partial, &mut out)?;
+        Ok((out, c))
+    }
 
     #[test]
     fn cpu_zero_plus_zero_returns_zero_with_no_carries() {

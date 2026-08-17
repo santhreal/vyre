@@ -19,8 +19,12 @@ use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::hash::crc32::{crc32, crc32_program};
+use vyre_libs::hash::crc32::crc32_program;
+use vyre_reference::composition_witness::multi_hash_witness;
 
+fn reference_crc32(bytes: &[u8]) -> u32 {
+    multi_hash_witness(bytes).0
+}
 /// Dispatch the real `crc32_program` on the GPU: one U32 word per source byte
 /// (the update masks each to its low 8 bits), single u32 CRC out at `out[0]`.
 fn gpu_crc32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
@@ -53,7 +57,7 @@ fn gpu_crc32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
 
 fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let gpu = gpu_crc32(backend, bytes);
-    let expected = crc32(bytes);
+    let expected = reference_crc32(bytes);
     assert_eq!(
         gpu, expected,
         "GPU CRC-32 of {label} diverged from the Rust reference, the nested loop or \
@@ -67,7 +71,7 @@ fn crc32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: CRC-32 GPU parity requires a live GPU.");
     // Drift-guard the reference against the standard zlib/IEEE CRC-32 of "abc".
     assert_eq!(
-        crc32(b"abc"),
+        reference_crc32(b"abc"),
         0x3524_41c2,
         "CRC-32 reference drifted for \"abc\""
     );
@@ -85,7 +89,7 @@ fn crc32_varied_inputs_match_reference_on_gpu() {
     check(&backend, &long, "a 64-byte block");
     // The classic "123456789" CRC-32 check value (0xCBF43926) (a well-known KAT).
     assert_eq!(
-        crc32(b"123456789"),
+        reference_crc32(b"123456789"),
         0xCBF4_3926,
         "CRC-32 reference drifted for the check string"
     );
@@ -101,6 +105,6 @@ fn crc32_distinguishes_inputs_on_gpu() {
         a, b,
         "CRC-32 must distinguish one-byte-different inputs on the GPU"
     );
-    assert_eq!(a, crc32(b"crc-input-0"));
-    assert_eq!(b, crc32(b"crc-input-1"));
+    assert_eq!(a, reference_crc32(b"crc-input-0"));
+    assert_eq!(b, reference_crc32(b"crc-input-1"));
 }

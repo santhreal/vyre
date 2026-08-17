@@ -1,9 +1,9 @@
-//! Property gates for `vyre_libs::graph::dominator_frontier::cpu_ref`.
+//! Property gates for `vyre_reference::composition_witness::dominator_frontier_witness`.
 
 #![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-fn cpu_ref(n: usize, _offsets: &[u32], _cols: &[u32]) -> Vec<u32> { vec![0; (n + 31) / 32 * n] }
+use vyre_reference::composition_witness::dominator_frontier_witness as cpu_ref;
 
 /// Diamond CFG: 0 -> {1,2}, 1 -> 3, 2 -> 3.
 /// Dominator sets (by dominator): 0->{0,1,2,3}, 1->{1}, 2->{2}, 3->{3}.

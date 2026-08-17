@@ -25,7 +25,6 @@ impl NodeSetFilter {
             Self::Intersects(mask) => Expr::ne(Expr::bitand(value, Expr::u32(mask)), Expr::u32(0)),
         }
     }
-
 }
 
 /// Build `nodeset_out = { v : filter(values[v]) }`.
@@ -72,21 +71,38 @@ pub(crate) fn nodeset_filter_program(
     )
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn scalar_ref(values: &[u32], filter: NodeSetFilter) -> Vec<u32> {
+    impl NodeSetFilter {
+        fn matches(self, value: u32) -> bool {
+            match self {
+                Self::Eq(expected) => value == expected,
+                Self::Intersects(mask) => (value & mask) != 0,
+            }
+        }
+    }
+
+    fn reference_nodeset_filter(values: &[u32], filter: NodeSetFilter) -> Vec<u32> {
         let mut out = vec![0_u32; values.len().div_ceil(32)];
-        for (node, value) in values.iter().copied().enumerate() {
+        reference_nodeset_filter_into(values, filter, &mut out);
+        out
+    }
+
+    fn reference_nodeset_filter_into(values: &[u32], filter: NodeSetFilter, out: &mut Vec<u32>) {
+        let needed = values.len().div_ceil(32);
+        out.clear();
+        out.resize(needed, 0);
+        for (node, &value) in values.iter().enumerate() {
             if filter.matches(value) {
                 out[node / 32] |= 1_u32 << (node % 32);
             }
         }
-        out
+    }
+
+    fn scalar_ref(values: &[u32], filter: NodeSetFilter) -> Vec<u32> {
+        reference_nodeset_filter(values, filter)
     }
 
     #[test]
@@ -112,7 +128,7 @@ mod tests {
             }
             for filter in filters {
                 assert_eq!(
-                    nodeset_filter_cpu_ref(&values, filter),
+                    reference_nodeset_filter(&values, filter),
                     scalar_ref(&values, filter),
                     "case {case} filter {filter:?}"
                 );
@@ -121,32 +137,31 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_into_reuses_output_and_clears_stale_tail() {
+    fn reference_into_reuses_output_and_clears_stale_tail() {
         let values = [1_u32, 2, 3, 4, 5, 6, 7, 8];
         let mut out = Vec::with_capacity(4);
         out.extend([u32::MAX; 4]);
         let ptr = out.as_ptr();
-        try_nodeset_filter_cpu_ref_into(&values, NodeSetFilter::Intersects(0b1), &mut out).unwrap();
+        reference_nodeset_filter_into(&values, NodeSetFilter::Intersects(0b1), &mut out);
         assert_eq!(out, vec![0b0101_0101]);
         assert_eq!(out.as_ptr(), ptr);
 
-        try_nodeset_filter_cpu_ref_into(&[], NodeSetFilter::Eq(1), &mut out).unwrap();
+        reference_nodeset_filter_into(&[], NodeSetFilter::Eq(1), &mut out);
         assert!(out.is_empty());
         assert_eq!(out.as_ptr(), ptr);
     }
 
     #[test]
-    fn compatibility_wrapper_matches_fallible_reference() {
+    fn reference_wrapper_matches_reference() {
         let values = [1_u32, 2, 3, 4, 5, 6, 7, 8];
         let filter = NodeSetFilter::Intersects(0b1);
         let mut compat = Vec::with_capacity(4);
-        let mut fallible = Vec::with_capacity(4);
+        let mut reference = Vec::with_capacity(4);
 
-        nodeset_filter_cpu_ref_into(&values, filter, &mut compat);
-        try_nodeset_filter_cpu_ref_into(&values, filter, &mut fallible)
-            .expect("Fix: small nodeset filter CPU reference must reserve");
+        reference_nodeset_filter_into(&values, filter, &mut compat);
+        reference_nodeset_filter_into(&values, filter, &mut reference);
 
-        assert_eq!(compat, fallible);
-        assert_eq!(nodeset_filter_cpu_ref(&values, filter), fallible);
+        assert_eq!(compat, reference);
+        assert_eq!(reference_nodeset_filter(&values, filter), reference);
     }
 }

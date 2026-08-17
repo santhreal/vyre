@@ -7,9 +7,9 @@ use vyre_driver::megakernel_fixtures::DIAMOND_DEPENDENCIES;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::{
-    plan_cuda_frontier_megakernel_execution, schedule_megakernel_from_cuda_samples,
-    select_cuda_megakernel_topology, CudaBackend, CudaMegakernelAnalysisKind,
-    CudaMegakernelDeviceKey, CudaMegakernelPlanCache, CudaMegakernelScheduleSample,
+    plan_cuda_frontier_megakernel_execution, select_cuda_megakernel_topology, CudaBackend,
+    CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCache,
+    CudaMegakernelScheduleSample,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
@@ -60,6 +60,53 @@ fn sample_dispatch(
             readback_bytes: telemetry.readback_bytes,
         },
         timed.enqueue_ns.unwrap_or(timed.wall_ns) as f64,
+    )
+}
+
+fn schedule_megakernel_from_cuda_samples(
+    samples: &[CudaMegakernelScheduleSample],
+    launch_overhead_ns: f64,
+    n_steps: u32,
+    dt: f64,
+) -> Result<Vec<f64>, String> {
+    if !dt.is_finite() || dt < 0.0 {
+        return Err(format!("invalid dt: {dt}"));
+    }
+    if !launch_overhead_ns.is_finite() || launch_overhead_ns < 0.0 {
+        return Err(format!("invalid launch_overhead_ns: {launch_overhead_ns}"));
+    }
+    for (index, sample) in samples.iter().enumerate() {
+        if !sample.dispatch_cost_ns.is_finite() || sample.dispatch_cost_ns < 0.0 {
+            return Err(format!(
+                "invalid cost at {index}: {}",
+                sample.dispatch_cost_ns
+            ));
+        }
+        if !sample.frontier_density.is_finite() || !(0.0..=1.0).contains(&sample.frontier_density) {
+            return Err(format!(
+                "invalid density at {index}: {}",
+                sample.frontier_density
+            ));
+        }
+    }
+    let witness_samples: Vec<vyre_reference::composition_witness::MegakernelScaleSampleWitness> =
+        samples
+            .iter()
+            .map(
+                |s| vyre_reference::composition_witness::MegakernelScaleSampleWitness {
+                    dispatch_cost_ns: s.dispatch_cost_ns,
+                    frontier_density: s.frontier_density,
+                    readback_bytes: s.readback_bytes,
+                },
+            )
+            .collect();
+    Ok(
+        vyre_reference::composition_witness::schedule_via_scale_aware_samples_witness(
+            &witness_samples,
+            launch_overhead_ns,
+            n_steps,
+            dt,
+        ),
     )
 }
 

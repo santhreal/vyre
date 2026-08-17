@@ -20,7 +20,6 @@ use crate::reduce::{
 };
 use vyre_foundation::ir::{Node, Program};
 
-
 /// Build the self-substrate f32 workgroup sum dispatch program.
 #[must_use]
 pub fn dispatch_workgroup_sum_f32(values: &str, out: &str, count: u32, tile: u32) -> Program {
@@ -168,16 +167,17 @@ pub fn dispatch_radix_sort(input: &str, output: &str, count: u32, bits: u32) -> 
     radix_sort(input, output, count, bits)
 }
 
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        inclusive_prefix_sum_witness as reference_prefix_sum,
+        radix_sort_masked_witness as reference_radix_sort,
+        range_counts_witness as reference_range_count, reduce_max_f32_witness as reference_max_f32,
+        reduce_sum_f32_witness as reference_sum_f32,
+        reduce_workgroup_any_witness as reference_workgroup_any,
+        wrapping_sum_witness as reference_sum_u32,
+    };
 
     fn region_generator(node: &Node) -> &str {
         let Node::Region { generator, .. } = node else {

@@ -318,10 +318,10 @@ fn fused_scan_program(
     )
 }
 #[cfg(test)]
-pub(super) fn cpu_ref(input: &[u8]) -> Result<(Vec<u32>, u32), String> {
-    inflate_stored_reference_bytes(input)
+pub(super) fn reference_inflate_stored_bytes(input: &[u8]) -> Result<(Vec<u32>, u32), String> {
+    let words: Vec<u32> = input.iter().map(|&b| u32::from(b)).collect();
+    vyre_reference::composition_witness::inflate_stored_witness(&words)
         .map(|result| (result.data, result.inflated_len))
-        .map_err(str::to_string)
 }
 
 fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
@@ -342,41 +342,22 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![
-        pack_words(&[
-            u32::from(b'h'),
-            u32::from(b'e'),
-            u32::from(b'l'),
-            u32::from(b'l'),
-            u32::from(b'o'),
-            0,
-            0,
-            0,
-            0,
-            0,
-        ]),
-        pack_words(&[5]),
-    ]]
-}
+const EXPECTED_INFLATE_DATA_BYTES: [u8; 40] = [
+    104, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+const EXPECTED_INFLATE_LEN_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || inflate_stored_block("input", "output", 10),
         Some(fixture_inputs),
-        Some(fixture_outputs),
+        Some(|| {
+            vec![vec![
+                EXPECTED_INFLATE_DATA_BYTES.to_vec(),
+                EXPECTED_INFLATE_LEN_BYTES.to_vec(),
+            ]]
+        }),
     )
-}
-// ---------------------------------------------------------------------------
-// CPU reference implementation
-// ---------------------------------------------------------------------------
-
-/// Result of a CPU stored-block inflate.
-#[derive(Debug, PartialEq, Eq)]
-pub struct CpuInflateResult {
-    /// Inflated data bytes (one per u32 slot, low 8 bits).
-    pub data: Vec<u32>,
-    /// Number of data bytes inflated.
-    pub inflated_len: u32,
 }

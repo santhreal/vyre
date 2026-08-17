@@ -89,10 +89,10 @@ impl ProgramDescriptor {
             .buffers()
             .iter()
             .map(|b| BufferDescriptor {
-                name: b.name().to_string(),
-                access: b.access(),
-                dtype: b.element(),
-                count: b.count(),
+                name: b.name.to_string(),
+                access: b.access.clone(),
+                dtype: b.element.clone(),
+                count: b.count,
             })
             .collect();
 

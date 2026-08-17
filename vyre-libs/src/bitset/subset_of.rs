@@ -14,7 +14,7 @@ pub const OP_ID: &str = "vyre-libs::bitset::subset_of";
 pub fn bitset_subset_of(lhs: &str, rhs: &str, out_scalar: &str, words: u32) -> Program {
     bitset_relation_program(OP_ID, lhs, rhs, out_scalar, words, BitsetRelation::SubsetOf)
 }
-
+const EXPECTED_BITSET_SUBSET_OF_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -29,8 +29,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[1])]]
+            vec![vec![EXPECTED_BITSET_SUBSET_OF_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -40,31 +39,34 @@ mod tests {
     use super::*;
     use vyre_foundation::ir::Node;
 
+    fn reference_bitset_subset_of(lhs: &[u32], rhs: &[u32]) -> u32 {
+        u32::from(vyre_reference::composition_witness::bitset_subset_of_witness(lhs, rhs))
+    }
+
     #[test]
     fn proper_subset_returns_one() {
-        assert_eq!(cpu_ref(&[0b0011], &[0b1111]), 1);
+        assert_eq!(reference_bitset_subset_of(&[0b0011], &[0b1111]), 1);
     }
 
     #[test]
     fn equal_sets_are_subsets() {
-        assert_eq!(cpu_ref(&[0xDEAD], &[0xDEAD]), 1);
+        assert_eq!(reference_bitset_subset_of(&[0xDEAD], &[0xDEAD]), 1);
     }
 
     #[test]
     fn superset_returns_zero() {
-        assert_eq!(cpu_ref(&[0b1111], &[0b0011]), 0);
+        assert_eq!(reference_bitset_subset_of(&[0b1111], &[0b0011]), 0);
     }
 
     #[test]
     fn disjoint_nonempty_returns_zero() {
-        assert_eq!(cpu_ref(&[0b1100], &[0b0011]), 0);
+        assert_eq!(reference_bitset_subset_of(&[0b1100], &[0b0011]), 0);
     }
 
     #[test]
     fn empty_lhs_is_subset_of_anything() {
-        assert_eq!(cpu_ref(&[0], &[0xFFFF_FFFF]), 1);
+        assert_eq!(reference_bitset_subset_of(&[0], &[0xFFFF_FFFF]), 1);
     }
-
     #[test]
     fn preserves_wrapper_op_id() {
         let program = bitset_subset_of("lhs", "rhs", "out", 2);
@@ -95,7 +97,11 @@ mod tests {
                 rhs.push(superset);
             }
             let expected = u32::from(lhs.iter().zip(&rhs).all(|(a, b)| (a & !b) == 0));
-            assert_eq!(cpu_ref(&lhs, &rhs), expected, "case {case}");
+            assert_eq!(
+                reference_bitset_subset_of(&lhs, &rhs),
+                expected,
+                "case {case}"
+            );
         }
     }
 }

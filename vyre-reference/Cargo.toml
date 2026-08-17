@@ -15,16 +15,9 @@ documentation = "https://docs.rs/vyre-reference"
 exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [dependencies]
-rayon = { workspace = true }
 inventory.workspace = true
 vyre-foundation.workspace = true
 vyre-primitives.workspace = true
-# `hash::fnv1a::fnv1a32` and `pattern::CompiledDfa` are the scalar and wire
-# halves of two primitive markers' reference semantics. Both domains moved out
-# of vyre-primitives into the composition library, so the oracle names them at
-# their owner. `default-features = false`: the oracle needs one hash function
-# and one DFA wire decoder, not the ML dialect surface.
-vyre-libs = { version = "0.7.2", path = "../vyre-libs", default-features = false, features = ["pattern-dfa"] }
 
 vyre-spec.workspace = true
 blake3.workspace = true
@@ -32,6 +25,7 @@ rustc-hash.workspace = true
 smallvec.workspace = true
 imbl.workspace = true
 libm.workspace = true
+regex.workspace = true
 
 [dev-dependencies]
 vyre-test-support.workspace = true

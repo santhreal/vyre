@@ -14,10 +14,53 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_libs::graph::motif::{self, count_witness_participants, MotifEdge};
+use vyre_libs::graph::motif::MotifEdge;
+use vyre_reference::composition_witness::{
+    motif_witness, motif_witness_into, reduce_any_witness, reduce_count_non_zero_witness,
+};
 
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
+
+fn reference_witness(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif_edges: &[MotifEdge],
+) -> Vec<u32> {
+    let edges: Vec<_> = motif_edges
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect();
+    motif_witness(node_count, offsets, targets, masks, &edges)
+}
+
+fn reference_witness_into(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif_edges: &[MotifEdge],
+    output: &mut Vec<u32>,
+) {
+    let edges: Vec<_> = motif_edges
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect();
+    motif_witness_into(node_count, offsets, targets, masks, &edges, output);
+}
+
+fn reference_matches(
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif_edges: &[MotifEdge],
+) -> bool {
+    let node_count = offsets.len().saturating_sub(1) as u32;
+    let witness = reference_witness(node_count, offsets, targets, masks, motif_edges);
+    reduce_any_witness(&witness) != 0 || motif_edges.is_empty()
+}
 
 #[test]
 fn motif_csr_matches_independent_witness_oracle_matrix() {
@@ -40,14 +83,14 @@ fn motif_csr_matches_independent_witness_oracle_matrix() {
 
         let expected_matches = spec_motif_matches(&adjacency, &motif_edges);
         assert_eq!(
-            motif::cpu_ref_matches(&offsets, &targets, &masks, &motif_edges),
+            reference_matches(&offsets, &targets, &masks, &motif_edges),
             expected_matches,
             "Fix: motif cpu_ref_matches oracle case {case} must agree with the edge-dictionary existence rule."
         );
 
         let endpoints = spec_matched_endpoints(node_count, &adjacency, &motif_edges);
         let expected = spec_witness(node_count, &endpoints);
-        let actual = motif::cpu_ref(node_count, &offsets, &targets, &masks, &motif_edges);
+        let actual = reference_witness(node_count, &offsets, &targets, &masks, &motif_edges);
         assert_eq!(
             actual, expected,
             "Fix: motif cpu_ref oracle case {case} node_count={node_count} must mark exactly the endpoint set of a matched motif."
@@ -55,19 +98,19 @@ fn motif_csr_matches_independent_witness_oracle_matrix() {
 
         let expected_count = endpoints.len() as u32;
         assert_eq!(
-            motif::cpu_ref_participation_count(
+            reduce_count_non_zero_witness(&reference_witness(
                 node_count,
                 &offsets,
                 &targets,
                 &masks,
-                &motif_edges
-            ),
+                &motif_edges,
+            )),
             expected_count,
             "Fix: motif participation count oracle case {case} must equal the number of distinct matched endpoints."
         );
 
         let mut reused = vec![0xCAFE_BABE; node_count as usize + 4];
-        motif::cpu_ref_into(
+        reference_witness_into(
             node_count,
             &offsets,
             &targets,
@@ -80,8 +123,7 @@ fn motif_csr_matches_independent_witness_oracle_matrix() {
             "Fix: motif cpu_ref_into oracle case {case} must clear stale witness capacity before writing."
         );
 
-        let witness_count = count_witness_participants(&actual)
-            .expect("Fix: generated motif witness must satisfy the boolean contract.");
+        let witness_count = reduce_count_non_zero_witness(&actual);
         assert_eq!(
             witness_count, expected_count,
             "Fix: motif witness participant count oracle case {case} must agree with participation count."

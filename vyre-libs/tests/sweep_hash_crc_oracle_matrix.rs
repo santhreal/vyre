@@ -15,11 +15,25 @@
 
 use std::num::NonZeroU32;
 
-use vyre_libs::hash::crc32::{
-    crc32, crc32_chunk, crc32_combine, crc32_combine_chunks, crc32_pair_reduce_chunks, Crc32Chunk,
-    CRC32_INIT, CRC32_POLY,
+use vyre_libs::hash::crc32::{CRC32_INIT, CRC32_POLY};
+use vyre_libs::hash::fnv1a::{FNV1A32_OFFSET, FNV1A32_PRIME};
+use vyre_reference::composition_witness::{
+    crc32_combine_chunks_witness as crc32_combine_chunks, crc32_combine_witness as crc32_combine,
+    crc32_pair_reduce_chunks_witness as crc32_pair_reduce_chunks, crc32_witness as crc32,
+    fnv1a32_witness as fnv1a32, Crc32ChunkWitness as Crc32Chunk,
 };
-use vyre_libs::hash::fnv1a::{fnv1a32, fnv1a32_packed_u32_low8, FNV1A32_OFFSET, FNV1A32_PRIME};
+
+fn crc32_chunk(bytes: &[u8]) -> Crc32Chunk {
+    Crc32Chunk {
+        len: bytes.len() as u64,
+        crc: crc32(bytes),
+    }
+}
+
+fn fnv1a32_packed_u32_low8(words: &[u32]) -> u32 {
+    let bytes: Vec<u8> = words.iter().map(|&w| (w & 0xFF) as u8).collect();
+    fnv1a32(&bytes)
+}
 
 /// Reflected IEEE 802.3 polynomial, from the CRC-32/ISO-HDLC specification.
 const SPEC_CRC32_POLY: u32 = 0xEDB8_8320;

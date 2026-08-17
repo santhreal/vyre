@@ -1,6 +1,6 @@
 //! Tier 3 - Property: proptest over random brace-token sequences for `matching::bracket_match`,
-//! driving the ACTUAL GPU IR through `reference_eval` vs `bracket_match_cpu_ref`. The shipped file value-checks
-//! only the CPU oracle's self-consistency (`generated_uncapped_cases_match_stack_reference_contract`
+//! driving the ACTUAL GPU IR through `reference_eval` vs `reference_bracket_match`. The shipped file value-checks
+//! only the reference oracle's self-consistency (`generated_uncapped_cases_match_stack_reference_contract`
 //! asserts pair symmetry, NOT the IR) plus a SINGLE balanced inventory fixture — so neither GPU IR
 //! path is validated against the oracle over real inputs.
 //!
@@ -11,16 +11,16 @@
 //!   dropped.
 //! This sweep draws `max_depth in 1..=(n+2)` so BOTH kernels are exercised, over sequences that are
 //! balanced, nested, unbalanced (extra opens AND extra closes), and depth-overflowing — the exact
-//! cases a single hand fixture cannot reach. Each result is asserted BIT-EXACT vs `bracket_match_cpu_ref`
+//! cases a single hand fixture cannot reach. Each result is asserted BIT-EXACT vs `reference_bracket_match`
 //! (`match_pairs`: bidirectional links, `BRACKET_MATCH_NONE` for unmatched). Any divergence is a real
 //! IR/oracle defect.
 #![cfg(feature = "pattern")]
 
 use proptest::prelude::*;
 use vyre_libs::pattern::{
-    bracket_match, bracket_match_cpu_ref, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
-    BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
+    bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
 };
+use vyre_reference::composition_witness::bracket_match_witness as reference_bracket_match;
 use vyre_reference::value::Value;
 
 /// Run the IR and return the `match_pairs` output (results[1]: the RW buffers are `stack`(1) then
@@ -62,14 +62,14 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(3000))]
 
     #[test]
-    fn bracket_match_ir_matches_cpu_ref_across_both_kernels(
+    fn bracket_match_ir_matches_reference_across_both_kernels(
         (kinds, max_depth) in arb_case()
     ) {
         let got = run_ir(&kinds, max_depth);
-        let want = bracket_match_cpu_ref(&kinds, max_depth);
+        let want = reference_bracket_match(&kinds, max_depth);
         prop_assert_eq!(
             &got, &want,
-            "kinds={:?} max_depth={} (n={}, kernel={}): IR {:?} != bracket_match_cpu_ref {:?}",
+            "kinds={:?} max_depth={} (n={}, kernel={}): IR {:?} != reference_bracket_match {:?}",
             kinds, max_depth, kinds.len(),
             if max_depth >= kinds.len() as u32 { "parallel" } else { "bounded-stack" },
             got, want

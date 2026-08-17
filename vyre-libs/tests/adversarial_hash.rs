@@ -4,8 +4,12 @@
 #![cfg(feature = "hash")]
 
 use vyre_foundation::ir::DataType;
-use vyre_libs::hash::{crc32::*, fnv1a::*};
+use vyre_libs::hash::fnv1a::*;
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
+use vyre_reference::composition_witness::{
+    crc32_table_witness as build_table, crc32_witness as crc32, fnv1a32_witness as fnv1a32,
+    fnv1a64_witness as fnv1a64,
+};
 use vyre_reference::value::Value;
 
 fn eval_fnv1a32_u8(bytes: &[u8]) -> u32 {

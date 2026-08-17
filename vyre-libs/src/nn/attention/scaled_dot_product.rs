@@ -644,6 +644,10 @@ inventory::submit! {
     .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(4))
 }
 
+const EXPECTED_REFERENCE_ATTENTION_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0xC0, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0xC0, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         REFERENCE_OP_ID,
@@ -658,8 +662,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let pack = vyre_primitives::wire::pack_f32_slice;
-            vec![vec![pack(&[4.0, 6.0, 4.0, 6.0])]]
+            vec![vec![EXPECTED_REFERENCE_ATTENTION_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

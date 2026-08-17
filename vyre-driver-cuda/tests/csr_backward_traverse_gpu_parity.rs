@@ -7,9 +7,10 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::csr_backward_traverse::{
-    cpu_ref, csr_backward_traverse, csr_backward_traverse_dispatch_grid,
+    csr_backward_traverse, csr_backward_traverse_dispatch_grid,
 };
 use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_reference::composition_witness::csr_backward_traverse_witness;
 
 fn run(
     node_count: u32,
@@ -61,7 +62,7 @@ fn cuda_csr_backward_chain_one_step() {
     let edge_kind_mask = vec![1u32; 3];
     // frontier_in = {3}. Backward step → {2} (only src that points to 3).
     let frontier = vec![0b1000u32];
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         4,
         &edge_offsets,
         &edge_targets,
@@ -90,7 +91,7 @@ fn cuda_csr_backward_diamond_one_step() {
     let edge_kind_mask = vec![1u32; 4];
     // frontier_in = {3}. Backward → {1, 2}.
     let frontier = vec![0b1000u32];
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         4,
         &edge_offsets,
         &edge_targets,
@@ -118,7 +119,7 @@ fn cuda_csr_backward_kind_mask_filters() {
     let edge_kind_mask = vec![0b0010u32]; // kind bit 1
     let frontier = vec![0b10u32];
     // allow=0b0001 (kind 0)  -  edge filtered out, no backward step.
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         2,
         &edge_offsets,
         &edge_targets,
@@ -145,7 +146,7 @@ fn cuda_csr_backward_empty_frontier() {
     let edge_targets = vec![1u32, 2, 3];
     let edge_kind_mask = vec![1u32; 3];
     let frontier = vec![0u32];
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         4,
         &edge_offsets,
         &edge_targets,
@@ -179,7 +180,7 @@ fn cuda_csr_backward_reaches_source_past_first_workgroup() {
     let mut frontier = vec![0u32; words];
     frontier[512 / 32] |= 1u32 << (512 % 32);
 
-    let cpu = cpu_ref(
+    let cpu = csr_backward_traverse_witness(
         node_count,
         &edge_offsets,
         &edge_targets,

@@ -31,6 +31,7 @@
 //! (`scan_presence_by_region` + `scan` + `regex_admission_by_region_program`).
 //! Prefer those until a segmentation/occupancy redesign makes fusion pay.
 
+#[cfg(test)]
 use crate::pattern::CompiledDfa;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -42,7 +43,9 @@ use crate::pattern::classic_ac::bounded_ranges::{
 };
 #[cfg(test)]
 use crate::pattern::regex_anchored_window::canonicalize_leftmost_longest;
+#[cfg(test)]
 use crate::pattern::regex_anchored_window::AnchoredWindowValidator;
+#[cfg(test)]
 use crate::pattern::regex_region_admission::{regex_admission_presence_words, region_of};
 
 /// The three evidence families a fused launch produces, as a CPU value.
@@ -62,8 +65,9 @@ pub struct FusedRegionEvidence {
 /// CPU reference for the fused launch, the GPU parity oracle. Reuses
 /// [`AnchoredWindowValidator`] for the walk (ONE source of truth) and routes each
 /// extracted match into the three families by region and by role mask.
+#[cfg(test)]
 #[must_use]
-pub fn fused_region_evidence_reference(
+pub(crate) fn fused_region_evidence_reference(
     dfa: &CompiledDfa,
     haystack: &[u8],
     region_starts: &[u32],
@@ -293,11 +297,11 @@ mod tests {
     }
 
     /// The single fused PROGRAM, evaluated by the reference backend, must produce
-    /// all three families byte-identical to the CPU oracle, one launch, one
+    /// all three families byte-identical to the reference oracle, one launch, one
     /// walk, three evidence outputs.
     #[test]
-    fn fused_program_reference_eval_matches_cpu_oracle() {
-        let patterns = ["abc", "AKIA", "token", "bcd", "secret"];
+    fn fused_program_reference_eval_matches_reference_oracle() {
+        let patterns = ["abc", "AKIA", "secret", "token", "bcd"];
         let dfa = dfa_for(&patterns);
         let haystack = b"xx abc AKIA\nsecret token\nbcd abc\n";
         let region_starts = [0u32, 12, 25];

@@ -363,8 +363,16 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         while let Some(frame) = stack.pop() {
             match frame {
                 Frame::Child(node) => {
+                    let synthetic_root = self.next_node == 0
+                        && matches!(
+                            node,
+                            Node::Region { generator, .. }
+                                if generator.as_ref() == Program::ROOT_REGION_GENERATOR
+                        );
                     self.current_node = self.next_node;
-                    self.next_node = self.next_node.saturating_add(1);
+                    if !synthetic_root {
+                        self.next_node = self.next_node.saturating_add(1);
+                    }
                     let first_new_error = self.errors.len();
                     if dispatch_node(self, node).is_break() {
                         break;

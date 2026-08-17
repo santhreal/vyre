@@ -31,10 +31,6 @@ mod depth;
 mod intersect_step;
 mod program;
 
-
-
-
-
 mod registry;
 
 #[cfg(test)]

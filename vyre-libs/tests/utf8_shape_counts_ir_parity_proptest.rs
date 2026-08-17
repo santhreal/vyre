@@ -19,21 +19,8 @@ use vyre_reference::value::Value;
 
 use vyre_libs::text::utf8_shape_counts;
 
-/// Independent reference: saturating range sums matching the kernel's lead-byte classes.
 fn reference(hist: &[u32; 256]) -> (u32, u32) {
-    let continuation = hist[0x80..0xC0]
-        .iter()
-        .fold(0u32, |a, &c| a.saturating_add(c));
-    let mut expected = hist[0xC2..0xE0]
-        .iter()
-        .fold(0u32, |a, &c| a.saturating_add(c));
-    expected = hist[0xE0..0xF0]
-        .iter()
-        .fold(expected, |a, &c| a.saturating_add(c.saturating_mul(2)));
-    expected = hist[0xF0..0xF5]
-        .iter()
-        .fold(expected, |a, &c| a.saturating_add(c.saturating_mul(3)));
-    (continuation, expected)
+    vyre_reference::composition_witness::utf8_histogram_shape_counts_witness(hist)
 }
 
 fn run_ir(hist: &[u32; 256]) -> (u32, u32) {

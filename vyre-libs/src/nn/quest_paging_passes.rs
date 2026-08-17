@@ -219,6 +219,17 @@ pub fn quest_select_top_k(
     )
 }
 
+const EXPECTED_QUEST_ZERO_FILL_OUTPUT_BYTES: [u8; 16] = [0u8; 16];
+const EXPECTED_QUEST_SCORE_PAGES_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x3F,
+];
+const EXPECTED_QUEST_SELECT_TOP_K_BUF0_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0xBF, 0x00, 0x00, 0x00, 0x3F,
+];
+const EXPECTED_QUEST_SELECT_TOP_K_BUF1_BYTES: [u8; 16] = [
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         QUEST_ZERO_FILL_OP_ID,
@@ -226,9 +237,7 @@ inventory::submit! {
         Some(|| {
             vec![vec![vec![0xFF; 4 * 4]]]
         }),
-        Some(|| {
-            vec![vec![vec![0u8; 4 * 4]]]
-        }),
+        Some(|| vec![vec![EXPECTED_QUEST_ZERO_FILL_OUTPUT_BYTES.to_vec()]]),
     )
 }
 
@@ -244,10 +253,7 @@ inventory::submit! {
                 vec![0u8; 4 * 4],
             ]]
         }),
-        Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32_bytes(&[0.0, 1.0, 2.0, 0.5])]]
-        }),
+        Some(|| vec![vec![EXPECTED_QUEST_SCORE_PAGES_OUTPUT_BYTES.to_vec()]]),
     )
 }
 
@@ -264,11 +270,9 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            let to_u32_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
-                to_f32_bytes(&[0.0, 1.0, -1.0, 0.5]),
-                to_u32_bytes(&[2, 0, 0, 0]),
+                EXPECTED_QUEST_SELECT_TOP_K_BUF0_BYTES.to_vec(),
+                EXPECTED_QUEST_SELECT_TOP_K_BUF1_BYTES.to_vec(),
             ]]
         }),
     )

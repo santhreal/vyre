@@ -228,9 +228,8 @@ pub(crate) fn analyze_topology_legality(
                 let mut aggregate_live = 0_u64;
                 for &g in groups {
                     for node in candidate.group_members(g) {
-                        aggregate_live = aggregate_live.saturating_add(
-                            facts.node_live_values.get(node).copied().unwrap_or(0),
-                        );
+                        aggregate_live = aggregate_live
+                            .saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
                         for (_, bytes) in facts
                             .node_workgroup_scratch
                             .get(node)
@@ -244,16 +243,12 @@ pub(crate) fn analyze_topology_legality(
                 if device.registers_per_invocation() > 0
                     && aggregate_live > u64::from(device.registers_per_invocation())
                 {
-                    return TopologyDecision::Rejected(
-                        TopologyRejectionReason::OccupancyExceeded,
-                    );
+                    return TopologyDecision::Rejected(TopologyRejectionReason::OccupancyExceeded);
                 }
                 if device.shared_scratch_bytes_per_workgroup() > 0
                     && aggregate_scratch > u64::from(device.shared_scratch_bytes_per_workgroup())
                 {
-                    return TopologyDecision::Rejected(
-                        TopologyRejectionReason::OccupancyExceeded,
-                    );
+                    return TopologyDecision::Rejected(TopologyRejectionReason::OccupancyExceeded);
                 }
 
                 for i in 0..groups.len() {
@@ -454,8 +449,8 @@ mod tests {
     use vyre_test_support::pass_programs::copy_program;
 
     use super::*;
-    use crate::normalize::normalize;
     use crate::facts::derive as derive_planning_facts;
+    use crate::normalize::normalize;
     #[test]
     fn topology_variants_have_exhaustive_decisions() {
         let variants = [
@@ -516,7 +511,6 @@ mod tests {
         }
         assert_eq!(codes.len(), reasons.len());
     }
-
 
     fn invocation_contract() -> ValueContract {
         ValueContract {
@@ -595,10 +589,15 @@ mod tests {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
-        let candidate = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ConcurrentQueue { queues: 8 });
+        let candidate = CandidatePlan::baseline(2)
+            .with_topology(ExecutionTopology::ConcurrentQueue { queues: 8 });
         let device = test_device().with_concurrent_queues(4);
-        let decision = analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
-        assert_eq!(decision, TopologyDecision::Rejected(TopologyRejectionReason::InsufficientConcurrentQueues));
+        let decision =
+            analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
+        assert_eq!(
+            decision,
+            TopologyDecision::Rejected(TopologyRejectionReason::InsufficientConcurrentQueues)
+        );
     }
 
     #[test]
@@ -606,13 +605,18 @@ mod tests {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
-        let candidate = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
-            partitions: 16,
-            mode: ResidentPartitionMode::FixedSpatialMask,
-        });
+        let candidate =
+            CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
+                partitions: 16,
+                mode: ResidentPartitionMode::FixedSpatialMask,
+            });
         let device = test_device().with_compute_units(8);
-        let decision = analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
-        assert_eq!(decision, TopologyDecision::Rejected(TopologyRejectionReason::InsufficientComputeUnits));
+        let decision =
+            analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
+        assert_eq!(
+            decision,
+            TopologyDecision::Rejected(TopologyRejectionReason::InsufficientComputeUnits)
+        );
     }
 
     #[test]
@@ -620,13 +624,18 @@ mod tests {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
-        let candidate = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
-            partitions: 2,
-            mode: ResidentPartitionMode::FixedSpatialMask,
-        });
+        let candidate =
+            CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
+                partitions: 2,
+                mode: ResidentPartitionMode::FixedSpatialMask,
+            });
         let device = test_device().with_spatial_partitioning(false);
-        let decision = analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
-        assert_eq!(decision, TopologyDecision::Rejected(TopologyRejectionReason::UnenforceableSpatialMasking));
+        let decision =
+            analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
+        assert_eq!(
+            decision,
+            TopologyDecision::Rejected(TopologyRejectionReason::UnenforceableSpatialMasking)
+        );
     }
 
     #[test]
@@ -634,13 +643,18 @@ mod tests {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
-        let candidate = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
-            partitions: 2,
-            mode: ResidentPartitionMode::BoundedWorkQueue,
-        });
+        let candidate =
+            CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
+                partitions: 2,
+                mode: ResidentPartitionMode::BoundedWorkQueue,
+            });
         let device = test_device().with_cooperative_launch(false);
-        let decision = analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
-        assert_eq!(decision, TopologyDecision::Rejected(TopologyRejectionReason::RequiresCooperativeLaunch));
+        let decision =
+            analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, device);
+        assert_eq!(
+            decision,
+            TopologyDecision::Rejected(TopologyRejectionReason::RequiresCooperativeLaunch)
+        );
     }
 
     #[test]
@@ -655,15 +669,28 @@ mod tests {
             workgroup_width: None,
             topology: ExecutionTopology::ConcurrentQueue { queues: 2 },
         };
-        let decision = analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, test_device());
-        assert_eq!(decision, TopologyDecision::Rejected(TopologyRejectionReason::NoIndependentConcurrency));
+        let decision = analyze_topology_legality(
+            &candidate,
+            &graph,
+            &facts,
+            &norm.dependencies,
+            test_device(),
+        );
+        assert_eq!(
+            decision,
+            TopologyDecision::Rejected(TopologyRejectionReason::NoIndependentConcurrency)
+        );
     }
 
     #[test]
     fn test_grid_sync_in_arm_rejects_control_dependency_or_effect() {
         let mut graph = ProgramGraph::new();
-        let in_a = graph.add_external_value("in_a", invocation_contract()).unwrap();
-        let in_b = graph.add_external_value("in_b", invocation_contract()).unwrap();
+        let in_a = graph
+            .add_external_value("in_a", invocation_contract())
+            .unwrap();
+        let in_b = graph
+            .add_external_value("in_b", invocation_contract())
+            .unwrap();
         let prog_with_fence = Program::wrapped(
             vec![
                 BufferDecl::read_write("in_a", 0, DataType::U32),
@@ -674,54 +701,72 @@ mod tests {
                 ordering: MemoryOrdering::GridSync,
             }],
         );
-        graph.add_node(
-            "arm_a",
-            prog_with_fence,
-            vec![GraphInput {
-                buffer: "in_a".into(),
-                value: in_a,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out_a".into(),
-                name: "out_a".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        ).unwrap();
-        graph.add_node(
-            "arm_b",
-            copy_program("in_b", "out_b"),
-            vec![GraphInput {
-                buffer: "in_b".into(),
-                value: in_b,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out_b".into(),
-                name: "out_b".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        ).unwrap();
+        graph
+            .add_node(
+                "arm_a",
+                prog_with_fence,
+                vec![GraphInput {
+                    buffer: "in_a".into(),
+                    value: in_a,
+                    contract: invocation_contract(),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_a".into(),
+                    name: "out_a".into(),
+                    contract: ValueContract {
+                        lifetime: ValueLifetime::Output,
+                        ..invocation_contract()
+                    },
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
+        graph
+            .add_node(
+                "arm_b",
+                copy_program("in_b", "out_b"),
+                vec![GraphInput {
+                    buffer: "in_b".into(),
+                    value: in_b,
+                    contract: invocation_contract(),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_b".into(),
+                    name: "out_b".into(),
+                    contract: ValueContract {
+                        lifetime: ValueLifetime::Output,
+                        ..invocation_contract()
+                    },
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
-        let candidate = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ConcurrentQueue { queues: 2 });
-        let decision = analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, test_device());
-        assert_eq!(decision, TopologyDecision::Rejected(TopologyRejectionReason::ControlDependencyOrEffect));
+        let candidate = CandidatePlan::baseline(2)
+            .with_topology(ExecutionTopology::ConcurrentQueue { queues: 2 });
+        let decision = analyze_topology_legality(
+            &candidate,
+            &graph,
+            &facts,
+            &norm.dependencies,
+            test_device(),
+        );
+        assert_eq!(
+            decision,
+            TopologyDecision::Rejected(TopologyRejectionReason::ControlDependencyOrEffect)
+        );
     }
 
     #[test]
     fn test_occupancy_exceeded() {
         let mut graph = ProgramGraph::new();
-        let in_a = graph.add_external_value("in_a", invocation_contract()).unwrap();
-        let in_b = graph.add_external_value("in_b", invocation_contract()).unwrap();
+        let in_a = graph
+            .add_external_value("in_a", invocation_contract())
+            .unwrap();
+        let in_b = graph
+            .add_external_value("in_b", invocation_contract())
+            .unwrap();
         let prog_with_scratch = Program::wrapped(
             vec![
                 BufferDecl::read_write("in_a", 0, DataType::U32),
@@ -729,53 +774,71 @@ mod tests {
                 BufferDecl::workgroup("scratch", 2048, DataType::U32),
             ],
             [32, 1, 1],
-            vec![Node::store("out_a", Expr::u32(0), Expr::load("in_a", Expr::u32(0)))],
+            vec![Node::store(
+                "out_a",
+                Expr::u32(0),
+                Expr::load("in_a", Expr::u32(0)),
+            )],
         );
-        graph.add_node(
-            "arm_a",
-            prog_with_scratch,
-            vec![GraphInput {
-                buffer: "in_a".into(),
-                value: in_a,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out_a".into(),
-                name: "out_a".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        ).unwrap();
-        graph.add_node(
-            "arm_b",
-            copy_program("in_b", "out_b"),
-            vec![GraphInput {
-                buffer: "in_b".into(),
-                value: in_b,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out_b".into(),
-                name: "out_b".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        ).unwrap();
+        graph
+            .add_node(
+                "arm_a",
+                prog_with_scratch,
+                vec![GraphInput {
+                    buffer: "in_a".into(),
+                    value: in_a,
+                    contract: invocation_contract(),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_a".into(),
+                    name: "out_a".into(),
+                    contract: ValueContract {
+                        lifetime: ValueLifetime::Output,
+                        ..invocation_contract()
+                    },
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
+        graph
+            .add_node(
+                "arm_b",
+                copy_program("in_b", "out_b"),
+                vec![GraphInput {
+                    buffer: "in_b".into(),
+                    value: in_b,
+                    contract: invocation_contract(),
+                }],
+                vec![GraphOutput {
+                    buffer: "out_b".into(),
+                    name: "out_b".into(),
+                    contract: ValueContract {
+                        lifetime: ValueLifetime::Output,
+                        ..invocation_contract()
+                    },
+                    retained_successor_of: None,
+                }],
+            )
+            .unwrap();
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
-        let candidate = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
-            partitions: 2,
-            mode: ResidentPartitionMode::FixedSpatialMask,
-        });
+        let candidate =
+            CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
+                partitions: 2,
+                mode: ResidentPartitionMode::FixedSpatialMask,
+            });
         let tiny_scratch_device = test_device().with_occupancy(128, 1024);
-        let decision = analyze_topology_legality(&candidate, &graph, &facts, &norm.dependencies, tiny_scratch_device);
-        assert_eq!(decision, TopologyDecision::Rejected(TopologyRejectionReason::OccupancyExceeded));
+        let decision = analyze_topology_legality(
+            &candidate,
+            &graph,
+            &facts,
+            &norm.dependencies,
+            tiny_scratch_device,
+        );
+        assert_eq!(
+            decision,
+            TopologyDecision::Rejected(TopologyRejectionReason::OccupancyExceeded)
+        );
     }
 
     #[test]
@@ -783,15 +846,29 @@ mod tests {
         let graph = independent_two_arm_graph();
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
-        let candidate_cq = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ConcurrentQueue { queues: 2 });
-        let decision_cq = analyze_topology_legality(&candidate_cq, &graph, &facts, &norm.dependencies, test_device());
+        let candidate_cq = CandidatePlan::baseline(2)
+            .with_topology(ExecutionTopology::ConcurrentQueue { queues: 2 });
+        let decision_cq = analyze_topology_legality(
+            &candidate_cq,
+            &graph,
+            &facts,
+            &norm.dependencies,
+            test_device(),
+        );
         assert_eq!(decision_cq, TopologyDecision::Legal);
 
-        let candidate_sp = CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
-            partitions: 2,
-            mode: ResidentPartitionMode::FixedSpatialMask,
-        });
-        let decision_sp = analyze_topology_legality(&candidate_sp, &graph, &facts, &norm.dependencies, test_device());
+        let candidate_sp =
+            CandidatePlan::baseline(2).with_topology(ExecutionTopology::ResidentPartition {
+                partitions: 2,
+                mode: ResidentPartitionMode::FixedSpatialMask,
+            });
+        let decision_sp = analyze_topology_legality(
+            &candidate_sp,
+            &graph,
+            &facts,
+            &norm.dependencies,
+            test_device(),
+        );
         assert_eq!(decision_sp, TopologyDecision::Legal);
     }
 }

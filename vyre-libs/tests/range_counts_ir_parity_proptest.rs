@@ -14,7 +14,7 @@ use proptest::prelude::*;
 use vyre_reference::value::Value;
 
 use vyre_libs::reduce::range_counts::range_counts_u32;
-fn cpu_ref(input: &[u32], lo: u32, hi: u32) -> u32 { input.iter().filter(|&&x| x >= lo && x < hi).count() as u32 }
+use vyre_reference::composition_witness::range_counts_witness as cpu_ref;
 
 const BINS: usize = 256;
 

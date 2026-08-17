@@ -1,5 +1,8 @@
 //! Compact device-side diagnostic aggregation contracts.
 
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
 /// Byte layout for one compact diagnostic record emitted by device aggregation.
 pub const COMPACT_DIAGNOSTIC_RECORD_BYTES: usize = 24;
 
@@ -89,6 +92,47 @@ pub fn plan_compact_diagnostic_readback(
     })
 }
 
+/// Canonical op id for compact diagnostic aggregation.
+pub const OP_ID: &str = "vyre-libs::analysis::compact_diagnostic_aggregation";
+
+/// Build a Program for compact diagnostic aggregation readback.
+pub fn compact_diagnostic_aggregation_program(
+    diagnostics_in: &str,
+    compact_out: &str,
+    input_items: u32,
+    max_records: u32,
+    raw_record_bytes_per_item: usize,
+) -> Result<Program, DiagnosticAggregationError> {
+    let plan = plan_compact_diagnostic_readback(
+        input_items,
+        max_records,
+        max_records,
+        raw_record_bytes_per_item,
+    )?;
+    let t = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::store(
+        compact_out,
+        t.clone(),
+        Expr::load(diagnostics_in, t.clone()),
+    )];
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(diagnostics_in, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(plan.input_items),
+            BufferDecl::storage(compact_out, 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(plan.max_records),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(
+                Expr::lt(t, Expr::u32(plan.max_records)),
+                body,
+            )],
+        )],
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,5 +170,12 @@ mod tests {
                 max_records: 8,
             }
         );
+    }
+
+    #[test]
+    fn compact_diagnostic_aggregation_program_builds_valid_ir() {
+        let program = compact_diagnostic_aggregation_program("diag_in", "compact_out", 100, 10, 16)
+            .expect("Fix: valid diagnostic aggregation program must build");
+        assert_eq!(program.buffers().len(), 2);
     }
 }

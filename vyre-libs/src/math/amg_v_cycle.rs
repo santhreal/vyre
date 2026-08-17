@@ -295,14 +295,6 @@ pub fn amg_v_cycle(
     )
 }
 
-
-
-
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -324,13 +316,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
             vec![vec![
-                to_bytes(&[0; 4]), // x
-                to_bytes(&[0; 4]), // sf
-                to_bytes(&[0; 2]), // scb
-                to_bytes(&[0; 2]), // scx
-                to_bytes(&[0; 2]), // temp_coarse
+                vec![0u8; 16], // x (4 u32 words)
+                vec![0u8; 16], // sf (4 u32 words)
+                vec![0u8; 8],  // scb (2 u32 words)
+                vec![0u8; 8],  // scx (2 u32 words)
+                vec![0u8; 8],  // temp_coarse (2 u32 words)
             ]]
         }),
     )
@@ -359,8 +350,7 @@ inventory::submit! {
             vec![vec![to_bytes(&[9]), to_bytes(&[0])]]
         }),
         Some(|| {
-            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
-            vec![vec![to_bytes(&[9])]]
+            vec![vec![vec![0x09, 0x00, 0x00, 0x00]]]
         }),
     )
 }
@@ -368,6 +358,87 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Default, Clone)]
+    struct AmgVcycleScratch {
+        inner: vyre_reference::composition_witness::AmgVcycleScratchWitness,
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_cpu_ref_into(
+        a: &[f64],
+        b: &[f64],
+        x: &[f64],
+        r_mat: &[f64],
+        p_mat: &[f64],
+        a_c: &[f64],
+        omega: f64,
+        n_fine: u32,
+        n_coarse: u32,
+        scratch: &mut AmgVcycleScratch,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        vyre_reference::composition_witness::try_amg_v_cycle_witness_with_scratch_into(
+            a,
+            b,
+            x,
+            r_mat,
+            p_mat,
+            a_c,
+            omega,
+            n_fine,
+            n_coarse,
+            &mut scratch.inner,
+            out,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_cpu_ref(
+        a: &[f64],
+        b: &[f64],
+        x: &[f64],
+        r_mat: &[f64],
+        p_mat: &[f64],
+        a_c: &[f64],
+        omega: f64,
+        n_fine: u32,
+        n_coarse: u32,
+    ) -> Result<Vec<f64>, String> {
+        let mut scratch = AmgVcycleScratch::default();
+        let mut out = Vec::new();
+        try_cpu_ref_into(
+            a,
+            b,
+            x,
+            r_mat,
+            p_mat,
+            a_c,
+            omega,
+            n_fine,
+            n_coarse,
+            &mut scratch,
+            &mut out,
+        )?;
+        Ok(out)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn cpu_ref(
+        a: &[f64],
+        b: &[f64],
+        x: &[f64],
+        r_mat: &[f64],
+        p_mat: &[f64],
+        a_c: &[f64],
+        omega: f64,
+        n_fine: u32,
+        n_coarse: u32,
+    ) -> Vec<f64> {
+        vyre_reference::composition_witness::amg_v_cycle_witness(
+            a, b, x, r_mat, p_mat, a_c, omega, n_fine, n_coarse,
+        )
+    }
 
     #[test]
     fn cpu_ref_identity_holds() {
@@ -418,7 +489,7 @@ mod tests {
         )
         .unwrap();
         let out_ptr = out.as_ptr();
-        let residual_ptr = scratch.residual.as_ptr();
+        let residual_ptr = scratch.inner.residual.as_ptr();
         let first = out.clone();
         out.extend([99.0; 4]);
         try_cpu_ref_into(
@@ -438,7 +509,7 @@ mod tests {
 
         assert_eq!(out, first);
         assert_eq!(out.as_ptr(), out_ptr);
-        assert_eq!(scratch.residual.as_ptr(), residual_ptr);
+        assert_eq!(scratch.inner.residual.as_ptr(), residual_ptr);
     }
 
     #[test]

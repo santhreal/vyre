@@ -17,6 +17,9 @@
 #![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
+use vyre_reference::composition_witness::{
+    bitset_clear_bit_witness, bitset_set_bit_witness, bitset_zero_witness,
+};
 use vyre_reference::value::Value;
 
 use vyre_libs::bitset::{clear_bit, set_bit, zero};
@@ -45,8 +48,7 @@ proptest! {
             .expect("bitset_zero reference evaluation must succeed");
         let got = decode(&outputs);
 
-        let mut want = target.clone();
-        zero::cpu_ref(&mut want);
+        let want = bitset_zero_witness(&target);
         prop_assert_eq!(&got, &want);
         prop_assert!(got.iter().all(|&w| w == 0), "zero must clear all words: {:?}", got);
     }
@@ -65,8 +67,7 @@ proptest! {
             .expect("bitset_set_bit reference evaluation must succeed");
         let got = decode(&outputs);
 
-        let mut want = target.clone();
-        set_bit::cpu_ref(&mut want, bit_idx);
+        let want = bitset_set_bit_witness(&target, bit_idx);
         prop_assert_eq!(&got, &want, "words={} bit_idx={}", words, bit_idx);
     }
 
@@ -82,8 +83,7 @@ proptest! {
             .expect("bitset_clear_bit reference evaluation must succeed");
         let got = decode(&outputs);
 
-        let mut want = target.clone();
-        clear_bit::cpu_ref(&mut want, bit_idx);
+        let want = bitset_clear_bit_witness(&target, bit_idx);
         prop_assert_eq!(&got, &want, "words={} bit_idx={}", words, bit_idx);
     }
 }
@@ -100,8 +100,7 @@ fn bitset_scalar_ir_word_seam_boundaries() {
         let got = decode(
             &vyre_reference::reference_eval(&program, &[pack(&base)]).expect("set_bit eval"),
         );
-        let mut want = base.clone();
-        set_bit::cpu_ref(&mut want, bit_idx);
+        let want = bitset_set_bit_witness(&base, bit_idx);
         assert_eq!(got, want, "set_bit seam bit_idx={bit_idx}");
 
         // clear_bit
@@ -109,8 +108,7 @@ fn bitset_scalar_ir_word_seam_boundaries() {
         let got = decode(
             &vyre_reference::reference_eval(&program, &[pack(&base)]).expect("clear_bit eval"),
         );
-        let mut want = base.clone();
-        clear_bit::cpu_ref(&mut want, bit_idx);
+        let want = bitset_clear_bit_witness(&base, bit_idx);
         assert_eq!(got, want, "clear_bit seam bit_idx={bit_idx}");
     }
 }

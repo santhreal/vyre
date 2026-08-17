@@ -110,15 +110,75 @@ pub fn sos_gram_construct(
     )
 }
 
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        sos_gram_construct_witness, sos_gram_construct_witness_into,
+    };
+
+    fn try_sos_gram_construct_cpu_into(
+        pairs: &[u32],
+        coeffs: &[u32],
+        m: u32,
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        sos_gram_construct_witness_into(pairs, coeffs, m, out);
+        Ok(())
+    }
+
+    fn sos_gram_construct_cpu_into(pairs: &[u32], coeffs: &[u32], m: u32, out: &mut Vec<u32>) {
+        try_sos_gram_construct_cpu_into(pairs, coeffs, m, out).unwrap();
+    }
+
+    fn sos_gram_construct_cpu(pairs: &[u32], coeffs: &[u32], m: u32) -> Vec<u32> {
+        sos_gram_construct_witness(pairs, coeffs, m)
+    }
+
+    fn is_psd_cpu(matrix: &[f64], n: u32) -> bool {
+        let n = n as usize;
+        if matrix.len() < n * n {
+            return false;
+        }
+        let mut a = vec![0.0f64; n * n];
+        for i in 0..n * n {
+            a[i] = matrix[i];
+        }
+        for i in 0..n {
+            for j in i + 1..n {
+                if (a[i * n + j] - a[j * n + i]).abs() > 1e-6 {
+                    return false;
+                }
+            }
+        }
+        let mut l = vec![0.0f64; n * n];
+        for i in 0..n {
+            for j in 0..=i {
+                let mut sum = 0.0;
+                for k in 0..j {
+                    sum += l[i * n + k] * l[j * n + k];
+                }
+                if i == j {
+                    let val = a[i * n + i] - sum;
+                    if val < -1e-9 {
+                        return false;
+                    }
+                    l[i * n + j] = val.max(0.0).sqrt();
+                } else {
+                    let diag = l[j * n + j];
+                    if diag <= 1e-12 {
+                        if (a[i * n + j] - sum).abs() > 1e-9 {
+                            return false;
+                        }
+                        l[i * n + j] = 0.0;
+                    } else {
+                        l[i * n + j] = (a[i * n + j] - sum) / diag;
+                    }
+                }
+            }
+        }
+        true
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

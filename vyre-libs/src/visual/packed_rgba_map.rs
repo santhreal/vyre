@@ -43,6 +43,10 @@ pub fn packed_rgba_map(input: &str, output: &str, count: u32) -> Program {
     )
 }
 
+const EXPECTED_PACKED_RGBA_MAP_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0xFF, 0xFF,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -53,9 +57,7 @@ inventory::submit! {
             vec![vec![bytes, vec![0; 16]]]
         }),
         Some(|| {
-            let pixels = [0xFF00_0000u32, 0xFF00_00FF, 0xFF00_FF00, 0xFFFF_0000];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&pixels);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_PACKED_RGBA_MAP_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

@@ -16,10 +16,12 @@
 #![cfg(feature = "math")]
 
 use proptest::prelude::*;
-use vyre_libs::math::bigint_add_carry::{
-    bigint_add_carry, bigint_add_carry_cpu, resolve_carry_chain_cpu,
-};
+use vyre_libs::math::bigint_add_carry::bigint_add_carry;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::{
+    bigint_add_carry_witness as bigint_add_carry_cpu,
+    resolve_bigint_carry_chain_witness as resolve_carry_chain_cpu,
+};
 use vyre_reference::value::Value;
 
 /// Drive the real IR and return `(sum_partial, carry_partial)`. Buffer binding

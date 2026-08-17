@@ -56,6 +56,8 @@ macro_rules! define_unary_u32_hardware_intrinsic {
         $expr:path,
         $cpu_map:expr,
         $fixture:expr,
+        $expected:expr,
+        $expected_bytes:expr,
         $seed:expr,
         $one_case:expr,
         $max_case:expr
@@ -71,12 +73,6 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             crate::hardware::unary_u32_program(OP_ID, input, out, n, $expr)
         }
 
-        fn cpu_ref(input: &[u32]) -> Vec<u8> {
-            let map_lane = $cpu_map;
-            let output: Vec<u32> = input.iter().copied().map(map_lane).collect();
-            crate::wire::pack_u32_slice(&output)
-        }
-
         fn fixture_input() -> Vec<u32> {
             $fixture.to_vec()
         }
@@ -87,10 +83,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             vec![vec![crate::wire::pack_u32_slice(&input), vec![0u8; len]]]
         }
 
-        fn expected_output() -> Vec<Vec<Vec<u8>>> {
-            let input = fixture_input();
-            vec![vec![cpu_ref(&input)]]
-        }
+        const EXPECTED_REGISTRATION_BYTES: &[u8] = $expected_bytes;
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::intrinsic(
@@ -98,7 +91,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
                 crate::hardware::catalog::U32_UNARY_SIGNATURE,
                 Some(|| $function("input", "out", 4)),
                 Some(test_inputs),
-                Some(expected_output),
+                Some(|| vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]),
             )
             .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE)
             .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
@@ -122,6 +115,12 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             use crate::hardware::{lcg_u32, run_program};
             use crate::wire::pack_u32_slice as pack_u32;
 
+            fn test_cpu_ref(input: &[u32]) -> Vec<u8> {
+                let map_lane = $cpu_map;
+                let output: Vec<u32> = input.iter().copied().map(map_lane).collect();
+                crate::wire::pack_u32_slice(&output)
+            }
+
             fn assert_case(input: &[u32]) {
                 let n = input.len() as u32;
                 let program = $function("input", "out", n.max(1));
@@ -129,7 +128,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
                     &program,
                     vec![pack_u32(input), vec![0u8; (n.max(1) * 4) as usize]],
                 );
-                assert_eq!(outputs, vec![cpu_ref(input)]);
+                assert_eq!(outputs, vec![test_cpu_ref(input)]);
             }
 
             #[test]
@@ -147,6 +146,14 @@ macro_rules! define_unary_u32_hardware_intrinsic {
                 let input = lcg_u32($seed, 64);
                 assert_case(&input);
             }
+
+            #[test]
+            fn registration_fixture_matches_exact_byte_constant() {
+                assert_eq!(
+                    EXPECTED_REGISTRATION_BYTES,
+                    test_cpu_ref($fixture).as_slice()
+                );
+            }
         }
     };
 }
@@ -156,6 +163,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
         $function:ident,
         $op_id:literal,
         $fixture:expr,
+        $fixture_bytes:expr,
         $seed:expr,
         $one_case:expr
     ) => {
@@ -170,10 +178,6 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             crate::hardware::barrier_identity_u32_program(OP_ID, input, out, n)
         }
 
-        fn cpu_ref(input: &[u32]) -> Vec<u8> {
-            crate::wire::pack_u32_slice(input)
-        }
-
         fn fixture_input() -> Vec<u32> {
             $fixture.to_vec()
         }
@@ -184,10 +188,8 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             vec![vec![crate::wire::pack_u32_slice(&input), vec![0u8; len]]]
         }
 
-        fn expected_output() -> Vec<Vec<Vec<u8>>> {
-            let input = fixture_input();
-            vec![vec![cpu_ref(&input)]]
-        }
+        const EXPECTED_REGISTRATION_BYTES: &[u8] = $fixture_bytes;
+
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::intrinsic(
@@ -195,7 +197,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
                 crate::hardware::catalog::U32_UNARY_SIGNATURE,
                 Some(|| $function("input", "out", 4)),
                 Some(test_inputs),
-                Some(expected_output),
+                Some(|| vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]),
             )
             .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
             .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
@@ -226,7 +228,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
                     &program,
                     vec![pack_u32(input), vec![0u8; (n.max(1) * 4) as usize]],
                 );
-                assert_eq!(outputs, vec![cpu_ref(input)]);
+                assert_eq!(outputs, vec![pack_u32(input)]);
             }
 
             #[test]
@@ -238,6 +240,14 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             fn random_sixty_four() {
                 let input = lcg_u32($seed, 64);
                 assert_case(&input);
+            }
+
+            #[test]
+            fn registration_fixture_matches_exact_byte_constant() {
+                assert_eq!(
+                    EXPECTED_REGISTRATION_BYTES,
+                    pack_u32($fixture).as_slice()
+                );
             }
         }
     };

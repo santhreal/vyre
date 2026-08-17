@@ -120,12 +120,6 @@ pub fn softmax_step(pre_exp: &str, out: &str, n: u32) -> Program {
     )
 }
 
-
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -139,7 +133,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[16_384; 4])]]
+            vec![vec![vec![
+                0x00, 0x40, 0x00, 0x00, // 16_384
+                0x00, 0x40, 0x00, 0x00,
+                0x00, 0x40, 0x00, 0x00,
+                0x00, 0x40, 0x00, 0x00,
+            ]]]
         }),
     )
 }
@@ -147,6 +146,24 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        differentiable_argmax_witness as differentiable_argmax_cpu,
+        differentiable_argmax_witness_into, softmax_witness as softmax_cpu, softmax_witness_into,
+    };
+
+    fn try_softmax_cpu_into(x: &[f64], out: &mut Vec<f64>) -> Result<(), String> {
+        softmax_witness_into(x, out);
+        Ok(())
+    }
+
+    fn differentiable_argmax_cpu_into(
+        x: &[f64],
+        temperature: f64,
+        scaled: &mut Vec<f64>,
+        out: &mut Vec<f64>,
+    ) {
+        differentiable_argmax_witness_into(x, temperature, scaled, out);
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

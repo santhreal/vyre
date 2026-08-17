@@ -351,7 +351,11 @@ pub(crate) use vyre_primitives::wire::pack_f32_slice as f32_bytes;
 /// Pack little-endian `i32` lanes into the byte buffers expected by CUDA dispatch.
 pub(crate) use vyre_primitives::wire::pack_i32_slice as i32_bytes;
 /// Pack little-endian `u16` lanes into the byte buffers expected by CUDA dispatch.
-pub(crate) use vyre_primitives::wire::pack_u16_slice as u16_bytes;
+pub(crate) fn u16_bytes(values: &[u16]) -> Vec<u8> {
+    let mut out = Vec::new();
+    vyre_primitives::wire::pack_u16_slice_into(values, &mut out);
+    out
+}
 /// Pack little-endian `u32` lanes into the byte buffers expected by CUDA dispatch.
 pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
 

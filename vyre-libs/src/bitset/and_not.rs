@@ -22,8 +22,7 @@ pub fn bitset_and_not(lhs: &str, rhs: &str, out: &str, words: u32) -> Program {
     binary_word_program(OP_ID, lhs, rhs, out, words, BitwiseBinaryOp::AndNot)
 }
 
-
-
+const EXPECTED_AND_NOT_OUTPUT_BYTES: [u8; 8] = [0x00, 0x0F, 0x00, 0x00, 0xAA, 0xAA, 0xAA, 0xAA];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -38,41 +37,47 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
-            vec![vec![to_bytes(&[0x0F00, 0xAAAA_AAAA])]]
+            vec![vec![EXPECTED_AND_NOT_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
-        let len = lhs.len().min(rhs.len());
-        lhs[..len].iter().zip(&rhs[..len]).map(|(&a, &b)| a & !b).collect()
-    }
-    fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
-        *out = cpu_ref(lhs, rhs);
-    }
-    fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<(), ()> {
-        cpu_ref_into(lhs, rhs, out);
+    use vyre_reference::composition_witness::{
+        bitset_and_not_witness as reference_bitset_and_not,
+        bitset_and_not_witness_into as reference_bitset_and_not_into,
+    };
+
+    fn try_reference_bitset_and_not_into(
+        lhs: &[u32],
+        rhs: &[u32],
+        out: &mut Vec<u32>,
+    ) -> Result<(), ()> {
+        reference_bitset_and_not_into(lhs, rhs, out);
         Ok(())
     }
 
     #[test]
     fn per_word_and_not() {
         // 0xFF00 with 0xF0F0 removed = 0x0F00.
-        assert_eq!(cpu_ref(&[0xFF00], &[0xF0F0]), vec![0x0F00]);
+        assert_eq!(reference_bitset_and_not(&[0xFF00], &[0xF0F0]), vec![0x0F00]);
     }
 
     #[test]
     fn empty_rhs_passes_lhs_through() {
-        assert_eq!(cpu_ref(&[0xDEAD_BEEF], &[0]), vec![0xDEAD_BEEF]);
+        assert_eq!(
+            reference_bitset_and_not(&[0xDEAD_BEEF], &[0]),
+            vec![0xDEAD_BEEF]
+        );
     }
 
     #[test]
     fn full_rhs_zeros_output() {
-        assert_eq!(cpu_ref(&[0xDEAD_BEEF], &[0xFFFF_FFFF]), vec![0]);
+        assert_eq!(
+            reference_bitset_and_not(&[0xDEAD_BEEF], &[0xFFFF_FFFF]),
+            vec![0]
+        );
     }
 
     #[test]
@@ -80,7 +85,7 @@ mod tests {
         let lhs = [0xFFFF_FFFF, 0x0F0F_0F0F, 0xAAAA_AAAA];
         let rhs = [0x0000_FFFF, 0xF0F0_F0F0, 0x5555_5555];
         let want = [0xFFFF_0000, 0x0F0F_0F0F, 0xAAAA_AAAA];
-        assert_eq!(cpu_ref(&lhs, &rhs), want);
+        assert_eq!(reference_bitset_and_not(&lhs, &rhs), want);
     }
 
     // ------------------------------------------------------------------
@@ -89,14 +94,14 @@ mod tests {
 
     #[test]
     fn empty_bitset() {
-        assert_eq!(cpu_ref(&[], &[]), Vec::<u32>::new());
+        assert_eq!(reference_bitset_and_not(&[], &[]), Vec::<u32>::new());
     }
 
     #[test]
     fn single_word_all_bits() {
         let lhs = vec![0xFFFF_FFFF];
         let rhs = vec![0x0000_FFFF];
-        assert_eq!(cpu_ref(&lhs, &rhs), vec![0xFFFF_0000]);
+        assert_eq!(reference_bitset_and_not(&lhs, &rhs), vec![0xFFFF_0000]);
     }
 
     #[test]
@@ -106,11 +111,11 @@ mod tests {
         let mut compat = Vec::with_capacity(4);
         let mut fallible = Vec::with_capacity(4);
 
-        cpu_ref_into(&lhs, &rhs, &mut compat);
-        try_cpu_ref_into(&lhs, &rhs, &mut fallible)
-            .expect("Fix: small bitset_and_not CPU oracle must reserve");
+        reference_bitset_and_not_into(&lhs, &rhs, &mut compat);
+        try_reference_bitset_and_not_into(&lhs, &rhs, &mut fallible)
+            .expect("Fix: small bitset_and_not reference witness must reserve");
 
-        assert_eq!(cpu_ref(&lhs, &rhs), fallible);
+        assert_eq!(reference_bitset_and_not(&lhs, &rhs), fallible);
         assert_eq!(compat, fallible);
     }
 
@@ -119,31 +124,34 @@ mod tests {
         // Word 0 bit 31 and word 1 bit 0 are adjacent nodes.
         let lhs = vec![0x8000_0000, 0x0000_0001];
         let rhs = vec![0x0000_0000, 0x0000_0000];
-        assert_eq!(cpu_ref(&lhs, &rhs), vec![0x8000_0000, 0x0000_0001]);
+        assert_eq!(
+            reference_bitset_and_not(&lhs, &rhs),
+            vec![0x8000_0000, 0x0000_0001]
+        );
     }
 
     #[test]
     fn a_eq_b_produces_all_zeros() {
         let a = vec![0xDEAD_BEEF, 0x0F0F_0F0F];
-        assert_eq!(cpu_ref(&a, &a), vec![0, 0]);
+        assert_eq!(reference_bitset_and_not(&a, &a), vec![0, 0]);
     }
 
     #[test]
     fn b_all_ones_produces_zeros() {
         let lhs = vec![0xFFFF_FFFF, 0xFFFF_FFFF];
         let rhs = vec![0xFFFF_FFFF, 0xFFFF_FFFF];
-        assert_eq!(cpu_ref(&lhs, &rhs), vec![0, 0]);
+        assert_eq!(reference_bitset_and_not(&lhs, &rhs), vec![0, 0]);
     }
 
     #[test]
-    fn cpu_ref_into_truncates_stale_tail_without_reallocating() {
+    fn reference_bitset_and_not_into_truncates_stale_tail_without_reallocating() {
         let lhs = vec![0xFFFF_FFFF, 0x0F0F_0F0F];
         let rhs = vec![0x0000_FFFF, 0xF0F0_F0F0];
         let mut out = Vec::with_capacity(8);
         out.extend([0xDEAD_BEEF; 8]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(&lhs, &rhs, &mut out).unwrap();
+        try_reference_bitset_and_not_into(&lhs, &rhs, &mut out).unwrap();
 
         assert_eq!(out, vec![0xFFFF_0000, 0x0F0F_0F0F]);
         assert_eq!(out.as_ptr(), ptr);
@@ -161,7 +169,7 @@ mod tests {
                 .collect();
             let mut out = Vec::with_capacity(lhs_len.min(rhs_len) + 3);
 
-            try_cpu_ref_into(&lhs, &rhs, &mut out).unwrap();
+            try_reference_bitset_and_not_into(&lhs, &rhs, &mut out).unwrap();
 
             assert_eq!(
                 out,

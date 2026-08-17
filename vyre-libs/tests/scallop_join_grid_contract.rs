@@ -21,14 +21,34 @@
 //!    cannot be cut at all.
 #![cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 
+use vyre_foundation::ir::{MemoryOrdering, Node};
 use vyre_foundation::transform::grid_sync_split::{
     contains_grid_sync, entry_sequence, loop_nested_grid_sync, split_on_grid_sync,
 };
-use vyre_libs::fixpoint::persistent_fixpoint::count_grid_sync;
 use vyre_libs::math::scallop_join::{
-    cpu_ref, scallop_join, scallop_join_dispatch_grid, SCALLOP_JOIN_WORKGROUP_SIZE,
+    scallop_join, scallop_join_dispatch_grid, SCALLOP_JOIN_WORKGROUP_SIZE,
 };
+use vyre_reference::composition_witness::scallop_join_fixpoint_witness as cpu_ref;
 use vyre_reference::value::Value;
+
+fn count_grid_sync(nodes: &[Node]) -> usize {
+    let mut total = 0;
+    let mut stack: Vec<&Node> = nodes.iter().collect();
+    while let Some(node) = stack.pop() {
+        if matches!(
+            node,
+            Node::Barrier {
+                ordering: MemoryOrdering::GridSync
+            }
+        ) {
+            total += 1;
+        }
+        for body in vyre_foundation::visit::child_bodies(node) {
+            stack.extend(body);
+        }
+    }
+    total
+}
 
 fn pack(data: &[u32]) -> Value {
     Value::from(vyre_primitives::wire::pack_u32_slice(data))

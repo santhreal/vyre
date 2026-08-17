@@ -4,6 +4,10 @@
 use proptest::prelude::*;
 use vyre_reference::composition_witness::bitset_subset_of_witness;
 
+fn cpu_ref(left: &[u32], right: &[u32]) -> u32 {
+    u32::from(bitset_subset_of_witness(left, right))
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
 

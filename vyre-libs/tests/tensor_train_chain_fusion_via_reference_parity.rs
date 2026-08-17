@@ -14,7 +14,7 @@
 //! rank product exactly (integer·2^16 >> 16 = integer, no rounding), so the final scalar is the exact
 //! product of the nonzero ranks (an independent mathematical oracle the IR must reproduce).
 
-use vyre_libs::solvers::tensor_train_chain_fusion::{fusion_pressure_via, should_fuse_chain_via};
+use vyre_libs::solvers::tensor_train_chain_fusion::fusion_pressure_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
@@ -66,19 +66,4 @@ fn fusion_pressure_via_matches_known_chains() {
     assert_eq!(fusion_pressure_via(&dispatcher, &[4, 0, 3]).unwrap(), 12.0);
     // Empty chain has no pressure.
     assert_eq!(fusion_pressure_via(&dispatcher, &[]).unwrap(), 0.0);
-}
-
-#[test]
-fn should_fuse_chain_via_thresholds_on_geometric_mean_pressure() {
-    let dispatcher = ReferenceEvalDispatcher;
-    // pressure([4,4]) = 16, geometric-mean-per-link = 16^(1/2) = 4. Use non-boundary thresholds to
-    // avoid f64 ln-boundary fragility.
-    assert!(
-        should_fuse_chain_via(&dispatcher, &[4, 4], 5.0).unwrap(),
-        "per-link pressure 4 is below threshold 5 → fuse"
-    );
-    assert!(
-        !should_fuse_chain_via(&dispatcher, &[4, 4], 3.0).unwrap(),
-        "per-link pressure 4 exceeds threshold 3 → do not fuse"
-    );
 }

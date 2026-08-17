@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 //! CHD perfect-hash over label-family strings (G9).
 //!
 //! # Algorithm

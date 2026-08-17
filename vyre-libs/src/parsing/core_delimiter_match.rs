@@ -70,6 +70,9 @@ pub fn core_delimiter_match(
     .with_entry_op_id(OP_ID)
     .with_non_composable_with_self(true)
 }
+const EXPECTED_CORE_DELIMITER_MATCH_BYTES: [u8; 32] = [
+    1, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -81,9 +84,7 @@ inventory::submit! {
             vec![vec![bytes, vec![0u8; 4 * 8]]]
         }),
         Some(|| {
-            let depths: [u32; 8] = [1, 2, 2, 2, 2, 1, 0, 0];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&depths);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_CORE_DELIMITER_MATCH_BYTES.to_vec()]]
         }),
     )
 }

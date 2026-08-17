@@ -105,7 +105,11 @@ pub fn store_global(slot: u32, index: u32, value: u32) -> KernelOp {
 /// A vector load of `slot` at element `index` of width `width`.
 #[must_use]
 pub fn vector_load_global(slot: u32, index: u32, width: u8, result: u32) -> KernelOp {
-    op(KernelOpKind::VectorLoadGlobal { width }, [slot, index], result)
+    op(
+        KernelOpKind::VectorLoadGlobal { width },
+        [slot, index],
+        result,
+    )
 }
 
 /// A vector store of `values` into `slot` at element `index`.

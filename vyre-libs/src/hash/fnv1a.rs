@@ -19,16 +19,15 @@ pub const FNV1A64_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 /// FNV-1a prime (64-bit).
 pub const FNV1A64_PRIME: u64 = 0x0000_0100_0000_01b3;
 
-/// CPU reference: FNV-1a 32-bit over a byte slice.
+#[cfg(test)]
 #[must_use]
-pub fn fnv1a32(bytes: &[u8]) -> u32 {
-    fnv1a32_const(bytes)
+pub(crate) fn fnv1a32(bytes: &[u8]) -> u32 {
+    vyre_reference::composition_witness::fnv1a32_witness(bytes)
 }
 
-/// CPU reference: FNV-1a32 over packed u32 lanes, hashing only the low byte
-/// from each lane.
+#[cfg(test)]
 #[must_use]
-pub fn fnv1a32_packed_u32_low8(words: &[u32]) -> u32 {
+pub(crate) fn fnv1a32_packed_u32_low8(words: &[u32]) -> u32 {
     let mut h = fnv1a32_initial_state();
     for &word in words {
         h = fnv1a32_update_byte(h, (word & 0xFF) as u8);
@@ -36,9 +35,9 @@ pub fn fnv1a32_packed_u32_low8(words: &[u32]) -> u32 {
     h
 }
 
-/// Const-evaluable FNV-1a32 over a byte slice.
+#[cfg(test)]
 #[must_use]
-pub const fn fnv1a32_const(bytes: &[u8]) -> u32 {
+pub(crate) const fn fnv1a32_const(bytes: &[u8]) -> u32 {
     let mut h = fnv1a32_initial_state();
     let mut idx = 0usize;
     while idx < bytes.len() {
@@ -47,14 +46,15 @@ pub const fn fnv1a32_const(bytes: &[u8]) -> u32 {
     }
     h
 }
-
 /// Initial FNV-1a32 CPU state.
+#[cfg(test)]
 #[must_use]
 pub const fn fnv1a32_initial_state() -> u32 {
     FNV1A32_OFFSET
 }
 
 /// Canonical FNV-1a32 CPU single-byte update.
+#[cfg(test)]
 #[must_use]
 pub const fn fnv1a32_update_byte(hash: u32, byte: u8) -> u32 {
     (hash ^ byte as u32).wrapping_mul(FNV1A32_PRIME)
@@ -142,6 +142,7 @@ pub fn fnv1a32_mix_word_expr(hash: Expr, word: Expr) -> Expr {
 /// by packed-AST CSE kernels. It is intentionally separate from
 /// [`fnv1a32_mix_word_expr`], whose order is FNV-1a-style
 /// `(hash XOR word) * prime`.
+#[cfg(test)]
 #[must_use]
 pub const fn fnv1a32_mul_xor_word_state(hash: u32, word: u32) -> u32 {
     hash.wrapping_mul(FNV1A32_PRIME) ^ word
@@ -383,14 +384,10 @@ fn fnv1a64_program_bounded(
     )
 }
 
-/// CPU reference: FNV-1a 64-bit over a byte slice.
+#[cfg(test)]
 #[must_use]
-pub fn fnv1a64(bytes: &[u8]) -> u64 {
-    let mut h = fnv1a64_initial_state();
-    for &byte in bytes {
-        h = fnv1a64_update_byte(h, byte);
-    }
-    h
+pub(crate) fn fnv1a64(bytes: &[u8]) -> u64 {
+    vyre_reference::composition_witness::fnv1a64_witness(bytes)
 }
 
 /// Initial FNV-1a64 CPU state.
@@ -405,6 +402,9 @@ pub const fn fnv1a64_update_byte(hash: u64, byte: u8) -> u64 {
     (hash ^ byte as u64).wrapping_mul(FNV1A64_PRIME)
 }
 
+const EXPECTED_FNV1A_32_OUTPUT_BYTES: [u8; 4] = [0x2C, 0x29, 0x0C, 0xE4];
+const EXPECTED_FNV1A_64_OUTPUT_BYTES: [u8; 8] = [0x8C, 0xEC, 0x01, 0x86, 0x4C, 0xDC, 0x63, 0xAF];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         FNV1A32_OP_ID,
@@ -417,8 +417,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0xe40c_292c])]] // canonical FNV-1a32("a")
+            vec![vec![EXPECTED_FNV1A_32_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -435,8 +434,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0x8601_ec8c, 0xaf63_dc4c])]] // canonical FNV-1a64("a") little-endian halves
+            vec![vec![EXPECTED_FNV1A_64_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

@@ -5,7 +5,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::graph::path_reconstruct;
+use vyre_reference::composition_witness::path_reconstruct_witness;
 
 #[test]
 fn path_reconstruct_matches_independent_parent_walk_oracle_matrix() {
@@ -16,7 +16,8 @@ fn path_reconstruct_matches_independent_parent_walk_oracle_matrix() {
         for (index, &target) in targets.iter().enumerate() {
             let (expected_len, expected_path) = oracle_path_reconstruct(&parent, target, max_depth);
             let mut scratch = Vec::new();
-            let actual_len = path_reconstruct::cpu_ref(&parent, target, max_depth, &mut scratch);
+            let (actual_path, actual_len) = path_reconstruct_witness(&parent, target, max_depth);
+            scratch.extend_from_slice(&actual_path);
             assert_eq!(
                 actual_len, expected_len,
                 "Fix: path_reconstruct length oracle case {case} target_index={index} target={target} must match the independent oracle."
@@ -27,15 +28,13 @@ fn path_reconstruct_matches_independent_parent_walk_oracle_matrix() {
             );
         }
 
-        let mut batched_paths = Vec::new();
-        let mut batched_lens = Vec::new();
-        path_reconstruct::cpu_ref_batched(
-            &parent,
-            &targets,
-            max_depth,
-            &mut batched_paths,
-            &mut batched_lens,
-        );
+        let mut batched_paths = Vec::with_capacity(targets.len() * max_depth as usize);
+        let mut batched_lens = Vec::with_capacity(targets.len());
+        for &target in &targets {
+            let (path, length) = path_reconstruct_witness(&parent, target, max_depth);
+            batched_paths.extend(path);
+            batched_lens.push(length);
+        }
         assert_eq!(
             batched_lens.len(),
             targets.len(),

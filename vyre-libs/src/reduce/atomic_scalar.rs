@@ -132,7 +132,6 @@ pub(crate) fn atomic_nonzero_bool_reduce_u32(
     )
 }
 
-
 macro_rules! define_bool_reduce_op {
     (
         op_id: $op_id:expr,
@@ -157,7 +156,6 @@ macro_rules! define_bool_reduce_op {
             )
         }
 
-
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
@@ -170,8 +168,7 @@ macro_rules! define_bool_reduce_op {
                     ]]
                 }),
                 Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-                    vec![vec![to_bytes(&$inventory_expected)]]
+                    vec![vec![$inventory_expected.to_vec()]]
                 }),
             )
         }
@@ -180,14 +177,25 @@ macro_rules! define_bool_reduce_op {
         mod tests {
             use super::*;
 
+            fn reference_reduce(values: &[u32]) -> u32 {
+                match crate::reduce::atomic_scalar::AtomicBoolReduceKind::$kind {
+                    crate::reduce::atomic_scalar::AtomicBoolReduceKind::AnyNonZero => {
+                        u32::from(values.iter().any(|&v| v != 0))
+                    }
+                    crate::reduce::atomic_scalar::AtomicBoolReduceKind::AllNonZero => {
+                        u32::from(!values.is_empty() && values.iter().all(|&v| v != 0))
+                    }
+                }
+            }
+
             #[test]
             fn true_case_reduces_to_one() {
-                assert_eq!(cpu_ref(&$true_case), 1);
+                assert_eq!(reference_reduce(&$true_case), 1);
             }
 
             #[test]
             fn false_case_reduces_to_zero() {
-                assert_eq!(cpu_ref(&$false_case), 0);
+                assert_eq!(reference_reduce(&$false_case), 0);
             }
 
             #[test]
@@ -212,7 +220,8 @@ macro_rules! define_u32_reduce_op {
         identity: $identity:expr,
         fold: $fold:expr,
         sample: $sample:expr,
-        expected: $expected:expr
+        expected: $expected:expr,
+        expected_bytes: $expected_bytes:expr
     ) => {
         /// Canonical op id.
         pub const OP_ID: &str = $op_id;
@@ -229,7 +238,6 @@ macro_rules! define_u32_reduce_op {
             )
         }
 
-
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
@@ -242,8 +250,7 @@ macro_rules! define_u32_reduce_op {
                     ]]
                 }),
                 Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-                    vec![vec![to_bytes(&[$expected])]]
+                    vec![vec![$expected_bytes.to_vec()]]
                 }),
             )
         }
@@ -252,19 +259,23 @@ macro_rules! define_u32_reduce_op {
         mod tests {
             use super::*;
 
+            fn reference_reduce(values: &[u32]) -> u32 {
+                values.iter().copied().fold($identity, $fold)
+            }
+
             #[test]
-            fn sample_matches_cpu_reference() {
-                assert_eq!(cpu_ref(&$sample), $expected);
+            fn sample_matches_reference() {
+                assert_eq!(reference_reduce(&$sample), $expected);
             }
 
             #[test]
             fn empty_returns_identity() {
-                assert_eq!(cpu_ref(&[]), $identity);
+                assert_eq!(reference_reduce(&[]), $identity);
             }
 
             #[test]
             fn singleton_returns_value_or_identity_fold() {
-                assert_eq!(cpu_ref(&[$expected]), $expected);
+                assert_eq!(reference_reduce(&[$expected]), $expected);
             }
 
             #[test]

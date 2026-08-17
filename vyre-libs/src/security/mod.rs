@@ -51,7 +51,7 @@ macro_rules! define_bitset_and_security_op {
             #[must_use]
             #[cfg(test)]
             pub(crate) fn cpu_ref($left: &[u32], $right: &[u32]) -> Vec<u32> {
-                crate::bitset::and::cpu_ref($left, $right)
+                vyre_reference::composition_witness::bitset_and_witness($left, $right)
             }
 
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
@@ -118,7 +118,7 @@ macro_rules! define_bitset_and_not_security_op {
             #[must_use]
             #[cfg(test)]
             pub(crate) fn cpu_ref($left: &[u32], $right: &[u32]) -> Vec<u32> {
-                crate::bitset::and_not::cpu_ref($left, $right)
+                vyre_reference::composition_witness::bitset_and_not_witness($left, $right)
             }
 
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
@@ -185,6 +185,7 @@ define_bitset_and_security_op!(
 );
 mod catalog;
 pub(crate) mod dominance_predecessors;
+#[cfg(test)]
 pub(crate) mod facts;
 /// Canonical `@family` name to tag-bit allocation shared by rule labels.
 pub mod family_mask;
@@ -192,21 +193,6 @@ pub(crate) mod flow_composition;
 pub(crate) mod flows_to;
 pub(crate) mod flows_to_to_sink;
 pub(crate) mod flows_to_with_sanitizer;
-// `external_ifds` is an INCOMPLETE integration: it `use`s a crate
-// `external_dataflow_engine` that is wired into no Cargo.toml and exists nowhere
-// on the tree, so it does not compile under `--features security` and broke every
-// downstream consumer the moment a cache invalidation forced a
-// vyre-libs rebuild. Gated behind `cfg(feature = "external_ifds_engine")`, which
-// is deliberately NOT a Cargo feature: the engine crate depends on the vyre
-// platform, and `xtask platform-boundary` forbids the platform from depending
-// back on a consumer, so this bridge cannot compile here at all. The cfg is
-// declared to the compiler in the workspace lint table so no build warns, and
-// nothing can turn it on. The bridge belongs on the consumer side, which is
-// BACKLOG R47. Gating it keeps the workspace building WITHOUT deleting the WIP. To finish the
-// integration: add the `external_dataflow_engine` crate to the workspace + this
-// crate's deps, then restore these guards to `#[cfg(feature = "security")]`.
-#[cfg(feature = "external_ifds_engine")]
-pub(crate) mod external_ifds;
 define_bitset_and_not_security_op!(
     format_string_check,
     format_string_check,
@@ -254,8 +240,11 @@ define_bitset_and_security_op!(
         distributes: (&[0xFF00, 0x00FF], &[0xFFFF, 0xFFFF]) => vec![0xFF00, 0x00FF];
     }
 );
+#[cfg(test)]
 pub(crate) mod predicate_catalog;
+#[cfg(test)]
 pub(crate) mod relation_analyzer;
+#[cfg(test)]
 pub(crate) mod reporter;
 pub(crate) mod sanitized_by;
 define_bitset_and_security_op!(
@@ -327,7 +316,9 @@ pub use aliases_dataflow::OP_ID;
 pub use aliases_dataflow::{aliases_dataflow, try_aliases_dataflow};
 pub use bounded_by_comparison::bounded_by_comparison;
 pub use dominance_predecessors::dominance_predecessors;
+#[cfg(test)]
 pub use facts::{finding_from_sanitized_source_to_sink_query, SourceToSinkFindingRequest};
+#[cfg(test)]
 pub use facts::{
     AnalysisFact, AnalysisFactColumns, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan,
     FactId, FactKind, FindingProofBundle, FindingProofStep,
@@ -336,28 +327,22 @@ pub use flows_to::flows_to;
 pub use flows_to::{flows_to_alias_only, ALIAS_PROPAGATION_MASK, FLOWS_TO_MASK};
 pub use flows_to_to_sink::flows_to_to_sink;
 pub use flows_to_with_sanitizer::flows_to_with_sanitizer;
+#[cfg(test)]
+pub use flows_to_with_sanitizer::sanitized_flow_final_finding_soundness;
 pub use flows_to_with_sanitizer::{
-    sanitized_flow_final_finding_soundness, sanitized_flow_final_soundness_contract,
-    sanitized_flow_soundness_contract, SanitizedFlowContractViolation, SanitizedFlowExecutionMode,
-    SanitizedFlowSoundnessContract, FIXPOINT_OP_ID,
-};
-// Gated off with `external_ifds` above (incomplete integration; missing the
-// `external_dataflow_engine` crate). Restore to `#[cfg(feature = "security")]`
-// once that crate is wired into the workspace.
-#[cfg(feature = "external_ifds_engine")]
-pub use external_ifds::{
-    route_security_taint_through_external_ifds, security_witness_path_from_external_path,
-    ExternalIfdsSecurityBuffers, ExternalIfdsSecurityDispatch, ExternalIfdsSecurityRouteError,
-    SecurityFindingWitnessPath, SecurityWitnessPathError, SecurityWitnessStatement,
-    EXTERNAL_IFDS_SECURITY_BACKEND_ID,
+    sanitized_flow_final_soundness_contract, sanitized_flow_soundness_contract,
+    SanitizedFlowContractViolation, SanitizedFlowExecutionMode, SanitizedFlowSoundnessContract,
+    FIXPOINT_OP_ID,
 };
 pub use integer_overflow_arith::integer_overflow_arith;
 pub use integer_overflow_arith::IntegerOverflowArith;
 pub use label_by_family::label_by_family;
+#[cfg(test)]
 pub use predicate_catalog::{
     security_predicate_row_by_op_id, security_predicate_rows, try_security_predicate_rows,
     SecurityPredicateOperation, SecurityPredicateRow,
 };
+#[cfg(test)]
 pub use relation_analyzer::{
     generated_relation_finding_fact_ids, run_generated_security_relation_analyzer,
     GeneratedSecurityRelationAnalyzerEvidence, GeneratedSecurityRelationAnalyzerReport,
@@ -365,6 +350,7 @@ pub use relation_analyzer::{
     SecurityRelationAnalyzerError, SecurityRelationQueryFamily,
     SECURITY_RELATION_ANALYZER_SCHEMA_VERSION,
 };
+#[cfg(test)]
 pub use reporter::{
     render_security_reporter_output, SecurityReporterError, SecurityReporterFinding,
     SecurityReporterOutputBytes, SecurityReporterPlannerPath, SecurityReporterSourceFile,

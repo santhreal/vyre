@@ -11,15 +11,17 @@ use harness::{bytes_u32, u32_bytes, with_live_backend};
 use std::num::NonZeroU32;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_libs::hash::crc32::{
-    crc32, crc32_chunk_program, crc32_combine_chunks, crc32_map_reduce_plan, crc32_pack_chunks_u32,
-    crc32_pair_reduce_program, crc32_unpack_chunks_u32, Crc32Chunk, Crc32MapReduceStep,
-    Crc32MapReduceStepKind,
-};
+use vyre_libs::hash::crc32::{crc32_chunk_program, crc32_pair_reduce_program};
 use vyre_libs::hash::hypervector::hypervector_xor_bind;
-use vyre_libs::parsing::whitespace_classify_word::{
-    reference_whitespace_classify_word, whitespace_classify_word,
-    whitespace_classify_word_dispatch_grid,
+use vyre_libs::parsing::whitespace_classify_word::whitespace_classify_word;
+use vyre_reference::composition_witness::{
+    crc32_combine_chunks_witness as crc32_combine_chunks,
+    crc32_map_reduce_plan_witness as crc32_map_reduce_plan,
+    crc32_pack_chunks_witness as crc32_pack_chunks_u32,
+    crc32_unpack_chunks_witness as crc32_unpack_chunks_u32, crc32_witness as crc32,
+    whitespace_classify_word_witness as reference_whitespace_classify_word,
+    Crc32ChunkWitness as Crc32Chunk, Crc32MapReduceStepKindWitness as Crc32MapReduceStepKind,
+    Crc32MapReduceStepWitness as Crc32MapReduceStep,
 };
 
 // ---------------------------------------------------------------------
@@ -223,7 +225,7 @@ fn run_whitespace_classify(backend: &CudaBackend, words: &[u32]) -> Vec<u32> {
     let program = whitespace_classify_word(n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(words), vec![0u8; n as usize * 4]];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(whitespace_classify_word_dispatch_grid(n));
+    config.grid_override = Some([n.div_ceil(256).max(1), 1, 1]);
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");

@@ -19,7 +19,6 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
-
 /// Build a Program that scans `haystack` (u32 per byte) for any
 /// accepting state of a pre-built DFA. Buffers:
 ///
@@ -65,12 +64,8 @@ pub fn aho_corasick_bounded(
     state_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    let body = crate::builder::TableStateMachineComposer::new(transitions).bounded_suffix_scan_body(
-        haystack,
-        accept,
-        matches,
-        max_pattern_len,
-    );
+    let body = crate::builder::TableStateMachineComposer::new(transitions)
+        .bounded_suffix_scan_body(haystack, accept, matches, max_pattern_len);
 
     Program::wrapped(
         vec![
@@ -89,6 +84,37 @@ pub fn aho_corasick_bounded(
         )],
     )
 }
+
+/// Build an Aho-Corasick scan program from an encoded DFA wire blob.
+///
+/// # Errors
+///
+/// Returns [`crate::pattern::DfaWireError`] when the wire blob cannot be decoded into a valid DFA.
+pub fn aho_corasick_program_from_dfa_wire(
+    wire_bytes: &[u8],
+    haystack: &str,
+    transitions: &str,
+    accept: &str,
+    matches: &str,
+    haystack_len: u32,
+) -> Result<Program, crate::pattern::DfaWireError> {
+    let dfa = crate::pattern::CompiledDfa::from_bytes(wire_bytes)?;
+    Ok(aho_corasick_bounded(
+        haystack,
+        transitions,
+        accept,
+        matches,
+        haystack_len,
+        dfa.state_count,
+        dfa.max_pattern_len,
+    ))
+}
+
+const EXPECTED_AHO_CORASICK_OUTPUT_BYTES: [u8; 44] = [
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -109,13 +135,7 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&compiled.accept),
             ]]
         }),
-        Some(|| vec![
-            vec![
-                vec![0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, ],
-            ],
-        ]),
+        Some(|| vec![vec![EXPECTED_AHO_CORASICK_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("scan")
 }
@@ -124,8 +144,8 @@ inventory::submit! {
 mod tests {
     use super::*;
     use std::ops::ControlFlow;
-    use vyre_foundation::ir::Node;
     use vyre_foundation::ir::Expr;
+    use vyre_foundation::ir::Node;
     use vyre_foundation::visit::try_for_each_node;
 
     /// Bounds of the first `Loop` in emission order.

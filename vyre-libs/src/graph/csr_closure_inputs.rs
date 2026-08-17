@@ -105,3 +105,39 @@ impl<'a> CsrClosureInputs<'a> {
         }
     }
 }
+
+/// Small CSR graphs whose closure is known by inspection.
+///
+/// Two shapes carry most of the subsystem's contract tests, and both were
+/// restated as a four-field literal at every use: the tests then differed in
+/// whitespace and in which arrays they named inline, so a reader could not tell
+/// two cases apart by their graph. These are the same graphs, named once.
+#[cfg(test)]
+pub(crate) mod graphs {
+    use super::CsrGraphView;
+
+    /// The chain `0 -> 1 -> 2 -> 3`, every edge of kind 1.
+    ///
+    /// Seeded at node 0 the closure is `0b1111`, reached after three growth
+    /// steps, so a fourth step adds nothing and proves the fixpoint. A budget
+    /// below three leaves the frontier still growing, which is what the
+    /// convergence-reporting cases need.
+    pub(crate) const CHAIN_4: CsrGraphView<'static> = CsrGraphView {
+        node_count: 4,
+        edge_offsets: &[0, 1, 2, 3, 3],
+        edge_targets: &[1, 2, 3],
+        edge_kind_mask: &[1, 1, 1],
+    };
+
+    /// The diamond `0 -> {1, 2}`, `1 -> 3`, `2 -> 3`, every edge of kind 1.
+    ///
+    /// Seeded at node 0 the closure is `0b1111` after two steps. Node 3 is
+    /// reachable by two distinct paths, so a step that double-counts a node or
+    /// loses one shows up here and not in [`CHAIN_4`].
+    pub(crate) const DIAMOND_4: CsrGraphView<'static> = CsrGraphView {
+        node_count: 4,
+        edge_offsets: &[0, 2, 3, 4, 4],
+        edge_targets: &[1, 2, 3, 3],
+        edge_kind_mask: &[1, 1, 1, 1],
+    };
+}

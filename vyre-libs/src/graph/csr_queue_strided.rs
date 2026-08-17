@@ -72,6 +72,7 @@ pub fn csr_queue_strided_forward_traverse_with(
     ))
 }
 
+const EXPECTED_CSR_QUEUE_STRIDED_OUTPUT_BYTES: [u8; 4] = [10, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -100,8 +101,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b1010])]]
+            vec![vec![EXPECTED_CSR_QUEUE_STRIDED_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -110,6 +110,33 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::graph::csr_frontier_queue::assert_offset_overflow_traps;
+    use vyre_reference::composition_witness::csr_queue_strided_forward_witness;
+
+    fn try_csr_queue_strided_forward_traverse_cpu(
+        active_queue: &[u32],
+        queue_len: u32,
+        edge_offsets: &[u32],
+        edge_targets: &[u32],
+        edge_kind_mask: &[u32],
+        node_count: u32,
+        allow_mask: u32,
+    ) -> Result<Vec<u32>, String> {
+        if edge_offsets.len() != (node_count as usize) + 1 {
+            return Err("Fix: edge offsets length must match node count + 1.".to_owned());
+        }
+        if edge_targets.len() != edge_kind_mask.len() {
+            return Err("Fix: edge targets length must match edge kind mask length.".to_owned());
+        }
+        Ok(csr_queue_strided_forward_witness(
+            active_queue,
+            queue_len,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            node_count,
+            allow_mask,
+        ))
+    }
 
     fn scalar_queue_forward(
         active_queue: &[u32],

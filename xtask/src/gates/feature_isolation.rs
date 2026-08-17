@@ -1308,7 +1308,7 @@ const STALE_FIX: &str = "delete every `measured` key and every `outcome = \"comp
 const COMPILE_FIX: &str = "give the feature the missing edge in its own [features] table so enabling it enables what it needs, or move the source behind the cfg that matches; record a row as blocked only for a constraint inherent to the crate";
 
 /// What a default build reaching a host oracle costs, and how to close it.
-const ORACLE_FIX: &str = "drop the cpu-parity edge from the feature that names it and gate the oracle call with cfg(any(test, feature = \"cpu-parity\")) instead; a default build must not compile a CPU reference implementation into the shipped library";
+const ORACLE_FIX: &str = "remove every dependency or code activation from the cpu-parity compatibility signature, move sequential host semantics into vyre-reference, and keep only cfg(test) adapters in shipped crates; an opt-in feature is still a production route and must not compile a second host implementation";
 
 /// What a run that compiled nothing on purpose judged.
 fn declaration_note(pairs: usize) -> String {

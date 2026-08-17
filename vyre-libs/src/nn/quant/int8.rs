@@ -38,6 +38,13 @@ pub fn int8_pack(input: &str, output: &str, n: u32) -> Program {
     })
 }
 
+const EXPECTED_INT8_UNPACK_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0x20, 0x41, 0x00, 0x00, 0x70, 0x42, 0x00, 0x00, 0xA0, 0x42,
+];
+const EXPECTED_INT8_PACK_OUTPUT_BYTES: [u8; 16] = [
+    0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         UNPACK_OP_ID,
@@ -50,12 +57,7 @@ inventory::submit! {
                 to_f32(&[0.5, 2.0]),  // 2 rows
             ]]
         }),
-        Some(|| {
-            // row0: [10*0.5, 20*0.5]=[5,10], row1: [30*2, 40*2]=[60,80]
-            let out = [5.0_f32, 10.0, 60.0, 80.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
-        }),
+        Some(|| vec![vec![EXPECTED_INT8_UNPACK_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
 }
@@ -70,10 +72,7 @@ inventory::submit! {
                 to_u32(&[255, 256, 1, 0]),
             ]]
         }),
-        Some(|| {
-            let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_u32(&[255, 0, 1, 0])]]
-        }),
+        Some(|| vec![vec![EXPECTED_INT8_PACK_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
 }

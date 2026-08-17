@@ -17,9 +17,10 @@ pub use dispatch::{
     build_ifds_csr_via, build_ifds_csr_via_into, build_ifds_csr_via_with_scratch_into,
 };
 
+#[cfg(test)]
+use crate::graph::exploded::{dense_to_encoded, encoded_to_dense, ifds_node_count_saturating};
 use crate::graph::exploded::{
-    dense_to_encoded, encoded_to_dense, ifds_node_count_saturating, IfdsCsrProgramCacheKey,
-    IfdsCsrRuleColumns, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
+    IfdsCsrProgramCacheKey, IfdsCsrRuleColumns, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
 };
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
@@ -49,6 +50,7 @@ impl IfdsCsrGpuScratch {
 /// dimensions. Equivalent to `row_ptr.len() - 1` after the CSR is
 /// built; useful when the caller needs to size frontier bitsets
 /// before invoking [`reference_build_ifds_csr`].
+#[cfg(test)]
 #[must_use]
 pub fn ifds_node_count(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32) -> u32 {
     ifds_node_count_saturating(num_procs, blocks_per_proc, facts_per_proc)
@@ -57,6 +59,7 @@ pub fn ifds_node_count(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32
 /// Helper: round-trip a dense index through the packed encoding and
 /// back. Used by callers that emit findings keyed on the packed id
 /// but operate on dense indices internally.
+#[cfg(test)]
 #[must_use]
 pub fn round_trip_dense(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {
     let encoded = dense_to_encoded(dense, blocks_per_proc, facts_per_proc)?;

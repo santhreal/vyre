@@ -1,8 +1,8 @@
 //! `betti_persistence`  -  full H_1 cycle counting on a Vietoris-Rips
 //! 1-skeleton (P-PRIM-4).
 //!
-//! Given a row-major n×n edge mask (0/1) produced by
-//! `vietoris_rips_edge_filter_cpu` (requires the `cpu-parity` feature), compute
+//! Given a row-major n×n edge mask (0/1) produced by the
+//! `vyre-reference` Vietoris-Rips edge filter witness, compute
 //! the first Betti number `b1`: the rank of `H_1(K)` where `K` is
 //! the 1-skeleton of the Rips complex.
 //!
@@ -21,10 +21,8 @@
 //! Implementation: a single-pass union-find over the upper-triangle
 //! edges. O(E·α(V))  -  practically linear in the edge count.
 
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use vyre_reference::composition_witness::betti_persistence_witness as betti_persistence_cpu;
 
     fn try_betti_persistence_cpu(mask: &[u32], n: u32) -> Result<(u32, u32, u32), String> {
@@ -42,17 +40,6 @@ mod tests {
         Ok(betti_persistence_cpu(mask, n))
     }
 
-    fn betti_persistence_into(
-        mask: &[u32],
-        n: u32,
-        parent: &mut Vec<u32>,
-        rank: &mut Vec<u32>,
-    ) -> (u32, u32, u32) {
-        parent.resize(n as usize, 0);
-        rank.resize(n as usize, 0);
-        betti_persistence_cpu(mask, n)
-    }
-
     fn try_betti_persistence_into(
         mask: &[u32],
         n: u32,
@@ -65,9 +52,21 @@ mod tests {
             return Ok((0, 0, 0));
         }
         let res = try_betti_persistence_cpu(mask, n)?;
+        parent.clear();
         parent.resize(n as usize, 0);
+        rank.clear();
         rank.resize(n as usize, 0);
         Ok(res)
+    }
+
+    fn betti_persistence_into(
+        mask: &[u32],
+        n: u32,
+        parent: &mut Vec<u32>,
+        rank: &mut Vec<u32>,
+    ) -> (u32, u32, u32) {
+        try_betti_persistence_into(mask, n, parent, rank)
+            .unwrap_or_else(|error| panic!("betti_persistence CPU reference failed: {error}"))
     }
 
     fn empty_mask(n: u32) -> Vec<u32> {
@@ -243,7 +242,6 @@ mod tests {
     fn betti_persistence_into_matches_cpu_and_reuses_scratch() {
         let mut parent = Vec::with_capacity(16);
         let mut rank = Vec::with_capacity(16);
-
 
         let mut mask4 = empty_mask(4);
         for i in 0..4 {

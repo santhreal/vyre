@@ -50,14 +50,14 @@ pub(crate) fn bit_update_program(
     )
 }
 
-
 macro_rules! define_bit_update_op {
     (
         op_id: $op_id:expr,
         fn_name: $fn_name:ident,
         kind: $kind:ident,
         inventory_input: $inventory_input:expr,
-        inventory_expected: $inventory_expected:expr
+        inventory_expected: $inventory_expected:expr,
+        inventory_expected_bytes: [$($inventory_expected_bytes:expr),* $(,)?]
     ) => {
         /// Canonical op id.
         pub const OP_ID: &str = $op_id;
@@ -74,6 +74,7 @@ macro_rules! define_bit_update_op {
             )
         }
 
+        const EXPECTED_REGISTRATION_BYTES: &[u8] = &[$($inventory_expected_bytes),*];
 
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
@@ -84,8 +85,7 @@ macro_rules! define_bit_update_op {
                     vec![vec![to_bytes(&$inventory_input)]]
                 }),
                 Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-                    vec![vec![to_bytes(&$inventory_expected)]]
+                    vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                 }),
             )
         }
@@ -94,10 +94,21 @@ macro_rules! define_bit_update_op {
         mod tests {
             use super::*;
 
+            fn reference_bit_update(buf: &mut [u32], bit_idx: u32) {
+                let word = (bit_idx / 32) as usize;
+                let bit = bit_idx % 32;
+                if word < buf.len() {
+                    match crate::bitset::bit_update::BitUpdateKind::$kind {
+                        crate::bitset::bit_update::BitUpdateKind::Set => buf[word] |= 1u32 << bit,
+                        crate::bitset::bit_update::BitUpdateKind::Clear => buf[word] &= !(1u32 << bit),
+                    }
+                }
+            }
+
             #[test]
-            fn inventory_case_matches_cpu_reference() {
+            fn inventory_case_matches_reference() {
                 let mut buf = $inventory_input.to_vec();
-                cpu_ref(&mut buf, 0);
+                reference_bit_update(&mut buf, 0);
                 assert_eq!(buf, $inventory_expected.to_vec());
             }
 
@@ -105,10 +116,9 @@ macro_rules! define_bit_update_op {
             fn out_of_range_is_noop() {
                 let mut buf = $inventory_input.to_vec();
                 let before = buf.clone();
-                cpu_ref(&mut buf, u32::MAX);
+                reference_bit_update(&mut buf, u32::MAX);
                 assert_eq!(buf, before);
             }
-
             #[test]
             fn wrapper_program_uses_requested_shape() {
                 let program = $fn_name("target", 0, 2);
@@ -124,6 +134,16 @@ pub(crate) use define_bit_update_op;
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn reference_bit_update(buf: &mut [u32], bit_idx: u32, kind: BitUpdateKind) {
+        let word = (bit_idx / 32) as usize;
+        let bit = bit_idx % 32;
+        if word < buf.len() {
+            match kind {
+                BitUpdateKind::Set => buf[word] |= 1u32 << bit,
+                BitUpdateKind::Clear => buf[word] &= !(1u32 << bit),
+            }
+        }
+    }
 
     fn scalar(mut input: Vec<u32>, bit_idx: u32, kind: BitUpdateKind) -> Vec<u32> {
         let word = (bit_idx / 32) as usize;
@@ -158,7 +178,7 @@ mod tests {
 
             for kind in [BitUpdateKind::Set, BitUpdateKind::Clear] {
                 let mut actual = input.clone();
-                cpu_ref(&mut actual, bit_idx, kind);
+                reference_bit_update(&mut actual, bit_idx, kind);
                 assert_eq!(
                     actual,
                     scalar(input.clone(), bit_idx, kind),

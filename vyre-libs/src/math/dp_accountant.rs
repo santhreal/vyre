@@ -94,21 +94,40 @@ pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32
         vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
-
-
-
-
-/// Convert RDP(α) to (ε, δ)-DP via Mironov's standard inequality:
-/// `ε(δ) = rdp(α) + ln(1/δ) / (α - 1)`. Pure host-side helper because
-/// the natural-log is precomputed once per call.
+/// CPU reference (f64 for precision, callers convert to/from their
+/// fixed-point convention).
 #[must_use]
-pub fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
-    if alpha <= 1.0 || !(delta > 0.0 && delta < 1.0) {
-        return f64::INFINITY;
-    }
-    rdp + (1.0 / delta).ln() / (alpha - 1.0)
+#[cfg(test)]
+fn gaussian_rdp_step_cpu(alpha: &[f64], sigma_squared: &[f64]) -> Vec<f64> {
+    vyre_reference::composition_witness::gaussian_rdp_step_witness(alpha, sigma_squared)
 }
 
+/// CPU reference using caller-owned output storage.
+#[cfg(test)]
+fn gaussian_rdp_step_cpu_into(alpha: &[f64], sigma_squared: &[f64], out: &mut Vec<f64>) {
+    vyre_reference::composition_witness::gaussian_rdp_step_witness_into(alpha, sigma_squared, out);
+}
+
+/// Fallible CPU reference using caller-owned output storage.
+#[cfg(test)]
+fn try_gaussian_rdp_step_cpu_into(
+    alpha: &[f64],
+    sigma_squared: &[f64],
+    out: &mut Vec<f64>,
+) -> Result<(), String> {
+    vyre_reference::composition_witness::try_gaussian_rdp_step_witness_into(
+        alpha,
+        sigma_squared,
+        out,
+    )
+}
+
+/// Test-only adapter for the reference-owned RDP-to-DP witness.
+#[cfg(test)]
+#[must_use]
+fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
+    vyre_reference::composition_witness::rdp_to_dp_witness(rdp, alpha, delta)
+}
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -123,7 +142,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[2; 4])]]
+            vec![vec![vec![
+                0x02, 0x00, 0x00, 0x00, // 2
+                0x02, 0x00, 0x00, 0x00,
+                0x02, 0x00, 0x00, 0x00,
+                0x02, 0x00, 0x00, 0x00,
+            ]]]
         }),
     )
 }

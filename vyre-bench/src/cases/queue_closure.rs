@@ -21,8 +21,8 @@ use crate::cases::queue_traverse_plan::should_use_row_strided;
 use vyre_foundation::ir::Program;
 use vyre_libs::graph::csr_frontier_queue::frontier_queue_len_init;
 use vyre_libs::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_strided_dispatch_grid,
-    csr_queue_delta_strided_enqueue, CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
+    csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
+    CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE,
 };
 
 /// Workgroup the seed reset and the delta enqueue both launch at.
@@ -30,6 +30,18 @@ use vyre_libs::graph::csr_queue_delta::{
 /// The delta kernel is the widest stage in the sequence, and both families give
 /// it the same shape, so the reset that seeds its queues matches it.
 pub(crate) const QUEUE_CLOSURE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
+
+const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
+    let source_slots = if active_queue_capacity == 0 {
+        1
+    } else if active_queue_capacity > 65_536 {
+        65_536
+    } else {
+        active_queue_capacity
+    };
+    let total_lanes = source_slots.saturating_mul(CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE);
+    vyre_primitives::lane_grid(total_lanes, QUEUE_CLOSURE_WORKGROUP_SIZE[0])
+}
 
 /// Everything a queue-closure case builds during prepare.
 ///

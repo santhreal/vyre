@@ -2,7 +2,7 @@
 
 #![cfg(feature = "security")]
 
-use vyre_libs::security::{AnalysisFact, AnalysisSourceSpan, FactId, FactKind};
+use super::{AnalysisFact, AnalysisSourceSpan, FactId, FactKind};
 use vyre_spec::{
     analysis::{AnalysisFactKind, AnalysisFactRecord},
     soundness::Soundness,

@@ -6,7 +6,10 @@
 #![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-use vyre_libs::graph::dominator_tree::{cooper_harvey_kennedy_idoms, lengauer_tarjan_idoms};
+use vyre_reference::composition_witness::{
+    dominator_idoms_witness as cooper_harvey_kennedy_idoms,
+    dominator_sets_idoms_witness as lengauer_tarjan_idoms,
+};
 
 prop_compose! {
     fn arb_digraph()(node_count in 0usize..=128usize, _edge_density in 0.0f64..=1.0f64)

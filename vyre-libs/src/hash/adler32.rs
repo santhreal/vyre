@@ -16,12 +16,8 @@ pub const ADLER32_MOD: u32 = 65_521;
 /// Stable Tier 2.5 op id for the Adler-32 serial byte walker.
 pub const ADLER32_OP_ID: &str = "vyre-libs::hash::adler32";
 
-/// Self-contained Adler-32 chunk summary for tree reductions.
-///
-/// A chunk stores the state obtained by hashing that byte range from the
-/// canonical initial state, plus the chunk length modulo [`ADLER32_MOD`].
-/// Adjacent chunks can be combined without re-reading their bytes, which is
-/// the algebra needed by GPU block scans and persistent hash pipelines.
+/// Test-only Adler-32 chunk summary used by independent witness adapters.
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Adler32Chunk {
     /// Chunk length modulo [`ADLER32_MOD`].
@@ -32,92 +28,93 @@ pub struct Adler32Chunk {
     pub b: u32,
 }
 
-/// CPU reference: Adler-32 over a byte slice.
+#[cfg(test)]
+impl From<vyre_reference::composition_witness::Adler32ChunkWitness> for Adler32Chunk {
+    fn from(witness: vyre_reference::composition_witness::Adler32ChunkWitness) -> Self {
+        Self {
+            len_mod: witness.len_mod,
+            a: witness.a,
+            b: witness.b,
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<Adler32Chunk> for vyre_reference::composition_witness::Adler32ChunkWitness {
+    fn from(chunk: Adler32Chunk) -> Self {
+        Self {
+            len_mod: chunk.len_mod,
+            a: chunk.a,
+            b: chunk.b,
+        }
+    }
+}
+
+#[cfg(test)]
 #[must_use]
-pub fn adler32(bytes: &[u8]) -> u32 {
-    let chunk = adler32_chunk(bytes);
-    adler32_finalize_state(chunk.a, chunk.b)
+pub(crate) fn adler32(bytes: &[u8]) -> u32 {
+    vyre_reference::composition_witness::adler32_witness(bytes)
 }
 
 /// Summarize a byte slice as an independently-combinable Adler-32 chunk.
+#[cfg(test)]
 #[must_use]
 pub fn adler32_chunk(bytes: &[u8]) -> Adler32Chunk {
-    let mut a = adler32_initial_a_state();
-    let mut b = adler32_initial_b_state();
-    for &byte in bytes {
-        let next = adler32_update_byte_state(a, b, byte);
-        a = next.0;
-        b = next.1;
-    }
-    Adler32Chunk {
-        len_mod: (bytes.len() % ADLER32_MOD as usize) as u32,
-        a,
-        b,
-    }
+    vyre_reference::composition_witness::adler32_chunk_witness(bytes).into()
 }
 
 /// Apply a precomputed chunk summary to an existing Adler-32 state.
+#[cfg(test)]
 #[must_use]
 pub fn adler32_combine_state(a: u32, b: u32, chunk: Adler32Chunk) -> (u32, u32) {
-    let modulus = u64::from(ADLER32_MOD);
-    let a_minus_one = (u64::from(a) + modulus - 1) % modulus;
-    let combined_a = adler32_mod_u64(u64::from(a) + u64::from(chunk.a) + modulus - 1);
-    let combined_b =
-        adler32_mod_u64(u64::from(b) + u64::from(chunk.b) + u64::from(chunk.len_mod) * a_minus_one);
-    (combined_a, combined_b)
+    vyre_reference::composition_witness::adler32_combine_state_witness(a, b, chunk.into())
 }
 
 /// Combine adjacent Adler-32 chunk summaries without reading source bytes.
+#[cfg(test)]
 #[must_use]
 pub fn adler32_combine_chunks(left: Adler32Chunk, right: Adler32Chunk) -> Adler32Chunk {
-    let (a, b) = adler32_combine_state(left.a, left.b, right);
-    Adler32Chunk {
-        len_mod: adler32_mod_u64(u64::from(left.len_mod) + u64::from(right.len_mod)),
-        a,
-        b,
-    }
+    vyre_reference::composition_witness::adler32_combine_chunks_witness(left.into(), right.into())
+        .into()
 }
 
 /// Initial Adler-32 A state.
+#[cfg(test)]
 #[must_use]
 pub const fn adler32_initial_a_state() -> u32 {
-    1
+    vyre_reference::composition_witness::adler32_initial_a_witness()
 }
 
 /// Initial Adler-32 B state.
+#[cfg(test)]
 #[must_use]
 pub const fn adler32_initial_b_state() -> u32 {
-    0
+    vyre_reference::composition_witness::adler32_initial_b_witness()
 }
 
 /// Canonical Adler-32 CPU single-byte update.
+#[cfg(test)]
 #[must_use]
 pub const fn adler32_update_byte_state(a: u32, b: u32, byte: u8) -> (u32, u32) {
-    let a = (a + byte as u32) % ADLER32_MOD;
-    let b = (b + a) % ADLER32_MOD;
-    (a, b)
+    vyre_reference::composition_witness::adler32_update_byte_witness(a, b, byte)
 }
 
 /// Canonical Adler-32 CPU finalization.
+#[cfg(test)]
 #[must_use]
 pub const fn adler32_finalize_state(a: u32, b: u32) -> u32 {
-    (b << 16) | a
+    vyre_reference::composition_witness::adler32_finalize_witness(a, b)
 }
-
-fn adler32_mod_u64(value: u64) -> u32 {
-    (value % u64::from(ADLER32_MOD)) as u32
-}
-
 /// Initial Adler-32 A expression for fused IR compositions.
 #[must_use]
 pub fn adler32_initial_a_expr() -> Expr {
-    Expr::u32(adler32_initial_a_state())
+    Expr::u32(1)
 }
 
 /// Initial Adler-32 B expression for fused IR compositions.
 #[must_use]
 pub fn adler32_initial_b_expr() -> Expr {
-    Expr::u32(adler32_initial_b_state())
+    Expr::u32(0)
 }
 
 /// Emit the canonical Adler-32 single-byte update into `a_var` and `b_var`.
@@ -187,6 +184,8 @@ fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
     )]
 }
 
+const EXPECTED_ADLER32_OUTPUT_BYTES: [u8; 4] = [0x27, 0x01, 0x4D, 0x02];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         ADLER32_OP_ID,
@@ -195,7 +194,7 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc");
             vec![vec![bytes, vec![0u8; 4]]]
         }),
-        Some(|| vec![vec![0x024D_0127u32.to_le_bytes().to_vec()]]),
+        Some(|| vec![vec![EXPECTED_ADLER32_OUTPUT_BYTES.to_vec()]]),
     )
 }
 

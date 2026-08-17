@@ -107,11 +107,8 @@ pub fn sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: 
     )
 }
 
-
-
-
-
-
+const EXPECTED_SPARSE_FFT_OUTPUT_BYTES: [u8; 16] =
+    [6, 0, 0, 0, 8, 0, 0, 0, 10, 0, 0, 0, 12, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -125,8 +122,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[6, 8, 10, 12])]]
+            vec![vec![EXPECTED_SPARSE_FFT_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -134,6 +130,60 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        sparse_fft_bin_hash_into_witness, sparse_fft_bin_hash_witness,
+        sparse_fft_voting_recovery_into_witness, sparse_fft_voting_recovery_witness,
+        try_sparse_fft_bin_hash_into_witness, try_sparse_fft_voting_recovery_into_witness,
+    };
+
+    fn sparse_fft_bin_hash_cpu(signal: &[u32], a: u32, c: u32, b: u32) -> Vec<u32> {
+        sparse_fft_bin_hash_witness(signal, a, c, b)
+    }
+
+    fn sparse_fft_bin_hash_cpu_into(signal: &[u32], a: u32, c: u32, b: u32, bins: &mut Vec<u32>) {
+        sparse_fft_bin_hash_into_witness(signal, a, c, b, bins);
+    }
+
+    fn try_sparse_fft_bin_hash_cpu_into(
+        signal: &[u32],
+        a: u32,
+        c: u32,
+        b: u32,
+        bins: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        try_sparse_fft_bin_hash_into_witness(signal, a, c, b, bins)
+    }
+
+    fn voting_recovery_cpu(
+        binnings: &[(u32, u32, Vec<u32>)],
+        threshold: u32,
+        n: u32,
+        b: u32,
+    ) -> Vec<u32> {
+        sparse_fft_voting_recovery_witness(binnings, threshold, n, b)
+    }
+
+    fn voting_recovery_cpu_into(
+        binnings: &[(u32, u32, Vec<u32>)],
+        threshold: u32,
+        n: u32,
+        b: u32,
+        votes: &mut Vec<u32>,
+        out: &mut Vec<u32>,
+    ) {
+        sparse_fft_voting_recovery_into_witness(binnings, threshold, n, b, votes, out);
+    }
+
+    fn try_voting_recovery_cpu_into(
+        binnings: &[(u32, u32, Vec<u32>)],
+        threshold: u32,
+        n: u32,
+        b: u32,
+        votes: &mut Vec<u32>,
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        try_sparse_fft_voting_recovery_into_witness(binnings, threshold, n, b, votes, out)
+    }
 
     #[test]
     fn cpu_hash_distributes_across_bins() {

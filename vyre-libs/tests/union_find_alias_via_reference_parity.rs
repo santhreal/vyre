@@ -19,8 +19,10 @@
 //! only up to intermediate parent links, not byte-for-byte), so the assertion is a full partition-equality
 //! check (exact, no tolerance).
 
-use vyre_libs::graph::dispatch::union_find_emit::{
-    canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,
+use vyre_libs::graph::dispatch::union_find_emit::union_find_alias_via;
+use vyre_reference::composition_witness::{
+    canonicalize_union_find_witness as canonicalize_parent_to_roots,
+    union_find_alias_witness as reference_union_find_alias,
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;

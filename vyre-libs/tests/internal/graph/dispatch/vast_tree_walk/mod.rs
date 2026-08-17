@@ -1,7 +1,5 @@
 use super::*;
-use crate::graph::vast_tree_walk::{
-    try_ast_walk_postorder, try_ast_walk_preorder, POSTORDER_OP_ID, PREORDER_OP_ID,
-};
+use crate::graph::vast_tree_walk::*;
 
 #[test]
 fn checked_plan_builds_preorder_and_postorder_programs() {

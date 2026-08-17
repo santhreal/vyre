@@ -43,11 +43,13 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::natural_gradient::natural_gradient_block_apply;
-#[cfg(test)]
-use crate::math::natural_gradient::{
-    natural_gradient_block_apply_cpu, natural_gradient_block_apply_cpu_into,
-};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    identity_matrix_witness_into, natural_gradient_autotune_step_witness_into,
+    natural_gradient_block_apply_witness as reference_natural_gradient_block_apply,
+    natural_gradient_block_apply_witness_into as reference_natural_gradient_block_apply_into,
+};
 
 /// Caller-owned dispatch scratch for fixed-point natural-gradient preconditioning.
 #[derive(Debug, Default)]
@@ -67,19 +69,19 @@ pub struct NaturalGradientGpuScratch {
 /// Panics if `m_inv_sqrt.len() != n*n` or `grad.len() != n`.
 #[must_use]
 #[cfg(test)]
-pub fn reference_precondition_autotune_gradient(
+pub(crate) fn reference_precondition_autotune_gradient(
     m_inv_sqrt: &[f64],
     grad: &[f64],
     n: u32,
 ) -> Vec<f64> {
     use crate::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
-    natural_gradient_block_apply_cpu(m_inv_sqrt, grad, n)
+    reference_natural_gradient_block_apply(m_inv_sqrt, grad, n)
 }
 
 /// Apply the inverse-Fisher preconditioner into caller-owned output.
 #[cfg(test)]
-pub fn reference_precondition_autotune_gradient_into(
+pub(crate) fn reference_precondition_autotune_gradient_into(
     m_inv_sqrt: &[f64],
     grad: &[f64],
     n: u32,
@@ -87,7 +89,7 @@ pub fn reference_precondition_autotune_gradient_into(
 ) {
     use crate::telemetry::{bump, natural_gradient_autotuner_calls};
     bump(&natural_gradient_autotuner_calls);
-    natural_gradient_block_apply_cpu_into(m_inv_sqrt, grad, n, out);
+    reference_natural_gradient_block_apply_into(m_inv_sqrt, grad, n, out);
 }
 
 /// Primitive-native fixed-point natural-gradient preconditioning.
@@ -215,7 +217,12 @@ pub fn precondition_autotune_gradient_fixed_via_with_scratch_into(
 /// `delta = -lr · g_nat`.
 #[must_use]
 #[cfg(test)]
-pub fn autotune_step(m_inv_sqrt: &[f64], grad: &[f64], n: u32, learning_rate: f64) -> Vec<f64> {
+pub(crate) fn autotune_step(
+    m_inv_sqrt: &[f64],
+    grad: &[f64],
+    n: u32,
+    learning_rate: f64,
+) -> Vec<f64> {
     let mut out = Vec::new();
     autotune_step_into(m_inv_sqrt, grad, n, learning_rate, &mut out);
     out
@@ -223,17 +230,16 @@ pub fn autotune_step(m_inv_sqrt: &[f64], grad: &[f64], n: u32, learning_rate: f6
 
 /// Compute the autotuner step into caller-owned output.
 #[cfg(test)]
-pub fn autotune_step_into(
+pub(crate) fn autotune_step_into(
     m_inv_sqrt: &[f64],
     grad: &[f64],
     n: u32,
     learning_rate: f64,
     out: &mut Vec<f64>,
 ) {
-    reference_precondition_autotune_gradient_into(m_inv_sqrt, grad, n, out);
-    for value in out.iter_mut() {
-        *value *= -learning_rate;
-    }
+    use crate::telemetry::{bump, natural_gradient_autotuner_calls};
+    bump(&natural_gradient_autotuner_calls);
+    natural_gradient_autotune_step_witness_into(m_inv_sqrt, grad, n, learning_rate, out);
 }
 
 /// Convenience: identity Fisher block. When the autotuner has no
@@ -241,7 +247,7 @@ pub fn autotune_step_into(
 /// gradient reduces to the plain gradient.
 #[must_use]
 #[cfg(test)]
-pub fn identity_fisher_block(n: u32) -> Vec<f64> {
+pub(crate) fn identity_fisher_block(n: u32) -> Vec<f64> {
     let mut out = Vec::new();
     identity_fisher_block_into(n, &mut out);
     out
@@ -249,13 +255,8 @@ pub fn identity_fisher_block(n: u32) -> Vec<f64> {
 
 /// Write an identity Fisher block into caller-owned storage.
 #[cfg(test)]
-pub fn identity_fisher_block_into(n: u32, out: &mut Vec<f64>) {
-    let n_us = n as usize;
-    out.clear();
-    out.resize(n_us * n_us, 0.0);
-    for i in 0..n_us {
-        out[i * n_us + i] = 1.0;
-    }
+pub(crate) fn identity_fisher_block_into(n: u32, out: &mut Vec<f64>) {
+    identity_matrix_witness_into(n, out);
 }
 
 #[cfg(test)]

@@ -12,8 +12,8 @@
 //! cell is chosen iff no already-chosen cell lies in its k×k above-left footprint, a pure integer
 //! computation, so the oracle here is EXACT (0/1 chosen mask, no tolerance).
 
-fn reference_planar_rewrite_schedule(n: usize) -> Vec<u32> { (0..n as u32).collect() }
 use vyre_libs::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via;
+use vyre_reference::composition_witness::planar_rewrite_schedule_witness as reference_planar_rewrite_schedule;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

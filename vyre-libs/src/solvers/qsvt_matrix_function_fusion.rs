@@ -50,64 +50,49 @@
 
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    require_exactly_one_output, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 #[cfg(test)]
-use crate::math::qsvt::{qsvt_apply_cpu_into, qsvt_block_encode_cpu_into};
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use vyre_reference::composition_witness::{
+    fusion_affinity_witness, negative_truncator_coeffs_witness,
+    negative_truncator_coeffs_witness_into, qsvt_apply_witness_with_scratch_into,
+    qsvt_block_encode_witness_into,
+};
+#[cfg(test)]
+fn reference_qsvt_block_encode_into(matrix: &[f64], dimension: u32, output: &mut Vec<f64>) -> f64 {
+    qsvt_block_encode_witness_into(matrix, dimension, output)
+}
 
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn reference_qsvt_apply_into(
+    matrix: &[f64],
+    vector: &[f64],
+    coefficients: &[f64],
+    dimension: u32,
+    output: &mut Vec<f64>,
+    previous: &mut Vec<f64>,
+    current: &mut Vec<f64>,
+    next: &mut Vec<f64>,
+) {
+    qsvt_apply_witness_with_scratch_into(
+        matrix,
+        vector,
+        coefficients,
+        dimension,
+        output,
+        previous,
+        current,
+        next,
+    )
+    .unwrap_or_else(|error| panic!("QSVT witness failed: {error}"));
+}
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// Caller-owned dispatch scratch for fixed-point QSVT transport residuals.
 #[derive(Debug, Default)]
 pub struct QsvtTransportGpuScratch {
     inputs: Vec<Vec<u8>>,
-}
-
-/// Compute the negative-truncation Chebyshev coefficients of length
-/// `k_steps`. The truncation function is `f(λ) = -λ if λ < 0 else 0`
-///  -  the standard negative-eigenvalue projector used in
-/// transport-based fusion analyses.
-///
-/// Uses a hand-derived Chebyshev expansion that approximates the
-/// truncator to ~3-decimal accuracy for the coefficient lengths this
-/// oracle supports. Higher-accuracy coefficient generators should live
-/// behind their own registered op and feed this function's `coeffs`
-/// consumers directly.
-#[must_use]
-pub fn negative_truncator_coeffs(k_steps: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    negative_truncator_coeffs_into(k_steps, &mut out);
-    out
-}
-
-/// Write negative-truncation Chebyshev coefficients into caller-owned storage.
-pub fn negative_truncator_coeffs_into(k_steps: u32, out: &mut Vec<f64>) {
-    // Hand-derived from the Fourier-Chebyshev expansion of
-    // f(cos θ) = -max(cos θ, 0) on [-1, 1]. The first few
-    // coefficients (truncated to k_steps):
-    //
-    // a_0 = -1/π
-    // a_1 = -1/2
-    // a_2 = -2/(3π)
-    // a_3 = 0
-    // a_4 = 2/(15π)
-    // a_5 = 0
-    // a_6 = -2/(35π)
-    // a_7 = 0
-    let pi = std::f64::consts::PI;
-    let all = [
-        -1.0 / pi,
-        -0.5,
-        -2.0 / (3.0 * pi),
-        0.0,
-        2.0 / (15.0 * pi),
-        0.0,
-        -2.0 / (35.0 * pi),
-        0.0,
-    ];
-    out.clear();
-    out.extend(all.iter().take(k_steps as usize).copied());
 }
 
 /// Compute `f(M) · v` for the dispatch-cost matrix M and weight
@@ -125,7 +110,7 @@ pub fn negative_truncator_coeffs_into(k_steps: u32, out: &mut Vec<f64>) {
 /// `chebyshev_order == 0`.
 #[must_use]
 #[cfg(test)]
-pub fn transport_residual(
+pub(crate) fn transport_residual(
     dispatch_cost: &[f64],
     weights: &[f64],
     n: u32,
@@ -155,7 +140,7 @@ pub fn transport_residual(
 /// Compute transport residual into caller-owned QSVT scratch buffers.
 #[cfg(test)]
 #[allow(clippy::too_many_arguments)]
-pub fn reference_transport_residual_into(
+pub(crate) fn reference_transport_residual_into(
     dispatch_cost: &[f64],
     weights: &[f64],
     n: u32,
@@ -177,9 +162,9 @@ pub fn reference_transport_residual_into(
     assert_eq!(dispatch_cost.len(), n_us * n_us);
     assert_eq!(weights.len(), n_us);
 
-    let _frobenius = qsvt_block_encode_cpu_into(dispatch_cost, n, scaled);
-    negative_truncator_coeffs_into(chebyshev_order, coeffs);
-    qsvt_apply_cpu_into(scaled, weights, coeffs, n, out, t_prev, t_curr, t_next);
+    let _frobenius = reference_qsvt_block_encode_into(dispatch_cost, n, scaled);
+    negative_truncator_coeffs_witness_into(chebyshev_order, coeffs);
+    reference_qsvt_apply_into(scaled, weights, coeffs, n, out, t_prev, t_curr, t_next);
 }
 
 /// Fixed-point dispatcher path for `f(M) * v` transport residuals.
@@ -290,30 +275,8 @@ pub fn transport_residual_fixed_via_with_scratch_into(
         &scratch.inputs[..5],
         Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
-    let output = outputs.first().ok_or_else(|| {
-        DispatchError::BackendError(format!(
-            "Fix: transport_residual_fixed_via expected one output buffer, got {}.",
-            outputs.len()
-        ))
-    })?;
+    let output = require_exactly_one_output(&outputs, "transport_residual_fixed_via")?;
     decode_u32_output_exact(output, n as usize, "transport_residual_fixed_via", out)
-}
-
-/// Convenience: derive a fusion-affinity score per Region from the
-/// transport residual. Lower magnitude = closer to the cost-matrix
-/// null space = better fusion candidate.
-#[must_use]
-pub fn fusion_affinity(transport_residual: &[f64]) -> Vec<f64> {
-    let mut out = Vec::new();
-    fusion_affinity_into(transport_residual, &mut out);
-    out
-}
-
-/// Derive fusion-affinity scores into caller-owned storage.
-pub fn fusion_affinity_into(transport_residual: &[f64], out: &mut Vec<f64>) {
-    out.clear();
-    reserve_vec_capacity_or_panic(out, transport_residual.len(), "QSVT fusion-affinity output");
-    out.extend(transport_residual.iter().map(|&v| -v.abs()));
 }
 
 #[cfg(test)]
@@ -348,14 +311,14 @@ mod tests {
 
     #[test]
     fn truncator_first_coeff_is_negative_inverse_pi() {
-        let coeffs = negative_truncator_coeffs(1);
+        let coeffs = negative_truncator_coeffs_witness(1);
         assert_eq!(coeffs.len(), 1);
         assert!(approx_eq(coeffs[0], -1.0 / std::f64::consts::PI));
     }
 
     #[test]
     fn truncator_high_order_caps_at_eight() {
-        let coeffs = negative_truncator_coeffs(8);
+        let coeffs = negative_truncator_coeffs_witness(8);
         assert_eq!(coeffs.len(), 8);
         // Odd-index k >= 3 is zero by Chebyshev parity.
         assert!(approx_eq(coeffs[3], 0.0));
@@ -374,7 +337,7 @@ mod tests {
     #[test]
     fn fusion_affinity_inverts_residual_magnitude() {
         let residual = vec![1.0, -2.5, 0.0, 0.5];
-        let aff = fusion_affinity(&residual);
+        let aff = fusion_affinity_witness(&residual);
         assert!(approx_eq(aff[0], -1.0));
         assert!(approx_eq(aff[1], -2.5));
         assert!(approx_eq(aff[2], 0.0));
@@ -427,7 +390,7 @@ mod tests {
     #[test]
     fn transport_residual_runs_on_small_matrix() {
         // 3x3 dispatch cost, all-ones weights. Just verify shape +
-        // no panic; numerical exactness comes from qsvt_apply_cpu
+        // no panic; numerical exactness comes from QSVT witness
         // unit tests in the primitive's own crate.
         let cost = vec![1.0, 0.5, 0.3, 0.5, 1.0, 0.4, 0.3, 0.4, 1.0];
         let weights = vec![1.0, 1.0, 1.0];

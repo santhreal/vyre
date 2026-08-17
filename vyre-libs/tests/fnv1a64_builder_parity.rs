@@ -15,9 +15,10 @@ use std::collections::BTreeSet;
 
 use vyre_foundation::ir::Program;
 use vyre_libs::hash::fnv1a::{
-    fnv1a64, fnv1a64_program, fnv1a64_program_n, fnv1a64_program_n_u8, fnv1a64_program_u8,
+    fnv1a64_program, fnv1a64_program_n, fnv1a64_program_n_u8, fnv1a64_program_u8,
 };
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
+use vyre_reference::composition_witness::fnv1a64_witness as fnv1a64;
 use vyre_reference::value::Value;
 use vyre_test_support::monorepo::declaring_source_file;
 

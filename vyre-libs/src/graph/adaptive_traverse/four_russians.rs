@@ -106,11 +106,19 @@ pub fn four_russians_dense_lut_from_adj_rows(
     adj_rows_dense: &[u32],
 ) -> Result<Vec<u32>, String> {
     let columns = four_russians_dense_columns_from_adj_rows(node_count, adj_rows_dense)?;
-    Ok(dense_matvec_byte_lut(
+    let expected_words = four_russians_dense_lut_words(node_count) as usize;
+    let lut = dense_matvec_byte_lut(
         &columns,
         four_russians_source_tile_count(node_count),
         bitset_words(node_count),
-    ))
+    );
+    if lut.len() != expected_words {
+        return Err(format!(
+            "Fix: Four-Russians dense LUT build expected {expected_words} words for {node_count} nodes, got {}.",
+            lut.len()
+        ));
+    }
+    Ok(lut)
 }
 
 /// Build the graph-level Four-Russians dense traversal Program.

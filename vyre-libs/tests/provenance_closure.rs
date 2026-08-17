@@ -4,7 +4,7 @@
 //! lineage directly.
 #![allow(missing_docs)]
 
-use vyre_libs::encoding::scallop_provenance;
+use vyre_reference::composition_witness::scallop_join_fixpoint_witness;
 
 #[test]
 fn provenance_closure_matches_expected_lineage() {
@@ -13,7 +13,7 @@ fn provenance_closure_matches_expected_lineage() {
     state[5] = 0b010;
 
     let join_rules = state.clone();
-    let closure = scallop_provenance::reference_provenance_closure(&state, &join_rules, 3, 8);
+    let (closure, _) = scallop_join_fixpoint_witness(&state, &join_rules, 3, 1, 8);
 
     assert_eq!(
         closure,

@@ -1,9 +1,46 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::path_reconstruct::{
-    cpu_ref as path_reconstruct_cpu, reference_path_to_root, reference_reconstruct_path,
-    try_cpu_ref_batched,
-};
+fn path_reconstruct_cpu(
+    parent: &[u32],
+    target: u32,
+    max_depth: u32,
+    scratch: &mut Vec<u32>,
+) -> u32 {
+    vyre_reference::composition_witness::path_reconstruct_witness_into(
+        parent, target, max_depth, scratch,
+    )
+}
+
+fn reference_reconstruct_path(
+    parent: &[u32],
+    target: u32,
+    max_depth: u32,
+    scratch: &mut Vec<u32>,
+) -> u32 {
+    path_reconstruct_cpu(parent, target, max_depth, scratch)
+}
+
+fn reference_path_to_root(parent: &[u32], target: u32, max_depth: u32) -> Vec<u32> {
+    let mut scratch = Vec::with_capacity(max_depth as usize);
+    let len = reference_reconstruct_path(parent, target, max_depth, &mut scratch);
+    scratch.truncate(len as usize);
+    scratch
+}
+
+fn try_cpu_ref_batched(
+    parent: &[u32],
+    targets: &[u32],
+    max_depth: u32,
+    paths: &mut Vec<u32>,
+    lens: &mut Vec<u32>,
+) -> Result<(), String> {
+    if max_depth == 0 {
+        return Err("Fix: batched_path_reconstruct max_depth must be >= 1.".to_string());
+    }
+    vyre_reference::composition_witness::try_path_reconstruct_batch_witness_into(
+        parent, targets, max_depth, paths, lens,
+    )
+}
 use crate::test_parity_oracles::StaticOutputs;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

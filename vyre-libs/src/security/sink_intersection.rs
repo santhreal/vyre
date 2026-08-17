@@ -41,7 +41,8 @@ pub fn sink_intersection(
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_ref(query_set: &[u32], sink_set: &[u32]) -> u32 {
-    crate::reduce::count::cpu_ref(&crate::bitset::and::cpu_ref(query_set, sink_set))
+    let intersection = vyre_reference::composition_witness::bitset_and_witness(query_set, sink_set);
+    vyre_reference::composition_witness::reduce_count_witness(&intersection)
 }
 
 /// Soundness marker for [`sink_intersection`].

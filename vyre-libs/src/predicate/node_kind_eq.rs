@@ -31,7 +31,7 @@ pub(crate) fn node_kind_eq_with_op_id(
     )
 }
 
-
+const EXPECTED_NODE_KIND_EQ_OUTPUT_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -45,17 +45,18 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0101])]] // nodes 0 and 2 (CALL)
+            // nodes 0 and 2 (CALL)
+            vec![vec![EXPECTED_NODE_KIND_EQ_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::predicate::node_kind;
-
+    use vyre_reference::composition_witness::{
+        node_kind_eq_witness as cpu_ref, node_kind_eq_witness_into as cpu_ref_into,
+    };
     #[test]
     fn filters_by_kind() {
         let got = cpu_ref(

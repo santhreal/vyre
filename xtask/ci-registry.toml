@@ -223,6 +223,11 @@ subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "host-oracle-elimination"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "hot-path-blocking-wait"
 subsets = ["hot-path"]
 workflows = ["gates.yml"]

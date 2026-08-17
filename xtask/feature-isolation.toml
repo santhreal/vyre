@@ -177,18 +177,6 @@ feature = "(none)"
 
 [[pair]]
 member = "vyre-driver-wgpu"
-feature = "pattern-dfa"
-
-[[pair]]
-member = "vyre-driver-wgpu"
-feature = "pattern-nfa"
-
-[[pair]]
-member = "vyre-driver-wgpu"
-feature = "pattern-substring"
-
-[[pair]]
-member = "vyre-driver-wgpu"
 feature = "math-linalg"
 
 [[pair]]
@@ -202,6 +190,18 @@ feature = "nn-attention"
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "parity-testing"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "pattern-dfa"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "pattern-nfa"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "pattern-substring"
 
 [[pair]]
 member = "vyre-driver-wgpu"
@@ -265,19 +265,15 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),analysis,cpu-parity,full"
+feature = "(default),analysis,full"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),bitset,cpu-parity,graph,nn-linear-4bit,predicate"
+feature = "(default),bitset,graph,nn-linear-4bit,predicate"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),cpu-parity,crypto-blake3,hash,nn-attention,parsing,pattern"
-
-[[pair]]
-member = "vyre-libs"
-feature = "(default),cpu-parity,graph-dispatch"
+feature = "(default),crypto-blake3,hash,nn-attention,parsing,pattern"
 
 [[pair]]
 member = "vyre-libs"
@@ -290,6 +286,10 @@ feature = "(default),full"
 [[pair]]
 member = "vyre-libs"
 feature = "(default),full,pattern-regex"
+
+[[pair]]
+member = "vyre-libs"
+feature = "(default),graph-dispatch"
 
 [[pair]]
 member = "vyre-libs"
@@ -318,10 +318,6 @@ feature = "builder-ops"
 [[pair]]
 member = "vyre-libs"
 feature = "cat-a-builder-options"
-
-[[pair]]
-member = "vyre-libs"
-feature = "cpu-parity"
 
 [[pair]]
 member = "vyre-libs"
@@ -386,30 +382,6 @@ feature = "llm"
 [[pair]]
 member = "vyre-libs"
 feature = "logical"
-
-[[pair]]
-member = "vyre-libs"
-feature = "pattern"
-
-[[pair]]
-member = "vyre-libs"
-feature = "pattern-dfa"
-
-[[pair]]
-member = "vyre-libs"
-feature = "pattern-kernels"
-
-[[pair]]
-member = "vyre-libs"
-feature = "pattern-nfa"
-
-[[pair]]
-member = "vyre-libs"
-feature = "pattern-regex"
-
-[[pair]]
-member = "vyre-libs"
-feature = "pattern-substring"
 
 [[pair]]
 member = "vyre-libs"
@@ -494,6 +466,30 @@ feature = "parsing"
 [[pair]]
 member = "vyre-libs"
 feature = "parsing-kernels"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-dfa"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-kernels"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-nfa"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-regex"
+
+[[pair]]
+member = "vyre-libs"
+feature = "pattern-substring"
 
 [[pair]]
 member = "vyre-libs"
@@ -601,10 +597,6 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-pass-engine"
-feature = "(default),cpu-parity"
-
-[[pair]]
-member = "vyre-pass-engine"
 feature = "(none)"
 
 [[pair]]
@@ -613,19 +605,11 @@ feature = "all-solvers"
 
 [[pair]]
 member = "vyre-pass-engine"
-feature = "cpu-parity"
-
-[[pair]]
-member = "vyre-pass-engine"
 feature = "optimizer"
 
 [[pair]]
 member = "vyre-primitives"
 feature = "(default)"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "(default),cpu-parity,hardware"
 
 [[pair]]
 member = "vyre-primitives"
@@ -642,10 +626,6 @@ feature = "(none)"
 [[pair]]
 member = "vyre-primitives"
 feature = "cpu-parity"
-
-[[pair]]
-member = "vyre-primitives"
-feature = "cpu-parity,hardware"
 
 [[pair]]
 member = "vyre-primitives"

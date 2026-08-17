@@ -1,7 +1,5 @@
 //! Host/device memory ownership contract validation.
 
-use std::collections::BTreeSet;
-
 /// Allowed owner for a buffer at a system boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MemoryOwner {
@@ -110,11 +108,10 @@ pub fn validate_memory_ownership_contract(
         return Err(MemoryOwnershipError::EmptyRecords);
     }
 
-    let mut resources = BTreeSet::new();
     let mut device_resident_count = 0_usize;
     let mut borrowed_output_slot_count = 0_usize;
 
-    for record in records {
+    for (idx, record) in records.iter().enumerate() {
         for (field, value) in [
             ("resource", record.resource),
             ("subsystem", record.subsystem),
@@ -126,10 +123,12 @@ pub fn validate_memory_ownership_contract(
                 });
             }
         }
-        if !resources.insert(record.resource) {
-            return Err(MemoryOwnershipError::DuplicateResource {
-                resource: record.resource.to_owned(),
-            });
+        for other in &records[idx + 1..] {
+            if record.resource == other.resource {
+                return Err(MemoryOwnershipError::DuplicateResource {
+                    resource: record.resource.to_owned(),
+                });
+            }
         }
         if record.production && record.owner == MemoryOwner::ParityOnly {
             return Err(MemoryOwnershipError::ParityOnlyInProduction {

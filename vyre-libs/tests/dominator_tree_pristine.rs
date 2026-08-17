@@ -11,8 +11,13 @@
 mod gate_fixtures;
 
 use gate_fixtures::reference_eval_idoms;
-fn df_cpu_ref(n: usize, _offsets: &[u32], _cols: &[u32]) -> Vec<u32> { vec![0; (n + 31) / 32 * n] }
 use vyre_libs::graph::dominator_tree::*;
+use vyre_reference::composition_witness::{
+    dominator_frontier_witness as df_cpu_ref,
+    dominator_idoms_witness as cooper_harvey_kennedy_idoms, dominator_idoms_witness as cpu_ref,
+    dominator_sets_idoms_witness as lengauer_tarjan_idoms,
+    idoms_to_dominator_sets_witness as idoms_to_dominator_sets,
+};
 
 // ------------------------------------------------------------------
 // Tier 1 - Positive truth: 10+ canonical CFG fixtures

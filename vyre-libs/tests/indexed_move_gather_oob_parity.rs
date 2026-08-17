@@ -12,9 +12,9 @@
 #![cfg(feature = "reduce")]
 
 use vyre_libs::reduce::gather::gather as gather_fn;
-fn gather_cpu_ref(source: &[u32], indices: &[u32]) -> Vec<u32> { indices.iter().map(|&idx| source.get(idx as usize).copied().unwrap_or(0)).collect() }
 use vyre_libs::reduce::scatter::scatter as scatter_fn;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::gather_witness as gather_reference_witness;
 use vyre_reference::value::Value;
 
 #[test]
@@ -40,7 +40,7 @@ fn gather_out_of_range_index_matches_cpu_ref_with_reused_dst() {
     .expect("gather reference evaluation must succeed");
 
     let gpu_ir = unpack(&outputs[0].to_bytes());
-    let cpu = gather_cpu_ref(&src, &indices); // expected [10, 0, 20]
+    let cpu = gather_reference_witness(&src, &indices); // expected [10, 0, 20]
 
     assert_eq!(
         gpu_ir, cpu,

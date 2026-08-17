@@ -8,11 +8,15 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_libs::bitset::and::{bitset_and, cpu_ref as and_cpu};
-use vyre_libs::bitset::and_not::{bitset_and_not, cpu_ref as and_not_cpu};
-use vyre_libs::bitset::any::{bitset_any, cpu_ref as any_cpu};
-use vyre_libs::bitset::set_bit::{bitset_set_bit, cpu_ref as set_bit_cpu};
-use vyre_libs::bitset::xor::{bitset_xor, cpu_ref as xor_cpu};
+use vyre_libs::bitset::and::bitset_and;
+use vyre_libs::bitset::and_not::bitset_and_not;
+use vyre_libs::bitset::any::bitset_any;
+use vyre_libs::bitset::set_bit::bitset_set_bit;
+use vyre_libs::bitset::xor::bitset_xor;
+use vyre_reference::composition_witness::{
+    bitset_and_not_witness, bitset_and_witness, bitset_set_bit_inplace_witness, bitset_xor_witness,
+    reduce_any_witness,
+};
 
 fn run_pairwise<F>(backend: &CudaBackend, program_builder: F, lhs: &[u32], rhs: &[u32]) -> Vec<u32>
 where
@@ -38,7 +42,7 @@ where
 fn assert_pairwise_matches<F, C>(
     case_name: &str,
     program_builder: F,
-    cpu_ref: C,
+    witness: C,
     lhs: &[u32],
     rhs: &[u32],
 ) -> Vec<u32>
@@ -46,10 +50,10 @@ where
     F: FnOnce(&str, &str, &str, u32) -> vyre::Program,
     C: FnOnce(&[u32], &[u32]) -> Vec<u32>,
 {
-    let cpu = cpu_ref(lhs, rhs);
+    let expected = witness(lhs, rhs);
     with_live_backend(case_name, |backend| {
         let gpu = run_pairwise(backend, program_builder, lhs, rhs);
-        assert_eq!(gpu, cpu, "{case_name}: bitset pairwise divergence");
+        assert_eq!(gpu, expected, "{case_name}: bitset pairwise divergence");
         gpu
     })
 }
@@ -58,21 +62,27 @@ where
 fn cuda_bitset_and_parity() {
     let lhs = vec![0xFF00FF00u32, 0xAAAA_AAAA, 0u32, 0xFFFF_FFFF];
     let rhs = vec![0x00FFFF00u32, 0x5555_5555, 0xFFFF_FFFF, 0xCAFEBABE];
-    assert_pairwise_matches("bitset and", bitset_and, and_cpu, &lhs, &rhs);
+    assert_pairwise_matches("bitset and", bitset_and, bitset_and_witness, &lhs, &rhs);
 }
 
 #[test]
 fn cuda_bitset_and_not_parity() {
     let lhs = vec![0xFFFF_FFFFu32, 0xCAFE_BABE, 0u32, 0xAAAA_AAAA];
     let rhs = vec![0x00FF_00FFu32, 0xFFFF_0000, 0xFFFF_FFFF, 0x5555_5555];
-    assert_pairwise_matches("bitset and-not", bitset_and_not, and_not_cpu, &lhs, &rhs);
+    assert_pairwise_matches(
+        "bitset and-not",
+        bitset_and_not,
+        bitset_and_not_witness,
+        &lhs,
+        &rhs,
+    );
 }
 
 #[test]
 fn cuda_bitset_xor_parity() {
     let lhs = vec![0xAAAA_AAAAu32, 0u32, 0xFFFF_FFFF, 0xDEAD_BEEF];
     let rhs = vec![0x5555_5555u32, 0xFFFF_FFFF, 0u32, 0xDEAD_BEEF];
-    let gpu = assert_pairwise_matches("bitset xor", bitset_xor, xor_cpu, &lhs, &rhs);
+    let gpu = assert_pairwise_matches("bitset xor", bitset_xor, bitset_xor_witness, &lhs, &rhs);
     // Self-xor should be all zeros for the last lane.
     assert_eq!(gpu[3], 0);
 }
@@ -90,10 +100,10 @@ fn run_any(backend: &CudaBackend, input: &[u32]) -> u32 {
 }
 
 fn assert_any_matches(case_name: &str, input: &[u32]) -> u32 {
-    let cpu = any_cpu(input);
+    let expected = reduce_any_witness(input);
     with_live_backend(case_name, |backend| {
         let gpu = run_any(backend, input);
-        assert_eq!(gpu, cpu, "{case_name}: bitset any divergence");
+        assert_eq!(gpu, expected, "{case_name}: bitset any divergence");
         gpu
     })
 }
@@ -132,11 +142,11 @@ fn run_set_bit(backend: &CudaBackend, target: &[u32], bit_idx: u32) -> Vec<u32> 
 }
 
 fn assert_set_bit_matches(case_name: &str, target: &[u32], bit_idx: u32) -> Vec<u32> {
-    let mut cpu = target.to_vec();
-    set_bit_cpu(&mut cpu, bit_idx);
+    let mut expected = target.to_vec();
+    bitset_set_bit_inplace_witness(&mut expected, bit_idx);
     with_live_backend(case_name, |backend| {
         let gpu = run_set_bit(backend, target, bit_idx);
-        assert_eq!(gpu, cpu, "{case_name}: set-bit divergence");
+        assert_eq!(gpu, expected, "{case_name}: set-bit divergence");
         gpu
     })
 }

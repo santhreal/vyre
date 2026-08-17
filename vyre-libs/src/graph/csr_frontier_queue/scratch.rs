@@ -76,7 +76,9 @@ pub(crate) struct ResidentCsrQueueFrontierStats {
     pub(crate) max_nonzero_words: usize,
 }
 
-pub(crate) fn resident_csr_queue_materializer(frontier_words: usize) -> ResidentCsrQueueMaterializer {
+pub(crate) fn resident_csr_queue_materializer(
+    frontier_words: usize,
+) -> ResidentCsrQueueMaterializer {
     if frontier_words >= WORD_PREFIX_MIN_FRONTIER_WORDS {
         ResidentCsrQueueMaterializer::DeterministicWordPrefix
     } else {
@@ -100,7 +102,9 @@ pub(crate) const fn resident_csr_queue_materializer_for_stats(
 }
 
 #[cfg(test)]
-pub(crate) const fn resident_csr_queue_traverse_kind(max_row_degree: u32) -> ResidentCsrQueueTraverseKind {
+pub(crate) const fn resident_csr_queue_traverse_kind(
+    max_row_degree: u32,
+) -> ResidentCsrQueueTraverseKind {
     if max_row_degree >= STRIDED_FORWARD_MIN_ROW_DEGREE {
         ResidentCsrQueueTraverseKind::RowStrided
     } else {

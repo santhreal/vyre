@@ -60,7 +60,6 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::sheaf::sheaf_diffusion_step;
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for fixed-point sheaf diffusion.
@@ -69,8 +68,6 @@ pub struct SheafDispatchGpuScratch {
     inputs: Vec<Vec<u8>>,
     damping: Vec<u32>,
 }
-
-
 
 /// Fixed-point production path for one sheaf-diffusion step.
 ///
@@ -211,7 +208,7 @@ pub fn diffuse_dispatch_stalks_fixed_via_with_scratch_into(
 /// `(final_stalks, iters_run)`.
 #[must_use]
 #[cfg(test)]
-pub fn diffuse_to_equilibrium(
+pub(crate) fn diffuse_to_equilibrium(
     initial_stalks: &[f64],
     restriction_diag: &[f64],
     damping: f64,
@@ -237,7 +234,35 @@ pub fn diffuse_to_equilibrium(
 /// `out` receives the final stalk vector and `scratch` is reused for each
 /// intermediate step.
 #[cfg(test)]
-pub fn diffuse_to_equilibrium_into(
+pub(crate) fn reference_diffuse_dispatch_stalks_into(
+    stalks: &[f64],
+    restriction_diag: &[f64],
+    damping: f64,
+    out: &mut Vec<f64>,
+) {
+    vyre_reference::composition_witness::sheaf_diffusion_step_witness_into(
+        stalks,
+        restriction_diag,
+        damping,
+        out,
+    );
+}
+
+#[cfg(test)]
+pub(crate) fn reference_diffuse_dispatch_stalks(
+    stalks: &[f64],
+    restriction_diag: &[f64],
+    damping: f64,
+) -> Vec<f64> {
+    vyre_reference::composition_witness::sheaf_diffusion_step_witness(
+        stalks,
+        restriction_diag,
+        damping,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn diffuse_to_equilibrium_into(
     initial_stalks: &[f64],
     restriction_diag: &[f64],
     damping: f64,
@@ -246,28 +271,23 @@ pub fn diffuse_to_equilibrium_into(
     out: &mut Vec<f64>,
     scratch: &mut Vec<f64>,
 ) -> u32 {
-    out.clear();
-    out.extend_from_slice(initial_stalks);
-    for iter in 0..max_iters {
-        reference_diffuse_dispatch_stalks_into(out, restriction_diag, damping, scratch);
-        let max_change = scratch
-            .iter()
-            .zip(out.iter())
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0_f64, f64::max);
-        std::mem::swap(out, scratch);
-        if max_change < tol {
-            return iter + 1;
-        }
-    }
-    max_iters
+    vyre_reference::composition_witness::sheaf_diffusion_equilibrium_witness_into(
+        initial_stalks,
+        restriction_diag,
+        damping,
+        tol,
+        max_iters,
+        out,
+        scratch,
+    )
 }
 
 /// Identify fusion-incompatible Region pairs: high stalk divergence
 /// after diffusion = type-space mismatch. Returns a 0/1 vector;
 /// 1 means "this Region's stalk diverged enough to flag fusion-incompatible."
 #[must_use]
-pub fn flag_fusion_incompatible(
+#[cfg(test)]
+pub(crate) fn flag_fusion_incompatible(
     initial_stalks: &[f64],
     diffused_stalks: &[f64],
     divergence_threshold: f64,
@@ -283,25 +303,19 @@ pub fn flag_fusion_incompatible(
 }
 
 /// Identify fusion-incompatible Region pairs into caller-owned storage.
-pub fn flag_fusion_incompatible_into(
+#[cfg(test)]
+pub(crate) fn flag_fusion_incompatible_into(
     initial_stalks: &[f64],
     diffused_stalks: &[f64],
     divergence_threshold: f64,
     out: &mut Vec<u32>,
 ) {
-    out.clear();
-    reserve_vec_capacity_or_panic(out, initial_stalks.len(), "sheaf incompatibility output");
-    initial_stalks
-        .iter()
-        .zip(diffused_stalks.iter())
-        .map(|(&i, &d)| {
-            if (i - d).abs() > divergence_threshold {
-                1u32
-            } else {
-                0u32
-            }
-        })
-        .for_each(|flag| out.push(flag));
+    vyre_reference::composition_witness::sheaf_fusion_incompatible_witness_into(
+        initial_stalks,
+        diffused_stalks,
+        divergence_threshold,
+        out,
+    );
 }
 
 #[cfg(test)]

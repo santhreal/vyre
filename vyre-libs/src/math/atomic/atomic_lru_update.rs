@@ -46,9 +46,8 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
             // Single lane writes timestamp 12345 into slot 0.
-            vec![vec![to_bytes(&[12345u32])]]
+            vec![vec![vec![0x39, 0x30, 0x00, 0x00]]]
         }),
     )
     .with_category("math")

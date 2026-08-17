@@ -13,38 +13,14 @@ fn cpu_ref(
     frontier: &[u32],
     edge_kind_mask: u32,
 ) -> Vec<u32> {
-    assert_eq!(
-        edge_offsets.len(),
-        node_count as usize + 1,
-        "node_count + 1 CSR offsets required"
-    );
-    let edge_count = edge_offsets.last().copied().unwrap_or(0) as usize;
-    assert!(
-        edge_targets.len() >= edge_count && edge_kinds.len() >= edge_count,
-        "complete CSR edge buffers required"
-    );
-    let mut out = vec![0u32; node_count.div_ceil(32) as usize];
-    for src in 0..node_count as usize {
-        if frontier
-            .get(src / 32)
-            .is_none_or(|word| (word & (1u32 << (src % 32))) == 0)
-        {
-            continue;
-        }
-        let start = edge_offsets[src] as usize;
-        let end = edge_offsets[src + 1] as usize;
-        assert!(start <= end, "CSR offsets must be monotonic");
-        for edge in start..end {
-            if edge_kinds[edge] & edge_kind_mask == 0 {
-                continue;
-            }
-            let dst = edge_targets[edge] as usize;
-            if let Some(word) = out.get_mut(dst / 32) {
-                *word |= 1u32 << (dst % 32);
-            }
-        }
-    }
-    out
+    vyre_reference::composition_witness::csr_forward_traverse_witness(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kinds,
+        frontier,
+        edge_kind_mask,
+    )
 }
 
 #[test]

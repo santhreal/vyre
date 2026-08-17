@@ -247,9 +247,7 @@ pub fn try_csr_read_only_buffers(
     node_count: u32,
     edge_count: u32,
 ) -> Result<Vec<BufferDecl>, String> {
-    let offset_count = node_count.checked_add(1).ok_or_else(|| {
-        format!("Fix: CSR offset count overflow: node_count={node_count} + 1 overflows u32.")
-    })?;
+    let offset_count = checked_csr_offset_count(node_count, "CSR")?;
     let physical_edge_count = edge_count.max(1);
     Ok(vec![
         BufferDecl::storage(

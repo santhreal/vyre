@@ -27,7 +27,6 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::visit::for_each_node;
-use vyre_libs::pattern::CompiledDfa;
 use vyre_libs::pattern::classic_ac::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
@@ -38,6 +37,7 @@ use vyre_libs::pattern::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
+use vyre_libs::pattern::CompiledDfa;
 use vyre_libs::pattern::{
     aho_corasick, anchored_window_extract_program,
     build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce, fused_region_evidence_program,

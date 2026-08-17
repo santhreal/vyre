@@ -9,12 +9,32 @@ mod gate_fixtures;
 use gate_fixtures::u32_bytes;
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::adaptive_traverse::{
-    adaptive_four_russians_dense_step, cpu_dense_step, cpu_four_russians_dense_step,
-    four_russians_dense_columns_from_adj_rows, four_russians_dense_lut_from_adj_rows,
-    four_russians_dense_lut_words, four_russians_frontier_words, four_russians_source_tile_count,
-    select_dense_traversal_kernel, DenseTraversalKernel, DENSE_THRESHOLD_PCT,
+    adaptive_four_russians_dense_step, four_russians_dense_columns_from_adj_rows,
+    four_russians_dense_lut_from_adj_rows, four_russians_dense_lut_words,
+    four_russians_frontier_words, four_russians_source_tile_count, select_dense_traversal_kernel,
+    DenseTraversalKernel, DENSE_THRESHOLD_PCT,
 };
+use vyre_reference::composition_witness::dense_bitmatrix_step_witness;
 use vyre_reference::value::Value;
+
+fn cpu_dense_step(frontier: &[u32], dense_adj: &[u32], node_count: u32) -> Vec<u32> {
+    dense_bitmatrix_step_witness(frontier, dense_adj, node_count)
+}
+
+fn cpu_four_russians_dense_step(
+    frontier: &[u32],
+    dense_adj: &[u32],
+    node_count: u32,
+) -> Result<Vec<u32>, String> {
+    let words = bitset_words(node_count);
+    let lut = four_russians_dense_lut_from_adj_rows(node_count, dense_adj)?;
+    let tile_count = four_russians_source_tile_count(node_count);
+    Ok(
+        vyre_reference::composition_witness::dense_boolean_matvec_witness(
+            frontier, &lut, tile_count, words,
+        ),
+    )
+}
 
 #[test]
 fn generated_four_russians_dense_matches_row_scan_dense() {

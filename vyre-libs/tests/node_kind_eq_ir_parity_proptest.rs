@@ -15,7 +15,9 @@ use proptest::prelude::*;
 use vyre_reference::value::Value;
 
 use vyre_libs::predicate::node_kind_eq::node_kind_eq;
-fn cpu_ref(kinds: &[u32], target: u32) -> Vec<u32> { kinds.iter().map(|&k| (k == target) as u32).collect() }
+fn cpu_ref(kinds: &[u32], target: u32) -> Vec<u32> {
+    vyre_reference::composition_witness::node_kind_eq_witness(kinds, target)
+}
 
 fn run_ir(nodes: &[u32], kind: u32) -> Vec<u32> {
     let node_count = nodes.len() as u32;

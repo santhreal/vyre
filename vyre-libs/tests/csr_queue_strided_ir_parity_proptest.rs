@@ -24,10 +24,11 @@
 
 use proptest::prelude::*;
 use vyre_libs::graph::csr_queue_strided::{
-    csr_queue_strided_forward_traverse, csr_queue_strided_forward_traverse_cpu,
+    csr_queue_strided_forward_traverse,
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE as LANES_PER_SOURCE,
 };
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::csr_queue_strided_forward_witness as csr_queue_strided_forward_traverse_cpu;
 use vyre_reference::value::Value;
 
 fn bitset_words(node_count: u32) -> usize {

@@ -61,8 +61,7 @@ impl Matmul {
             0
         };
 
-        let mut composer =
-            ContractionComposer::matmul_2d(OP_ID, self.a, self.b, self.out, m, k, n);
+        let mut composer = ContractionComposer::matmul_2d(OP_ID, self.a, self.b, self.out, m, k, n);
         if let Some(workgroup) = self.options.workgroup_size {
             composer = composer.with_workgroup_size(workgroup);
         }
@@ -145,7 +144,6 @@ impl MatmulBias {
 
 crate::builder::impl_cat_a_builder_options!(MatmulBias);
 
-
 /// Build a Program that computes `out = a @ b` where `a` is `m x k`,
 /// `b` is `k x n`, and `out` is `m x n`. The caller supplies buffer
 /// names + dimensions via buffer `count()` on the BufferDecls.
@@ -184,7 +182,6 @@ pub fn matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u
         )
     })
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -474,20 +471,24 @@ inventory::submit! {
         Some(|| {
             // 4x4 matmul over u32: a[i,j] = i*4+j, b[i,j] = i*4+j+1.
             // out[i,j] = Σ_k a[i,k] * b[k,j]. Computed row-major.
-            let a: Vec<u32> = (0..16).collect();
-            let b: Vec<u32> = (0..16).map(|i| i + 1).collect();
-            let mut out = Vec::with_capacity(16);
-            for i in 0..4 {
-                for j in 0..4 {
-                    let mut acc: u32 = 0;
-                    for k in 0..4 {
-                        acc = acc.wrapping_add(a[i * 4 + k].wrapping_mul(b[k * 4 + j]));
-                    }
-                    out.push(acc);
-                }
-            }
-            let bytes = vyre_primitives::wire::pack_u32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![vec![
+                0x3e, 0x00, 0x00, 0x00, // 62
+                0x44, 0x00, 0x00, 0x00, // 68
+                0x4a, 0x00, 0x00, 0x00, // 74
+                0x50, 0x00, 0x00, 0x00, // 80
+                0xae, 0x00, 0x00, 0x00, // 174
+                0xc4, 0x00, 0x00, 0x00, // 196
+                0xda, 0x00, 0x00, 0x00, // 218
+                0xf0, 0x00, 0x00, 0x00, // 240
+                0x1e, 0x01, 0x00, 0x00, // 286
+                0x44, 0x01, 0x00, 0x00, // 324
+                0x6a, 0x01, 0x00, 0x00, // 362
+                0x90, 0x01, 0x00, 0x00, // 400
+                0x8e, 0x01, 0x00, 0x00, // 398
+                0xc4, 0x01, 0x00, 0x00, // 452
+                0xfa, 0x01, 0x00, 0x00, // 506
+                0x30, 0x02, 0x00, 0x00, // 560
+            ]]]
         }),
     )
     .with_category("math")
@@ -506,8 +507,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-
-            vec![vec![crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70])]]
+            vec![vec![vec![
+                0x1d, 0x00, 0x00, 0x00, // 29
+                0x2a, 0x00, 0x00, 0x00, // 42
+                0x35, 0x00, 0x00, 0x00, // 53
+                0x46, 0x00, 0x00, 0x00, // 70
+            ]]]
         }),
     )
     .with_category("math")
@@ -525,7 +530,9 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![crate::fixture_bytes::u32_bytes(&[11])]]
+            vec![vec![vec![
+                0x0b, 0x00, 0x00, 0x00, // 11
+            ]]]
         }),
     )
     .with_category("math")

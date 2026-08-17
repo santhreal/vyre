@@ -13,11 +13,10 @@
 #![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-use vyre_libs::graph::csr_frontier_degree_sum::{
-    csr_frontier_degree_sum, csr_frontier_degree_sum_cpu,
-};
+use vyre_libs::graph::csr_frontier_degree_sum::csr_frontier_degree_sum;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::csr_frontier_degree_sum_witness as csr_frontier_degree_sum_cpu;
 use vyre_reference::value::Value;
 
 fn bitset_words(node_count: u32) -> usize {

@@ -20,8 +20,6 @@ use wire_words::{decode_u32_words as decode_u32, Lcg};
 use std::collections::BTreeSet;
 
 use vyre_libs::pattern::classic_ac::{
-    classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
-    classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
     classic_ac_compile, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
@@ -29,6 +27,11 @@ use vyre_libs::pattern::classic_ac::{
 };
 use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
+use vyre_reference::composition_witness::{
+    classic_ac_candidate_end_byte_mask_words_witness,
+    classic_ac_candidate_suffix2_mask_words_witness,
+    classic_ac_candidate_suffix3_bloom_words_witness,
+};
 
 /// Small alphabet so literals collide and the DFA / prefilter actually exercise
 /// shared prefixes, suffix2/suffix3 candidate gating, and overlapping matches.
@@ -109,9 +112,17 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         let pattern_count = literals.len() as u32;
         let region_count = region_starts.len() as u32;
 
-        let end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
-        let suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
-        let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(&pattern_refs);
+        let end_mask = classic_ac_candidate_end_byte_mask_words_witness(
+            &ac.dfa.transitions,
+            &ac.dfa.output_offsets,
+            ac.dfa.state_count,
+        );
+        let suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
+            &ac.dfa.transitions,
+            &ac.dfa.output_offsets,
+            ac.dfa.state_count,
+        );
+        let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(&pattern_refs);
         let haystack_packed = pack_haystack_u32(&haystack);
         let transitions = pack_u32_slice(&ac.dfa.transitions);
         let output_offsets = pack_u32_slice(&ac.dfa.output_offsets);
@@ -242,9 +253,16 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         // Independent linear-AC oracle cross-check: the fused triple SET (pid,end)
         // must equal the bounded-ranges AC oracle's, so the differential isn't two
         // programs sharing the same bug.
-        let oracle: BTreeSet<(u32, u32)> = classic_ac_bounded_ranges_scan(&ac, &lengths, &haystack)
-            .into_iter()
-            .map(|(pid, _start, end)| (pid, end))
+        let oracle: BTreeSet<(u32, u32)> = literals
+            .iter()
+            .enumerate()
+            .flat_map(|(pattern_id, literal)| {
+                haystack
+                    .windows(literal.len())
+                    .enumerate()
+                    .filter(move |(_, window)| *window == literal.as_slice())
+                    .map(move |(start, _)| (pattern_id as u32, (start + literal.len()) as u32))
+            })
             .collect();
         let fused_pid_end: BTreeSet<(u32, u32)> =
             fused_triples.iter().map(|&(pid, _s, e)| (pid, e)).collect();

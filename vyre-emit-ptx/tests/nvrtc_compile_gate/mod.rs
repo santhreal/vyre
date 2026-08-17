@@ -127,4 +127,4 @@ fn mock_gate_rejects_malformed_placeholder() {
 }
 
 #[cfg(feature = "nvrtc")]
-mod nvrtc_real;
+mod cuda;

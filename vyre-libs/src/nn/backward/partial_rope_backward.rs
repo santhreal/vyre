@@ -137,6 +137,10 @@ pub fn partial_rope_backward(
     )
 }
 
+const EXPECTED_PARTIAL_ROPE_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0xC0, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -151,9 +155,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // cos=1, sin=0: backward rotation is also identity
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32(&[1.0, 0.0, 5.0, 6.0])]]
+            vec![vec![EXPECTED_PARTIAL_ROPE_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

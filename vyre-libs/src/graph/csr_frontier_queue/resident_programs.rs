@@ -147,7 +147,10 @@ pub(crate) fn resident_csr_queue_atomic_word_scan_program(
 }
 
 /// Popcount every frontier word into per-word partials and per-block totals.
-pub(crate) fn resident_csr_queue_word_counts_program(frontier_in: &str, node_count: u32) -> Program {
+pub(crate) fn resident_csr_queue_word_counts_program(
+    frontier_in: &str,
+    node_count: u32,
+) -> Program {
     frontier_word_counts_scan_pass_a(frontier_in, WORD_PARTIALS, BLOCK_TOTALS, node_count)
 }
 

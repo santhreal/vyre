@@ -20,7 +20,7 @@ pub const BINDING_CHANGED: u32 = BINDING_PRIMITIVE_START + 2;
 /// while still growing (an under-approximated closure) or `max_iters == 0`.
 /// This is the device readback that lets a host caller reject a partial closure
 /// loudly instead of silently trusting a frontier the kernel never drove to a
-/// fixpoint. Mirrors `PersistentBfsConvergence::converged` (requires the `cpu-parity` feature).
+/// fixpoint. Mirrors the `vyre-reference` persistent BFS witness convergence contract.
 pub const BINDING_CONVERGED: u32 = BINDING_PRIMITIVE_START + 3;
 /// Canonical binding index for the optional per-iteration frontier-density array.
 ///

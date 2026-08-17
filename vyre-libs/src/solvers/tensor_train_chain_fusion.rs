@@ -15,10 +15,13 @@ use crate::dispatch_buffers::{
     write_zero_bytes,
 };
 use crate::math::tensor_train::tt_contract_step;
-#[cfg(test)]
-use crate::math::tensor_train::tt_contract_step_cpu;
 use crate::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    should_fuse_chain_witness,
+    tensor_train_fusion_pressure_witness as reference_fusion_pressure_witness,
+};
 
 const FIXED_ONE: u32 = 1 << 16;
 const MAX_TT_DISPATCH_CELLS: u32 = 1 << 20;
@@ -38,36 +41,10 @@ pub struct TensorTrainFusionGpuScratch {
 /// the same TT contraction primitive through the selected backend.
 #[cfg(test)]
 #[must_use]
-pub fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
+pub(crate) fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
     use crate::telemetry::{bump, tensor_train_chain_fusion_calls};
     bump(&tensor_train_chain_fusion_calls);
-    if shared_buffer_ranks.is_empty() {
-        return 0.0;
-    }
-
-    // Initial accumulator for r_0 = 1.
-    let mut acc = vec![1.0];
-
-    for &r_next in shared_buffer_ranks {
-        let r_prev = acc.len() as u32;
-        // Skip zero-rank buffers as they indicate no dataflow.
-        if r_next == 0 {
-            continue;
-        }
-
-        // Use a "unit core" - all ones.
-        // acc_out[b] = Σ_a acc_in[a] · core[a, b] = Σ_a 1 · 1 = r_prev.
-        // Result: acc_out is a vector of length r_next containing r_prev.
-        let core_slice = vec![1.0; (r_prev * r_next) as usize];
-        acc = tt_contract_step_cpu(&acc, &core_slice, r_prev, r_next);
-    }
-
-    // Final contraction to scalar (last bond is 1).
-    let r_last = acc.len() as u32;
-    let core_last = vec![1.0; r_last as usize];
-    let result = tt_contract_step_cpu(&acc, &core_last, r_last, 1);
-
-    result[0]
+    reference_fusion_pressure_witness(shared_buffer_ranks)
 }
 
 /// Compute fusion pressure through the GPU-dispatchable TT contraction primitive.
@@ -175,24 +152,6 @@ pub fn fusion_pressure_via_with_scratch(
     Ok(scratch.step_out.first().copied().unwrap_or(0) as f64)
 }
 
-/// Decide whether to fuse a chain using the GPU-dispatchable TT contraction primitive.
-///
-/// # Errors
-///
-/// Propagates [`fusion_pressure_via`] dispatch and input-shape failures.
-pub fn should_fuse_chain_via(
-    dispatcher: &dyn ProgramDispatcher,
-    shared_buffer_ranks: &[u32],
-    threshold_per_link: f64,
-) -> Result<bool, DispatchError> {
-    if shared_buffer_ranks.is_empty() {
-        return Ok(false);
-    }
-    let pressure = fusion_pressure_via(dispatcher, shared_buffer_ranks)?;
-    let n = shared_buffer_ranks.len() as f64;
-    Ok(pressure.ln() / n <= threshold_per_link.ln())
-}
-
 fn dispatch_tt_step_with_scratch_into(
     dispatcher: &dyn ProgramDispatcher,
     acc_in: &[u32],
@@ -237,23 +196,10 @@ fn bounded_core_cells(left: u32, right: u32, label: &str) -> Result<usize, Dispa
 ///
 /// A chain should be fused if its total intermediate volume (pressure)
 /// is below the threshold relative to the number of regions.
+#[cfg(test)]
 #[must_use]
 pub fn should_fuse_chain(shared_buffer_ranks: &[u32], threshold_per_link: f64) -> bool {
-    if shared_buffer_ranks.is_empty() {
-        return false;
-    }
-    let n = shared_buffer_ranks.len() as f64;
-    // Logarithmic scale because TT contraction of unit cores is multiplicative.
-    // log(r1 * r2 * ... * rn) = Σ log(ri)
-    // We compare average log-rank against the threshold.
-    let log_sum = shared_buffer_ranks
-        .iter()
-        .copied()
-        .filter(|&rank| rank != 0)
-        .map(|rank| (rank as f64).ln())
-        .sum::<f64>();
-    let avg_log_rank = log_sum / n;
-    avg_log_rank <= threshold_per_link.ln()
+    should_fuse_chain_witness(shared_buffer_ranks, threshold_per_link)
 }
 
 #[cfg(test)]
@@ -378,20 +324,6 @@ mod tests {
         assert_eq!(
             scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
             input_capacities
-        );
-    }
-
-    #[test]
-    fn via_should_fuse_matches_reference_decision() {
-        let dispatcher = ReferenceDispatcher;
-        let ranks = vec![8, 8, 8];
-        assert_eq!(
-            should_fuse_chain_via(&dispatcher, &ranks, 16.0).expect("Fix: TT dispatch succeeds"),
-            should_fuse_chain(&ranks, 16.0)
-        );
-        assert_eq!(
-            should_fuse_chain_via(&dispatcher, &ranks, 4.0).expect("Fix: TT dispatch succeeds"),
-            should_fuse_chain(&ranks, 4.0)
         );
     }
 

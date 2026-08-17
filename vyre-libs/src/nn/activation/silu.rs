@@ -33,6 +33,10 @@ pub fn silu(input: &str, output: &str, n: u32) -> Program {
     ElementwiseComposer::f32_unary("vyre-libs::nn::silu", input, output, n, silu_expr)
 }
 
+const EXPECTED_SILU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0xA8, 0x26, 0x3B, 0x3F, 0xB0, 0xB2, 0x89, 0xBE, 0xEA, 0x7B, 0xE1, 0x3F,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::silu",
@@ -44,17 +48,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // SiLU via the same x / (1 + exp(-x)) formula the IR evaluates.
-            // The cross-backend f32 ULP tolerance in parity_matrix
-            // widens to 64 ULP for transcendentals, so this CPU-side
-            // value is byte-identical with the reference interpreter.
-            let input = [0.0_f32, 1.0, -1.0, 2.0];
-            let out: Vec<f32> = input
-                .iter()
-                .map(|x| x / (1.0 + (-x).exp()))
-                .collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_SILU_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

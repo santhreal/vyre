@@ -43,6 +43,7 @@ mod nfa_builder;
 mod set_compiler;
 
 use crate::pattern::nfa::NfaPlan;
+use vyre_foundation::ir::Program;
 
 use self::construct_budget::STATE_CAP;
 use self::set_compiler::compile_regex_set_inner;
@@ -349,6 +350,47 @@ pub fn build_scan_program_from_regex(
     })
 }
 
+/// Canonical op id for regex NFA scan.
+pub const REGEX_SCAN_OP_ID: &str = "vyre-libs::matching::regex_scan";
+
+/// Build a regex scan [`Program`] directly from regex sources.
+///
+/// Convenience wrapper over [`build_scan_program_from_regex`] returning the
+/// compiled IR [`Program`] directly.
+///
+/// # Errors
+/// Forwards [`RegexCompileError`].
+pub fn regex_scan_program(
+    patterns: &[&str],
+    input_buf: &str,
+    hit_buf: &str,
+    input_len: u32,
+) -> Result<Program, RegexCompileError> {
+    build_scan_program_from_regex(patterns, input_buf, hit_buf, input_len).map(|s| s.program)
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        REGEX_SCAN_OP_ID,
+        || {
+            regex_scan_program(&["[a-z]+"], "input", "hits", 64)
+                .expect("Fix: canonical fixture regex scan must compile")
+        },
+        Some(|| {
+            let compiled = compile_regex_set(&["[a-z]+"])
+                .expect("Fix: canonical fixture regex scan must compile");
+            vec![vec![
+                vec![0u8; 64],
+                vyre_primitives::wire::pack_u32_slice(&compiled.transition_table),
+                vyre_primitives::wire::pack_u32_slice(&compiled.epsilon_table),
+                vec![0u8; 4],
+                vec![0u8; 4],
+            ]]
+        }),
+        None,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::{regex_construct_diagnostic_code, RegexConstruct};
@@ -397,5 +439,13 @@ mod tests {
                  names which construct refused the pattern."
             );
         }
+    }
+
+    #[test]
+    fn regex_scan_program_builds_valid_ir() {
+        let program = super::regex_scan_program(&["[a-z]+", "token=[0-9]+"], "input", "hits", 128)
+            .expect("valid regex scan program must build");
+        assert!(!program.buffers().is_empty());
+        assert!(!program.entry().is_empty());
     }
 }

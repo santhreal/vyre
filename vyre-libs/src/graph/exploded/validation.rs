@@ -70,6 +70,7 @@ pub fn validate_ifds_csr_readback(
 }
 
 /// Checked exploded-supergraph node count.
+#[cfg(test)]
 #[must_use]
 pub fn ifds_node_count_checked(
     num_procs: u32,
@@ -82,6 +83,7 @@ pub fn ifds_node_count_checked(
 }
 
 /// Saturating exploded-supergraph node count for capacity planning UIs.
+#[cfg(test)]
 #[must_use]
 pub fn ifds_node_count_saturating(
     num_procs: u32,

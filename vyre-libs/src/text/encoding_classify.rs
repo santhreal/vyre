@@ -6,7 +6,7 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::reduce::range_counts::range_counts_u32_child;
-use crate::text::utf8_shape_counts::{utf8_shape_counts_child, utf8_shape_counts_from_histogram};
+use crate::text::utf8_shape_counts::utf8_shape_counts_child;
 
 /// Canonical op id for histogram-based encoding classification.
 pub const ENCODING_CLASSIFY_OP_ID: &str = "vyre-libs::text::encoding_classify";
@@ -64,13 +64,16 @@ pub fn encoding_classify_body(histogram: &str, output: &str, count: u32) -> Vec<
 
             body.push(Node::if_then(
                 Expr::and(
-                    Expr::gt(Expr::var("high_count"), Expr::u32(0)),
-                    Expr::lt(
-                        Expr::abs_diff(
-                            Expr::var("continuation"),
-                            Expr::var("expected_continuation"),
+                    Expr::ne(Expr::var("enc_id"), Expr::u32(ENC_UTF16LE)),
+                    Expr::and(
+                        Expr::gt(Expr::var("high_count"), Expr::u32(0)),
+                        Expr::lt(
+                            Expr::abs_diff(
+                                Expr::var("continuation"),
+                                Expr::var("expected_continuation"),
+                            ),
+                            Expr::div(Expr::u32(count.saturating_add(19)), Expr::u32(20)),
                         ),
-                        Expr::div(Expr::u32(count.saturating_add(19)), Expr::u32(20)),
                     ),
                 ),
                 vec![Node::assign("enc_id", Expr::u32(ENC_UTF8))],
@@ -125,33 +128,6 @@ pub fn encoding_classify(histogram: &str, output: &str, count: u32) -> Program {
     )
 }
 
-/// Reference oracle for [`encoding_classify`].
-#[must_use]
-pub fn classify_from_histogram(histogram: &[u32; 256], count: u32) -> u32 {
-    if count == 0 {
-        return ENC_ASCII;
-    }
-    let null_count = histogram[0];
-    let ascii_count: u32 = histogram[0..128].iter().sum();
-    let high_count = count - ascii_count;
-
-    if null_count > count / 8 {
-        return ENC_UTF16LE;
-    }
-    if high_count == 0 {
-        return ENC_ASCII;
-    }
-
-    let (continuation, expected_continuation) = utf8_shape_counts_from_histogram(histogram);
-
-    let tolerance = count.saturating_add(19) / 20;
-    if continuation.abs_diff(expected_continuation) < tolerance {
-        return ENC_UTF8;
-    }
-
-    ENC_ISO8859_1
-}
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         ENCODING_CLASSIFY_OP_ID,
@@ -163,13 +139,14 @@ inventory::submit! {
             }
             vec![vec![histogram, vec![0; 4]]]
         }),
-        Some(|| vec![vec![ENC_ASCII.to_le_bytes().to_vec()]]),
+        Some(|| vec![vec![vec![0, 0, 0, 0]]]),
     )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::encoding_classify_histogram_witness as classify_from_histogram;
 
     #[test]
     fn classifies_ascii_histogram() {
@@ -187,6 +164,30 @@ mod tests {
         histogram[0xC3] = 2;
         histogram[0xA9] = 2;
         assert_eq!(classify_from_histogram(&histogram, 4), ENC_UTF8);
+    }
+
+    /// WHY: UTF-8 shape evidence must not override the stronger UTF-16 null-density signal.
+    #[test]
+    fn null_density_precedes_balanced_utf8_shape_in_ir() {
+        let mut histogram = [0_u32; 256];
+        histogram[0] = 1;
+        histogram[usize::from(b'a')] = 1;
+        histogram[0xC3] = 1;
+        histogram[0xA9] = 1;
+        let bytes = histogram
+            .iter()
+            .flat_map(|value| value.to_le_bytes())
+            .collect::<Vec<_>>();
+        let outputs = vyre_reference::reference_eval(
+            &encoding_classify("histogram", "encoding", 4),
+            &[vyre_reference::value::Value::from(bytes)],
+        )
+        .expect("encoding classifier must evaluate");
+        let encoded = outputs[0].to_bytes();
+        assert_eq!(
+            u32::from_le_bytes(encoded[..4].try_into().expect("one u32 output")),
+            ENC_UTF16LE
+        );
     }
 
     #[test]

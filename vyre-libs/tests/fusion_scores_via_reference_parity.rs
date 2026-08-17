@@ -18,8 +18,8 @@
 //! `2·(L̂·T_curr)` dominates `T_prev`) and every intermediate stays < 2^24, where f32 represents integers
 //! EXACTLY. So the u32 GPU output equals the f32 reference cast to integer, bit-for-bit.
 
-use vyre_libs::graph::chebyshev_filter::chebyshev_filter_cpu;
 use vyre_libs::scheduling::spectral_schedule::fusion_scores_fixed_via;
+use vyre_reference::composition_witness::chebyshev_filter_witness as chebyshev_filter_cpu;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

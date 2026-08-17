@@ -4,13 +4,15 @@
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::csr_frontier_queue::validate_csr_queue_graph;
 use vyre_libs::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_mixed_logical_lanes,
-    try_csr_queue_split_low_forward_traverse_cpu, CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE,
+    CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE,
 };
 use vyre_libs::graph::csr_queue_strided::{
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE, CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
 };
+use vyre_reference::composition_witness::csr_queue_split_low_forward_witness;
 
 #[derive(Clone, Debug)]
 struct GeneratedCsr {
@@ -27,6 +29,53 @@ struct SplitOracle {
     high_queue: Vec<u32>,
     high_len: u32,
     scalar_full: Vec<u32>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct SplitWitness {
+    frontier_out: Vec<u32>,
+    high_queue: Vec<u32>,
+    high_len: u32,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn try_csr_queue_split_low_forward_traverse_cpu(
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_seed: &[u32],
+    node_count: u32,
+    high_queue_capacity: usize,
+    high_degree_threshold: u32,
+    allow_mask: u32,
+) -> Result<SplitWitness, String> {
+    let layout = validate_csr_queue_graph(node_count, edge_offsets, edge_targets, edge_kind_mask)?;
+    if frontier_seed.len() != layout.words {
+        return Err(format!(
+            "Fix: csr_queue_split_low_forward_traverse requires frontier_out_seed.len() == bitset_words(node_count), got len={} but expected {} for node_count={node_count}.",
+            frontier_seed.len(),
+            layout.words
+        ));
+    }
+    let (frontier_out, high_queue, high_len) = csr_queue_split_low_forward_witness(
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_seed,
+        node_count,
+        high_queue_capacity,
+        high_degree_threshold,
+        allow_mask,
+    );
+    Ok(SplitWitness {
+        frontier_out,
+        high_queue,
+        high_len,
+    })
 }
 
 proptest! {

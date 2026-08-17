@@ -22,6 +22,7 @@ pub fn canonicalize_csr_within_rows_in_place(
 /// # Panics
 /// Panics when `row_ptr` and `col_idx` do not describe a valid CSR. Returning the
 /// input unchanged would leave rows uncanonical while claiming otherwise.
+#[cfg(test)]
 #[must_use]
 pub fn canonicalize_csr_within_rows(row_ptr: &[u32], col_idx: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let mut canonical_col = col_idx.to_vec();

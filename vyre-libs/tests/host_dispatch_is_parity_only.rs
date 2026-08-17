@@ -14,12 +14,11 @@
 //! exact equality against the empty set so the failure names the file and the
 //! type instead of a count.
 //!
-//! Two things are allowed to implement one and are not offenders. The oracle
-//! crates exist to execute on the host: `vyre-reference` is the interpreter and
-//! `vyre-driver-reference` is the `ProgramDispatcher` in front of it, which is
-//! the single seam every parity suite dispatches through. Anything behind
-//! `#[cfg(test)]` or the `cpu-parity` feature is a comparison arm that never
-//! reaches a default build. Everything else fails.
+//! The only allowed production host dispatchers belong to `vyre-reference` and
+//! `vyre-driver-reference`, which form the single seam every parity suite uses.
+//! A dispatcher under `#[cfg(test)]` is also excluded because it cannot reach a
+//! shipped build. Feature-gated host dispatchers are forbidden: dormant CPU
+//! execution is still a second production route.
 //!
 //! What it does not catch: a host dispatcher that implements the trait through a
 //! blanket impl or a macro, and one that executes a Program without implementing
@@ -33,9 +32,6 @@ use std::path::{Path, PathBuf};
 
 /// Crate directories permitted to execute a Program on the host.
 const ORACLE_CRATES: &[&str] = &["vyre-reference", "vyre-driver-reference"];
-
-/// Cargo features that mark a parity-only build, never a default one.
-const PARITY_FEATURES: &[&str] = &["cpu-parity"];
 
 /// Below this many implementors the walk has stopped reading the tree, and an
 /// empty offender set would prove nothing. Every backend driver ships one, so
@@ -58,11 +54,11 @@ fn no_production_crate_outside_the_oracle_ships_a_host_dispatcher() {
     assert_eq!(
         offending,
         BTreeSet::new(),
-        "Fix: a host `ProgramDispatcher` is reachable from a default build. Vyre \
+        "Fix: a host `ProgramDispatcher` is reachable from a shipped build. Vyre \
          executes on a device: move the implementation into one of \
-         {ORACLE_CRATES:?}, or gate its module on \
-         `#[cfg(any(test, feature = \"cpu-parity\"))]` so it cannot be \
-         constructed by a consumer. Offenders: {offenders:?}"
+         {ORACLE_CRATES:?}, or make it a test-only module. Feature gates do not \
+         make dormant host execution an acceptable production route. Offenders: \
+         {offenders:?}"
     );
 }
 
@@ -84,7 +80,7 @@ fn the_walk_actually_reaches_the_dispatchers_it_judges() {
 /// collapse into each other. Exercised on synthetic paths so it holds for the
 /// rule and not for today's tree.
 #[test]
-fn the_judgement_admits_the_oracle_and_the_parity_gate_and_nothing_else() {
+fn the_judgement_admits_reference_and_test_dispatchers_only() {
     for oracle in ORACLE_CRATES {
         assert!(
             !is_host_dispatcher_offender(&format!("{oracle}/src/dispatcher.rs")),
@@ -103,14 +99,21 @@ fn the_judgement_admits_the_oracle_and_the_parity_gate_and_nothing_else() {
         !is_host_dispatcher_offender("vyre-driver-cuda/tests/parity.rs"),
         "an integration test is not production surface"
     );
+    assert!(
+        is_test_cfg("#[cfg(test)]"),
+        "a test cfg must exclude the dispatcher from shipped builds"
+    );
+    assert!(
+        !is_test_cfg("#[cfg(feature = \"cpu-parity\")]"),
+        "a feature gate must not exempt dormant host execution"
+    );
 }
 
 /// Whether a file declaring an implementor is a production host dispatcher.
 ///
-/// Path-based, because that is what decides reachability from a default build: a
-/// crate directory, a `tests` directory or a `benches` directory. Whether the
-/// module itself carries a parity `cfg` is read from the source separately, in
-/// [`implementors`], because a path cannot say it.
+/// Paths decide whether code is reachable from a shipped build: oracle crates
+/// and `tests` or `benches` directories are excluded here. A test `cfg` on the
+/// declaring module is read separately in [`implementors`].
 fn is_host_dispatcher_offender(path: &str) -> bool {
     let path = Path::new(path);
     if ORACLE_CRATES
@@ -146,7 +149,7 @@ fn implementors(root: &Path) -> BTreeMap<String, Declared> {
             .filter_map(|line| implemented_type(line.trim()))
             .map(str::to_string)
             .collect();
-        if types.is_empty() || is_parity_gated(&text) || declaration_is_gated(root, &path) {
+        if types.is_empty() || is_test_gated(&text) || declaration_is_gated(root, &path) {
             continue;
         }
         let reaches_interpreter = reaches_the_interpreter(&text);
@@ -202,26 +205,26 @@ fn reaches_the_interpreter(text: &str) -> bool {
     text.contains("reference_eval")
 }
 
-/// Whether the file's own inner attributes put it behind a test or parity gate.
-fn is_parity_gated(text: &str) -> bool {
-    text.lines().any(|line| is_parity_cfg(line.trim()))
+/// Whether the file's own inner attributes restrict it to test builds.
+fn is_test_gated(text: &str) -> bool {
+    text.lines().any(|line| is_test_cfg(line.trim()))
 }
 
-/// Whether a `cfg` attribute line names `test` or a parity feature.
-fn is_parity_cfg(line: &str) -> bool {
+/// Whether a `cfg` attribute line names `test`.
+fn is_test_cfg(line: &str) -> bool {
     if !line.starts_with("#![cfg(") && !line.starts_with("#[cfg(") {
         return false;
     }
-    line.contains("test") || PARITY_FEATURES.iter().any(|feature| line.contains(feature))
+    line.contains("test")
 }
 
 /// Whether the `mod` statement that brings this file into the crate is gated.
 ///
 /// This, not the file's own attributes, is where the gate belongs and where it
-/// usually sits: a parity module carries no `cfg` of its own and is excluded from
-/// a default build entirely by the attribute on the `pub mod` line in its parent.
-/// A check that read only the file would call a correctly gated tree broken and
-/// send the next reader to add a redundant inner attribute.
+/// usually sits: a test module carries no `cfg` of its own and is excluded from
+/// shipped builds by the attribute on its `mod` line. A check that read only the
+/// file would call a correctly gated tree broken and send the next reader to add
+/// a redundant inner attribute.
 fn declaration_is_gated(root: &Path, path: &str) -> bool {
     let path = Path::new(path);
     let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) else {
@@ -258,7 +261,7 @@ fn declaration_is_gated(root: &Path, path: &str) -> bool {
                 || line == format!("pub(crate) mod {name};")
                 || line == format!("pub(super) mod {name};");
             if declares {
-                return attributes.iter().copied().any(is_parity_cfg);
+                return attributes.iter().copied().any(is_test_cfg);
             }
             if !line.starts_with("///") && !line.starts_with("//") && !line.is_empty() {
                 attributes.clear();

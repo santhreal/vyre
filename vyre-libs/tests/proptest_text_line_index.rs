@@ -9,8 +9,8 @@ use proptest::prelude::*;
 use vyre_foundation::ir::{BufferAccess, DataType, Program, PORTABLE_WORKGROUP_INVOCATIONS};
 const BLOCK_LANES: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
 use vyre_libs::text::{line_index, line_index_u8};
-use vyre_reference::composition_witness::line_index_witness as reference_line_index;
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
+use vyre_reference::composition_witness::line_index_witness as reference_line_index;
 use vyre_reference::value::Value;
 
 fn independent_prefix_flag_line_index(source: &[u8]) -> Vec<u32> {

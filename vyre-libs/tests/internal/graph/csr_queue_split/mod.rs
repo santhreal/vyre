@@ -1,6 +1,66 @@
 use super::*;
 use crate::bitset::bitset_words;
-use crate::graph::csr_frontier_queue::try_csr_queue_forward_traverse_cpu_into;
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CsrQueueSplitLowForwardCpuResult {
+    frontier_out: Vec<u32>,
+    high_queue: Vec<u32>,
+    high_len: u32,
+}
+
+fn try_csr_queue_split_low_forward_traverse_cpu(
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_out_seed: &[u32],
+    node_count: u32,
+    high_queue_capacity: usize,
+    high_degree_threshold: u32,
+    allow_mask: u32,
+) -> Result<CsrQueueSplitLowForwardCpuResult, String> {
+    let (frontier_out, high_queue, high_len) =
+        vyre_reference::composition_witness::csr_queue_split_low_forward_witness(
+            active_queue,
+            queue_len,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            frontier_out_seed,
+            node_count,
+            high_queue_capacity,
+            high_degree_threshold,
+            allow_mask,
+        );
+    Ok(CsrQueueSplitLowForwardCpuResult {
+        frontier_out,
+        high_queue,
+        high_len,
+    })
+}
+
+fn try_csr_queue_forward_traverse_cpu_into(
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    node_count: u32,
+    allow_mask: u32,
+    out: &mut Vec<u32>,
+) -> Result<(), String> {
+    vyre_reference::composition_witness::csr_queue_strided_forward_witness_into(
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        node_count,
+        allow_mask,
+        out,
+    );
+    Ok(())
+}
 use crate::graph::csr_queue_strided::{
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE, CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
 };
@@ -121,19 +181,16 @@ fn generated_split_low_plus_high_queue_matches_scalar_traversal() {
         .unwrap_or_else(|err| panic!("generated split case {case} failed: {err}"));
 
         let mut mixed_out = split.frontier_out;
-        for &src in &split.high_queue {
-            let start = edge_offsets[src as usize] as usize;
-            let end = edge_offsets[src as usize + 1] as usize;
-            emit_scalar_row_cpu(
-                start,
-                end,
-                &edge_targets,
-                &edge_kind_mask,
-                node_count,
-                ALLOW,
-                &mut mixed_out,
-            );
-        }
+        let high_out = vyre_reference::composition_witness::csr_queue_strided_forward_witness(
+            &split.high_queue,
+            split.high_queue.len() as u32,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            node_count,
+            ALLOW,
+        );
+        vyre_reference::composition_witness::bitset_or_inplace_witness(&mut mixed_out, &high_out);
 
         let mut scalar_out = seed;
         try_csr_queue_forward_traverse_cpu_into(

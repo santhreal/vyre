@@ -27,8 +27,6 @@ pub use vyre_spec::{
     SubnormalBehavior, FP4_DECODE_TABLE, I4_DECODE_TABLE, NF4_QUANTILE_TABLE,
     NUMERIC_SEMANTICS_SCHEMA_VERSION,
 };
-/// Source-derived inventory and migration audit for host execution oracles.
-pub mod host_oracle_migration;
 
 /// Atomic operation reference implementations.
 pub mod atomics;

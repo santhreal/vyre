@@ -124,18 +124,18 @@ pub fn tt_contract_step(
     )
 }
 
-
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        tensor_train_contract_step_witness as tt_contract_step_cpu,
+        tensor_train_contract_step_witness_into as tt_contract_step_cpu_into,
+        tensor_train_full_chain_witness as tt_full_chain_cpu,
+        tensor_train_full_chain_witness_into as tt_full_chain_cpu_with_scratch,
+        try_tensor_train_contract_step_witness as try_tt_contract_step_cpu,
+        try_tensor_train_contract_step_witness_into as try_tt_contract_step_cpu_into,
+        try_tensor_train_full_chain_witness_into as try_tt_full_chain_cpu_with_scratch,
+    };
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

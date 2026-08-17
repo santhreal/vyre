@@ -217,22 +217,9 @@ missing_safety_doc = "allow"
 # `drop(perf_scope.finish())` documents measurement lifecycle intent. This is
 # a rustc lint, not a Clippy lint, on the supported toolchain.
 dropping_copy_types = "allow"
-# `external_ifds_engine` names the disabled bridge in
-# `vyre-libs/src/security/external_ifds.rs`. It cannot be a Cargo feature here:
-# the engine crate depends on the Vyre platform, and `xtask platform-boundary`
-# forbids the platform from depending back on a consumer. Moving the bridge to
-# the consumer side is BACKLOG R47.
-#
-# `deny`, not `warn`, because a `cfg` naming a feature its own crate does not
-# declare deletes the code under it with nothing red. Moving the composition
-# domains into `vyre-libs` carried 161 `#[cfg(feature = "inventory-registry")]`
-# gates and seven whole-file domain-aggregate feature gates into a crate
-# that declares neither feature. The composition audit went from 327 operations
-# to 174 and seven test files compiled to nothing, and the only signal was
-# `warning` text in a build that emitted many.
-unexpected_cfgs = { level = "deny", check-cfg = [
-  'cfg(feature, values("external_ifds_engine"))',
-] }
+# Unknown feature cfgs delete code silently. Deny them instead of accepting
+# warning-only builds whose source and compiled feature surfaces disagree.
+unexpected_cfgs = "deny"
 unsafe_code = "deny"
 missing_docs = "deny"
 unreachable_pub = "warn"

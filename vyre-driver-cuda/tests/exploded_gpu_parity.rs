@@ -5,56 +5,21 @@
 mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
-use vyre_libs::graph::dispatch::exploded::{
-    build_ifds_csr_via, reference_canonicalize_csr_within_rows,
-};
+use vyre_libs::graph::dispatch::exploded::build_ifds_csr_via;
+use vyre_reference::composition_witness::exploded_ifds_csr_witness;
 
 fn assert_csr_equiv(cpu: &(Vec<u32>, Vec<u32>), gpu: &(Vec<u32>, Vec<u32>), label: &str) {
-    let (cpu_row, cpu_col) = reference_canonicalize_csr_within_rows(&cpu.0, &cpu.1);
-    let (gpu_row, gpu_col) = (gpu.0.clone(), gpu.1.clone());
+    let mut cpu_col = cpu.1.clone();
+    for window in cpu.0.windows(2) {
+        let start = window[0] as usize;
+        let end = window[1] as usize;
+        if start <= end && end <= cpu_col.len() {
+            cpu_col[start..end].sort_unstable();
+        }
+    }
+    let (cpu_row, gpu_row, gpu_col) = (&cpu.0, &gpu.0, &gpu.1);
     assert_eq!(cpu_row, gpu_row, "{label}: row_ptr divergence");
-    assert_eq!(cpu_col, gpu_col, "{label}: col_idx divergence");
-}
-fn build_cpu_reference(
-    procs: u32,
-    blocks: u32,
-    facts: u32,
-    intra: &[(u32, u32, u32)],
-    inter: &[(u32, u32, u32, u32)],
-    flow_gen: &[(u32, u32, u32)],
-    _kill: &[(u32, u32, u32)],
-) -> (Vec<u32>, Vec<u32>) {
-    let total_nodes = procs * blocks * facts;
-    let mut adj: Vec<Vec<u32>> = vec![Vec::new(); total_nodes as usize];
-    for &(p, b_src, b_dst) in intra {
-        for f in 0..facts {
-            let src = (p * blocks + b_src) * facts + f;
-            let dst = (p * blocks + b_dst) * facts + f;
-            adj[src as usize].push(dst);
-        }
-    }
-    for &(p_call, b_call, p_entry, b_entry) in inter {
-        for f in 0..facts {
-            let src = (p_call * blocks + b_call) * facts + f;
-            let dst = (p_entry * blocks + b_entry) * facts + f;
-            adj[src as usize].push(dst);
-        }
-    }
-    for &(p, b, f_gen) in flow_gen {
-        let src = (p * blocks + b) * facts + 0;
-        let dst = (p * blocks + b) * facts + f_gen;
-        adj[src as usize].push(dst);
-    }
-    let mut row_ptr = Vec::with_capacity(total_nodes as usize + 1);
-    let mut col_idx = Vec::new();
-    row_ptr.push(0);
-    for mut neighbors in adj {
-        neighbors.sort_unstable();
-        neighbors.dedup();
-        col_idx.extend_from_slice(&neighbors);
-        row_ptr.push(col_idx.len() as u32);
-    }
-    (row_ptr, col_idx)
+    assert_eq!(&cpu_col, gpu_col, "{label}: col_idx divergence");
 }
 
 fn assert_ifds_matches_reference(
@@ -67,7 +32,7 @@ fn assert_ifds_matches_reference(
     flow_gen: &[(u32, u32, u32)],
     kill: &[(u32, u32, u32)],
 ) {
-    let cpu = build_cpu_reference(procs, blocks, facts, intra, inter, flow_gen, kill);
+    let cpu = exploded_ifds_csr_witness(procs, blocks, facts, intra, inter, flow_gen, kill);
     with_cuda_optimizer_dispatcher(label, |dispatcher| {
         let gpu = build_ifds_csr_via(
             dispatcher, procs, blocks, facts, intra, inter, flow_gen, kill,

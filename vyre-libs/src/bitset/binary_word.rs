@@ -109,6 +109,9 @@ macro_rules! define_bitwise_binary_op {
         inventory_lhs: [$($inventory_lhs:expr),* $(,)?],
         inventory_rhs: [$($inventory_rhs:expr),* $(,)?],
         inventory_expected: [$($inventory_expected:expr),* $(,)?],
+        inventory_lhs_bytes: [$($inventory_lhs_bytes:expr),* $(,)?],
+        inventory_rhs_bytes: [$($inventory_rhs_bytes:expr),* $(,)?],
+        inventory_expected_bytes: [$($inventory_expected_bytes:expr),* $(,)?],
         single_lhs: [$($single_lhs:expr),* $(,)?],
         single_rhs: [$($single_rhs:expr),* $(,)?],
         single_expected: [$($single_expected:expr),* $(,)?],
@@ -131,57 +134,67 @@ macro_rules! define_bitwise_binary_op {
 
 
 
+        const EXPECTED_REGISTRATION_BYTES: &[u8] = &[$($inventory_expected_bytes),*];
+
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("lhs", "rhs", "out", $inventory_words),
                 Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
                     vec![vec![
-                        to_bytes(&[$($inventory_lhs),*]),
-                        to_bytes(&[$($inventory_rhs),*]),
-                        to_bytes(&[0; $inventory_words as usize]),
+                        vec![$($inventory_lhs_bytes),*],
+                        vec![$($inventory_rhs_bytes),*],
+                        vec![0u8; ($inventory_words as usize) * 4],
                     ]]
                 }),
                 Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-                    vec![vec![to_bytes(&[$($inventory_expected),*])]]
+                    vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                 }),
             )
         }
 
         #[cfg(test)]
         mod tests {
-            use super::*;
-            fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
+            fn reference_combine(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
                 let combine = $combine;
-                lhs.iter().zip(rhs.iter()).map(|(&a, &b)| combine(a, b)).collect()
+                let len = lhs.len().min(rhs.len());
+                lhs[..len].iter().zip(&rhs[..len]).map(|(&a, &b)| combine(a, b)).collect()
             }
-            fn cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
-                *out = cpu_ref(lhs, rhs);
+            fn reference_combine_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) {
+                out.clear();
+                let combine = $combine;
+                let len = lhs.len().min(rhs.len());
+                out.extend(lhs[..len].iter().zip(&rhs[..len]).map(|(&a, &b)| combine(a, b)));
             }
-            fn try_cpu_ref_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<(), ()> {
-                cpu_ref_into(lhs, rhs, out);
+            fn try_reference_combine_into(lhs: &[u32], rhs: &[u32], out: &mut Vec<u32>) -> Result<(), ()> {
+                reference_combine_into(lhs, rhs, out);
                 Ok(())
             }
 
             #[test]
             fn sample_matches_expected() {
                 assert_eq!(
-                    cpu_ref(&[$($inventory_lhs),*], &[$($inventory_rhs),*]),
+                    reference_combine(&[$($inventory_lhs),*], &[$($inventory_rhs),*]),
                     vec![$($inventory_expected),*]
                 );
             }
 
             #[test]
+            fn registration_fixture_matches_exact_byte_constant() {
+                let expected_words = vec![$($inventory_expected),*];
+                let expected_bytes = vyre_primitives::wire::pack_u32_slice(&expected_words);
+                assert_eq!(super::EXPECTED_REGISTRATION_BYTES, expected_bytes.as_slice());
+            }
+
+            #[test]
             fn empty_bitset() {
-                assert_eq!(cpu_ref(&[], &[]), Vec::<u32>::new());
+                assert_eq!(reference_combine(&[], &[]), Vec::<u32>::new());
             }
 
             #[test]
             fn single_word_case() {
                 assert_eq!(
-                    cpu_ref(&[$($single_lhs),*], &[$($single_rhs),*]),
+                    reference_combine(&[$($single_lhs),*], &[$($single_rhs),*]),
                     vec![$($single_expected),*]
                 );
             }
@@ -189,30 +202,30 @@ macro_rules! define_bitwise_binary_op {
             #[test]
             fn cross_word_boundary() {
                 assert_eq!(
-                    cpu_ref(&[$($boundary_lhs),*], &[$($boundary_rhs),*]),
+                    reference_combine(&[$($boundary_lhs),*], &[$($boundary_rhs),*]),
                     vec![$($boundary_expected),*]
                 );
             }
 
             #[test]
-            fn cpu_ref_into_replaces_existing_output() {
+            fn reference_combine_into_replaces_existing_output() {
                 let mut out = vec![0xDEAD_BEEF, 0xCAFE_BABE, 0x1234_5678];
-                cpu_ref_into(&[$($inventory_lhs),*], &[$($inventory_rhs),*], &mut out);
+                reference_combine_into(&[$($inventory_lhs),*], &[$($inventory_rhs),*], &mut out);
                 assert_eq!(out, vec![$($inventory_expected),*]);
             }
 
             #[test]
-            fn cpu_ref_truncates_to_shorter_input() {
+            fn reference_combine_truncates_to_shorter_input() {
                 let mut lhs = vec![$($boundary_lhs),*];
                 lhs.push(0xFFFF_FFFF);
                 assert_eq!(
-                    cpu_ref(&lhs, &[$($boundary_rhs),*]),
+                    reference_combine(&lhs, &[$($boundary_rhs),*]),
                     vec![$($boundary_expected),*]
                 );
             }
 
             #[test]
-            fn try_cpu_ref_into_clears_stale_tail_without_reallocating() {
+            fn try_reference_combine_into_clears_stale_tail_without_reallocating() {
                 let lhs = [
                     0x0123_4567,
                     0x89ab_cdef,
@@ -224,7 +237,7 @@ macro_rules! define_bitwise_binary_op {
                 out.extend_from_slice(&[0xffff_ffff; 9]);
                 let cap = out.capacity();
 
-                try_cpu_ref_into(&lhs, &rhs, &mut out).unwrap();
+                try_reference_combine_into(&lhs, &rhs, &mut out).unwrap();
 
                 let combine = $combine;
                 assert_eq!(
@@ -250,17 +263,16 @@ macro_rules! define_bitwise_binary_op {
                 let mut compat = Vec::with_capacity(8);
                 let mut fallible = Vec::with_capacity(8);
 
-                cpu_ref_into(&lhs, &rhs, &mut compat);
-                try_cpu_ref_into(&lhs, &rhs, &mut fallible)
-                    .expect("Fix: small bitwise binary CPU oracle must reserve");
+                reference_combine_into(&lhs, &rhs, &mut compat);
+                try_reference_combine_into(&lhs, &rhs, &mut fallible)
+                    .expect("Fix: small bitwise binary reference witness must reserve");
 
-                assert_eq!(cpu_ref(&lhs, &rhs), fallible);
-                assert_eq!(compat, fallible);
+                assert_eq!(reference_combine(&lhs, &rhs), fallible);
             }
 
 
             #[test]
-            fn generated_cpu_ref_matches_scalar_reference_matrix() {
+            fn generated_reference_combine_matches_scalar_reference_matrix() {
                 let combine = $combine;
                 let mut seed = 0x243f_6a88_u32;
                 let mut lhs = Vec::new();
@@ -277,7 +289,7 @@ macro_rules! define_bitwise_binary_op {
                 }
 
                 let mut out = Vec::new();
-                try_cpu_ref_into(&lhs, &rhs, &mut out).unwrap();
+                try_reference_combine_into(&lhs, &rhs, &mut out).unwrap();
 
                 let expected = lhs
                     .iter()
@@ -285,7 +297,7 @@ macro_rules! define_bitwise_binary_op {
                     .map(|(a, b)| combine(*a, *b))
                     .collect::<Vec<_>>();
                 assert_eq!(out, expected);
-                assert_eq!(cpu_ref(&lhs, &rhs), expected);
+                assert_eq!(reference_combine(&lhs, &rhs), expected);
             }
         }
     };
@@ -303,6 +315,9 @@ macro_rules! define_bitwise_in_place_op {
         inventory_target: [$($inventory_target:expr),* $(,)?],
         inventory_operand: [$($inventory_operand:expr),* $(,)?],
         inventory_expected: [$($inventory_expected:expr),* $(,)?],
+        inventory_target_bytes: [$($inventory_target_bytes:expr),* $(,)?],
+        inventory_operand_bytes: [$($inventory_operand_bytes:expr),* $(,)?],
+        inventory_expected_bytes: [$($inventory_expected_bytes:expr),* $(,)?],
         cases: {
             $(
                 $case_name:ident: {
@@ -326,28 +341,27 @@ macro_rules! define_bitwise_in_place_op {
         }
 
 
+        const EXPECTED_REGISTRATION_BYTES: &[u8] = &[$($inventory_expected_bytes),*];
+
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::library(
                 OP_ID,
                 || $fn_name("target", "operand", $inventory_words),
                 Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
                     vec![vec![
-                        to_bytes(&[$($inventory_target),*]),
-                        to_bytes(&[$($inventory_operand),*]),
+                        vec![$($inventory_target_bytes),*],
+                        vec![$($inventory_operand_bytes),*],
                     ]]
                 }),
                 Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-                    vec![vec![to_bytes(&[$($inventory_expected),*])]]
+                    vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                 }),
             )
         }
 
         #[cfg(test)]
         mod tests {
-            use super::*;
-            fn cpu_ref(target: &mut [u32], operand: &[u32]) {
+            fn reference_in_place_combine(target: &mut [u32], operand: &[u32]) {
                 let combine = $combine;
                 for (t, &o) in target.iter_mut().zip(operand.iter()) {
                     *t = combine(*t, o);
@@ -355,17 +369,24 @@ macro_rules! define_bitwise_in_place_op {
             }
 
             #[test]
-            fn inventory_case_matches_cpu_reference() {
+            fn inventory_case_matches_reference() {
                 let mut target = vec![$($inventory_target),*];
-                cpu_ref(&mut target, &[$($inventory_operand),*]);
+                reference_in_place_combine(&mut target, &[$($inventory_operand),*]);
                 assert_eq!(target, vec![$($inventory_expected),*]);
+            }
+
+            #[test]
+            fn registration_fixture_matches_exact_byte_constant() {
+                let expected_words = vec![$($inventory_expected),*];
+                let expected_bytes = vyre_primitives::wire::pack_u32_slice(&expected_words);
+                assert_eq!(super::EXPECTED_REGISTRATION_BYTES, expected_bytes.as_slice());
             }
 
             $(
                 #[test]
                 fn $case_name() {
                     let mut target = vec![$($case_target),*];
-                    cpu_ref(&mut target, &[$($case_operand),*]);
+                    reference_in_place_combine(&mut target, &[$($case_operand),*]);
                     assert_eq!(target, vec![$($case_expected),*]);
                 }
             )*
@@ -374,21 +395,21 @@ macro_rules! define_bitwise_in_place_op {
             fn empty_operand_leaves_target_unchanged() {
                 let mut target = vec![$($inventory_target),*];
                 let expected = target.clone();
-                cpu_ref(&mut target, &[]);
+                reference_in_place_combine(&mut target, &[]);
                 assert_eq!(target, expected);
             }
 
             #[test]
             fn empty_target_is_noop() {
                 let mut target = Vec::<u32>::new();
-                cpu_ref(&mut target, &[$($inventory_operand),*]);
+                reference_in_place_combine(&mut target, &[$($inventory_operand),*]);
                 assert!(target.is_empty());
             }
 
             #[test]
             fn shorter_operand_preserves_tail() {
                 let mut target = vec![$($inventory_target),*, 0xCAFE_BABE];
-                cpu_ref(&mut target, &[$($inventory_operand),*]);
+                reference_in_place_combine(&mut target, &[$($inventory_operand),*]);
                 assert_eq!(target, vec![$($inventory_expected),*, 0xCAFE_BABE]);
             }
 
@@ -413,7 +434,7 @@ macro_rules! define_bitwise_in_place_op {
                     *value = combine(*value, *rhs);
                 }
 
-                cpu_ref(&mut target, &operand);
+                reference_in_place_combine(&mut target, &operand);
 
                 assert_eq!(target, expected);
             }

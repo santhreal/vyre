@@ -1,7 +1,5 @@
 //! Frontier-typed IR dependency waves.
 
-use std::collections::HashMap;
-
 /// Work domain for a frontier-typed node.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum FrontierDomain {
@@ -106,99 +104,72 @@ impl std::fmt::Display for FrontierTypedPlanError {
 impl std::error::Error for FrontierTypedPlanError {}
 
 /// Plan frontier-typed dependency waves.
+#[cfg(test)]
 pub fn plan_frontier_typed_ir(
     nodes: &[FrontierNode],
     dependencies: &[FrontierDependency],
 ) -> Result<FrontierTypedPlan, FrontierTypedPlanError> {
-    let mut node_indices = HashMap::with_capacity(nodes.len());
-    for (index, node) in nodes.iter().enumerate() {
-        if node_indices.insert(node.id, index).is_some() {
-            return Err(FrontierTypedPlanError::DuplicateNode { id: node.id });
-        }
-    }
-    let mut successors: Vec<Vec<usize>> = (0..nodes.len()).map(|_| Vec::new()).collect();
-    let mut indegree = vec![0_u32; nodes.len()];
-    for dependency in dependencies {
-        let before = match node_indices.get(&dependency.before) {
-            Some(&index) => index,
-            None => {
-                return Err(FrontierTypedPlanError::UnknownDependencyNode {
-                    id: dependency.before,
-                });
-            }
-        };
-        let after = match node_indices.get(&dependency.after) {
-            Some(&index) => index,
-            None => {
-                return Err(FrontierTypedPlanError::UnknownDependencyNode {
-                    id: dependency.after,
-                });
-            }
-        };
-        successors[before].push(after);
-        indegree[after] =
-            indegree[after]
-                .checked_add(1)
-                .ok_or(FrontierTypedPlanError::PlanTooLarge {
-                    field: "dependency indegree",
-                })?;
-    }
+    use vyre_reference::composition_witness::{
+        plan_frontier_typed_ir_witness, FrontierDependencyWitness, FrontierDomainWitness,
+        FrontierNodeWitness, FrontierTypedPlanWitnessError,
+    };
 
-    let mut ready = Vec::with_capacity(nodes.len());
-    for (index, &degree) in indegree.iter().enumerate() {
-        if degree == 0 {
-            ready.push(index);
-        }
-    }
-
-    let mut scheduled = 0_usize;
-    let mut waves = Vec::new();
-    let mut next_ready = Vec::new();
-    while !ready.is_empty() {
-        ready.sort_unstable_by_key(|&index| (nodes[index].domain, nodes[index].id));
-        let wave_index =
-            u32::try_from(waves.len()).map_err(|_| FrontierTypedPlanError::PlanTooLarge {
-                field: "wave count",
-            })?;
-        let mut domains = Vec::new();
-        let mut node_ids = Vec::with_capacity(ready.len());
-        let mut active_items = 0_u64;
-        next_ready.clear();
-        for &node_index in &ready {
-            let node = nodes[node_index];
-            if !domains.contains(&node.domain) {
-                domains.push(node.domain);
+    let witness_nodes = nodes
+        .iter()
+        .map(|node| FrontierNodeWitness {
+            id: node.id,
+            domain: match node.domain {
+                FrontierDomain::Parser => FrontierDomainWitness::Parser,
+                FrontierDomain::Semantic => FrontierDomainWitness::Semantic,
+                FrontierDomain::Dataflow => FrontierDomainWitness::Dataflow,
+                FrontierDomain::Diagnostic => FrontierDomainWitness::Diagnostic,
+            },
+            active_items: node.active_items,
+        })
+        .collect::<Vec<_>>();
+    let witness_dependencies = dependencies
+        .iter()
+        .map(|dependency| FrontierDependencyWitness {
+            before: dependency.before,
+            after: dependency.after,
+        })
+        .collect::<Vec<_>>();
+    let witness_plan = plan_frontier_typed_ir_witness(&witness_nodes, &witness_dependencies)
+        .map_err(|error| match error {
+            FrontierTypedPlanWitnessError::DuplicateNode { id } => {
+                FrontierTypedPlanError::DuplicateNode { id }
             }
-            node_ids.push(node.id);
-            active_items = active_items
-                .checked_add(u64::from(node.active_items))
-                .ok_or(FrontierTypedPlanError::PlanTooLarge {
-                    field: "active item count",
-                })?;
-            scheduled += 1;
-            for &successor in &successors[node_index] {
-                indegree[successor] -= 1;
-                if indegree[successor] == 0 {
-                    next_ready.push(successor);
-                }
+            FrontierTypedPlanWitnessError::UnknownDependencyNode { id } => {
+                FrontierTypedPlanError::UnknownDependencyNode { id }
             }
-        }
-        waves.push(FrontierWave {
-            index: wave_index,
-            domains,
-            node_ids,
-            active_items,
-        });
-        std::mem::swap(&mut ready, &mut next_ready);
-    }
-
-    if scheduled != nodes.len() {
-        return Err(FrontierTypedPlanError::Cycle {
-            unscheduled_nodes: nodes.len() - scheduled,
-        });
-    }
-
-    Ok(FrontierTypedPlan { waves })
+            FrontierTypedPlanWitnessError::Cycle { unscheduled_nodes } => {
+                FrontierTypedPlanError::Cycle { unscheduled_nodes }
+            }
+            FrontierTypedPlanWitnessError::PlanTooLarge { field } => {
+                FrontierTypedPlanError::PlanTooLarge { field }
+            }
+        })?;
+    Ok(FrontierTypedPlan {
+        waves: witness_plan
+            .waves
+            .into_iter()
+            .map(|wave| FrontierWave {
+                index: wave.index,
+                domains: wave
+                    .domains
+                    .into_iter()
+                    .map(|domain| match domain {
+                        FrontierDomainWitness::Parser => FrontierDomain::Parser,
+                        FrontierDomainWitness::Semantic => FrontierDomain::Semantic,
+                        FrontierDomainWitness::Dataflow => FrontierDomain::Dataflow,
+                        FrontierDomainWitness::Diagnostic => FrontierDomain::Diagnostic,
+                    })
+                    .collect(),
+                node_ids: wave.node_ids,
+                active_items: wave.active_items,
+            })
+            .collect(),
+    })
 }
 
 #[cfg(test)]
@@ -264,6 +235,17 @@ mod tests {
         );
         assert_eq!(
             plan_frontier_typed_ir(
+                &[node(2, FrontierDomain::Parser, 1)],
+                &[FrontierDependency {
+                    before: 1,
+                    after: 2,
+                }],
+            )
+            .expect_err("unknown dependency before should fail"),
+            FrontierTypedPlanError::UnknownDependencyNode { id: 1 }
+        );
+        assert_eq!(
+            plan_frontier_typed_ir(
                 &[
                     node(1, FrontierDomain::Parser, 1),
                     node(2, FrontierDomain::Semantic, 1)
@@ -284,6 +266,38 @@ mod tests {
                 unscheduled_nodes: 2,
             }
         );
+        assert_eq!(
+            plan_frontier_typed_ir(
+                &[node(1, FrontierDomain::Parser, 1)],
+                &[FrontierDependency {
+                    before: 1,
+                    after: 1,
+                }],
+            )
+            .expect_err("self cycle should fail"),
+            FrontierTypedPlanError::Cycle {
+                unscheduled_nodes: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn frontier_typed_plan_error_display() {
+        let err = FrontierTypedPlanError::DuplicateNode { id: 7 };
+        assert!(err.to_string().contains("duplicate node id 7"));
+
+        let err = FrontierTypedPlanError::UnknownDependencyNode { id: 13 };
+        assert!(err.to_string().contains("unknown node 13"));
+
+        let err = FrontierTypedPlanError::Cycle {
+            unscheduled_nodes: 4,
+        };
+        assert!(err.to_string().contains("cycle with 4 unscheduled node(s)"));
+
+        let err = FrontierTypedPlanError::PlanTooLarge {
+            field: "active item count",
+        };
+        assert!(err.to_string().contains("active item count exceeds"));
     }
 
     #[test]

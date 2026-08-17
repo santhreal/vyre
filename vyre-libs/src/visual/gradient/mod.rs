@@ -300,6 +300,10 @@ pub fn try_linear_gradient(
     ))
 }
 
+const EXPECTED_GRADIENT_OUTPUT_BYTES: [u8; 16] = [
+    0xFF, 0x00, 0x00, 0xFF, 0xAA, 0x00, 0x55, 0xFF, 0x55, 0x00, 0xAA, 0xFF, 0x00, 0x00, 0xFF, 0xFF,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -314,11 +318,7 @@ inventory::submit! {
             vec![vec![vec![0u8; 16]]]  // initial 4×1 output buffer
         }),
         Some(|| {
-            // 4-pixel horizontal gradient: red → blue.
-            // Pixel 0: pure red, Pixel 3: pure blue.
-            // Exact values depend on interpolation rounding.
-            let expected = [0xFF_0000FFu32, 0xFF_5500AAu32, 0xFF_AA0055u32, 0xFF_FF0000u32];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
+            vec![vec![EXPECTED_GRADIENT_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")

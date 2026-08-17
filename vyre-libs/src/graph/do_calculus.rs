@@ -36,6 +36,8 @@ pub const OP_ID: &str = "vyre-libs::graph::do_intervention_delete_incoming";
 pub const RULE2_OP_ID: &str = "vyre-libs::graph::do_rule2_reverse_incoming";
 /// Rule 3 op id.
 pub const RULE3_OP_ID: &str = "vyre-libs::graph::do_rule3_subgraph";
+/// Impact mask op id.
+pub(crate) const IMPACT_MASK_OP_ID: &str = "vyre-libs::graph::do_impact_mask_from_closure";
 
 /// Emit a Program that zeros all incoming edges to nodes marked
 /// "intervened" in `intervention_mask`. The result is the post-do
@@ -100,13 +102,10 @@ pub fn try_do_intervention_delete_incoming(
     ))
 }
 
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::do_intervention_delete_incoming_witness as do_intervention_delete_incoming_cpu;
 
     #[test]
     fn cpu_no_intervention_preserves_adjacency() {
@@ -302,7 +301,7 @@ pub fn try_do_rule2_reverse_incoming(
 }
 
 /// Emit a Program for do-calculus **Rule 3 subgraph extraction**: the GPU/IR
-/// counterpart of `do_rule3_subgraph_cpu` (requires the `cpu-parity` feature). Restricts the `n × n` adjacency
+/// counterpart of the `vyre-reference` do-calculus rule 3 witness. Restricts the `n × n` adjacency
 /// matrix to the nodes whose `keep_mask` bit is set, laying the result out as a
 /// dense `k × k` block (`k = popcount(keep_mask)`), and emits the
 /// kept-index → original-index map plus the scalar `k`.
@@ -432,17 +431,203 @@ pub fn try_do_rule3_subgraph(
     ))
 }
 
+/// Emit a Program that projects a reachability closure matrix and intervention mask
+/// into an n-element impact mask on device.
+#[must_use]
+pub(crate) fn do_impact_mask_from_closure(
+    intervention_mask: &str,
+    closure: &str,
+    impact_mask: &str,
+    n: u32,
+) -> Program {
+    match try_do_impact_mask_from_closure(intervention_mask, closure, impact_mask, n) {
+        Ok(program) => program,
+        Err(error) => trap_program(IMPACT_MASK_OP_ID, Some((impact_mask, DataType::U32)), error),
+    }
+}
 
+/// Emit an impact-mask projection Program with checked input shapes.
+pub(crate) fn try_do_impact_mask_from_closure(
+    intervention_mask: &str,
+    closure: &str,
+    impact_mask: &str,
+    n: u32,
+) -> Result<Program, String> {
+    if n == 0 {
+        return Err(format!("Fix: {IMPACT_MASK_OP_ID} requires n > 0."));
+    }
+    let cells = crate::plumbing::operand::shape::square_matrix_cells(IMPACT_MASK_OP_ID, n)?;
+    let j = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::if_then(
+        Expr::lt(j.clone(), Expr::u32(n)),
+        vec![
+            Node::let_bind(
+                "is_impacted",
+                Expr::select(
+                    Expr::ne(Expr::load(intervention_mask, j.clone()), Expr::u32(0)),
+                    Expr::u32(1),
+                    Expr::u32(0),
+                ),
+            ),
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::u32(n),
+                vec![
+                    Node::let_bind(
+                        "src_intervened",
+                        Expr::ne(Expr::load(intervention_mask, Expr::var("i")), Expr::u32(0)),
+                    ),
+                    Node::let_bind(
+                        "reach",
+                        Expr::ne(
+                            Expr::load(
+                                closure,
+                                Expr::add(Expr::mul(Expr::var("i"), Expr::u32(n)), j.clone()),
+                            ),
+                            Expr::u32(0),
+                        ),
+                    ),
+                    Node::if_then(
+                        Expr::and(Expr::var("src_intervened"), Expr::var("reach")),
+                        vec![Node::assign("is_impacted", Expr::u32(1))],
+                    ),
+                ],
+            ),
+            Node::store(impact_mask, j, Expr::var("is_impacted")),
+        ],
+    )];
 
-
-
-
-
-
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(intervention_mask, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(n),
+            BufferDecl::storage(closure, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(cells),
+            BufferDecl::storage(impact_mask, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(n),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(IMPACT_MASK_OP_ID, body)],
+    ))
+}
 
 #[cfg(test)]
 mod fallible_cpu_reference_tests {
-    use super::*;
+    use vyre_reference::composition_witness::{
+        do_intervention_delete_incoming_witness_into, do_rule2_reverse_incoming_witness_into,
+        do_rule3_subgraph_witness_into,
+    };
+    fn do_intervention_delete_incoming_cpu(
+        adjacency: &[u32],
+        intervention_mask: &[u32],
+        n: u32,
+    ) -> Vec<u32> {
+        vyre_reference::composition_witness::do_intervention_delete_incoming_witness(
+            adjacency,
+            intervention_mask,
+            n,
+        )
+    }
+
+    fn do_rule2_reverse_incoming_cpu(
+        adjacency: &[u32],
+        treatment_mask: &[u32],
+        n: u32,
+    ) -> Vec<u32> {
+        vyre_reference::composition_witness::do_rule2_reverse_incoming_witness(
+            adjacency,
+            treatment_mask,
+            n,
+        )
+    }
+
+    fn try_do_intervention_delete_incoming_cpu_into(
+        adjacency: &[u32],
+        intervention_mask: &[u32],
+        n: u32,
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let n_usize = n as usize;
+        if adjacency.len() != n_usize * n_usize {
+            return Err(format!(
+                "Fix: do_intervention requires adjacency.len() == n*n, got {} vs {}.",
+                adjacency.len(),
+                n_usize * n_usize
+            ));
+        }
+        if intervention_mask.len() != n_usize {
+            return Err(format!(
+                "Fix: do_intervention requires intervention_mask.len() == n, got {} vs {}.",
+                intervention_mask.len(),
+                n_usize
+            ));
+        }
+        do_intervention_delete_incoming_witness_into(adjacency, intervention_mask, n, out);
+        Ok(())
+    }
+
+    fn try_do_rule2_reverse_incoming_cpu_into(
+        adjacency: &[u32],
+        treatment_mask: &[u32],
+        n: u32,
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let n_usize = n as usize;
+        if adjacency.len() != n_usize * n_usize {
+            return Err(format!(
+                "Fix: rule2 requires adjacency.len() == n*n, got {} vs {}.",
+                adjacency.len(),
+                n_usize * n_usize
+            ));
+        }
+        if treatment_mask.len() != n_usize {
+            return Err(format!(
+                "Fix: rule2 requires treatment_mask.len() == n, got {} vs {}.",
+                treatment_mask.len(),
+                n_usize
+            ));
+        }
+        do_rule2_reverse_incoming_witness_into(adjacency, treatment_mask, n, out);
+        Ok(())
+    }
+
+    fn try_do_rule3_subgraph_cpu_into(
+        adjacency: &[u32],
+        keep_mask: &[u32],
+        n: u32,
+        reduced: &mut Vec<u32>,
+        kept: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let n_usize = n as usize;
+        if adjacency.len() != n_usize * n_usize {
+            return Err(format!(
+                "Fix: rule3 requires adjacency.len() == n*n, got {} vs {}.",
+                adjacency.len(),
+                n_usize * n_usize
+            ));
+        }
+        if keep_mask.len() != n_usize {
+            return Err(format!(
+                "Fix: rule3 requires keep_mask.len() == n, got {} vs {}.",
+                keep_mask.len(),
+                n_usize
+            ));
+        }
+        do_rule3_subgraph_witness_into(adjacency, keep_mask, n, reduced, kept);
+        Ok(())
+    }
+
+    fn try_do_rule3_subgraph_cpu(
+        adjacency: &[u32],
+        keep_mask: &[u32],
+        n: u32,
+    ) -> Result<(Vec<u32>, Vec<u32>), String> {
+        let mut reduced = Vec::new();
+        let mut kept = Vec::new();
+        try_do_rule3_subgraph_cpu_into(adjacency, keep_mask, n, &mut reduced, &mut kept)?;
+        Ok((reduced, kept))
+    }
 
     #[test]
     fn try_intervention_rejects_bad_input_without_clobbering_output() {
@@ -599,6 +784,7 @@ mod fallible_cpu_reference_tests {
 #[cfg(test)]
 mod rule2_tests {
     use super::*;
+    use vyre_reference::composition_witness::do_rule2_reverse_incoming_witness as do_rule2_reverse_incoming_cpu;
 
     #[test]
     fn no_treatment_preserves_adjacency() {
@@ -691,7 +877,35 @@ mod rule2_tests {
 
 #[cfg(test)]
 mod rule3_tests {
-    use super::*;
+    use vyre_reference::composition_witness::{
+        do_rule3_subgraph_witness as do_rule3_subgraph_cpu,
+        do_rule3_subgraph_witness_into as do_rule3_subgraph_cpu_into,
+    };
+    fn try_do_rule3_subgraph_cpu_into(
+        adjacency: &[u32],
+        keep_mask: &[u32],
+        n: u32,
+        reduced: &mut Vec<u32>,
+        kept: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let n_usize = n as usize;
+        if adjacency.len() != n_usize * n_usize {
+            return Err(format!(
+                "Fix: rule3 requires adjacency.len() == n*n, got {} vs {}.",
+                adjacency.len(),
+                n_usize * n_usize
+            ));
+        }
+        if keep_mask.len() != n_usize {
+            return Err(format!(
+                "Fix: rule3 requires keep_mask.len() == n, got {} vs {}.",
+                keep_mask.len(),
+                n_usize
+            ));
+        }
+        do_rule3_subgraph_cpu_into(adjacency, keep_mask, n, reduced, kept);
+        Ok(())
+    }
 
     #[test]
     fn keep_all_returns_original() {

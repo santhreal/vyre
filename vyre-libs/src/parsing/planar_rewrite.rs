@@ -148,6 +148,10 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
     )
 }
 
+const EXPECTED_PLANAR_REWRITE_BYTES: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -163,10 +167,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            let mut expected = vec![0; 16];
-            expected[5] = 1;
-            vec![vec![to_bytes(&expected)]]
+            vec![vec![EXPECTED_PLANAR_REWRITE_BYTES.to_vec()]]
         }),
     )
 }
@@ -174,9 +175,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::planar_rewrite_schedule_witness as reference_planar_rewrite_schedule;
 
     #[test]
-    fn cpu_no_candidates_no_chosen() {
+    fn reference_no_candidates_no_chosen() {
         let cands = vec![0u32; 16];
         let chosen = reference_planar_rewrite_schedule(&cands, 4, 4, 2);
         for v in chosen {
@@ -185,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_isolated_candidate_is_chosen() {
+    fn reference_isolated_candidate_is_chosen() {
         let mut cands = vec![0u32; 16];
         cands[5] = 1; // (1, 1) in a 4x4
         let chosen = reference_planar_rewrite_schedule(&cands, 4, 4, 2);
@@ -193,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_overlapping_candidates_only_first_chosen() {
+    fn reference_overlapping_candidates_only_first_chosen() {
         // Two candidates touching with k=2 exclusion: (0,0) and (0,1)
         // overlap. Only (0,0) is chosen.
         let mut cands = vec![0u32; 9];
@@ -205,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_widely_spaced_candidates_all_chosen() {
+    fn reference_widely_spaced_candidates_all_chosen() {
         // 5x5 grid, candidates at corners  -  all far enough apart.
         let mut cands = vec![0u32; 25];
         cands[0] = 1; // (0, 0)
@@ -220,14 +222,14 @@ mod tests {
     }
 
     #[test]
-    fn cpu_short_candidate_buffer_treats_missing_cells_as_zero() {
+    fn reference_short_candidate_buffer_treats_missing_cells_as_zero() {
         let cands = vec![1u32];
         let chosen = reference_planar_rewrite_schedule(&cands, 2, 2, 1);
         assert_eq!(chosen, vec![1, 0, 0, 0]);
     }
 
     #[test]
-    fn cpu_dense_candidates_alternate_chosen() {
+    fn reference_dense_candidates_alternate_chosen() {
         // All cells are candidates with k=2; chosen should be a maximal
         // independent set.
         let cands = vec![1u32; 16];

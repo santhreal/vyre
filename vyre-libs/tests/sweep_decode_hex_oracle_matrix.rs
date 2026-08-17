@@ -72,15 +72,7 @@ fn oracle_hex_table() -> [u32; 256] {
 }
 
 fn oracle_hex_decode_packed(input: &[u8]) -> Vec<u32> {
-    let table = oracle_hex_table();
-    input
-        .chunks_exact(2)
-        .map(|pair| {
-            let hi = table[usize::from(pair[0])];
-            let lo = table[usize::from(pair[1])];
-            (hi << 4) | lo
-        })
-        .collect()
+    vyre_reference::composition_witness::hex_decode_packed_witness(input)
 }
 
 fn hostile_hex_input(seed: u32) -> Vec<u8> {

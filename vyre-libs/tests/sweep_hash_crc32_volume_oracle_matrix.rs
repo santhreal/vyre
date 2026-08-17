@@ -6,7 +6,7 @@
 mod wire_words;
 use wire_words::hostile_bytes;
 
-use vyre_libs::hash::crc32;
+use vyre_reference::composition_witness::crc32_witness;
 
 fn oracle_crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;
@@ -27,7 +27,7 @@ fn sweep_hash_crc32_volume_oracle_matrix() {
     for idx in 0..CASES {
         let bytes = hostile_bytes(idx as u32);
         assert_eq!(
-            crc32::crc32(&bytes),
+            crc32_witness(&bytes),
             oracle_crc32(&bytes),
             "Fix: crc32 volume case {idx} len={}",
             bytes.len()

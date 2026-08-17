@@ -109,8 +109,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32_bytes(&[23.0])]]
+            vec![vec![vec![0x00, 0x00, 0xb8, 0x41]]] // 23.0
         }),
     )
 }

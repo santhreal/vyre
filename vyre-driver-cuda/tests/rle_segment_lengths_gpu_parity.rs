@@ -8,8 +8,7 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::decode::rle_segment_lengths::{
-    rle_segment_lengths, rle_segment_lengths_cpu, rle_segment_lengths_dispatch_grid,
-    MAX_SEGMENT_LENGTH,
+    rle_segment_lengths, rle_segment_lengths_cpu, MAX_SEGMENT_LENGTH,
 };
 
 fn run_rle(segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
@@ -21,7 +20,7 @@ fn run_rle(segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
         vec![0u8; count as usize * 4],
     ];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(rle_segment_lengths_dispatch_grid(count));
+    config.grid_override = Some(vyre_primitives::lane_grid(count, 256));
     let outputs = with_live_backend("RLE segment lengths", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -78,7 +77,7 @@ fn cuda_rle_segment_lengths_multi_block_mixed_runs() {
     let (cpu_lengths, cpu_values) = rle_segment_lengths_cpu(&segments);
     let (gpu_lengths, gpu_values) = run_rle(&segments);
 
-    assert_eq!(rle_segment_lengths_dispatch_grid(count), [5, 1, 1]);
+    assert_eq!(vyre_primitives::lane_grid(count, 256), [5, 1, 1]);
     assert_eq!(gpu_lengths, cpu_lengths);
     assert_eq!(gpu_values, cpu_values);
     assert_eq!(gpu_lengths[0], MAX_SEGMENT_LENGTH);

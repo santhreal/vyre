@@ -79,24 +79,9 @@ fn linear_reference(
     n: u32,
     eps: f32,
 ) -> Vec<f32> {
-    assert_eq!(
-        normalized.len(),
-        n as usize,
-        "linear_reference must receive exactly n normalized values: got {} vs {}",
-        normalized.len(),
-        n
-    );
-    let inv_scale =
-        1.0_f32 / ((normalized.iter().map(|v| v * v).sum::<f32>() / (n as f32)) + eps).sqrt();
-    let mut output = bias.to_vec();
-    for j in 0..out_dim as usize {
-        let mut acc = output[j];
-        for k in 0..in_dim as usize {
-            acc += input[k] * inv_scale * weights[k * out_dim as usize + j];
-        }
-        output[j] = acc;
-    }
-    output
+    vyre_reference::composition_witness::rms_norm_linear_witness(
+        input, normalized, weights, bias, out_dim, in_dim, n, eps,
+    )
 }
 
 fn parity_case(n: u32, in_dim: u32, out_dim: u32) {

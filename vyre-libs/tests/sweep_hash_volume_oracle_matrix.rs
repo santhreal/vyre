@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
 
-use vyre_libs::hash::{crc32, fnv1a};
+use vyre_reference::composition_witness::{crc32_witness, fnv1a32_witness};
 
 fn oracle_crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;
@@ -43,7 +43,7 @@ fn hostile_bytes() -> impl Iterator<Item = Vec<u8>> {
 fn sweep_crc32_volume_oracle_matrix() {
     for (idx, bytes) in hostile_bytes().enumerate() {
         let expected = oracle_crc32(&bytes);
-        let actual = crc32::crc32(&bytes);
+        let actual = crc32_witness(&bytes);
         assert_eq!(
             actual,
             expected,
@@ -57,7 +57,7 @@ fn sweep_crc32_volume_oracle_matrix() {
 fn sweep_fnv1a32_volume_oracle_matrix() {
     for (idx, bytes) in hostile_bytes().enumerate() {
         let expected = oracle_fnv1a32(&bytes);
-        let actual = fnv1a::fnv1a32(&bytes);
+        let actual = fnv1a32_witness(&bytes);
         assert_eq!(
             actual,
             expected,

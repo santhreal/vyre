@@ -16,9 +16,8 @@
 //! which the real backend's strict `validate_input_lengths` would reject. The faithful dispatcher's
 //! strict count check caught it; the consumer now passes exactly six.
 
-use vyre_libs::solvers::sinkhorn_dispatch_clustering::{
-    reference_sinkhorn_clustering, sinkhorn_clustering_via,
-};
+use vyre_libs::solvers::sinkhorn_dispatch_clustering::sinkhorn_clustering_via;
+use vyre_reference::composition_witness::sinkhorn_clustering_witness;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
@@ -51,7 +50,7 @@ fn assert_via_matches_oracle(
         EPS,
     )
     .expect("sinkhorn_clustering_via must dispatch the Sinkhorn IR");
-    let oracle = reference_sinkhorn_clustering(
+    let oracle = sinkhorn_clustering_witness(
         features, centroids, weights, capacities, m, n, d, ITERS, EPS,
     );
     assert_eq!(via.len(), m as usize, "one assignment per region");

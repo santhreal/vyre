@@ -29,7 +29,8 @@ pub struct ToposortCsrLayout {
 /// Returns [`ToposortCsrError::BadCsr`] when the CSR shape is malformed and
 /// [`ToposortCsrError::BadOrder`] only if derived state violates the
 /// topological-order contract after input validation.
-pub fn toposort_csr(
+#[cfg(test)]
+pub(crate) fn toposort_csr(
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],
@@ -39,27 +40,6 @@ pub fn toposort_csr(
     Ok(order)
 }
 
-/// Caller-owned workspace for repeated CSR topological-sort CPU oracle runs.
-///
-/// The CPU oracle is used heavily by conformance and backend parity paths. Keeping
-/// indegree and queue storage outside the call lets proof runners amortize heap
-/// growth across thousands of generated graphs without changing the public
-/// allocating convenience API.
-#[derive(Debug, Default, Clone)]
-pub struct ToposortCsrScratch {
-    /// Per-node incoming-edge counts rebuilt for each run.
-    pub indeg: Vec<u32>,
-    /// Zero-indegree work queue consumed by Kahn traversal.
-    pub queue: Vec<u32>,
-}
-
-impl ToposortCsrScratch {
-    /// Create an empty reusable topological-sort workspace.
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
 /// CPU reference over primitive-native CSR adjacency, reusing caller storage.
 ///
 /// # Errors
@@ -67,99 +47,18 @@ impl ToposortCsrScratch {
 /// Returns [`ToposortCsrError::BadCsr`] when CSR validation fails and
 /// [`ToposortCsrError::BadOrder`] when the derived order violates the
 /// primitive contract.
-pub fn toposort_csr_into(
+#[cfg(test)]
+pub(crate) fn toposort_csr_into(
     node_count: u32,
     offsets: &[u32],
     targets: &[u32],
     order: &mut Vec<u32>,
-) -> Result<(), ToposortCsrError> {
-    let mut scratch = ToposortCsrScratch::default();
-    toposort_csr_into_with_scratch(node_count, offsets, targets, order, &mut scratch)
-}
-
-/// CPU reference over primitive-native CSR adjacency with caller-owned output
-/// and scratch storage.
-///
-/// # Errors
-///
-/// Returns [`ToposortCsrError::BadCsr`] when CSR validation fails and
-/// [`ToposortCsrError::BadOrder`] when the derived order violates the
-/// primitive contract. Validation happens before any caller-owned storage is
-/// cleared, so rejected inputs do not clobber reusable buffers.
-pub fn toposort_csr_into_with_scratch(
-    node_count: u32,
-    offsets: &[u32],
-    targets: &[u32],
-    order: &mut Vec<u32>,
-    scratch: &mut ToposortCsrScratch,
 ) -> Result<(), ToposortCsrError> {
     let layout = validate_toposort_csr_inputs(node_count, offsets, targets)?;
-    order.clear();
-    scratch.indeg.clear();
-    scratch.queue.clear();
-    if node_count == 0 {
-        return Ok(());
-    }
-
-    let node_words = layout.node_words;
-    crate::plumbing::host::scratch::reserve_items_with(
-        &mut scratch.indeg,
-        node_words,
-        "toposort CSR CPU oracle",
-        "toposort_csr indegree scratch",
-        toposort_csr_allocation,
-    )?;
-    scratch.indeg.resize(node_words, 0);
-    for (idx, &target) in targets.iter().enumerate() {
-        scratch.indeg[target as usize] =
-            scratch.indeg[target as usize]
-                .checked_add(1)
-                .ok_or_else(|| ToposortCsrError::BadCsr {
-                    message: format!(
-                    "Fix: toposort_csr target node {target} indegree overflowed at targets[{idx}]."
-                ),
-                })?;
-    }
-
-    crate::plumbing::host::scratch::reserve_items_with(
-        &mut scratch.queue,
-        node_words,
-        "toposort CSR CPU oracle",
-        "toposort_csr zero-indegree queue",
-        toposort_csr_allocation,
-    )?;
-    for node in 0..node_count {
-        if scratch.indeg[node as usize] == 0 {
-            scratch.queue.push(node);
-        }
-    }
-    crate::plumbing::host::scratch::reserve_items_with(
-        order,
-        node_words,
-        "toposort CSR CPU oracle",
-        "toposort_csr output order",
-        toposort_csr_allocation,
-    )?;
-    while let Some(node) = scratch.queue.pop() {
-        order.push(node);
-        let start = offsets[node as usize] as usize;
-        let end = offsets[node as usize + 1] as usize;
-        for (edge_offset, &dependent) in targets[start..end].iter().enumerate() {
-            let slot = &mut scratch.indeg[dependent as usize];
-            *slot = slot
-                .checked_sub(1)
-                .ok_or_else(|| ToposortCsrError::BadOrder {
-                    message: format!(
-                    "Fix: toposort_csr indegree underflow for edge {} from {node} to {dependent}.",
-                    start + edge_offset
-                ),
-                })?;
-            if *slot == 0 {
-                scratch.queue.push(dependent);
-            }
-        }
-    }
-
+    vyre_reference::composition_witness::toposort_csr_into_witness(
+        node_count, offsets, targets, order,
+    )
+    .map_err(|message| ToposortCsrError::BadOrder { message })?;
     validate_toposort_csr_order_with_layout(&layout, offsets, targets, order)
 }
 

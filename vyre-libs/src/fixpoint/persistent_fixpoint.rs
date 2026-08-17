@@ -649,16 +649,14 @@ pub fn routed_persistent_fixpoint(
 /// between groups, which is the whole defect this builder exists to
 /// avoid.
 ///
-/// Public because [`count_grid_sync`] is the matching reader and every op that
-/// emits one of these fences pins its wave structure by counting them. An op
-/// that builds the barrier itself and an assertion that recognises a different
-/// ordering are the same drift in two places.
+/// Every grid-wide composition uses this constructor so the lowering boundary
+/// has one exact fence representation.
 #[must_use]
 pub fn grid_sync_barrier() -> Node {
     Node::barrier_with_ordering(vyre_foundation::ir::MemoryOrdering::GridSync)
 }
 
-/// Grid-wide fences in `nodes`, counted through every nesting construct.
+/// Test-only count of grid-wide fences in `nodes`, through every nesting construct.
 ///
 /// This is the ONE reader of [`grid_sync_barrier`]. Nesting comes from
 /// `vyre_foundation::visit::child_bodies`, the workspace's single
@@ -670,8 +668,9 @@ pub fn grid_sync_barrier() -> Node {
 /// with its own `match node` ending in `_ => 0`, which classifies an
 /// unrecognised nesting variant as containing no fences. A fence hidden inside
 /// such a variant makes an under-fenced program's structure test pass.
+#[cfg(test)]
 #[must_use]
-pub fn count_grid_sync(nodes: &[Node]) -> usize {
+pub(crate) fn count_grid_sync(nodes: &[Node]) -> usize {
     let mut total = 0;
     let mut stack: Vec<&Node> = nodes.iter().collect();
     while let Some(node) = stack.pop() {
@@ -699,6 +698,7 @@ pub fn count_grid_sync(nodes: &[Node]) -> usize {
 /// recoverable from the program's own declarations, which is what lets a test
 /// confirm the routing decision against the emission instead of against a
 /// restatement of the rule.
+#[cfg(test)]
 #[must_use]
 pub fn declared_dispatch_span(program: &Program) -> u32 {
     program
@@ -713,6 +713,7 @@ pub fn declared_dispatch_span(program: &Program) -> u32 {
 ///
 /// [`declared_dispatch_span`] over the program's own declared workgroup width, so
 /// neither half can be pinned to a stale constant.
+#[cfg(test)]
 #[must_use]
 pub fn required_workgroups(program: &Program) -> u32 {
     declared_dispatch_span(program).div_ceil(program.workgroup_size()[0])
@@ -729,6 +730,7 @@ pub fn required_workgroups(program: &Program) -> u32 {
 /// Panics when `buffer` names no declared buffer. A program that does not
 /// declare the buffer a caller is asking about is a defect in the emission
 /// rather than a zero-width buffer.
+#[cfg(test)]
 #[must_use]
 pub fn declared_words(program: &Program, buffer: &str) -> u32 {
     program
@@ -789,8 +791,9 @@ fn build_fixpoint_program(
     )
 }
 
-
-
+const EXPECTED_PERSISTENT_FIXPOINT_FRONTIER_BYTES: [u8; 4] = [7, 0, 0, 0];
+const EXPECTED_PERSISTENT_FIXPOINT_STATE_BYTES: [u8; 4] = [7, 0, 0, 0];
+const EXPECTED_PERSISTENT_FIXPOINT_CONVERGED_BYTES: [u8; 4] = [0, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -814,8 +817,11 @@ inventory::submit! {
             vec![vec![to_bytes(&[7]), to_bytes(&[0]), to_bytes(&[0])]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[7]), to_bytes(&[7]), to_bytes(&[0])]]
+            vec![vec![
+                EXPECTED_PERSISTENT_FIXPOINT_FRONTIER_BYTES.to_vec(),
+                EXPECTED_PERSISTENT_FIXPOINT_STATE_BYTES.to_vec(),
+                EXPECTED_PERSISTENT_FIXPOINT_CONVERGED_BYTES.to_vec(),
+            ]]
         }),
     )
 }
@@ -824,21 +830,80 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn try_reference_bitset_fixpoint_into<F>(
+        seed: &[u32],
+        max_iterations: u32,
+        transfer_step: &mut F,
+        current: &mut Vec<u32>,
+        next: &mut Vec<u32>,
+    ) -> Result<u32, String>
+    where
+        F: FnMut(&[u32], &mut [u32]),
+    {
+        vyre_reference::composition_witness::try_persistent_fixpoint_into_witness(
+            seed,
+            max_iterations,
+            transfer_step,
+            current,
+            next,
+        )
+    }
+
+    fn reference_bitset_fixpoint_into<F>(
+        seed: &[u32],
+        max_iterations: u32,
+        transfer_step: &mut F,
+        current: &mut Vec<u32>,
+        next: &mut Vec<u32>,
+    ) -> u32
+    where
+        F: FnMut(&[u32], &mut [u32]),
+    {
+        vyre_reference::composition_witness::persistent_fixpoint_into_witness(
+            seed,
+            max_iterations,
+            transfer_step,
+            current,
+            next,
+        )
+    }
+
+    fn reference_bitset_fixpoint<F>(
+        seed: &[u32],
+        max_iterations: u32,
+        mut transfer_step: F,
+    ) -> (Vec<u32>, u32)
+    where
+        F: FnMut(&[u32], &mut [u32]),
+    {
+        let mut current = Vec::new();
+        let mut next = Vec::new();
+        let iters = vyre_reference::composition_witness::persistent_fixpoint_into_witness(
+            seed,
+            max_iterations,
+            &mut transfer_step,
+            &mut current,
+            &mut next,
+        );
+        (current, iters)
+    }
+
     #[test]
-    fn cpu_ref_converges_when_step_is_idempotent() {
+    fn reference_bitset_fixpoint_converges_when_step_is_idempotent() {
         // Identity transfer: next = current. Should converge in 1 step.
         let seed = vec![0b1010, 0b0101];
-        let (out, iters) = cpu_ref(&seed, 100, |cur, next| next.copy_from_slice(cur));
+        let (out, iters) =
+            reference_bitset_fixpoint(&seed, 100, |cur, next| next.copy_from_slice(cur));
         assert_eq!(out, seed);
         assert_eq!(iters, 1);
     }
 
     #[test]
-    fn cpu_ref_converges_on_or_to_fixed_point() {
+    fn reference_bitset_fixpoint_converges_on_or_to_fixed_point() {
         // Transfer: next = current | constant. Reaches fixed point
         // when constant's bits are all set in current.
         let seed = vec![0u32];
-        let (out, iters) = cpu_ref(&seed, 100, |cur, next| {
+        let (out, iters) = reference_bitset_fixpoint(&seed, 100, |cur, next| {
             next[0] = cur[0] | 0b1010;
         });
         assert_eq!(out, vec![0b1010]);
@@ -846,19 +911,19 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_caps_at_max_iterations() {
+    fn reference_bitset_fixpoint_caps_at_max_iterations() {
         // Diverging transfer: next = current + 1 (per word). Never
-        // reaches fixed point; cpu_ref returns at max_iterations.
+        // reaches fixed point; reference_bitset_fixpoint returns at max_iterations.
         let seed = vec![0u32];
         let max = 16;
-        let (_, iters) = cpu_ref(&seed, max, |cur, next| {
+        let (_, iters) = reference_bitset_fixpoint(&seed, max, |cur, next| {
             next[0] = cur[0].wrapping_add(1);
         });
         assert_eq!(iters, max);
     }
 
     #[test]
-    fn cpu_ref_into_reuses_ping_pong_buffers() {
+    fn reference_bitset_fixpoint_into_reuses_ping_pong_buffers() {
         let seed = vec![0u32];
         let mut current = Vec::with_capacity(16);
         let mut next = Vec::with_capacity(16);
@@ -867,7 +932,8 @@ mod tests {
         let mut transfer = |cur: &[u32], out: &mut [u32]| {
             out[0] = cur[0] | 0b1010;
         };
-        let iters = cpu_ref_into(&seed, 16, &mut transfer, &mut current, &mut next);
+        let iters =
+            reference_bitset_fixpoint_into(&seed, 16, &mut transfer, &mut current, &mut next);
         assert!(iters < 5);
         assert_eq!(current, vec![0b1010]);
         assert!(current.as_ptr() == current_ptr || current.as_ptr() == next_ptr);
@@ -876,7 +942,7 @@ mod tests {
     }
 
     #[test]
-    fn try_cpu_ref_into_reuses_buffers_and_clears_stale_tail() {
+    fn try_reference_bitset_fixpoint_into_reuses_buffers_and_clears_stale_tail() {
         let mut current = Vec::with_capacity(8);
         let mut next = Vec::with_capacity(8);
         current.extend([u32::MAX; 8]);
@@ -885,14 +951,18 @@ mod tests {
         let next_ptr = next.as_ptr();
 
         let mut transfer = |cur: &[u32], out: &mut [u32]| out.copy_from_slice(cur);
-        let iters = try_cpu_ref_into(&[1, 2], 4, &mut transfer, &mut current, &mut next).unwrap();
+        let iters =
+            try_reference_bitset_fixpoint_into(&[1, 2], 4, &mut transfer, &mut current, &mut next)
+                .unwrap();
         assert_eq!(iters, 1);
         assert_eq!(current, vec![1, 2]);
         assert_eq!(next, vec![1, 2]);
         assert!(current.as_ptr() == current_ptr || current.as_ptr() == next_ptr);
         assert!(next.as_ptr() == current_ptr || next.as_ptr() == next_ptr);
 
-        let iters = try_cpu_ref_into(&[], 4, &mut transfer, &mut current, &mut next).unwrap();
+        let iters =
+            try_reference_bitset_fixpoint_into(&[], 4, &mut transfer, &mut current, &mut next)
+                .unwrap();
         assert_eq!(iters, 1);
         assert!(current.is_empty());
         assert!(next.is_empty());

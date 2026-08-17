@@ -2,6 +2,10 @@ const OP_ID: &str = "vyre-libs::graph::persistent_bfs";
 use super::program::persistent_bfs;
 use crate::graph::program_graph::ProgramGraphShape;
 
+const EXPECTED_PERSISTENT_BFS_FRONTIER_BYTES: [u8; 4] = [15, 0, 0, 0];
+const EXPECTED_PERSISTENT_BFS_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
+const EXPECTED_PERSISTENT_BFS_CONVERGED_BYTES: [u8; 4] = [1, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -21,14 +25,13 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // After 4 iterations the graph 0→1,0→2,1→3,2→3 is fully closed. The
             // fixpoint is reached at step 2 (no new nodes), one step inside the
             // max_iters=4 budget, so the converged readback is 1.
             vec![vec![
-                to_bytes(&[0b1111]),              // frontier_out = {0,1,2,3}
-                to_bytes(&[1]),                   // changed
-                to_bytes(&[1]),                   // converged
+                EXPECTED_PERSISTENT_BFS_FRONTIER_BYTES.to_vec(),
+                EXPECTED_PERSISTENT_BFS_CHANGED_BYTES.to_vec(),
+                EXPECTED_PERSISTENT_BFS_CONVERGED_BYTES.to_vec(),
             ]]
         }),
     )

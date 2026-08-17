@@ -103,7 +103,7 @@ pub fn homotopy_euler_predictor(
     )
 }
 
-
+const EXPECTED_HOMOTOPY_OUTPUT_BYTES: [u8; 8] = [0, 0, 7, 0, 0, 0, 10, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -118,10 +118,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-                7u32 << 16,
-                10u32 << 16,
-            ])]]
+            vec![vec![EXPECTED_HOMOTOPY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -129,6 +126,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        homotopy_euler_predictor_witness as homotopy_euler_predictor_cpu,
+        linear_homotopy_witness as linear_homotopy_cpu,
+    };
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

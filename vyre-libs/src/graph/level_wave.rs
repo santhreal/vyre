@@ -12,8 +12,8 @@
 //! ## LEGO discipline
 //!
 //! Composes:
-//! - [`crate::graph::toposort::toposort()`]  -  CPU reference for the depth
-//!   assignment (caller computes `depth[node]` from the topological
+//! - Topological sort (sequential witness in `vyre-reference::composition_witness::toposort_witness`) -
+//!   depth assignment reference (caller computes `depth[node]` from the topological
 //!   ordering before invoking this primitive).
 //! - `Node::Loop` (vyre-foundation IR primitive)  -  outer per-depth
 //!   loop.
@@ -239,6 +239,7 @@ pub fn level_wave_program_with_buffers_and_op_id(
     )
 }
 
+const EXPECTED_LEVEL_WAVE_OUTPUT_BYTES: [u8; 16] = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -260,10 +261,9 @@ inventory::submit! {
             ]
         }),
         Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![
-                vec![to_bytes(&[1, 1, 1, 1])],
-                vec![to_bytes(&[1, 1, 1, 1])],
+                vec![EXPECTED_LEVEL_WAVE_OUTPUT_BYTES.to_vec()],
+                vec![EXPECTED_LEVEL_WAVE_OUTPUT_BYTES.to_vec()],
             ]
         }),
     )
@@ -304,6 +304,13 @@ mod tests {
         nodes
             .iter()
             .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Loop { .. })))
+    }
+
+    fn cpu_ref<F>(depths: &[u32], max_depth: u32, step_for_lane: F)
+    where
+        F: FnMut(u32, u32),
+    {
+        vyre_reference::composition_witness::level_wave_witness(depths, max_depth, step_for_lane);
     }
 
     #[test]

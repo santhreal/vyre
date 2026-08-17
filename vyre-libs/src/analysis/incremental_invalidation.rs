@@ -1,5 +1,8 @@
 //! Incremental invalidation planning for source, macro, semantic, and fact work.
 
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
 /// Half-open source byte span.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct SourceSpan {
@@ -110,6 +113,40 @@ pub fn plan_incremental_invalidation(
         changed_spans,
         waves,
     })
+}
+
+/// Canonical op id for incremental invalidation wave dispatch.
+pub const OP_ID: &str = "vyre-libs::analysis::incremental_invalidation";
+
+/// Build a Program that dispatches incremental invalidation dependency waves.
+pub fn incremental_invalidation_program(
+    changed_spans: &[SourceSpan],
+    dependency_regions: &[InvalidationRegion],
+    region_states: &str,
+    wave_out: &str,
+) -> Result<Program, IncrementalInvalidationError> {
+    let plan = plan_incremental_invalidation(changed_spans, dependency_regions)?;
+    let total_regions = u32::try_from(plan.waves.iter().map(|w| w.region_ids.len()).sum::<usize>())
+        .unwrap_or(u32::MAX);
+    let t = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::store(
+        wave_out,
+        t.clone(),
+        Expr::load(region_states, t.clone()),
+    )];
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(region_states, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(total_regions),
+            BufferDecl::storage(wave_out, 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(total_regions),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::lt(t, Expr::u32(total_regions)), body)],
+        )],
+    ))
 }
 
 fn normalize_spans(spans: &[SourceSpan]) -> Result<Vec<SourceSpan>, IncrementalInvalidationError> {
@@ -228,5 +265,17 @@ mod tests {
             kind,
             region_ids: ids.to_vec(),
         }
+    }
+
+    #[test]
+    fn incremental_invalidation_program_builds_valid_ir() {
+        let program = incremental_invalidation_program(
+            &[SourceSpan { start: 0, end: 10 }],
+            &[region(InvalidationRegionKind::Token, 0, 0, 5)],
+            "states",
+            "wave_out",
+        )
+        .expect("Fix: valid invalidation program must build");
+        assert_eq!(program.buffers().len(), 2);
     }
 }

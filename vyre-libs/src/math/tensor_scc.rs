@@ -91,10 +91,10 @@ pub fn tensor_scc_fixpoint(
     )
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::tensor_scc_witness as cpu_ref;
 
     #[test]
     fn cpu_ref_closes_cycle_inside_group() {

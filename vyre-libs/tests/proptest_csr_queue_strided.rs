@@ -4,11 +4,12 @@
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::csr_frontier_queue::validate_csr_queue_graph;
 use vyre_libs::graph::csr_queue_strided::{
-    csr_queue_strided_forward_dispatch_grid, try_csr_queue_strided_forward_traverse_cpu,
-    try_csr_queue_strided_forward_traverse_cpu_into, CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
+    csr_queue_strided_forward_dispatch_grid, CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
     CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
 };
+use vyre_reference::composition_witness::csr_queue_strided_forward_witness;
 
 #[derive(Clone, Debug)]
 struct GeneratedSkewedCsr {
@@ -44,7 +45,7 @@ proptest! {
             allow_mask,
         );
 
-        let actual = try_csr_queue_strided_forward_traverse_cpu(
+        let actual = csr_queue_strided_forward_witness(
             &queue,
             queue_len,
             &graph.edge_offsets,
@@ -52,26 +53,24 @@ proptest! {
             &graph.edge_kind_mask,
             node_count,
             allow_mask,
-        )
-        .expect("Fix: generated skewed CSR queue graph should traverse");
+        );
 
         prop_assert_eq!(actual, expected);
     }
 
     #[test]
-    fn strided_queue_cpu_into_erases_stale_bits_and_matches_allocating_wrapper(
+    fn strided_queue_witness_repeated_calls_do_not_retain_prior_state(
         node_count in 1u32..=384,
         graph_seed in any::<u64>(),
         queue_seed in any::<u64>(),
         queue_slots in 1usize..=96,
         queue_len_extra in 0u32..=32,
-        stale_seed in any::<u32>(),
     ) {
         let graph = generated_skewed_csr(node_count, graph_seed);
         let queue = generated_active_queue(node_count, graph.hub, queue_slots, queue_seed);
         let queue_len = (queue.len() as u32).saturating_add(queue_len_extra);
         let allow_mask = 0b1011;
-        let expected = try_csr_queue_strided_forward_traverse_cpu(
+        let first = csr_queue_strided_forward_witness(
             &queue,
             queue_len,
             &graph.edge_offsets,
@@ -79,11 +78,10 @@ proptest! {
             &graph.edge_kind_mask,
             node_count,
             allow_mask,
-        )
-        .expect("Fix: generated skewed CSR queue graph should traverse");
-        let mut out = vec![stale_seed; expected.len().saturating_add(9)];
-
-        try_csr_queue_strided_forward_traverse_cpu_into(
+        );
+        let unrelated =
+            csr_queue_strided_forward_witness(&[], 0, &[0, 0], &[], &[], 1, allow_mask);
+        let second = csr_queue_strided_forward_witness(
             &queue,
             queue_len,
             &graph.edge_offsets,
@@ -91,11 +89,10 @@ proptest! {
             &graph.edge_kind_mask,
             node_count,
             allow_mask,
-            &mut out,
-        )
-        .expect("Fix: generated skewed CSR queue graph should traverse into caller storage");
+        );
 
-        prop_assert_eq!(out, expected);
+        prop_assert_eq!(unrelated, vec![0]);
+        prop_assert_eq!(second, first);
     }
 
     #[test]
@@ -114,26 +111,14 @@ proptest! {
 }
 
 #[test]
-fn strided_queue_rejects_malformed_csr_without_clobbering_output() {
-    let mut out = vec![0xA5A5_A5A5, 0x5A5A_5A5A];
-
-    let err = try_csr_queue_strided_forward_traverse_cpu_into(
-        &[0],
-        1,
-        &[0, 2],
-        &[0],
-        &[1],
-        1,
-        1,
-        &mut out,
-    )
-    .expect_err("Fix: malformed CSR final offset must be rejected");
+fn strided_queue_validator_rejects_malformed_csr() {
+    let err = validate_csr_queue_graph(1, &[0, 2], &[0], &[1])
+        .expect_err("Fix: malformed CSR final offset must be rejected");
 
     assert!(
         err.contains("final offset declares edge_count"),
         "Fix: malformed CSR diagnostic must identify the final offset mismatch, got: {err}"
     );
-    assert_eq!(out, vec![0xA5A5_A5A5, 0x5A5A_5A5A]);
 }
 
 fn generated_skewed_csr(node_count: u32, seed: u64) -> GeneratedSkewedCsr {

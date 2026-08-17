@@ -11,8 +11,8 @@
 #![cfg(feature = "math-kernels")]
 
 use vyre_libs::math::tensor_scc::tensor_scc_fixpoint;
-fn cpu_ref(_input: &[u32], n: usize) -> Vec<u32> { vec![0; n] }
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::tensor_scc_witness as cpu_ref;
 use vyre_reference::value::Value;
 
 fn next_u32(state: &mut u32) -> u32 {

@@ -4,11 +4,13 @@
 
 use proptest::prelude::*;
 use vyre_foundation::ir::DataType;
-use vyre_libs::hash::fnv1a::{
-    fnv1a32, fnv1a32_initial_state, fnv1a32_program_u8, fnv1a32_update_byte, fnv1a64,
-    fnv1a64_program_n_u8,
-};
+use vyre_libs::hash::fnv1a::{fnv1a32_program_u8, fnv1a64_program_n_u8};
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
+use vyre_reference::composition_witness::{
+    fnv1a32_initial_state_witness as fnv1a32_initial_state,
+    fnv1a32_update_byte_witness as fnv1a32_update_byte, fnv1a32_witness as fnv1a32,
+    fnv1a64_witness as fnv1a64,
+};
 use vyre_reference::value::Value;
 
 fn manual_fnv1a32(bytes: &[u8]) -> u32 {

@@ -13,11 +13,12 @@ use crate::dispatch_buffers::{
     write_zero_bytes,
 };
 use crate::math::differentiable::softmax_step;
-#[cfg(test)]
-use crate::math::differentiable::{differentiable_argmax_cpu_into, softmax_cpu_into};
-#[cfg(test)]
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    argmin_cost_witness, differentiable_autotune_gradient_witness_into,
+    differentiable_autotune_pick_config_witness_into,
+};
 
 /// Caller-owned scratch for fixed-point differentiable-autotune dispatch.
 #[derive(Debug, Default)]
@@ -220,7 +221,7 @@ pub fn natural_config_gradient_magnitude_pre_exp_fixed_via_with_scratch_into(
 /// at low temperature the argmax dominates.
 #[must_use]
 #[cfg(test)]
-pub fn pick_config(costs: &[f64], temperature: f64) -> Vec<f64> {
+pub(crate) fn pick_config(costs: &[f64], temperature: f64) -> Vec<f64> {
     let mut neg_costs = Vec::new();
     let mut scaled = Vec::new();
     let mut out = Vec::new();
@@ -230,7 +231,7 @@ pub fn pick_config(costs: &[f64], temperature: f64) -> Vec<f64> {
 
 /// Soft-pick into caller-owned scratch and probability buffers.
 #[cfg(test)]
-pub fn reference_pick_config_into(
+pub(crate) fn reference_pick_config_into(
     costs: &[f64],
     temperature: f64,
     neg_costs: &mut Vec<f64>,
@@ -239,34 +240,14 @@ pub fn reference_pick_config_into(
 ) {
     use crate::telemetry::{bump, differentiable_autotune_calls};
     bump(&differentiable_autotune_calls);
-    // Negate costs so higher input = better config.
-    neg_costs.clear();
-    reserve_vec_capacity_or_panic(
-        neg_costs,
-        costs.len(),
-        "differentiable autotune negated costs",
-    );
-    neg_costs.extend(costs.iter().map(|&c| -c));
-    differentiable_argmax_cpu_into(neg_costs, temperature, scaled, out);
+    differentiable_autotune_pick_config_witness_into(costs, temperature, neg_costs, scaled, out);
 }
 
 /// Hard pick the best configuration: take the argmax of cost scores.
 #[must_use]
 #[cfg(test)]
-pub fn pick_best_config(costs: &[f64]) -> usize {
-    assert!(
-        !costs.is_empty(),
-        "Fix: pick_best_config requires at least one candidate."
-    );
-    let mut best = 0usize;
-    let mut best_cost = costs[0];
-    for (i, &cost) in costs.iter().enumerate().skip(1) {
-        if cost.total_cmp(&best_cost).is_lt() {
-            best = i;
-            best_cost = cost;
-        }
-    }
-    best
+pub(crate) fn pick_best_config(costs: &[f64]) -> usize {
+    argmin_cost_witness(costs)
 }
 
 /// Compute the gradient of the soft-picked cost w.r.t. each config
@@ -275,7 +256,7 @@ pub fn pick_best_config(costs: &[f64]) -> usize {
 /// concentrates on the argmin.
 #[must_use]
 #[cfg(test)]
-pub fn config_gradient(costs: &[f64], temperature: f64) -> Vec<f64> {
+pub(crate) fn config_gradient(costs: &[f64], temperature: f64) -> Vec<f64> {
     let mut neg_costs = Vec::new();
     let mut out = Vec::new();
     reference_config_gradient_into(costs, temperature, &mut neg_costs, &mut out);
@@ -284,25 +265,16 @@ pub fn config_gradient(costs: &[f64], temperature: f64) -> Vec<f64> {
 
 /// Compute the config-score gradient into caller-owned storage.
 #[cfg(test)]
-pub fn reference_config_gradient_into(
+pub(crate) fn reference_config_gradient_into(
     costs: &[f64],
     temperature: f64,
     neg_costs: &mut Vec<f64>,
     out: &mut Vec<f64>,
 ) {
+    use crate::telemetry::{bump, differentiable_autotune_calls};
+    bump(&differentiable_autotune_calls);
     assert!(temperature > 0.0, "temperature must be positive");
-    // d softmax / d cost_i = -softmax_i (since costs are negated).
-    neg_costs.clear();
-    reserve_vec_capacity_or_panic(
-        neg_costs,
-        costs.len(),
-        "differentiable autotune gradient negated costs",
-    );
-    neg_costs.extend(costs.iter().map(|&c| -c / temperature));
-    softmax_cpu_into(neg_costs, out);
-    for value in out.iter_mut() {
-        *value = -*value;
-    }
+    differentiable_autotune_gradient_witness_into(costs, temperature, neg_costs, out);
 }
 
 #[cfg(test)]

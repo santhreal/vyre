@@ -172,6 +172,10 @@ name = "heuristic-audit"
 findings = 0
 
 [[gate]]
+name = "host-oracle-elimination"
+findings = 0
+
+[[gate]]
 name = "hot-path-blocking-wait"
 findings = 0
 

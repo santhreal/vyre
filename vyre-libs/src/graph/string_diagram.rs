@@ -51,9 +51,8 @@ pub fn try_monoidal_compose(
     try_fixed_u32_matmul(f, g, out, a, b, c, &MATMUL_CONTEXT)
 }
 
-
-
-
+const EXPECTED_STRING_DIAGRAM_OUTPUT_BYTES: [u8; 16] =
+    [0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0, 7, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -68,10 +67,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let one = 1u32 << 16;
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-                2 * one, 3 * one, 5 * one, 7 * one,
-            ])]]
+            vec![vec![EXPECTED_STRING_DIAGRAM_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -79,6 +75,33 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_monoidal_compose_cpu_into(
+        f: &[f64],
+        g: &[f64],
+        a: u32,
+        b: u32,
+        c: u32,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let out_len = (a as usize).checked_mul(c as usize).ok_or_else(|| {
+            "Fix: monoidal_compose CPU output cell count overflowed u32.".to_owned()
+        })?;
+        if out_len > 1_000_000_000 {
+            return Err("Fix: monoidal_compose CPU output reserve exceeded maximum.".to_owned());
+        }
+        vyre_reference::composition_witness::dense_matrix_multiply_witness_into(
+            f, g, a as usize, b as usize, c as usize, out,
+        );
+        Ok(())
+    }
+
+    fn monoidal_compose_cpu(f: &[f64], g: &[f64], a: u32, b: u32, c: u32) -> Vec<f64> {
+        let mut out = Vec::new();
+        try_monoidal_compose_cpu_into(f, g, a, b, c, &mut out)
+            .expect("monoidal_compose_cpu failed");
+        out
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

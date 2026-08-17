@@ -56,12 +56,6 @@ pub fn try_tn_pair_contract(
     try_fixed_u32_matmul(a, b, c, m, k, n, &MATMUL_CONTEXT)
 }
 
-
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -75,8 +69,13 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let two = 2u32 << 16;
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[two, two, two, two])]]
+            // [131072, 131072, 131072, 131072] (2.0 in 16.16 fixed-point)
+            vec![vec![vec![
+                0x00, 0x00, 0x02, 0x00,
+                0x00, 0x00, 0x02, 0x00,
+                0x00, 0x00, 0x02, 0x00,
+                0x00, 0x00, 0x02, 0x00,
+            ]]]
         }),
     )
 }
@@ -84,6 +83,35 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_tn_pair_contract_cpu_into(
+        a: &[f64],
+        b: &[f64],
+        m: u32,
+        k: u32,
+        n: u32,
+        c: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let res = independent_pair_contract(a, b, m as usize, k as usize, n as usize);
+        c.clear();
+        c.extend_from_slice(&res);
+        Ok(())
+    }
+
+    fn tn_pair_contract_cpu(a: &[f64], b: &[f64], m: u32, k: u32, n: u32) -> Vec<f64> {
+        independent_pair_contract(a, b, m as usize, k as usize, n as usize)
+    }
+
+    fn try_greedy_contract_order_cpu_into(
+        costs: &[u32],
+        order: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let mut indexed: Vec<(usize, u32)> = costs.iter().copied().enumerate().collect();
+        indexed.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        order.clear();
+        order.extend(indexed.into_iter().map(|(idx, _)| idx as u32));
+        Ok(())
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

@@ -2,7 +2,9 @@
 
 #![cfg(feature = "pattern")]
 
-use vyre_libs::pattern::{dfa_compile, CompiledDfa, DfaWireError};
+use vyre_libs::pattern::{
+    aho_corasick_program_from_dfa_wire, dfa_compile, CompiledDfa, DfaWireError,
+};
 
 #[test]
 fn dfa_wire_round_trips_all_tables() {
@@ -68,4 +70,40 @@ fn dfa_wire_rejects_shape_mismatch_before_body_decode() {
         CompiledDfa::from_bytes(&bytes),
         Err(DfaWireError::ShapeMismatch { .. })
     ));
+}
+
+#[test]
+fn dfa_wire_program_builder_builds_program_from_valid_blob() {
+    let dfa = dfa_compile(&[b"abra".as_slice()]);
+    let bytes = dfa.to_bytes().expect("encode DFA wire blob");
+    let program = aho_corasick_program_from_dfa_wire(
+        &bytes,
+        "haystack",
+        "transitions",
+        "accept",
+        "matches",
+        16,
+    )
+    .expect("decode DFA wire blob into Program");
+
+    assert_eq!(program.workgroup_size, [64, 1, 1]);
+}
+
+#[test]
+fn dfa_wire_program_builder_rejects_corrupt_blob() {
+    let mut bytes = dfa_compile(&[b"abra".as_slice()])
+        .to_bytes()
+        .expect("encode DFA wire blob");
+    bytes[0] = 0; // bad magic
+    let err = aho_corasick_program_from_dfa_wire(
+        &bytes,
+        "haystack",
+        "transitions",
+        "accept",
+        "matches",
+        16,
+    )
+    .unwrap_err();
+
+    assert!(matches!(err, DfaWireError::BadMagic));
 }

@@ -2,19 +2,17 @@
 //!
 //! Two families live here, distinguished by what a caller can do with the
 //! failure. Dispatch release paths reuse caller-owned buffers heavily and
-//! surface a [`DispatchError`], so they use `reserve_vec`, `reserve_hash_set`
-//! and friends. CPU oracles and structure-of-arrays builders report the owning
-//! kernel and the scratch role as a message the caller maps into its own error
-//! type, so they use `reserve_items`, `reserve_capacity`, `reserve_items_with`
-//! and `resize_vec`.
-//!
+//! surface a [`DispatchError`], so they use `reserve_vec`, `reserve_vec_capacity`
+//! and friends. Host builders report the owning kernel and the scratch role as
+//! a message the caller maps into its own error type, so they use `reserve_items`
+//! and `reserve_items_with`.
 //! Keeping both families here prevents each domain from growing its own
 //! unchecked `Vec::reserve` variant and keeps allocation failures actionable.
 //! Nothing here truncates or saturates on overflow.
 
-#[cfg(feature = "device")]
+#[cfg(all(test, feature = "device"))]
 use std::collections::HashSet;
-#[cfg(feature = "device")]
+#[cfg(all(test, feature = "device"))]
 use std::hash::{BuildHasher, Hash};
 #[cfg(feature = "device")]
 use vyre_foundation::program_dispatch::DispatchError;
@@ -39,36 +37,6 @@ pub(crate) fn reserve_items<T>(
     })
 }
 
-/// Grow `buffer` to hold at least `len` items.
-///
-/// # Errors
-///
-/// Returns a message naming `owner`, `context`, and the allocator failure.
-#[cfg(any(feature = "graph", feature = "math-kernels"))]
-pub(crate) fn reserve_capacity<T>(
-    buffer: &mut Vec<T>,
-    len: usize,
-    owner: &str,
-    context: &str,
-) -> Result<(), String> {
-    if len > buffer.capacity() {
-        reserve_items(buffer, len - buffer.len(), owner, context)?;
-    }
-    Ok(())
-}
-
-/// Define a per-owner `fn(out, len, name)` wrapper over [`reserve_capacity`].
-///
-/// A kernel module that reserves against many scratch vectors under one owner
-/// name would otherwise repeat that name at every call.
-#[cfg(any(feature = "graph", feature = "math-kernels"))]
-macro_rules! define_reserve_capacity {
-    ($name:ident, $item:ty, $owner:literal) => {
-    };
-}
-#[cfg(any(feature = "graph", feature = "math-kernels"))]
-pub(crate) use define_reserve_capacity;
-
 /// Reserve scratch and map the shared diagnostic into a domain-specific error
 /// type.
 ///
@@ -84,26 +52,6 @@ pub(crate) fn reserve_items_with<T, E>(
     map: impl FnOnce(String) -> E,
 ) -> Result<(), E> {
     reserve_items(buffer, additional, owner, context).map_err(map)
-}
-
-/// Grow `buffer` to `len` items, filling new slots with `value`.
-///
-/// # Errors
-///
-/// Returns a message naming `owner`, `context`, and the allocator failure.
-#[cfg(any(feature = "graph", feature = "math-kernels"))]
-pub(crate) fn resize_vec<T: Clone>(
-    buffer: &mut Vec<T>,
-    len: usize,
-    value: T,
-    owner: &str,
-    context: &str,
-) -> Result<(), String> {
-    if len > buffer.len() {
-        reserve_items(buffer, len - buffer.len(), owner, context)?;
-    }
-    buffer.resize(len, value);
-    Ok(())
 }
 
 /// Grow `buffer` to hold at least `capacity` items.
@@ -161,7 +109,7 @@ pub(crate) fn reserve_vec_capacity<T>(
 /// # Panics
 /// Panics when the reservation fails. Continuing with a short buffer would let a pass
 /// write past the scratch it believes it owns.
-#[cfg(feature = "device")]
+#[cfg(all(test, feature = "device"))]
 pub(crate) fn reserve_vec_capacity_or_panic<T>(
     buffer: &mut Vec<T>,
     capacity: usize,
@@ -181,7 +129,7 @@ pub(crate) fn reserve_vec_capacity_or_panic<T>(
 /// # Errors
 /// Returns a [`DispatchError::BackendError`] when the target capacity overflows
 /// or the allocator refuses it.
-#[cfg(feature = "device")]
+#[cfg(all(test, feature = "device"))]
 pub(crate) fn reserve_hash_set<T, S>(
     set: &mut HashSet<T, S>,
     additional: usize,
@@ -205,7 +153,6 @@ where
         ))
     })
 }
-
 
 #[cfg(all(test, feature = "device"))]
 mod dispatch_tests {

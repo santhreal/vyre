@@ -1,5 +1,4 @@
-//! Transitive reachability over an edge list  -  CPU reference + Tier-2.5
-//! GPU Program builder.
+//! Transitive reachability GPU Program builder and test-only witness adapter.
 //!
 //! Consumed by taint analysis (`flows_to`) and graph analyses
 //! that need "is B reachable from A given these edges?"
@@ -8,9 +7,10 @@
 //! ships as a Tier-2.5 builder. It runs a synchronized wavefront
 //! closure in one dispatch: expand the current wave, absorb only
 //! newly-discovered neighbors into `reach_out`, and feed those new bits
-//! into the next wave. The CPU reference (`reachable`) is retained for
-//! the conform harness cpu↔gpu bytecompare oracle.
+//! Test-only host parity delegates to the canonical `vyre-reference` witness.
+//! No host graph traversal is compiled into the shipped library.
 
+#[cfg(test)]
 use std::collections::HashSet;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
@@ -91,7 +91,8 @@ impl From<UnknownNode> for ReachableError {
 /// [`UnknownNode`] so the violation is visible at the call site  -
 /// consistent with how `toposort` surfaces the same shape of
 /// failure.
-pub fn reachable(
+#[cfg(test)]
+pub(crate) fn reachable(
     node_count: u32,
     edges: &[(u32, u32)],
     sources: &[u32],
@@ -108,23 +109,21 @@ pub fn reachable(
 /// Unlike [`reachable`], this surfaces allocation failure as a typed error, so
 /// hostile graph dimensions cannot abort the process through infallible vector
 /// growth.
-pub fn try_reachable(
+#[cfg(test)]
+pub(crate) fn try_reachable(
     node_count: u32,
     edges: &[(u32, u32)],
     sources: &[u32],
 ) -> Result<HashSet<u32>, ReachableError> {
-    const NONE: usize = usize::MAX;
-
-    let n = node_count as usize;
     for (index, &(from, to)) in edges.iter().enumerate() {
-        if (from as usize) >= n {
+        if from >= node_count {
             return Err(ReachableError::UnknownNode(UnknownNode {
                 index,
                 node: from,
                 node_count,
             }));
         }
-        if (to as usize) >= n {
+        if to >= node_count {
             return Err(ReachableError::UnknownNode(UnknownNode {
                 index,
                 node: to,
@@ -132,100 +131,8 @@ pub fn try_reachable(
             }));
         }
     }
-    let mut head: Vec<usize> = Vec::new();
-    crate::plumbing::host::scratch::reserve_items(
-        &mut head,
-        n,
-        "reachable CPU oracle",
-        "adjacency heads",
-    )
-    .map_err(ReachableError::Allocation)?;
-    head.resize(n, NONE);
-    let mut to_nodes: Vec<u32> = Vec::new();
-    crate::plumbing::host::scratch::reserve_items(
-        &mut to_nodes,
-        edges.len(),
-        "reachable CPU oracle",
-        "adjacency destinations",
-    )
-    .map_err(ReachableError::Allocation)?;
-    let mut next_edges: Vec<usize> = Vec::new();
-    crate::plumbing::host::scratch::reserve_items(
-        &mut next_edges,
-        edges.len(),
-        "reachable CPU oracle",
-        "adjacency next links",
-    )
-    .map_err(ReachableError::Allocation)?;
-    for &(from, to) in edges {
-        let edge_index = to_nodes.len();
-        to_nodes.push(to);
-        next_edges.push(head[from as usize]);
-        head[from as usize] = edge_index;
-    }
-    let mut visited: Vec<bool> = Vec::new();
-    crate::plumbing::host::scratch::reserve_items(
-        &mut visited,
-        n,
-        "reachable CPU oracle",
-        "visited bitmap",
-    )
-    .map_err(ReachableError::Allocation)?;
-    visited.resize(n, false);
-    let mut out_of_range_sources: Vec<u32> = Vec::new();
-    crate::plumbing::host::scratch::reserve_items(
-        &mut out_of_range_sources,
-        sources.len(),
-        "reachable CPU oracle",
-        "out-of-range source list",
-    )
-    .map_err(ReachableError::Allocation)?;
-    let mut stack: Vec<u32> = Vec::new();
-    crate::plumbing::host::scratch::reserve_items(
-        &mut stack,
-        sources.len(),
-        "reachable CPU oracle",
-        "DFS stack",
-    )
-    .map_err(ReachableError::Allocation)?;
-    stack.extend_from_slice(sources);
-    while let Some(v) = stack.pop() {
-        let idx = v as usize;
-        if idx >= n {
-            out_of_range_sources.push(v);
-            continue;
-        }
-        if visited[idx] {
-            continue;
-        }
-        visited[idx] = true;
-        let mut edge = head[idx];
-        while edge != NONE {
-            let next = to_nodes[edge];
-            if !visited[next as usize] {
-                stack.push(next);
-            }
-            edge = next_edges[edge];
-        }
-    }
-    let result_capacity = visited
-        .iter()
-        .filter(|&&is_visited| is_visited)
-        .count()
-        .saturating_add(out_of_range_sources.len());
-    let mut result = HashSet::new();
-    result.try_reserve(result_capacity).map_err(|error| {
-        ReachableError::Allocation(format!(
-            "Fix: reachable CPU oracle could not reserve {result_capacity} result nodes: {error}"
-        ))
-    })?;
-    for (idx, is_visited) in visited.into_iter().enumerate() {
-        if is_visited {
-            result.insert(idx as u32);
-        }
-    }
-    result.extend(out_of_range_sources);
-    Ok(result)
+    vyre_reference::composition_witness::reachable_witness(node_count, edges, sources)
+        .map_err(ReachableError::Allocation)
 }
 
 /// Build a Tier-2.5 GPU Program for transitive reachability.

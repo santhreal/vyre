@@ -24,18 +24,13 @@ inventory::submit! {
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
         Some(|| {
-            // HD-style floor((a+b)/2) that never overflows:
-            //   (a & b) + ((a ^ b) >> 1). For the fixture
-            //   (10,20)->15, (MAX,MAX)->MAX, (7,12)->9, (100,0)->50.
-            let a = [10u32, u32::MAX, 7, 100];
-            let b = [20u32, u32::MAX, 12, 0];
-            let expected: Vec<u32> = a
-                .iter()
-                .zip(b.iter())
-                .map(|(&x, &y)| (x & y).wrapping_add((x ^ y) >> 1))
-                .collect();
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            // (10,20)->15, (MAX,MAX)->MAX, (7,12)->9, (100,0)->50.
+            vec![vec![vec![
+                0x0f, 0x00, 0x00, 0x00, // 15
+                0xff, 0xff, 0xff, 0xff, // u32::MAX
+                0x09, 0x00, 0x00, 0x00, // 9
+                0x32, 0x00, 0x00, 0x00, // 50
+            ]]]
         }),
     )
     .with_category("math")

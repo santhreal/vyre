@@ -291,7 +291,6 @@ fn line_start_flags_program(
     ))
 }
 
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         LINE_INDEX_OP_ID,
@@ -316,6 +315,23 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn reference_line_index(input: &[u8]) -> Vec<u32> {
+        if input.is_empty() {
+            return Vec::new();
+        }
+        let mut lines = Vec::with_capacity(input.len());
+        let mut current_line = 0u32;
+        for (i, &b) in input.iter().enumerate() {
+            if i > 0 {
+                let prev = input[i - 1];
+                if prev == b'\n' || (prev == b'\r' && b != b'\n') {
+                    current_line += 1;
+                }
+            }
+            lines.push(current_line);
+        }
+        lines
+    }
     #[test]
     fn reference_no_newlines() {
         assert_eq!(reference_line_index(b"Hello"), vec![0; 5]);

@@ -31,6 +31,10 @@ pub fn ema_apply(ema: &str, theta: &str, n: u32, decay: f32) -> Program {
     })
 }
 
+const EXPECTED_EMA_APPLY_OUTPUT_BYTES: [u8; 16] = [
+    0x9A, 0x99, 0x21, 0x41, 0xCD, 0xCC, 0xA0, 0x41, 0xCD, 0xCC, 0xF0, 0x41, 0x66, 0x66, 0x20, 0x42,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -42,16 +46,7 @@ inventory::submit! {
                 to_f32(&[11.0, 21.0, 31.0, 41.0]),  // theta
             ]]
         }),
-        Some(|| {
-            let decay = 0.9_f32;
-            let ema = [10.0_f32, 20.0, 30.0, 40.0];
-            let theta = [11.0_f32, 21.0, 31.0, 41.0];
-            let out: Vec<f32> = ema.iter().zip(theta.iter())
-                .map(|(e, t)| decay * e + (1.0 - decay) * t)
-                .collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
-        }),
+        Some(|| vec![vec![EXPECTED_EMA_APPLY_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
     .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(1))

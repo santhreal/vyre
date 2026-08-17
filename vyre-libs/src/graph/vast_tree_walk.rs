@@ -772,6 +772,9 @@ fn fixture_tree_words() -> Vec<u32> {
     ]
 }
 
+const EXPECTED_VAST_PREORDER_OUTPUT_BYTES: [u8; 12] = [0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0];
+const EXPECTED_VAST_POSTORDER_OUTPUT_BYTES: [u8; 12] = [1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         PREORDER_OP_ID,
@@ -780,7 +783,7 @@ inventory::submit! {
             fixture_u32(&fixture_tree_words()),
             fixture_u32(&[SENTINEL, SENTINEL, SENTINEL]),
         ]]),
-        Some(|| vec![vec![fixture_u32(&[0, 1, 2])]]),
+        Some(|| vec![vec![EXPECTED_VAST_PREORDER_OUTPUT_BYTES.to_vec()]]),
     )
 }
 
@@ -792,6 +795,6 @@ inventory::submit! {
             fixture_u32(&fixture_tree_words()),
             fixture_u32(&[SENTINEL, SENTINEL, SENTINEL]),
         ]]),
-        Some(|| vec![vec![fixture_u32(&[1, 2, 0])]]),
+        Some(|| vec![vec![EXPECTED_VAST_POSTORDER_OUTPUT_BYTES.to_vec()]]),
     )
 }

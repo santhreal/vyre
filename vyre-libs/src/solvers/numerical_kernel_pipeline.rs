@@ -4,16 +4,11 @@
 //! math primitives without reimplementing the primitive algorithms here.
 
 use crate::math::{
-    dp_accountant::{gaussian_rdp_step, rdp_to_dp},
-    fractional::{
-        grunwald_letnikov_kernel, grunwald_letnikov_kernel_into, kernel_to_fixed_16_16,
-        kernel_to_fixed_16_16_into,
-    },
+    dp_accountant::gaussian_rdp_step,
     preconditioner::{newton_schulz_poly5_f32, newton_schulz_y_step},
     randomized_svd::randomized_projection_step,
 };
 use vyre_foundation::ir::Program;
-
 
 /// Build a randomized projection dispatch for low-rank optimizer telemetry.
 #[must_use]
@@ -59,56 +54,6 @@ pub fn dispatch_gaussian_rdp_step(
     gaussian_rdp_step(alpha, sigma_squared, out, count)
 }
 
-/// Generate a fractional Grünwald-Letnikov kernel for host-side conv1d staging.
-#[must_use]
-pub fn fractional_kernel(alpha: f64, n: u32) -> Vec<f64> {
-    grunwald_letnikov_kernel(alpha, n)
-}
-
-/// Generate a fractional kernel into caller-owned storage.
-pub fn fractional_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
-    grunwald_letnikov_kernel_into(alpha, n, out);
-}
-
-/// Convert a fractional kernel to 16.16 fixed-point weights.
-#[must_use]
-pub fn fractional_kernel_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
-    kernel_to_fixed_16_16(kernel, step, alpha)
-}
-
-/// Convert a fractional kernel to 16.16 fixed-point weights in caller storage.
-pub fn fractional_kernel_fixed_16_16_into(
-    kernel: &[f64],
-    step: f64,
-    alpha: f64,
-    out: &mut Vec<u32>,
-) {
-    kernel_to_fixed_16_16_into(kernel, step, alpha, out);
-}
-
-/// Convert RDP to epsilon for self-substrate private telemetry accounting.
-#[must_use]
-pub fn privacy_epsilon_from_rdp(rdp: f64, alpha: f64, delta: f64) -> f64 {
-    rdp_to_dp(rdp, alpha, delta)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,6 +73,204 @@ mod tests {
 
     /// The binding names the Sinkhorn dispatch tests build against.
     const SINKHORN_FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;
+
+    fn reference_randomized_projection(
+        a: &[f64],
+        omega: &[f64],
+        m: u32,
+        n: u32,
+        l: u32,
+    ) -> Vec<f64> {
+        let mut y = Vec::new();
+        reference_randomized_projection_into(a, omega, m, n, l, &mut y);
+        y
+    }
+
+    fn reference_randomized_projection_into(
+        a: &[f64],
+        omega: &[f64],
+        m: u32,
+        n: u32,
+        l: u32,
+        y: &mut Vec<f64>,
+    ) {
+        vyre_reference::composition_witness::dense_matrix_multiply_witness_into(
+            a, omega, m as usize, n as usize, l as usize, y,
+        );
+    }
+
+    fn reference_modified_gram_schmidt(y: &[f64], m: u32, l: u32) -> Vec<f64> {
+        let mut q = Vec::new();
+        reference_modified_gram_schmidt_into(y, m, l, &mut q);
+        q
+    }
+
+    fn reference_modified_gram_schmidt_into(y: &[f64], m: u32, l: u32, q: &mut Vec<f64>) {
+        vyre_reference::composition_witness::modified_gram_schmidt_witness_into(y, m, l, q);
+    }
+
+    fn reference_fractional_derivative(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
+        let mut kernel = Vec::new();
+        let mut out = Vec::new();
+        reference_fractional_derivative_into(f, alpha, step, &mut kernel, &mut out);
+        out
+    }
+
+    fn reference_fractional_derivative_into(
+        f: &[f64],
+        alpha: f64,
+        step: f64,
+        kernel: &mut Vec<f64>,
+        out: &mut Vec<f64>,
+    ) {
+        vyre_reference::composition_witness::try_fractional_derivative_witness_into(
+            f, alpha, step, kernel, out,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+    }
+
+    type NewtonSchulzScratch = vyre_reference::composition_witness::NewtonSchulzScratchWitness;
+
+    fn reference_newton_schulz_y_step(y_curr: &[f64], yzy: &[f64]) -> Vec<f64> {
+        let mut out = Vec::new();
+        reference_newton_schulz_y_step_into(y_curr, yzy, &mut out);
+        out
+    }
+
+    fn reference_newton_schulz_y_step_into(y_curr: &[f64], yzy: &[f64], out: &mut Vec<f64>) {
+        vyre_reference::composition_witness::newton_schulz_y_step_witness_into(y_curr, yzy, out);
+    }
+
+    fn reference_newton_schulz_inverse_sqrt(m: &[f64], n: usize, iters: u32) -> Vec<f64> {
+        let mut out = Vec::new();
+        let mut scratch = NewtonSchulzScratch::new();
+        reference_newton_schulz_inverse_sqrt_into(m, n, iters, &mut out, &mut scratch);
+        out
+    }
+
+    fn reference_newton_schulz_inverse_sqrt_into(
+        m: &[f64],
+        n: usize,
+        iters: u32,
+        out: &mut Vec<f64>,
+        scratch: &mut NewtonSchulzScratch,
+    ) {
+        vyre_reference::composition_witness::newton_schulz_inverse_sqrt_witness_into(
+            m, n, iters, out, scratch,
+        );
+    }
+    fn reference_sinkhorn_quantized(
+        k: &[u32],
+        k_t: &[u32],
+        a: &[u32],
+        b: &[u32],
+        u_init: &[u32],
+        v_init: &[u32],
+        m: u32,
+        n: u32,
+        max_iterations: u32,
+    ) -> (Vec<u32>, Vec<u32>, u32) {
+        vyre_reference::composition_witness::sinkhorn_iterate_witness(
+            k,
+            k_t,
+            a,
+            b,
+            u_init,
+            v_init,
+            m,
+            n,
+            max_iterations,
+        )
+    }
+
+    fn reference_sinkhorn_quantized_into(
+        k: &[u32],
+        k_t: &[u32],
+        a: &[u32],
+        b: &[u32],
+        u_init: &[u32],
+        v_init: &[u32],
+        m: u32,
+        n: u32,
+        max_iterations: u32,
+        u: &mut Vec<u32>,
+        v: &mut Vec<u32>,
+        u_old: &mut Vec<u32>,
+    ) {
+        vyre_reference::composition_witness::try_sinkhorn_iterate_witness_into(
+            k,
+            k_t,
+            a,
+            b,
+            u_init,
+            v_init,
+            m,
+            n,
+            max_iterations,
+            u,
+            v,
+            u_old,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+    }
+
+    fn reference_sinkhorn_f64(
+        k: &[f64],
+        a: &[f64],
+        b: &[f64],
+        tolerance: f64,
+        max_iterations: u32,
+    ) -> (Vec<f64>, Vec<f64>, u32) {
+        let mut u = Vec::new();
+        let mut v = Vec::new();
+        let mut u_old = Vec::new();
+        let iters = reference_sinkhorn_f64_into(
+            k,
+            a,
+            b,
+            tolerance,
+            max_iterations,
+            &mut u,
+            &mut v,
+            &mut u_old,
+        );
+        (u, v, iters)
+    }
+
+    fn reference_sinkhorn_f64_into(
+        k: &[f64],
+        a: &[f64],
+        b: &[f64],
+        tolerance: f64,
+        max_iterations: u32,
+        u: &mut Vec<f64>,
+        v: &mut Vec<f64>,
+        u_old: &mut Vec<f64>,
+    ) -> u32 {
+        vyre_reference::composition_witness::try_sinkhorn_iterate_f64_witness_into(
+            k,
+            a,
+            b,
+            tolerance,
+            max_iterations,
+            u,
+            v,
+            u_old,
+        )
+        .unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    fn reference_sinkhorn_row_residual(k: &[f64], u: &[f64], v: &[f64], a: &[f64]) -> f64 {
+        vyre_reference::composition_witness::sinkhorn_row_residual_witness(k, u, v, a)
+    }
+
+    fn reference_sinkhorn_col_residual(k: &[f64], u: &[f64], v: &[f64], b: &[f64]) -> f64 {
+        vyre_reference::composition_witness::sinkhorn_col_residual_witness(k, u, v, b)
+    }
+
+    fn reference_gaussian_rdp_step(alpha: &[f64], sigma_squared: &[f64]) -> Vec<f64> {
+        vyre_reference::composition_witness::gaussian_rdp_step_witness(alpha, sigma_squared)
+    }
 
     #[test]
     fn program_builders_emit_expected_numerical_primitives() {
@@ -162,21 +305,35 @@ mod tests {
 
     #[test]
     fn fractional_wrappers_preserve_kernel_and_fixed_point_contracts() {
-        let kernel = fractional_kernel(1.0, 3);
+        let kernel = vyre_reference::composition_witness::grunwald_letnikov_kernel_witness(1.0, 3);
         assert!(approx_eq(kernel[0], 1.0));
         assert!(approx_eq(kernel[1], -1.0));
         assert!(approx_eq(kernel[2], 0.0));
 
         let mut kernel_into = Vec::with_capacity(3);
-        fractional_kernel_into(1.0, 3, &mut kernel_into);
+        vyre_reference::composition_witness::try_grunwald_letnikov_kernel_witness_into(
+            1.0,
+            3,
+            &mut kernel_into,
+        )
+        .unwrap();
         assert_eq!(kernel, kernel_into);
 
-        let fixed = fractional_kernel_fixed_16_16(&[1.0, -0.5], 1.0, 1.0);
+        let fixed = vyre_reference::composition_witness::kernel_to_fixed_16_16_witness(
+            &[1.0, -0.5],
+            1.0,
+            1.0,
+        );
         assert_eq!(fixed[0], 65536);
         assert_eq!(fixed[1] as i32, -32768);
 
         let mut fixed_into = Vec::with_capacity(2);
-        fractional_kernel_fixed_16_16_into(&[1.0, -0.5], 1.0, 1.0, &mut fixed_into);
+        vyre_reference::composition_witness::kernel_to_fixed_16_16_witness_into(
+            &[1.0, -0.5],
+            1.0,
+            1.0,
+            &mut fixed_into,
+        );
         assert_eq!(fixed, fixed_into);
 
         let derivative = reference_fractional_derivative(&[0.0, 1.0, 2.0], 1.0, 1.0);
@@ -297,7 +454,11 @@ mod tests {
         let rdp = reference_gaussian_rdp_step(&[2.0], &[1.0]);
         assert!(approx_eq(rdp[0], 1.0));
         assert!(approx_eq(
-            privacy_epsilon_from_rdp(0.0, 2.0, std::f64::consts::E.recip()),
+            vyre_reference::composition_witness::privacy_epsilon_from_rdp_witness(
+                0.0,
+                2.0,
+                std::f64::consts::E.recip()
+            ),
             1.0
         ));
     }

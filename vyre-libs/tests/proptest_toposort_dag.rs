@@ -3,7 +3,27 @@
 #![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-use vyre_libs::graph::toposort::{toposort, ToposortError};
+use vyre_libs::graph::toposort::ToposortError;
+use vyre_reference::composition_witness::toposort_witness;
+
+fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, ToposortError> {
+    for (edge, &(from, to)) in edges.iter().enumerate() {
+        if from >= node_count {
+            return Err(ToposortError::UnknownNode { edge, node: from });
+        }
+        if to >= node_count {
+            return Err(ToposortError::UnknownNode { edge, node: to });
+        }
+    }
+    toposort_witness(node_count, edges).map_err(|err| {
+        if let Some(rest) = err.strip_prefix("Cycle detected involving node ") {
+            if let Ok(node) = rest.parse::<u32>() {
+                return ToposortError::Cycle { node };
+            }
+        }
+        ToposortError::InconsistentState { message: err }
+    })
+}
 
 fn is_topo_order(node_count: u32, edges: &[(u32, u32)], order: &[u32]) -> bool {
     let n = node_count as usize;

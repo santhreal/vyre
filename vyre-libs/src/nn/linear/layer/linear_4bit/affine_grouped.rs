@@ -464,7 +464,7 @@ mod tests {
         }
     }
 
-    fn affine_cpu_reference(
+    fn reference_affine_grouped(
         x: &[f32],
         packed: &[u32],
         scale: &[f32],
@@ -624,7 +624,7 @@ mod tests {
     }
 
     #[test]
-    fn generated_affine_grouped_vectors_match_cpu_oracle() {
+    fn generated_affine_grouped_vectors_match_reference_oracle() {
         let mut checked = 0usize;
         for out_dim in [1u32, 2, 3, 5, 8, 13, 21, 32] {
             for group_size in [1u32, 2, 4, 8, 16, 32] {
@@ -691,7 +691,7 @@ mod tests {
                     });
                     let actual =
                         vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
-                    let expected = affine_cpu_reference(
+                    let expected = reference_affine_grouped(
                         &x,
                         &packed,
                         &scale,

@@ -16,7 +16,6 @@ use crate::cases::reference_sample::{
 };
 use openssl::symm::{Cipher, Crypter, Mode};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::wire::pack_u32_iter;
 
 // 100MB = 6_553_600 blocks of 16 bytes each
 // Reduced to 10MB for smoke suite to keep tests fast
@@ -128,7 +127,7 @@ fn prepare_aes_ctr(ctx: &mut BenchContext) -> Result<AesCtrPrepared, BenchError>
         [256, 1, 1],
         aes_ctr_kernel_body(),
     );
-    let plaintext_bytes = pack_u32_iter(0..TOTAL_WORDS);
+    let plaintext_bytes: Vec<u8> = (0..TOTAL_WORDS).flat_map(u32::to_le_bytes).collect();
     let key_bytes = [
         0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD,
         0xEF,

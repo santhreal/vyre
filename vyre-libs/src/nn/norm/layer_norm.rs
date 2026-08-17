@@ -354,6 +354,8 @@ pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
     })
 }
 
+const EXPECTED_LAYER_NORM_OUTPUT_BYTES: [u8; 16] = [0u8; 16];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::layer_norm",
@@ -364,11 +366,7 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&input),
             ]]
         }),
-        Some(|| vec![
-            vec![
-                vec![0; 16],
-            ],
-        ]),
+        Some(|| vec![vec![EXPECTED_LAYER_NORM_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
     .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(1))

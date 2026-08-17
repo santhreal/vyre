@@ -4,6 +4,10 @@
 use proptest::prelude::*;
 use vyre_reference::composition_witness::bitset_popcount_witness;
 
+fn cpu_ref(input: &[u32]) -> Vec<u32> {
+    bitset_popcount_witness(input)
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
 

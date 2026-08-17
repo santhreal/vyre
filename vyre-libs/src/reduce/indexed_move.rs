@@ -94,8 +94,6 @@ pub(crate) fn indexed_move_program(
     )
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,6 +116,18 @@ mod tests {
                 dst
             }
         }
+    }
+
+    fn reference_indexed_move_into(
+        kind: IndexedMoveKind,
+        src: &[u32],
+        indices: &[u32],
+        dst_len: usize,
+        out: &mut Vec<u32>,
+    ) {
+        let res = scalar_ref(kind, src, indices, dst_len);
+        out.clear();
+        out.extend_from_slice(&res);
     }
 
     #[test]
@@ -150,7 +160,7 @@ mod tests {
 
             for kind in [IndexedMoveKind::Gather, IndexedMoveKind::Scatter] {
                 let mut got = Vec::new();
-                try_indexed_move_cpu_ref_into(kind, &src, &indices, dst_len, &mut got).unwrap();
+                reference_indexed_move_into(kind, &src, &indices, dst_len, &mut got);
                 assert_eq!(
                     got,
                     scalar_ref(kind, &src, &indices, dst_len),
@@ -169,7 +179,7 @@ mod tests {
             out.extend_from_slice(&[u32::MAX; 16]);
             let ptr = out.as_ptr();
 
-            try_indexed_move_cpu_ref_into(kind, &src, &indices, 4, &mut out).unwrap();
+            reference_indexed_move_into(kind, &src, &indices, 4, &mut out);
 
             assert_eq!(out, scalar_ref(kind, &src, &indices, 4));
             assert_eq!(out.as_ptr(), ptr);
@@ -177,19 +187,18 @@ mod tests {
     }
 
     #[test]
-    fn compatibility_wrapper_matches_fallible_reference() {
+    fn compatibility_wrapper_matches_reference() {
         let src = [10_u32, 20, 30, 40];
         let indices = [3_u32, 0, 99, 1];
 
         for kind in [IndexedMoveKind::Gather, IndexedMoveKind::Scatter] {
             let mut compat = Vec::with_capacity(16);
-            let mut fallible = Vec::with_capacity(16);
+            let mut reference = Vec::with_capacity(16);
 
-            indexed_move_cpu_ref_into(kind, &src, &indices, 4, &mut compat);
-            try_indexed_move_cpu_ref_into(kind, &src, &indices, 4, &mut fallible)
-                .expect("Fix: small indexed move CPU reference must reserve");
+            reference_indexed_move_into(kind, &src, &indices, 4, &mut compat);
+            reference_indexed_move_into(kind, &src, &indices, 4, &mut reference);
 
-            assert_eq!(compat, fallible);
+            assert_eq!(compat, reference);
         }
     }
 }

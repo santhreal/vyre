@@ -15,12 +15,15 @@
 //! `picked` 0/1 vector must match BIT-FOR-BIT (no tolerance), this pins that the IR argmax (including its
 //! tie-break) agrees with `argmax_of_marginals_cpu`.
 
-use vyre_libs::scheduling::submodular_cache_eviction::{
-    select_retention_set, select_retention_set_via,
-};
+use vyre_libs::scheduling::submodular_cache_eviction::select_retention_set_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_reference::composition_witness::select_retention_set_witness;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
+
+fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
+    select_retention_set_witness(gains, n, k)
+}
 
 #[test]
 fn select_retention_set_via_matches_reference_greedy_over_random_gains() {

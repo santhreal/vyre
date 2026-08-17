@@ -210,6 +210,11 @@ fn build_partial_rope_at_offset(
     })
 }
 
+const EXPECTED_PARTIAL_ROPE_OUTPUT_BYTES: [u8; 32] = [
+    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x80, 0x40,
+    0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0xC0, 0x40, 0x00, 0x00, 0xE0, 0x40, 0x00, 0x00, 0x00, 0x41,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -224,8 +229,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])]]
+            vec![vec![EXPECTED_PARTIAL_ROPE_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

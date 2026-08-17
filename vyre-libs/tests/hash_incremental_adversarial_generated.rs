@@ -1,15 +1,17 @@
 //! Generated adversarial incremental-hash tests for CRC32, Adler32, and FNV-1a.
 
-use vyre_libs::hash::adler32::{
-    adler32, adler32_finalize_state, adler32_initial_a_state, adler32_initial_b_state,
-    adler32_update_byte_state,
-};
-use vyre_libs::hash::crc32::{
-    build_table, crc32, crc32_finalize_state, crc32_initial_state, crc32_update_byte_state,
-};
-use vyre_libs::hash::fnv1a::{
-    fnv1a32, fnv1a32_initial_state, fnv1a32_update_byte, fnv1a64, fnv1a64_initial_state,
-    fnv1a64_update_byte,
+use vyre_reference::composition_witness::{
+    adler32_finalize_witness as adler32_finalize_state,
+    adler32_initial_a_witness as adler32_initial_a_state,
+    adler32_initial_b_witness as adler32_initial_b_state,
+    adler32_update_byte_witness as adler32_update_byte_state, adler32_witness as adler32,
+    crc32_finalize_witness as crc32_finalize_state,
+    crc32_initial_state_witness as crc32_initial_state, crc32_table_witness as build_table,
+    crc32_update_byte_witness as crc32_update_byte_state, crc32_witness as crc32,
+    fnv1a32_initial_state_witness as fnv1a32_initial_state,
+    fnv1a32_update_byte_witness as fnv1a32_update_byte, fnv1a32_witness as fnv1a32,
+    fnv1a64_initial_state_witness as fnv1a64_initial_state,
+    fnv1a64_update_byte_witness as fnv1a64_update_byte, fnv1a64_witness as fnv1a64,
 };
 
 fn generated_case(seed: u32) -> Vec<u8> {

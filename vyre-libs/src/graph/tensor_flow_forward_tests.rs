@@ -1,13 +1,14 @@
 use super::program_graph::ProgramGraphShape;
 use super::tensor_flow_forward::{
     tensor_flow_forward_dispatch_grid, tensor_words, try_tensor_flow_forward,
-    try_tensor_flow_forward_cpu, try_tensor_flow_forward_cpu_into,
     TENSOR_FLOW_FORWARD_WORKGROUP_SIZE,
 };
 
-fn tensor_bit_index(node: u32, ctx: u32, fld: u32, context_limit: u32, field_limit: u32) -> u32 {
-    node * context_limit * field_limit + ctx * field_limit + fld
-}
+use vyre_reference::composition_witness::{
+    tensor_bit_index_witness as tensor_bit_index,
+    try_tensor_flow_forward_witness as try_tensor_flow_forward_cpu,
+    try_tensor_flow_forward_witness_into as try_tensor_flow_forward_cpu_into,
+};
 
 fn tensor_bit_is_set(words: &[u32], bit: u32) -> bool {
     words

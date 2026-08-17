@@ -95,38 +95,67 @@ pub fn sinkhorn_scale(target: &str, divisor: &str, out: &str, count: u32) -> Pro
     )
 }
 
+/// CPU reference operating in f64 for numerical clarity. Returns
+/// `(u, v)` after one full Sinkhorn iteration starting from
+/// `(u_init, v_init)`.
+///
+/// `k` is the kernel `exp(-C/ε)` of shape `m × n` row-major.
+#[cfg(test)]
+fn sinkhorn_iter_cpu(
+    k: &[f64],
+    a: &[f64],
+    b: &[f64],
+    u: &mut [f64],
+    v: &mut [f64],
+    m: u32,
+    n: u32,
+) {
+    let mut kv = Vec::new();
+    let mut ktu = Vec::new();
+    try_sinkhorn_iter_cpu_into(k, a, b, u, v, m, n, &mut kv, &mut ktu)
+        .expect("sinkhorn_iter_cpu failed: invalid Sinkhorn shape");
+}
 
+/// CPU reference using caller-owned temporary vectors.
+#[allow(clippy::too_many_arguments)]
+#[cfg(test)]
+fn sinkhorn_iter_cpu_into(
+    k: &[f64],
+    a: &[f64],
+    b: &[f64],
+    u: &mut [f64],
+    v: &mut [f64],
+    m: u32,
+    n: u32,
+    kv: &mut Vec<f64>,
+    ktu: &mut Vec<f64>,
+) {
+    try_sinkhorn_iter_cpu_into(k, a, b, u, v, m, n, kv, ktu)
+        .expect("sinkhorn_iter_cpu_into failed: invalid Sinkhorn shape");
+}
 
-
-crate::plumbing::host::scratch::define_reserve_capacity!(
-    reserve_sinkhorn_tmp,
-    f64,
-    "Sinkhorn CPU oracle"
-);
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        OP_ID,
-        || {
-            sinkhorn_scale("a", "b", "out", 4)
-        },
-        Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[8, 9, 10, 11]),
-                vyre_primitives::wire::pack_u32_slice(&[2, 3, 0, 5]),
-                vyre_primitives::wire::pack_u32_slice(&[0; 4]),
-            ]]
-        }),
-        Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[4, 3, 10, 2])]]
-        }),
+/// Fallible CPU reference using caller-owned temporary vectors.
+#[allow(clippy::too_many_arguments)]
+#[cfg(test)]
+fn try_sinkhorn_iter_cpu_into(
+    k: &[f64],
+    a: &[f64],
+    b: &[f64],
+    u: &mut [f64],
+    v: &mut [f64],
+    m: u32,
+    n: u32,
+    kv: &mut Vec<f64>,
+    ktu: &mut Vec<f64>,
+) -> Result<(), String> {
+    vyre_reference::composition_witness::try_sinkhorn_iter_f64_in_place_witness_into(
+        k, a, b, u, v, m, n, kv, ktu,
     )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     const EPS: f64 = 1e-6;
 
     fn approx_eq(a: f64, b: f64) -> bool {

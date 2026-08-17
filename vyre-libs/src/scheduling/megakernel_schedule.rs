@@ -7,6 +7,7 @@
 //! pressure. The solver is deterministic, allocation-reusable, and rejects
 //! malformed cost vectors through the `try_` entry points.
 
+#[cfg(test)]
 use crate::plumbing::host::scratch::try_reserve_vec_capacity;
 
 /// Input-shape or numeric error from the homotopy megakernel scheduler.
@@ -144,6 +145,7 @@ pub trait MegakernelScaleSample {
 /// the per-Program dispatch cost. Returns continuous fusion indicators in
 /// `[0, 1]^n`; callers round or pass the result to the matroid scheduler for
 /// the discrete scheduling decision.
+#[cfg(test)]
 #[must_use]
 pub fn schedule_via_homotopy(costs: &[f64], n: u32, n_steps: u32, dt: f64) -> Vec<f64> {
     try_schedule_via_homotopy(costs, n, n_steps, dt).unwrap_or_default()
@@ -153,6 +155,7 @@ pub fn schedule_via_homotopy(costs: &[f64], n: u32, n_steps: u32, dt: f64) -> Ve
 ///
 /// # Panics
 /// Panics on malformed schedule input. Callers that must recover use the `try_` twin.
+#[cfg(test)]
 pub fn schedule_via_homotopy_into(
     costs: &[f64],
     n: u32,
@@ -169,6 +172,7 @@ pub fn schedule_via_homotopy_into(
 }
 
 /// Fallible homotopy scheduler entry point.
+#[cfg(test)]
 pub fn try_schedule_via_homotopy(
     costs: &[f64],
     n: u32,
@@ -183,6 +187,7 @@ pub fn try_schedule_via_homotopy(
 }
 
 /// Fallible homotopy scheduler into caller-owned storage.
+#[cfg(test)]
 pub fn try_schedule_via_homotopy_into(
     costs: &[f64],
     n: u32,
@@ -192,37 +197,15 @@ pub fn try_schedule_via_homotopy_into(
 ) -> Result<(), MegakernelScheduleError> {
     let n = n as usize;
     validate_schedule_inputs(costs, n, dt)?;
-
     reserve_schedule_output(out, n, "homotopy")?;
-    out.clear();
-    out.resize(n, 0.0);
-    if n == 0 || n_steps == 0 {
-        return Ok(());
-    }
-    let max_cost = costs
-        .iter()
-        .copied()
-        .fold(0.0f64, |max, cost| max.max(cost));
-    if max_cost == 0.0 {
-        return Ok(());
-    }
-    let step_size = dt.clamp(0.0, 1.0);
-    let inv_max_cost = 1.0 / max_cost;
-    for step in 0..n_steps {
-        let alpha = f64::from(step + 1) / f64::from(n_steps);
-        for (value, cost) in out.iter_mut().zip(costs.iter().copied()) {
-            let cost_pressure = cost * inv_max_cost;
-            let target = alpha * cost_pressure;
-            *value += step_size * (target - *value);
-        }
-    }
-    for value in out {
-        *value = value.clamp(0.0, 1.0);
-    }
+    vyre_reference::composition_witness::schedule_via_homotopy_witness_into(
+        costs, n_steps, dt, out,
+    );
     Ok(())
 }
 
 /// Fallible scale-aware homotopy scheduler entry point.
+#[cfg(test)]
 pub fn try_schedule_via_scale_aware_telemetry(
     costs: &[f64],
     telemetry: MegakernelScaleTelemetry<'_>,
@@ -238,6 +221,7 @@ pub fn try_schedule_via_scale_aware_telemetry(
 }
 
 /// Fallible scale-aware homotopy scheduler into caller-owned storage.
+#[cfg(test)]
 pub fn try_schedule_via_scale_aware_telemetry_into(
     costs: &[f64],
     telemetry: MegakernelScaleTelemetry<'_>,
@@ -249,48 +233,16 @@ pub fn try_schedule_via_scale_aware_telemetry_into(
     let n = n as usize;
     validate_schedule_inputs(costs, n, dt)?;
     validate_scale_telemetry(telemetry, n)?;
-
     reserve_schedule_output(out, n, "scale-aware telemetry")?;
-    out.clear();
-    out.resize(n, 0.0);
-    if n == 0 || n_steps == 0 {
-        return Ok(());
-    }
-    let max_cost = costs
-        .iter()
-        .copied()
-        .fold(0.0f64, |max, cost| max.max(cost));
-    let max_readback = telemetry.readback_bytes.iter().copied().max().unwrap_or(0);
-    if max_cost == 0.0 && max_readback == 0 && telemetry.launch_overhead_ns == 0.0 {
-        return Ok(());
-    }
-    let step_size = dt.clamp(0.0, 1.0);
-    let inv_max_cost = if max_cost == 0.0 { 0.0 } else { 1.0 / max_cost };
-    let inv_max_readback = if max_readback == 0 {
-        0.0
-    } else {
-        1.0 / max_readback as f64
-    };
-    for step in 0..n_steps {
-        let alpha = f64::from(step + 1) / f64::from(n_steps);
-        for i in 0..n {
-            let cost_pressure = costs[i] * inv_max_cost;
-            let readback_pressure = telemetry.readback_bytes[i] as f64 * inv_max_readback;
-            let launch_pressure = launch_dominance(telemetry.launch_overhead_ns, costs[i]);
-            let frontier_pressure = telemetry.frontier_density[i];
-            let target = alpha
-                * scale_aware_pressure(
-                    cost_pressure,
-                    readback_pressure,
-                    launch_pressure,
-                    frontier_pressure,
-                );
-            out[i] += step_size * (target - out[i]);
-        }
-    }
-    for value in out {
-        *value = value.clamp(0.0, 1.0);
-    }
+    vyre_reference::composition_witness::schedule_via_scale_aware_telemetry_witness_into(
+        costs,
+        telemetry.frontier_density,
+        telemetry.readback_bytes,
+        telemetry.launch_overhead_ns,
+        n_steps,
+        dt,
+        out,
+    );
     Ok(())
 }
 
@@ -299,6 +251,7 @@ pub fn try_schedule_via_scale_aware_telemetry_into(
 /// This is the hot-path form for runtime adapters: it validates and schedules
 /// directly from the sample slice, avoiding the parallel staging vectors needed
 /// by [`try_schedule_via_scale_aware_telemetry_into`].
+#[cfg(test)]
 pub fn try_schedule_via_scale_aware_samples_into<S>(
     samples: &[S],
     launch_overhead_ns: f64,
@@ -311,55 +264,29 @@ where
 {
     let n = samples.len();
     validate_sample_schedule_inputs(samples, launch_overhead_ns, dt)?;
-
     reserve_schedule_output(out, n, "scale-aware samples")?;
-    out.clear();
-    out.resize(n, 0.0);
-    if n == 0 || n_steps == 0 {
-        return Ok(());
-    }
-    let max_cost = samples
-        .iter()
-        .fold(0.0f64, |max, sample| max.max(sample.dispatch_cost_ns()));
-    let max_readback = samples
-        .iter()
-        .map(MegakernelScaleSample::readback_bytes)
-        .max()
-        .unwrap_or(0);
-    if max_cost == 0.0 && max_readback == 0 && launch_overhead_ns == 0.0 {
-        return Ok(());
-    }
-    let step_size = dt.clamp(0.0, 1.0);
-    let inv_max_cost = if max_cost == 0.0 { 0.0 } else { 1.0 / max_cost };
-    let inv_max_readback = if max_readback == 0 {
-        0.0
-    } else {
-        1.0 / max_readback as f64
-    };
-    for step in 0..n_steps {
-        let alpha = f64::from(step + 1) / f64::from(n_steps);
-        for (value, sample) in out.iter_mut().zip(samples) {
-            let cost = sample.dispatch_cost_ns();
-            let cost_pressure = cost * inv_max_cost;
-            let readback_pressure = sample.readback_bytes() as f64 * inv_max_readback;
-            let launch_pressure = launch_dominance(launch_overhead_ns, cost);
-            let frontier_pressure = sample.frontier_density();
-            let target = alpha
-                * scale_aware_pressure(
-                    cost_pressure,
-                    readback_pressure,
-                    launch_pressure,
-                    frontier_pressure,
-                );
-            *value += step_size * (target - *value);
-        }
-    }
-    for value in out {
-        *value = value.clamp(0.0, 1.0);
-    }
+    let witness_samples: Vec<vyre_reference::composition_witness::MegakernelScaleSampleWitness> =
+        samples
+            .iter()
+            .map(
+                |s| vyre_reference::composition_witness::MegakernelScaleSampleWitness {
+                    dispatch_cost_ns: s.dispatch_cost_ns(),
+                    frontier_density: s.frontier_density(),
+                    readback_bytes: s.readback_bytes(),
+                },
+            )
+            .collect();
+    vyre_reference::composition_witness::schedule_via_scale_aware_samples_witness_into(
+        &witness_samples,
+        launch_overhead_ns,
+        n_steps,
+        dt,
+        out,
+    );
     Ok(())
 }
 
+#[cfg(test)]
 fn reserve_schedule_output(
     out: &mut Vec<f64>,
     capacity: usize,
@@ -374,6 +301,7 @@ fn reserve_schedule_output(
     })
 }
 
+#[cfg(test)]
 fn validate_schedule_inputs(
     costs: &[f64],
     n: usize,
@@ -396,6 +324,7 @@ fn validate_schedule_inputs(
     Ok(())
 }
 
+#[cfg(test)]
 fn validate_sample_schedule_inputs<S>(
     samples: &[S],
     launch_overhead_ns: f64,
@@ -428,6 +357,7 @@ where
     Ok(())
 }
 
+#[cfg(test)]
 fn validate_scale_telemetry(
     telemetry: MegakernelScaleTelemetry<'_>,
     n: usize,
@@ -457,27 +387,27 @@ fn validate_scale_telemetry(
     Ok(())
 }
 
+#[cfg(test)]
 fn launch_dominance(launch_overhead_ns: f64, candidate_cost_ns: f64) -> f64 {
-    let denom = launch_overhead_ns + candidate_cost_ns;
-    if denom == 0.0 {
-        0.0
-    } else {
-        (launch_overhead_ns / denom).clamp(0.0, 1.0)
-    }
+    vyre_reference::composition_witness::launch_dominance_witness(
+        launch_overhead_ns,
+        candidate_cost_ns,
+    )
 }
 
+#[cfg(test)]
 fn scale_aware_pressure(
     cost_pressure: f64,
     readback_pressure: f64,
     launch_pressure: f64,
     frontier_pressure: f64,
 ) -> f64 {
-    let density_adjusted_cost = cost_pressure * (0.65 + 0.35 * frontier_pressure);
-    (0.55 * density_adjusted_cost
-        + 0.25 * readback_pressure
-        + 0.15 * launch_pressure
-        + 0.05 * frontier_pressure)
-        .clamp(0.0, 1.0)
+    vyre_reference::composition_witness::scale_aware_pressure_witness(
+        cost_pressure,
+        readback_pressure,
+        launch_pressure,
+        frontier_pressure,
+    )
 }
 
 #[cfg(test)]

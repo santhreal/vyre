@@ -38,6 +38,13 @@ pub fn muoneq_r(
     )
 }
 
+const EXPECTED_MUONEQ_R_MOMENTUM_BYTES: [u8; 16] = [
+    0xCD, 0xCC, 0xCC, 0x3D, 0xCD, 0xCC, 0x4C, 0x3E, 0x9A, 0x99, 0x99, 0x3E, 0xCD, 0xCC, 0xCC, 0x3E,
+];
+const EXPECTED_MUONEQ_R_OUTPUT_BYTES: [u8; 16] = [
+    0x40, 0xEF, 0x7D, 0x3F, 0x40, 0xEF, 0xFD, 0x3F, 0x70, 0x73, 0x3E, 0x40, 0x40, 0xEF, 0x7D, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -52,12 +59,8 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vec![
-                    205, 204, 204, 61, 205, 204, 76, 62, 154, 153, 153, 62, 205, 204, 204, 62,
-                ],
-                vec![
-                    64, 239, 125, 63, 64, 239, 253, 63, 112, 115, 62, 64, 64, 239, 125, 64,
-                ],
+                EXPECTED_MUONEQ_R_MOMENTUM_BYTES.to_vec(),
+                EXPECTED_MUONEQ_R_OUTPUT_BYTES.to_vec(),
             ]]
         }),
     )

@@ -15,9 +15,11 @@
 use thiserror::Error;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
+#[cfg(test)]
+use crate::nn::attention::layout::attention_layout_dispatch_grid;
 use crate::nn::attention::layout::{
-    attention_layout_dispatch_grid, block_index, check_layout_dims, checked_elements,
-    layout_move_program, IndexMap, LayoutMove, LayoutReject, RowMajor,
+    block_index, check_layout_dims, checked_elements, layout_move_program, IndexMap, LayoutMove,
+    LayoutReject, RowMajor,
 };
 
 /// Canonical op id of the paged gather.
@@ -290,6 +292,7 @@ pub fn paged_kv_append(
 /// # Errors
 ///
 /// Returns `Err` when the moved element count overflows `u32` indexing.
+#[cfg(test)]
 pub fn paged_kv_dispatch_grid(
     spec: &PagedKvCache<'_>,
     tokens: u32,
@@ -346,6 +349,15 @@ fn append_fixture_program() -> Program {
     }
 }
 
+const EXPECTED_PAGED_KV_GATHER_OUTPUT_BYTES: [u8; 32] = [
+    0, 0, 160, 64, 0, 0, 192, 64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64,
+    64, 0, 0, 128, 64,
+];
+const EXPECTED_PAGED_KV_APPEND_OUTPUT_BYTES: [u8; 32] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 65, 0, 0, 32,
+    65,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         PAGED_KV_GATHER_OP_ID,
@@ -356,9 +368,7 @@ inventory::submit! {
         ]]),
         // Physical block 1 holds the first two logical tokens and physical
         // block 0 holds the next two.
-        Some(|| vec![vec![
-            fixture_f32(&[5.0, 6.0, 7.0, 8.0, 1.0, 2.0, 3.0, 4.0]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_PAGED_KV_GATHER_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("llm")
 }
@@ -374,9 +384,27 @@ inventory::submit! {
         ]]),
         // Logical token 1 is slot 1 of logical block 0, which the table maps to
         // physical block 1: cache elements 6 and 7.
-        Some(|| vec![vec![
-            fixture_f32(&[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.0, 10.0]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_PAGED_KV_APPEND_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("llm")
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_paged_kv_dispatch_grid_normal_and_overflow() {
+        let spec = fixture_cache();
+        let grid = paged_kv_dispatch_grid(&spec, 2).expect("Fix: compute grid");
+        assert_eq!(grid, [1, 1, 1]);
+
+        let overflow = PagedKvCache {
+            heads: u32::MAX,
+            ..fixture_cache()
+        };
+        assert_eq!(
+            paged_kv_dispatch_grid(&overflow, 4),
+            Err(PagedKvError::ElementCountOverflow)
+        );
+    }
 }

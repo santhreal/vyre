@@ -7,8 +7,10 @@
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
-use vyre_libs::graph::csr_frontier_shard::{
-    frontier_step_sharded, merge_frontier_out, partition_frontier_by_vertex,
+use vyre_reference::composition_witness::{
+    frontier_step_sharded_witness as frontier_step_sharded,
+    merge_frontier_out_witness as merge_frontier_out,
+    partition_frontier_by_vertex_witness as partition_frontier_by_vertex,
 };
 
 /// splitmix64, a deterministic, seedable generator so each proptest case builds a

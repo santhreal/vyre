@@ -108,6 +108,8 @@ pub fn select1_query(
         vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
+const EXPECTED_SELECT1_QUERY_OUTPUT_BYTES: [u8; 20] =
+    [0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 63, 0, 0, 0, 80, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -120,9 +122,7 @@ inventory::submit! {
             vec![vec![to_bytes(&bits), to_bytes(&queries), vec![0u8; 5 * 4]]]
         }),
         Some(|| {
-            let expected = [0u32, 1, 3, 63, 80];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_SELECT1_QUERY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

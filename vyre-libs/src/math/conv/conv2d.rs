@@ -119,26 +119,24 @@ inventory::submit! {
             vec![vec![input, kernel]]
         }),
         Some(|| {
-            // box-kernel convolution of identity matrix with
-            // zero-padding: each output pixel is the sum of the 3x3
-            // window around it, where the window is intersected
-            // with the input bounds. Computed via the naive
-            // reference in the test below  -  this is just the
-            // canonical fixture output for the inventory entry.
-            // For 4x4 identity with 3x3 box kernel:
-            // out[y, x] = number of 1.0 entries in the 3x3 window
-            //              centered at (y, x), zero-padded
-            // Computed offline:
-            // [[2, 2, 1, 0],
-            //  [2, 3, 2, 1],
-            //  [1, 2, 3, 2],
-            //  [0, 1, 2, 2]]
-            vec![vec![crate::fixture_bytes::f32_bytes(&[
-                2.0, 2.0, 1.0, 0.0,
-                2.0, 3.0, 2.0, 1.0,
-                1.0, 2.0, 3.0, 2.0,
-                0.0, 1.0, 2.0, 2.0,
-            ])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x40, 0x40, // 3.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x40, 0x40, // 3.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+            ]]]
         }),
     )
     .with_category("math")

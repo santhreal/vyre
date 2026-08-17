@@ -236,6 +236,7 @@ pub fn plan_adaptive_frontier_work(
 ///
 /// Returns an actionable diagnostic if the frontier contains more set bits than
 /// can be represented by the primitive's u32 resident popcount scalar.
+#[cfg(test)]
 pub fn adaptive_frontier_popcount(frontier_in: &[u32], context: &str) -> Result<u32, String> {
     let mut popcount = 0u32;
     for &word in frontier_in {
@@ -255,6 +256,7 @@ pub fn adaptive_frontier_popcount(frontier_in: &[u32], context: &str) -> Result<
 ///
 /// Returns frontier-shape diagnostics or an actionable diagnostic if the
 /// in-domain frontier contains more set bits than fit in a u32 scalar.
+#[cfg(test)]
 pub fn adaptive_frontier_popcount_in_domain(
     node_count: u32,
     frontier_in: &[u32],

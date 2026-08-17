@@ -3,9 +3,9 @@
 
 use vyre_foundation::ir::{DataType, Program};
 use vyre_libs::text::{
-    reference_utf8_validate, utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID,
-    UTF8_LEAD_2, UTF8_LEAD_4,
+    utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_4,
 };
+use vyre_reference::composition_witness::utf8_validate_witness as reference_utf8_validate;
 use vyre_reference::value::Value;
 
 fn output_u32s(program: &Program, outputs: &[Value], n: usize) -> Vec<u32> {

@@ -23,9 +23,6 @@ Out of this crate, into:
 - `vyre-foundation` over the `foundation-ir` seam, public: typed IR, graph,
   diagnostics, validation, and semantic optimization contracts. Built when:
   always.
-- `vyre-libs` over the `product-libraries` seam, public: host-side helpers the
-  oracle shares with the composition it checks: the FNV-1a state functions and
-  the DFA compiler. Built when: always.
 - `vyre-primitives` over the `primitive-library` seam, public: the wire format,
   the marker types, and guarded IR construction. Built when: always.
 - `vyre-spec` over the `specification` seam, public: stable cross-engine
@@ -40,10 +37,9 @@ Into this crate, from:
 
 ## Direction that may not reverse
 
-`vyre-foundation`, `vyre-libs`, `vyre-primitives`, `vyre-spec` must never
-depend on `vyre-reference`. The edge is one way: a cycle back into this crate
-makes the two crates one crate that cannot be built, reviewed or published
-apart.
+`vyre-foundation`, `vyre-primitives`, and `vyre-spec` must never depend on
+`vyre-reference`. The edge is one way: a cycle back into this crate makes the
+two crates one crate that cannot be built, reviewed or published apart.
 
 ## Invariants
 

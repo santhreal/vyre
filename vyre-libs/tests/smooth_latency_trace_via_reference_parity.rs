@@ -16,8 +16,9 @@
 //! `cpu_conv1d(latency, gaussian_weights(radius, sigma), 1)` bit-for-bit; this pins that `conv1d_program`
 //! reproduces `cpu_conv1d` (mul/accumulate order AND the clamp-to-edge boundary handling).
 
-use vyre_libs::math::conv1d::{cpu_conv1d, gaussian_weights};
+use vyre_libs::math::conv1d::gaussian_weights;
 use vyre_libs::solvers::conv1d_latency_smoothing::smooth_latency_trace_via;
+use vyre_reference::composition_witness::conv1d_witness as cpu_conv1d;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::{xorshift32 as xorshift, FIXED_ONE};

@@ -131,25 +131,6 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
     )
 }
 
-/// Reference oracle for [`utf8_shape_counts`].
-#[must_use]
-pub(crate) fn utf8_shape_counts_from_histogram(histogram: &[u32; 256]) -> (u32, u32) {
-    let continuation = histogram[0x80..0xC0]
-        .iter()
-        .fold(0u32, |acc, &count| acc.saturating_add(count));
-    let expected = histogram[0xC2..0xE0]
-        .iter()
-        .fold(0u32, |acc, &count| acc.saturating_add(count));
-    let expected = histogram[0xE0..0xF0].iter().fold(expected, |acc, &count| {
-        acc.saturating_add(count.saturating_mul(2))
-    });
-    let expected = histogram[0xF0..0xF5].iter().fold(expected, |acc, &count| {
-        acc.saturating_add(count.saturating_mul(3))
-    });
-    (continuation, expected)
-}
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         UTF8_SHAPE_COUNTS_OP_ID,
@@ -161,13 +142,13 @@ inventory::submit! {
             }
             vec![vec![histogram, vec![0; 8]]]
         }),
-        Some(|| vec![vec![[2u32.to_le_bytes(), 2u32.to_le_bytes()].concat()]]),
+        Some(|| vec![vec![vec![2, 0, 0, 0, 2, 0, 0, 0]]]),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use vyre_reference::composition_witness::utf8_histogram_shape_counts_witness as reference_utf8_shape_counts;
 
     #[test]
     fn reference_counts_continuation_and_expected() {

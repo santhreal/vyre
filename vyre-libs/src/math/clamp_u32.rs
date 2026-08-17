@@ -42,12 +42,13 @@ inventory::submit! {
             vec![vec![to_bytes(&input), to_bytes(&lo), to_bytes(&hi)]]
         }),
         Some(|| {
-            // u32::clamp per-element. The 4th lane (u32::MAX) clamps
-            // down to hi=200; the first three clamp up to lo=3 or
-            // pass through unchanged.
-            let expected = [3u32, 5, 8, 200];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            // [3, 5, 8, 200]
+            vec![vec![vec![
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x05, 0x00, 0x00, 0x00, // 5
+                0x08, 0x00, 0x00, 0x00, // 8
+                0xc8, 0x00, 0x00, 0x00, // 200
+            ]]]
         }),
     )
     .with_category("math")

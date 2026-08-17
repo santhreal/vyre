@@ -7,7 +7,7 @@
 use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_u32_le_bytes_all, decode_u64_le_bytes_all, pack_f32_slice,
-    pack_u32_slice, pack_u64_slice, unpack_u32_slice_into,
+    pack_u32_slice, pack_u64_slice_into, unpack_u32_slice_into,
 };
 
 #[test]
@@ -37,7 +37,8 @@ fn round_trip_u64_across_crates() {
     let values: Vec<u64> = (0u64..512)
         .map(|i| i.wrapping_mul(0x0101_0101_0101_0101))
         .collect();
-    let bytes = pack_u64_slice(&values);
+    let mut bytes = Vec::new();
+    pack_u64_slice_into(&values, &mut bytes);
     let decoded = decode_u64_le_bytes_all(&bytes);
     assert_eq!(decoded, values);
 }

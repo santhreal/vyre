@@ -10,9 +10,9 @@
 //! builder, its word-count helper, the CPU reference, and the dispatch Program.
 
 use vyre_libs::bitset::four_russians::{
-    dense_matvec_byte_lut, dense_matvec_byte_lut_words, dense_matvec_cpu_ref,
-    four_russians_dense_matvec_byte_lut,
+    dense_matvec_byte_lut, dense_matvec_byte_lut_words, four_russians_dense_matvec_byte_lut,
 };
+use vyre_reference::composition_witness::four_russians_dense_matvec_witness as dense_matvec_cpu_ref;
 
 #[path = "../../tests/support/dense_matvec_cases.rs"]
 mod dense_matvec_cases;

@@ -56,6 +56,13 @@ pub fn gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> Program {
     })
 }
 
+const EXPECTED_GPTQ_ROUND_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x48, 0x42, 0x00, 0x00, 0x7C, 0x42, 0x00, 0x00, 0x48, 0x42, 0x00, 0x00, 0x00, 0x40,
+];
+const EXPECTED_GPTQ_SDCLIP_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x20, 0x41, 0x00, 0x00, 0xF0, 0x41, 0x00, 0x00, 0xF0, 0xC1, 0x00, 0x00, 0xC8, 0x41,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         ROUND_OP_ID,
@@ -67,12 +74,7 @@ inventory::submit! {
                 to_f32(&[2.0, 3.0, 1.0, 5.0]),
             ]]
         }),
-        Some(|| {
-            // 100/2=50, 200/3=66.7→63(clamped), 50/1=50, 10/5=2
-            let out = [50.0_f32, 63.0, 50.0, 2.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
-        }),
+        Some(|| vec![vec![EXPECTED_GPTQ_ROUND_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
 }
@@ -87,12 +89,7 @@ inventory::submit! {
                 to_f32(&[10.0, 50.0, -40.0, 25.0]),
             ]]
         }),
-        Some(|| {
-            // clamp: 10, 30, -30, 25
-            let out = [10.0_f32, 30.0, -30.0, 25.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
-        }),
+        Some(|| vec![vec![EXPECTED_GPTQ_SDCLIP_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
 }

@@ -2,22 +2,38 @@
 //!
 //! Exercises the span-dedup primitive at boundary conditions, degenerate
 //! inputs, cluster pathologies, sortedness violations, and scale limits.
-//! Every test targets both `dedup_regions_cpu` and `dedup_regions_inplace`
+//! Every test targets both `reference_dedup_regions` and `reference_dedup_regions_in_place`
 //! to lock the bit-identical post-condition contract.
 
 #![cfg(feature = "pattern")]
 
 use std::time::Instant;
-use vyre_libs::pattern::{dedup_regions_inplace, RegionTriple};
+use vyre_libs::pattern::RegionTriple;
+use vyre_reference::composition_witness::{dedup_regions_witness, dedup_regions_witness_in_place};
+
+fn reference_dedup_regions_in_place(regions: &mut Vec<RegionTriple>) {
+    let mut tuples: Vec<(u32, u32, u32)> =
+        regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    dedup_regions_witness_in_place(&mut tuples);
+    regions.clear();
+    regions.extend(
+        tuples
+            .into_iter()
+            .map(|(pid, start, end)| RegionTriple::new(pid, start, end)),
+    );
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn dedup_regions_cpu(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    let mut owned = input;
-    dedup_regions_inplace(&mut owned);
-    owned
+fn reference_dedup_regions(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
+    let tuples: Vec<(u32, u32, u32)> = input.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    let deduped = dedup_regions_witness(tuples);
+    deduped
+        .into_iter()
+        .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
+        .collect()
 }
 
 /// Assert output is sorted by `(pid, start, end)`.
@@ -49,16 +65,16 @@ fn assert_no_same_pid_overlap(out: &[RegionTriple]) {
 
 /// Run both variants and assert they match `expected`.
 fn assert_both_eq(input: Vec<RegionTriple>, expected: Vec<RegionTriple>) {
-    let cpu = dedup_regions_cpu(input.clone());
+    let reference = reference_dedup_regions(input.clone());
     assert_eq!(
-        cpu, expected,
-        "FINDING-ADV-REGION-CPU: dedup_regions_cpu mismatch"
+        reference, expected,
+        "FINDING-ADV-REGION-REFERENCE: reference_dedup_regions mismatch"
     );
     let mut inplace = input;
-    dedup_regions_inplace(&mut inplace);
+    reference_dedup_regions_in_place(&mut inplace);
     assert_eq!(
         inplace, expected,
-        "FINDING-ADV-REGION-INPLACE: dedup_regions_inplace mismatch"
+        "FINDING-ADV-REGION-INPLACE: reference_dedup_regions_in_place mismatch"
     );
 }
 
@@ -167,7 +183,7 @@ fn degenerate_alternating_overlap_nonoverlap() {
             input.push(RegionTriple::new(0, base + 5, base + 9));
         }
     }
-    let out = dedup_regions_cpu(input.clone());
+    let out = reference_dedup_regions(input.clone());
     assert_sorted(&out);
     assert_no_same_pid_overlap(&out);
     // Even indices merge to one; odd indices stay separate (gap of 1).
@@ -201,7 +217,7 @@ fn cluster_100k_all_overlapping_same_pid() {
         .map(|i| RegionTriple::new(0, (i as u32) % 1000, (i as u32) % 1000 + 500))
         .collect();
     let start = Instant::now();
-    let out = dedup_regions_cpu(input.clone());
+    let out = reference_dedup_regions(input.clone());
     let elapsed = start.elapsed();
     assert!(
         elapsed.as_millis() < 100,
@@ -232,7 +248,7 @@ fn cluster_sliding_window_never_merges() {
     let input: Vec<_> = (0..1000)
         .map(|i| RegionTriple::new(0, (i as u32) * 2, (i as u32) * 2 + 1))
         .collect();
-    let out = dedup_regions_cpu(input.clone());
+    let out = reference_dedup_regions(input.clone());
     assert_eq!(
         out.len(),
         1000,
@@ -248,7 +264,7 @@ fn cluster_nested_different_pids() {
     let b = RegionTriple::new(1, 10, 20);
     let c = RegionTriple::new(1, 30, 40);
     let d = RegionTriple::new(0, 50, 60);
-    let out = dedup_regions_cpu(vec![a, b, c, d]);
+    let out = reference_dedup_regions(vec![a, b, c, d]);
     let mut exp = vec![
         RegionTriple::new(0, 0, 100),
         RegionTriple::new(1, 10, 20),
@@ -264,7 +280,7 @@ fn cluster_chain_reaction_merge() {
     let input: Vec<_> = (0..500)
         .map(|i| RegionTriple::new(0, i as u32, (i + 2) as u32))
         .collect();
-    let out = dedup_regions_cpu(input);
+    let out = reference_dedup_regions(input);
     assert_eq!(out.len(), 1);
     assert_eq!(out[0], RegionTriple::new(0, 0, 501));
 }
@@ -274,7 +290,7 @@ fn cluster_interleaved_pids_overlapping() {
     let a = RegionTriple::new(0, 0, 10);
     let b = RegionTriple::new(1, 5, 15);
     let c = RegionTriple::new(0, 8, 12);
-    let out = dedup_regions_cpu(vec![a, b, c]);
+    let out = reference_dedup_regions(vec![a, b, c]);
     // After sorting: (0,0,10), (0,8,12) => merge to (0,0,12);
     // (1,5,15) stays separate.
     let mut exp = vec![RegionTriple::new(0, 0, 12), RegionTriple::new(1, 5, 15)];
@@ -291,7 +307,7 @@ fn sortedness_descending_by_start() {
     let input: Vec<_> = (0..100)
         .map(|i| RegionTriple::new(0, 99 - i, 100 - i))
         .collect();
-    let out = dedup_regions_cpu(input);
+    let out = reference_dedup_regions(input);
     assert_sorted(&out);
     assert_no_same_pid_overlap(&out);
     // All touch or overlap, should merge to a single span.
@@ -307,7 +323,7 @@ fn sortedness_random_shuffle() {
     for chunk in input.chunks_exact_mut(2) {
         chunk.swap(0, 1);
     }
-    let out = dedup_regions_cpu(input);
+    let out = reference_dedup_regions(input);
     assert_sorted(&out);
     assert_no_same_pid_overlap(&out);
 }
@@ -319,7 +335,7 @@ fn sortedness_almost_sorted_one_out_of_order() {
         .collect();
     // Swap two adjacent elements.
     input.swap(5, 6);
-    let out = dedup_regions_cpu(input);
+    let out = reference_dedup_regions(input);
     assert_sorted(&out);
     assert_no_same_pid_overlap(&out);
     // All overlapping; should still merge to one.
@@ -332,7 +348,7 @@ fn sortedness_fully_reversed() {
         .map(|i| RegionTriple::new(0, i as u32, i as u32 + 1))
         .collect();
     input.reverse();
-    let out = dedup_regions_cpu(input);
+    let out = reference_dedup_regions(input);
     assert_sorted(&out);
     // All touch: (0,0,1), (0,1,2), ... => merge to (0,0,30).
     assert_eq!(out, vec![RegionTriple::new(0, 0, 30)]);
@@ -343,7 +359,7 @@ fn sortedness_random_shuffle_many_duplicates() {
     let base = RegionTriple::new(2, 10, 20);
     let mut input = vec![base; 200];
     input.reverse();
-    let out = dedup_regions_cpu(input);
+    let out = reference_dedup_regions(input);
     assert_sorted(&out);
     assert_eq!(out, vec![base]);
 }
@@ -354,9 +370,9 @@ fn sortedness_random_shuffle_many_duplicates() {
 
 #[test]
 fn scale_empty_vec() {
-    assert!(dedup_regions_cpu(vec![]).is_empty());
+    assert!(reference_dedup_regions(vec![]).is_empty());
     let mut v = vec![];
-    dedup_regions_inplace(&mut v);
+    reference_dedup_regions_in_place(&mut v);
     assert!(v.is_empty());
 }
 
@@ -411,11 +427,11 @@ fn scale_1024_random_no_panic() {
         let end = start.saturating_add(len);
         input.push(RegionTriple::new(pid, start, end));
     }
-    let out = dedup_regions_cpu(input.clone());
+    let out = reference_dedup_regions(input.clone());
     assert_sorted(&out);
     assert_no_same_pid_overlap(&out);
     let mut inplace = input;
-    dedup_regions_inplace(&mut inplace);
+    reference_dedup_regions_in_place(&mut inplace);
     assert_eq!(out, inplace);
 }
 
@@ -431,7 +447,7 @@ fn scale_100k_smoke_no_quadratic_blowup() {
         input.push(RegionTriple::new(pid, start, end));
     }
     let start = Instant::now();
-    let out = dedup_regions_cpu(input.clone());
+    let out = reference_dedup_regions(input.clone());
     let elapsed = start.elapsed();
     assert!(
         elapsed.as_millis() < 100,
@@ -448,7 +464,7 @@ fn scale_100k_identical_collapse() {
     let t = RegionTriple::new(5, 1000, 2000);
     let input = vec![t; 100_000];
     let start = Instant::now();
-    let out = dedup_regions_cpu(input.clone());
+    let out = reference_dedup_regions(input.clone());
     let elapsed = start.elapsed();
     assert!(
         elapsed.as_millis() < 100,

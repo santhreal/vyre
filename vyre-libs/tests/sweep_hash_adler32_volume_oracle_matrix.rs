@@ -6,7 +6,7 @@
 mod wire_words;
 use wire_words::hostile_bytes;
 
-use vyre_libs::hash::adler32;
+use vyre_reference::composition_witness::adler32_witness;
 
 const ADLER_MOD: u32 = 65_521;
 const CASES: usize = 16384;
@@ -26,7 +26,7 @@ fn sweep_hash_adler32_volume_oracle_matrix() {
     for idx in 0..CASES {
         let bytes = hostile_bytes(idx as u32);
         assert_eq!(
-            adler32::adler32(&bytes),
+            adler32_witness(&bytes),
             oracle_adler32(&bytes),
             "Fix: adler32 volume case {idx} len={}",
             bytes.len()

@@ -9,6 +9,7 @@ macro_rules! define_bit_count_u32_op {
         kind = $kind:expr,
         reference = $reference:ident,
         expected = $expected:expr,
+        expected_bytes = $expected_bytes:expr,
         doc = $doc:expr
     ) => {
         #[doc = $doc]
@@ -33,8 +34,7 @@ macro_rules! define_bit_count_u32_op {
                         vec![vec![to_bytes(&input)]]
                     }),
                     Some(|| {
-                        let bytes = vyre_primitives::wire::pack_u32_slice(&$expected);
-                        vec![vec![bytes]]
+                        vec![vec![$expected_bytes.to_vec()]]
                     }),
                 )
                 .with_category("math")
@@ -78,6 +78,12 @@ define_bit_count_u32_op!(
     kind = BitCountKind::LeadingZeros,
     reference = leading_zeros,
     expected = [32u32, 31, 0, 8],
+    expected_bytes = [
+        0x20, 0x00, 0x00, 0x00, // 32
+        0x1f, 0x00, 0x00, 0x00, // 31
+        0x00, 0x00, 0x00, 0x00, // 0
+        0x08, 0x00, 0x00, 0x00, // 8
+    ],
     doc = "Map `input[i] -> input[i].leading_zeros()` into `out[i]`."
 );
 
@@ -88,5 +94,11 @@ define_bit_count_u32_op!(
     kind = BitCountKind::TrailingZeros,
     reference = trailing_zeros,
     expected = [32u32, 0, 31, 20],
+    expected_bytes = [
+        0x20, 0x00, 0x00, 0x00, // 32
+        0x00, 0x00, 0x00, 0x00, // 0
+        0x1f, 0x00, 0x00, 0x00, // 31
+        0x14, 0x00, 0x00, 0x00, // 20
+    ],
     doc = "Map `input[i] -> input[i].trailing_zeros()` into `out[i]`."
 );

@@ -103,6 +103,7 @@ pub fn tfn_scalar_mix(
     )
 }
 
+const EXPECTED_TFN_OUTPUT_BYTES: [u8; 8] = [0, 0, 2, 0, 0, 0, 3, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -116,10 +117,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-                2u32 << 16,
-                3u32 << 16,
-            ])]]
+            vec![vec![EXPECTED_TFN_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -130,6 +128,18 @@ mod tests {
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
+    }
+
+    fn tfn_scalar_mix_cpu(
+        features: &[f64],
+        weights: &[f64],
+        n_nodes: u32,
+        c_in: u32,
+        c_out: u32,
+    ) -> Vec<f64> {
+        vyre_reference::composition_witness::tfn_scalar_mix_witness(
+            features, weights, n_nodes, c_in, c_out,
+        )
     }
 
     #[test]

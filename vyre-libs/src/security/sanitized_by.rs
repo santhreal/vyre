@@ -9,7 +9,6 @@
 
 use crate::graph::csr_forward_traverse::csr_forward_traverse_excluding;
 use crate::graph::program_graph::ProgramGraphShape;
-use crate::predicate::edge_kind;
 use vyre_foundation::composition::tag_program;
 
 const OP_ID: &str = "vyre-libs::security::sanitized_by";
@@ -44,31 +43,27 @@ pub fn sanitized_by(
     tag_program(OP_ID, traverse)
 }
 
+const EXPECTED_SANITIZED_BY_OUTPUT_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || sanitized_by(ProgramGraphShape::new(4, 3), "fin", "san", "fout"),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // Linear 0→1→2→3 with node 1 marked sanitizer.
             vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // 0: pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // 1: pg_edge_offsets
-                to_bytes(&[1, 2, 3]),             // 2: pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // 3: pg_edge_kind_mask
-                to_bytes(&[0, 1, 0, 0]),          // 4: pg_node_tags
-                to_bytes(&[0b0001]),              // 5: fin = {0}
-                to_bytes(&[0b0010]),              // 6: san = {1}
-                to_bytes(&[0b0001]),              // 7: fout accumulator seed = {0}
+                vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 0: pg_nodes
+                vec![0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // 1: pg_edge_offsets
+                vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],             // 2: pg_edge_targets
+                vec![1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],             // 3: pg_edge_kind_mask (ASSIGNMENT=1)
+                vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 4: pg_node_tags
+                vec![1, 0, 0, 0],                                     // 5: fin = {0}
+                vec![2, 0, 0, 0],                                     // 6: san = {1}
+                vec![1, 0, 0, 0],                                     // 7: fout accumulator seed = {0}
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0011])]]
+            vec![vec![EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("security")
@@ -108,6 +103,11 @@ mod tests {
         use crate::security::flows_to::FLOWS_TO_MASK;
         assert_eq!(FLOWS_TO_MASK & edge_kind::CONTROL, 0);
         assert_eq!(FLOWS_TO_MASK & edge_kind::DOMINANCE, 0);
+    }
+
+    #[test]
+    fn registration_fixture_matches_exact_byte_constant() {
+        assert_eq!(EXPECTED_SANITIZED_BY_OUTPUT_BYTES, [0x03, 0x00, 0x00, 0x00]);
     }
 
     #[test]

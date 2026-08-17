@@ -41,6 +41,7 @@ pub const BINDING_DEGREE_SUM_OUT: u32 = BINDING_PRIMITIVE_START + 1;
 pub const CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid that covers every source node exactly once.
+#[cfg(test)]
 #[must_use]
 pub const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
     vyre_primitives::lane_grid(node_count, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE[0])
@@ -97,7 +98,7 @@ pub fn csr_frontier_degree_sum(shape: ProgramGraphShape) -> Program {
     Program::wrapped(buffers, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE, entry)
 }
 
-
+const EXPECTED_CSR_FRONTIER_DEGREE_SUM_OUTPUT_BYTES: [u8; 4] = [3, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -116,8 +117,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[3])]]
+            vec![vec![EXPECTED_CSR_FRONTIER_DEGREE_SUM_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -125,6 +125,36 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::csr_frontier_degree_sum_witness;
+
+    fn try_csr_frontier_degree_sum_cpu(
+        frontier: &[u32],
+        edge_offsets: &[u32],
+        node_count: u32,
+    ) -> Result<u32, String> {
+        if edge_offsets.len() != (node_count as usize) + 1 {
+            return Err("Fix: edge_offsets.len() must equal node_count + 1.".to_owned());
+        }
+        if edge_offsets[0] != 0 {
+            return Err("Fix: edge offsets must start at zero.".to_owned());
+        }
+        if edge_offsets.windows(2).any(|w| w[0] > w[1]) {
+            return Err("Fix: non-monotonic CSR offsets detected.".to_owned());
+        }
+        let expected_words = crate::bitset::bitset_words(node_count) as usize;
+        if frontier.len() < expected_words {
+            return Err("Fix: frontier bitset shorter than expected words.".to_owned());
+        }
+        Ok(csr_frontier_degree_sum_witness(
+            frontier,
+            edge_offsets,
+            node_count,
+        ))
+    }
+
+    fn csr_frontier_degree_sum_cpu(frontier: &[u32], edge_offsets: &[u32], node_count: u32) -> u32 {
+        try_csr_frontier_degree_sum_cpu(frontier, edge_offsets, node_count).unwrap_or(u32::MAX)
+    }
 
     #[test]
     fn cpu_ref_empty_frontier_emits_zero() {

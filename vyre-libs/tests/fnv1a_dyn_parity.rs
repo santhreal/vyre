@@ -10,8 +10,9 @@
 //! `reference_eval`, including the low-byte masking and the empty-input basis.
 #![cfg(feature = "hash")]
 
-use vyre_libs::hash::fnv1a::{fnv1a32, fnv1a32_program_dyn, fnv1a32_program_dyn_u8};
+use vyre_libs::hash::fnv1a::{fnv1a32_program_dyn, fnv1a32_program_dyn_u8};
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
+use vyre_reference::composition_witness::fnv1a32_witness as fnv1a32;
 use vyre_reference::value::Value;
 
 fn hash_out(program: &vyre_foundation::ir::Program, input: Vec<u8>) -> u32 {

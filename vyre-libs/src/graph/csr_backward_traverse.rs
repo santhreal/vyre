@@ -7,9 +7,7 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::graph::csr_frontier_step::{
-    csr_frontier_step_program, define_csr_frontier_step_cpu_ref, CsrFrontierStepKind,
-};
+use crate::graph::csr_frontier_step::{csr_frontier_step_program, CsrFrontierStepKind};
 use crate::graph::program_graph::ProgramGraphShape;
 
 /// Canonical op id.
@@ -41,16 +39,7 @@ pub fn csr_backward_traverse(
     )
 }
 
-define_csr_frontier_step_cpu_ref! {
-    direction: CsrFrontierStepKind::Backward,
-    label: "csr_backward_traverse",
-    /// CPU reference: one reverse step. Returns a bitset where bit `u`
-    /// is set iff there exists an edge `u → v` with `allow_mask`-matching
-    /// kind AND `v` is set in `frontier_in`.
-    pub fn cpu_ref,
-    /// CPU reference using caller-owned output storage.
-    pub fn cpu_ref_into,
-}
+const EXPECTED_CSR_BACKWARD_TRAVERSE_OUTPUT_BYTES: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -72,10 +61,53 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0110])]]
+            vec![vec![EXPECTED_CSR_BACKWARD_TRAVERSE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+}
+
+#[cfg(test)]
+pub(crate) fn cpu_ref(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    assert!(
+        row_offsets.len() == (node_count as usize) + 1,
+        "node_count + 1 CSR offsets required"
+    );
+    vyre_reference::composition_witness::csr_backward_traverse_witness(
+        node_count,
+        row_offsets,
+        col_indices,
+        edge_kind_mask,
+        frontier,
+        allow_mask,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn cpu_ref_into(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+    out: &mut Vec<u32>,
+) {
+    vyre_reference::composition_witness::csr_backward_traverse_witness_into(
+        node_count,
+        row_offsets,
+        col_indices,
+        edge_kind_mask,
+        frontier,
+        allow_mask,
+        out,
+    );
 }
 
 #[cfg(test)]

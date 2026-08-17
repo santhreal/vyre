@@ -85,11 +85,11 @@ pub(crate) fn add_one_program(words: u32) -> Program {
 }
 
 pub(crate) fn add_one_input(words: u32) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_iter(0..words)
+    (0..words).flat_map(u32::to_le_bytes).collect()
 }
 
 pub(crate) fn add_one_expected(words: u32) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_iter(1..=words)
+    (1..=words).flat_map(u32::to_le_bytes).collect()
 }
 
 pub(crate) fn assert_dispatch_async_returns_before_gpu_completion() {

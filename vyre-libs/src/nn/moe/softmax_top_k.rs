@@ -163,23 +163,6 @@ fn softmax_top_k_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn softmax_top_k_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    let scores: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let max = scores[7];
-    let exp_values = scores
-        .iter()
-        .map(|score| (*score - max).exp())
-        .collect::<Vec<f32>>();
-    let sum = exp_values.iter().copied().sum::<f32>();
-    let top_exp = [exp_values[7], exp_values[6]];
-    vec![vec![
-        fixture_u32_bytes(&[7, 6]),
-        fixture_f32_bytes(&[top_exp[0] / sum, top_exp[1] / sum]),
-        fixture_f32_bytes(&top_exp),
-        fixture_u32_bytes(&[7, 6]),
-    ]]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,12 +236,24 @@ mod tests {
     }
 }
 
+const EXPECTED_SOFTMAX_TOP_K_BUF0_BYTES: [u8; 8] = [0x07, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00];
+const EXPECTED_SOFTMAX_TOP_K_BUF1_BYTES: [u8; 8] = [0x8E, 0xE0, 0x21, 0x3F, 0x83, 0x34, 0x6E, 0x3E];
+const EXPECTED_SOFTMAX_TOP_K_BUF2_BYTES: [u8; 8] = [0x00, 0x00, 0x80, 0x3F, 0xB2, 0x5A, 0xBC, 0x3E];
+const EXPECTED_SOFTMAX_TOP_K_BUF3_BYTES: [u8; 8] = [0x07, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || softmax_top_k("scores", "indices", "weights", 8, 2),
         Some(softmax_top_k_fixture_inputs),
-        Some(softmax_top_k_fixture_expected),
+        Some(|| {
+            vec![vec![
+                EXPECTED_SOFTMAX_TOP_K_BUF0_BYTES.to_vec(),
+                EXPECTED_SOFTMAX_TOP_K_BUF1_BYTES.to_vec(),
+                EXPECTED_SOFTMAX_TOP_K_BUF2_BYTES.to_vec(),
+                EXPECTED_SOFTMAX_TOP_K_BUF3_BYTES.to_vec(),
+            ]]
+        }),
     )
     .with_category("nn")
 }

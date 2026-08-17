@@ -25,8 +25,7 @@ pub fn bitset_not(input: &str, out: &str, words: u32) -> Program {
     bitset_unary_word_program(OP_ID, input, out, words, UnOp::BitNot)
 }
 
-
-
+const EXPECTED_BITSET_NOT_OUTPUT_BYTES: [u8; 4] = [0xF0, 0xF0, 0xF0, 0xF0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -37,46 +36,51 @@ inventory::submit! {
             vec![vec![to_bytes(&[0x0F0F_0F0F]), to_bytes(&[0])]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0xF0F0_F0F0])]]
+            vec![vec![EXPECTED_BITSET_NOT_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use vyre_reference::composition_witness::{
+        bitset_not_witness as reference_bitset_not,
+        bitset_not_witness_into as reference_bitset_not_into,
+    };
+
+    fn try_reference_bitset_not_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), ()> {
+        reference_bitset_not_into(input, out);
+        Ok(())
+    }
 
     #[test]
     fn flips_every_bit() {
-        assert_eq!(cpu_ref(&[0x0F0F_0F0F]), vec![0xF0F0_F0F0]);
+        assert_eq!(reference_bitset_not(&[0x0F0F_0F0F]), vec![0xF0F0_F0F0]);
     }
 
     #[test]
     fn empty_bitset() {
-        assert_eq!(cpu_ref(&[]), Vec::<u32>::new());
+        assert_eq!(reference_bitset_not(&[]), Vec::<u32>::new());
     }
-
-    #[test]
     fn single_word_all_bits() {
-        assert_eq!(cpu_ref(&[0xFFFF_FFFF]), vec![0x0000_0000]);
-        assert_eq!(cpu_ref(&[0x0000_0000]), vec![0xFFFF_FFFF]);
+        assert_eq!(reference_bitset_not(&[0xFFFF_FFFF]), vec![0x0000_0000]);
+        assert_eq!(reference_bitset_not(&[0x0000_0000]), vec![0xFFFF_FFFF]);
     }
 
     #[test]
     fn cross_word_boundary() {
         let input = vec![0x8000_0000, 0x0000_0001];
-        assert_eq!(cpu_ref(&input), vec![0x7FFF_FFFF, 0xFFFF_FFFE]);
+        assert_eq!(reference_bitset_not(&input), vec![0x7FFF_FFFF, 0xFFFF_FFFE]);
     }
 
     #[test]
-    fn cpu_ref_into_truncates_stale_tail_without_reallocating() {
+    fn reference_bitset_not_into_truncates_stale_tail_without_reallocating() {
         let input = vec![0x8000_0000, 0x0000_0001];
         let mut out = Vec::with_capacity(8);
         out.extend([0xDEAD_BEEF; 8]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(&input, &mut out).unwrap();
+        try_reference_bitset_not_into(&input, &mut out).unwrap();
 
         assert_eq!(out, vec![0x7FFF_FFFF, 0xFFFF_FFFE]);
         assert_eq!(out.as_ptr(), ptr);
@@ -88,11 +92,11 @@ mod tests {
         let mut compat = Vec::with_capacity(4);
         let mut fallible = Vec::with_capacity(4);
 
-        cpu_ref_into(&input, &mut compat);
-        try_cpu_ref_into(&input, &mut fallible)
-            .expect("Fix: small bitset_not CPU oracle must reserve");
+        reference_bitset_not_into(&input, &mut compat);
+        try_reference_bitset_not_into(&input, &mut fallible)
+            .expect("Fix: small bitset_not reference witness must reserve");
 
-        assert_eq!(cpu_ref(&input), fallible);
+        assert_eq!(reference_bitset_not(&input), fallible);
         assert_eq!(compat, fallible);
     }
 
@@ -109,8 +113,8 @@ mod tests {
             let mut out = Vec::with_capacity(len + 3);
             let mut roundtrip = Vec::with_capacity(len + 3);
 
-            try_cpu_ref_into(&input, &mut out).unwrap();
-            try_cpu_ref_into(&out, &mut roundtrip).unwrap();
+            try_reference_bitset_not_into(&input, &mut out).unwrap();
+            try_reference_bitset_not_into(&out, &mut roundtrip).unwrap();
 
             assert_eq!(
                 out,

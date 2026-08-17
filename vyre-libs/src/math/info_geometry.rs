@@ -17,7 +17,7 @@
 //! - `bhattacharyya_coefficient`  -  `Σ sqrt(p · q)`, the inner
 //!   product on the spherical statistical manifold. Distance is
 //!   `2 · arccos(coeff)` host-side.
-//! - `amari_alpha_step_cpu` (requires the `cpu-parity` feature)  -  host-side α-connection interpolation,
+//! - `amari_alpha_step` witness in `vyre-reference`  -  host-side α-connection interpolation,
 //!   useful for distribution-aware loss design.
 //!
 //! # Why this primitive is dual-use
@@ -132,11 +132,6 @@ pub fn bhattacharyya_per_element(p: &str, q: &str, out_per_elem: &str, n: u32) -
 
 // ---- CPU references ----
 
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -151,7 +146,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[0; 4])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ]]]
         }),
     )
 }
@@ -159,6 +159,35 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn bhattacharyya_coefficient_cpu(p: &[f64], q: &[f64]) -> f64 {
+        p.iter()
+            .zip(q.iter())
+            .map(|(&pi, &qi)| (pi * qi).max(0.0).sqrt())
+            .sum()
+    }
+
+    fn fisher_rao_distance_cpu(p: &[f64], q: &[f64]) -> f64 {
+        let bc = bhattacharyya_coefficient_cpu(p, q);
+        2.0 * bc.clamp(0.0, 1.0).acos()
+    }
+
+    fn try_amari_alpha_step_cpu_into(
+        p: &[f64],
+        q: &[f64],
+        alpha: f64,
+        t: f64,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let res = independent_amari_alpha(p, q, alpha, t);
+        out.clear();
+        out.extend_from_slice(&res);
+        Ok(())
+    }
+
+    fn amari_alpha_step_cpu(p: &[f64], q: &[f64], alpha: f64, t: f64) -> Vec<f64> {
+        independent_amari_alpha(p, q, alpha, t)
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())

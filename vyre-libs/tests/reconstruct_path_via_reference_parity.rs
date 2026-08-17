@@ -13,7 +13,13 @@
 //! even cyclic parent arrays terminate (both the GPU IR and `cpu_ref` bound-walk identically).
 
 use vyre_libs::graph::dispatch::path_reconstruct::reconstruct_path_via;
-fn cpu_ref(parents: &[u32], target: u32) -> Vec<u32> { let mut path = Vec::new(); let mut cur = target; while cur != u32::MAX && (cur as usize) < parents.len() { path.push(cur); cur = parents[cur as usize]; } path.reverse(); path }
+use vyre_reference::composition_witness::path_reconstruct_witness;
+
+fn cpu_ref(parents: &[u32], target: u32, max_depth: u32, scratch: &mut Vec<u32>) -> u32 {
+    let (path, length) = path_reconstruct_witness(parents, target, max_depth);
+    *scratch = path;
+    length
+}
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

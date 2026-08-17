@@ -178,13 +178,33 @@ fn run_element(in_buf: &str, run_base: &Expr, step: u32, n: u32) -> Expr {
     )
 }
 
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn try_cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) -> Result<(), String> {
+        let inclusive = match kind {
+            ScanKind::InclusiveSum => true,
+            ScanKind::ExclusiveSum => false,
+        };
+        vyre_reference::composition_witness::prefix_scan_witness_into(
+            input,
+            inclusive,
+            |a, b| a.wrapping_add(b),
+            0,
+            out,
+        );
+        Ok(())
+    }
+
+    fn cpu_ref_into(input: &[u32], kind: ScanKind, out: &mut Vec<u32>) {
+        try_cpu_ref_into(input, kind, out).expect("cpu_ref_into failed");
+    }
+
+    fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> {
+        let mut out = Vec::new();
+        cpu_ref_into(input, kind, &mut out);
+        out
+    }
 
     #[test]
     fn inclusive_cpu_ref_matches_textbook() {

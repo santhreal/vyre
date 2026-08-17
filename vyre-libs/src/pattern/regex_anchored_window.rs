@@ -28,9 +28,11 @@
 //! seeds the same transition table at the same origins and must produce the
 //! byte-identical match set this walk defines.
 
+#[cfg(test)]
 use crate::pattern::CompiledDfa;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+#[cfg(test)]
 use vyre_foundation::match_result::ByteRange;
 
 use crate::pattern::builders::append_match;
@@ -43,6 +45,7 @@ use crate::pattern::classic_ac::bounded_ranges::{
 /// GPU extraction intentionally emits accepting states without per-pattern
 /// scratch. Every host result path applies this in-place contract before
 /// exposing token findings.
+#[cfg(test)]
 pub(crate) fn canonicalize_leftmost_longest(matches: &mut Vec<ByteRange>) {
     matches.sort_unstable_by_key(|m| (m.start, m.tag, m.end));
     let mut write = 0usize;
@@ -68,8 +71,9 @@ pub(crate) fn canonicalize_leftmost_longest(matches: &mut Vec<ByteRange>) {
 /// Construct once per DFA (it precomputes the dead-state id for an O(1) early
 /// out), then validate any number of candidate batches against different
 /// haystacks.
+#[cfg(test)]
 #[derive(Debug, Clone, Copy)]
-pub struct AnchoredWindowValidator<'dfa> {
+pub(crate) struct AnchoredWindowValidator<'dfa> {
     dfa: &'dfa CompiledDfa,
     /// Precomputed dead-sink state id, if the DFA has one. Reaching it ends a
     /// window walk early: it self-loops forever and never accepts, so no match
@@ -78,6 +82,7 @@ pub struct AnchoredWindowValidator<'dfa> {
     dead_state: Option<u32>,
 }
 
+#[cfg(test)]
 impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// Bind a validator to an anchored regex DFA (e.g.
     /// `build_regex_dfa_pipeline(..).dfa`).
@@ -88,7 +93,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// the pattern occurs anywhere at or after `origin`, defeating the anchoring
     /// contract.
     #[must_use]
-    pub fn new(dfa: &'dfa CompiledDfa) -> Self {
+    pub(crate) fn new(dfa: &'dfa CompiledDfa) -> Self {
         Self {
             dead_state: detect_dead_state(dfa),
             dfa,
@@ -99,7 +104,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// `max_pattern_len`. A consumer sizing a GPU per-candidate replay buffer
     /// reads this to bound the work per origin.
     #[must_use]
-    pub fn window_len(&self) -> u32 {
+    pub(crate) fn window_len(&self) -> u32 {
         self.dfa.max_pattern_len
     }
 
@@ -112,7 +117,12 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// (mirrors the whole-buffer AC dispatch's `output_records` fan-out). Does
     /// not sort or deduplicate; call [`Self::validate_candidates`] for a
     /// canonical, deduplicated batch result. Out-of-range origins are ignored.
-    pub fn validate_candidate(&self, haystack: &[u8], origin: u32, out: &mut Vec<ByteRange>) {
+    pub(crate) fn validate_candidate(
+        &self,
+        haystack: &[u8],
+        origin: u32,
+        out: &mut Vec<ByteRange>,
+    ) {
         let origin_idx = origin as usize;
         if origin_idx >= haystack.len() {
             return;
@@ -145,7 +155,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// collapse to one entry, so the result is a set a consumer can union with
     /// other shards without double counting.
     #[must_use]
-    pub fn validate_candidates(&self, haystack: &[u8], origins: &[u32]) -> Vec<ByteRange> {
+    pub(crate) fn validate_candidates(&self, haystack: &[u8], origins: &[u32]) -> Vec<ByteRange> {
         let mut matches = Vec::new();
         for &origin in origins {
             self.validate_candidate(haystack, origin, &mut matches);
@@ -175,7 +185,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// policy (the prefilter supplies token-start origins, and
     /// [`Self::validate_candidates_leftmost_longest`] deduplicates identical
     /// triples). Each pattern surfaces at most once per origin here.
-    pub fn validate_candidate_leftmost_longest(
+    pub(crate) fn validate_candidate_leftmost_longest(
         &self,
         haystack: &[u8],
         origin: u32,
@@ -219,7 +229,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// duplicates removed, the leftmost-longest analogue of
     /// [`Self::validate_candidates`].
     #[must_use]
-    pub fn validate_candidates_leftmost_longest(
+    pub(crate) fn validate_candidates_leftmost_longest(
         &self,
         haystack: &[u8],
         origins: &[u32],
@@ -239,6 +249,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
 /// `None` if the automaton has no dead state (every state can still reach an
 /// accept). Scans states once; O(state_count · 256) but run only at
 /// construction.
+#[cfg(test)]
 fn detect_dead_state(dfa: &CompiledDfa) -> Option<u32> {
     for state in 0..dfa.state_count {
         let s = state as usize;
@@ -380,423 +391,5 @@ pub fn anchored_window_extract_program(
 }
 
 #[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
-mod tests {
-    use super::*;
-    use crate::pattern::classic_ac::test_dispatch_and_decode::with_reference_dispatch_lanes;
-    use crate::pattern::regex_dfa::build_regex_dfa_pipeline;
-
-    const MAX_MATCHES: u32 = 4096;
-    const MAX_DFA_STATES: usize = 16_384;
-
-    fn validator_for(patterns: &[&str]) -> CompiledDfa {
-        build_regex_dfa_pipeline(patterns, MAX_MATCHES, MAX_DFA_STATES)
-            .expect("Fix: test patterns must compile to an anchored regex DFA")
-            .dfa
-    }
-
-    /// THE anchoring contract: a match is emitted ONLY when the candidate origin
-    /// is exactly where the pattern starts. A candidate one byte early or one
-    /// byte late, even though the pattern is present in the window, yields
-    /// nothing. This is precisely what distinguishes anchored-window extraction
-    /// from an unanchored "match somewhere in the region" scan.
-    #[test]
-    fn matches_only_at_exact_candidate_origin() {
-        let dfa = validator_for(&["abc"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"..abc..";
-
-        assert_eq!(
-            validator.validate_candidates(haystack, &[2]),
-            vec![ByteRange::new(0, 2, 5)],
-            "candidate at the true start must extract the match with start==origin"
-        );
-        assert!(
-            validator.validate_candidates(haystack, &[1]).is_empty(),
-            "candidate one byte before the match start must NOT match (anchored, not unanchored)"
-        );
-        assert!(
-            validator.validate_candidates(haystack, &[3]).is_empty(),
-            "candidate one byte after the match start must NOT match"
-        );
-    }
-
-    /// A short match at the origin must not let the DFA re-accept later in the
-    /// window: after "abc" accepts at end 3, the trailing bytes drive the walk
-    /// into the dead sink, which never accepts. Proves the dead-state stop is
-    /// what keeps a long window anchored.
-    #[test]
-    fn short_match_does_not_re_accept_deeper_in_window() {
-        let dfa = validator_for(&["abc"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        // Long tail after the match, well past max_pattern_len were it unbounded.
-        let haystack = b"abcabcabc";
-        assert_eq!(
-            validator.validate_candidates(haystack, &[0]),
-            vec![ByteRange::new(0, 0, 3)],
-            "only the anchored match at the origin may surface; later 'abc's start at other origins"
-        );
-    }
-
-    /// One origin, multiple accept lengths: two patterns sharing a prefix both
-    /// accept at the same origin at their own end offsets, and both surface via
-    /// the accepting states' output records.
-    #[test]
-    fn shared_prefix_patterns_emit_every_accept_length_at_one_origin() {
-        let dfa = validator_for(&["abc", "abcde"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"abcde";
-        let got = validator.validate_candidates(haystack, &[0]);
-        assert_eq!(
-            got,
-            vec![ByteRange::new(0, 0, 3), ByteRange::new(1, 0, 5)],
-            "both the length-3 and length-5 pattern must extract at the shared origin"
-        );
-    }
-
-    /// A variable-length pattern (bounded repetition) extracts a faithful,
-    /// anchored, non-vacuous match: whatever accept ends the compiled DFA
-    /// carries, the validator surfaces them all, each starting exactly at the
-    /// origin. We compute the expectation by walking the *same* DFA directly
-    /// (faithfulness), never by assuming a particular multi-length semantics
-    /// vyre's AC-at-end DFA reports a bounded repetition at a single canonical
-    /// length, not one match per length (recorded in BACKLOG for the regex-DFA
-    /// owner). Asserting the direct-walk truth keeps this test correct
-    /// regardless of that choice.
-    #[test]
-    fn bounded_repetition_pattern_extracts_faithful_anchored_matches() {
-        let dfa = validator_for(&["a{2,4}"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"aaaaa";
-        // Compare over the SAME candidate set the oracle walks (every origin),
-        // else the sets legitimately differ (the oracle finds "aa" at each
-        // origin, not just origin 0).
-        let origins: Vec<u32> = (0..haystack.len() as u32).collect();
-        let got = validator.validate_candidates(haystack, &origins);
-
-        let expected = direct_walk_all_origins(&dfa, haystack);
-        assert_eq!(
-            got, expected,
-            "validator must extract exactly what a direct walk of the same DFA accepts"
-        );
-        assert!(
-            !got.is_empty(),
-            "a bounded repetition anchored at a matching origin must extract at least one match"
-        );
-        // Every extracted match starts at one of the supplied origins and is a
-        // genuine run of 'a's of the accepted length.
-        assert!(
-            got.iter()
-                .all(|m| haystack[m.start as usize..m.end as usize]
-                    .iter()
-                    .all(|&b| b == b'a')),
-            "every anchored-window match must be a real run of the repeated byte"
-        );
-        // The bounded-repetition lowering fix (BACKLOG items 18/27) records the
-        // MAXIMUM match length, so the replay window now covers the full range:
-        // `a{2,4}` has max_pattern_len == 4 and the raw fan-out surfaces every
-        // admissible length 2..=4 (the ε skip edges make the fragment end
-        // reachable after 2, 3, or 4 copies). Before the fix the window was
-        // capped at the MINIMUM (2), so the longer accepts were never visited.
-        assert_eq!(
-            dfa.max_pattern_len, 4,
-            "the {{n,m}} lowering must size the window to the MAX repetition (4), \
-             not the min (2), so the windowed walk can reach the longer accepts"
-        );
-        // At origin 0 over "aaaa" the raw fan-out accepts at lengths 2, 3, AND 4.
-        let origin0_ends: Vec<u32> = got
-            .iter()
-            .filter(|m| m.start == 0)
-            .map(|m| m.end - m.start)
-            .collect();
-        assert_eq!(
-            origin0_ends,
-            vec![2, 3, 4],
-            "raw fan-out must now surface every admissible {{2,4}} length at origin 0"
-        );
-        // Leftmost-longest extraction collapses those to the single maximal
-        // match (the whole 4-'a' run, not three overlapping partial hits).
-        assert_eq!(
-            validator.validate_candidates_leftmost_longest(haystack, &[0]),
-            vec![ByteRange::new(0, 0, 4)],
-            "leftmost-longest must emit exactly the longest {{2,4}} match at origin 0"
-        );
-    }
-
-    /// Direct, un-optimized reference walk of `dfa` over every origin of
-    /// `haystack` (no dead-state early-out), returning the canonical extracted
-    /// set. This is the faithfulness oracle: the validator must equal it.
-    fn direct_walk_all_origins(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<ByteRange> {
-        let mut out = Vec::new();
-        for origin in 0..haystack.len() {
-            let window = (dfa.max_pattern_len as usize).min(haystack.len() - origin);
-            let mut state = 0u32;
-            for step in 0..window {
-                let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(state, haystack[origin + step]);
-                state = dfa.transitions[trans_idx];
-                let lo = dfa.output_offsets[state as usize] as usize;
-                let hi = dfa.output_offsets[state as usize + 1] as usize;
-                for &pid in &dfa.output_records[lo..hi] {
-                    out.push(ByteRange::new(
-                        pid,
-                        origin as u32,
-                        (origin + step + 1) as u32,
-                    ));
-                }
-            }
-        }
-        out.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
-        out.dedup();
-        out
-    }
-
-    /// Distinct patterns anchored at their own origins each extract exactly once;
-    /// candidate origins are validated independently.
-    #[test]
-    fn distinct_patterns_extract_at_their_own_origins() {
-        let dfa = validator_for(&["abc", "bcd"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"abcd";
-        assert_eq!(
-            validator.validate_candidates(haystack, &[0, 1]),
-            vec![ByteRange::new(0, 0, 3), ByteRange::new(1, 1, 4)],
-            "each pattern extracts at the origin where it starts"
-        );
-    }
-
-    /// Boundary safety: an origin at or past EOF is ignored, and an origin whose
-    /// window is truncated by EOF only extracts matches that fit, no panic, no
-    /// out-of-bounds read.
-    #[test]
-    fn origins_at_and_past_eof_are_safe_and_windows_truncate() {
-        let dfa = validator_for(&["abcd"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"xxabc"; // "abcd" does not fit starting at index 2 (only "abc" remains)
-        assert!(
-            validator.validate_candidates(haystack, &[2]).is_empty(),
-            "a pattern that runs off the end of the haystack must not match"
-        );
-        assert!(
-            validator
-                .validate_candidates(haystack, &[haystack.len() as u32])
-                .is_empty(),
-            "origin == haystack.len() must be ignored, not indexed"
-        );
-        assert!(
-            validator
-                .validate_candidates(haystack, &[haystack.len() as u32 + 9])
-                .is_empty(),
-            "origin past EOF must be ignored"
-        );
-    }
-
-    /// Duplicate origins collapse: validating the same origin twice yields the
-    /// same match once, so the batch result is a clean set.
-    #[test]
-    fn duplicate_origins_collapse_to_a_set() {
-        let dfa = validator_for(&["abc"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"abc";
-        assert_eq!(
-            validator.validate_candidates(haystack, &[0, 0, 0]),
-            vec![ByteRange::new(0, 0, 3)],
-            "repeated origins must not duplicate the extracted match"
-        );
-    }
-
-    #[test]
-    fn empty_candidate_batch_is_empty() {
-        let dfa = validator_for(&["abc"]);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        assert!(validator.validate_candidates(b"abcabc", &[]).is_empty());
-    }
-
-    /// Decode `(pattern_id, start, end)` triples from a `[match_count, matches]`
-    /// reference-output pair (little-endian u32 words).
-    fn decode_match_triples(outputs: &[vyre_reference::value::Value]) -> Vec<(u32, u32, u32)> {
-        let words = |value: &vyre_reference::value::Value| -> Vec<u32> {
-            value
-                .to_bytes()
-                .chunks_exact(4)
-                .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-                .collect()
-        };
-        let count = words(&outputs[0])[0] as usize;
-        let matches = words(&outputs[1]);
-        matches[..count.saturating_mul(3)]
-            .chunks_exact(3)
-            .map(|chunk| (chunk[0], chunk[1], chunk[2]))
-            .collect()
-    }
-
-    /// Proves the emitted kernel and CPU oracle implement identical anchored-window semantics.
-    #[test]
-    fn extract_program_reference_eval_matches_cpu_oracle() {
-        use crate::pattern::haystack::pack_haystack_u32;
-        use vyre_primitives::wire::pack_u32_slice;
-
-        let patterns = ["abc", "abcde", "bcd", "x"];
-        let dfa = validator_for(&patterns);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"zabcdex bcd abc x abcde";
-        // Candidate origins: a mix of real match starts, near-misses, and EOF-
-        // adjacent positions (the program must reject the non-starts).
-        let candidates: Vec<u32> = vec![0, 1, 2, 8, 12, 16, 18, haystack.len() as u32 - 1];
-
-        // Oracle.
-        let mut expected = validator.validate_candidates(haystack, &candidates);
-        expected.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
-
-        // Reference dispatch of the emitted program (one lane per candidate).
-        let num_candidates = candidates.len() as u32;
-        let max_matches = 4096u32;
-        let program = with_reference_dispatch_lanes(
-            anchored_window_extract_program(
-                "haystack",
-                "transitions",
-                "output_offsets",
-                "output_records",
-                "candidates",
-                "candidate_count",
-                "haystack_len",
-                "match_count",
-                "matches",
-                dfa.state_count,
-                dfa.output_records.len() as u32,
-                num_candidates,
-                max_matches,
-                dfa.max_pattern_len,
-            ),
-            num_candidates,
-        );
-        let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.output_records)),
-            vyre_reference::value::Value::from(pack_u32_slice(&candidates)),
-            vyre_reference::value::Value::from(pack_u32_slice(&[num_candidates])),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(vec![0_u8; num_candidates as usize * 4]),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: anchored-window extract program must evaluate in the reference backend");
-
-        let mut actual: Vec<ByteRange> = decode_match_triples(&outputs)
-            .into_iter()
-            .map(|(pid, start, end)| ByteRange::new(pid, start, end))
-            .collect();
-        actual.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
-        actual.dedup();
-
-        assert_eq!(
-            actual, expected,
-            "reference-eval of the anchored-window program must equal the CPU oracle's extraction"
-        );
-        assert!(
-            !expected.is_empty(),
-            "parity test is vacuous: the oracle extracted no matches for these candidates"
-        );
-    }
-
-    /// Rigorous differential: for literal patterns, the anchored-window
-    /// extraction over EVERY position must equal an independent naive
-    /// "does pattern P start exactly at position p" substring oracle. A
-    /// deterministic LCG builds the haystack so the test is reproducible without
-    /// an RNG dependency.
-    #[test]
-    fn differential_vs_naive_anchored_substring_oracle() {
-        let patterns = ["ab", "abc", "bcx", "x", "cab"];
-        let dfa = validator_for(&patterns);
-        let validator = AnchoredWindowValidator::new(&dfa);
-
-        // Deterministic haystack over a small alphabet that plants the patterns
-        // densely (LCG (pure, reproducible, no rand crate)).
-        let alphabet = b"abcx";
-        let mut state: u32 = 0x1234_5678;
-        let mut haystack = Vec::with_capacity(600);
-        for _ in 0..600 {
-            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
-            haystack.push(alphabet[(state >> 24) as usize % alphabet.len()]);
-        }
-
-        // Candidates = every position (the extractor must be exact everywhere).
-        let origins: Vec<u32> = (0..haystack.len() as u32).collect();
-        let got = validator.validate_candidates(&haystack, &origins);
-
-        // Independent oracle: naive anchored substring test per pattern.
-        let mut oracle: Vec<ByteRange> = Vec::new();
-        for (pid, pat) in patterns.iter().enumerate() {
-            let pb = pat.as_bytes();
-            if pb.len() <= haystack.len() {
-                for start in 0..=haystack.len() - pb.len() {
-                    if &haystack[start..start + pb.len()] == pb {
-                        oracle.push(ByteRange::new(
-                            pid as u32,
-                            start as u32,
-                            (start + pb.len()) as u32,
-                        ));
-                    }
-                }
-            }
-        }
-        oracle.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
-        oracle.dedup();
-
-        assert_eq!(
-            got, oracle,
-            "anchored-window extraction must equal the naive anchored-substring oracle at every position"
-        );
-        // Guard against a vacuous pass: the dense haystack must actually plant
-        // matches for several distinct patterns.
-        assert!(
-            oracle.len() > 50,
-            "differential is vacuous: oracle found only {} matches",
-            oracle.len()
-        );
-        let distinct_pids: std::collections::BTreeSet<u32> = oracle.iter().map(|m| m.tag).collect();
-        assert!(
-            distinct_pids.len() >= 4,
-            "differential should exercise most patterns; saw pids {distinct_pids:?}"
-        );
-    }
-
-    /// The dead-state early-out must not change results: a validator that stops
-    /// at the dead sink extracts the same set as a full-window walk that never
-    /// stops early. We reconstruct the un-optimized walk inline and compare.
-    #[test]
-    fn dead_state_early_out_equals_full_window_walk() {
-        let patterns = ["abc", "abcde", "bx"];
-        let dfa = validator_for(&patterns);
-        let validator = AnchoredWindowValidator::new(&dfa);
-        let haystack = b"abcdefabxabc";
-        let origins: Vec<u32> = (0..haystack.len() as u32).collect();
-        let optimized = validator.validate_candidates(haystack, &origins);
-
-        // Reference: identical walk WITHOUT the dead-state break (shared helper).
-        let full = direct_walk_all_origins(&dfa, haystack);
-
-        assert_eq!(
-            optimized, full,
-            "dead-state early-out must be a pure optimization, identical extraction to the full walk"
-        );
-    }
-
-    /// The DFA has exactly one detectable dead sink, and it is neither the start
-    /// state nor an accepting state (guards the detector against misclassifying a
-    /// live state).
-    #[test]
-    fn detected_dead_state_is_non_start_non_accepting_self_loop() {
-        let dfa = validator_for(&["abc"]);
-        let dead =
-            detect_dead_state(&dfa).expect("an anchored DFA with a rejecting path has a dead sink");
-        assert_ne!(dead, 0, "the start state must not be classified as dead");
-        assert_eq!(dfa.accept[dead as usize], 0, "dead state must not accept");
-        for byte in 0..=255u16 {
-            assert_eq!(
-                dfa.transitions[dead as usize * 256 + byte as usize],
-                dead,
-                "dead state must self-loop on every byte"
-            );
-        }
-    }
-}
+#[path = "../../tests/internal/pattern/regex_anchored_window/mod.rs"]
+mod tests;

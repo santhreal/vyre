@@ -10,8 +10,8 @@ use crate::graph::adaptive_traverse::{
     four_russians_dense_lut_from_adj_rows as primitive_four_russians_dense_lut_from_adj_rows,
     validate_adaptive_traversal_layout,
 };
-use crate::graph::csr_frontier_queue::validate_csr_queue_graph;
 use crate::graph::csr_frontier_queue::scratch::resident_csr_queue_high_degree_source_count;
+use crate::graph::csr_frontier_queue::validate_csr_queue_graph;
 use crate::graph::dispatch::dispatch_bridge::{upload_resident_dispatch_inputs, DispatchInput};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

@@ -94,11 +94,11 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
     assert_eq!(prepared.clear_len_program.workgroup_size(), [1, 1, 1]);
     assert_eq!(prepared.delta_program.workgroup_size(), [256, 1, 1]);
     assert!(prepared.row_strided_delta);
+    let expected_lanes = prepared.queue_capacity.min(65_536)
+        * vyre_libs::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE;
     assert_eq!(
         prepared.delta_grid,
-        vyre_libs::graph::csr_queue_delta::csr_queue_delta_strided_dispatch_grid(
-            prepared.queue_capacity
-        )
+        vyre_primitives::lane_grid(expected_lanes, 256)
     );
     assert_eq!(
         prepared.delta_program.buffers()[0].name.as_ref(),

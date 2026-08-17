@@ -7,7 +7,7 @@ use graph_sweep_fixtures::bitset_words;
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 
-use vyre_libs::graph::csr_backward_traverse;
+use vyre_reference::composition_witness::csr_backward_traverse_witness;
 
 /// Independent oracle for ONE BACKWARD (reverse) CSR traversal step: a node `src` enters the output
 /// frontier iff it has at least one allowed out-edge whose TARGET is currently in the frontier (i.e).
@@ -61,7 +61,7 @@ fn sweep_graph_csr_backward_traverse_volume_oracle_matrix() {
         let expected = oracle_csr_backward_step(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
-        let actual = csr_backward_traverse::cpu_ref(
+        let actual = csr_backward_traverse_witness(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
         assert_eq!(

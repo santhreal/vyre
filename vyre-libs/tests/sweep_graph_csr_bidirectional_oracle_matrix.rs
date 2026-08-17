@@ -9,6 +9,7 @@ use vyre_foundation::ir::Program;
 use vyre_libs::graph::csr_bidirectional;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::csr_bidirectional_step_witness;
 use vyre_reference::value::Value;
 
 #[path = "../../tests/support/csr_sweep/mod.rs"]
@@ -25,27 +26,12 @@ fn csr_bidirectional_matches_independent_union_oracle_matrix() {
         let expected = oracle_bidirectional_step(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
-        let actual = csr_bidirectional::cpu_ref(
+        let actual = csr_bidirectional_step_witness(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
         assert_eq!(
             actual, expected,
             "Fix: csr_bidirectional cpu_ref oracle case {case} node_count={node_count} allow_mask={allow_mask:#x} must match the independent union oracle."
-        );
-
-        let mut reused = vec![0xDEAD_BEEF; bitset_words(node_count) + 3];
-        csr_bidirectional::cpu_ref_into(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
-            &frontier,
-            allow_mask,
-            &mut reused,
-        );
-        assert_eq!(
-            reused, expected,
-            "Fix: csr_bidirectional cpu_ref_into oracle case {case} must clear stale frontier capacity before writing."
         );
     }
 }
@@ -119,7 +105,7 @@ fn csr_bidirectional_fused_program_matches_cpu_ref_via_reference_eval() {
         let mut gpu = unpack(&outputs[out_idx].to_bytes());
         gpu.truncate(words);
 
-        let cpu = csr_bidirectional::cpu_ref(
+        let cpu = csr_bidirectional_step_witness(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
 

@@ -367,7 +367,10 @@ fn vector_memory_rewrite_transforms_eligible_load_and_store_chains_at_vec2_and_v
         rewritten_vec4_store.body.ops[8].kind,
         KernelOpKind::VectorStoreGlobal { width: 4 }
     );
-    assert_eq!(rewritten_vec4_store.body.ops[8].operands, vec![0, 0, 4, 5, 6, 7]);
+    assert_eq!(
+        rewritten_vec4_store.body.ops[8].operands,
+        vec![0, 0, 4, 5, 6, 7]
+    );
     assert!(verify(&rewritten_vec4_store).is_ok());
 }
 
@@ -430,7 +433,10 @@ fn vector_memory_rewrite_rejects_aliasing_hazards() {
         .build();
 
     let rewritten = rewrite_vector_memory(&desc);
-    assert_eq!(rewritten, desc, "intervening write to same slot must reject load vectorization");
+    assert_eq!(
+        rewritten, desc,
+        "intervening write to same slot must reject load vectorization"
+    );
 
     // Intervening write to different slot with unproven alias
     let mut alias_facts = AliasFactSet::default();
@@ -473,7 +479,10 @@ fn vector_memory_rewrite_rejects_intervening_side_effects() {
         .build();
 
     let rewritten = rewrite_vector_memory(&desc);
-    assert_eq!(rewritten, desc, "intervening atomic effect must reject vectorization");
+    assert_eq!(
+        rewritten, desc,
+        "intervening atomic effect must reject vectorization"
+    );
 }
 
 #[test]
@@ -507,7 +516,10 @@ fn vector_memory_rewrite_rejects_scheduling_fences() {
         .build();
 
     let rewritten = rewrite_vector_memory(&desc);
-    assert_eq!(rewritten, desc, "intervening barrier fence must reject vectorization");
+    assert_eq!(
+        rewritten, desc,
+        "intervening barrier fence must reject vectorization"
+    );
 }
 
 #[test]
@@ -538,7 +550,10 @@ fn vector_memory_rewrite_rejects_structured_control_boundaries() {
         .build();
 
     let rewritten = rewrite_vector_memory(&desc);
-    assert_eq!(rewritten, desc, "accesses across structured control boundary must not be fused across bodies");
+    assert_eq!(
+        rewritten, desc,
+        "accesses across structured control boundary must not be fused across bodies"
+    );
 }
 
 #[test]
@@ -591,7 +606,10 @@ fn vector_memory_rewrite_rejects_value_dependency_hazards() {
         .build();
 
     let rewritten = rewrite_vector_memory(&desc);
-    assert_eq!(rewritten, desc, "intervening value computation between stores must reject store fusion");
+    assert_eq!(
+        rewritten, desc,
+        "intervening value computation between stores must reject store fusion"
+    );
 }
 
 #[test]
@@ -636,7 +654,9 @@ fn vector_load_fusion_collapses_memory_ops_and_preserves_ssa_projections() {
         KernelOpKind::VectorLoadGlobal { width: 4 }
     );
     assert_eq!(rewritten.body.ops[4].operands, vec![0, 0]);
-    let vec_res = rewritten.body.ops[4].result.expect("VectorLoadGlobal must define result");
+    let vec_res = rewritten.body.ops[4]
+        .result
+        .expect("VectorLoadGlobal must define result");
 
     assert_eq!(
         rewritten.body.ops[5].kind,

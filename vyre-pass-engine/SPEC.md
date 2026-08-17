@@ -43,7 +43,7 @@ two crates one crate that cannot be built, reviewed or published apart.
 - Every edge above is declared in `docs/CRATE_OWNERSHIP.toml`. An edge in
   `Cargo.toml` that the registry does not carry, and a registry row no manifest
   declares, both fail.
-- The crate declares 3 features beyond `default`: `all-solvers`, `cpu-parity`,
+- The crate declares 2 features beyond `default`: `all-solvers`,
   `optimizer`. Each builds alone.
 - The public surface is recorded in `docs/public-api/vyre-pass-engine.txt`. An
   item added, removed or moved changes that file in the same change.

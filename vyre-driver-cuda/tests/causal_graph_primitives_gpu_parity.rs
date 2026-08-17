@@ -7,11 +7,11 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::adjustment_set::{
-    backdoor_descendants_check, backdoor_descendants_check_cpu,
-};
-use vyre_libs::graph::do_calculus::{
-    do_intervention_delete_incoming, do_intervention_delete_incoming_cpu,
+use vyre_libs::graph::adjustment_set::backdoor_descendants_check;
+use vyre_libs::graph::do_calculus::do_intervention_delete_incoming;
+use vyre_reference::composition_witness::{
+    backdoor_descendants_check_witness as backdoor_descendants_check_cpu,
+    do_intervention_delete_incoming_witness as do_intervention_delete_incoming_cpu,
 };
 
 fn run_backdoor_check(candidate_z: &[u32], descendants_of_x: &[u32], n: u32) -> u32 {

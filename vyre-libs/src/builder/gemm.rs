@@ -39,9 +39,10 @@ impl core::fmt::Debug for ContractionSemiring {
             Self::Standard => write!(f, "Standard"),
             Self::Closed(s) => write!(f, "Closed({s:?})"),
             Self::Fixed16_16 => write!(f, "Fixed16_16"),
-            Self::Custom { identity, .. } => {
-                f.debug_struct("Custom").field("identity", identity).finish()
-            }
+            Self::Custom { identity, .. } => f
+                .debug_struct("Custom")
+                .field("identity", identity)
+                .finish(),
         }
     }
 }
@@ -121,9 +122,9 @@ pub fn semiring_combine_expr(semiring: Semiring, a: Expr, b: Expr) -> Expr {
 #[must_use]
 pub fn semiring_accumulate_expr(semiring: Semiring, acc: Expr, val: Expr) -> Expr {
     match semiring {
-        Semiring::Real | Semiring::MaxPlus => Expr::add(acc, val),
+        Semiring::Real => Expr::add(acc, val),
         Semiring::MinPlus => Expr::min(acc, val),
-        Semiring::MaxTimes => Expr::max(acc, val),
+        Semiring::MaxPlus | Semiring::MaxTimes => Expr::max(acc, val),
         Semiring::BoolOr | Semiring::Lineage => Expr::bitor(acc, val),
         Semiring::BoolAnd => Expr::bitand(acc, val),
         Semiring::Gf2 => Expr::bitxor(acc, val),
@@ -180,7 +181,11 @@ impl core::fmt::Debug for ContractionEpilogue {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::None => write!(f, "None"),
-            Self::Bias { buffer, count, dtype } => f
+            Self::Bias {
+                buffer,
+                count,
+                dtype,
+            } => f
                 .debug_struct("Bias")
                 .field("buffer", buffer)
                 .field("count", count)
@@ -651,11 +656,9 @@ impl ContractionComposer {
     /// # Errors
     /// Returns [`TensorRefError`] on shape mismatch, dtype mismatch, or element overflow.
     pub fn build(self) -> Result<Program, TensorRefError> {
-        let generator = self.generator.unwrap_or(
-            self.options
-                .region_generator
-                .unwrap_or(self.op_id),
-        );
+        let generator = self
+            .generator
+            .unwrap_or(self.options.region_generator.unwrap_or(self.op_id));
 
         match &self.geometry {
             ContractionGeometry::Matmul2D { m, k, n } => {
@@ -741,10 +744,7 @@ impl ContractionComposer {
 
                 match &self.tiling {
                     ContractionTiling::Linear { workgroup_size } => {
-                        let wg = self
-                            .options
-                            .workgroup_size
-                            .unwrap_or(*workgroup_size);
+                        let wg = self.options.workgroup_size.unwrap_or(*workgroup_size);
                         let linear_wg = [
                             wg[0]
                                 .max(1)
@@ -819,21 +819,19 @@ impl ContractionComposer {
                             })
                         }
                     }
-                    ContractionTiling::Block1D { tile } => {
-                        build_block_1d_contraction(
-                            self.op_id,
-                            generator,
-                            self.a.name_str(),
-                            self.b.name_str(),
-                            self.bias.as_ref().map(TensorRef::name_str),
-                            self.out.name_str(),
-                            m,
-                            k,
-                            n,
-                            *tile,
-                            &self.dtype,
-                        )
-                    }
+                    ContractionTiling::Block1D { tile } => build_block_1d_contraction(
+                        self.op_id,
+                        generator,
+                        self.a.name_str(),
+                        self.b.name_str(),
+                        self.bias.as_ref().map(TensorRef::name_str),
+                        self.out.name_str(),
+                        m,
+                        k,
+                        n,
+                        *tile,
+                        &self.dtype,
+                    ),
                 }
             }
             ContractionGeometry::BatchedMatmul3D { batch, m, k, n } => {
@@ -890,25 +888,21 @@ impl ContractionComposer {
                     wg,
                 )
             }
-            ContractionGeometry::Strassen2x2 => {
-                build_strassen_2x2(
-                    self.op_id,
-                    generator,
-                    self.a.name_str(),
-                    self.b.name_str(),
-                    self.out.name_str(),
-                )
-            }
-            ContractionGeometry::StrassenOneLevel { n } => {
-                build_strassen_one_level(
-                    self.op_id,
-                    generator,
-                    self.a.name_str(),
-                    self.b.name_str(),
-                    self.out.name_str(),
-                    *n,
-                )
-            }
+            ContractionGeometry::Strassen2x2 => build_strassen_2x2(
+                self.op_id,
+                generator,
+                self.a.name_str(),
+                self.b.name_str(),
+                self.out.name_str(),
+            ),
+            ContractionGeometry::StrassenOneLevel { n } => build_strassen_one_level(
+                self.op_id,
+                generator,
+                self.a.name_str(),
+                self.b.name_str(),
+                self.out.name_str(),
+                *n,
+            ),
         }
     }
 }
@@ -1061,30 +1055,32 @@ fn build_batched_3d_contraction(
             name: b.to_string(),
             shape: vec![batch, k, n],
         })?;
-    let out_batch_stride = m
-        .checked_mul(n)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
+    let out_batch_stride =
+        m.checked_mul(n)
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: out.to_string(),
+                shape: vec![batch, m, n],
+            })?;
+    let a_count =
+        batch
+            .checked_mul(a_batch_stride)
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: a.to_string(),
+                shape: vec![batch, m, k],
+            })?;
+    let b_count =
+        batch
+            .checked_mul(b_batch_stride)
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: b.to_string(),
+                shape: vec![batch, k, n],
+            })?;
+    let out_count = batch.checked_mul(out_batch_stride).ok_or_else(|| {
+        TensorRefError::ElementCountOverflow {
             name: out.to_string(),
             shape: vec![batch, m, n],
-        })?;
-    let a_count = batch
-        .checked_mul(a_batch_stride)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: a.to_string(),
-            shape: vec![batch, m, k],
-        })?;
-    let b_count = batch
-        .checked_mul(b_batch_stride)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: b.to_string(),
-            shape: vec![batch, k, n],
-        })?;
-    let out_count = batch
-        .checked_mul(out_batch_stride)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
-            shape: vec![batch, m, n],
-        })?;
+        }
+    })?;
 
     let idx = Expr::var("idx");
     let batch_idx = Expr::var("batch_idx");
@@ -1181,24 +1177,25 @@ fn build_batched_rows_contraction(
     weight_out_in: bool,
     workgroup_size: [u32; 3],
 ) -> Result<Program, TensorRefError> {
-    let input_count = rows
-        .checked_mul(in_dim)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: x.to_string(),
-            shape: vec![rows, in_dim],
-        })?;
-    let output_count = rows
-        .checked_mul(out_dim)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
-            shape: vec![rows, out_dim],
-        })?;
-    let weight_count = in_dim
-        .checked_mul(out_dim)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: w.to_string(),
-            shape: vec![in_dim, out_dim],
-        })?;
+    let input_count =
+        rows.checked_mul(in_dim)
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: x.to_string(),
+                shape: vec![rows, in_dim],
+            })?;
+    let output_count =
+        rows.checked_mul(out_dim)
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: out.to_string(),
+                shape: vec![rows, out_dim],
+            })?;
+    let weight_count =
+        in_dim
+            .checked_mul(out_dim)
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: w.to_string(),
+                shape: vec![in_dim, out_dim],
+            })?;
 
     let index = Expr::var("index");
     let row = Expr::div(index.clone(), Expr::u32(out_dim));
@@ -1297,20 +1294,18 @@ fn build_block_1d_contraction(
     tile: u32,
     dtype: &DataType,
 ) -> Result<Program, TensorRefError> {
-    let weight_count = in_dim
-        .checked_mul(out_dim)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: w.to_string(),
-            shape: vec![in_dim, out_dim],
-        })?;
+    let weight_count =
+        in_dim
+            .checked_mul(out_dim)
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: w.to_string(),
+                shape: vec![in_dim, out_dim],
+            })?;
     let tile_count = in_dim.div_ceil(tile);
     let lane = Expr::var("lane");
     let kk = Expr::var("kk");
 
-    let initial_acc = bias.map_or_else(
-        || Expr::u32(0),
-        |b| Expr::load(b, lane.clone()),
-    );
+    let initial_acc = bias.map_or_else(|| Expr::u32(0), |b| Expr::load(b, lane.clone()));
 
     let body = vec![
         Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
@@ -1641,10 +1636,7 @@ fn build_strassen_one_level(
                             "b11",
                             Expr::load(
                                 b,
-                                Expr::add(
-                                    Expr::mul(Expr::var("k"), Expr::u32(n)),
-                                    Expr::var("sc"),
-                                ),
+                                Expr::add(Expr::mul(Expr::var("k"), Expr::u32(n)), Expr::var("sc")),
                             ),
                         ),
                         Node::let_bind(
@@ -1763,10 +1755,7 @@ fn build_strassen_one_level(
                     vec![Node::assign(
                         "c_val",
                         Expr::add(
-                            Expr::sub(
-                                Expr::add(Expr::var("m1"), Expr::var("m4")),
-                                Expr::var("m5"),
-                            ),
+                            Expr::sub(Expr::add(Expr::var("m1"), Expr::var("m4")), Expr::var("m5")),
                             Expr::var("m7"),
                         ),
                     )],
@@ -1799,10 +1788,7 @@ fn build_strassen_one_level(
                     vec![Node::assign(
                         "c_val",
                         Expr::add(
-                            Expr::add(
-                                Expr::sub(Expr::var("m1"), Expr::var("m2")),
-                                Expr::var("m3"),
-                            ),
+                            Expr::add(Expr::sub(Expr::var("m1"), Expr::var("m2")), Expr::var("m3")),
                             Expr::var("m6"),
                         ),
                     )],
@@ -1868,7 +1854,10 @@ mod tests {
         let program = ContractionComposer::tiled_2d("test_tiled", a, b, None, out, 16, 16, 16, 16)
             .build()
             .expect("tiled_2d should build");
-        assert!(program.buffers().iter().any(|b| matches!(b.access, BufferAccess::Workgroup)));
+        assert!(program
+            .buffers()
+            .iter()
+            .any(|b| matches!(b.access, BufferAccess::Workgroup)));
     }
 
     #[test]
@@ -1886,9 +1875,10 @@ mod tests {
             let a = TensorRef::u32_2d("a", 2, 2);
             let b = TensorRef::u32_2d("b", 2, 2);
             let out = TensorRef::u32_2d("out", 2, 2);
-            let program = ContractionComposer::semiring_2d("test_semiring", a, b, out, 2, 2, 2, semiring)
-                .build()
-                .expect("semiring_2d should build");
+            let program =
+                ContractionComposer::semiring_2d("test_semiring", a, b, out, 2, 2, 2, semiring)
+                    .build()
+                    .expect("semiring_2d should build");
             assert_eq!(program.buffers().len(), 3);
         }
     }

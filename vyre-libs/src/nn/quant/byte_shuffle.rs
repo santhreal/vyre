@@ -58,6 +58,11 @@ pub fn byte_shuffle(input: &str, output: &str, n: u32, elem_bytes: u32) -> Resul
     ))
 }
 
+const EXPECTED_BYTE_SHUFFLE_OUTPUT_BYTES: [u8; 24] = [
+    0x0A, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00,
+    0x15, 0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -69,10 +74,7 @@ inventory::submit! {
             // 3 elements × 2 bytes: [a0,a1, b0,b1, c0,c1]
             vyre_primitives::wire::pack_u32_slice(&[10u32, 11, 20, 21, 30, 31]),
         ]]),
-        Some(|| vec![vec![
-            // Byte-transposed: [a0,b0,c0, a1,b1,c1]
-            vyre_primitives::wire::pack_u32_slice(&[10u32, 20, 30, 11, 21, 31]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_BYTE_SHUFFLE_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
 }

@@ -127,8 +127,8 @@ fn cat_a_dot_matches_cpu_reference() {
 
 #[test]
 fn cat_a_aho_corasick_matches_cpu_reference() {
-    use vyre_libs::pattern::dfa_compile;
     use vyre_libs::pattern::aho_corasick;
+    use vyre_libs::pattern::dfa_compile;
 
     let patterns: [&[u8]; 4] = [b"he", b"she", b"his", b"hers"];
     let compiled = dfa_compile(&patterns);

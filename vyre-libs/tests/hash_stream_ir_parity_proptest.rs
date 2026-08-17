@@ -15,8 +15,9 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::hash::adler32::{adler32, adler32_program};
-use vyre_libs::hash::multi_hash::{multi_hash_program, multi_hash_reference};
+use vyre_libs::hash::adler32::adler32_program;
+use vyre_libs::hash::multi_hash::multi_hash_program;
+use vyre_reference::composition_witness::{adler32_witness as adler32, multi_hash_witness};
 
 fn bytes_to_words(bytes: &[u8]) -> Vec<u32> {
     bytes.iter().map(|&b| u32::from(b)).collect()
@@ -60,7 +61,7 @@ proptest! {
 
     #[test]
     fn multi_hash_ir_matches_oracle(bytes in prop::collection::vec(any::<u8>(), 0..=256)) {
-        prop_assert_eq!(run_multi(&bytes), multi_hash_reference(&bytes), "len={}", bytes.len());
+        prop_assert_eq!(run_multi(&bytes), multi_hash_witness(&bytes), "len={}", bytes.len());
     }
 }
 
@@ -76,7 +77,7 @@ fn hash_stream_ir_anchors() {
     for s in [b"abc".as_slice(), b"", b"the quick brown fox jumps over"] {
         assert_eq!(
             run_multi(s),
-            multi_hash_reference(s),
+            multi_hash_witness(s),
             "multi_hash anchor {s:?}"
         );
     }

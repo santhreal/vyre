@@ -204,12 +204,16 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // Expected fixed-point accumulators before caller-side normalization.
-            let to_bytes = |v: &[u32]| vyre_primitives::wire::pack_u32_slice(v);
-            vec![vec![to_bytes(&[
-                8_192_000, 13_107_200, 19_660_800, 26_214_400, 32_768_000, 39_321_600,
-                45_875_200, 50_790_400,
-            ])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x7d, 0x00, // 8_192_000
+                0x00, 0x00, 0xc8, 0x00, // 13_107_200
+                0x00, 0x00, 0x2c, 0x01, // 19_660_800
+                0x00, 0x00, 0x90, 0x01, // 26_214_400
+                0x00, 0x00, 0xf4, 0x01, // 32_768_000
+                0x00, 0x00, 0x58, 0x02, // 39_321_600
+                0x00, 0x00, 0xbc, 0x02, // 45_875_200
+                0x00, 0x00, 0x07, 0x03, // 50_790_400
+            ]]]
         }),
     )
 }
@@ -218,12 +222,12 @@ inventory::submit! {
 // CPU reference implementation
 // ---------------------------------------------------------------------------
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use vyre_reference::composition_witness::{
+        conv1d_witness as cpu_conv1d, conv1d_witness_into as cpu_conv1d_into,
+    };
     #[test]
     fn cpu_conv1d_identity_kernel() {
         // Identity kernel: [0, 1.0, 0] in fixed-point = [0, 65536, 0]

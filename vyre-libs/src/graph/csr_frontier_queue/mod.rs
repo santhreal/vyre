@@ -23,7 +23,6 @@ use crate::graph::csr_frontier_step::{
 };
 
 pub mod batch_memory;
-mod cpu_reference;
 mod graph_validation;
 mod packed_word_compaction;
 mod queue_compaction;

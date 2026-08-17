@@ -380,9 +380,12 @@ inventory::submit! {
             vec![vec![to_bytes(&bits)]]
         }),
         Some(|| {
-            let expected = [0u32, 4, 20];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            // [0, 4, 20]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x04, 0x00, 0x00, 0x00, // 4
+                0x14, 0x00, 0x00, 0x00, // 20
+            ]]]
         }),
     )
     .with_category("math")
@@ -400,9 +403,14 @@ inventory::submit! {
             vec![vec![to_bytes(&bits), to_bytes(&superblocks), to_bytes(&queries)]]
         }),
         Some(|| {
-            let expected = [0u32, 1, 3, 3, 4];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            // [0, 1, 3, 3, 4]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x01, 0x00, 0x00, 0x00, // 1
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x04, 0x00, 0x00, 0x00, // 4
+            ]]]
         }),
     )
     .with_category("math")

@@ -46,7 +46,7 @@ pub fn taint_kill(
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_ref(frontier_in: &[u32], kill_set: &[u32]) -> Vec<u32> {
-    crate::bitset::and_not::cpu_ref(frontier_in, kill_set)
+    vyre_reference::composition_witness::bitset_and_not_witness(frontier_in, kill_set)
 }
 
 /// Marker type for the taint_kill dataflow primitive.

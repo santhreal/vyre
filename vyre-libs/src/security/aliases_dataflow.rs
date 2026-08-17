@@ -252,21 +252,22 @@ fn witness_inputs() -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn witness_expected_outputs() -> Vec<Vec<u8>> {
-    witness_program()
-        .buffers()
-        .iter()
-        .filter(|decl| decl.is_output() || decl.access() == BufferAccess::ReadWrite)
-        .map(|decl| vyre_primitives::wire::pack_u32_slice(&witness_words(decl.name(), true)))
-        .collect()
-}
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         witness_program,
         Some(|| vec![witness_inputs()]),
-        Some(|| vec![witness_expected_outputs()]),
+        Some(|| {
+            vec![vec![
+                vec![3, 0, 0, 0], // reach_x = {0, 1}
+                vec![6, 0, 0, 0], // reach_y = {1, 2}
+                vec![2, 0, 0, 0], // hop_x = {1}
+                vec![4, 0, 0, 0], // hop_y = {2}
+                vec![0, 0, 0, 0], // x_in_y = {}
+                vec![2, 0, 0, 0], // y_in_x = {1}
+                vec![2, 0, 0, 0], // out = {1}
+            ]]
+        }),
     )
     .with_category("security")
 }

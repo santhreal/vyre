@@ -51,9 +51,12 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::mori_zwanzig::mz_project_step;
-#[cfg(test)]
-use crate::math::mori_zwanzig::mz_project_step_cpu_into;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    cluster_projection_matrix_witness_into, mori_zwanzig_coarsen_via_clustering_witness_into,
+    mori_zwanzig_project_witness_into as reference_mz_project_step_into,
+};
 
 /// Caller-owned dispatch scratch for fixed-point Mori-Zwanzig projection.
 #[derive(Debug, Default)]
@@ -63,21 +66,21 @@ pub struct RegionCoarsenGpuScratch {
 
 /// Reusable buffers for Mori-Zwanzig region coarsening.
 #[derive(Debug, Default)]
-pub struct RegionCoarsenScratch {
+#[cfg(test)]
+pub(crate) struct RegionCoarsenScratch {
     cluster_sizes: Vec<u32>,
     projection: Vec<f64>,
-    #[cfg(test)]
     coarse_state: Vec<f64>,
 }
 
+#[cfg(test)]
 impl RegionCoarsenScratch {
     /// Create empty reusable region-coarsening scratch.
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    #[cfg(test)]
     fn projection_ptr(&self) -> *const f64 {
         self.projection.as_ptr()
     }
@@ -92,14 +95,16 @@ impl RegionCoarsenScratch {
 ///
 /// Panics if any assignment exceeds k-1.
 #[must_use]
-pub fn cluster_projection_matrix(assignments: &[u32], n: u32, k: u32) -> Vec<f64> {
+#[cfg(test)]
+pub(crate) fn cluster_projection_matrix(assignments: &[u32], n: u32, k: u32) -> Vec<f64> {
     let mut scratch = RegionCoarsenScratch::new();
     cluster_projection_matrix_into(assignments, n, k, &mut scratch).to_vec()
 }
 
 /// Build a cluster-projection matrix using caller-owned scratch.
 #[must_use]
-pub fn cluster_projection_matrix_into<'a>(
+#[cfg(test)]
+pub(crate) fn cluster_projection_matrix_into<'a>(
     assignments: &[u32],
     n: u32,
     k: u32,
@@ -107,38 +112,13 @@ pub fn cluster_projection_matrix_into<'a>(
 ) -> &'a [f64] {
     use crate::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
-    assert!(n > 0);
-    assert!(k > 0);
-    assert_eq!(assignments.len(), n as usize);
-    let n = n as usize;
-    let k = k as usize;
-
-    scratch.cluster_sizes.clear();
-    scratch.cluster_sizes.resize(k, 0);
-    for &c in assignments {
-        assert!(
-            (c as usize) < k,
-            "Fix: assignment {c} exceeds cluster count {k}."
-        );
-        scratch.cluster_sizes[c as usize] += 1;
-    }
-
-    scratch.projection.clear();
-    scratch.projection.resize(n * n, 0.0);
-    for i in 0..n {
-        let ci = assignments[i] as usize;
-        let size = scratch.cluster_sizes[ci] as f64;
-        if size == 0.0 {
-            continue;
-        }
-        let inv = 1.0 / size;
-        #[allow(clippy::needless_range_loop)]
-        for j in 0..n {
-            if assignments[j] as usize == ci {
-                scratch.projection[i * n + j] = inv;
-            }
-        }
-    }
+    cluster_projection_matrix_witness_into(
+        assignments,
+        n,
+        k,
+        &mut scratch.cluster_sizes,
+        &mut scratch.projection,
+    );
     &scratch.projection
 }
 
@@ -151,7 +131,7 @@ pub fn cluster_projection_matrix_into<'a>(
 /// Panics if `state.len() != n`.
 #[must_use]
 #[cfg(test)]
-pub fn coarsen_region_state(p_matrix: &[f64], state: &[f64], n: u32) -> Vec<f64> {
+pub(crate) fn coarsen_region_state(p_matrix: &[f64], state: &[f64], n: u32) -> Vec<f64> {
     let mut out = Vec::new();
     reference_coarsen_region_state_into(p_matrix, state, n, &mut out);
     out
@@ -159,7 +139,7 @@ pub fn coarsen_region_state(p_matrix: &[f64], state: &[f64], n: u32) -> Vec<f64>
 
 /// Apply Mori-Zwanzig projection using caller-owned output storage.
 #[cfg(test)]
-pub fn reference_coarsen_region_state_into(
+pub(crate) fn reference_coarsen_region_state_into(
     p_matrix: &[f64],
     state: &[f64],
     n: u32,
@@ -167,9 +147,8 @@ pub fn reference_coarsen_region_state_into(
 ) {
     use crate::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
     bump(&mori_zwanzig_region_coarsen_calls);
-    mz_project_step_cpu_into(p_matrix, state, n, out);
+    reference_mz_project_step_into(p_matrix, state, n, out);
 }
-
 /// Primitive-native fixed-point production path for applying a
 /// Mori-Zwanzig projection to a per-Region scalar state.
 ///
@@ -288,7 +267,12 @@ pub fn coarsen_region_state_fixed_via_with_scratch_into(
 /// Convenience: derive the projection AND apply it in one step.
 #[must_use]
 #[cfg(test)]
-pub fn coarsen_via_clustering(state: &[f64], assignments: &[u32], n: u32, k: u32) -> Vec<f64> {
+pub(crate) fn coarsen_via_clustering(
+    state: &[f64],
+    assignments: &[u32],
+    n: u32,
+    k: u32,
+) -> Vec<f64> {
     let mut scratch = RegionCoarsenScratch::new();
     reference_coarsen_via_clustering_into(state, assignments, n, k, &mut scratch).to_vec()
 }
@@ -296,26 +280,25 @@ pub fn coarsen_via_clustering(state: &[f64], assignments: &[u32], n: u32, k: u32
 /// Derive and apply the projection using caller-owned scratch.
 #[must_use]
 #[cfg(test)]
-pub fn reference_coarsen_via_clustering_into<'a>(
+pub(crate) fn reference_coarsen_via_clustering_into<'a>(
     state: &[f64],
     assignments: &[u32],
     n: u32,
     k: u32,
     scratch: &'a mut RegionCoarsenScratch,
 ) -> &'a [f64] {
-    let projection_len = cluster_projection_matrix_into(assignments, n, k, scratch).len();
-    debug_assert_eq!(
-        projection_len,
-        (n as usize).saturating_mul(n as usize),
-        "cluster projection matrix must be n*n (per-row cluster-uniform weights over n columns)"
+    use crate::telemetry::{bump, mori_zwanzig_region_coarsen_calls};
+    bump(&mori_zwanzig_region_coarsen_calls);
+    mori_zwanzig_coarsen_via_clustering_witness_into(
+        state,
+        assignments,
+        n,
+        k,
+        &mut scratch.cluster_sizes,
+        &mut scratch.projection,
+        &mut scratch.coarse_state,
     );
-    let RegionCoarsenScratch {
-        projection,
-        coarse_state,
-        ..
-    } = scratch;
-    mz_project_step_cpu_into(projection, state, n, coarse_state);
-    coarse_state
+    &scratch.coarse_state
 }
 
 #[cfg(test)]

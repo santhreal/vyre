@@ -2,14 +2,42 @@
 //! and the fused inflate-then-scan path.
 
 use super::inflate::{
-    cpu_inflate_stored, cpu_ref, inflate_stored_block, inflate_stored_block_then_aho_corasick,
-    inflate_stored_reference_words, DYNAMIC_HUFFMAN_REJECT, FAMILY_PREFIX, FIXED_HUFFMAN_REJECT,
-    INFLATED_LEN_BUFFER, RESERVED_BTYPE_FIX, STORED_HEADER_FIX,
+    inflate_stored_block, inflate_stored_block_then_aho_corasick, DYNAMIC_HUFFMAN_REJECT,
+    FAMILY_PREFIX, FIXED_HUFFMAN_REJECT, INFLATED_LEN_BUFFER, RESERVED_BTYPE_FIX,
+    STORED_HEADER_FIX,
 };
 use crate::buffer_names::fixed_name;
 use crate::pattern::{dfa_compile, CompiledDfa};
 use vyre_primitives::wire::pack_u32_slice as pack_words;
+use vyre_reference::composition_witness::{inflate_stored_witness, InflateStoredWitness};
 use vyre_reference::value::Value;
+
+fn inflate_error(input: &[u32]) -> &'static str {
+    match input.first().copied().unwrap_or(0) >> 1 & 0x3 {
+        1 => FIXED_HUFFMAN_REJECT,
+        2 => DYNAMIC_HUFFMAN_REJECT,
+        3 => RESERVED_BTYPE_FIX,
+        _ => STORED_HEADER_FIX,
+    }
+}
+
+fn inflate_stored_reference_words(input: &[u32]) -> Result<InflateStoredWitness, &'static str> {
+    inflate_stored_witness(input).map_err(|_| inflate_error(input))
+}
+
+fn reference_inflate_stored(input: &[u32]) -> Option<InflateStoredWitness> {
+    inflate_stored_reference_words(input).ok()
+}
+
+fn reference_inflate_stored_result(input: &[u32]) -> Result<(Vec<u32>, u32), &'static str> {
+    let result = inflate_stored_reference_words(input)?;
+    Ok((result.data, result.inflated_len))
+}
+
+fn reference_inflate_stored_bytes(input: &[u8]) -> Result<(Vec<u32>, u32), &'static str> {
+    let words: Vec<u32> = input.iter().map(|&b| u32::from(b)).collect();
+    reference_inflate_stored_result(&words)
+}
 
 #[test]
 fn inflate_stored_hello() {
@@ -26,7 +54,7 @@ fn inflate_stored_hello() {
         b'l' as u32,
         b'o' as u32,
     ];
-    let result = cpu_inflate_stored(&input).unwrap();
+    let result = reference_inflate_stored(&input).unwrap();
     assert_eq!(result.inflated_len, 5);
     assert_eq!(
         result.data,
@@ -47,7 +75,7 @@ fn inflate_stored_empty_block() {
         0x00, 0x00, // LEN = 0
         0xFF, 0xFF, // NLEN = 0xFFFF
     ];
-    let result = cpu_inflate_stored(&input).unwrap();
+    let result = reference_inflate_stored(&input).unwrap();
     assert_eq!(result.inflated_len, 0);
     assert!(result.data.is_empty());
 }
@@ -58,7 +86,7 @@ fn inflate_stored_rejects_fixed_huffman() {
         0x03, // BFINAL=1, BTYPE=01 (fixed Huffman)
         0x00, 0x00, 0xFF, 0xFF,
     ];
-    assert!(cpu_inflate_stored(&input).is_none());
+    assert!(reference_inflate_stored(&input).is_none());
 }
 
 #[test]
@@ -75,7 +103,7 @@ fn inflate_stored_rejects_len_nlen_mismatch() {
         b'x' as u32,
         b'x' as u32,
     ];
-    assert!(cpu_inflate_stored(&input).is_none());
+    assert!(reference_inflate_stored(&input).is_none());
 }
 
 #[test]
@@ -85,7 +113,7 @@ fn inflate_stored_rejects_truncated_payload() {
         inflate_stored_reference_words(&input),
         Err(STORED_HEADER_FIX)
     );
-    assert!(cpu_inflate_stored(&input).is_none());
+    assert!(reference_inflate_stored(&input).is_none());
 }
 
 fn run(input: &[u8]) -> (Vec<u32>, u32) {
@@ -116,14 +144,16 @@ fn stored_block_decodes_without_host_roundtrip() {
 }
 
 #[test]
-fn cpu_reference_names_fixed_huffman_gap() {
-    let err = cpu_ref(&[0x03, 0, 0, 0, 0]).expect_err("BTYPE=1 must reject");
+fn reference_names_fixed_huffman_gap() {
+    let err =
+        reference_inflate_stored_result(&[0x03, 0, 0, 0, 0]).expect_err("BTYPE=1 must reject");
     assert_eq!(err, FIXED_HUFFMAN_REJECT);
 }
 
 #[test]
-fn cpu_reference_names_dynamic_huffman_gap() {
-    let err = cpu_ref(&[0x05, 0, 0, 0, 0]).expect_err("BTYPE=2 must reject");
+fn reference_names_dynamic_huffman_gap() {
+    let err =
+        reference_inflate_stored_result(&[0x05, 0, 0, 0, 0]).expect_err("BTYPE=2 must reject");
     assert_eq!(err, DYNAMIC_HUFFMAN_REJECT);
 }
 
@@ -265,7 +295,7 @@ fn generic_default_names_are_family_scoped() {
 }
 
 #[test]
-fn generated_stored_blocks_match_cpu_reference_and_clear_length_once() {
+fn generated_stored_blocks_match_reference_and_clear_length_once() {
     for seed in 0u32..2048 {
         let len = (seed % 65) as usize;
         let mut state = seed ^ 0x1F1A_7E55;
@@ -283,7 +313,7 @@ fn generated_stored_blocks_match_cpu_reference_and_clear_length_once() {
         input.extend_from_slice(&payload);
 
         let (actual, actual_len) = run(&input);
-        let (expected, expected_len) = cpu_ref(&input)
+        let (expected, expected_len) = reference_inflate_stored_bytes(&input)
             .unwrap_or_else(|error| panic!("generated stored block rejected seed {seed}: {error}"));
         assert_eq!(actual_len, expected_len, "inflated length seed {seed}");
         assert_eq!(
@@ -310,7 +340,7 @@ fn generated_non_stored_and_corrupt_headers_report_canonical_reasons() {
             2 => input[0] = 0x07,
             _ => input[3] ^= 0x5A,
         }
-        let err = match cpu_ref(&input) {
+        let err = match reference_inflate_stored_bytes(&input) {
             Ok(_) => panic!("generated corrupt block accepted seed {seed}"),
             Err(error) => error,
         };

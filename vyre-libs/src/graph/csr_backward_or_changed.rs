@@ -3,24 +3,17 @@
 use vyre_foundation::ir::Program;
 
 use crate::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::lane_grid;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::csr_backward_or_changed";
 
 /// Workgroup size for the reverse CSR frontier kernel (one thread per source node).
-pub const CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [lane_grid::PORTABLE_WARP_WIDTH, 1, 1];
+pub const CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Compute the dispatch grid shape for reverse CSR frontier expansion.
 #[must_use]
 pub const fn csr_backward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
-    let block = CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE[0];
-    let groups = if node_count == 0 {
-        1
-    } else {
-        (node_count + block - 1) / block
-    };
-    [groups, 1, 1]
+    vyre_primitives::lane_grid(node_count, CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE[0])
 }
 
 /// Build a Program: reverse CSR frontier expansion over an in-place accumulator bitset.
@@ -47,33 +40,36 @@ pub fn csr_backward_or_changed_parallel(
     .build_parallel_backward_or_changed(frontier_out, changed)
 }
 
+const EXPECTED_CSR_BACKWARD_OR_CHANGED_FRONTIER_BYTES: [u8; 4] = [7, 0, 0, 0];
+const EXPECTED_CSR_BACKWARD_OR_CHANGED_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
-            let shape = ProgramGraphShape { node_count: 4, edge_count: 4 };
-            csr_backward_or_changed_parallel(shape, "frontier", "changed", 0xFFFF_FFFF)
+            let shape = ProgramGraphShape {
+                node_count: 4,
+                edge_count: 4,
+            };
+            csr_backward_or_changed_parallel(shape, "frontier", "changed", 1)
         },
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![
-                to_bytes(&[0, 1, 2, 3, 4]),
-                to_bytes(&[1, 2, 3, 0]),
-                to_bytes(&[1, 1, 1, 1]),
-                to_bytes(&[0b0000_1000]),
-                to_bytes(&[0]),
-            ]
+            vec![vec![
+                to_bytes(&[0, 0, 0, 0]),    // pg_nodes
+                to_bytes(&[0, 2, 3, 4, 4]), // pg_edge_offsets
+                to_bytes(&[1, 2, 3, 3]),    // pg_edge_targets
+                to_bytes(&[1, 1, 1, 1]),    // pg_edge_kind_mask
+                to_bytes(&[0, 0, 0, 0]),    // pg_node_tags
+                to_bytes(&[0b0110]),        // frontier seed = {1, 2}
+                to_bytes(&[0]),             // changed
+            ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![
-                to_bytes(&[0, 1, 2, 3, 4]),
-                to_bytes(&[1, 2, 3, 0]),
-                to_bytes(&[1, 1, 1, 1]),
-                to_bytes(&[0b0000_1100]),
-                to_bytes(&[1]),
-            ]
+            vec![vec![
+                EXPECTED_CSR_BACKWARD_OR_CHANGED_FRONTIER_BYTES.to_vec(),
+                EXPECTED_CSR_BACKWARD_OR_CHANGED_CHANGED_BYTES.to_vec(),
+            ]]
         }),
     )
 }

@@ -150,6 +150,9 @@ pub fn mlp_backward(
     )
 }
 
+const EXPECTED_MLP_BACKWARD_OUTPUT_BYTES: [u8; 8] =
+    [0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x80, 0x40];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -166,14 +169,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // W1=W2=I, b1=0, x=[1,2], grad_out=[1,1]
-            // h = x = [1, 2], d_act = max(0.5*h, 2*h) = [2, 4]
-            // grad_h_act[j] = sum_k grad_out[k]*W2[j*2+k] → W2=I so [1,1]
-            // grad_h = d_act * grad_h_act = [2*1, 4*1] = [2, 4]
-            // grad_x[i] = sum_j grad_h[j]*W1[i*2+j] → W1=I so [2, 4]
-            let out = [2.0_f32, 4.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_MLP_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

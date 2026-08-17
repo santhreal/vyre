@@ -31,9 +31,9 @@
 //!
 //! Accept metadata: a DFA state accepts if any NFA state in its set is an
 //! accept. `output_records[state]` enumerates every pattern_id whose accept
-//! state is in the set, preserving multi-match semantics.
-
+#[cfg(test)]
 mod dedup;
+
 mod error;
 mod state_set;
 mod subset;
@@ -41,7 +41,7 @@ mod subset;
 #[cfg(test)]
 #[path = "../../../tests/internal/pattern/nfa_to_dfa/mod.rs"]
 mod tests;
-
+#[cfg(test)]
 pub use dedup::{
     dfa_fingerprint, dfa_wire_bytes, DfaDedupBatch, DfaDedupResult, DfaDedupStats, DfaDedupTable,
 };

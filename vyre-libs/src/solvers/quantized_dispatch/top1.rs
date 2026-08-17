@@ -1,4 +1,5 @@
 use super::*;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Compute top-1 scores and row indices for packed signed INT4 batched matmul through the backend.
 ///
@@ -73,6 +74,13 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
         cols,
     )?;
 
+    let batch_usize = batch as usize;
+    let expected_words = batch_usize.checked_mul(2).ok_or_else(|| {
+        DispatchError::BadInputs(format!(
+            "Fix: i4x8_batched_matmul_top1_f32_scaled_via batch={batch} overflows usize."
+        ))
+    })?;
+
     let QuantizedBatchedMatmulTop1GpuScratch {
         inputs,
         program_cache,
@@ -108,19 +116,15 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
     let mut values = Vec::new();
     decode_f32_output_exact(
         packed,
-        batch as usize * 2,
+        expected_words,
         "i4x8_batched_matmul_top1_f32_scaled_via",
         &mut values,
     )?;
-    let batch = batch as usize;
     scores_out.clear();
     indices_out.clear();
-    scores_out.reserve(batch);
-    indices_out.reserve(batch);
-    for b in 0..batch {
-        scores_out.push(values[b]);
-        // The kernel stored `cast(f32, best_index)`; recover the integer index from that exact f32.
-        indices_out.push(values[batch + b] as u32);
-    }
+    scores_out.reserve(batch_usize);
+    indices_out.reserve(batch_usize);
+    scores_out.extend_from_slice(&values[..batch_usize]);
+    indices_out.extend(values[batch_usize..].iter().map(|&v| v as u32));
     Ok(())
 }

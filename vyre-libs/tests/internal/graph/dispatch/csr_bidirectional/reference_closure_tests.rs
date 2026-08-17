@@ -1,5 +1,6 @@
-use crate::graph::csr_bidirectional::{
-    reference_bidirectional_closure, reference_bidirectional_step,
+use super::{
+    reference_bidirectional_closure, reference_bidirectional_closure_into,
+    reference_bidirectional_step,
 };
 use crate::graph::csr_closure_inputs::graphs;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
@@ -44,4 +45,29 @@ fn closure_is_idempotent_at_fixpoint() {
     );
     // Bidirectional step from saturated set keeps everything set.
     assert_eq!(out, saturated);
+}
+
+/// Caller-owned scratch reuse: pointer and capacity preserved through closure iterations.
+#[test]
+fn closure_into_reuses_caller_scratch_buffers() {
+    let g = graphs::CHAIN_4;
+    let mut current = Vec::with_capacity(16);
+    let mut next = Vec::with_capacity(16);
+    let cur_ptr = current.as_ptr();
+    let nxt_ptr = next.as_ptr();
+
+    reference_bidirectional_closure_into(
+        CsrClosureInputs::allow_all(g, 10),
+        &[0b0001],
+        &mut current,
+        &mut next,
+    );
+
+    assert_eq!(current, vec![0b1111]);
+    assert_eq!(current.as_ptr(), cur_ptr, "current buffer capacity reused");
+    assert_eq!(
+        next.as_ptr(),
+        nxt_ptr,
+        "next scratch buffer capacity reused"
+    );
 }

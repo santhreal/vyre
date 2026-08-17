@@ -74,23 +74,16 @@ vyre = { path = "../vyre", default-features = false }
 # vyre_reference::reference_eval) and by differential tests.
 vyre-reference = { path = "../vyre-reference" }
 # Required by several _gpu_parity tests that import vyre_primitives::*.
-# `cpu-parity` exposes the CPU reference oracles (hex_decode_reference_packed, …)
-# these parity tests diff the GPU output against; gated out of production builds.
 # `hardware` is the one domain this crate declares. The composition domains the
 # parity tests reach into (bitset, decode, fixpoint, graph, hash, math,
 # matching, parsing, reduce, text, visual) come from the vyre-libs dev-dependency
 # above on `full`, which is why naming them here is no longer possible or needed.
 vyre-primitives = { path = "../vyre-primitives", features = [
     "hardware",
-    "cpu-parity",
 ], default-features = false }
-# Required by tests/union_find_gpu_parity.rs, which imports the CPU union-find
-# reference oracles `union_find_emit::{canonicalize_parent_to_roots,
-# reference_union_find_alias}`. Those are `#[cfg(any(test, feature = "cpu-parity"))]`
-# in vyre-pass-engine, so a downstream test build must enable `cpu-parity`
-# explicitly (the `test` cfg only applies to that crate's own tests, not ours).
+# Required by self_optimizer_* e2e and differential tests.
 # Dev-dep only -> gated out of the production lib build keyhog links.
-vyre-pass-engine = { path = "../vyre-pass-engine", features = ["cpu-parity"] }
+vyre-pass-engine = { path = "../vyre-pass-engine" }
 
 [[test]]
 name = "cuda_graph_dispatch_parity"

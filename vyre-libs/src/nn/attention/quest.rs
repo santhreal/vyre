@@ -86,6 +86,13 @@ pub fn quest_paging(
     )
 }
 
+const EXPECTED_QUEST_SCORES_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x7F, 0xFF, 0xFF, 0xFF, 0x7F, 0xFF, 0x00, 0x00, 0x00, 0x3F,
+];
+const EXPECTED_QUEST_IO_QUEUE_BYTES: [u8; 16] = [
+    0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -107,17 +114,10 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32_bytes =
-                |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-
-            // scores after selection: only slots that were picked
-            // (indices 2 and 1) are overwritten with SCORE_SENTINEL.
-            // Indices 0 and 3 retain their pass-1 dot-product scores.
-            let scores = [0.0, SCORE_SENTINEL, SCORE_SENTINEL, 0.5];
-            // io_queue[0..2] = [2, 1] (top-2 in descending score).
-            // io_queue[2..4] = [0, 0] (zero-filled on pass 1).
-            let io_queue = [2u32, 1, 0, 0];
-            vec![vec![to_f32_bytes(&scores), crate::fixture_bytes::u32_bytes(&io_queue)]]
+            vec![vec![
+                EXPECTED_QUEST_SCORES_BYTES.to_vec(),
+                EXPECTED_QUEST_IO_QUEUE_BYTES.to_vec(),
+            ]]
         }),
     )
     .with_category("nn")

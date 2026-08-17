@@ -379,3 +379,37 @@ fn duplicate_literal_accept_field_contains_first_pattern() {
         "duplicate literals must both appear in output_records"
     );
 }
+
+#[test]
+fn from_bytes_wire_program_builder_round_trip() {
+    let dfa = dfa_compile(&[b"test".as_slice()]);
+    let bytes = dfa.to_bytes().expect("encode DFA wire blob");
+    let prog = crate::pattern::dfa::aho_corasick_program_from_dfa_wire(
+        &bytes,
+        "haystack",
+        "transitions",
+        "accept",
+        "matches",
+        32,
+    )
+    .expect("decode DFA wire blob into Program");
+    assert_eq!(prog.workgroup_size, [64, 1, 1]);
+}
+
+#[test]
+fn from_bytes_wire_program_builder_rejects_bad_magic() {
+    let mut bytes = dfa_compile(&[b"test".as_slice()])
+        .to_bytes()
+        .expect("encode DFA wire blob");
+    bytes[0] = 0;
+    let err = crate::pattern::dfa::aho_corasick_program_from_dfa_wire(
+        &bytes,
+        "haystack",
+        "transitions",
+        "accept",
+        "matches",
+        32,
+    )
+    .unwrap_err();
+    assert!(matches!(err, DfaWireError::BadMagic));
+}

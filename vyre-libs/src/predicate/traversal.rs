@@ -1,8 +1,6 @@
 use vyre_foundation::ir::Program;
 
-use crate::graph::csr_frontier_step::{
-    csr_frontier_step_program, define_csr_frontier_step_cpu_ref, CsrFrontierStepKind,
-};
+use crate::graph::csr_frontier_step::{csr_frontier_step_program, CsrFrontierStepKind};
 use crate::graph::program_graph::ProgramGraphShape;
 
 pub(crate) fn forward_edge_program(
@@ -37,24 +35,6 @@ pub(crate) fn backward_edge_program(
         frontier_out,
         edge_mask,
     )
-}
-
-define_csr_frontier_step_cpu_ref! {
-    direction: CsrFrontierStepKind::Forward,
-    label: "predicate forward edge step",
-    /// CPU reference for a predicate that is one forward masked step.
-    pub(crate) fn cpu_ref_forward,
-    /// Same forward step into caller-owned output storage.
-    pub(crate) fn cpu_ref_forward_into,
-}
-
-define_csr_frontier_step_cpu_ref! {
-    direction: CsrFrontierStepKind::Backward,
-    label: "predicate backward edge step",
-    /// CPU reference for a predicate that is one reverse masked step.
-    pub(crate) fn cpu_ref_backward,
-    /// Same reverse step into caller-owned output storage.
-    pub(crate) fn cpu_ref_backward_into,
 }
 
 #[cfg(test)]

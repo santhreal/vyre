@@ -23,6 +23,9 @@ use vyre_libs::reduce::multi_block_prefix_scan;
 
 const BLOCK_LANES: u32 = 1024;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::{
+    exclusive_prefix_sum_witness, inclusive_prefix_sum_witness,
+};
 use vyre_reference::value::Value;
 
 /// Position of the buffer `name` within `reference_eval`'s returned outputs, which are
@@ -109,7 +112,7 @@ fn multi_block_gpu_program_matches_cpu_ref_across_block_boundary() {
     ] {
         let input: Vec<u32> = (0..n).map(|i| (i % 7) + 1).collect();
         let gpu = gpu_scan(&input);
-        let cpu = multi_block_prefix_scan::cpu_ref(&input);
+        let cpu = inclusive_prefix_sum_witness(&input);
 
         assert_eq!(gpu.len(), input.len(), "output length mismatch at n={n}");
         if let Some(i) = (0..gpu.len()).find(|&i| gpu[i] != cpu[i]) {
@@ -166,7 +169,7 @@ fn multi_block_exclusive_scan_matches_cpu_ref_across_block_boundary() {
     for &n in &[BLOCK_LANES + 1, BLOCK_LANES * 2, BLOCK_LANES * 3 + 7] {
         let input: Vec<u32> = (0..n).map(|i| (i % 7) + 1).collect();
         let gpu = gpu_scan_exclusive(&input);
-        let cpu = multi_block_prefix_scan::cpu_ref_exclusive(&input);
+        let cpu = exclusive_prefix_sum_witness(&input);
 
         assert_eq!(gpu.len(), input.len(), "exclusive output length at n={n}");
         if let Some(i) = (0..gpu.len()).find(|&i| gpu[i] != cpu[i]) {
@@ -195,7 +198,7 @@ fn multi_block_prefix_scan_matches_cpu_ref_with_256_block_lanes() {
             .expect("multi-block prefix scan with 256 lanes must execute under reference_eval");
         let mut out = unpack(&outputs[out_idx].to_bytes());
         out.truncate(input.len());
-        let cpu = multi_block_prefix_scan::cpu_ref(&input);
+        let cpu = inclusive_prefix_sum_witness(&input);
         assert_eq!(
             out, cpu,
             "256-block-lanes prefix scan matches cpu_ref at n={n}"

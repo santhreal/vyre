@@ -6,8 +6,7 @@ use crate::graph::csr_forward_or_changed::{
 
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::dispatch::dispatch_bridge::{
-    dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs,
-    write_dispatch_input, CachedProgram, DispatchInput, ProgramCache,
+    refresh_keyed_dispatch_inputs, write_dispatch_input, CachedProgram, DispatchInput, ProgramCache,
 };
 use crate::plumbing::host::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -127,11 +126,12 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         static_input_key,
         program_cache,
     } = scratch;
-    let cached = program_cache.get_or_try_insert_with(plan.program_key(), || {
-        Ok(CachedForwardChangedProgram {
-            program: plan.program().map_err(DispatchError::BadInputs)?,
-        })
-    })?;
+    let cached = program_cache.get_or_insert_with(plan.program_key(), || CachedForwardChangedProgram {
+        program: plan
+            .program()
+            .map_err(DispatchError::BadInputs)
+            .expect("Fix: validated csr_forward_or_changed launch plan must produce valid dispatch program"),
+    });
     let next_static_input_key = plan
         .static_input_key(graph.edge_offsets, graph.edge_targets, graph.edge_kind_mask)
         .map_err(DispatchError::BadInputs)?;
@@ -161,17 +161,27 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
                 DispatchInput::zero_u32_words(1, "csr_forward_or_changed changed scratch"),
             )?;
         }
-        dispatch_two_u32_outputs_from_prepared_into(
-            dispatcher,
-            &cached.program,
-            inputs,
+        let outputs = dispatcher.dispatch(&cached.program, inputs, Some(plan.dispatch_grid()))?;
+        let [frontier_buf, changed_buf] = match outputs.as_slice() {
+            [f, c] => [f, c],
+            _ => {
+                return Err(DispatchError::BackendError(format!(
+                    "Fix: csr_forward_or_changed expected exactly two u32 output buffers, got {}.",
+                    outputs.len()
+                )));
+            }
+        };
+        crate::dispatch_buffers::decode_u32_output_exact(
+            frontier_buf,
             plan.frontier_words(),
             "csr_forward_or_changed frontier_out",
             frontier,
+        )?;
+        crate::dispatch_buffers::decode_u32_output_exact(
+            changed_buf,
             changed_words,
             "csr_forward_or_changed changed",
             changed_out,
-            Some(plan.dispatch_grid()),
         )?;
         let changed_index = plan
             .changed_read_index(iter)

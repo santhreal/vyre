@@ -49,6 +49,10 @@ fn build_swiglu(gate: &str, up: &str, output: &str, n: u32, dtype: DataType) -> 
     typed_sigmoid_gate_program(OP_ID, gate, up, output, n, dtype, true)
 }
 
+const EXPECTED_SWIGLU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0xA8, 0x26, 0xBB, 0x3F, 0x08, 0x8C, 0x4E, 0xBF, 0xEA, 0x7B, 0xE1, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -61,14 +65,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let gate = [0.0_f32, 1.0, -1.0, 2.0];
-            let up = [1.0_f32, 2.0, 3.0, 4.0];
-            let out: Vec<f32> = gate.iter().zip(up.iter()).map(|(&g, &u)| {
-                let sigmoid_g = 1.0 / (1.0 + (-g).exp());
-                g * u * sigmoid_g
-            }).collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_SWIGLU_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

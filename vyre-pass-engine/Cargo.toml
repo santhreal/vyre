@@ -32,10 +32,6 @@ all-solvers = [
     "vyre-libs/scheduling",
     "vyre-libs/telemetry",
 ]
-# `optimizer` because the parity suite this feature gates imports
-# `vyre_pass_engine::optimizer`. Without the edge, `--features cpu-parity` on its
-# own reserved the suite for a namespace the same selection did not compile.
-cpu-parity = ["all-solvers", "optimizer", "vyre-primitives/cpu-parity"]
 
 [dependencies]
 vyre-foundation.workspace = true
@@ -53,10 +49,8 @@ rustc-hash.workspace = true
 
 [dev-dependencies]
 vyre-test-support.workspace = true
-# Parity tests import the vyre-primitives CPU reference oracles (quantized *_cpu),
-# gated behind `cpu-parity`. Enable it for this crate's own test/bench builds only
-# (resolver 2 keeps it out of production builds of dependents).
-vyre-primitives = { path = "../vyre-primitives", features = ["cpu-parity"], default-features = false }
+# Dev-dep only -> gated out of production builds of dependents.
+vyre-primitives = { path = "../vyre-primitives", default-features = false }
 vyre-reference = { path = "../vyre-reference" }
 # The one crate allowed to execute a Program on the host. Every parity test here
 # dispatches through its `ReferenceEvalDispatcher`, so an encoded pass is
@@ -72,7 +66,7 @@ proptest.workspace = true
 [[test]]
 name = "optimizer_bfs_and_softmax_parity"
 path = "tests/optimizer_bfs_and_softmax_parity.rs"
-required-features = ["cpu-parity"]
+required-features = ["all-solvers"]
 
 # Both suites assert the contract of the `optimizer` namespace, so they cannot
 # build when it is off. Declared rather than wrapped in a file-level `cfg`: cargo

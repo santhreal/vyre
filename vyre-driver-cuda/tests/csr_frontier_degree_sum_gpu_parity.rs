@@ -7,11 +7,21 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::Program;
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::csr_frontier_degree_sum::{
-    csr_frontier_degree_sum, csr_frontier_degree_sum_cpu, csr_frontier_degree_sum_dispatch_grid,
-};
+use vyre_libs::graph::csr_frontier_degree_sum::csr_frontier_degree_sum;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_reference::composition_witness::csr_frontier_degree_sum_witness as csr_frontier_degree_sum_cpu;
 
+const fn csr_frontier_degree_sum_dispatch_grid(node_count: u32) -> [u32; 3] {
+    [
+        if node_count == 0 {
+            1
+        } else {
+            (node_count + 255) / 256
+        },
+        1,
+        1,
+    ]
+}
 fn run(
     program: &Program,
     pg_nodes: &[u32],

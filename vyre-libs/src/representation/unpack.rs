@@ -20,6 +20,12 @@ pub fn unpack_4bit_f32(input: &str, output: &str, n: u32) -> Program {
         })
 }
 
+const EXPECTED_UNPACK_NIBBLE_U32_F32_OUTPUT_BYTES: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64, 0, 0, 192,
+    64, 0, 0, 224, 64, 0, 0, 0, 65, 0, 0, 16, 65, 0, 0, 32, 65, 0, 0, 48, 65, 0, 0, 64, 65, 0, 0,
+    80, 65, 0, 0, 96, 65, 0, 0, 112, 65,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::representation::unpack_4bit_f32",
@@ -33,14 +39,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // u32 → f32 as a value-preserving cast (not a bit-cast),
-            // matching target-text `f32(u32_value)`. The packed input
-            // [0x76543210, 0xFEDCBA98] unpacks into nibbles 0..15
-            // in LSB-first order, each of which casts to its integer
-            // value as f32.
-            let values: Vec<f32> = (0u32..16).map(|v| v as f32).collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&values);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_UNPACK_NIBBLE_U32_F32_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

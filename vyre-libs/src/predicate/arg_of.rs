@@ -46,8 +46,6 @@ pub fn arg_of(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -
     backward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,7 +58,7 @@ mod tests {
     }
 }
 
-
+const EXPECTED_ARG_OF_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -79,8 +77,8 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            use super::inventory_u32_le_bytes as b;
-            vec![vec![b(&[0b0001])]]   // {0} is predecessor via CALL_ARG
+            // {0} is predecessor via CALL_ARG
+            vec![vec![EXPECTED_ARG_OF_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

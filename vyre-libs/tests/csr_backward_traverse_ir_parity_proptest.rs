@@ -20,7 +20,7 @@ mod csr_sweep;
 
 use proptest::prelude::*;
 use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;
-use vyre_reference::composition_witness::csr_forward_traverse_witness as cpu_ref;
+use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 
 /// Drive the real reverse-step IR and return the `frontier_out` word bitset.
 fn gpu_backward_step(

@@ -308,6 +308,65 @@ fn a_refreshed_snapshot_verifies_clean_against_the_same_tree() {
     assert_eq!(verify.count(), 0, "{:?}", verify.findings);
 }
 
+/// A stale snapshot missing newly removed items or missing newly added items must fail the gate.
+///
+/// WHY: When a public function or type is deleted from a crate without refreshing the snapshot,
+/// the committed snapshot remains stale. The non-mutating gate run must catch this drift and
+/// report the exact added and removed items in its finding message.
+#[test]
+fn stale_public_api_snapshot_is_reported_as_drift_finding() {
+    let temp = tempfile::tempdir().expect("Fix: temporary workspace must be creatable");
+    let root = temp.path();
+    fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"fixture\"]\nresolver = \"2\"\n",
+    )
+    .expect("Fix: fixture workspace manifest must be writable");
+    let crate_dir = root.join("fixture");
+    fs::create_dir_all(crate_dir.join("src"))
+        .expect("Fix: fixture crate source directory must be creatable");
+    fs::write(
+        crate_dir.join("Cargo.toml"),
+        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .expect("Fix: fixture crate manifest must be writable");
+    fs::write(
+        crate_dir.join("src/lib.rs"),
+        "pub struct Alpha;\npub fn removed_item() {}\n",
+    )
+    .expect("Fix: fixture crate root must be writable");
+    fs::copy(workspace_root().join("cargo_full"), root.join("cargo_full"))
+        .expect("Fix: the bounded cargo wrapper must be copyable into the fixture");
+    git_init(root);
+
+    let write = GateCtx::new(root.to_path_buf(), vec!["--write".to_string()]);
+    PublicApiSnapshot
+        .run(&write)
+        .expect("Fix: the snapshot gate must be able to write the fixture surface");
+
+    // Mutate source to simulate removing an API without updating the snapshot.
+    fs::write(crate_dir.join("src/lib.rs"), "pub struct Alpha;\n")
+        .expect("Fix: fixture crate root must be writable");
+
+    let verify = PublicApiSnapshot
+        .run(&GateCtx::new(root.to_path_buf(), Vec::new()))
+        .expect("Fix: the snapshot gate must run");
+    assert_eq!(verify.count(), 1, "stale snapshot must report 1 finding");
+    let message = &verify.findings[0].message;
+    assert!(
+        message.contains("the public API of `fixture` no longer matches its snapshot"),
+        "unexpected finding message: {message}"
+    );
+    assert!(
+        message.contains("1 removed"),
+        "finding must record 1 removed item: {message}"
+    );
+    assert!(
+        message.contains("-pub fn fixture::removed_item()"),
+        "finding must name the removed item: {message}"
+    );
+}
+
 /// The committed snapshots are the live public surface.
 ///
 /// WHY: every other contract in this file judges which snapshot files exist and

@@ -466,12 +466,9 @@ pub fn sum_product_depths(
     )
 }
 
-
-
-
-
-
-
+const EXPECTED_SUM_PRODUCT_EVALUATE_OUTPUT_BYTES: [u8; 4] = [0, 0, 4, 0];
+const EXPECTED_SUM_PRODUCT_ALL_NODES_OUTPUT_BYTES: [u8; 16] =
+    [0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0, 10, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -499,7 +496,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[4u32 << 16])]]
+            vec![vec![EXPECTED_SUM_PRODUCT_EVALUATE_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -544,12 +541,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-                2u32 << 16, // n0 = 2.0
-                3u32 << 16, // n1 = 3.0
-                5u32 << 16, // n2 = SUM = 5.0
-                10u32 << 16, // n3 = PRODUCT(5.0, 2.0) = 10.0
-            ])]]
+            vec![vec![EXPECTED_SUM_PRODUCT_ALL_NODES_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -557,6 +549,124 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::sum_product_evaluate_witness_into;
+
+    #[derive(Default)]
+    struct SumProductCpuScratch {
+        values: Vec<f64>,
+    }
+
+    impl SumProductCpuScratch {
+        fn new() -> Self {
+            Self::default()
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_sum_product_evaluate_cpu_into_with_scratch(
+        kinds: &[u32],
+        child_offsets: &[u32],
+        child_counts: &[u32],
+        children: &[u32],
+        weights: &[f64],
+        leaf_values: &[f64],
+        topological_order: &[u32],
+        out: &mut Vec<f64>,
+        scratch: &mut SumProductCpuScratch,
+    ) -> Result<(), String> {
+        let n = kinds.len();
+        if child_offsets.len() != n || child_counts.len() != n || leaf_values.len() != n {
+            return Err("Fix: mismatched node slice lengths in sum-product evaluation.".to_owned());
+        }
+        for &node in topological_order {
+            let node = node as usize;
+            if node >= n {
+                return Err(format!(
+                    "Fix: topological order node {node} outside node_count ({n})."
+                ));
+            }
+            let start = child_offsets[node] as usize;
+            let count = child_counts[node] as usize;
+            if start.checked_add(count).is_none() || start + count > children.len() {
+                return Err(format!(
+                    "Fix: child range {start}..{} exceeds child_count ({})",
+                    start + count,
+                    children.len()
+                ));
+            }
+            if kinds[node] == KIND_SUM && (start + count > weights.len()) {
+                return Err("Fix: sum node weight range exceeds weights length.".to_owned());
+            }
+            for &child in &children[start..start + count] {
+                if child as usize >= n {
+                    return Err(format!(
+                        "Fix: child index {child} outside node_count ({n})."
+                    ));
+                }
+            }
+        }
+        sum_product_evaluate_witness_into(
+            kinds,
+            child_offsets,
+            child_counts,
+            children,
+            weights,
+            leaf_values,
+            topological_order,
+            &mut scratch.values,
+        );
+        out.clear();
+        out.extend_from_slice(&scratch.values);
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_sum_product_evaluate_cpu(
+        kinds: &[u32],
+        child_offsets: &[u32],
+        child_counts: &[u32],
+        children: &[u32],
+        weights: &[f64],
+        leaf_values: &[f64],
+        topological_order: &[u32],
+    ) -> Result<Vec<f64>, String> {
+        let mut out = Vec::new();
+        let mut scratch = SumProductCpuScratch::new();
+        try_sum_product_evaluate_cpu_into_with_scratch(
+            kinds,
+            child_offsets,
+            child_counts,
+            children,
+            weights,
+            leaf_values,
+            topological_order,
+            &mut out,
+            &mut scratch,
+        )?;
+        Ok(out)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn sum_product_evaluate_cpu(
+        kinds: &[u32],
+        child_offsets: &[u32],
+        child_counts: &[u32],
+        children: &[u32],
+        weights: &[f64],
+        leaf_values: &[f64],
+        topological_order: &[u32],
+    ) -> Vec<f64> {
+        try_sum_product_evaluate_cpu(
+            kinds,
+            child_offsets,
+            child_counts,
+            children,
+            weights,
+            leaf_values,
+            topological_order,
+        )
+        .expect("sum_product_evaluate_cpu failed")
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

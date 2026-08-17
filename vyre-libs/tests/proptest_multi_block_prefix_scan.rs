@@ -7,7 +7,7 @@ use ir_shape::{contains_invocation_id, contains_loop, grid_sync_barrier_count};
 
 use proptest::prelude::*;
 use vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
-fn cpu_ref(input: &[u32]) -> Vec<u32> { let mut acc = 0u32; input.iter().map(|&x| { acc = acc.wrapping_add(x); acc }).collect() }
+use vyre_reference::composition_witness::inclusive_prefix_sum_witness as reference_inclusive_prefix;
 
 const BLOCK_LANES: u32 = 1024;
 
@@ -26,10 +26,10 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(4_096))]
 
     #[test]
-    fn cpu_ref_matches_independent_wrapping_prefix_for_generated_inputs(
+    fn reference_inclusive_prefix_matches_independent_wrapping_prefix_for_generated_inputs(
         values in proptest::collection::vec(any::<u32>(), 0..=2048),
     ) {
-        prop_assert_eq!(cpu_ref(&values), independent_wrapping_prefix(&values));
+        prop_assert_eq!(reference_inclusive_prefix(&values), independent_wrapping_prefix(&values));
     }
 
     #[test]

@@ -209,14 +209,13 @@ pub(crate) fn evaluate(
                     .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
                 live_value_peak = live_value_peak.max(group_live);
                 shared_scratch_bytes = shared_scratch_bytes.max(group_scratch);
-                let passes = resident_passes(
-                    group_live,
-                    u64::from(device.registers_per_invocation()),
-                )
-                .max(resident_passes(
-                    group_scratch,
-                    u64::from(device.shared_scratch_bytes_per_workgroup()),
-                ));
+                let passes =
+                    resident_passes(group_live, u64::from(device.registers_per_invocation())).max(
+                        resident_passes(
+                            group_scratch,
+                            u64::from(device.shared_scratch_bytes_per_workgroup()),
+                        ),
+                    );
                 occupancy_passes_peak = occupancy_passes_peak.max(passes);
                 occupancy_bytes = occupancy_bytes
                     .saturating_add(group_bytes.saturating_mul(passes.saturating_sub(1)));
@@ -247,8 +246,9 @@ pub(crate) fn evaluate(
                                 None => stage_tiles.push((name, *bytes)),
                             }
                         }
-                        stage_bytes = stage_bytes
-                            .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
+                        stage_bytes = stage_bytes.saturating_add(
+                            facts.node_touched_bytes.get(node).copied().unwrap_or(0),
+                        );
                     }
                 }
                 let stage_scratch = stage_tiles
@@ -256,14 +256,13 @@ pub(crate) fn evaluate(
                     .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
                 live_value_peak = live_value_peak.max(stage_live);
                 shared_scratch_bytes = shared_scratch_bytes.max(stage_scratch);
-                let passes = resident_passes(
-                    stage_live,
-                    u64::from(device.registers_per_invocation()),
-                )
-                .max(resident_passes(
-                    stage_scratch,
-                    u64::from(device.shared_scratch_bytes_per_workgroup()),
-                ));
+                let passes =
+                    resident_passes(stage_live, u64::from(device.registers_per_invocation())).max(
+                        resident_passes(
+                            stage_scratch,
+                            u64::from(device.shared_scratch_bytes_per_workgroup()),
+                        ),
+                    );
                 occupancy_passes_peak = occupancy_passes_peak.max(passes);
                 occupancy_bytes = occupancy_bytes
                     .saturating_add(stage_bytes.saturating_mul(passes.saturating_sub(1)));

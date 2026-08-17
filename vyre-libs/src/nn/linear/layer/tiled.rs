@@ -104,6 +104,10 @@ pub fn linear_tiled_reference(
         .map_err(|error| format!("Fix: linear_tiled_reference build failed: {error}"))
 }
 
+const EXPECTED_LINEAR_OUTPUT_BYTES: [u8; 16] = [
+    0x38, 0x00, 0x00, 0x00, 0x3E, 0x00, 0x00, 0x00, 0x44, 0x00, 0x00, 0x00, 0x4A, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::linear",
@@ -133,8 +137,7 @@ inventory::submit! {
             vec![vec![x, w, bias]]
         }),
         Some(|| {
-
-            vec![vec![crate::fixture_bytes::u32_bytes(&[56, 62, 68, 74])]]
+            vec![vec![EXPECTED_LINEAR_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")
@@ -155,8 +158,7 @@ inventory::submit! {
             vec![vec![x, w, bias]]
         }),
         Some(|| {
-
-            vec![vec![crate::fixture_bytes::u32_bytes(&[56, 62, 68, 74])]]
+            vec![vec![EXPECTED_LINEAR_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

@@ -82,9 +82,6 @@ pub fn try_mz_project_step(
     ))
 }
 
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -105,7 +102,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[3, 5, 7, 11])]]
+            vec![vec![vec![
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x05, 0x00, 0x00, 0x00, // 5
+                0x07, 0x00, 0x00, 0x00, // 7
+                0x0b, 0x00, 0x00, 0x00, // 11
+            ]]]
         }),
     )
 }
@@ -113,6 +115,19 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::mori_zwanzig_project_witness as mz_project_step_cpu;
+
+    fn try_mz_project_step_cpu_into(
+        projector: &[f64],
+        forcing: &[f64],
+        dimension: u32,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let res = mz_project_step_cpu(projector, forcing, dimension);
+        out.clear();
+        out.extend_from_slice(&res);
+        Ok(())
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

@@ -1,11 +1,11 @@
 //! Property tests for categorical laws over functorial pass composition and IR rewrites.
 use proptest::prelude::*;
-use vyre_libs::graph::sheaf::sheaf_diffusion_step_cpu;
-use vyre_libs::reasoning::functorial_pass_composition::{
-    apply_pass_functor, compose_passes, identity_functor,
-};
-use vyre_libs::reasoning::string_diagram_ir_rewrite::{
-    compose_ir_arrows, composition_associates, identity_arrow,
+use vyre_reference::composition_witness::sheaf_diffusion_step_witness as sheaf_diffusion_step_cpu;
+use vyre_reference::composition_witness::{
+    compose_ir_arrows_witness as compose_ir_arrows, compose_passes_witness as compose_passes,
+    composition_associates_witness as composition_associates,
+    functor_apply_witness as apply_pass_functor, identity_arrow_witness as identity_arrow,
+    identity_functor_witness as identity_functor,
 };
 
 fn approx_eq_vec(a: &[f64], b: &[f64]) -> bool {

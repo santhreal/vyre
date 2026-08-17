@@ -16,13 +16,7 @@
 mod gate_fixtures;
 
 use vyre_libs::reduce::gather::*;
-
-fn cpu_ref(src: &[u32], indices: &[u32]) -> Vec<u32> {
-    indices
-        .iter()
-        .map(|index| src.get(*index as usize).copied().unwrap_or(0))
-        .collect()
-}
+use vyre_reference::composition_witness::gather_witness as cpu_ref;
 
 adversarial_binary_vec_cases! {
     test_reduce_gather_adv_0: vec![0u32; 0], vec![0u32; 0] => Vec::<u32>::new(), "FINDING-ADV-REDUCE-GATHER-0: Exact bit output mismatch";

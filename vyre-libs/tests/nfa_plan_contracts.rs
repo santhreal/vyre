@@ -4,7 +4,9 @@
 #[test]
 fn nfa_plan_and_state_major_table_encode_exactly_the_declared_edges() {
     use vyre_libs::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
-    use vyre_libs::pattern::nfa::{build_transition_table, plan_shards, try_compile};
+    use vyre_libs::pattern::nfa::{
+        build_transition_table, nfa_sharded_programs, plan_shards, try_compile,
+    };
 
     let pattern_sets: &[&[&str]] = &[
         &[],
@@ -72,6 +74,12 @@ fn nfa_plan_and_state_major_table_encode_exactly_the_declared_edges() {
             states <= MAX_STATES_PER_SUBGROUP,
             "Fix: generated NFA shard has {states} states, above subgroup limit."
         );
+    }
+    let sharded_programs = nfa_sharded_programs(&refs, "input", "hits", 64)
+        .expect("Fix: sharded NFA scan programs should build");
+    assert!(sharded_programs.len() >= 2);
+    for p in &sharded_programs {
+        assert_eq!(p.workgroup_size, [LANES_PER_SUBGROUP as u32, 1, 1]);
     }
     assert_eq!(checked_sets, pattern_sets.len());
 }

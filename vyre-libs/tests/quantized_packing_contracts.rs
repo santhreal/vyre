@@ -5,10 +5,12 @@
 #[cfg(feature = "math")]
 #[test]
 fn generated_i4_cpu_oracle_matrix_preserves_packing_and_top1_semantics() {
-    use vyre_libs::math::quantized::{
-        i4_packed_words, i4x8_batched_matmul_f32_scaled_cpu,
-        i4x8_batched_matmul_top1_f32_scaled_cpu, i4x8_dot_i32_cpu, pack_i4x8_cpu, unpack_i4x8_cpu,
-        I4_LANES_PER_WORD,
+    use vyre_libs::math::quantized::{i4_packed_words, I4_LANES_PER_WORD};
+    use vyre_reference::composition_witness::{
+        i4x8_batched_matmul_f32_scaled_witness as i4x8_batched_matmul_f32_scaled_cpu,
+        i4x8_batched_matmul_top1_f32_scaled_witness as i4x8_batched_matmul_top1_f32_scaled_cpu,
+        i4x8_dot_i32_witness as i4x8_dot_i32_cpu, pack_i4x8_witness as pack_i4x8_cpu,
+        unpack_i4x8_witness as unpack_i4x8_cpu,
     };
 
     let lane_cases = [0usize, 1, 2, 7, 8, 9, 15, 16, 17, 31, 32, 33, 63, 64, 65];

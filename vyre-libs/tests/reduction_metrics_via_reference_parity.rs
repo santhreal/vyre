@@ -16,8 +16,11 @@
 
 use vyre_libs::encoding::reduction_metrics::{
     histogram_atomic_scatter_via, reduce_all_via, reduce_any_via, reduce_count_non_zero_via,
-    reduce_max_via, reduce_min_via, reduce_sum_via, reference_histogram_atomic_scatter,
-    reference_segment_reduce_sum, segment_reduce_sum_via,
+    reduce_max_via, reduce_min_via, reduce_sum_via, segment_reduce_sum_via,
+};
+use vyre_reference::composition_witness::{
+    histogram_witness as reference_histogram_atomic_scatter,
+    segment_reduce_sum_witness as reference_segment_reduce_sum,
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;

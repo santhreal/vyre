@@ -542,7 +542,10 @@ mod tests {
     fn a_crate_root_carries_no_module_name() {
         assert_eq!(judged_name_of("vyre-libs/src/lib.rs"), None);
         assert_eq!(judged_name_of("conform/vyre-conform/src/main.rs"), None);
-        assert_eq!(judged_name_of("vyre-libs/src/pattern/mod.rs"), Some("pattern"));
+        assert_eq!(
+            judged_name_of("vyre-libs/src/pattern/mod.rs"),
+            Some("pattern")
+        );
         assert_eq!(
             judged_name_of("vyre-libs/src/pattern/window.rs"),
             Some("window")

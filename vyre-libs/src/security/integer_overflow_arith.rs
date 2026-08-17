@@ -45,8 +45,8 @@ pub(crate) fn cpu_ref(
     attacker_reach: &[u32],
     overflow_check_dominates: &[u32],
 ) -> Vec<u32> {
-    let inter = crate::bitset::and::cpu_ref(arith_set, attacker_reach);
-    crate::bitset::and_not::cpu_ref(&inter, overflow_check_dominates)
+    let inter = vyre_reference::composition_witness::bitset_and_witness(arith_set, attacker_reach);
+    vyre_reference::composition_witness::bitset_and_not_witness(&inter, overflow_check_dominates)
 }
 
 /// Soundness marker for [`integer_overflow_arith`].

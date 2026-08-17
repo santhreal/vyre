@@ -93,12 +93,37 @@ pub fn rk4_step(
     )
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_rk4_step_cpu_into(
+        y: &[f64],
+        k1: &[f64],
+        k2: &[f64],
+        k3: &[f64],
+        k4: &[f64],
+        h: f64,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let len = y
+            .len()
+            .min(k1.len())
+            .min(k2.len())
+            .min(k3.len())
+            .min(k4.len());
+        out.clear();
+        for i in 0..len {
+            out.push(y[i] + (h / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]));
+        }
+        Ok(())
+    }
+
+    fn rk4_step_cpu(y: &[f64], k1: &[f64], k2: &[f64], k3: &[f64], k4: &[f64], h: f64) -> Vec<f64> {
+        let mut out = Vec::new();
+        try_rk4_step_cpu_into(y, k1, k2, k3, k4, h, &mut out).unwrap();
+        out
+    }
 
     const EPS: f64 = 1e-10;
 

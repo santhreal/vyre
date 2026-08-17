@@ -162,6 +162,12 @@ fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
+const EXPECTED_SSA_DOMINANCE_SCAN_PHIS_BYTES: [u8; 32] = [
+    7, 0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+];
+const EXPECTED_SSA_DOMINANCE_SCAN_COUNT_BYTES: [u8; 4] = [4, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -175,8 +181,8 @@ inventory::submit! {
             fixture_u32(&[0]),
         ]]),
         Some(|| vec![vec![
-            fixture_u32(&[7, 10, 20, 0, 0, 0, 0, 0]),
-            fixture_u32(&[4]),
+            EXPECTED_SSA_DOMINANCE_SCAN_PHIS_BYTES.to_vec(),
+            EXPECTED_SSA_DOMINANCE_SCAN_COUNT_BYTES.to_vec(),
         ]]),
     )
 }

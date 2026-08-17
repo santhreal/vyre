@@ -6,9 +6,7 @@ use crate::graph::csr_bidirectional::{
 };
 use vyre_foundation::ir::Program;
 
-use crate::graph::dispatch::dispatch_bridge::{
-    dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
-};
+use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Dispatcher-backed bidirectional CSR step.
@@ -130,13 +128,21 @@ pub(super) fn bidirectional_step_dispatch_prepared_inputs_into(
     inputs: &[Vec<u8>],
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    dispatch_single_u32_output_from_prepared_into(
-        dispatcher,
-        program,
-        inputs,
+    let outputs = dispatcher.dispatch(program, inputs, Some(plan.grid))?;
+    let [frontier_out] = match outputs.as_slice() {
+        [frontier_out] => [frontier_out],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: {} expected exactly one u32 output buffer, got {}.",
+                CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER,
+                outputs.len()
+            )));
+        }
+    };
+    crate::dispatch_buffers::decode_u32_output_exact(
+        frontier_out,
         plan.frontier_words,
         CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER,
-        Some(plan.grid),
         out,
     )
 }

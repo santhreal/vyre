@@ -27,6 +27,7 @@ pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32
     if n == 0 {
         return trap_program(
             OP_ID,
+            None,
             "hensel_lift_step requires n > 0 (use positive degree)",
         );
     }
@@ -48,7 +49,6 @@ pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32
         })
 }
 
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -56,22 +56,40 @@ inventory::submit! {
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let to_fixed = |v: f64| (v * 65536.0).round() as u32;
-            vec![
+            vec![vec![
                 to_bytes(&[to_fixed(2.0), to_fixed(3.0), to_fixed(5.0), to_fixed(7.0)]),
                 to_bytes(&[to_fixed(0.1), to_fixed(0.2), to_fixed(-0.1), to_fixed(0.0)]),
                 to_bytes(&[to_fixed(1.0), to_fixed(0.5), to_fixed(2.0), to_fixed(1.0)]),
                 to_bytes(&[0, 0, 0, 0]),
-            ]
+            ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            let to_fixed = |v: f64| (v * 65536.0).round() as u32;
-            vec![
-                to_bytes(&[to_fixed(2.0), to_fixed(3.0), to_fixed(5.0), to_fixed(7.0)]),
-                to_bytes(&[to_fixed(0.1), to_fixed(0.2), to_fixed(-0.1), to_fixed(0.0)]),
-                to_bytes(&[to_fixed(1.0), to_fixed(0.5), to_fixed(2.0), to_fixed(1.0)]),
-                to_bytes(&[to_fixed(1.9), to_fixed(2.9), to_fixed(5.2), to_fixed(7.0)]),
-            ]
+            vec![vec![
+                vec![
+                    0x00, 0x00, 0x02, 0x00, // 2.0
+                    0x00, 0x00, 0x03, 0x00, // 3.0
+                    0x00, 0x00, 0x05, 0x00, // 5.0
+                    0x00, 0x00, 0x07, 0x00, // 7.0
+                ],
+                vec![
+                    0x9a, 0x19, 0x00, 0x00, // 0.1
+                    0x33, 0x33, 0x00, 0x00, // 0.2
+                    0x00, 0x00, 0x00, 0x00, // -0.1
+                    0x00, 0x00, 0x00, 0x00, // 0.0
+                ],
+                vec![
+                    0x00, 0x00, 0x01, 0x00, // 1.0
+                    0x00, 0x80, 0x00, 0x00, // 0.5
+                    0x00, 0x00, 0x02, 0x00, // 2.0
+                    0x00, 0x00, 0x01, 0x00, // 1.0
+                ],
+                vec![
+                    0x66, 0xe6, 0x01, 0x00, // 1.9
+                    0x66, 0xe6, 0x02, 0x00, // 2.9
+                    0x33, 0x33, 0x05, 0x00, // 5.2
+                    0x00, 0x00, 0x07, 0x00, // 7.0
+                ],
+            ]]
         }),
     )
 }

@@ -12,21 +12,19 @@
 #![cfg(feature = "pattern-dfa")]
 #![allow(deprecated)]
 mod wire_words;
-use vyre_libs::pattern::{dfa_compile, CompiledDfa};
 use vyre_libs::pattern::aho_corasick;
+use vyre_libs::pattern::{dfa_compile, CompiledDfa};
 use vyre_reference::value::Value;
 use wire_words::{decode_u32_words, u32_bytes};
 
 /// Reference oracle: walk the DFA byte-by-byte, emit accept[state] at each
 /// offset. This is the oracle the vyre IR must match.
 fn cpu_reference_scan(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<u32> {
-    let mut state = 0u32;
-    let mut out = Vec::with_capacity(haystack.len());
-    for &b in haystack {
-        state = dfa.transitions[(state as usize) * 256 + b as usize];
-        out.push(dfa.accept[state as usize]);
-    }
-    out
+    vyre_reference::composition_witness::dfa_scan_accept_witness(
+        &dfa.transitions,
+        &dfa.accept,
+        haystack,
+    )
 }
 
 /// Run the vyre IR for aho_corasick through the reference interpreter

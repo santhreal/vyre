@@ -54,6 +54,54 @@ pub fn utf8_shape_counts_witness(input: &[u8]) -> [u32; 4] {
     counts
 }
 
+/// Count observed and expected UTF-8 continuation bytes from a byte histogram.
+#[must_use]
+pub fn utf8_histogram_shape_counts_witness(histogram: &[u32; 256]) -> (u32, u32) {
+    let continuation = histogram[0x80..0xC0]
+        .iter()
+        .fold(0_u32, |sum, &count| sum.saturating_add(count));
+    let expected = histogram[0xC2..0xE0]
+        .iter()
+        .fold(0_u32, |sum, &count| sum.saturating_add(count));
+    let expected = histogram[0xE0..0xF0].iter().fold(expected, |sum, &count| {
+        sum.saturating_add(count.saturating_mul(2))
+    });
+    let expected = histogram[0xF0..0xF5].iter().fold(expected, |sum, &count| {
+        sum.saturating_add(count.saturating_mul(3))
+    });
+    (continuation, expected)
+}
+
+/// Classify an encoding from a 256-bin byte histogram.
+#[must_use]
+pub fn encoding_classify_histogram_witness(histogram: &[u32; 256], count: u32) -> u32 {
+    const ASCII: u32 = 0;
+    const UTF8: u32 = 1;
+    const UTF16_LE: u32 = 2;
+    const ISO_8859_1: u32 = 4;
+    if count == 0 {
+        return ASCII;
+    }
+    let null_count = histogram[0];
+    let ascii_count = histogram[0..128]
+        .iter()
+        .fold(0_u32, |sum, &value| sum.saturating_add(value));
+    let high_count = count.saturating_sub(ascii_count);
+    if null_count > count / 8 {
+        return UTF16_LE;
+    }
+    if high_count == 0 {
+        return ASCII;
+    }
+    let (continuation, expected) = utf8_histogram_shape_counts_witness(histogram);
+    let tolerance = count.saturating_add(19) / 20;
+    if continuation.abs_diff(expected) < tolerance {
+        UTF8
+    } else {
+        ISO_8859_1
+    }
+}
+
 /// Sequential UTF-8 classification witness for the text validator ABI.
 #[must_use]
 pub fn utf8_validate_witness(source: &[u8]) -> Vec<u32> {

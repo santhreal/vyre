@@ -130,26 +130,29 @@ pub fn bfs_expand_via_with_scratch_into(
         ],
     )?;
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some(plan.dispatch_grid()))?;
-    if outputs.len() != 3 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: bfs_expand_via expected exactly three u32 output buffers (frontier_out, changed, converged), got {}.",
-            outputs.len()
-        )));
-    }
+    let [frontier_buf, changed_buf, converged_buf] = match outputs.as_slice() {
+        [frontier_buf, changed_buf, converged_buf] => [frontier_buf, changed_buf, converged_buf],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: bfs_expand_via expected exactly three u32 output buffers (frontier_out, changed, converged), got {}.",
+                outputs.len()
+            )));
+        }
+    };
     decode_u32_output_exact(
-        &outputs[0],
+        frontier_buf,
         words,
         "bfs_expand_via frontier_out",
         frontier_out,
     )?;
     decode_u32_output_exact(
-        &outputs[1],
+        changed_buf,
         changed_words,
         "bfs_expand_via changed",
         &mut scratch.changed,
     )?;
     decode_u32_output_exact(
-        &outputs[2],
+        converged_buf,
         1,
         "bfs_expand_via converged",
         &mut scratch.converged,

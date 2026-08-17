@@ -6,7 +6,6 @@
 //! textbook slicing algorithm.
 
 use std::num::NonZeroU32;
-use std::sync::OnceLock;
 use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -26,7 +25,8 @@ pub const CRC32_CHUNK_OP_ID: &str = "vyre-libs::hash::crc32_chunk";
 /// Stable Tier 2.5 op id for pairwise CRC-32 chunk-summary reduction.
 pub const CRC32_PAIR_REDUCE_OP_ID: &str = "vyre-libs::hash::crc32_pair_reduce";
 
-static CRC32_TABLE: OnceLock<[u32; 256]> = OnceLock::new();
+#[cfg(test)]
+static CRC32_TABLE: std::sync::LazyLock<[u32; 256]> = std::sync::LazyLock::new(build_table);
 
 /// Self-contained CRC-32 chunk summary for associative reductions.
 ///
@@ -34,6 +34,7 @@ static CRC32_TABLE: OnceLock<[u32; 256]> = OnceLock::new();
 /// chunks can be combined with [`crc32_combine_chunks`] without reading the
 /// original bytes, which is the algebra needed by GPU block scans and resident
 /// streaming pipelines.
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Crc32Chunk {
     /// Exact chunk length in bytes.
@@ -43,6 +44,7 @@ pub struct Crc32Chunk {
 }
 
 /// Kind of executable step in a CRC-32 GPU map-reduce plan.
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Crc32MapReduceStepKind {
     /// Emit one `[crc, len]` summary per input byte chunk.
@@ -52,6 +54,7 @@ pub enum Crc32MapReduceStepKind {
 }
 
 /// One executable dispatch shape in a CRC-32 map-reduce plan.
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Crc32MapReduceStep {
     /// Step kind.
@@ -70,6 +73,7 @@ pub struct Crc32MapReduceStep {
 }
 
 /// Single-source execution plan for CRC-32 GPU map-reduce.
+#[cfg(test)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Crc32MapReducePlan {
     /// Input length in byte slots.
@@ -80,22 +84,15 @@ pub struct Crc32MapReducePlan {
     /// pair-reduction steps.
     pub steps: Vec<Crc32MapReduceStep>,
 }
-
-/// CPU reference: CRC-32 over a byte slice. Returns the post-complement
-/// value (matches the gzip / zip convention).
+#[cfg(test)]
 #[must_use]
-pub fn crc32(bytes: &[u8]) -> u32 {
-    let table = crc32_table();
-    let mut crc = crc32_initial_state();
-    for &byte in bytes {
-        crc = crc32_update_byte_state(crc, table, byte);
-    }
-    crc32_finalize_state(crc)
+pub(crate) fn crc32(bytes: &[u8]) -> u32 {
+    vyre_reference::composition_witness::crc32_witness(bytes)
 }
 
-/// Summarize a byte slice as an independently-combinable CRC-32 chunk.
+#[cfg(test)]
 #[must_use]
-pub fn crc32_chunk(bytes: &[u8]) -> Crc32Chunk {
+pub(crate) fn crc32_chunk(bytes: &[u8]) -> Crc32Chunk {
     Crc32Chunk {
         len: bytes.len() as u64,
         crc: crc32(bytes),
@@ -107,51 +104,14 @@ pub fn crc32_chunk(bytes: &[u8]) -> Crc32Chunk {
 /// `right_len` is the exact byte length of the right-hand input. The result is
 /// `crc32(left_bytes || right_bytes)` when `left_crc == crc32(left_bytes)` and
 /// `right_crc == crc32(right_bytes)`.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_combine(left_crc: u32, right_crc: u32, right_len: u64) -> u32 {
-    if right_len == 0 {
-        return left_crc;
-    }
-
-    let mut odd = [0u32; 32];
-    let mut even = [0u32; 32];
-
-    odd[0] = CRC32_POLY;
-    let mut row = 1u32;
-    for slot in odd.iter_mut().skip(1) {
-        *slot = row;
-        row <<= 1;
-    }
-
-    gf2_matrix_square(&mut even, &odd);
-    gf2_matrix_square(&mut odd, &even);
-
-    let mut len = right_len;
-    let mut crc = left_crc;
-    loop {
-        gf2_matrix_square(&mut even, &odd);
-        if (len & 1) != 0 {
-            crc = gf2_matrix_times(&even, crc);
-        }
-        len >>= 1;
-        if len == 0 {
-            break;
-        }
-
-        gf2_matrix_square(&mut odd, &even);
-        if (len & 1) != 0 {
-            crc = gf2_matrix_times(&odd, crc);
-        }
-        len >>= 1;
-        if len == 0 {
-            break;
-        }
-    }
-
-    crc ^ right_crc
+    vyre_reference::composition_witness::crc32_combine_witness(left_crc, right_crc, right_len)
 }
 
 /// Combine adjacent CRC-32 chunk summaries without reading source bytes.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_combine_chunks(left: Crc32Chunk, right: Crc32Chunk) -> Option<Crc32Chunk> {
     Some(Crc32Chunk {
@@ -161,6 +121,7 @@ pub fn crc32_combine_chunks(left: Crc32Chunk, right: Crc32Chunk) -> Option<Crc32
 }
 
 /// Pair-reduce adjacent CRC-32 chunks. Odd tails are carried forward.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_pair_reduce_chunks(chunks: &[Crc32Chunk]) -> Option<Vec<Crc32Chunk>> {
     let mut reduced = Vec::with_capacity(chunks.len().div_ceil(2));
@@ -177,6 +138,7 @@ pub fn crc32_pair_reduce_chunks(chunks: &[Crc32Chunk]) -> Option<Vec<Crc32Chunk>
 }
 
 /// Pack CRC-32 chunk summaries into the executable `[crc, len]` u32 ABI.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_pack_chunks_u32(chunks: &[Crc32Chunk]) -> Option<Vec<u32>> {
     let mut words = Vec::with_capacity(chunks.len().checked_mul(2)?);
@@ -188,6 +150,7 @@ pub fn crc32_pack_chunks_u32(chunks: &[Crc32Chunk]) -> Option<Vec<u32>> {
 }
 
 /// Unpack executable `[crc, len]` u32 words into CRC-32 chunk summaries.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_unpack_chunks_u32(words: &[u32]) -> Option<Vec<Crc32Chunk>> {
     let pairs = words.chunks_exact(2);
@@ -205,6 +168,7 @@ pub fn crc32_unpack_chunks_u32(words: &[u32]) -> Option<Vec<Crc32Chunk>> {
 }
 
 /// Pair-reduce packed executable `[crc, len]` u32 words.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_pair_reduce_chunk_words(words: &[u32]) -> Option<Vec<u32>> {
     let chunks = crc32_unpack_chunks_u32(words)?;
@@ -213,29 +177,28 @@ pub fn crc32_pair_reduce_chunk_words(words: &[u32]) -> Option<Vec<u32>> {
 }
 
 /// Process-wide CRC-32 table used by CPU references and tests.
-///
-/// The table is deterministic and immutable. Caching it removes a fixed
-/// 256-slot rebuild from every reference invocation without changing the
-/// public [`build_table`] helper used by tests and artifact generation.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_table() -> &'static [u32; 256] {
-    CRC32_TABLE.get_or_init(build_table)
+    &CRC32_TABLE
 }
 
 /// Initial CRC-32 CPU state before byte updates.
+#[cfg(test)]
 #[must_use]
 pub const fn crc32_initial_state() -> u32 {
     CRC32_INIT
 }
 
 /// Canonical CRC-32 CPU single-byte update.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_update_byte_state(crc: u32, table: &[u32; 256], byte: u8) -> u32 {
-    let idx = ((crc ^ u32::from(byte)) & 0xFF) as usize;
-    (crc >> 8) ^ table[idx]
+    vyre_reference::composition_witness::crc32_update_byte_witness(crc, table, byte)
 }
 
 /// Final CRC-32 CPU state complement.
+#[cfg(test)]
 #[must_use]
 pub const fn crc32_finalize_state(crc: u32) -> u32 {
     crc ^ CRC32_INIT
@@ -243,21 +206,10 @@ pub const fn crc32_finalize_state(crc: u32) -> u32 {
 
 /// Build the 256-entry CRC-32 table at runtime. Deterministic; the
 /// GPU-side op loads this buffer from the host.
+#[cfg(test)]
 #[must_use]
 pub fn build_table() -> [u32; 256] {
-    let mut table = [0u32; 256];
-    for (i, slot) in table.iter_mut().enumerate() {
-        let mut c = i as u32;
-        for _ in 0..8 {
-            c = if c & 1 == 1 {
-                (c >> 1) ^ CRC32_POLY
-            } else {
-                c >> 1
-            };
-        }
-        *slot = c;
-    }
-    table
+    vyre_reference::composition_witness::crc32_table_witness()
 }
 
 fn gf2_matrix_times(matrix: &[u32; 32], mut vector: u32) -> u32 {
@@ -390,6 +342,7 @@ pub const fn crc32_pair_reduce_output_pairs(pair_count: u32) -> u32 {
 }
 
 /// Build a single-source CRC-32 GPU map-reduce plan for `input_len` byte slots.
+#[cfg(test)]
 #[must_use]
 pub fn crc32_map_reduce_plan(input_len: u32, chunk_size: NonZeroU32) -> Option<Crc32MapReducePlan> {
     let chunk_size_words = chunk_size.get();
@@ -670,6 +623,8 @@ fn crc32_byte_shift_matrix() -> [u32; 32] {
     even
 }
 
+const EXPECTED_CRC32_OUTPUT_BYTES: [u8; 4] = [0xC2, 0x41, 0x24, 0x35];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         CRC32_OP_ID,
@@ -678,7 +633,7 @@ inventory::submit! {
             let bytes = vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc");
             vec![vec![bytes, vec![0u8; 4]]]
         }),
-        Some(|| vec![vec![0x3524_41c2u32.to_le_bytes().to_vec()]]),
+        Some(|| vec![vec![EXPECTED_CRC32_OUTPUT_BYTES.to_vec()]]),
     )
 }
 

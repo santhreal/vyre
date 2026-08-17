@@ -161,7 +161,11 @@ impl ReductionComposer {
             }
         }
         body.extend(writeback);
-        Program::wrapped(buffers, workgroup_size, vec![wrap_region(generator, body, None)])
+        Program::wrapped(
+            buffers,
+            workgroup_size,
+            vec![wrap_region(generator, body, None)],
+        )
     }
 
     /// Build a tiled mean reduction program.
@@ -500,10 +504,7 @@ impl ReductionComposer {
             publish: vec![Node::Store {
                 buffer: "rms_mean_sq".into(),
                 index: Expr::u32(0),
-                value: Expr::div(
-                    Expr::load("rms_scratch", Expr::u32(0)),
-                    Expr::f32(n as f32),
-                ),
+                value: Expr::div(Expr::load("rms_scratch", Expr::u32(0)), Expr::f32(n as f32)),
             }],
         };
 
@@ -558,21 +559,13 @@ impl ReductionComposer {
                 tile,
                 chunks,
                 n,
-                (
-                    "sum_acc",
-                    Expr::f32(0.0),
-                    "ln_sum_scratch",
-                    |idx, acc| Expr::add(acc, Expr::load(input, idx)),
-                ),
-                (
-                    "sq_acc",
-                    Expr::f32(0.0),
-                    "ln_sq_scratch",
-                    |idx, acc| {
-                        let val = Expr::load(input, idx);
-                        Expr::add(acc, Expr::mul(val.clone(), val))
-                    },
-                ),
+                ("sum_acc", Expr::f32(0.0), "ln_sum_scratch", |idx, acc| {
+                    Expr::add(acc, Expr::load(input, idx))
+                }),
+                ("sq_acc", Expr::f32(0.0), "ln_sq_scratch", |idx, acc| {
+                    let val = Expr::load(input, idx);
+                    Expr::add(acc, Expr::mul(val.clone(), val))
+                }),
             ),
             reductions: vec![
                 workgroup_tree::sum_f32_child(
@@ -857,7 +850,9 @@ impl ReductionComposer {
         count: u32,
         kind: crate::reduce::atomic_scalar::AtomicBoolReduceKind,
     ) -> Program {
-        crate::reduce::atomic_scalar::atomic_nonzero_bool_reduce_u32(input, output, count, kind, op_id)
+        crate::reduce::atomic_scalar::atomic_nonzero_bool_reduce_u32(
+            input, output, count, kind, op_id,
+        )
     }
 
     /// Build a prefix scan program.
@@ -1001,7 +996,8 @@ mod tests {
     #[test]
     #[cfg(all(feature = "reduce", feature = "builder-ops"))]
     fn tiled_softmax_composition_structure() {
-        let program = ReductionComposer::tiled_softmax("test::softmax", "in", "out", 512, [256, 1, 1]);
+        let program =
+            ReductionComposer::tiled_softmax("test::softmax", "in", "out", 512, [256, 1, 1]);
         assert_eq!(program.workgroup_size(), [256, 1, 1]);
         assert_eq!(program.buffers().len(), 4);
         assert_eq!(program.buffers()[0].name.as_ref(), "in");
@@ -1034,12 +1030,22 @@ mod tests {
             AtomicReduceKind::PopcountSum,
             AtomicReduceKind::CountNonZero,
         ] {
-            let p = ReductionComposer::atomic_scalar_reduction("test::atomic", "in", "out", 128, kind);
+            let p =
+                ReductionComposer::atomic_scalar_reduction("test::atomic", "in", "out", 128, kind);
             assert_eq!(p.workgroup_size(), [256, 1, 1]);
         }
 
-        for kind in [AtomicBoolReduceKind::AnyNonZero, AtomicBoolReduceKind::AllNonZero] {
-            let p = ReductionComposer::atomic_nonzero_bool_reduction("test::atomic_bool", "in", "out", 128, kind);
+        for kind in [
+            AtomicBoolReduceKind::AnyNonZero,
+            AtomicBoolReduceKind::AllNonZero,
+        ] {
+            let p = ReductionComposer::atomic_nonzero_bool_reduction(
+                "test::atomic_bool",
+                "in",
+                "out",
+                128,
+                kind,
+            );
             assert_eq!(p.workgroup_size(), [256, 1, 1]);
         }
     }
@@ -1048,9 +1054,21 @@ mod tests {
     #[cfg(feature = "math-kernels")]
     fn prefix_scan_structure() {
         use crate::math::prefix_scan::ScanKind;
-        let p_inc = ReductionComposer::prefix_scan("test::scan_inc", "in", "out", 64, ScanKind::InclusiveSum);
+        let p_inc = ReductionComposer::prefix_scan(
+            "test::scan_inc",
+            "in",
+            "out",
+            64,
+            ScanKind::InclusiveSum,
+        );
         assert_eq!(p_inc.workgroup_size(), [64, 1, 1]);
-        let p_exc = ReductionComposer::prefix_scan("test::scan_exc", "in", "out", 64, ScanKind::ExclusiveSum);
+        let p_exc = ReductionComposer::prefix_scan(
+            "test::scan_exc",
+            "in",
+            "out",
+            64,
+            ScanKind::ExclusiveSum,
+        );
         assert_eq!(p_exc.workgroup_size(), [64, 1, 1]);
     }
 }

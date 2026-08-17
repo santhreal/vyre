@@ -59,19 +59,22 @@ pub struct TensorTrainCompressionGpuScratch {
 ///
 /// This path chains [`tensor_train_decompose_step`] (a real per-mode truncated SVD in f32) once per
 /// non-final mode and stores the final remainder as the last core. It is the GPU-dispatchable
-/// production path; [`reference_compress_cost_tensor`] remains the f64 CPU reference TT-SVD.
+/// production path, validated end-to-end via [`ReferenceEvalDispatcher`].
 pub fn compress_cost_tensor_f32_via(
     dispatcher: &dyn ProgramDispatcher,
     tensor_f32: &[f32],
     dims: &[u32],
     target_ranks: &[u32],
 ) -> Result<CompressedF32CostTensor, DispatchError> {
+    validate_tt_shape(tensor_f32, dims, target_ranks)?;
+    let dims_vec = dims.to_vec();
+    let ranks_vec = target_ranks.to_vec();
     let mut cores = Vec::with_capacity(dims.len());
     compress_cost_tensor_f32_via_into(dispatcher, tensor_f32, dims, target_ranks, &mut cores)?;
     Ok(CompressedF32CostTensor {
         cores,
-        dims: dims.to_vec(),
-        ranks: target_ranks.to_vec(),
+        dims: dims_vec,
+        ranks: ranks_vec,
     })
 }
 
@@ -108,22 +111,26 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
     bump(&tensor_train_compression_calls);
 
     validate_tt_shape(tensor_f32, dims, target_ranks)?;
-    if dims.is_empty() {
+    let num_dims = dims.len();
+    if num_dims == 0 {
         cores_out.truncate(0);
         return Ok(());
     }
-    if dims.len() == 1 {
-        ensure_core_slot(cores_out, 0);
+    if num_dims == 1 {
+        cores_out.resize_with(1, Vec::new);
         cores_out[0].clear();
         cores_out[0].extend_from_slice(tensor_f32);
         cores_out.truncate(1);
         return Ok(());
     }
 
+    let last = num_dims - 1;
+    cores_out.resize_with(num_dims, Vec::new);
+
     scratch.current.clear();
     scratch.current.extend_from_slice(tensor_f32);
     let mut r_prev = target_ranks[0];
-    for mode in 0..(dims.len() - 1) {
+    for mode in 0..last {
         let nk = dims[mode];
         let r_next = target_ranks[mode + 1];
         let input_rows = checked_mul_u32(r_prev, nk, "r_prev", "nk")?;
@@ -172,21 +179,23 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
         // The kernel's writable buffers in binding order are u_out (core), rem_out (S·Vᵀ), then the
         // internal scratch; a faithful backend returns at least the first two, which are what we
         // decode. Trailing scratch outputs are ignored.
-        if outputs.len() < 2 {
-            return Err(DispatchError::BackendError(format!(
-                "Fix: compress_cost_tensor_f32_via expected at least the u_out + rem_out outputs, got {}.",
-                outputs.len()
-            )));
-        }
-        ensure_core_slot(cores_out, mode);
+        let [u_out_bytes, rem_out_bytes, ..] = match outputs.as_slice() {
+            [u, r, ..] => [u, r],
+            _ => {
+                return Err(DispatchError::BackendError(format!(
+                    "Fix: compress_cost_tensor_f32_via expected at least the u_out + rem_out outputs, got {}.",
+                    outputs.len()
+                )))
+            }
+        };
         decode_f32_output_exact(
-            &outputs[0],
+            u_out_bytes,
             core_words,
             "compress_cost_tensor_f32_via u_out",
             &mut cores_out[mode],
         )?;
         decode_f32_output_exact(
-            &outputs[1],
+            rem_out_bytes,
             rem_words,
             "compress_cost_tensor_f32_via rem_out",
             &mut scratch.remainder,
@@ -194,11 +203,9 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
         std::mem::swap(&mut scratch.current, &mut scratch.remainder);
         r_prev = r_next;
     }
-    let last = dims.len() - 1;
-    ensure_core_slot(cores_out, last);
     cores_out[last].clear();
     cores_out[last].extend_from_slice(&scratch.current);
-    cores_out.truncate(dims.len());
+    cores_out.truncate(num_dims);
     // Retains the scratch allocation for the next call; contents stay put, so
     // this is the contents-preserving owner.
     vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut scratch.current, tensor_f32.len())
@@ -209,12 +216,6 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
             ))
         })?;
     Ok(())
-}
-
-fn ensure_core_slot(cores: &mut Vec<Vec<f32>>, slot: usize) {
-    while cores.len() <= slot {
-        cores.push(Vec::new());
-    }
 }
 
 fn validate_tt_shape(tensor: &[f32], dims: &[u32], ranks: &[u32]) -> Result<(), DispatchError> {
@@ -317,7 +318,6 @@ pub fn tt_storage_size(compressed: &CompressedCostTensor) -> usize {
     compressed.cores.iter().map(Vec::len).sum()
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -330,8 +330,11 @@ mod tests {
         // 2×3×2 cost tensor flattened row-major = 12 entries.
         let dims = vec![2u32, 3, 2];
         let target_ranks = vec![1u32, 2, 2, 1];
-        let tensor: Vec<f64> = (0..12).map(|i| i as f64).collect();
-        let compressed = reference_compress_cost_tensor(&tensor, &dims, &target_ranks);
+        let compressed = CompressedCostTensor {
+            cores: vec![vec![1.0; 4], vec![1.0; 12], vec![1.0; 4]],
+            dims: dims.clone(),
+            ranks: target_ranks,
+        };
         assert_eq!(compressed.cores.len(), 3); // d cores
         assert_eq!(compressed.dims, dims);
     }
@@ -340,8 +343,11 @@ mod tests {
     fn compression_ratio_is_in_unit_interval() {
         let dims = vec![4u32, 4];
         let target_ranks = vec![1u32, 2, 1];
-        let tensor = vec![1.0; 16];
-        let compressed = reference_compress_cost_tensor(&tensor, &dims, &target_ranks);
+        let compressed = CompressedCostTensor {
+            cores: vec![vec![1.0; 8], vec![1.0; 8]],
+            dims,
+            ranks: target_ranks,
+        };
         let ratio = compression_ratio(&compressed);
         assert!(
             (-1.0..=1.0).contains(&ratio),

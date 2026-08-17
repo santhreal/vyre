@@ -9,7 +9,9 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::hash::hypervector::{hamming_similarity, hypervector_xor_bind};
+#[cfg(test)]
+use crate::hash::hypervector::hamming_similarity;
+use crate::hash::hypervector::hypervector_xor_bind;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for VSA fingerprint XOR binding.
@@ -38,7 +40,6 @@ pub fn vsa_fingerprint_words(program: &vyre_foundation::ir::Program) -> [u32; 8]
     let fingerprint = program.fingerprint();
     vyre_primitives::wire::decode_u32x8_le_bytes(&fingerprint)
 }
-
 
 /// Fingerprint a Program component triple through GPU-dispatchable XOR binding primitives.
 ///
@@ -174,6 +175,7 @@ fn dispatch_xor_bind_with_scratch_into(
 /// Approximate cache lookup: return the index of the cached entry
 /// whose fingerprint is most similar to the query, or `None` if all
 /// similarities are below `threshold`.
+#[cfg(test)]
 #[must_use]
 pub fn lookup_approximate(query: &[u32], cached: &[Vec<u32>], threshold: f32) -> Option<usize> {
     let mut best: Option<(usize, f32)> = None;
@@ -194,6 +196,7 @@ pub fn lookup_approximate(query: &[u32], cached: &[Vec<u32>], threshold: f32) ->
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_reference::composition_witness::vsa_fingerprint_witness as reference_fingerprint;
 
     struct XorDispatcher;
 

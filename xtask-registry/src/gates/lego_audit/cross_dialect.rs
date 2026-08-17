@@ -412,8 +412,7 @@ mod tests {
         let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
         write_module(libs_src.path(), "math");
         write_module(libs_src.path(), "unlinked_domain");
-        std::fs::write(libs_src.path().join("lib.rs"), "pub mod math;\n")
-            .expect("write lib.rs");
+        std::fs::write(libs_src.path().join("lib.rs"), "pub mod math;\n").expect("write lib.rs");
 
         let (dialects, errors) = list_dialect_dirs(libs_src.path());
         assert!(errors.is_empty());

@@ -1325,7 +1325,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   that read launch geometry inside one read as not reading it.
   `visit::any_expr_in` is public, as the composition of the node, operand, and
   expression owners that a scan over both namespaces needs.
-- Twelve duplication pins now sit at what the merged tree measures rather than
+- Eleven duplication pins now sit at what the merged tree measures rather than
   at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31,
   vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to
   4017, vyre-foundation 5125 to 5117, vyre-libs 11759 to 11539, vyre-megakernel

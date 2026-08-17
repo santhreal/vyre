@@ -7,6 +7,10 @@ use vyre_driver::accounting::{checked_mul_u64_count as checked_mul, ArithmeticOv
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlan;
+#[cfg(test)]
+use vyre_libs::scheduling::frontier_typed_ir::{
+    FrontierDependency, FrontierDomain, FrontierNode, FrontierWave,
+};
 
 /// CUDA-ready frontier wave input derived from a frontier-typed IR plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -182,6 +186,61 @@ const fn dependency_capacity(wave_count: usize) -> usize {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn plan_frontier_typed_ir(
+    nodes: &[FrontierNode],
+    dependencies: &[FrontierDependency],
+) -> Result<FrontierTypedPlan, String> {
+    use vyre_reference::composition_witness::{
+        plan_frontier_typed_ir_witness, FrontierDependencyWitness, FrontierDomainWitness,
+        FrontierNodeWitness,
+    };
+
+    let witness_nodes = nodes
+        .iter()
+        .map(|node| FrontierNodeWitness {
+            id: node.id,
+            domain: match node.domain {
+                FrontierDomain::Parser => FrontierDomainWitness::Parser,
+                FrontierDomain::Semantic => FrontierDomainWitness::Semantic,
+                FrontierDomain::Dataflow => FrontierDomainWitness::Dataflow,
+                FrontierDomain::Diagnostic => FrontierDomainWitness::Diagnostic,
+            },
+            active_items: node.active_items,
+        })
+        .collect::<Vec<_>>();
+    let witness_dependencies = dependencies
+        .iter()
+        .map(|dependency| FrontierDependencyWitness {
+            before: dependency.before,
+            after: dependency.after,
+        })
+        .collect::<Vec<_>>();
+    let witness_plan = plan_frontier_typed_ir_witness(&witness_nodes, &witness_dependencies)
+        .map_err(|error| format!("{error:?}"))?;
+    Ok(FrontierTypedPlan {
+        waves: witness_plan
+            .waves
+            .into_iter()
+            .map(|wave| FrontierWave {
+                index: wave.index,
+                domains: wave
+                    .domains
+                    .into_iter()
+                    .map(|domain| match domain {
+                        FrontierDomainWitness::Parser => FrontierDomain::Parser,
+                        FrontierDomainWitness::Semantic => FrontierDomain::Semantic,
+                        FrontierDomainWitness::Dataflow => FrontierDomain::Dataflow,
+                        FrontierDomainWitness::Diagnostic => FrontierDomain::Diagnostic,
+                    })
+                    .collect(),
+                node_ids: wave.node_ids,
+                active_items: wave.active_items,
+            })
+            .collect(),
+    })
+}
+
 // Inline: `vyre_driver_cuda::frontier_typed_ir_adapter` is `pub(crate)`, so no integration test can
 // reach what this suite exercises.
 #[cfg(test)]
@@ -189,7 +248,7 @@ mod tests {
     use super::*;
     use vyre_driver::megakernel_barrier::plan_megakernel_barriers;
     use vyre_libs::scheduling::frontier_typed_ir::{
-        plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
+        FrontierDependency, FrontierDomain, FrontierNode,
     };
 
     #[test]
@@ -270,6 +329,32 @@ mod tests {
                 field: "frontier bytes",
             }
         );
+
+        let err_scratch = adapt_frontier_typed_ir_to_cuda(&plan, 1, 2, 0)
+            .expect_err("overflowing scratch bytes should fail");
+        assert_eq!(
+            err_scratch,
+            CudaFrontierTypedIrAdapterError::ByteCountOverflow {
+                field: "scratch bytes",
+            }
+        );
+    }
+
+    #[test]
+    fn adapter_error_display() {
+        let err = CudaFrontierTypedIrAdapterError::ByteCountOverflow {
+            field: "scratch bytes",
+        };
+        assert!(err
+            .to_string()
+            .contains("overflowed while computing scratch bytes"));
+
+        let err = CudaFrontierTypedIrAdapterError::StorageReserveFailed {
+            field: "waves",
+            requested: 16,
+            message: "out of memory".to_string(),
+        };
+        assert!(err.to_string().contains("could not reserve 16 waves"));
     }
 
     #[test]

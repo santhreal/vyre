@@ -18,7 +18,7 @@ pub fn bitset_contains(input: &str, index_buffer: &str, out: &str, words: u32) -
     // an in-bounds check. Prior code loaded unconditionally, which
     // on a misconfigured predicate (index >= words * 32) produced
     // an OOB read on the GPU. Now out-of-range indices yield 0,
-    // matching the cpu_ref semantics below.
+    // matching reference semantics.
     let body = vec![
         Node::let_bind("idx", Expr::load(index_buffer, Expr::u32(0))),
         Node::let_bind("word_idx", Expr::shr(Expr::var("idx"), Expr::u32(5))),
@@ -59,6 +59,7 @@ pub fn bitset_contains(input: &str, index_buffer: &str, out: &str, words: u32) -
     )
 }
 
+const EXPECTED_BITSET_CONTAINS_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -69,20 +70,19 @@ inventory::submit! {
             vec![vec![to_bytes(&[0b1010]), to_bytes(&[1]), to_bytes(&[0])]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[1])]]
+            vec![vec![EXPECTED_BITSET_CONTAINS_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use vyre_reference::composition_witness::bitset_test_bit_witness as reference_bitset_contains;
 
     #[test]
     fn reads_single_bit() {
-        assert_eq!(cpu_ref(&[0b1010], 1), 1);
-        assert_eq!(cpu_ref(&[0b1010], 0), 0);
-        assert_eq!(cpu_ref(&[0b1010], 3), 1);
+        assert_eq!(reference_bitset_contains(&[0b1010], 1), 1);
+        assert_eq!(reference_bitset_contains(&[0b1010], 0), 0);
+        assert_eq!(reference_bitset_contains(&[0b1010], 3), 1);
     }
 }

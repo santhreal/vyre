@@ -157,16 +157,6 @@ pub fn sheaf_laplacian_eigenvalue(
     )
 }
 
-
-
-
-
-crate::plumbing::host::scratch::define_reserve_capacity!(
-    reserve_eigen_tmp,
-    f64,
-    "sheaf Laplacian eigenvalue CPU oracle"
-);
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -181,13 +171,17 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
             // All-zero diagonal: max is 0 at arg-max index 0, so lambda = 0 and the eigenvector is
             // e_0 = [1.0, 0, 0, 0] in 16.16. The only writable outputs are `v` and `lambda`: the
             // running max/arg-max are loop-carried locals, not storage buffers.
             vec![vec![
-                to_bytes(&[1u32 << 16, 0, 0, 0]), // v = e_0
-                to_bytes(&[0]),                   // l = max r = 0
+                vec![
+                    0x00, 0x00, 0x01, 0x00, // 1.0 in 16.16
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                ], // v = e_0
+                vec![0x00, 0x00, 0x00, 0x00], // l = max r = 0
             ]]
         }),
     )
@@ -216,8 +210,7 @@ inventory::submit! {
             vec![vec![to_bytes(&[11]), to_bytes(&[0])]]
         }),
         Some(|| {
-            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
-            vec![vec![to_bytes(&[11])]]
+            vec![vec![vec![0x0b, 0x00, 0x00, 0x00]]]
         }),
     )
 }
@@ -225,6 +218,41 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_cpu_ref_into(
+        restriction_diag: &[f64],
+        init: &[f64],
+        iterations: u32,
+        v: &mut Vec<f64>,
+        next: &mut Vec<f64>,
+    ) -> Result<f64, String> {
+        if restriction_diag.len() < init.len() {
+            return Err("restriction_diag too short".to_string());
+        }
+        let lambda = vyre_reference::composition_witness::sheaf_dominant_spectrum_witness_into(
+            &restriction_diag[..init.len()],
+            iterations,
+            v,
+        );
+        next.clear();
+        next.extend_from_slice(v);
+        Ok(lambda)
+    }
+
+    fn try_cpu_ref(
+        restriction_diag: &[f64],
+        init: &[f64],
+        iterations: u32,
+    ) -> Result<(f64, Vec<f64>), String> {
+        let mut v = Vec::new();
+        let mut next = Vec::new();
+        let lambda = try_cpu_ref_into(restriction_diag, init, iterations, &mut v, &mut next)?;
+        Ok((lambda, v))
+    }
+
+    fn cpu_ref(restriction_diag: &[f64], init: &[f64], iterations: u32) -> (f64, Vec<f64>) {
+        try_cpu_ref(restriction_diag, init, iterations).unwrap()
+    }
 
     #[test]
     fn cpu_ref_diagonal_max() {

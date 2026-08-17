@@ -47,118 +47,48 @@
 /// # Panics
 /// Panics when `alpha` is not finite or `n` is zero. Callers that must recover use the
 /// `try_` twin.
+#[cfg(test)]
 #[must_use]
-pub fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
-    let mut out = Vec::new();
-    // Returning an empty/partial kernel on failure silently corrupts every
-    // downstream convolution (it reads zeros) (a silent fallback (Law 10)).
-    // Fail loud; callers use try_grunwald_letnikov_kernel_into.
-    if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, &mut out) {
-        panic!("vyre-primitives Grünwald-Letnikov kernel generation failed: {error}");
-    }
-    out
+fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
+    vyre_reference::composition_witness::grunwald_letnikov_kernel_witness(alpha, n)
 }
 
-/// Generate the Grünwald-Letnikov kernel into caller-owned storage.
-///
-/// # Panics
-/// Panics when `alpha` is not finite or `n` is zero; see
-/// [`grunwald_letnikov_kernel`].
-pub fn grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
+#[cfg(test)]
+fn grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
     if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, out) {
-        panic!("vyre-primitives Grünwald-Letnikov kernel generation failed: {error}");
+        panic!("Grünwald-Letnikov kernel generation failed: {error}");
     }
 }
 
-/// Fallible Grünwald-Letnikov kernel generator into caller-owned storage.
-pub fn try_grunwald_letnikov_kernel_into(
-    alpha: f64,
-    n: u32,
-    out: &mut Vec<f64>,
-) -> Result<(), String> {
-    let n = n as usize;
-    if n > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            n - out.len(),
-            "fractional calculus CPU helper",
-            "grunwald_letnikov_kernel output",
-        )?;
-    }
-    out.clear();
-    if n == 0 || !alpha.is_finite() {
-        return Ok(());
-    }
-    out.resize(n, 0.0);
-    out[0] = 1.0;
-    for k in 1..n {
-        // w_k = (1 - (alpha + 1) / k) · w_{k-1}
-        out[k] = (1.0 - (alpha + 1.0) / (k as f64)) * out[k - 1];
-    }
-    Ok(())
+#[cfg(test)]
+fn try_grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) -> Result<(), String> {
+    vyre_reference::composition_witness::try_grunwald_letnikov_kernel_witness_into(alpha, n, out)
 }
 
-/// Convert a Grünwald-Letnikov kernel into the 16.16 fixed-point
-/// representation that [`crate::math::conv1d`] consumes.
-///
-/// # Panics
-/// Panics when a kernel weight is not representable in 16.16 fixed point. Saturating
-/// silently would change the convolution the GPU then runs.
+#[cfg(test)]
 #[must_use]
-pub fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
-    let mut out = Vec::new();
-    // Returning an empty/partial fixed-point kernel on failure silently
-    // corrupts the conv1d input, a silent fallback (Law 10). Fail loud;
-    // callers use try_kernel_to_fixed_16_16_into.
-    if let Err(error) = try_kernel_to_fixed_16_16_into(kernel, step, alpha, &mut out) {
-        panic!("vyre-primitives 16.16 fixed-point kernel conversion failed: {error}");
-    }
-    out
+fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
+    vyre_reference::composition_witness::kernel_to_fixed_16_16_witness(kernel, step, alpha)
 }
 
-/// Convert a Grünwald-Letnikov kernel into 16.16 fixed point in caller-owned storage.
-///
-/// # Panics
-/// Panics when a kernel weight is not representable in 16.16 fixed point; see
-/// [`kernel_to_fixed_16_16`].
-pub fn kernel_to_fixed_16_16_into(kernel: &[f64], step: f64, alpha: f64, out: &mut Vec<u32>) {
-    if let Err(error) = try_kernel_to_fixed_16_16_into(kernel, step, alpha, out) {
-        panic!("vyre-primitives 16.16 fixed-point kernel conversion failed: {error}");
-    }
+#[cfg(test)]
+fn kernel_to_fixed_16_16_into(kernel: &[f64], step: f64, alpha: f64, out: &mut Vec<u32>) {
+    vyre_reference::composition_witness::kernel_to_fixed_16_16_witness_into(
+        kernel, step, alpha, out,
+    )
 }
 
-/// Fallible conversion of a Grünwald-Letnikov kernel into caller-owned 16.16 fixed point.
-pub fn try_kernel_to_fixed_16_16_into(
+#[cfg(test)]
+fn try_kernel_to_fixed_16_16_into(
     kernel: &[f64],
     step: f64,
     alpha: f64,
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    if kernel.len() > out.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            out,
-            kernel.len() - out.len(),
-            "fractional calculus CPU helper",
-            "kernel_to_fixed_16_16 output",
-        )?;
-    }
-    out.clear();
-    if step <= 0.0 || !step.is_finite() || !alpha.is_finite() {
-        return Ok(());
-    }
-    let scale = step.powf(-alpha);
-    for &w in kernel {
-        let scaled = w * scale * 65536.0;
-        // Wrap negative values into u32 two's-complement so
-        // subsequent fixed-point multiplies preserve sign on
-        // 32-bit modular arithmetic.
-        out.push(scaled.round() as i64 as u32);
-    }
-    Ok(())
+    vyre_reference::composition_witness::try_kernel_to_fixed_16_16_witness_into(
+        kernel, step, alpha, out,
+    )
 }
-
-
-
 
 #[cfg(test)]
 mod tests {
@@ -168,6 +98,45 @@ mod tests {
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < EPS * (1.0 + a.abs() + b.abs())
+    }
+
+    fn try_fractional_derivative_cpu_into(
+        f: &[f64],
+        alpha: f64,
+        step: f64,
+        kernel: &mut Vec<f64>,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        if f.len() > out.capacity() {
+            crate::plumbing::host::scratch::reserve_items(
+                out,
+                f.len() - out.len(),
+                "fractional calculus CPU oracle",
+                "fractional_derivative output",
+            )?;
+        }
+        vyre_reference::composition_witness::try_fractional_derivative_witness_into(
+            f, alpha, step, kernel, out,
+        )
+    }
+
+    fn fractional_derivative_cpu_into(
+        f: &[f64],
+        alpha: f64,
+        step: f64,
+        kernel: &mut Vec<f64>,
+        out: &mut Vec<f64>,
+    ) {
+        try_fractional_derivative_cpu_into(f, alpha, step, kernel, out)
+            .unwrap_or_else(|error| panic!("{error}"));
+    }
+
+    fn fractional_derivative_cpu(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
+        let mut kernel = Vec::new();
+        let mut out = Vec::new();
+        try_fractional_derivative_cpu_into(f, alpha, step, &mut kernel, &mut out)
+            .unwrap_or_else(|error| panic!("{error}"));
+        out
     }
 
     #[test]
@@ -314,21 +283,7 @@ mod tests {
     }
 
     fn independent_fractional_derivative(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
-        if step <= 0.0 || !step.is_finite() || !alpha.is_finite() {
-            return Vec::new();
-        }
-        let mut kernel = Vec::new();
-        grunwald_letnikov_kernel_into(alpha, f.len() as u32, &mut kernel);
-        let scale = step.powf(-alpha);
-        let mut out = Vec::with_capacity(f.len());
-        for i in 0..f.len() {
-            let mut acc = 0.0;
-            for k in 0..=i {
-                acc += kernel[k] * f[i - k];
-            }
-            out.push(acc * scale);
-        }
-        out
+        vyre_reference::composition_witness::fractional_derivative_witness(f, alpha, step)
     }
 
     #[test]

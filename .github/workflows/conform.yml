@@ -33,14 +33,13 @@ jobs:
       - name: Verify registered primitive safety contracts
         run: >-
           ./cargo_full test -p vyre-primitives
-          --features hardware,cpu-parity,inventory-registry
+          --features hardware,inventory-registry
           --test registry_oob_clean
 
       # The graph and fixpoint oracle sweeps moved to vyre-libs with their
-      # domains. `cpu-parity` and `graph` are what those targets declare as
-      # required-features, and a target whose required feature is absent is
-      # skipped without a word, so the selection is named rather than left to
-      # the default set.
+      # domains. `graph` is what those targets declare as required-features,
+      # and a target whose required feature is absent is skipped without a word,
+      # so the selection is named rather than left to the default set.
       - name: Verify graph and fixpoint oracle sweeps
         run: >-
           ./cargo_full test -p vyre-libs

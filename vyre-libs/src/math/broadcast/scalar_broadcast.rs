@@ -31,7 +31,12 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![
             // Only ReadWrite buffer: dst filled with 42
-            vyre_primitives::wire::pack_u32_slice(&[42u32, 42, 42, 42]),
+            vec![
+                0x2a, 0x00, 0x00, 0x00, // 42
+                0x2a, 0x00, 0x00, 0x00, // 42
+                0x2a, 0x00, 0x00, 0x00, // 42
+                0x2a, 0x00, 0x00, 0x00, // 42
+            ],
         ]]),
     )
     .with_category("math")

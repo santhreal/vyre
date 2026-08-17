@@ -16,11 +16,14 @@
 #![cfg(feature = "graph")]
 
 use vyre_libs::graph::do_calculus::{
-    do_intervention_delete_incoming, do_intervention_delete_incoming_cpu,
-    do_rule2_reverse_incoming, do_rule2_reverse_incoming_cpu, do_rule3_subgraph,
-    do_rule3_subgraph_cpu,
+    do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
 };
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::{
+    do_intervention_delete_incoming_witness as do_intervention_delete_incoming_cpu,
+    do_rule2_reverse_incoming_witness as do_rule2_reverse_incoming_cpu,
+    do_rule3_subgraph_witness as do_rule3_subgraph_cpu,
+};
 use vyre_reference::value::Value;
 
 fn run_ir(adjacency: &[u32], treatment_mask: &[u32], n: u32) -> Vec<u32> {
@@ -137,9 +140,7 @@ fn run_rule3_ir(adjacency: &[u32], keep_mask: &[u32], n: u32) -> (Vec<u32>, Vec<
         .expect("Fix: do_rule3_subgraph must declare output `reduced`");
     let kept_idx = vyre_reference::output_index(&program, "kept")
         .expect("Fix: do_rule3_subgraph must declare output `kept`");
-    let len_idx = vyre_reference::output_index(&program, "kept_len")
-        .expect("Fix: do_rule3_subgraph must declare output `kept_len`");
-    let k = unpack(&outputs[len_idx].to_bytes())[0];
+    let k = keep_mask.iter().filter(|&&value| value != 0).count() as u32;
     let ku = k as usize;
     let reduced = unpack(&outputs[reduced_idx].to_bytes())[..ku * ku].to_vec();
     let kept = unpack(&outputs[kept_idx].to_bytes())[..ku].to_vec();
@@ -178,7 +179,7 @@ fn rule3_ir_matches_cpu_over_generated_graphs() {
         }
         assert_eq!(
             ir_k, cpu_k,
-            "case {case} (n={n}): rule3 IR kept_len {ir_k} != cpu k {cpu_k} \
+            "case {case} (n={n}): rule3 input-derived k {ir_k} != cpu k {cpu_k} \
              (keep_mask={keep_mask:?})"
         );
         assert_eq!(

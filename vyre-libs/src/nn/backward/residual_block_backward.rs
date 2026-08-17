@@ -31,6 +31,10 @@ pub fn residual_block_backward(
         })
 }
 
+const EXPECTED_RESIDUAL_BLOCK_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x80, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -44,10 +48,11 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // All three live-outs = copy of grad_out.
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            let expected = to_f32(&[1.0, 2.0, 3.0, 4.0]);
-            vec![vec![expected.clone(), expected.clone(), expected]]
+            vec![vec![
+                EXPECTED_RESIDUAL_BLOCK_BACKWARD_OUTPUT_BYTES.to_vec(),
+                EXPECTED_RESIDUAL_BLOCK_BACKWARD_OUTPUT_BYTES.to_vec(),
+                EXPECTED_RESIDUAL_BLOCK_BACKWARD_OUTPUT_BYTES.to_vec(),
+            ]]
         }),
     )
     .with_category("nn")

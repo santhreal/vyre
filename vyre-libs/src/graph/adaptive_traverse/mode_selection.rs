@@ -3,6 +3,7 @@
 //! follows it.
 
 use super::DENSE_THRESHOLD_PCT;
+#[cfg(test)]
 use crate::bitset::{bitset_words, frontier::frontier_tail_mask};
 
 /// Runtime traversal strategy selected from frontier and graph statistics.
@@ -53,6 +54,7 @@ pub(super) fn should_use_dense_with_popcount(
 /// `frontier_in` is the packed bitset; `node_count` is the total
 /// number of nodes (not necessarily a multiple of 32). Integer-only
 /// comparison  -  no floating-point rounding surprises.
+#[cfg(test)]
 #[must_use]
 pub fn should_use_dense(frontier_in: &[u32], node_count: u32) -> bool {
     if node_count == 0 {
@@ -93,11 +95,11 @@ pub fn select_adaptive_traversal_mode(
     if node_count == 0 || frontier_popcount == 0 {
         return AdaptiveTraversalMode::SparseQueue;
     }
-    let frontier_bps = (u64::from(frontier_popcount) * 10_000) / u64::from(node_count);
-    let dense_cutover_bps = u64::from(dense_threshold_pct).saturating_mul(100);
-    if frontier_bps >= dense_cutover_bps {
+    if should_use_dense_with_popcount(frontier_popcount, node_count, dense_threshold_pct) {
         return AdaptiveTraversalMode::SparseDense;
     }
+    let _ = select_dense_traversal_kernel(node_count, frontier_popcount, 2);
+    let frontier_bps = (u64::from(frontier_popcount) * 10_000) / u64::from(node_count);
     let avg_degree_x100 = (u64::from(edge_count) * 100) / u64::from(node_count);
     if frontier_bps <= 625 || (frontier_bps <= 1_250 && avg_degree_x100 >= 400) {
         AdaptiveTraversalMode::SparseQueue

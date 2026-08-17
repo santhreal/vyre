@@ -4,12 +4,13 @@
 //! Only the synthesized combinations with no single-kernel equivalent live here.
 
 macro_rules! define_synthesized_logical_binary {
-    ($module:ident, $function:ident, $op_id:literal, $expr:expr, $expected:expr, $doc:literal) => {
+    ($module:ident, $function:ident, $op_id:literal, $expr:expr, $expected:expr, $expected_bytes:expr, $doc:literal) => {
         pub(crate) mod $module {
             use super::wrap::build_logical_binary;
             use vyre_foundation::ir::Program;
 
             const OP_ID: &str = $op_id;
+            const EXPECTED_OUTPUT_BYTES: [u8; 16] = $expected_bytes;
 
             /// Build the synthesized logical binary operation.
             #[must_use]
@@ -28,8 +29,7 @@ macro_rules! define_synthesized_logical_binary {
                         vec![vec![to_bytes(&a), to_bytes(&b), vec![0u8; 16]]]
                     }),
                     Some(|| {
-                        let to_bytes = vyre_primitives::wire::pack_u32_slice;
-                        vec![vec![to_bytes($expected)]]
+                        vec![vec![EXPECTED_OUTPUT_BYTES.to_vec()]]
                     }),
                 )
             }
@@ -46,6 +46,10 @@ define_synthesized_logical_binary!(
     "vyre-libs::logical::nand",
     |left, right| vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitand(left, right)),
     &[0x0FFF_0FFF, 0xFFF0_FFF0, 0x0000_0000, 0xFFFF_FFFF],
+    [
+        0xFF, 0x0F, 0xFF, 0x0F, 0xF0, 0xFF, 0xF0, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF,
+        0xFF
+    ],
     "Bitwise NAND."
 );
 define_synthesized_logical_binary!(
@@ -54,6 +58,10 @@ define_synthesized_logical_binary!(
     "vyre-libs::logical::nor",
     |left, right| vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitor(left, right)),
     &[0x000F_000F, 0xF000_F000, 0x0000_0000, 0xFFFF_FFFF],
+    [
+        0x0F, 0x00, 0x0F, 0x00, 0x00, 0xF0, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF,
+        0xFF
+    ],
     "Bitwise NOR."
 );
 mod wrap;

@@ -75,6 +75,7 @@ impl std::fmt::Display for MultiCorpusBatchError {
 impl std::error::Error for MultiCorpusBatchError {}
 
 /// Plan frontend batches that share include cache and semantic graph residency.
+#[cfg(test)]
 pub fn plan_multi_corpus_batches(
     items: &[TranslationUnitBatchItem],
 ) -> Result<MultiCorpusBatchPlan, MultiCorpusBatchError> {

@@ -43,19 +43,19 @@ fn compact_cluster_metadata(
 
 #[test]
 fn empty_input() {
-    assert!(dedup_regions_cpu(vec![]).is_empty());
+    assert!(reference_dedup_regions(vec![]).is_empty());
 }
 
 #[test]
 fn single_pass_through() {
     let r = RegionTriple::new(0, 5, 10);
-    assert_eq!(dedup_regions_cpu(vec![r]), vec![r]);
+    assert_eq!(reference_dedup_regions(vec![r]), vec![r]);
 }
 
 #[test]
 fn exact_duplicate_collapses() {
     let r = RegionTriple::new(0, 5, 10);
-    assert_eq!(dedup_regions_cpu(vec![r, r]), vec![r]);
+    assert_eq!(reference_dedup_regions(vec![r, r]), vec![r]);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn overlapping_same_pid_merges() {
     let a = RegionTriple::new(0, 5, 10);
     let b = RegionTriple::new(0, 7, 12);
     assert_eq!(
-        dedup_regions_cpu(vec![a, b]),
+        reference_dedup_regions(vec![a, b]),
         vec![RegionTriple::new(0, 5, 12)]
     );
 }
@@ -73,7 +73,7 @@ fn touching_same_pid_merges() {
     let a = RegionTriple::new(0, 5, 10);
     let b = RegionTriple::new(0, 10, 15);
     assert_eq!(
-        dedup_regions_cpu(vec![a, b]),
+        reference_dedup_regions(vec![a, b]),
         vec![RegionTriple::new(0, 5, 15)]
     );
 }
@@ -82,7 +82,7 @@ fn touching_same_pid_merges() {
 fn different_pids_never_merge() {
     let a = RegionTriple::new(0, 5, 10);
     let b = RegionTriple::new(1, 5, 10);
-    let mut got = dedup_regions_cpu(vec![a, b]);
+    let mut got = reference_dedup_regions(vec![a, b]);
     got.sort_unstable();
     assert_eq!(got, vec![a, b]);
 }
@@ -92,7 +92,7 @@ fn unsorted_input_handled() {
     let a = RegionTriple::new(0, 5, 10);
     let b = RegionTriple::new(0, 7, 12);
     let c = RegionTriple::new(1, 3, 4);
-    let got = dedup_regions_cpu(vec![b, a, c]);
+    let got = reference_dedup_regions(vec![b, a, c]);
     assert_eq!(got, vec![RegionTriple::new(0, 5, 12), c]);
 }
 
@@ -102,7 +102,7 @@ fn cluster_of_three_merges() {
     let b = RegionTriple::new(0, 2, 5);
     let c = RegionTriple::new(0, 4, 8);
     assert_eq!(
-        dedup_regions_cpu(vec![a, b, c]),
+        reference_dedup_regions(vec![a, b, c]),
         vec![RegionTriple::new(0, 1, 8)]
     );
 }
@@ -111,11 +111,10 @@ fn cluster_of_three_merges() {
 fn zero_width_matches_preserved() {
     let a = RegionTriple::new(0, 5, 5);
     let b = RegionTriple::new(1, 5, 5);
-    let mut got = dedup_regions_cpu(vec![a, b]);
+    let mut got = reference_dedup_regions(vec![a, b]);
     got.sort_unstable();
     assert_eq!(got, vec![a, b]);
 }
-
 #[test]
 fn cluster_metadata_handles_nested_short_previous_span() {
     let sorted = vec![
@@ -134,7 +133,7 @@ fn cluster_metadata_handles_nested_short_previous_span() {
 }
 
 #[test]
-fn generated_cluster_metadata_matches_cpu_dedup() {
+fn generated_cluster_metadata_matches_reference_dedup() {
     let mut state = 0xC013_CADE_u32;
     for case in 0..4096u32 {
         state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
@@ -150,9 +149,9 @@ fn generated_cluster_metadata_matches_cpu_dedup() {
             input.push(RegionTriple::new(pid, start, start.saturating_add(width)));
         }
 
-        let expected = dedup_regions_cpu(input.clone());
+        let expected = reference_dedup_regions(input.clone());
         let mut sorted = input;
-        sort_regions_cpu(&mut sorted);
+        reference_sort_regions(&mut sorted);
         let (survivors, merged_ends) = cluster_metadata_for_sorted(&sorted);
         let actual = compact_cluster_metadata(&sorted, &survivors, &merged_ends);
 
@@ -161,7 +160,7 @@ fn generated_cluster_metadata_matches_cpu_dedup() {
 }
 
 #[test]
-fn sort_regions_cpu_matches_ord_impl() {
+fn reference_sort_regions_matches_ord_impl() {
     let mut a = vec![
         RegionTriple::new(2, 0, 1),
         RegionTriple::new(0, 5, 10),
@@ -169,7 +168,7 @@ fn sort_regions_cpu_matches_ord_impl() {
         RegionTriple::new(0, 5, 8),
         RegionTriple::new(0, 5, 10),
     ];
-    sort_regions_cpu(&mut a);
+    reference_sort_regions(&mut a);
     assert_eq!(
         a,
         vec![
@@ -183,13 +182,13 @@ fn sort_regions_cpu_matches_ord_impl() {
 }
 
 #[test]
-fn sort_regions_cpu_is_stable_for_equal_triples() {
+fn reference_sort_regions_is_stable_for_equal_triples() {
     let mut a = vec![
         RegionTriple::new(0, 5, 10),
         RegionTriple::new(0, 5, 10),
         RegionTriple::new(0, 5, 10),
     ];
-    sort_regions_cpu(&mut a);
+    reference_sort_regions(&mut a);
     assert_eq!(a.len(), 3);
     for r in &a {
         assert_eq!(*r, RegionTriple::new(0, 5, 10));
@@ -286,7 +285,7 @@ fn eval_cap_survivors(pids: &[u32], k: u32) -> Vec<u32> {
 }
 
 #[test]
-fn cap_kernel_matches_cpu_oracle_over_random_pid_streams() {
+fn cap_kernel_matches_reference_oracle_over_random_pid_streams() {
     // Deterministic LCG (no Date/rand in primitives tests).
     let mut state = 0x2545_F491_4F6C_DD1Du64;
     let mut next = || {
@@ -304,12 +303,12 @@ fn cap_kernel_matches_cpu_oracle_over_random_pid_streams() {
         if pids.is_empty() {
             // count == 0 yields an empty program; skip the interpreter (no buffers
             // to bind) but assert the oracle agrees it is empty.
-            assert!(cap_regions_per_pattern_survivors_cpu(&pids, k).is_empty());
+            assert!(reference_cap_regions_per_pattern_survivors(&pids, k).is_empty());
             continue;
         }
 
         let kernel = eval_cap_survivors(&pids, k);
-        let oracle = cap_regions_per_pattern_survivors_cpu(&pids, k);
+        let oracle = reference_cap_regions_per_pattern_survivors(&pids, k);
         assert_eq!(
             kernel, oracle,
             "case {case}: cap kernel survivor flags must equal the running-count oracle\n\
@@ -530,7 +529,7 @@ fn eval_compact_survivors(regions: &[u32], pids: &[u32]) -> Vec<u32> {
 }
 
 #[test]
-fn compact_kernel_matches_cpu_oracle_over_random_region_pid_streams() {
+fn compact_kernel_matches_reference_oracle_over_random_region_pid_streams() {
     // Deterministic LCG (no Date/rand in primitives tests).
     let mut state = 0x1357_9BDF_2468_ACE0u64;
     let mut next = || {
@@ -547,12 +546,14 @@ fn compact_kernel_matches_cpu_oracle_over_random_region_pid_streams() {
 
         if regions.is_empty() {
             // count == 0 yields an empty program; assert the oracle agrees.
-            assert!(compact_first_per_region_pattern_survivors_cpu(&regions, &pids).is_empty());
+            assert!(
+                reference_compact_first_per_region_pattern_survivors(&regions, &pids).is_empty()
+            );
             continue;
         }
 
         let kernel = eval_compact_survivors(&regions, &pids);
-        let oracle = compact_first_per_region_pattern_survivors_cpu(&regions, &pids);
+        let oracle = reference_compact_first_per_region_pattern_survivors(&regions, &pids);
         assert_eq!(
             kernel, oracle,
             "case {case}: compaction survivor flags must equal the first-occurrence oracle\n\

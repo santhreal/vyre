@@ -28,10 +28,13 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_f32_slice;
-            vec![vec![
-                to_bytes(&[4.0_f32, 9.0, 16.0, 25.0]), // output = x*x
-            ]]
+            // [4.0, 9.0, 16.0, 25.0]
+            vec![vec![vec![
+                0x00, 0x00, 0x80, 0x40, // 4.0
+                0x00, 0x00, 0x10, 0x41, // 9.0
+                0x00, 0x00, 0x80, 0x41, // 16.0
+                0x00, 0x00, 0xc8, 0x41, // 25.0
+            ]]]
         }),
     )
     .with_category("math")

@@ -120,10 +120,10 @@ pub fn write_u32_slice_le_bytes(out: &mut Vec<u8>, values: &[u32]) {
 }
 
 /// Encode an f32 slice as little-endian bytes for dispatcher input buffers.
-#[must_use]
-pub fn f32_slice_to_le_bytes(values: &[f32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_f32_slice(values)
-}
+///
+/// Routes through the canonical `vyre-primitives::wire::pack_f32_slice`
+/// LEGO primitive (with `bytemuck::cast_slice` fast path on LE hosts).
+pub use vyre_primitives::wire::pack_f32_slice as f32_slice_to_le_bytes;
 
 /// Decode an aligned u32 input buffer for a CPU-parity dispatcher.
 pub fn decode_u32_input_aligned(bytes: &[u8], context: &str) -> Result<Vec<u32>, DispatchError> {
@@ -165,6 +165,20 @@ pub fn read_f32s(bytes: &[u8]) -> Vec<f32> {
 /// input storage.
 pub fn write_f32_slice_le_bytes(out: &mut Vec<u8>, values: &[f32]) {
     vyre_primitives::wire::pack_f32_slice_into(values, out);
+}
+
+/// Return the sole dispatcher output buffer and reject missing or surplus buffers.
+pub(crate) fn require_exactly_one_output<'a>(
+    outputs: &'a [Vec<u8>],
+    context: &str,
+) -> Result<&'a [u8], DispatchError> {
+    let [output] = outputs else {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: {context} expected exactly one output buffer, got {}.",
+            outputs.len()
+        )));
+    };
+    Ok(output)
 }
 
 /// Decode a dispatcher u32 output buffer with exact byte-count validation.
@@ -288,5 +302,28 @@ mod tests {
 
         assert_eq!(bytes, vec![0; 32]);
         assert_eq!(bytes.as_ptr(), ptr);
+    }
+
+    #[test]
+    fn dispatcher_output_count_is_exact() {
+        let empty: Vec<Vec<u8>> = Vec::new();
+        let missing = require_exactly_one_output(&empty, "dispatch-buffer test")
+            .expect_err("missing output must fail");
+        assert!(missing
+            .to_string()
+            .contains("exactly one output buffer, got 0"));
+
+        let extra = vec![vec![1], vec![2]];
+        let surplus = require_exactly_one_output(&extra, "dispatch-buffer test")
+            .expect_err("surplus output must fail");
+        assert!(surplus
+            .to_string()
+            .contains("exactly one output buffer, got 2"));
+
+        let one = vec![vec![3]];
+        assert_eq!(
+            require_exactly_one_output(&one, "dispatch-buffer test").expect("one output is exact"),
+            [3]
+        );
     }
 }

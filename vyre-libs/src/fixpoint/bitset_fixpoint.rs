@@ -77,7 +77,6 @@ pub fn bitset_fixpoint(current: &str, next: &str, changed: &str, words: u32) -> 
     )
 }
 
-
 /// Canonical seed-buffer name for the warm-start variant.
 pub const NAME_WARM_SEED: &str = "fp_warm_seed";
 
@@ -166,6 +165,7 @@ pub fn bitset_fixpoint_warm_start(
 /// Canonical op id for the warm-start variant.
 pub const OP_ID_WARM_START: &str = "vyre-libs::fixpoint::bitset_fixpoint_warm_start";
 
+const EXPECTED_BITSET_FIXPOINT_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -177,15 +177,17 @@ inventory::submit! {
             vec![vec![to_bytes(&[0b0001]), to_bytes(&[0b0011]), to_bytes(&[0])]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[1])]]
+            vec![vec![EXPECTED_BITSET_FIXPOINT_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use vyre_reference::composition_witness::{
+        bitset_difference_flag_witness as reference_eval,
+        bitset_warm_start_witness as reference_eval_warm_start,
+    };
 
     #[test]
     fn flag_clears_when_bitsets_equal() {

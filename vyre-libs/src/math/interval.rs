@@ -84,7 +84,6 @@ pub fn interval_merge_program(
     )
 }
 
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -106,9 +105,19 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // omin = min(a,b) per lane; omax = max(a,b) per lane.
-            vec![vec![to_bytes(&[4, 0, 7]), to_bytes(&[20, 5, 12])]]
+            vec![vec![
+                vec![
+                    0x04, 0x00, 0x00, 0x00, // 4
+                    0x00, 0x00, 0x00, 0x00, // 0
+                    0x07, 0x00, 0x00, 0x00, // 7
+                ],
+                vec![
+                    0x14, 0x00, 0x00, 0x00, // 20
+                    0x05, 0x00, 0x00, 0x00, // 5
+                    0x0c, 0x00, 0x00, 0x00, // 12
+                ],
+            ]]
         }),
     )
 }
@@ -116,6 +125,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::interval_merge_witness as cpu_interval_merge;
 
     #[test]
     fn interval_merge_program_is_ir_not_target_text() {

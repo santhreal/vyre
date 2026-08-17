@@ -4,11 +4,10 @@
 
 use proptest::prelude::*;
 use vyre_foundation::ir::Program;
-use vyre_libs::graph::csr_frontier_queue::{
-    frontier_to_queue_cpu, frontier_words_to_queue_clear_out_parallel,
-};
+use vyre_libs::graph::csr_frontier_queue::frontier_words_to_queue_clear_out_parallel;
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_words;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
+use vyre_reference::composition_witness::frontier_to_queue_witness;
 use vyre_reference::value::Value;
 
 /// Read a returned output buffer BY NAME (queue/queue_len/frontier_out) instead of by
@@ -55,7 +54,7 @@ fn word_parallel_frontier_queue_clear_out_matches_queue_and_zeros_output() {
     ];
     let frontier_out_seed = [u32::MAX, 0xA5A5_A5A5, 0x8000_0001];
     let (expected_queue, expected_seen) =
-        frontier_to_queue_cpu(&frontier, node_count, queue_capacity as usize);
+        frontier_to_queue_witness(&frontier, node_count, queue_capacity as usize);
     let program = frontier_words_to_queue_clear_out_parallel(
         "frontier",
         "queue",
@@ -108,7 +107,7 @@ proptest! {
         let queue_capacity = 1 + capacity_salt % (node_count + 7);
         let frontier_out_seed = generated_words(node_count, out_seed ^ 0xa5a5_5a5a);
         let (all_active, expected_seen) =
-            frontier_to_queue_cpu(&frontier, node_count, node_count as usize);
+            frontier_to_queue_witness(&frontier, node_count, node_count as usize);
         let program = frontier_words_to_queue_clear_out_parallel(
             "frontier",
             "queue",

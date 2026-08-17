@@ -7,6 +7,7 @@ mod matvec_contracts;
 mod unpack_contracts;
 
 use super::*;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 struct QuantizedDispatcher;
 

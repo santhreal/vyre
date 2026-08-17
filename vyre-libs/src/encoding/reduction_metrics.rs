@@ -17,7 +17,6 @@ use crate::reduce::{
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
-
 /// Caller-owned scratch for reduction metric dispatches.
 #[derive(Debug, Default)]
 pub struct ReductionMetricsGpuScratch {
@@ -262,14 +261,6 @@ pub fn histogram_atomic_scatter_via(
     Ok(out)
 }
 
-
-
-
-
-
-
-
-
 fn grid_for_metric(metric: ReductionMetric, _count: u32) -> [u32; 3] {
     match metric {
         ReductionMetric::Sum
@@ -335,6 +326,23 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::{
+        histogram_witness as reference_histogram_atomic_scatter,
+        reduce_all_witness as reference_reduce_all_u32,
+        reduce_any_witness as reference_reduce_any_u32,
+        reduce_count_non_zero_witness as reference_reduce_count_non_zero,
+        reduce_max_witness as reference_reduce_max, reduce_min_witness as reference_reduce_min,
+        segment_reduce_sum_witness as primitive_segment_reduce_sum,
+        wrapping_sum_witness as reference_reduce_sum,
+    };
+
+    fn reference_reduce_any(values: &[u32]) -> bool {
+        reference_reduce_any_u32(values) != 0
+    }
+
+    fn reference_reduce_all(values: &[u32]) -> bool {
+        reference_reduce_all_u32(values) != 0
+    }
 
     struct ReduceDispatcher;
 
@@ -362,7 +370,7 @@ mod tests {
                         ReductionMetric::Sum,
                         values.len() as u32,
                     );
-                    scalar(primitive_sum(&values))
+                    scalar(reference_reduce_sum(&values))
                 }
                 crate::reduce::max::OP_ID => {
                     assert_scalar_metric_dispatch(
@@ -371,7 +379,7 @@ mod tests {
                         ReductionMetric::Max,
                         values.len() as u32,
                     );
-                    scalar(primitive_max(&values))
+                    scalar(reference_reduce_max(&values))
                 }
                 crate::reduce::min::OP_ID => {
                     assert_scalar_metric_dispatch(
@@ -380,7 +388,7 @@ mod tests {
                         ReductionMetric::Min,
                         values.len() as u32,
                     );
-                    scalar(primitive_min(&values))
+                    scalar(reference_reduce_min(&values))
                 }
                 crate::reduce::count_non_zero::OP_ID => {
                     assert_scalar_metric_dispatch(
@@ -389,7 +397,7 @@ mod tests {
                         ReductionMetric::CountNonZero,
                         values.len() as u32,
                     );
-                    scalar(primitive_count_non_zero(&values))
+                    scalar(reference_reduce_count_non_zero(&values))
                 }
                 crate::reduce::any::OP_ID => {
                     assert_scalar_metric_dispatch(
@@ -398,7 +406,7 @@ mod tests {
                         ReductionMetric::Any,
                         values.len() as u32,
                     );
-                    scalar(primitive_any(&values))
+                    scalar(reference_reduce_any_u32(&values))
                 }
                 crate::reduce::all::OP_ID => {
                     assert_scalar_metric_dispatch(
@@ -407,7 +415,7 @@ mod tests {
                         ReductionMetric::All,
                         values.len() as u32,
                     );
-                    scalar(primitive_all(&values))
+                    scalar(reference_reduce_all_u32(&values))
                 }
                 crate::reduce::segment_reduce::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
@@ -426,9 +434,9 @@ mod tests {
                     assert_eq!(program.workgroup_size(), [256, 1, 1]);
                     let bins = (inputs[1].len() / std::mem::size_of::<u32>()) as u32;
 
-                    Ok(vec![u32_slice_to_le_bytes(&primitive_histogram(
-                        &values, bins,
-                    ))])
+                    Ok(vec![u32_slice_to_le_bytes(
+                        &reference_histogram_atomic_scatter(&values, bins),
+                    )])
                 }
                 other => panic!("unexpected reduction primitive op id {other}"),
             }
@@ -460,15 +468,12 @@ mod tests {
     #[test]
     fn reference_reductions_match_primitives_exactly() {
         let values = [1u32, 0, 7, u32::MAX];
-        assert_eq!(reference_reduce_sum(&values), primitive_sum(&values));
-        assert_eq!(reference_reduce_max(&values), primitive_max(&values));
-        assert_eq!(reference_reduce_min(&values), primitive_min(&values));
-        assert_eq!(
-            reference_reduce_count_non_zero(&values),
-            primitive_count_non_zero(&values)
-        );
-        assert_eq!(reference_reduce_any(&values), primitive_any(&values) != 0);
-        assert_eq!(reference_reduce_all(&values), primitive_all(&values) != 0);
+        assert_eq!(reference_reduce_sum(&values), 7);
+        assert_eq!(reference_reduce_max(&values), u32::MAX);
+        assert_eq!(reference_reduce_min(&values), 0);
+        assert_eq!(reference_reduce_count_non_zero(&values), 3);
+        assert!(reference_reduce_any(&values));
+        assert!(!reference_reduce_all(&values));
     }
 
     #[test]

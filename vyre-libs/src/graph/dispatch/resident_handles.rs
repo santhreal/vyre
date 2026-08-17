@@ -1,8 +1,5 @@
 //! Shared resident-handle utilities for graph dispatch wrappers.
 
-use std::collections::HashSet;
-
-use crate::plumbing::host::scratch::reserve_hash_set as reserve_graph_hash_set;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Free each resident handle at most once while still attempting every unique
@@ -10,15 +7,15 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 pub(crate) fn free_unique_resident_handles(
     dispatcher: &dyn ProgramDispatcher,
     handles: &[u64],
-    context: &'static str,
+    _context: &'static str,
 ) -> Result<(), DispatchError> {
-    let mut seen = HashSet::new();
-    reserve_graph_hash_set(&mut seen, handles.len(), context)?;
+    let mut seen = Vec::with_capacity(handles.len());
     let mut first_err = None;
     for &handle in handles {
-        if !seen.insert(handle) {
+        if seen.contains(&handle) {
             continue;
         }
+        seen.push(handle);
         if let Err(err) = dispatcher.free_resident(handle) {
             if first_err.is_none() {
                 first_err = Some(err);

@@ -110,10 +110,7 @@ mod tests {
         let result = apply_lowering_rewrites(&desc);
 
         // Constant promotion: slot 0 should be Constant, loads should be LoadConstant.
-        assert_eq!(
-            result.bindings.slots[0].memory_class,
-            MemoryClass::Constant
-        );
+        assert_eq!(result.bindings.slots[0].memory_class, MemoryClass::Constant);
         assert_eq!(result.body.ops[1].kind, KernelOpKind::LoadConstant);
         assert_eq!(result.body.ops[2].kind, KernelOpKind::LoadConstant);
 

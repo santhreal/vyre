@@ -57,33 +57,19 @@ impl Lcg {
 /// ascending and starts at 0, so this is `upper_bound(end_pos) - 1`.
 #[must_use]
 pub fn region_of(region_starts: &[u32], end_pos: u32) -> usize {
-    let mut region = 0usize;
-    for (r, &start) in region_starts.iter().enumerate() {
-        if start <= end_pos {
-            region = r;
-        } else {
-            break;
-        }
-    }
-    region
+    vyre_reference::composition_witness::region_of_witness(end_pos, region_starts)
 }
 
 /// Independent DFA walk (plain Rust, no packed bytes / prefilter / region
 /// search): emit every `(pattern_id, end_pos)`.
 #[must_use]
 pub fn dfa_scan(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<(u32, u32)> {
-    let dfa = &ac.dfa;
-    let mut state = 0u32;
-    let mut out = Vec::new();
-    for (pos, &b) in haystack.iter().enumerate() {
-        state = dfa.transitions[(state as usize) * 256 + (b as usize)];
-        let begin = dfa.output_offsets[state as usize] as usize;
-        let end = dfa.output_offsets[state as usize + 1] as usize;
-        for &pattern_id in &dfa.output_records[begin..end] {
-            out.push((pattern_id, pos as u32));
-        }
-    }
-    out
+    vyre_reference::composition_witness::classic_ac_scan_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        &ac.dfa.output_records,
+        haystack,
+    )
 }
 
 /// Independent oracle presence bitmap: walk the DFA, attribute each match by its

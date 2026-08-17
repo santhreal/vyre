@@ -46,7 +46,11 @@ pub(crate) use vyre_primitives::wire::pack_f32_slice as f32_bytes;
 
 pub(crate) use vyre_primitives::wire::decode_f32_le_bytes_all as f32_words;
 
-pub(crate) use vyre_primitives::wire::pack_u16_slice as u16_bytes;
+pub(crate) fn u16_bytes(values: &[u16]) -> Vec<u8> {
+    let mut out = Vec::new();
+    vyre_primitives::wire::pack_u16_slice_into(values, &mut out);
+    out
+}
 
 pub(crate) use vyre_primitives::wire::decode_u16_le_bytes_all as u16_words;
 

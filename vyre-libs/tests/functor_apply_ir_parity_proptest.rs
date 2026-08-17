@@ -17,8 +17,9 @@
 #![cfg(feature = "graph")]
 
 use proptest::prelude::*;
-use vyre_libs::graph::functorial::{functor_apply_cpu, functor_apply_sized};
+use vyre_libs::graph::functorial::functor_apply_sized;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::functor_apply_witness as functor_apply_cpu;
 use vyre_reference::value::Value;
 
 /// Drive the real IR. Buffer binding order: source_row(0), mapping(1),

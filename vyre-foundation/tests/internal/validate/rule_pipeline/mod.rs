@@ -51,12 +51,6 @@ fn validate_with_options_legacy(
         ));
 
     report
-        .errors
-        .extend(crate::validate::async_pipeline::check_async_pipeline(
-            program,
-        ));
-
-    report
 }
 
 // ------------------------------------------------------------------

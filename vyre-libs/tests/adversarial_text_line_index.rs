@@ -3,8 +3,8 @@
 
 use vyre_foundation::ir::{DataType, Program};
 use vyre_libs::text::{line_index, line_index_u8};
-use vyre_reference::composition_witness::line_index_witness as reference_line_index;
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
+use vyre_reference::composition_witness::line_index_witness as reference_line_index;
 use vyre_reference::value::Value;
 
 // Locate outputs via the interpreter's OWN selection predicate

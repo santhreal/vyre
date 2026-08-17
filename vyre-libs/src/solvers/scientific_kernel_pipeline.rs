@@ -27,7 +27,6 @@ use crate::math::{
 };
 use vyre_foundation::ir::Program;
 
-
 /// Build a Bhattacharyya per-element information-geometry dispatch.
 #[must_use]
 pub fn dispatch_bhattacharyya_per_element(p: &str, q: &str, out_per_elem: &str, n: u32) -> Program {
@@ -187,8 +186,6 @@ pub fn dispatch_conformal_threshold(scores_sorted: &str, q_hat: &str, n: u32, k:
     conformal_threshold(scores_sorted, q_hat, n, k)
 }
 
-
-
 /// Build a generic semiring GEMM dispatch.
 #[must_use]
 pub fn dispatch_semiring_gemm(
@@ -225,35 +222,6 @@ pub fn dispatch_mz_project_step(p_matrix: &str, f_vec: &str, out: &str, n: u32) 
     mz_project_step(p_matrix, f_vec, out, n)
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,6 +236,266 @@ mod tests {
             panic!("Fix: scientific kernel Program must start with a Region.");
         };
         generator.as_str()
+    }
+
+    fn reference_conformal_rank(n: u32, alpha: f64) -> u32 {
+        vyre_reference::composition_witness::conformal_rank_witness(n, alpha)
+    }
+
+    fn reference_predict_interval(y: u32, q_hat: u32) -> (u32, u32) {
+        vyre_reference::composition_witness::predict_interval_witness(y, q_hat)
+    }
+
+    fn reference_p2m_zeroth_moment(charges: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
+        vyre_reference::composition_witness::p2m_zeroth_moment_witness(charges, cell_assignment)
+    }
+
+    fn reference_bhattacharyya_coefficient(p: &[f64], q: &[f64]) -> f64 {
+        vyre_reference::composition_witness::bhattacharyya_coefficient_witness(p, q)
+    }
+
+    fn reference_fisher_rao_distance(p: &[f64], q: &[f64]) -> f64 {
+        vyre_reference::composition_witness::fisher_rao_distance_witness(p, q)
+    }
+
+    fn reference_amari_alpha_step(p: &[f64], q: &[f64], alpha: f64, t: f64) -> Vec<f64> {
+        vyre_reference::composition_witness::amari_alpha_step_witness(p, q, alpha, t)
+    }
+
+    fn reference_tt_contract_step_into(
+        acc_in: &[f64],
+        core_slice: &[f64],
+        r_prev: u32,
+        r_next: u32,
+        out: &mut Vec<f64>,
+    ) {
+        vyre_reference::composition_witness::tensor_train_contract_step_witness_into(
+            acc_in, core_slice, r_prev, r_next, out,
+        );
+    }
+
+    fn reference_tt_full_chain(
+        cores: &[Vec<f64>],
+        ranks: &[u32],
+        mode_dims: &[u32],
+        indices: &[u32],
+    ) -> f64 {
+        let mut acc = Vec::new();
+        let mut next = Vec::new();
+        reference_tt_full_chain_with_scratch(cores, ranks, mode_dims, indices, &mut acc, &mut next)
+    }
+    fn reference_tt_full_chain_with_scratch(
+        cores: &[Vec<f64>],
+        ranks: &[u32],
+        mode_dims: &[u32],
+        indices: &[u32],
+        acc: &mut Vec<f64>,
+        next: &mut Vec<f64>,
+    ) -> f64 {
+        vyre_reference::composition_witness::tensor_train_full_chain_witness_into(
+            cores, ranks, mode_dims, indices, acc, next,
+        )
+    }
+
+    fn reference_qsvt_block_encode(a: &[f64], n: u32) -> (Vec<f64>, f64) {
+        vyre_reference::composition_witness::qsvt_block_encode_witness(a, n)
+    }
+
+    fn reference_qsvt_block_encode_into(a: &[f64], n: u32, out: &mut Vec<f64>) -> f64 {
+        vyre_reference::composition_witness::qsvt_block_encode_witness_into(a, n, out)
+    }
+
+    fn reference_qsvt_apply(a_scaled: &[f64], v: &[f64], coeffs: &[f64], n: u32) -> Vec<f64> {
+        vyre_reference::composition_witness::qsvt_apply_witness(a_scaled, v, coeffs, n)
+            .unwrap_or_else(|error| panic!("QSVT witness failed: {error}"))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn reference_qsvt_apply_into(
+        a_scaled: &[f64],
+        v: &[f64],
+        coeffs: &[f64],
+        n: u32,
+        out: &mut Vec<f64>,
+        t_prev: &mut Vec<f64>,
+        t_curr: &mut Vec<f64>,
+        t_next: &mut Vec<f64>,
+    ) {
+        vyre_reference::composition_witness::qsvt_apply_witness_into(a_scaled, v, coeffs, n, out)
+            .unwrap_or_else(|error| panic!("QSVT witness failed: {error}"));
+        t_prev.clear();
+        t_curr.clear();
+        t_next.clear();
+    }
+    fn reference_hensel_lift_step(x: f64, f_x: f64, inv_f_prime: f64) -> f64 {
+        vyre_reference::composition_witness::hensel_lift_step_witness(x, f_x, inv_f_prime)
+    }
+
+    fn reference_sos_gram_construct(monomial_pairs: &[u32], p_coeffs: &[u32], m: u32) -> Vec<u32> {
+        vyre_reference::composition_witness::sos_gram_construct_witness(monomial_pairs, p_coeffs, m)
+    }
+
+    fn reference_sos_gram_construct_into(
+        monomial_pairs: &[u32],
+        p_coeffs: &[u32],
+        m: u32,
+        out: &mut Vec<u32>,
+    ) {
+        vyre_reference::composition_witness::sos_gram_construct_witness_into(
+            monomial_pairs,
+            p_coeffs,
+            m,
+            out,
+        );
+    }
+
+    fn reference_is_psd(matrix: &[f64], n: u32) -> bool {
+        vyre_reference::composition_witness::is_psd_matrix_witness(matrix, n)
+    }
+
+    fn reference_bigint_add_carry(a: &[u32], b: &[u32]) -> Result<(Vec<u32>, Vec<u32>), String> {
+        vyre_reference::composition_witness::bigint_add_carry_witness(a, b)
+    }
+
+    fn reference_bigint_add_carry_into(
+        a: &[u32],
+        b: &[u32],
+        sum_partial: &mut Vec<u32>,
+        carry_partial: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        vyre_reference::composition_witness::bigint_add_carry_witness_into(
+            a,
+            b,
+            sum_partial,
+            carry_partial,
+        )
+    }
+
+    fn reference_resolve_carry_chain(
+        sum_partial: &[u32],
+        carry_partial: &[u32],
+    ) -> Result<(Vec<u32>, u32), String> {
+        vyre_reference::composition_witness::resolve_bigint_carry_chain_witness(
+            sum_partial,
+            carry_partial,
+        )
+    }
+
+    fn reference_resolve_carry_chain_into(
+        sum_partial: &[u32],
+        carry_partial: &[u32],
+        final_sum: &mut Vec<u32>,
+    ) -> Result<u32, String> {
+        vyre_reference::composition_witness::resolve_bigint_carry_chain_witness_into(
+            sum_partial,
+            carry_partial,
+            final_sum,
+        )
+    }
+
+    fn reference_tn_pair_contract(a: &[f64], b: &[f64], m: u32, k: u32, n: u32) -> Vec<f64> {
+        vyre_reference::composition_witness::dense_matrix_multiply_witness(
+            a, b, m as usize, k as usize, n as usize,
+        )
+    }
+
+    fn reference_greedy_contract_order(dims: &[u32]) -> Vec<usize> {
+        vyre_reference::composition_witness::greedy_tensor_contract_order_witness(dims)
+    }
+
+    fn reference_rk4_step(
+        y_prev: &[f64],
+        k1: &[f64],
+        k2: &[f64],
+        k3: &[f64],
+        k4: &[f64],
+        h: f64,
+    ) -> Vec<f64> {
+        vyre_reference::composition_witness::rk4_step_witness(y_prev, k1, k2, k3, k4, h)
+    }
+
+    fn reference_sinkhorn_iter(
+        k: &[f64],
+        a: &[f64],
+        b: &[f64],
+        u: &mut [f64],
+        v: &mut [f64],
+        m: u32,
+        n: u32,
+    ) {
+        let mut kv = Vec::new();
+        let mut ktu = Vec::new();
+        vyre_reference::composition_witness::sinkhorn_iter_f64_in_place_witness_into(
+            k, a, b, u, v, m, n, &mut kv, &mut ktu,
+        );
+    }
+
+    fn reference_sinkhorn_iter_into(
+        k: &[f64],
+        a: &[f64],
+        b: &[f64],
+        u: &mut [f64],
+        v: &mut [f64],
+        m: u32,
+        n: u32,
+        kv: &mut Vec<f64>,
+        ktu: &mut Vec<f64>,
+    ) {
+        vyre_reference::composition_witness::sinkhorn_iter_f64_step_witness_into(
+            k, a, b, v, m, n, kv, ktu,
+        );
+        u.copy_from_slice(kv);
+        v.copy_from_slice(ktu);
+    }
+
+    fn reference_score_denoise_step(
+        x: &[f64],
+        score: &[f64],
+        noise: &[f64],
+        alpha: f64,
+        beta: f64,
+        sigma: f64,
+    ) -> Vec<f64> {
+        vyre_reference::composition_witness::score_denoise_step_witness(
+            x, score, noise, alpha, beta, sigma,
+        )
+    }
+
+    fn reference_semiring_gemm(
+        a: &[u32],
+        b: &[u32],
+        m: u32,
+        n: u32,
+        k: u32,
+        semiring: Semiring,
+    ) -> Vec<u32> {
+        vyre_reference::composition_witness::semiring_gemm_witness(
+            a, b, m as usize, n as usize, k as usize, semiring,
+        )
+    }
+
+    fn reference_semiring_gemm_into(
+        a: &[u32],
+        b: &[u32],
+        m: u32,
+        n: u32,
+        k: u32,
+        semiring: Semiring,
+        c: &mut Vec<u32>,
+    ) {
+        vyre_reference::composition_witness::semiring_gemm_witness_into(
+            a, b, m as usize, n as usize, k as usize, semiring, c,
+        );
+    }
+
+    fn reference_mz_project_step(p_matrix: &[f64], f_vec: &[f64], n: u32) -> Vec<f64> {
+        vyre_reference::composition_witness::mori_zwanzig_project_witness(p_matrix, f_vec, n)
+    }
+
+    fn reference_mz_project_step_into(p_matrix: &[f64], f_vec: &[f64], n: u32, out: &mut Vec<f64>) {
+        vyre_reference::composition_witness::mori_zwanzig_project_witness_into(
+            p_matrix, f_vec, n, out,
+        );
     }
 
     #[test]

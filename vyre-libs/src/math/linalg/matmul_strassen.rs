@@ -80,7 +80,12 @@ inventory::submit! {
         }),
         Some(|| {
             // C = A · B = [[19, 22], [43, 50]]
-            vec![vec![crate::fixture_bytes::f32_bytes(&[19.0, 22.0, 43.0, 50.0])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x98, 0x41, // 19.0
+                0x00, 0x00, 0xb0, 0x41, // 22.0
+                0x00, 0x00, 0x2c, 0x42, // 43.0
+                0x00, 0x00, 0x48, 0x42, // 50.0
+            ]]]
         }),
     )
     .with_category("math")
@@ -129,9 +134,7 @@ pub fn matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> Result<Pr
     );
     composer.geometry = ContractionGeometry::StrassenOneLevel { n };
     composer
-        .with_region_generator(
-            "anonymous::vyre-libs::math::linalg::matmul_strassen_one_level",
-        )
+        .with_region_generator("anonymous::vyre-libs::math::linalg::matmul_strassen_one_level")
         .build()
         .map_err(|e| format!("Fix: matmul_strassen_one_level failed: {e}"))
 }

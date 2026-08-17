@@ -117,9 +117,8 @@ pub fn try_base64_decode_packed_witness_into(
     let decoded_words = blocks
         .checked_mul(3)
         .ok_or(Base64DecodeWitnessError::CapacityOverflow { blocks })?;
-    let decoded_len_abi = u32::try_from(decoded_words).map_err(|_| {
-        Base64DecodeWitnessError::DecodedLengthOverflow { decoded_words }
-    })?;
+    let decoded_len_abi = u32::try_from(decoded_words)
+        .map_err(|_| Base64DecodeWitnessError::DecodedLengthOverflow { decoded_words })?;
     vyre_foundation::allocation::reserve_exact_cleared(out, decoded_words).map_err(|source| {
         Base64DecodeWitnessError::Allocation {
             requested: decoded_words,
@@ -149,12 +148,15 @@ pub fn try_base64_decode_packed_witness_into(
         }
     }
 
-    let padding = input
-        .iter()
-        .rev()
-        .take(2)
-        .take_while(|&&byte| byte == b'=')
-        .count() as u32;
+    let mut padding = 0u32;
+    if input.len() >= 2 {
+        if input[input.len() - 1] == b'=' {
+            padding = padding.saturating_add(1);
+        }
+        if input[input.len() - 2] == b'=' {
+            padding = padding.saturating_add(1);
+        }
+    }
     Ok(decoded_len_abi.saturating_sub(padding))
 }
 
@@ -198,6 +200,16 @@ pub fn rle_segment_lengths_witness(packed: &[u32]) -> (Vec<u32>, Vec<u32>) {
     (lengths, values)
 }
 
+/// Unpack canonical RLE segment lengths and values into caller-supplied vectors.
+pub fn rle_segment_lengths_witness_into(
+    packed: &[u32],
+    lengths: &mut Vec<u32>,
+    values: &mut Vec<u32>,
+) {
+    try_rle_segment_lengths_witness_into(packed, lengths, values)
+        .unwrap_or_else(|error| panic!("RLE segment witness failed: {error}"));
+}
+
 /// Compute exclusive RLE segment offsets and return the saturated total length.
 pub fn try_rle_segment_start_offsets_witness_into(
     lengths: &[u32],
@@ -224,11 +236,14 @@ pub fn rle_segment_start_offsets_witness(lengths: &[u32]) -> (Vec<u32>, u32) {
     (offsets, total)
 }
 
+/// Compute exclusive RLE segment offsets into caller-supplied vector and return the saturated total length.
+pub fn rle_segment_start_offsets_witness_into(lengths: &[u32], offsets: &mut Vec<u32>) -> u32 {
+    try_rle_segment_start_offsets_witness_into(lengths, offsets)
+        .unwrap_or_else(|error| panic!("RLE offset witness failed: {error}"))
+}
+
 /// Expand canonical packed RLE segments into caller-owned bytes.
-pub fn try_rle_decode_witness_into(
-    packed: &[u32],
-    decoded: &mut Vec<u8>,
-) -> Result<(), String> {
+pub fn try_rle_decode_witness_into(packed: &[u32], decoded: &mut Vec<u8>) -> Result<(), String> {
     let decoded_len = packed
         .iter()
         .map(|segment| (segment >> 8) as usize)
@@ -283,10 +298,19 @@ pub fn ziftsieve_extract_literals_witness(
     input: &[u8],
     max_output: usize,
 ) -> Result<ZiftsieveLiteralWitness, String> {
+    const MAX_SEQUENCES_PER_BLOCK: usize = 100_000;
+    const MAX_BLOCK_SIZE: usize = 4 * 1024 * 1024;
     let mut cursor = 0_usize;
     let mut decoded_len = 0_usize;
+    let mut sequence_count = 0_usize;
     let mut literals = Vec::with_capacity(max_output.min(input.len()));
     while cursor < input.len() {
+        sequence_count += 1;
+        if sequence_count > MAX_SEQUENCES_PER_BLOCK {
+            return Err(format!(
+                "too many LZ4 sequences (max {MAX_SEQUENCES_PER_BLOCK})"
+            ));
+        }
         let token = input[cursor];
         cursor += 1;
         let mut literal_len = usize::from(token >> 4);
@@ -299,6 +323,11 @@ pub fn ziftsieve_extract_literals_witness(
                 literal_len = literal_len
                     .checked_add(usize::from(extension))
                     .ok_or_else(|| "literal length overflow".to_owned())?;
+                if literal_len > MAX_BLOCK_SIZE {
+                    return Err(format!(
+                        "literal length {literal_len} exceeds MAX_BLOCK_SIZE"
+                    ));
+                }
                 if extension != u8::MAX {
                     break;
                 }
@@ -331,4 +360,68 @@ pub fn ziftsieve_extract_literals_witness(
         literals,
         decoded_len,
     })
+}
+
+/// Decode ASCII hex pairs into one byte value per `u32` output slot.
+#[must_use]
+pub fn hex_decode_packed_witness(input: &[u8]) -> Vec<u32> {
+    fn nibble(byte: u8) -> u32 {
+        match byte {
+            b'0'..=b'9' => u32::from(byte - b'0'),
+            b'A'..=b'F' => u32::from(byte - b'A' + 10),
+            b'a'..=b'f' => u32::from(byte - b'a' + 10),
+            _ => 0,
+        }
+    }
+    input
+        .chunks_exact(2)
+        .map(|pair| (nibble(pair[0]) << 4) | nibble(pair[1]))
+        .collect()
+}
+
+/// Decoded payload and byte length of one DEFLATE stored block.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct InflateStoredWitness {
+    /// One decoded byte per low-order `u32` lane.
+    pub data: Vec<u32>,
+    /// Number of decoded bytes.
+    pub inflated_len: u32,
+}
+
+/// Decode one byte-per-word DEFLATE stored block.
+pub fn inflate_stored_witness(input: &[u32]) -> Result<InflateStoredWitness, String> {
+    if input.len() < 5 {
+        return Err("stored block header requires five words".to_owned());
+    }
+    if input[0] >> 1 & 0x3 != 0 {
+        return Err("DEFLATE block is not stored".to_owned());
+    }
+    let length = (input[1] & 0xFF) | ((input[2] & 0xFF) << 8);
+    let complement = (input[3] & 0xFF) | ((input[4] & 0xFF) << 8);
+    if complement != (!length & 0xFFFF) {
+        return Err("stored block LEN/NLEN mismatch".to_owned());
+    }
+    let end = 5_usize
+        .checked_add(length as usize)
+        .ok_or_else(|| "stored block length overflow".to_owned())?;
+    let payload = input
+        .get(5..end)
+        .ok_or_else(|| "truncated stored block payload".to_owned())?;
+    Ok(InflateStoredWitness {
+        data: payload.iter().map(|word| word & 0xFF).collect(),
+        inflated_len: length,
+    })
+}
+
+/// Sequential mathematical witness for VSA hypervector fingerprinting by 3-way XOR binding.
+#[must_use]
+pub fn vsa_fingerprint_witness(
+    kind_hv: &[u32],
+    signature_hv: &[u32],
+    region_hv: &[u32],
+) -> Vec<u32> {
+    let len = kind_hv.len().min(signature_hv.len()).min(region_hv.len());
+    (0..len)
+        .map(|i| kind_hv[i] ^ signature_hv[i] ^ region_hv[i])
+        .collect()
 }

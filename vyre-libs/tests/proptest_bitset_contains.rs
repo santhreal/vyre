@@ -5,6 +5,10 @@
 use proptest::prelude::*;
 use vyre_reference::composition_witness::bitset_contains_witness;
 
+fn cpu_ref(input: &[u32], bit: u32) -> u32 {
+    u32::from(bitset_contains_witness(input, bit))
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
 

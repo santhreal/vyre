@@ -129,6 +129,25 @@ pub fn multi_block_prefix_scan_sum_u32_with_geometry(
 // registered while no backend ever ran it. The fixture below is an ordinary
 // inclusive scan whose expected values are closed-form, so it checks real
 // arithmetic rather than merely running.
+const EXPECTED_PREFIX_SCAN_OUTPUT_BYTES: [u8; 256] = [
+    0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+    0x0f, 0x00, 0x00, 0x00, 0x15, 0x00, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+    0x2d, 0x00, 0x00, 0x00, 0x37, 0x00, 0x00, 0x00, 0x42, 0x00, 0x00, 0x00, 0x4e, 0x00, 0x00, 0x00,
+    0x5b, 0x00, 0x00, 0x00, 0x69, 0x00, 0x00, 0x00, 0x78, 0x00, 0x00, 0x00, 0x88, 0x00, 0x00, 0x00,
+    0x99, 0x00, 0x00, 0x00, 0xab, 0x00, 0x00, 0x00, 0xbe, 0x00, 0x00, 0x00, 0xd2, 0x00, 0x00, 0x00,
+    0xe7, 0x00, 0x00, 0x00, 0xfd, 0x00, 0x00, 0x00, 0x14, 0x01, 0x00, 0x00, 0x2c, 0x01, 0x00, 0x00,
+    0x45, 0x01, 0x00, 0x00, 0x5f, 0x01, 0x00, 0x00, 0x7a, 0x01, 0x00, 0x00, 0x96, 0x01, 0x00, 0x00,
+    0xb3, 0x01, 0x00, 0x00, 0xd1, 0x01, 0x00, 0x00, 0xf0, 0x01, 0x00, 0x00, 0x10, 0x02, 0x00, 0x00,
+    0x31, 0x02, 0x00, 0x00, 0x53, 0x02, 0x00, 0x00, 0x76, 0x02, 0x00, 0x00, 0x9a, 0x02, 0x00, 0x00,
+    0xbf, 0x02, 0x00, 0x00, 0xe5, 0x02, 0x00, 0x00, 0x0c, 0x03, 0x00, 0x00, 0x34, 0x03, 0x00, 0x00,
+    0x5d, 0x03, 0x00, 0x00, 0x87, 0x03, 0x00, 0x00, 0xb2, 0x03, 0x00, 0x00, 0xde, 0x03, 0x00, 0x00,
+    0x0b, 0x04, 0x00, 0x00, 0x39, 0x04, 0x00, 0x00, 0x68, 0x04, 0x00, 0x00, 0x98, 0x04, 0x00, 0x00,
+    0xc9, 0x04, 0x00, 0x00, 0xfb, 0x04, 0x00, 0x00, 0x2e, 0x05, 0x00, 0x00, 0x62, 0x05, 0x00, 0x00,
+    0x97, 0x05, 0x00, 0x00, 0xcd, 0x05, 0x00, 0x00, 0x04, 0x06, 0x00, 0x00, 0x3c, 0x06, 0x00, 0x00,
+    0x75, 0x06, 0x00, 0x00, 0xaf, 0x06, 0x00, 0x00, 0xea, 0x06, 0x00, 0x00, 0x26, 0x07, 0x00, 0x00,
+    0x63, 0x07, 0x00, 0x00, 0xa1, 0x07, 0x00, 0x00, 0xe0, 0x07, 0x00, 0x00, 0x20, 0x08, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID_INCLUSIVE_SUM,
@@ -138,13 +157,7 @@ inventory::submit! {
             let input: Vec<u32> = (1..=SCAN_FIXTURE_LEN).collect();
             vec![vec![to_bytes(&input), to_bytes(&vec![0u32; SCAN_FIXTURE_LEN as usize])]]
         }),
-        Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            // Inclusive scan of 1..=n is the triangular number sequence:
-            // output[i] = (i + 1)(i + 2) / 2.
-            let expected: Vec<u32> = (1..=SCAN_FIXTURE_LEN).map(|i| i * (i + 1) / 2).collect();
-            vec![vec![to_bytes(&expected)]]
-        }),
+        Some(|| vec![vec![EXPECTED_PREFIX_SCAN_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("reduce")
     .with_geometry_requirements(multi_block_prefix_scan_requirements())
@@ -699,28 +712,53 @@ fn try_pass_c_broadcast_offsets(
     ))
 }
 
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use vyre_foundation::visit::any_descendant;
 
-    #[test]
-    fn cpu_ref_matches_simple_inclusive_sum() {
-        assert_eq!(cpu_ref(&[1, 2, 3, 4]), vec![1, 3, 6, 10]);
-        assert_eq!(cpu_ref(&[]), Vec::<u32>::new());
-        assert_eq!(cpu_ref(&[7]), vec![7]);
+    fn reference_inclusive_scan(input: &[u32]) -> Vec<u32> {
+        let mut out = Vec::new();
+        reference_inclusive_scan_into(input, &mut out);
+        out
+    }
+
+    fn reference_inclusive_scan_into(input: &[u32], out: &mut Vec<u32>) {
+        out.clear();
+        let mut acc = 0u32;
+        for &x in input {
+            acc = acc.wrapping_add(x);
+            out.push(acc);
+        }
+    }
+
+    fn reference_exclusive_scan(input: &[u32]) -> Vec<u32> {
+        let mut out = Vec::new();
+        let mut acc = 0u32;
+        for &x in input {
+            out.push(acc);
+            acc = acc.wrapping_add(x);
+        }
+        out
+    }
+
+    fn try_reference_inclusive_scan_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
+        reference_inclusive_scan_into(input, out);
+        Ok(())
     }
 
     #[test]
-    fn cpu_ref_exclusive_matches_definition() {
-        assert_eq!(cpu_ref_exclusive(&[1, 2, 3, 4]), vec![0, 1, 3, 6]);
-        assert_eq!(cpu_ref_exclusive(&[]), Vec::<u32>::new());
-        assert_eq!(cpu_ref_exclusive(&[7]), vec![0]);
+    fn reference_matches_simple_inclusive_sum() {
+        assert_eq!(reference_inclusive_scan(&[1, 2, 3, 4]), vec![1, 3, 6, 10]);
+        assert_eq!(reference_inclusive_scan(&[]), Vec::<u32>::new());
+        assert_eq!(reference_inclusive_scan(&[7]), vec![7]);
+    }
+
+    #[test]
+    fn reference_exclusive_matches_definition() {
+        assert_eq!(reference_exclusive_scan(&[1, 2, 3, 4]), vec![0, 1, 3, 6]);
+        assert_eq!(reference_exclusive_scan(&[]), Vec::<u32>::new());
+        assert_eq!(reference_exclusive_scan(&[7]), vec![0]);
     }
 
     /// The identity the exclusive builder is constructed from:
@@ -734,8 +772,8 @@ mod tests {
             let input: Vec<u32> = (0..n)
                 .map(|i| (state.rotate_left(i as u32 % 31) % 1000))
                 .collect();
-            let inclusive = cpu_ref(&input);
-            let exclusive = cpu_ref_exclusive(&input);
+            let inclusive = reference_inclusive_scan(&input);
+            let exclusive = reference_exclusive_scan(&input);
             for i in 0..n {
                 assert_eq!(
                     exclusive[i],
@@ -758,7 +796,7 @@ mod tests {
         use vyre_reference::value::Value;
 
         let input = [3u32, 1, 4, 1, 5, 9, 2, 6];
-        let inclusive = cpu_ref(&input); // [3,4,8,9,14,23,25,31]
+        let inclusive = reference_inclusive_scan(&input); // [3,4,8,9,14,23,25,31]
         let n = input.len() as u32;
         let program = try_exclusive_difference_pass("inclusive", "input", "output", n, 1024)
             .expect("difference pass builds");
@@ -777,7 +815,7 @@ mod tests {
             .collect();
         assert_eq!(
             out,
-            cpu_ref_exclusive(&input),
+            reference_exclusive_scan(&input),
             "difference pass must yield the exclusive scan"
         );
     }
@@ -836,7 +874,7 @@ mod tests {
             let actual = run_full_scan(&program, &input);
             assert_eq!(
                 actual,
-                cpu_ref(&input),
+                reference_inclusive_scan(&input),
                 "n={n}: inclusive multi-block chain diverged from the scan oracle"
             );
         }
@@ -854,7 +892,7 @@ mod tests {
             let actual = run_full_scan(&program, &input);
             assert_eq!(
                 actual,
-                cpu_ref_exclusive(&input),
+                reference_exclusive_scan(&input),
                 "n={n}: exclusive multi-block chain diverged from the exclusive scan oracle"
             );
         }
@@ -900,43 +938,43 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_into_reuses_output_and_truncates_stale_tail() {
+    fn reference_into_reuses_output_and_truncates_stale_tail() {
         let mut out = Vec::with_capacity(8);
         out.extend_from_slice(&[99, 98, 97, 96]);
         let capacity = out.capacity();
 
-        cpu_ref_into(&[u32::MAX, 1, 2], &mut out);
+        reference_inclusive_scan_into(&[u32::MAX, 1, 2], &mut out);
         assert_eq!(out, vec![u32::MAX, 0, 2]);
         assert_eq!(out.capacity(), capacity);
 
-        cpu_ref_into(&[7], &mut out);
+        reference_inclusive_scan_into(&[7], &mut out);
         assert_eq!(out, vec![7]);
         assert_eq!(out.capacity(), capacity);
     }
 
     #[test]
-    fn try_cpu_ref_into_reuses_output_and_clears_stale_tail() {
+    fn try_reference_into_reuses_output_and_clears_stale_tail() {
         let mut out = Vec::with_capacity(8);
         out.extend_from_slice(&[99, 98, 97, 96]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(&[u32::MAX, 1, 2], &mut out).unwrap();
+        try_reference_inclusive_scan_into(&[u32::MAX, 1, 2], &mut out).unwrap();
 
         assert_eq!(out, vec![u32::MAX, 0, 2]);
         assert_eq!(out.as_ptr(), ptr);
     }
 
     #[test]
-    fn compatibility_wrappers_match_fallible_reference() {
+    fn compatibility_wrappers_match_reference() {
         let input = &[u32::MAX, 1, 2];
         let mut compat = Vec::with_capacity(8);
         let mut fallible = Vec::with_capacity(8);
 
-        cpu_ref_into(input, &mut compat);
-        try_cpu_ref_into(input, &mut fallible)
-            .expect("Fix: small multi-block prefix-scan CPU reference must reserve");
+        reference_inclusive_scan_into(input, &mut compat);
+        try_reference_inclusive_scan_into(input, &mut fallible)
+            .expect("Fix: small multi-block prefix-scan reference must reserve");
 
-        assert_eq!(cpu_ref(input), fallible);
+        assert_eq!(reference_inclusive_scan(input), fallible);
         assert_eq!(compat, fallible);
     }
 
@@ -1096,7 +1134,7 @@ mod tests {
                 multi_block_prefix_scan_sum_u32_with_block_lanes("input", "output", n, lanes);
             assert_eq!(prog.workgroup_size(), [lanes, 1, 1]);
             let actual = run_full_scan(&prog, &input);
-            assert_eq!(actual, cpu_ref(&input));
+            assert_eq!(actual, reference_inclusive_scan(&input));
 
             let geom = vyre_foundation::LaunchGeometry {
                 workgroup: [lanes, 1, 1],
@@ -1106,21 +1144,21 @@ mod tests {
                 multi_block_prefix_scan_sum_u32_with_geometry("input", "output", n, &geom);
             assert_eq!(prog_geom.workgroup_size(), [lanes, 1, 1]);
             let actual_geom = run_full_scan(&prog_geom, &input);
-            assert_eq!(actual_geom, cpu_ref(&input));
+            assert_eq!(actual_geom, reference_inclusive_scan(&input));
 
             let prog_excl = multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
                 "input", "output", n, lanes,
             );
             assert_eq!(prog_excl.workgroup_size(), [lanes, 1, 1]);
             let actual_excl = run_full_scan(&prog_excl, &input);
-            assert_eq!(actual_excl, cpu_ref_exclusive(&input));
+            assert_eq!(actual_excl, reference_exclusive_scan(&input));
 
             let prog_excl_geom = multi_block_prefix_scan_sum_exclusive_u32_with_geometry(
                 "input", "output", n, &geom,
             );
             assert_eq!(prog_excl_geom.workgroup_size(), [lanes, 1, 1]);
             let actual_excl_geom = run_full_scan(&prog_excl_geom, &input);
-            assert_eq!(actual_excl_geom, cpu_ref_exclusive(&input));
+            assert_eq!(actual_excl_geom, reference_exclusive_scan(&input));
         }
     }
 }

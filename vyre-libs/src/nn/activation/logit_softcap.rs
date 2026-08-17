@@ -24,6 +24,10 @@ pub fn logit_softcap(input: &str, output: &str, n: u32, cap: f32) -> Program {
     })
 }
 
+const EXPECTED_LOGIT_SOFTCAP_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0xF4, 0xD0, 0x5D, 0x41, 0xDB, 0x5D, 0xE7, 0xC1, 0xD2, 0x63, 0xEF, 0x41,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -35,14 +39,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let out = [
-                f32::from_bits(0x0000_0000),
-                f32::from_bits(0x415d_d0f4),
-                f32::from_bits(0xc1e7_5ddb),
-                f32::from_bits(0x41ef_63d2),
-            ];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_LOGIT_SOFTCAP_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

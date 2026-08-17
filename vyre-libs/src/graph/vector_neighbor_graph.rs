@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 //! Vector-to-neighbor-graph fusion contract.
 //!
 //! This module is the shared boundary between ANN-style vector ranking and
@@ -5,7 +7,9 @@
 //! CSR graph from vector rows, traverses that graph from the query-nearest seed,
 //! and records whether graph-ranked top-k matches direct vector top-k.
 
-use std::collections::VecDeque;
+use vyre_reference::composition_witness::{
+    knn_csr_witness, vector_graph_traverse_from_seed_witness, vector_top_k_witness,
+};
 
 /// Schema version for vector-to-graph fusion evidence.
 pub const VECTOR_GRAPH_FUSION_SCHEMA_VERSION: u32 = 1;
@@ -115,19 +119,25 @@ pub fn try_vector_graph_fusion_evidence(
         &failure_mode,
     )?;
     let node_count = vectors.len() / dimension;
-    let (csr_offsets, csr_targets) = build_knn_csr(vectors, dimension, neighbor_k);
-    let direct_top_k = top_k_for_nodes(vectors, dimension, query, 0..node_count, rank_k);
-    let reached = traverse_from_seed(
-        direct_top_k[0].node_id as usize,
-        node_count,
-        &csr_offsets,
-        &csr_targets,
-    );
+    let (csr_offsets, csr_targets) = knn_csr_witness(vectors, dimension, neighbor_k);
+    let direct_top_k_tuples =
+        vector_top_k_witness(vectors, dimension, query, 0..node_count, rank_k);
+    let direct_top_k: Vec<VectorGraphTopKEntry> = direct_top_k_tuples
+        .into_iter()
+        .map(|(node, dist)| VectorGraphTopKEntry::new(node, dist))
+        .collect();
+    let seed = direct_top_k[0].node_id as usize;
+    let reached =
+        vector_graph_traverse_from_seed_witness(seed, node_count, &csr_offsets, &csr_targets);
     let graph_nodes = reached
         .iter()
         .enumerate()
         .filter_map(|(node, reached)| reached.then_some(node));
-    let graph_traversal_top_k = top_k_for_nodes(vectors, dimension, query, graph_nodes, rank_k);
+    let graph_top_k_tuples = vector_top_k_witness(vectors, dimension, query, graph_nodes, rank_k);
+    let graph_traversal_top_k: Vec<VectorGraphTopKEntry> = graph_top_k_tuples
+        .into_iter()
+        .map(|(node, dist)| VectorGraphTopKEntry::new(node, dist))
+        .collect();
     let graph_reached_count = reached.iter().filter(|seen| **seen).count();
     let traversal_parity = graph_reached_count == node_count;
     let top_k_stable = direct_top_k == graph_traversal_top_k;
@@ -237,102 +247,6 @@ fn validate_vector_graph_inputs(
         return Err("Fix: vector graph fusion failure_mode cannot be blank.".to_string());
     }
     Ok(())
-}
-
-fn build_knn_csr(vectors: &[f32], dimension: usize, neighbor_k: usize) -> (Vec<u32>, Vec<u32>) {
-    let node_count = vectors.len() / dimension;
-    let mut offsets = Vec::with_capacity(node_count + 1);
-    let mut targets = Vec::with_capacity(node_count * neighbor_k);
-    offsets.push(0);
-    for src in 0..node_count {
-        let mut candidates = (0..node_count)
-            .filter(|dst| *dst != src)
-            .map(|dst| {
-                (
-                    squared_l2(row(vectors, dimension, src), row(vectors, dimension, dst)),
-                    dst,
-                )
-            })
-            .collect::<Vec<_>>();
-        candidates.sort_by(|left, right| {
-            left.0
-                .total_cmp(&right.0)
-                .then_with(|| left.1.cmp(&right.1))
-        });
-        targets.extend(
-            candidates
-                .into_iter()
-                .take(neighbor_k)
-                .map(|(_, dst)| dst as u32),
-        );
-        offsets.push(targets.len() as u32);
-    }
-    (offsets, targets)
-}
-
-fn top_k_for_nodes<I>(
-    vectors: &[f32],
-    dimension: usize,
-    query: &[f32],
-    nodes: I,
-    rank_k: usize,
-) -> Vec<VectorGraphTopKEntry>
-where
-    I: IntoIterator<Item = usize>,
-{
-    let mut scored = nodes
-        .into_iter()
-        .map(|node| (squared_l2(row(vectors, dimension, node), query), node))
-        .collect::<Vec<_>>();
-    scored.sort_by(|left, right| {
-        left.0
-            .total_cmp(&right.0)
-            .then_with(|| left.1.cmp(&right.1))
-    });
-    scored
-        .into_iter()
-        .take(rank_k)
-        .map(|(distance, node)| VectorGraphTopKEntry::new(node, distance))
-        .collect()
-}
-
-fn traverse_from_seed(
-    seed: usize,
-    node_count: usize,
-    csr_offsets: &[u32],
-    csr_targets: &[u32],
-) -> Vec<bool> {
-    let mut reached = vec![false; node_count];
-    let mut queue = VecDeque::new();
-    reached[seed] = true;
-    queue.push_back(seed);
-    while let Some(node) = queue.pop_front() {
-        let start = csr_offsets[node] as usize;
-        let end = csr_offsets[node + 1] as usize;
-        for target in &csr_targets[start..end] {
-            let target = *target as usize;
-            if !reached[target] {
-                reached[target] = true;
-                queue.push_back(target);
-            }
-        }
-    }
-    reached
-}
-
-fn row(vectors: &[f32], dimension: usize, row: usize) -> &[f32] {
-    let start = row * dimension;
-    &vectors[start..start + dimension]
-}
-
-fn squared_l2(left: &[f32], right: &[f32]) -> f32 {
-    left.iter()
-        .zip(right)
-        .map(|(left, right)| {
-            let delta = *left - *right;
-            delta * delta
-        })
-        .sum()
 }
 
 #[cfg(test)]

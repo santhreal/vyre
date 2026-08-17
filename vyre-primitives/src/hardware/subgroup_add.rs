@@ -56,26 +56,13 @@ pub fn subgroup_add(values: &str, out: &str, n: u32) -> Program {
     )
 }
 
-fn cpu_ref(values: &[u32]) -> Vec<u8> {
-    const SUBGROUP_WIDTH: usize = 32;
-    let mut out = Vec::with_capacity(values.len() * 4);
-    for chunk in values.chunks(SUBGROUP_WIDTH) {
-        let sum = chunk.iter().copied().fold(0u32, u32::wrapping_add);
-        for _ in 0..chunk.len() {
-            out.extend_from_slice(&sum.to_le_bytes());
-        }
-    }
-    out
-}
-
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
     packed_u32_input_with_output(&[1, 2, 3, 4])
 }
 
-fn expected_output() -> Vec<Vec<Vec<u8>>> {
-    let values = vec![1u32, 2, 3, 4];
-    vec![vec![cpu_ref(&values)]]
-}
+const EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES: [u8; 16] = [
+    0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00,
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::intrinsic(
@@ -83,7 +70,7 @@ inventory::submit! {
         crate::hardware::catalog::U32_UNARY_SIGNATURE,
         Some(|| subgroup_add("values", "out", 4)),
         Some(test_inputs),
-        Some(expected_output),
+        Some(|| vec![vec![EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES.to_vec()]]),
     )
     .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
     .with_explicit_capabilities(
@@ -109,6 +96,18 @@ mod tests {
     use crate::hardware::{lcg_u32, run_program};
     use crate::wire::pack_u32_slice as pack_u32;
 
+    fn test_cpu_ref(values: &[u32]) -> Vec<u8> {
+        let sim = vyre_reference::subgroup::SubgroupSimulator::default();
+        let mut out = Vec::with_capacity(values.len() * 4);
+        for chunk in values.chunks(sim.width()) {
+            let sum = sim.add(chunk);
+            for _ in 0..chunk.len() {
+                out.extend_from_slice(&sum.to_le_bytes());
+            }
+        }
+        out
+    }
+
     fn assert_case(values: &[u32]) {
         let n = values.len() as u32;
         let program = subgroup_add("values", "out", n.max(1));
@@ -116,7 +115,7 @@ mod tests {
             &program,
             vec![pack_u32(values), vec![0u8; (n.max(1) * 4) as usize]],
         );
-        assert_eq!(outputs, vec![cpu_ref(values)]);
+        assert_eq!(outputs, vec![test_cpu_ref(values)]);
     }
 
     /// This boundary test proves a one-lane subgroup broadcasts its only value unchanged.
@@ -133,5 +132,13 @@ mod tests {
     #[test]
     fn random_sixty_four() {
         assert_case(&lcg_u32(0xC100_0033, 64));
+    }
+
+    #[test]
+    fn registration_fixture_matches_exact_byte_constant() {
+        assert_eq!(
+            EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES.to_vec(),
+            test_cpu_ref(&[1, 2, 3, 4])
+        );
     }
 }

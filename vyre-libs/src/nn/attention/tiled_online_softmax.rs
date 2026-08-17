@@ -418,6 +418,12 @@ pub(super) fn compose_online_softmax_attention(
     )
 }
 
+const EXPECTED_ONLINE_SOFTMAX_ATTENTION_OUTPUT_BYTES: [u8; 36] = [
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40,
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40,
+    0x00, 0x00, 0x80, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -437,7 +443,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[4.0_f32; 9])]]
+            vec![vec![EXPECTED_ONLINE_SOFTMAX_ATTENTION_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

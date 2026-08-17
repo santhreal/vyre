@@ -12,7 +12,8 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::decode::rle_segment_lengths::{rle_segment_lengths, rle_segment_lengths_cpu};
+use vyre_libs::decode::rle_segment_lengths::rle_segment_lengths;
+use vyre_reference::composition_witness::rle_segment_lengths_witness as rle_segment_lengths_cpu;
 
 fn decode(v: &Value) -> Vec<u32> {
     v.to_bytes()

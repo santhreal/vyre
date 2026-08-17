@@ -163,14 +163,24 @@ pub fn dp_clip_per_sample(
     )
 }
 
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        dp_clip_per_sample_witness as dp_clip_per_sample_cpu, dp_clip_per_sample_witness_into,
+    };
 
+    fn try_dp_clip_per_sample_cpu_into(
+        grads: &[f64],
+        norms: &[f64],
+        clip_norm: f64,
+        batch: u32,
+        dim: u32,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        dp_clip_per_sample_witness_into(grads, norms, clip_norm, batch, dim, out);
+        Ok(())
+    }
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
     }

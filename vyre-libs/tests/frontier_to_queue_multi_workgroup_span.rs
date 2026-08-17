@@ -27,9 +27,10 @@
 #![cfg(feature = "graph")]
 
 use vyre_foundation::ir::Program;
-use vyre_libs::graph::csr_frontier_queue::{frontier_to_queue, frontier_to_queue_cpu};
+use vyre_libs::graph::csr_frontier_queue::frontier_to_queue;
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_words;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
+use vyre_reference::composition_witness::frontier_to_queue_witness as frontier_to_queue_cpu;
 use vyre_reference::value::Value;
 
 fn out_words(program: &Program, outputs: &[Value], name: &str) -> Vec<u32> {

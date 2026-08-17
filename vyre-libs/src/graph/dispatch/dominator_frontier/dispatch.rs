@@ -96,13 +96,12 @@ pub fn dominance_frontier_via_with_scratch_into(
         program_cache,
         static_input_key,
     } = scratch;
-    let cached = program_cache.get_or_try_insert_with(plan.shape(), || {
-        Ok(CachedDominanceFrontierProgram {
-            program: plan
-                .program("seed", "frontier_out")
-                .map_err(DispatchError::BadInputs)?,
-        })
-    })?;
+    let cached = program_cache.get_or_insert_with(plan.shape(), || CachedDominanceFrontierProgram {
+        program: plan
+            .program("seed", "frontier_out")
+            .map_err(DispatchError::BadInputs)
+            .expect("Fix: validated dominator_frontier launch plan must produce valid dispatch program"),
+    });
 
     refresh_dominance_frontier_inputs(
         inputs,

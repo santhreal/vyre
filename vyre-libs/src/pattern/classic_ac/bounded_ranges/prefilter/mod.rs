@@ -546,7 +546,7 @@ mod tests {
     };
 
     #[test]
-    fn bounded_ranges_prefilter_reference_eval_matches_cpu_oracle() {
+    fn bounded_ranges_prefilter_reference_eval_matches_reference_oracle() {
         let patterns: [&[u8]; 5] = [b"a", b"bc", b"abcd", b"BEGIN", b"token"];
         let haystack = b"zabcd BEGIN token abcdbc";
         let ac = classic_ac_compile(&patterns);

@@ -1,4 +1,4 @@
-//! ZX-diagram rewriting.
+//! ZX-diagram rewriting test adapters.
 //!
 //! ZX is a graphical language for linear maps. A diagram is an undirected
 //! multigraph whose vertices, called spiders, each carry a color (Z or X) and a
@@ -11,18 +11,9 @@
 //! * color change (H): conjugation by a Hadamard turns a Z-spider into an
 //!   X-spider and back.
 //!
-//! [`simplified_diagram`] is the joint fixpoint of the first two.
-//!
-//! No floating point. A phase is a numerator over the diagram's `phase_denom`,
-//! and two phases are equal when their numerators agree modulo it. A caller
-//! picks `phase_denom = 8` for the Clifford+T fragment, `4` for Clifford only,
-//! and `2` for the simplest stabilizer fragment.
-//!
-//! The optimizer's pattern-simplification pass treats commutative same-color
-//! operators in the IR Region tree as Z spiders and folds them here.
+//! Sequential ZX-diagram rewriting witnesses are centralized in
+//! `vyre_reference::composition_witness`. This module provides test-scoped
+//! adapters for parity verification.
 
+#[cfg(test)]
 pub(crate) mod rewrite;
-
-pub use rewrite::{
-    color_change, identity_removal, simplified_diagram, spider_fusion, ZxColor, ZxDiagram, ZxSpider,
-};

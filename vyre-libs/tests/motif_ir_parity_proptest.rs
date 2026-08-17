@@ -18,7 +18,21 @@
 
 use proptest::prelude::*;
 use vyre_libs::graph::motif::{motif, MotifEdge, TWO_EDGE_PATH_MOTIF};
-fn cpu_ref(_adj: &[u32], _n: u32) -> u32 { 0 }
+use vyre_reference::composition_witness::motif_witness;
+
+fn cpu_ref(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif: &[MotifEdge],
+) -> Vec<u32> {
+    let edges = motif
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect::<Vec<_>>();
+    motif_witness(node_count, offsets, targets, masks, &edges)
+}
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;

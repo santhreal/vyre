@@ -15,7 +15,7 @@ use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into
 ///
 /// Returns a fix-directed string when dimensions overflow, inputs are empty, or
 /// the adjacency matrix is not exactly `n*n`.
-pub fn compare_static_analysis_reachability_fixpoints(
+fn compare_static_analysis_reachability_fixpoints(
     adj: &[u32],
     n: u32,
     max_iters: u32,

@@ -5,6 +5,10 @@
 use proptest::prelude::*;
 use vyre_reference::composition_witness::bitset_xor_witness;
 
+fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
+    bitset_xor_witness(lhs, rhs)
+}
+
 fn manual_xor(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
     lhs.iter().zip(rhs.iter()).map(|(a, b)| a ^ b).collect()
 }

@@ -23,6 +23,9 @@
 use vyre_libs::solvers::fmm_polyhedral_compress::fmm_compress_pairwise_via;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_reference::composition_witness::{
+    l2p_zeroth_all_witness, m2l_zeroth_all_witness, p2m_zeroth_moment_witness,
+};
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 fn unit_f32(state: &mut u32) -> f32 {
@@ -36,24 +39,19 @@ fn compress_oracle(
     cell_distances: &[f32],
     n_cells: usize,
 ) -> Vec<f64> {
-    // P2M: zeroth moment per cell = sum of contained region scores.
-    let mut moments = vec![0.0f64; n_cells];
-    for (r, &c) in cell_assignment.iter().enumerate() {
-        moments[c as usize] += f64::from(scores[r]);
-    }
-    // M2L: local[t] = Σ_{s != t} moments[s] / max(dist[t*n_cells + s], 1e-12).
-    let mut local = vec![0.0f64; n_cells];
-    for t in 0..n_cells {
-        for s in 0..n_cells {
-            if t == s {
-                continue;
-            }
-            let d = f64::from(cell_distances[t * n_cells + s]).max(1e-12);
-            local[t] += moments[s] / d;
-        }
-    }
-    // L2P: per-region gather of the owning cell's local moment.
-    cell_assignment.iter().map(|&c| local[c as usize]).collect()
+    let charges_f64: Vec<f64> = scores.iter().map(|&score| f64::from(score)).collect();
+    let moments = p2m_zeroth_moment_witness(&charges_f64, cell_assignment);
+    assert_eq!(
+        moments.len(),
+        n_cells,
+        "fixture assignments must cover every declared cell"
+    );
+    let distances_f64: Vec<f64> = cell_distances
+        .iter()
+        .map(|&distance| f64::from(distance))
+        .collect();
+    let local = m2l_zeroth_all_witness(&moments, &distances_f64);
+    l2p_zeroth_all_witness(&local, cell_assignment, cell_assignment.len() as u32)
 }
 
 fn approx_slice(got: &[f32], want: &[f64], ctx: &str) {

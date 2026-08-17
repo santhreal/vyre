@@ -17,7 +17,8 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::hash::crc32::{crc32, crc32_program};
+use vyre_libs::hash::crc32::crc32_program;
+use vyre_reference::composition_witness::crc32_witness as crc32;
 
 /// Run the CRC-32 IR over `bytes` (one byte per u32 slot) and return `out[0]`.
 fn run_ir(bytes: &[u8]) -> u32 {

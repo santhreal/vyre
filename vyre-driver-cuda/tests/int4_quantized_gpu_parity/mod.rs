@@ -1,7 +1,7 @@
 //! Live CUDA parity for packed INT4 quantized primitives.
 //!
 //! The CPU references these contracts diff against are the ones
-//! `vyre-primitives` ships behind `cpu-parity`. This file used to carry a
+//! `vyre-libs` ships in `math::quantized`. This file used to carry a
 //! private reimplementation of every one of them plus its own little-endian
 //! packing, so a correction to a shipped oracle left the CUDA arm asserting
 //! bit-exact equality against a definition nobody ships. What stays local is

@@ -1,16 +1,10 @@
-//! Shared CSR frontier-step Program builder and CPU reference.
-//!
+//! Shared CSR frontier-step `Program` builder.
 //! Forward and reverse traversals use the same ProgramGraph ABI,
 //! frontier buffers, edge-kind mask filtering, and packed-NodeSet
 //! output writes. The only semantic difference is whether the input
 //! frontier is tested at `src` before walking outgoing edges or at
 //! `dst` while scanning a source row.
 //!
-//! [`csr_frontier_step_cpu_ref_into`] walks the same two directions on the
-//! host. It is written from the CSR arrays alone and never reads the emitted
-//! `Program`, so it stays able to disagree with the program it checks; the
-//! direction is its argument because the row scan and the edge-kind filter are
-//! one walk, not two.
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
@@ -48,39 +42,6 @@ pub(crate) enum CsrFrontierStepKind {
     /// If any allowed `dst` is active, emit `src`.
     Backward,
 }
-
-
-
-
-
-/// Publish one op's CPU reference for a CSR frontier step.
-///
-/// Every op that is one masked CSR step republishes the same reference under
-/// its own name: the two traversal primitives and each predicate that fixes an
-/// edge-kind mask. The pair of entry points, their inputs, and the buffer-reuse
-/// contract are stated here once; each op supplies its direction, the label its
-/// diagnostics carry, and its own documentation.
-///
-/// The macro itself is always defined and always invocable: whether the entry
-/// points it publishes exist is decided once, by the `cfg` on the items it
-/// expands to, so an op invokes it unconditionally and expands to nothing when
-/// host references are not built.
-macro_rules! define_csr_frontier_step_cpu_ref {
-    (
-        direction: $direction:expr,
-        label: $label:literal,
-        $(#[$owned_meta:meta])*
-        $owned_vis:vis fn $owned:ident,
-        $(#[$into_meta:meta])*
-        $into_vis:vis fn $into:ident,
-    ) => {
-        $(#[$owned_meta])*
-
-        $(#[$into_meta])*
-    };
-}
-
-pub(crate) use define_csr_frontier_step_cpu_ref;
 
 /// Build a one-step CSR frontier traversal under a caller-owned op id.
 #[must_use]
@@ -816,77 +777,9 @@ fn csr_queue_emit_nodes(
 #[cfg(test)]
 mod tests {
     use super::{csr_frontier_step_dispatch_grid, CSR_FRONTIER_STEP_WORKGROUP_SIZE};
-
-    fn scalar_forward(
-        node_count: u32,
-        edge_offsets: &[u32],
-        edge_targets: &[u32],
-        edge_kind_mask: &[u32],
-        frontier_in: &[u32],
-        allow_mask: u32,
-    ) -> Vec<u32> {
-        let mut out = vec![0_u32; crate::bitset::bitset_words(node_count) as usize];
-        for src in 0..node_count {
-            let src_word = (src / 32) as usize;
-            if frontier_in
-                .get(src_word)
-                .copied()
-                .is_none_or(|word| (word & (1_u32 << (src % 32))) == 0)
-            {
-                continue;
-            }
-            let start = edge_offsets[src as usize] as usize;
-            let end = edge_offsets[src as usize + 1] as usize;
-            for edge in start..end {
-                if (edge_kind_mask[edge] & allow_mask) == 0 {
-                    continue;
-                }
-                let dst = edge_targets[edge];
-                if dst < node_count {
-                    out[(dst / 32) as usize] |= 1_u32 << (dst % 32);
-                }
-            }
-        }
-        out
-    }
-
-    fn scalar_backward(
-        node_count: u32,
-        edge_offsets: &[u32],
-        edge_targets: &[u32],
-        edge_kind_mask: &[u32],
-        frontier_in: &[u32],
-        allow_mask: u32,
-    ) -> Vec<u32> {
-        let mut out = vec![0_u32; crate::bitset::bitset_words(node_count) as usize];
-        for src in 0..node_count {
-            let start = edge_offsets[src as usize] as usize;
-            let end = edge_offsets[src as usize + 1] as usize;
-            let mut hit = false;
-            for edge in start..end {
-                if (edge_kind_mask[edge] & allow_mask) == 0 {
-                    continue;
-                }
-                let dst = edge_targets[edge];
-                if dst < node_count {
-                    let word = (dst / 32) as usize;
-                    let bit = 1_u32 << (dst % 32);
-                    if frontier_in
-                        .get(word)
-                        .copied()
-                        .is_some_and(|w| (w & bit) != 0)
-                    {
-                        hit = true;
-                        break;
-                    }
-                }
-            }
-            if hit {
-                out[(src / 32) as usize] |= 1_u32 << (src % 32);
-            }
-        }
-        out
-    }
+    use vyre_reference::composition_witness::{
+        csr_backward_traverse_witness, csr_forward_traverse_witness,
+    };
 
     #[test]
     fn generated_csr_frontier_step_uses_block_sized_workgroup() {
@@ -957,14 +850,18 @@ mod tests {
                 crate::graph::csr_forward_traverse::cpu_ref(
                     node_count, &offsets, &targets, &masks, &frontier, allow_mask,
                 ),
-                scalar_forward(node_count, &offsets, &targets, &masks, &frontier, allow_mask),
+                csr_forward_traverse_witness(
+                    node_count, &offsets, &targets, &masks, &frontier, allow_mask,
+                ),
                 "forward case {case}"
             );
             assert_eq!(
                 crate::graph::csr_backward_traverse::cpu_ref(
                     node_count, &offsets, &targets, &masks, &frontier, allow_mask,
                 ),
-                scalar_backward(node_count, &offsets, &targets, &masks, &frontier, allow_mask),
+                csr_backward_traverse_witness(
+                    node_count, &offsets, &targets, &masks, &frontier, allow_mask,
+                ),
                 "backward case {case}"
             );
         }

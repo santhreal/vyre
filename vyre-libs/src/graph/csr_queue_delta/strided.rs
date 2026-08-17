@@ -5,10 +5,9 @@ use vyre_foundation::ir::{DataType, Program};
 
 use crate::graph::csr_frontier_step::{csr_queue_step_program, CsrQueueLanes};
 
-use super::{
-    define_csr_queue_delta_entry_point, CsrQueueDeltaEnqueueParams,
-    CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE,
-};
+#[cfg(test)]
+use super::CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE;
+use super::{define_csr_queue_delta_entry_point, CsrQueueDeltaEnqueueParams};
 
 /// Canonical op id for row-strided queue-to-queue delta CSR expansion.
 pub const CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID: &str =
@@ -52,6 +51,7 @@ pub const fn csr_queue_delta_strided_logical_lanes_per_launch(active_queue_capac
 }
 
 /// Dispatch grid for row-strided queue-to-queue delta expansion.
+#[cfg(test)]
 #[must_use]
 pub const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
     let total_lanes = csr_queue_delta_strided_logical_lanes_per_launch(active_queue_capacity);

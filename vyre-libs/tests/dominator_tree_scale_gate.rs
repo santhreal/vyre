@@ -2,9 +2,9 @@
 #![cfg(feature = "graph")]
 
 use std::time::Instant;
-use vyre_libs::graph::dominator_tree::{
-    cooper_harvey_kennedy_idoms, cpu_ref, try_dominator_tree_program,
-};
+use vyre_libs::graph::dominator_tree::try_dominator_tree_program;
+use vyre_reference::composition_witness::dominator_idoms_witness as cooper_harvey_kennedy_idoms;
+use vyre_reference::composition_witness::dominator_idoms_witness as cpu_ref;
 
 /// Build a linear chain of `n` nodes: 0 -> 1 -> 2 -> ... -> n-1.
 fn linear_chain_edges(n: u32) -> Vec<(u32, u32)> {

@@ -16,10 +16,9 @@
 #![cfg(feature = "parsing")]
 
 use proptest::prelude::*;
-use vyre_libs::parsing::planar_rewrite::{
-    planar_rewrite_schedule, reference_planar_rewrite_schedule,
-};
+use vyre_libs::parsing::planar_rewrite::planar_rewrite_schedule;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::planar_rewrite_schedule_witness as reference_planar_rewrite_schedule;
 use vyre_reference::value::Value;
 
 /// Drive the real IR. Buffer binding order: candidates(0), chosen(1, RW).

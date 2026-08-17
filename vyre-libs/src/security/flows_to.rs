@@ -117,6 +117,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::predicate::edge_kind;
+    use vyre_reference::composition_witness::csr_forward_traverse_witness;
 
     #[test]
     fn flows_to_mask_excludes_control_and_dominance() {
@@ -170,7 +171,7 @@ mod tests {
             edge_kind::MUT_REF,
             edge_kind::RETURN,
         ];
-        let alias_only = crate::graph::csr_forward_traverse::cpu_ref(
+        let alias_only = csr_forward_traverse_witness(
             6,
             &edge_offsets,
             &edge_targets,
@@ -178,7 +179,7 @@ mod tests {
             &[0b000001],
             ALIAS_PROPAGATION_MASK,
         );
-        let full_flow = crate::graph::csr_forward_traverse::cpu_ref(
+        let full_flow = csr_forward_traverse_witness(
             6,
             &edge_offsets,
             &edge_targets,

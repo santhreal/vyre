@@ -31,6 +31,10 @@ pub fn gelu(input: &str, output: &str, n: u32) -> Program {
     super::unary::f32_unary_activation_program(OP_ID, input, output, n, gelu_expr)
 }
 
+const EXPECTED_GELU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0x5C, 0x58, 0x57, 0x3F, 0x90, 0x9E, 0x22, 0xBE, 0x42, 0x30, 0xFA, 0x3F,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -42,17 +46,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let input = [0.0_f32, 1.0, -1.0, 2.0];
-            let out: Vec<f32> = input
-                .iter()
-                .map(|&x| {
-                    let x3 = x * x * x;
-                    let inner = GELU_SQRT_2_OVER_PI * (x + GELU_COEF * x3);
-                    0.5 * x * (1.0 + inner.tanh())
-                })
-                .collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_GELU_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

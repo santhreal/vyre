@@ -22,8 +22,8 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 /// `converged` is a single u32 word set to `1` if the frontier reached a
 /// fixpoint (a step added nothing) before the `max_iters` budget was exhausted,
 /// and `0` if the loop ran all `max_iters` steps while still growing (a partial
-/// closure) or `max_iters == 0`. It is the device counterpart of the CPU
-/// reference `PersistentBfsConvergence::converged` (requires the `cpu-parity` feature) and lets a
+/// closure) or `max_iters == 0`. It is the device counterpart of the
+/// `vyre-reference` persistent BFS witness and lets a
 /// host caller reject an under-approximated frontier loudly instead of silently
 /// trusting a closure the kernel never drove to a fixpoint.
 #[must_use]

@@ -93,7 +93,9 @@ impl Dot {
         let workgroup = self.options.workgroup_size.unwrap_or([256, 1, 1]);
         let tile = workgroup[0].max(1);
         let generator = self.options.region_generator.unwrap_or(OP_ID);
-        Ok(ReductionComposer::tiled_dot(generator, lhs, rhs, out, n, tile))
+        Ok(ReductionComposer::tiled_dot(
+            generator, lhs, rhs, out, n, tile,
+        ))
     }
 }
 
@@ -124,7 +126,6 @@ pub fn dot(lhs: &str, rhs: &str, out: &str, n: u32) -> Result<Program, String> {
     .build()
     .map_err(|error| format!("Fix: {OP_ID} build failed: {error}"))
 }
-
 
 #[cfg(test)]
 fn dot_reference_body(lhs: &str, rhs: &str, out: &str, n: u32) -> Vec<Node> {
@@ -179,7 +180,7 @@ inventory::submit! {
             vec![0u8; 256 * 4],
         ]]),
         Some(|| vec![vec![
-            0u32.to_le_bytes().to_vec(),
+            vec![0x00, 0x00, 0x00, 0x00],
         ]]),
     )
     .with_category("math")

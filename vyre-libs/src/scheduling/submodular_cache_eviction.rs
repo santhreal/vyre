@@ -57,6 +57,7 @@ use crate::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
+#[cfg(test)]
 use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -67,12 +68,10 @@ pub struct SubmodularEvictionGpuScratch {
     winner: Vec<u32>,
 }
 
-
-
 /// Compute the retention set through the GPU-dispatchable submodular argmax primitive.
 ///
 /// This is the production path for callers with a concrete backend dispatcher. It performs the
-/// same simple independent-access greedy loop as `reference_select_retention_set_into`, dispatching
+/// same simple independent-access greedy loop as the sequential reference, dispatching
 /// `crate::math::submodular_greedy::argmax_of_marginals` once per retained item.
 ///
 /// # Errors
@@ -166,20 +165,24 @@ fn dispatch_argmax_step_with_scratch(
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     write_zero_bytes(&mut scratch.inputs[3], std::mem::size_of::<u32>());
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
-    if outputs.len() != 2 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: submodular argmax dispatch returned {} outputs, expected exactly winner_idx and winner_gain.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], 1, "winner_idx", &mut scratch.winner)?;
+    let [winner_idx_out, winner_gain_out] = match outputs.as_slice() {
+        [idx, gain] => [idx, gain],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: submodular argmax dispatch returned {} outputs, expected exactly winner_idx and winner_gain.",
+                outputs.len()
+            )))
+        }
+    };
+    decode_u32_output_exact(winner_idx_out, 1, "winner_idx", &mut scratch.winner)?;
     let winner_idx = scratch.winner[0];
-    decode_u32_output_exact(&outputs[1], 1, "winner_gain", &mut scratch.winner)?;
+    decode_u32_output_exact(winner_gain_out, 1, "winner_gain", &mut scratch.winner)?;
     let winner_gain = scratch.winner[0];
     Ok((winner_idx, winner_gain))
 }
 
 /// Convenience: invert retention to eviction (1 = evict).
+#[cfg(test)]
 #[must_use]
 pub fn invert_to_eviction_set(retention: &[u32]) -> Vec<u32> {
     let mut eviction = Vec::with_capacity(retention.len());
@@ -188,6 +191,7 @@ pub fn invert_to_eviction_set(retention: &[u32]) -> Vec<u32> {
 }
 
 /// Invert retention to eviction (1 = evict) into caller-owned storage.
+#[cfg(test)]
 pub fn invert_to_eviction_set_into(retention: &[u32], eviction: &mut Vec<u32>) {
     eviction.clear();
     reserve_vec_capacity_or_panic(eviction, retention.len(), "submodular eviction output");
@@ -197,6 +201,7 @@ pub fn invert_to_eviction_set_into(retention: &[u32], eviction: &mut Vec<u32>) {
 /// Approximate worst-case retention quality bound: greedy submodular
 /// maximization achieves `(1 - 1/e)` ≈ 0.632 of optimum. Returns the
 /// expected lower bound on retention quality given an optimum.
+#[cfg(test)]
 #[must_use]
 pub fn greedy_quality_bound(optimum: u32) -> u32 {
     // `(1 - 1/e) ≈ 0.6321205588`. Use integer approximation
@@ -208,6 +213,37 @@ pub fn greedy_quality_bound(optimum: u32) -> u32 {
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_reference::composition_witness::argmax_of_marginals_witness;
+
+    fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
+        assert!(n > 0, "Fix: select_retention_set requires n > 0.");
+        assert_eq!(
+            gains.len(),
+            n as usize,
+            "Fix: select_retention_set expected gains.len() == n == {n}, got {}.",
+            gains.len()
+        );
+        assert!(
+            k <= n,
+            "Fix: select_retention_set requires k <= n; got k={k}, n={n}."
+        );
+        let mut picked = vec![0u32; n as usize];
+        let mut keep_count = 0u32;
+        while keep_count < k {
+            let (winner, _) = argmax_of_marginals_witness(gains, &picked);
+            if winner == NO_WINNER {
+                break;
+            }
+            let winner_idx = winner as usize;
+            if winner_idx >= picked.len() {
+                break;
+            }
+            picked[winner_idx] = 1;
+            gains[winner_idx] = 0;
+            keep_count += 1;
+        }
+        picked
+    }
 
     struct ArgmaxDispatcher;
 
@@ -232,7 +268,7 @@ mod tests {
                 picked_bytes,
                 "argmax test dispatcher",
             )?;
-            let (winner_idx, winner_gain) = argmax_of_marginals_cpu(&gains, &picked);
+            let (winner_idx, winner_gain) = argmax_of_marginals_witness(&gains, &picked);
             Ok(vec![
                 u32_slice_to_le_bytes(&[winner_idx]),
                 u32_slice_to_le_bytes(&[winner_gain]),

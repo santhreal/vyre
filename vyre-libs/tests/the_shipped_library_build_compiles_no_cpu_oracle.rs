@@ -1,18 +1,14 @@
 //! The crate graph a consumer compiles enables no host reference oracle.
 //!
-//! WHY: `cpu-parity` gates the host reference oracles in `vyre-primitives`, and
-//! three domain features of `vyre-libs` used to name it. `cargo add vyre-libs`
-//! therefore compiled CPU execution into the shipped library, against the rule
-//! that no CPU execution lives outside `vyre-reference`. It also masked the
-//! domain edges a feature-isolation sweep exists to find, because the oracle
-//! modules re-enabled whatever a domain had forgotten to name.
+//! WHY: host mathematics belongs exclusively to `vyre-reference`. The historical
+//! `cpu-parity` dependency edge compiled host execution into shipped libraries
+//! and also masked missing domain edges during feature-isolation sweeps. The edge
+//! is gone; the compatibility feature names that remain in facade manifests are
+//! empty and must never regain dependency or code activation entries.
 //!
-//! Deleting the three edges fixes the incident. This closes the class: the
-//! contract is the whole dependency graph a default `vyre-libs` compiles, not
-//! the three features that happened to carry the edge. A new domain feature, a
-//! new dependency, or a dependency that turns the oracles on for its own
-//! reasons all reintroduce the defect through a path nobody would think to
-//! name, and each of them turns this red on the commit that adds it.
+//! This contract checks the whole default dependency graph and every declaration
+//! of the compatibility feature. A new domain edge, dependency, or non-empty
+//! facade feature turns it red on the commit that adds it.
 //!
 //! Every member of the graph is derived at run time from the manifests cargo
 //! itself reads: the workspace roster from the root manifest, each package's
@@ -20,9 +16,9 @@
 //! feature entries. Nothing here restates a package list, a feature list, or an
 //! edge.
 //!
-//! What this does NOT catch: an oracle that ships ungated, or one gated behind
-//! a feature named something else. Gating is what makes a module optional, and
-//! a module with no gate is a different defect with a different measure.
+//! What this does NOT catch: source code hidden behind an unrelated feature or
+//! an ungated host implementation. The structural host-oracle-elimination gate
+//! owns those cases.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -30,7 +26,7 @@ use std::path::Path;
 use toml::{Table, Value};
 use vyre_test_support::monorepo::vyre_workspace_root;
 
-/// The feature that compiles the host reference oracles.
+/// Empty compatibility feature that must never activate host execution.
 const ORACLE_FEATURE: &str = "cpu-parity";
 
 /// The package a library consumer names. Its default build is the shipped
@@ -85,46 +81,39 @@ fn the_resolver_descends_into_every_dependency_the_shipped_build_pulls() {
 }
 
 #[test]
-fn the_resolver_reports_an_oracle_that_a_feature_edge_turns_on() {
+fn cpu_parity_is_absent_from_the_library_and_empty_where_retained() {
     let workspace = Workspace::load();
-
-    // The mutation is the manifest's own oracle feature, requested explicitly.
-    // Its entries name the packages an oracle build reaches, so the packages
-    // this must report are read off the same edge rather than listed here.
-    let edge = workspace.manifests[SHIPPED_ROOT]
-        .features
-        .get(ORACLE_FEATURE)
-        .unwrap_or_else(|| {
-            panic!("Fix: `{SHIPPED_ROOT}` must declare `{ORACLE_FEATURE}` for this contract")
-        });
-    let mut must_report: BTreeSet<String> = BTreeSet::new();
-    must_report.insert(SHIPPED_ROOT.to_string());
-    for entry in edge {
-        if let Some((alias, feature)) = entry.split_once('/') {
-            if feature == ORACLE_FEATURE {
-                let alias = alias.trim_end_matches('?');
-                must_report.insert(workspace.manifests[SHIPPED_ROOT].package_of(alias));
-            }
-        }
-    }
     assert!(
-        must_report.len() > 1,
-        "Fix: `{ORACLE_FEATURE}` must cross a package boundary for this contract to prove the \
-         resolver follows one; it reads as {edge:?}"
+        !workspace.manifests[SHIPPED_ROOT]
+            .features
+            .contains_key(ORACLE_FEATURE),
+        "Fix: `{SHIPPED_ROOT}` must not declare `{ORACLE_FEATURE}`; parity witnesses \
+         belong in `vyre-reference`"
     );
 
-    let resolved = workspace.resolve(&Request::with_feature(ORACLE_FEATURE));
-    let reported: BTreeSet<String> = resolved
+    let declarations: BTreeMap<&str, &Vec<String>> = workspace
+        .manifests
         .iter()
-        .filter(|(_, features)| features.contains(ORACLE_FEATURE))
-        .map(|(package, _)| package.clone())
+        .filter_map(|(package, manifest)| {
+            manifest
+                .features
+                .get(ORACLE_FEATURE)
+                .map(|entries| (package.as_str(), entries))
+        })
         .collect();
-
     assert!(
-        must_report.is_subset(&reported),
-        "Fix: requesting `{ORACLE_FEATURE}` must report every package the edge turns it on for. \
-         Expected at least {must_report:?}, got {reported:?}. A resolver that misses one here \
-         would also miss it in the default build."
+        !declarations.is_empty(),
+        "Fix: the workspace walk found no `{ORACLE_FEATURE}` declarations, so it \
+         cannot prove retained compatibility features stay empty"
+    );
+    let non_empty: BTreeMap<&str, &Vec<String>> = declarations
+        .into_iter()
+        .filter(|(_, entries)| !entries.is_empty())
+        .collect();
+    assert!(
+        non_empty.is_empty(),
+        "Fix: `{ORACLE_FEATURE}` is an empty compatibility signature and must not \
+         activate dependencies or code; non-empty declarations: {non_empty:?}"
     );
 }
 
@@ -141,16 +130,6 @@ impl Request {
     fn default_only() -> Self {
         Self {
             explicit: BTreeSet::new(),
-            default: true,
-        }
-    }
-
-    /// A default build with one extra feature named.
-    fn with_feature(feature: &str) -> Self {
-        let mut explicit = BTreeSet::new();
-        explicit.insert(feature.to_string());
-        Self {
-            explicit,
             default: true,
         }
     }

@@ -16,15 +16,11 @@
 //! Zm9vYmFy→foobar); its fail-loud contract on non-multiple-of-4 input is locked by
 //! `cpu_base64_decode_fails_loud_on_invalid_length`.
 #![forbid(unsafe_code)]
-// The differential drives `cpu_base64_decode`, a CPU reference oracle gated on
-// `cfg(any(test, feature = "cpu-parity"))`. In an integration test the lib is built
-// without `--cfg test`, so the oracle is reachable ONLY under `cpu-parity`; gating on
-// `decode` alone made `cargo test --features decode` fail to compile (unresolved
-// import). Declare the true dependency so the suite runs wherever both features are on
-// and is cleanly skipped otherwise.
+// The differential drives the canonical sequential composition witness while
+// the production path remains GPU-only.
 #![cfg(feature = "decode")]
 
-use vyre_libs::decode::base64::cpu_base64_decode;
+use vyre_reference::composition_witness::base64_decode_bytes_witness as cpu_base64_decode;
 
 const CASES: usize = 16384;
 /// The 64 standard base64 body symbols (no `=`); `=` is added only as valid

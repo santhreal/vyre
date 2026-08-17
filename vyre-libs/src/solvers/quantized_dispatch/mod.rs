@@ -17,14 +17,21 @@ use crate::math::quantized::{
 use crate::plumbing::host::program_cache::ProgramCache;
 use shapes::{expect_one_output, validate_batched_packed_matmul_shape};
 use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 #[cfg(test)]
-use crate::math::quantized::{
-    i4x8_batched_matmul_f32_scaled_cpu, i4x8_batched_matmul_top1_f32_scaled_cpu,
-    i4x8_batched_matvec_f32_scaled_cpu, i4x8_dot_f32_scaled_cpu, i4x8_matvec_f32_scaled_cpu,
-    pack_i4x8_cpu, unpack_i4x8_cpu_into,
+use vyre_reference::composition_witness::{
+    i4x8_batched_matmul_f32_scaled_witness as i4x8_batched_matmul_f32_scaled_cpu,
+    i4x8_batched_matmul_top1_f32_scaled_witness as i4x8_batched_matmul_top1_f32_scaled_cpu,
+    i4x8_batched_matvec_f32_scaled_witness as i4x8_batched_matvec_f32_scaled_cpu,
+    i4x8_dot_f32_scaled_witness as i4x8_dot_f32_scaled_cpu,
+    i4x8_matvec_f32_scaled_witness as i4x8_matvec_f32_scaled_cpu,
+    pack_i4x8_witness as pack_i4x8_cpu, unpack_i4x8_witness,
 };
+
+#[cfg(test)]
+fn unpack_i4x8_cpu_into(words: &[u32], lane_count: u32, output: &mut Vec<i32>) {
+    *output = unpack_i4x8_witness(words, lane_count);
+}
 
 /// Caller-owned dispatch scratch for quantized INT4 unpacking.
 #[derive(Debug, Default)]

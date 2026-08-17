@@ -20,14 +20,13 @@ inventory::submit! {
             vec![vec![to_bytes(&a)]]
         }),
         Some(|| {
-            let expected = [
-                0u32.wrapping_neg(),
-                1u32.wrapping_neg(),
-                u32::MAX.wrapping_neg(),
-                42u32.wrapping_neg(),
-            ];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            // [0, u32::MAX (from 1), 1 (from u32::MAX), 0xFFFF_FFD6 (from 42)]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0xff, 0xff, 0xff, 0xff, // u32::MAX (wrapping_neg of 1)
+                0x01, 0x00, 0x00, 0x00, // 1 (wrapping_neg of u32::MAX)
+                0xd6, 0xff, 0xff, 0xff, // 0xFFFF_FFD6 (wrapping_neg of 42)
+            ]]]
         }),
     )
     .with_category("math")

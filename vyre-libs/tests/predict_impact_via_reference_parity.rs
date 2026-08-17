@@ -18,8 +18,11 @@
 //! `BUG-reference-eval-indirect-scatter-fixpoint-1round`).
 
 use vyre_libs::reasoning::do_calculus_change_impact::{
-    predict_impact, predict_impact_observation_form, predict_impact_observation_form_via,
-    predict_impact_via,
+    predict_impact_observation_form_via, predict_impact_via,
+};
+use vyre_reference::composition_witness::{
+    predict_impact_observation_form_witness as predict_impact_observation_form,
+    predict_impact_witness as predict_impact,
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;

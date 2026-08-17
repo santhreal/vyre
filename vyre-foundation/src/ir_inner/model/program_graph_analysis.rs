@@ -230,8 +230,7 @@ fn validate_graph(graph: &ProgramGraph) -> Result<(), ProgramGraphAnalysisError>
                             })
                     })
                     .is_some_and(|buffer| buffer.is_output());
-            if (!same_retained && !caller_output_transition)
-                || !prior.consumers.contains(&producer)
+            if (!same_retained && !caller_output_transition) || !prior.consumers.contains(&producer)
             {
                 return Err(ProgramGraphAnalysisError::StateTransition {
                     value: value.id,

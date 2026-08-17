@@ -21,15 +21,29 @@
 //! `u32::MAX` (∞ / no-edge) to exercise the guarded branch and the `min` accumulate against ∞.
 
 use vyre_libs::analysis::dataflow_fixpoint::{
-    reference_semiring_gemm, semiring_gemm_via_bool_or, semiring_gemm_via_lineage,
-    semiring_gemm_via_min_plus,
+    semiring_gemm_via_bool_or, semiring_gemm_via_lineage, semiring_gemm_via_min_plus,
 };
+use vyre_libs::math::semiring_gemm::semiring_gemm;
 use vyre_libs::math::semiring_gemm::Semiring;
+use vyre_primitives::wire::{decode_u32_le_bytes_all, pack_u32_slice};
+use vyre_reference::value::Value;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
+use vyre_reference::composition_witness::semiring_gemm_witness;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
 
 const INF: u32 = u32::MAX;
+
+fn reference_semiring_gemm(
+    a: &[u32],
+    b: &[u32],
+    m: u32,
+    n: u32,
+    k: u32,
+    semiring: Semiring,
+) -> Vec<u32> {
+    semiring_gemm_witness(a, b, m as usize, n as usize, k as usize, semiring)
+}
 
 #[test]
 fn bool_or_gemm_via_matches_cpu_reachability_matmul() {
@@ -143,6 +157,27 @@ fn lineage_gemm_via_matches_cpu_provenance_matmul() {
         zero_guard_hits > 100,
         "lineage sweep must exercise the either-zero combine guard, got {zero_guard_hits}"
     );
+}
+
+/// WHY: max-plus and max-times share max accumulation but must retain distinct combines.
+#[test]
+fn max_semirings_execute_their_declared_algebra() {
+    for (semiring, expected) in [(Semiring::MaxPlus, 9), (Semiring::MaxTimes, 20)] {
+        let outputs = vyre_reference::reference_eval(
+            &semiring_gemm("a", "b", "c", 1, 1, 2, semiring),
+            &[
+                Value::from(pack_u32_slice(&[2, 5])),
+                Value::from(pack_u32_slice(&[3, 4])),
+                Value::from(pack_u32_slice(&[0])),
+            ],
+        )
+        .expect("max semiring GEMM must evaluate");
+        assert_eq!(
+            decode_u32_le_bytes_all(&outputs[0].to_bytes()),
+            vec![expected],
+            "{semiring:?}"
+        );
+    }
 }
 
 #[test]

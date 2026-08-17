@@ -581,11 +581,8 @@ pub fn try_dominator_frontier(
     ))
 }
 
-
-
-
-
 /// Number of nodes flagged in a dominance-frontier bitset.
+#[cfg(test)]
 #[must_use]
 pub fn frontier_size(frontier: &[u32]) -> u32 {
     frontier.iter().map(|word| word.count_ones()).sum()
@@ -677,6 +674,7 @@ pub fn validate_dominator_frontier_inputs(
     })
 }
 
+const EXPECTED_DOMINATOR_FRONTIER_OUTPUT_BYTES: [u8; 4] = [0, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -693,7 +691,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[0])]]
+            vec![vec![EXPECTED_DOMINATOR_FRONTIER_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -701,6 +699,100 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::dominator_frontier_witness_into;
+
+    fn try_cpu_ref_into(
+        node_count: u32,
+        dom_offsets: &[u32],
+        dom_targets: &[u32],
+        pred_offsets: &[u32],
+        pred_targets: &[u32],
+        seed: &[u32],
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let layout = validate_dominator_frontier_inputs(
+            node_count,
+            dom_offsets,
+            dom_targets,
+            pred_offsets,
+            pred_targets,
+            seed,
+        )?;
+        dominator_frontier_witness_into(
+            node_count,
+            dom_offsets,
+            dom_targets,
+            pred_offsets,
+            pred_targets,
+            seed,
+            out,
+        );
+        if out.len() < layout.words as usize {
+            out.resize(layout.words as usize, 0);
+        }
+        Ok(())
+    }
+
+    fn try_cpu_ref(
+        node_count: u32,
+        dom_offsets: &[u32],
+        dom_targets: &[u32],
+        pred_offsets: &[u32],
+        pred_targets: &[u32],
+        seed: &[u32],
+    ) -> Result<Vec<u32>, String> {
+        let mut out = Vec::new();
+        try_cpu_ref_into(
+            node_count,
+            dom_offsets,
+            dom_targets,
+            pred_offsets,
+            pred_targets,
+            seed,
+            &mut out,
+        )?;
+        Ok(out)
+    }
+
+    fn cpu_ref_into(
+        node_count: u32,
+        dom_offsets: &[u32],
+        dom_targets: &[u32],
+        pred_offsets: &[u32],
+        pred_targets: &[u32],
+        seed: &[u32],
+        out: &mut Vec<u32>,
+    ) {
+        try_cpu_ref_into(
+            node_count,
+            dom_offsets,
+            dom_targets,
+            pred_offsets,
+            pred_targets,
+            seed,
+            out,
+        )
+        .expect("cpu_ref_into failed");
+    }
+
+    fn cpu_ref(
+        node_count: u32,
+        dom_offsets: &[u32],
+        dom_targets: &[u32],
+        pred_offsets: &[u32],
+        pred_targets: &[u32],
+        seed: &[u32],
+    ) -> Vec<u32> {
+        try_cpu_ref(
+            node_count,
+            dom_offsets,
+            dom_targets,
+            pred_offsets,
+            pred_targets,
+            seed,
+        )
+        .expect("cpu_ref failed")
+    }
 
     #[test]
     fn empty_seed_yields_empty_frontier() {

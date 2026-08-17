@@ -4,7 +4,6 @@
 //! builder and the fused decode-then-scan builder all live here. The op id is
 //! `vyre-libs::decode::hex`.
 
-use std::sync::OnceLock;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -27,7 +26,17 @@ pub const HEX_DECODE_TABLE_WORDS: u32 = 256;
 /// Canonical hex decode workgroup size.
 pub const HEX_WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 
-static HEX_DECODE_TABLE: OnceLock<[u32; 256]> = OnceLock::new();
+static HEX_DECODE_TABLE: [u32; 256] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0,
+    0, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0,
+];
 
 /// Return the canonical 256-entry ASCII hex decode table by value.
 #[must_use]
@@ -41,27 +50,7 @@ pub fn hex_decode_table() -> [u32; 256] {
 /// should use this reference when they do not need an owned copy.
 #[must_use]
 pub fn hex_decode_table_ref() -> &'static [u32; 256] {
-    HEX_DECODE_TABLE.get_or_init(build_hex_decode_table)
-}
-
-fn build_hex_decode_table() -> [u32; 256] {
-    let mut table = [0u32; 256];
-    let mut byte = b'0';
-    while byte <= b'9' {
-        table[byte as usize] = u32::from(byte - b'0');
-        byte += 1;
-    }
-    byte = b'A';
-    while byte <= b'F' {
-        table[byte as usize] = u32::from(byte - b'A' + 10);
-        byte += 1;
-    }
-    byte = b'a';
-    while byte <= b'f' {
-        table[byte as usize] = u32::from(byte - b'a' + 10);
-        byte += 1;
-    }
-    table
+    &HEX_DECODE_TABLE
 }
 
 /// Number of decoded byte slots produced by an even-length hex input.
@@ -220,8 +209,8 @@ pub fn hex_decode_then_aho_corasick(
     )
 }
 #[cfg(test)]
-fn cpu_ref(input: &[u8]) -> Vec<u32> {
-    hex_decode_reference_packed(input)
+fn reference_hex_decode_packed(input: &[u8]) -> Vec<u32> {
+    vyre_reference::composition_witness::hex_decode_packed_witness(input)
 }
 
 fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
@@ -265,30 +254,51 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]
 }
 
-fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
-    vec![
-        vec![pack_words(&[0x4D, 0x61, 0x6E])],
-        vec![pack_words(&[0x68, 0x49, 0x4A])],
-        vec![pack_words(&[0x7A, 0x01, 0x00])],
-    ]
-}
+const EXPECTED_HEX_CASE0_BYTES: [u8; 12] = [0x4D, 0, 0, 0, 0x61, 0, 0, 0, 0x6E, 0, 0, 0];
+const EXPECTED_HEX_CASE1_BYTES: [u8; 12] = [0x68, 0, 0, 0, 0x49, 0, 0, 0, 0x4A, 0, 0, 0];
+const EXPECTED_HEX_CASE2_BYTES: [u8; 12] = [0x7A, 0, 0, 0, 0x01, 0, 0, 0, 0x00, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || hex_decode("input", "output", 6),
         Some(fixture_inputs),
-        Some(fixture_outputs),
+        Some(|| {
+            vec![
+                vec![EXPECTED_HEX_CASE0_BYTES.to_vec()],
+                vec![EXPECTED_HEX_CASE1_BYTES.to_vec()],
+                vec![EXPECTED_HEX_CASE2_BYTES.to_vec()],
+            ]
+        }),
     )
 }
 #[cfg(test)]
 mod primitive_tests {
     use super::*;
+    fn build_hex_decode_table() -> [u32; 256] {
+        let mut table = [0u32; 256];
+        let mut byte = b'0';
+        while byte <= b'9' {
+            table[byte as usize] = u32::from(byte - b'0');
+            byte += 1;
+        }
+        byte = b'A';
+        while byte <= b'F' {
+            table[byte as usize] = u32::from(byte - b'A' + 10);
+            byte += 1;
+        }
+        byte = b'a';
+        while byte <= b'f' {
+            table[byte as usize] = u32::from(byte - b'a' + 10);
+            byte += 1;
+        }
+        table
+    }
 
     #[test]
     fn reference_decodes_upper_lower_and_invalid_nibbles() {
         assert_eq!(
-            hex_decode_reference_packed(b"4D6aZ1"),
+            reference_hex_decode_packed(b"4D6aZ1"),
             vec![0x4D, 0x6A, 0x01]
         );
     }
@@ -380,7 +390,11 @@ mod tests {
                 input.push(ALPHABET[(state as usize) % ALPHABET.len()]);
             }
 
-            assert_eq!(run(&input), cpu_ref(&input), "hex wrapper seed {seed}");
+            assert_eq!(
+                run(&input),
+                reference_hex_decode_packed(&input),
+                "hex wrapper seed {seed}"
+            );
         }
     }
 

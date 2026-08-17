@@ -1,5 +1,5 @@
 use crate::graph::{
-    adaptive_traverse::{adaptive_dense_step, cpu_dense_step, should_use_dense},
+    adaptive_traverse::{adaptive_dense_step, should_use_dense},
     csr_closure_inputs::{CsrClosureInputs, CsrGraphView},
     csr_forward_or_changed::{
         cpu_ref_closure_into, csr_forward_or_changed_body, csr_forward_or_changed_body_prefixed,
@@ -10,9 +10,7 @@ use crate::graph::{
         try_csr_forward_or_changed_parallel_batch,
         try_csr_forward_or_changed_parallel_batch_global_slot,
     },
-    csr_frontier_degree_sum::{
-        csr_frontier_degree_sum, csr_frontier_degree_sum_cpu, try_csr_frontier_degree_sum_cpu,
-    },
+    csr_frontier_degree_sum::csr_frontier_degree_sum,
     persistent_bfs_step::{
         persistent_bfs_step, persistent_bfs_step_body, persistent_bfs_step_body_prefixed,
         persistent_bfs_step_child, persistent_bfs_step_child_prefixed,
@@ -21,6 +19,42 @@ use crate::graph::{
     program_graph::ProgramGraphShape,
 };
 use vyre_foundation::ir::{Node, Program};
+use vyre_reference::composition_witness::{
+    csr_frontier_degree_sum_witness as csr_frontier_degree_sum_cpu, dense_bitmatrix_step_witness,
+};
+
+fn cpu_dense_step(frontier_in: &[u32], adj_rows_dense: &[u32], node_count: u32) -> Vec<u32> {
+    dense_bitmatrix_step_witness(frontier_in, adj_rows_dense, node_count)
+}
+
+fn try_csr_frontier_degree_sum_cpu(
+    frontier_in: &[u32],
+    edge_offsets: &[u32],
+    node_count: u32,
+) -> Result<u32, String> {
+    let expected_offsets = (node_count as usize)
+        .checked_add(1)
+        .ok_or_else(|| format!("node_count + 1 overflows usize for node_count={node_count}"))?;
+    if edge_offsets.len() < expected_offsets {
+        return Err(format!(
+            "expected {expected_offsets} CSR offsets for {node_count} nodes, got {}",
+            edge_offsets.len()
+        ));
+    }
+    for pair in edge_offsets[..expected_offsets].windows(2) {
+        if pair[0] > pair[1] {
+            return Err(format!(
+                "non-monotonic CSR offsets: {} > {}",
+                pair[0], pair[1]
+            ));
+        }
+    }
+    Ok(csr_frontier_degree_sum_cpu(
+        frontier_in,
+        edge_offsets,
+        node_count,
+    ))
+}
 
 fn shape() -> ProgramGraphShape {
     ProgramGraphShape::new(4, 4)

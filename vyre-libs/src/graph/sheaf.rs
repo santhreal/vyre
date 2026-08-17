@@ -129,9 +129,7 @@ pub fn try_sheaf_diffusion_step(
     ))
 }
 
-
-
-
+const EXPECTED_SHEAF_DIFFUSION_OUTPUT_BYTES: [u8; 4] = [0, 0, 5, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -147,8 +145,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[5u32 << 16])]]
+            vec![vec![EXPECTED_SHEAF_DIFFUSION_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -156,6 +153,19 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        sheaf_diffusion_step_witness as sheaf_diffusion_step_cpu, sheaf_diffusion_step_witness_into,
+    };
+
+    fn try_sheaf_diffusion_step_cpu_into(
+        stalks: &[f64],
+        restriction_diag: &[f64],
+        damping: f64,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        sheaf_diffusion_step_witness_into(stalks, restriction_diag, damping, out);
+        Ok(())
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

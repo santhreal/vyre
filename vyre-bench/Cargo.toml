@@ -35,7 +35,7 @@ vyre-libs = { workspace = true, features = [
     "nn-linear-4bit",
     "predicate",
 ] }
-vyre-primitives = { workspace = true, features = ["cpu-parity", "hardware"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }

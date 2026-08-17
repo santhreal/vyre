@@ -1,4 +1,4 @@
-//! Property gates for `vyre_libs::graph::csr_forward_traverse::cpu_ref`.
+//! Property gates for `vyre_reference::composition_witness::csr_forward_traverse_witness`.
 
 #![cfg(feature = "graph")]
 

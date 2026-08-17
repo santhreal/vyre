@@ -147,7 +147,8 @@ impl BodyCtx<'_> {
                     (2, _) => PtxType::B16,
                     (_, ty) => ty,
                 };
-                let final_addr = self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
+                let final_addr =
+                    self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
                 let load_space = self.load_space_for(binding_slot, memory_class);
                 let mut regs = smallvec::SmallVec::<[crate::reg::Reg; 4]>::new();
                 for _ in 0..*width {
@@ -200,7 +201,8 @@ impl BodyCtx<'_> {
                     (2, _) => PtxType::B16,
                     (_, ty) => ty,
                 };
-                let final_addr = self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
+                let final_addr =
+                    self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
                 let mut regs = smallvec::SmallVec::<[crate::reg::Reg; 4]>::new();
                 for &val_id in &op.operands[2..] {
                     let value = self.lookup_operand(val_id)?;

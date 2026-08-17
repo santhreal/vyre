@@ -4,7 +4,6 @@
 //! drives every scalar reducer, vector unary bitset map, and binary bitset map
 //! through the same hostile length/value corpus.
 
-
 mod wire_words;
 use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
@@ -16,32 +15,46 @@ type BinaryVectorInto = fn(&[u32], &[u32], &mut Vec<u32>);
 
 #[test]
 fn scalar_bitset_and_reduce_ops_cover_adversarial_matrix() {
-    assert_unary_scalar("bitset_any", |input| u32::from(input.iter().any(|word| *word != 0)), |input| {
-        u32::from(input.iter().any(|word| *word != 0))
-    });
-    assert_unary_scalar("reduce_all", |input| u32::from(input.iter().all(|value| *value != 0)), |input| {
-        u32::from(input.iter().all(|value| *value != 0))
-    });
-    assert_unary_scalar("reduce_any", |input| u32::from(input.iter().any(|value| *value != 0)), |input| {
-        u32::from(input.iter().any(|value| *value != 0))
-    });
-    assert_unary_scalar("reduce_count", |input| input.iter().map(|word| word.count_ones()).sum(), |input| {
-        input.iter().map(|word| word.count_ones()).sum()
-    });
+    assert_unary_scalar(
+        "bitset_any",
+        |input| u32::from(input.iter().any(|word| *word != 0)),
+        |input| u32::from(input.iter().any(|word| *word != 0)),
+    );
+    assert_unary_scalar(
+        "reduce_all",
+        |input| u32::from(input.iter().all(|value| *value != 0)),
+        |input| u32::from(input.iter().all(|value| *value != 0)),
+    );
+    assert_unary_scalar(
+        "reduce_any",
+        |input| u32::from(input.iter().any(|value| *value != 0)),
+        |input| u32::from(input.iter().any(|value| *value != 0)),
+    );
+    assert_unary_scalar(
+        "reduce_count",
+        |input| input.iter().map(|word| word.count_ones()).sum(),
+        |input| input.iter().map(|word| word.count_ones()).sum(),
+    );
     assert_unary_scalar(
         "reduce_count_non_zero",
         |input| input.iter().filter(|value| **value != 0).count() as u32,
         |input| input.iter().filter(|value| **value != 0).count() as u32,
     );
-    assert_unary_scalar("reduce_max", |input| input.iter().copied().max().unwrap_or(0), |input| {
-        input.iter().copied().max().unwrap_or(0)
-    });
-    assert_unary_scalar("reduce_min", |input| input.iter().copied().min().unwrap_or(u32::MAX), |input| {
-        input.iter().copied().min().unwrap_or(u32::MAX)
-    });
-    assert_unary_scalar("reduce_sum", |input| input.iter().copied().fold(0u32, u32::wrapping_add), |input| {
-        input.iter().copied().fold(0u32, u32::wrapping_add)
-    });
+    assert_unary_scalar(
+        "reduce_max",
+        |input| input.iter().copied().max().unwrap_or(0),
+        |input| input.iter().copied().max().unwrap_or(0),
+    );
+    assert_unary_scalar(
+        "reduce_min",
+        |input| input.iter().copied().min().unwrap_or(u32::MAX),
+        |input| input.iter().copied().min().unwrap_or(u32::MAX),
+    );
+    assert_unary_scalar(
+        "reduce_sum",
+        |input| input.iter().copied().fold(0u32, u32::wrapping_add),
+        |input| input.iter().copied().fold(0u32, u32::wrapping_add),
+    );
 }
 
 #[test]

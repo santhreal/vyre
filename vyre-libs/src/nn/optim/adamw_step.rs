@@ -70,6 +70,10 @@ pub fn adamw_step(
         })
 }
 
+const EXPECTED_ADAMW_STEP_M_BYTES: [u8; 8] = [0xD7, 0xE8, 0x7E, 0x3F, 0x18, 0x74, 0xFF, 0x3F];
+const EXPECTED_ADAMW_STEP_V_BYTES: [u8; 8] = [0x0D, 0xD7, 0x23, 0x3C, 0x0D, 0xD7, 0xA3, 0x3C];
+const EXPECTED_ADAMW_STEP_PARAMS_BYTES: [u8; 8] = [0x1F, 0xC5, 0x27, 0x37, 0x1F, 0xC5, 0x27, 0x38];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -85,9 +89,9 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vec![215, 232, 126, 63, 24, 116, 255, 63],
-                vec![13, 215, 35, 60, 13, 215, 163, 60],
-                vec![31, 197, 39, 55, 31, 197, 39, 56],
+                EXPECTED_ADAMW_STEP_M_BYTES.to_vec(),
+                EXPECTED_ADAMW_STEP_V_BYTES.to_vec(),
+                EXPECTED_ADAMW_STEP_PARAMS_BYTES.to_vec(),
             ]]
         }),
     )

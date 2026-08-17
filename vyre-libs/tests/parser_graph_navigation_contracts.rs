@@ -9,7 +9,15 @@
 #![allow(deprecated)]
 
 mod wire_words;
-use vyre_libs::graph::{pack_branching_fixture, pack_spine_fixture};
+use vyre_libs::graph::pack_branching_fixture;
+
+fn pack_spine_fixture(node_count: u32) -> (Vec<u8>, Vec<u8>) {
+    let full = vyre_foundation::vast::pack_spine_vast(&vec![1u32; node_count as usize]);
+    let node_len = (node_count as usize) * vyre_foundation::vast::NODE_STRIDE_U32 * 4;
+    let start = vyre_foundation::vast::HEADER_LEN;
+    let region = full[start..start + node_len].to_vec();
+    (full, region)
+}
 use vyre_reference::value::Value;
 use wire_words::decode_u32_words;
 

@@ -98,6 +98,7 @@ pub fn ast_cfg_blocks(
     .with_entry_op_id("vyre-libs::parsing::ast_cfg_blocks")
     .with_non_composable_with_self(true)
 }
+const EXPECTED_AST_CFG_BLOCKS_BYTES: [u8; 8] = [0, 0, 0, 0, 255, 255, 255, 255];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -122,9 +123,7 @@ inventory::submit! {
             vec![vec![to_bytes(&tok_types), to_bytes(&statements), vec![0u8; 4 * 2]]]
         }),
         Some(|| {
-            let headers: [u32; 2] = [0, u32::MAX];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&headers);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_AST_CFG_BLOCKS_BYTES.to_vec()]]
         }),
     )
     .with_category("parsing")

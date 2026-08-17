@@ -1,7 +1,6 @@
 //! Subgroup simulator lane contracts.
 
 use proptest::prelude::*;
-use rayon::prelude::*;
 use vyre_reference::subgroup::SubgroupSimulator;
 
 #[test]
@@ -21,9 +20,9 @@ fn shuffle_zeroes_out_of_range_lanes() {
 
 proptest! {
     #[test]
-    fn subgroup_add_matches_parallel_wrapping_sum(values in prop::collection::vec(any::<u32>(), 0..128)) {
+    fn subgroup_add_matches_wrapping_sum(values in prop::collection::vec(any::<u32>(), 0..128)) {
         let simulator = SubgroupSimulator::new(values.len().max(1));
-        let expected = values.par_iter().copied().reduce(|| 0u32, u32::wrapping_add);
+        let expected = values.iter().copied().fold(0u32, u32::wrapping_add);
         prop_assert_eq!(simulator.add(&values), expected);
     }
 }

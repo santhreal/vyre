@@ -10,9 +10,10 @@ mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::union_find_emit::{
-    canonicalize_parent_to_roots, reference_union_find_alias, union_find_alias_via,
+    canonicalize_parent_to_roots, union_find_alias_via,
 };
 use vyre_libs::graph::union_find::union_find_dispatch_grid;
+use vyre_reference::composition_witness::union_find_alias_witness as reference_union_find_alias;
 
 fn assert_same_partition(a: &[u32], b: &[u32]) {
     let n = a.len();

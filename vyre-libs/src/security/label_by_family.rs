@@ -26,20 +26,25 @@ pub fn label_by_family(
     )
 }
 
+const EXPECTED_LABEL_BY_FAMILY_OUTPUT_BYTES: [u8; 4] = [0x06, 0x00, 0x00, 0x00];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || label_by_family("node_tags", "out", 4, 0b0010),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
-                to_bytes(&[0x01, 0x02, 0x06, 0x04]),
-                to_bytes(&[0]),
+                vec![
+                    0x01, 0x00, 0x00, 0x00,
+                    0x02, 0x00, 0x00, 0x00,
+                    0x06, 0x00, 0x00, 0x00,
+                    0x04, 0x00, 0x00, 0x00,
+                ],
+                vec![0x00, 0x00, 0x00, 0x00],
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0110])]]
+            vec![vec![EXPECTED_LABEL_BY_FAMILY_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("security")
@@ -56,6 +61,14 @@ mod tests {
         let names: Vec<&str> = p.buffers().iter().map(|b| b.name()).collect();
         assert!(names.contains(&"node_tags"));
         assert!(names.contains(&"out"));
+    }
+
+    #[test]
+    fn registration_fixture_matches_exact_byte_constant() {
+        assert_eq!(
+            EXPECTED_LABEL_BY_FAMILY_OUTPUT_BYTES,
+            [0x06, 0x00, 0x00, 0x00]
+        );
     }
 
     #[test]
@@ -154,7 +167,7 @@ mod tests {
         ) {
             let node_count = tags.len() as u32;
             let words = node_count.div_ceil(32);
-            let expected = crate::label::resolve_family::cpu_ref(&tags, mask);
+            let expected = vyre_reference::composition_witness::resolve_family_witness(&tags, mask);
             let p = label_by_family("node_tags", "out", node_count, mask);
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let inputs = vec![

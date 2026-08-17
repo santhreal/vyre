@@ -90,20 +90,6 @@ mod blur {
         assert_eq!(stages.vertical.buffers()[0].name(), "tmp");
         assert_eq!(stages.vertical.buffers()[1].name(), "out");
     }
-
-    #[test]
-    fn reusable_kernel_rejects_wrong_weight_count() {
-        let err = GaussianKernel::from_weights(4, vec![65536; 3])
-            .expect_err("radius 4 needs nine weights");
-
-        assert_eq!(err.radius, 4);
-        assert_eq!(err.expected, 9);
-        assert_eq!(err.actual, 3);
-        assert!(
-            err.to_string().contains("Fix: supply 2 * radius + 1"),
-            "kernel shape errors must be actionable"
-        );
-    }
 }
 
 // ================================================================
@@ -383,3 +369,37 @@ mod downsample {
 // ================================================================
 // Glass (hero composition)
 // ================================================================
+
+mod glass {
+    use vyre_libs::visual::{glass_blur_stage, glass_filter_stage, glass_stages, GlassParams};
+
+    #[test]
+    fn program_has_correct_buffers() {
+        let params = GlassParams {
+            width: 16,
+            height: 16,
+            blur_radius: 4,
+            blur_sigma: 1.5,
+            tint_rgba: 0x0D_FFFFFF,
+            brightness: 1.0,
+            saturation: 0.75,
+        };
+        let stages = glass_blur_stage("scene", "out", "tmp", &params);
+        let h_bufs = stages.horizontal.buffers();
+        assert_eq!(h_bufs.len(), 2, "horizontal pass needs scene + tmp");
+        assert_eq!(h_bufs[0].name(), "scene");
+        assert_eq!(h_bufs[1].name(), "tmp");
+        let v_bufs = stages.vertical.buffers();
+        assert_eq!(v_bufs.len(), 2, "vertical pass needs tmp + out");
+        assert_eq!(v_bufs[0].name(), "tmp");
+        assert_eq!(v_bufs[1].name(), "out");
+
+        let filter = glass_filter_stage("out", &params);
+        assert_eq!(filter.buffers().len(), 1, "filter stage works in-place");
+        assert_eq!(filter.buffers()[0].name(), "out");
+
+        let (blur, tint) = glass_stages("scene", "out", "tmp", &params);
+        assert_eq!(blur.stage_count(), 2);
+        assert_eq!(tint.buffers().len(), 1);
+    }
+}

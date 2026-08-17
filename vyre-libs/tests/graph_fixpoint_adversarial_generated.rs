@@ -4,8 +4,8 @@
 
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
-use vyre_libs::graph::csr_forward_or_changed;
 use vyre_libs::graph::persistent_bfs;
+use vyre_reference::composition_witness::csr_closure_with_step_hook_witness;
 
 fn next_u32(state: &mut u32) -> u32 {
     *state ^= *state << 13;
@@ -69,6 +69,48 @@ fn allow_mask(seed: u32) -> u32 {
     }
 }
 
+fn reference_closure(inputs: CsrClosureInputs<'_>, frontier: &[u32]) -> Vec<u32> {
+    csr_closure_with_step_hook_witness(
+        inputs.graph.node_count,
+        inputs.graph.edge_offsets,
+        inputs.graph.edge_targets,
+        inputs.graph.edge_kind_mask,
+        inputs.allow_mask,
+        inputs.max_iters,
+        frontier,
+        |_| {},
+    )
+}
+
+fn independent_queue_closure(inputs: CsrClosureInputs<'_>, frontier: &[u32]) -> Vec<u32> {
+    let node_count = inputs.graph.node_count;
+    let mut closure = frontier.to_vec();
+    closure.resize(bitset_words(node_count) as usize, 0);
+    let mut queue = std::collections::VecDeque::new();
+    for node in 0..node_count {
+        if closure[(node / 32) as usize] & (1 << (node % 32)) != 0 {
+            queue.push_back(node);
+        }
+    }
+    while let Some(source) = queue.pop_front() {
+        let start = inputs.graph.edge_offsets[source as usize] as usize;
+        let end = inputs.graph.edge_offsets[source as usize + 1] as usize;
+        for edge in start..end {
+            if inputs.graph.edge_kind_mask[edge] & inputs.allow_mask == 0 {
+                continue;
+            }
+            let destination = inputs.graph.edge_targets[edge];
+            let word = (destination / 32) as usize;
+            let bit = 1 << (destination % 32);
+            if closure[word] & bit == 0 {
+                closure[word] |= bit;
+                queue.push_back(destination);
+            }
+        }
+    }
+    closure
+}
+
 #[test]
 fn persistent_bfs_matches_csr_forward_closure_for_generated_graphs() {
     for seed in 0..8192u32 {
@@ -87,8 +129,8 @@ fn persistent_bfs_matches_csr_forward_closure_for_generated_graphs() {
             allow_mask: allow,
             max_iters,
         };
-        let via_csr = csr_forward_or_changed::cpu_ref_closure(inputs, &frontier);
-        let (via_bfs, _changed) = persistent_bfs::cpu_ref(inputs, &frontier);
+        let via_csr = reference_closure(inputs, &frontier);
+        let via_bfs = independent_queue_closure(inputs, &frontier);
 
         assert_eq!(via_bfs, via_csr, "seed {seed}");
     }
@@ -112,8 +154,9 @@ fn persistent_bfs_generated_fixpoints_are_idempotent() {
             allow_mask: allow,
             max_iters,
         };
-        let (closure, _first_changed) = persistent_bfs::cpu_ref(inputs, &frontier);
-        let (closure_again, second_changed) = persistent_bfs::cpu_ref(inputs, &closure);
+        let closure = reference_closure(inputs, &frontier);
+        let closure_again = reference_closure(inputs, &closure);
+        let second_changed = u32::from(closure_again != closure);
 
         assert_eq!(closure_again, closure, "idempotent closure seed {seed}");
         assert_eq!(

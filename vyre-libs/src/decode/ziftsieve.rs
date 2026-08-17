@@ -79,36 +79,6 @@ pub struct ZiftsieveExtents {
     pub max_output: u32,
 }
 
-
-
-
-fn decode_length(data: &[u8], pos: &mut usize, initial: usize) -> Result<usize, String> {
-    let mut len = initial;
-    loop {
-        if *pos >= data.len() {
-            return Err(format!(
-                "truncated length encoding at offset {pos}. \
-                 Fix: use a complete LZ4 stream"
-            ));
-        }
-        let byte = data[*pos];
-        *pos += 1;
-        len = len.checked_add(byte as usize).ok_or_else(|| {
-            "length overflow in variable-length encoding. Fix: use a valid LZ4 stream".to_string()
-        })?;
-        if byte < 255 {
-            break;
-        }
-        if len > MAX_BLOCK_SIZE {
-            return Err(format!(
-                "length {len} exceeds MAX_BLOCK_SIZE {MAX_BLOCK_SIZE}. \
-                 Fix: use a valid LZ4 stream"
-            ));
-        }
-    }
-    Ok(len)
-}
-
 /// Build the primitive body for indexed literal copy.
 #[must_use]
 pub fn ziftsieve_literal_copy_body(buffers: ZiftsieveBuffers<'_>, seq_count: u32) -> Vec<Node> {
@@ -266,13 +236,7 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-        b'A' as u32,
-        b'B' as u32,
-        b'C' as u32,
-    ])]]
-}
+const EXPECTED_ZIFTSIEVE_LITERAL_BYTES: [u8; 12] = [65, 0, 0, 0, 66, 0, 0, 0, 67, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -288,13 +252,14 @@ inventory::submit! {
             )
         },
         Some(fixture_inputs),
-        Some(fixture_outputs),
+        Some(|| vec![vec![EXPECTED_ZIFTSIEVE_LITERAL_BYTES.to_vec()]]),
     )
 }
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod primitive_tests {
     use super::*;
+    use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
     use vyre_reference::value::Value;
 
     fn run(input: &[u8], seq_starts: &[u32], seq_lens: &[u32], seq_offsets: &[u32]) -> Vec<u32> {

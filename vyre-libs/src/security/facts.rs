@@ -1103,3 +1103,6 @@ mod tests {
         );
     }
 }
+#[cfg(test)]
+#[path = "../../tests/internal/security/facts/analysis_fact_schema.rs"]
+mod analysis_fact_schema_contracts;

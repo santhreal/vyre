@@ -25,12 +25,30 @@
 //! `outputs[0]=pids_out`) was audited CLEAN and is covered here as a durable guard.
 
 use vyre_libs::encoding::matching_diagnostic_compaction::{
-    bracket_pairs_via, dedup_region_survivor_flags_via, reference_dedup_regions,
-    reference_sort_regions, sort_regions_via,
+    bracket_pairs_via, dedup_region_survivor_flags_via, sort_regions_via,
 };
-use vyre_libs::pattern::{
-    bracket_match_cpu_ref as bracket_cpu_ref, RegionTriple, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
+use vyre_libs::pattern::{RegionTriple, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN};
+use vyre_reference::composition_witness::{
+    bracket_match_witness as bracket_cpu_ref, dedup_regions_witness, sort_regions_witness,
 };
+
+fn reference_sort_regions(regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
+    let input: Vec<(u32, u32, u32)> = regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    let sorted = sort_regions_witness(input);
+    sorted
+        .into_iter()
+        .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
+        .collect()
+}
+
+fn reference_dedup_regions(regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
+    let input: Vec<(u32, u32, u32)> = regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    let deduped = dedup_regions_witness(input);
+    deduped
+        .into_iter()
+        .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
+        .collect()
+}
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

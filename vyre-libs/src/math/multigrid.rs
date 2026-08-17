@@ -263,10 +263,6 @@ pub fn jacobi_smooth_step_serial_body(
     )]
 }
 
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -282,8 +278,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[3u32 << 16])]]
+            vec![vec![vec![0x00, 0x00, 0x03, 0x00]]] // 3 << 16
         }),
     )
 }
@@ -291,6 +286,36 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_jacobi_smooth_step_cpu_into(
+        a: &[f64],
+        b: &[f64],
+        x_in: &[f64],
+        omega: f64,
+        n: u32,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let res = independent_jacobi(a, b, x_in, omega, n as usize);
+        out.clear();
+        out.extend_from_slice(&res);
+        Ok(())
+    }
+
+    fn try_jacobi_smooth_step_cpu(
+        a: &[f64],
+        b: &[f64],
+        x_in: &[f64],
+        omega: f64,
+        n: u32,
+    ) -> Result<Vec<f64>, String> {
+        let mut out = Vec::new();
+        try_jacobi_smooth_step_cpu_into(a, b, x_in, omega, n, &mut out)?;
+        Ok(out)
+    }
+
+    fn jacobi_smooth_step_cpu(a: &[f64], b: &[f64], x_in: &[f64], omega: f64, n: u32) -> Vec<f64> {
+        independent_jacobi(a, b, x_in, omega, n as usize)
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())

@@ -11,8 +11,8 @@ use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_driver::DispatchConfig;
 use vyre_libs::text::{line_index, line_index_u8, reference_line_index};
 use vyre_libs::text::{
-    reference_utf8_validate, utf8_validate, utf8_validate_dispatch_grid, utf8_validate_u8,
-    UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3, UTF8_LEAD_4,
+    reference_utf8_validate, utf8_validate, utf8_validate_u8, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3,
+    UTF8_LEAD_4,
 };
 
 fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
@@ -246,7 +246,7 @@ fn run_utf8_validate(source: &[u8]) -> Vec<u32> {
     let program = utf8_validate("source", "classes", n);
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(&bytes_to_u32_per_lane(source))];
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(utf8_validate_dispatch_grid(n));
+    config.grid_override = Some(vyre_primitives::lane_grid(n, 256));
     let outputs = with_live_backend("UTF-8 validate primitive", |backend| {
         backend
             .dispatch(&program, &inputs, &config)
@@ -262,7 +262,7 @@ fn run_utf8_validate_u8(source: &[u8]) -> Vec<u32> {
     let program = utf8_validate_u8("source", "classes", n);
     let inputs = inputs_for_program(&program, source);
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(utf8_validate_dispatch_grid(n));
+    config.grid_override = Some(vyre_primitives::lane_grid(n, 256));
     let classes_index = output_index(&program, "classes");
     let outputs = with_live_backend("packed-u8 UTF-8 validate primitive", |backend| {
         backend
@@ -388,7 +388,7 @@ fn cuda_utf8_validate_u8_generated_matrix_matches_cpu() {
     let program = utf8_validate_u8("source", "classes", len as u32);
     let classes_index = output_index(&program, "classes");
     let mut config = DispatchConfig::default();
-    config.grid_override = Some(utf8_validate_dispatch_grid(len as u32));
+    config.grid_override = Some(vyre_primitives::lane_grid(len as u32, 256));
 
     with_live_backend("packed-u8 generated UTF-8 matrix", |backend| {
         let mut checked = 0usize;

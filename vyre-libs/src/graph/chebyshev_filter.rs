@@ -263,16 +263,103 @@ pub fn try_chebyshev_filter(
         vec![wrap_anonymous_region(OP_ID, body_with_bounds)],
     ))
 }
+/// CPU reference for [`chebyshev_filter`]. Operates on f32 internally
+/// for parity-test simplicity; the GPU primitive is u32 fixed-point so
+/// callers are responsible for matching scaling.
+#[must_use]
+#[cfg(test)]
+fn chebyshev_filter_cpu(
+    laplacian: &[f32],
+    signal: &[f32],
+    coeffs: &[f32],
+    n: u32,
+    k_steps: u32,
+) -> Vec<f32> {
+    try_chebyshev_filter_cpu(laplacian, signal, coeffs, n, k_steps)
+        .unwrap_or_else(|error| panic!("{error}"))
+}
 
+/// Fallible CPU reference for [`chebyshev_filter`].
+#[cfg(test)]
+fn try_chebyshev_filter_cpu(
+    laplacian: &[f32],
+    signal: &[f32],
+    coeffs: &[f32],
+    n: u32,
+    k_steps: u32,
+) -> Result<Vec<f32>, String> {
+    let mut out = Vec::new();
+    let mut t_prev = Vec::new();
+    let mut t_curr = Vec::new();
+    let mut t_next = Vec::new();
+    try_chebyshev_filter_cpu_into(
+        laplacian,
+        signal,
+        coeffs,
+        n,
+        k_steps,
+        &mut out,
+        &mut t_prev,
+        &mut t_curr,
+        &mut t_next,
+    )?;
+    Ok(out)
+}
 
+/// CPU reference for [`chebyshev_filter`] using caller-owned buffers.
+#[allow(clippy::too_many_arguments)]
+#[cfg(test)]
+fn chebyshev_filter_cpu_into(
+    laplacian: &[f32],
+    signal: &[f32],
+    coeffs: &[f32],
+    n: u32,
+    k_steps: u32,
+    out: &mut Vec<f32>,
+    t_prev: &mut Vec<f32>,
+    t_curr: &mut Vec<f32>,
+    t_next: &mut Vec<f32>,
+) {
+    try_chebyshev_filter_cpu_into(
+        laplacian, signal, coeffs, n, k_steps, out, t_prev, t_curr, t_next,
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+}
 
-
-
+/// Fallible CPU reference for [`chebyshev_filter`] using caller-owned buffers.
+#[allow(clippy::too_many_arguments)]
+#[cfg(test)]
+fn try_chebyshev_filter_cpu_into(
+    laplacian: &[f32],
+    signal: &[f32],
+    coeffs: &[f32],
+    n: u32,
+    k_steps: u32,
+    out: &mut Vec<f32>,
+    t_prev: &mut Vec<f32>,
+    t_curr: &mut Vec<f32>,
+    t_next: &mut Vec<f32>,
+) -> Result<(), String> {
+    if k_steps > MAX_K {
+        return Err(format!(
+            "Fix: chebyshev_filter_cpu k_steps must be <= MAX_K={MAX_K}, got {k_steps}."
+        ));
+    }
+    let n_us = n as usize;
+    n_us.checked_mul(n_us).ok_or_else(|| {
+        format!(
+            "chebyshev_filter_cpu n={n} overflows dense Laplacian indexing. Fix: shard or sparsify the graph before CPU parity evaluation."
+        )
+    })?;
+    vyre_reference::composition_witness::chebyshev_filter_witness_into(
+        laplacian, signal, coeffs, n, k_steps, out, t_prev, t_curr, t_next,
+    );
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     /// Tolerance for f32 parity in the CPU ref.
     const EPS: f32 = 1e-4;
 

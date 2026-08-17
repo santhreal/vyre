@@ -13,13 +13,17 @@ use crate::api::resident::{input_bytes_total, u32_counter_reset_program, Residen
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
 use vyre_libs::pattern::classic_ac::{
-    classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
-    classic_ac_candidate_suffix3_bloom_words, classic_ac_compile,
+    classic_ac_compile,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     ClassicAcAutomaton, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
 use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
+use vyre_reference::composition_witness::{
+    classic_ac_candidate_end_byte_mask_words_witness,
+    classic_ac_candidate_suffix2_mask_words_witness,
+    classic_ac_candidate_suffix3_bloom_words_witness,
+};
 
 use super::baseline::cpu_aho_overlapping_matches;
 use super::haystack::{build_irregular_haystack, pattern_lengths};
@@ -234,9 +238,17 @@ pub(super) fn prepare_scan_ac_irregular(
     let (haystack, planted_matches) = build_irregular_haystack(HAYSTACK_BYTES);
     let ac = classic_ac_compile(PATTERNS);
     let pattern_lengths = pattern_lengths()?;
-    let candidate_end_mask = classic_ac_candidate_end_byte_mask_words(&ac.dfa);
-    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words(&ac.dfa);
-    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words(PATTERNS);
+    let candidate_end_mask = classic_ac_candidate_end_byte_mask_words_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        ac.dfa.state_count,
+    );
+    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        ac.dfa.state_count,
+    );
+    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
     let reset_program = u32_counter_reset_program("match_count");
 
     let baseline_start = std::time::Instant::now();

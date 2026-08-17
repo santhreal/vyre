@@ -287,16 +287,11 @@ fn matroid_jacobi_flow_into(
     }
 }
 
-/// Convenience: count selected fusion candidates.
-#[must_use]
-pub fn count_selected(subset: &[u32]) -> u32 {
-    subset.iter().filter(|&&v| v != 0).count() as u32
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
+    use vyre_reference::composition_witness::reduce_count_non_zero_witness as count_selected;
 
     #[test]
     fn empty_seed_with_no_edges_returns_empty() {

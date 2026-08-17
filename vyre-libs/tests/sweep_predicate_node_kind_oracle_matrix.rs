@@ -16,8 +16,7 @@ fn node_kind_eq_matches_independent_oracle_matrix() {
         "node_kind_eq",
         oracle_node_kind_eq,
         |nodes, kind, out| {
-            out.clear();
-            out.extend(oracle_node_kind_eq(nodes, kind));
+            vyre_reference::composition_witness::node_kind_eq_witness_into(nodes, kind, out);
         },
         oracle_node_kind_eq,
     );
@@ -50,14 +49,7 @@ fn assert_node_kind(
 }
 
 fn oracle_node_kind_eq(nodes: &[u32], kind: u32) -> Vec<u32> {
-    let words = nodes.len().div_ceil(32);
-    let mut out = vec![0u32; words];
-    for (node, &value) in nodes.iter().enumerate() {
-        if value == kind {
-            out[node / 32] |= 1u32 << (node % 32);
-        }
-    }
-    out
+    vyre_reference::composition_witness::node_kind_eq_witness(nodes, kind)
 }
 
 fn node_kind_cases() -> Vec<(Vec<u32>, u32)> {

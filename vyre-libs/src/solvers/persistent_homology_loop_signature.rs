@@ -27,7 +27,7 @@ pub fn region_loop_skeleton_fixed_via(
     epsilon_fixed: u32,
     n: u32,
 ) -> Result<Vec<u32>, DispatchError> {
-    let cells = checked_square_cells(n)?;
+    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via")?;
     if dist_matrix_fixed.len() != cells {
         return Err(DispatchError::BadInputs(format!(
             "distance matrix len {} != n*n ({cells})",
@@ -35,13 +35,7 @@ pub fn region_loop_skeleton_fixed_via(
         )));
     }
     let mut out = Vec::new();
-    region_loop_skeleton_fixed_via_into(
-        dispatcher,
-        dist_matrix_fixed,
-        epsilon_fixed,
-        n,
-        &mut out,
-    )?;
+    region_loop_skeleton_fixed_via_into(dispatcher, dist_matrix_fixed, epsilon_fixed, n, &mut out)?;
     Ok(out)
 }
 
@@ -57,20 +51,14 @@ pub fn region_loop_skeleton_fixed_via_into(
     n: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    let cells = checked_square_cells(n)?;
+    let cells = checked_square_cells(n, "region_loop_skeleton_fixed_via_into")?;
     if dist_matrix_fixed.len() != cells {
         return Err(DispatchError::BadInputs(format!(
             "distance matrix len {} != n*n ({cells})",
             dist_matrix_fixed.len()
         )));
     }
-    let program = vietoris_rips_edge_filter(
-        "dist_matrix",
-        "epsilon",
-        "edge_mask",
-        n,
-        1,
-    );
+    let program = vietoris_rips_edge_filter("dist_matrix", "epsilon", "edge_mask", n);
     let inputs = vec![
         u32_slice_to_le_bytes(dist_matrix_fixed),
         u32_slice_to_le_bytes(&[epsilon_fixed]),
@@ -79,13 +67,12 @@ pub fn region_loop_skeleton_fixed_via_into(
     let groups = ceil_div_u32(n, 256).max(1);
     let outputs = dispatcher.dispatch(&program, &inputs, Some([groups, 1, 1]))?;
     if outputs.is_empty() {
-        return Err(DispatchError::ExecutionFailed(
-            "no output buffers returned".to_string(),
+        return Err(DispatchError::BackendError(
+            "Fix: Vietoris-Rips dispatch returned no output buffers".to_string(),
         ));
     }
     decode_u32_output_exact(&outputs[0], cells, "region_loop_skeleton_fixed_via", out)
 }
-
 
 #[cfg(test)]
 mod fixed_via_tests {
@@ -144,8 +131,7 @@ mod fixed_via_tests {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use vyre_reference::composition_witness::betti_persistence_witness as betti_persistence_cpu;
+    use vyre_reference::composition_witness::betti_persistence_witness as reference_betti_persistence;
 
     #[derive(Debug, Default)]
     struct LoopTopologyScratch {
@@ -212,7 +198,13 @@ mod tests {
     ) -> Vec<u32> {
         let mut scratch = LoopTopologyScratch::default();
         let mut out = Vec::with_capacity(epsilons.len());
-        reference_loop_filtration_edge_counts_into(dist_matrix, epsilons, n, &mut scratch, &mut out);
+        reference_loop_filtration_edge_counts_into(
+            dist_matrix,
+            epsilons,
+            n,
+            &mut scratch,
+            &mut out,
+        );
         out
     }
 
@@ -251,7 +243,7 @@ mod tests {
         out.clear();
         for &eps in epsilons {
             reference_region_loop_skeleton_into(dist_matrix, eps, n, &mut scratch.mask);
-            let (b0, b1, _edges) = betti_persistence_cpu(&scratch.mask, n);
+            let (b0, b1, _edges) = reference_betti_persistence(&scratch.mask, n);
             out.push((b0, b1));
         }
     }
@@ -274,7 +266,7 @@ mod tests {
         births.clear();
         for &eps in epsilons {
             reference_region_loop_skeleton_into(dist_matrix, eps, n, &mut scratch.mask);
-            let (_b0, b1, _edges) = betti_persistence_cpu(&scratch.mask, n);
+            let (_b0, b1, _edges) = reference_betti_persistence(&scratch.mask, n);
             if b1 > prev_b1 {
                 births.push((eps, b1));
             }
@@ -344,10 +336,7 @@ mod tests {
     #[test]
     fn betti_filtration_b1_monotone_non_decreasing_on_growing_filtration() {
         let dist = vec![
-            0.0, 0.1, 0.2, 0.3,
-            0.1, 0.0, 0.4, 0.5,
-            0.2, 0.4, 0.0, 0.6,
-            0.3, 0.5, 0.6, 0.0,
+            0.0, 0.1, 0.2, 0.3, 0.1, 0.0, 0.4, 0.5, 0.2, 0.4, 0.0, 0.6, 0.3, 0.5, 0.6, 0.0,
         ];
         let epsilons = vec![0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65];
         let series = reference_loop_filtration_betti(&dist, &epsilons, 4);
@@ -393,14 +382,12 @@ mod tests {
 
     #[test]
     fn betti_filtration_matches_primitive_on_each_epsilon() {
-        let dist = vec![
-            0.0, 0.2, 0.4, 0.2, 0.0, 0.3, 0.4, 0.3, 0.0,
-        ];
+        let dist = vec![0.0, 0.2, 0.4, 0.2, 0.0, 0.3, 0.4, 0.3, 0.0];
         let epsilons = vec![0.1, 0.25, 0.35, 0.5];
         let series = reference_loop_filtration_betti(&dist, &epsilons, 3);
         for (idx, &eps) in epsilons.iter().enumerate() {
             let mask = reference_region_loop_skeleton(&dist, eps, 3);
-            let (b0_p, b1_p, _) = betti_persistence_cpu(&mask, 3);
+            let (b0_p, b1_p, _) = reference_betti_persistence(&mask, 3);
             assert_eq!(series[idx], (b0_p, b1_p));
         }
     }

@@ -90,12 +90,13 @@ pub fn try_natural_gradient_block_apply(
     ))
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        natural_gradient_block_apply_witness as natural_gradient_block_apply_cpu,
+        natural_gradient_block_apply_witness_into as natural_gradient_block_apply_cpu_into,
+    };
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

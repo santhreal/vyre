@@ -36,6 +36,7 @@ pub fn is_bitset_equal_program(program: &Program) -> bool {
     )
 }
 
+const EXPECTED_BITSET_EQUAL_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -50,8 +51,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[1])]]
+            vec![vec![EXPECTED_BITSET_EQUAL_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -61,31 +61,42 @@ mod tests {
     use super::*;
     use vyre_foundation::ir::Node;
 
+    fn reference_bitset_equal(lhs: &[u32], rhs: &[u32]) -> u32 {
+        u32::from(vyre_reference::composition_witness::bitset_equal_witness(
+            lhs, rhs,
+        ))
+    }
+
     #[test]
     fn identical_returns_one() {
-        assert_eq!(cpu_ref(&[0xDEAD, 0xBEEF], &[0xDEAD, 0xBEEF]), 1);
+        assert_eq!(
+            reference_bitset_equal(&[0xDEAD, 0xBEEF], &[0xDEAD, 0xBEEF]),
+            1
+        );
     }
 
     #[test]
     fn differs_in_first_word_returns_zero() {
-        assert_eq!(cpu_ref(&[0xDEAD, 0xBEEF], &[0xDEAE, 0xBEEF]), 0);
+        assert_eq!(
+            reference_bitset_equal(&[0xDEAD, 0xBEEF], &[0xDEAE, 0xBEEF]),
+            0
+        );
     }
 
     #[test]
     fn differs_in_last_word_returns_zero() {
-        assert_eq!(cpu_ref(&[0, 0, 1], &[0, 0, 0]), 0);
+        assert_eq!(reference_bitset_equal(&[0, 0, 1], &[0, 0, 0]), 0);
     }
 
     #[test]
     fn empty_pair_returns_one() {
-        assert_eq!(cpu_ref(&[], &[]), 1);
+        assert_eq!(reference_bitset_equal(&[], &[]), 1);
     }
 
     #[test]
     fn length_mismatch_returns_zero() {
-        assert_eq!(cpu_ref(&[0], &[0, 0]), 0);
+        assert_eq!(reference_bitset_equal(&[0], &[0, 0]), 0);
     }
-
     #[test]
     fn preserves_wrapper_op_id() {
         let program = bitset_equal("lhs", "rhs", "out", 2);
@@ -116,7 +127,7 @@ mod tests {
                 });
             }
             let expected = u32::from(lhs == rhs);
-            assert_eq!(cpu_ref(&lhs, &rhs), expected, "case {case}");
+            assert_eq!(reference_bitset_equal(&lhs, &rhs), expected, "case {case}");
         }
     }
 }

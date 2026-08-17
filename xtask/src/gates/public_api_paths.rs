@@ -775,25 +775,25 @@ mod tests {
         );
     }
 
-    /// WHY: `csr_bidirectional` and `csr_forward_or_changed` each generate their own
-    /// `cpu_ref_closure` through one wrapper macro, so no `pub fn` line carries the
-    /// name and the snapshot line is the same one a re-export writes. Reading only
-    /// `pub` lines reported two owned functions as one item at two paths.
+    /// WHY: sibling modules that generate functions through a wrapper macro do not
+    /// carry a literal `pub fn` line for the generated names, so the snapshot line
+    /// looks like a re-export. Reading only `pub` lines would report two owned functions
+    /// as one item at two paths.
     #[test]
     fn a_name_two_sibling_modules_plant_through_a_macro_is_not_one_item() {
         let invocation = |body: &str| {
-            format!("define_csr_closure_entry_points! {{\n    allocating: {body} {{\n        /// doc\n    }},\n    hooked: cpu_ref_closure_into_with_step_hook,\n}}\n")
+            format!("define_entry_points! {{\n    allocating: {body} {{\n        /// doc\n    }},\n    hooked: generated_entry_into_with_step_hook,\n}}\n")
         };
         let shared = names_declared_more_than_once(&[
-            invocation("cpu_ref_closure"),
-            invocation("cpu_ref_closure"),
+            invocation("generated_entry"),
+            invocation("generated_entry"),
         ]);
         assert!(
-            shared.contains("cpu_ref_closure"),
+            shared.contains("generated_entry"),
             "two macro invocations plant two functions: {shared:?}"
         );
         assert!(
-            shared.contains("cpu_ref_closure_into_with_step_hook"),
+            shared.contains("generated_entry_into_with_step_hook"),
             "a slot without a block is still a name slot: {shared:?}"
         );
     }

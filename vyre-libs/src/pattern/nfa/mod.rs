@@ -36,6 +36,7 @@ use crate::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
 
 /// Canonical op id for the end-to-end scan kernel.
 pub const OP_ID: &str = "vyre-libs::matching::nfa_scan";
+const REGION_GENERATOR: &str = "anonymous::vyre-libs::matching::nfa_scan";
 
 /// Compile a set of patterns into a scan Program.
 ///
@@ -81,6 +82,28 @@ pub fn try_nfa_scan(
         .map_err(|error| error.to_string())?
         .for_input_len(input_len);
     nfa_scan_with_plan(&plan, false, input_buf, hit_buf, input_len)
+}
+
+/// Build sharded NFA scan programs for a pattern set that may exceed a single
+/// subgroup's state budget.
+///
+/// # Errors
+///
+/// Returns an actionable error when any individual pattern exceeds
+/// one subgroup's state budget.
+#[allow(clippy::vec_init_then_push)]
+pub fn nfa_sharded_programs(
+    patterns: &[&str],
+    input_buf: &str,
+    hit_buf: &str,
+    input_len: u32,
+) -> Result<Vec<Program>, String> {
+    let shards = plan_shards(patterns);
+    let mut programs = Vec::with_capacity(shards.len());
+    for shard in &shards {
+        programs.push(try_nfa_scan(shard, input_buf, hit_buf, input_len)?);
+    }
+    Ok(programs)
 }
 
 /// Canonical buffer name for the runtime-supplied haystack byte count.
@@ -449,7 +472,7 @@ pub fn nfa_scan_with_plan(
         buffers,
         [LANES_PER_SUBGROUP as u32, 1, 1],
         vec![wrap_anonymous_region(
-            OP_ID,
+            REGION_GENERATOR,
             vec![Node::if_then(
                 Expr::and(
                     Expr::lt(lane_u32(), Expr::u32(LANES_PER_SUBGROUP as u32)),
@@ -666,5 +689,17 @@ mod tests {
     fn nfa_plan_input_len_is_attachable() {
         let plan = compile(&["abc"]).for_input_len(64);
         assert_eq!(plan.input_len, 64);
+    }
+
+    #[test]
+    fn nfa_sharded_programs_emits_programs_for_each_shard() {
+        let big: Vec<String> = (0..12).map(|_| "a".repeat(100)).collect();
+        let refs: Vec<&str> = big.iter().map(String::as_str).collect();
+        let programs = nfa_sharded_programs(&refs, "input", "hits", 16)
+            .expect("Fix: sharded patterns must fit within state caps");
+        assert!(programs.len() >= 2);
+        for p in &programs {
+            assert_eq!(p.workgroup_size, [LANES_PER_SUBGROUP as u32, 1, 1]);
+        }
     }
 }

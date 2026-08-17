@@ -109,6 +109,7 @@ impl GaussianKernel {
     ///
     /// Returns an actionable error when `weights.len()` does not match
     /// `2 * min(radius, MAX_RADIUS) + 1`.
+    #[cfg(test)]
     pub fn from_weights(radius: u32, weights: Vec<u32>) -> Result<Self, GaussianKernelError> {
         let clamped = radius.min(crate::math::conv1d::MAX_RADIUS);
         let expected = (2 * clamped + 1) as usize;
@@ -337,6 +338,8 @@ fn gaussian_blur_pass(
     )
 }
 
+const EXPECTED_BLUR_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -350,10 +353,27 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // All-white blurred → all-white (±1).
-            let pixels = vec![0xFFFF_FFFFu32; 16];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels)]]
+            vec![vec![EXPECTED_BLUR_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reusable_kernel_rejects_wrong_weight_count() {
+        let err = GaussianKernel::from_weights(4, vec![65536; 3])
+            .expect_err("radius 4 needs nine weights");
+
+        assert_eq!(err.radius, 4);
+        assert_eq!(err.expected, 9);
+        assert_eq!(err.actual, 3);
+        assert!(
+            err.to_string().contains("Fix: supply 2 * radius + 1"),
+            "kernel shape errors must be actionable"
+        );
+    }
 }

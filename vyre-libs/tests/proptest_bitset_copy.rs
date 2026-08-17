@@ -1,4 +1,4 @@
-//! Property gates for `vyre_libs::bitset::copy::cpu_ref`.
+//! Property gates for `vyre_reference::composition_witness::bitset_copy_witness`.
 
 #![cfg(feature = "bitset")]
 
@@ -51,6 +51,5 @@ proptest! {
 }
 
 fn cpu_ref(target: &mut [u32], source: &[u32]) {
-    let n = target.len().min(source.len());
-    target[..n].copy_from_slice(&source[..n]);
+    vyre_reference::composition_witness::bitset_copy_witness(target, source);
 }

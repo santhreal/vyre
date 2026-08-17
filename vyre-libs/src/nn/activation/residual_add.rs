@@ -48,6 +48,10 @@ fn build_residual_add(
     }
     typed_binary_activation_program(OP_ID, residual, branch, output, n, dtype, Expr::add)
 }
+const EXPECTED_RESIDUAL_ADD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0xC0, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -59,9 +63,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[
-                1.5, 2.0, 2.0, 0.0,
-            ])]]
+            vec![vec![EXPECTED_RESIDUAL_ADD_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

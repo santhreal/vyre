@@ -152,7 +152,12 @@ inventory::submit! {
         }),
         Some(|| {
             // FFT of impulse = uniform [1, 1, 1, 1] across all bins.
-            vec![vec![crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, // 1.0, 0.0
+                0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, // 1.0, 0.0
+                0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, // 1.0, 0.0
+                0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, // 1.0, 0.0
+            ]]]
         }),
     )
     .with_category("math")

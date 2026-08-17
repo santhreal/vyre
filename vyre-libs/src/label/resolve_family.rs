@@ -29,7 +29,7 @@ pub fn resolve_family(
     )
 }
 
-
+const EXPECTED_RESOLVE_FAMILY_OUTPUT_BYTES: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -42,8 +42,7 @@ inventory::submit! {
             vec![vec![to_bytes(&[0x01, 0x02, 0x06, 0x04]), to_bytes(&[0])]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0110])]]
+            vec![vec![EXPECTED_RESOLVE_FAMILY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -52,25 +51,44 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn reference_resolve_family(node_tags: &[u32], family_mask: u32) -> Vec<u32> {
+        let mut out = vec![0_u32; node_tags.len().div_ceil(32)];
+        reference_resolve_family_into(node_tags, family_mask, &mut out);
+        out
+    }
+
+    fn reference_resolve_family_into(node_tags: &[u32], family_mask: u32, out: &mut Vec<u32>) {
+        let words = node_tags.len().div_ceil(32);
+        out.clear();
+        out.resize(words, 0);
+        for (node, &tag) in node_tags.iter().enumerate() {
+            if (tag & family_mask) != 0 {
+                out[node / 32] |= 1_u32 << (node % 32);
+            }
+        }
+    }
+
     #[test]
     fn single_family_bit() {
-        assert_eq!(cpu_ref(&[0x01, 0x02, 0x06, 0x04], 0x02), vec![0b0110]);
+        assert_eq!(
+            reference_resolve_family(&[0x01, 0x02, 0x06, 0x04], 0x02),
+            vec![0b0110]
+        );
     }
 
     #[test]
     fn empty_family_yields_empty_nodeset() {
-        assert_eq!(cpu_ref(&[0x01, 0x02], 0x00), vec![0]);
+        assert_eq!(reference_resolve_family(&[0x01, 0x02], 0x00), vec![0]);
     }
 
     #[test]
-    fn cpu_ref_into_reuses_nodeset_buffer() {
+    fn reference_into_reuses_nodeset_buffer() {
         let mut out = Vec::with_capacity(4);
         let ptr = out.as_ptr();
-        cpu_ref_into(&[0x01, 0x02, 0x06, 0x04], 0x02, &mut out);
+        reference_resolve_family_into(&[0x01, 0x02, 0x06, 0x04], 0x02, &mut out);
         assert_eq!(out, vec![0b0110]);
         assert_eq!(out.as_ptr(), ptr);
     }
-
     /// GPU parity tests for resolve_family  -  exercise every word boundary
     /// to expose the word-1+ atomic_or write bug.
     mod gpu_tests {
@@ -136,7 +154,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_0_word_0_bit_0() {
             let tags = tags_with_only(0, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -147,7 +165,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_31_word_0_bit_31() {
             let tags = tags_with_only(31, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -158,7 +176,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_32_word_1_bit_0() {
             let tags = tags_with_only(32, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -169,7 +187,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_33_word_1_bit_1() {
             let tags = tags_with_only(33, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -180,7 +198,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_39_word_1_bit_7() {
             let tags = tags_with_only(39, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -191,7 +209,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_63_word_1_bit_31() {
             let tags = tags_with_only(63, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -202,7 +220,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_64_word_2_bit_0() {
             let tags = tags_with_only(64, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -213,7 +231,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_65_word_2_bit_1() {
             let tags = tags_with_only(65, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -224,7 +242,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_96_word_3_bit_0() {
             let tags = tags_with_only(96, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -235,7 +253,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_127_word_3_bit_31() {
             let tags = tags_with_only(127, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -246,7 +264,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_128_word_4_bit_0() {
             let tags = tags_with_only(128, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -257,7 +275,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_129_word_4_bit_1() {
             let tags = tags_with_only(129, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -268,7 +286,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_160_word_5_bit_0() {
             let tags = tags_with_only(160, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -279,7 +297,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_191_word_5_bit_31() {
             let tags = tags_with_only(191, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -290,7 +308,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_192_word_6_bit_0() {
             let tags = tags_with_only(192, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -301,7 +319,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_193_word_6_bit_1() {
             let tags = tags_with_only(193, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -312,7 +330,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_224_word_7_bit_0() {
             let tags = tags_with_only(224, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -323,7 +341,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_node_255_word_7_bit_31() {
             let tags = tags_with_only(255, 256, 0x01);
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -334,7 +352,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_empty_mask_yields_empty_nodeset() {
             let tags = vec![0xffff_ffffu32; 256];
-            let expected = cpu_ref(&tags, 0x00);
+            let expected = reference_resolve_family(&tags, 0x00);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x00),
                 expected,
@@ -345,7 +363,7 @@ mod tests {
         #[test]
         fn gpu_resolve_family_full_mask_all_nodes_match() {
             let tags = vec![0xffff_ffffu32; 256];
-            let expected = cpu_ref(&tags, 0xffff_ffff);
+            let expected = reference_resolve_family(&tags, 0xffff_ffff);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0xffff_ffff),
                 expected,
@@ -359,7 +377,7 @@ mod tests {
             tags[32] = 0x01;
             tags[33] = 0x01;
             tags[34] = 0x01;
-            let expected = cpu_ref(&tags, 0x01);
+            let expected = reference_resolve_family(&tags, 0x01);
             assert_eq!(
                 run_gpu_resolve_family(&tags, 0x01),
                 expected,
@@ -370,7 +388,7 @@ mod tests {
         // ---- Bounded adversarial corpus: tags + mask over 256 nodes ----
 
         #[test]
-        fn gpu_resolve_family_matches_cpu_oracle_adversarial_256_corpus() {
+        fn gpu_resolve_family_matches_reference_oracle_adversarial_256_corpus() {
             let backend = CudaBackend::acquire().expect(
                 "Fix: CUDA backend acquisition failed. \
                  Configuration error: no CUDA-capable GPU or driver available on this host.",
@@ -414,11 +432,11 @@ mod tests {
 
             for (tags, mask) in cases {
                 let gpu = run_gpu_resolve_family_with_backend(&backend, &tags, mask);
-                let cpu = cpu_ref(&tags, mask);
+                let reference = reference_resolve_family(&tags, mask);
                 assert_eq!(
-                    &gpu, &cpu,
-                    "FINDING-GPU-RESOLVE-FAMILY-PROP: GPU resolve_family(tags=[256 words], mask={:#010x}) = {:?}, CPU oracle = {:?}",
-                    mask, gpu, cpu
+                    &gpu, &reference,
+                    "FINDING-GPU-RESOLVE-FAMILY-PROP: GPU resolve_family(tags=[256 words], mask={:#010x}) = {:?}, reference oracle = {:?}",
+                    mask, gpu, reference
                 );
             }
         }

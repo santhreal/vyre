@@ -172,34 +172,47 @@ pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: 
 
 // ---- CPU references ----
 
-
-
-
-
-
-
 /// Cosine-style similarity over BSC hypervectors: 1 - 2 · hamming(a, b) /
 /// dim_bits. Returns f32 in roughly [-1, 1] (perfect match = 1.0, anti-
 /// correlation = -1.0, random = 0.0).
+#[cfg(test)]
 #[must_use]
 pub fn hamming_similarity(a: &[u32], b: &[u32]) -> f32 {
-    let dim_words = a.len().min(b.len());
-    if dim_words == 0 {
-        return 1.0;
-    }
-    let dim_bits = (dim_words * 32) as f32;
-    let hamming: u32 = a
-        .iter()
-        .zip(b.iter())
-        .take(dim_words)
-        .map(|(&x, &y)| (x ^ y).count_ones())
-        .sum();
-    1.0 - 2.0 * (hamming as f32) / dim_bits
+    vyre_reference::composition_witness::hamming_similarity_witness(a, b)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        hypervector_majority_bundle_into_witness, hypervector_majority_bundle_witness,
+        hypervector_xor_bind_into_witness, hypervector_xor_bind_witness,
+        try_hypervector_majority_bundle_into_witness, try_hypervector_xor_bind_into_witness,
+    };
+
+    fn xor_bind_cpu(a: &[u32], b: &[u32]) -> Vec<u32> {
+        hypervector_xor_bind_witness(a, b)
+    }
+
+    fn xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
+        hypervector_xor_bind_into_witness(a, b, out);
+    }
+
+    fn try_xor_bind_cpu_into(a: &[u32], b: &[u32], out: &mut Vec<u32>) -> Result<(), String> {
+        try_hypervector_xor_bind_into_witness(a, b, out)
+    }
+
+    fn majority_bundle_cpu(hvs: &[Vec<u32>]) -> Vec<u32> {
+        hypervector_majority_bundle_witness(hvs)
+    }
+
+    fn majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) {
+        hypervector_majority_bundle_into_witness(hvs, out);
+    }
+
+    fn try_majority_bundle_cpu_into(hvs: &[Vec<u32>], out: &mut Vec<u32>) -> Result<(), String> {
+        try_hypervector_majority_bundle_into_witness(hvs, out)
+    }
 
     #[test]
     fn xor_bind_self_cancels() {

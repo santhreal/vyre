@@ -1,4 +1,5 @@
 use super::*;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Compute packed signed INT4 batched matrix multiply through the backend.
 ///

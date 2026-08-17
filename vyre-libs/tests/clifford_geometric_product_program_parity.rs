@@ -1,9 +1,8 @@
 //! GPU-IR parity for the Cl(2,0) geometric-product kernel `geom/clifford2_product`, driven through
 //! `vyre_reference::reference_eval` with SIGNED (negative) multivector components.
 //!
-//! Why this test exists: `geom/clifford.rs` ships the `clifford2_product` Program builder + a
-//! `clifford2_product_cpu` f64 reference, but its only inline `#[cfg(test)]` coverage exercises the CPU
-//! reference, the GPU IR had ZERO parity coverage, and NONE with negative components. The geometric
+//! Why this test exists: `geom/clifford.rs` ships the `clifford2_product` Program builder, but the
+//! GPU IR previously had no signed-component parity coverage. The geometric
 //! product is sign-mixing (`out_s = …− a₁₂·b₁₂`, `out_e1 = …− a₂·b₁₂`, …), so with negative components the
 //! per-term products feed `fixed_mul_16_16_expr` NEGATIVE operands, exactly the class of value that the
 //! old UNSIGNED fixed multiply corrupted (see BACKLOG `FIXED-amg-fixed-path-unsigned-mul-negatives`). This
@@ -17,6 +16,7 @@
 
 use vyre_libs::geom::clifford::clifford2_product;
 use vyre_primitives::wire::pack_u32_slice as pack_u32;
+use vyre_reference::composition_witness::clifford2_product_witness;
 use vyre_reference::value::Value;
 use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshift};
 
@@ -24,20 +24,6 @@ use vyre_test_support::fixed_point::{from_fixed, to_fixed, xorshift32 as xorshif
 fn signed_half(state: &mut u32) -> f64 {
     let steps = (xorshift(state) % 13) as i32 - 6; // -6..=6
     0.5 * f64::from(steps)
-}
-
-/// Inline f64 Cl(2,0) geometric product, the authoritative reference (identical to
-/// `clifford2_product_cpu`, re-stated here so the test needs no `cpu-parity` feature). Layout per pair is
-/// `[s, e1, e2, e12]`.
-fn clifford_product_f64(a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
-    let [a_s, a1, a2, a12] = a;
-    let [b_s, b1, b2, b12] = b;
-    [
-        a_s * b_s + a1 * b1 + a2 * b2 - a12 * b12,
-        a_s * b1 + a1 * b_s - a2 * b12 + a12 * b2,
-        a_s * b2 + a2 * b_s + a1 * b12 - a12 * b1,
-        a_s * b12 + a12 * b_s + a1 * b2 - a2 * b1,
-    ]
 }
 
 fn run_via_reference(lhs: &[u32], rhs: &[u32], n_pairs: u32) -> Vec<u32> {
@@ -98,7 +84,7 @@ fn clifford_geometric_product_bit_exact_over_signed_components() {
                 rhs_f[pair * 4 + 2],
                 rhs_f[pair * 4 + 3],
             ];
-            let want = clifford_product_f64(a, b);
+            let want = clifford2_product_witness(a, b);
             for k in 0..4 {
                 let got_word = got[pair * 4 + k];
                 let want_word = to_fixed(want[k]);

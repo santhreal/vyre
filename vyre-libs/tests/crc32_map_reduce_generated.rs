@@ -1,10 +1,23 @@
 //! Generated adversarial coverage for CRC-32 chunk map-reduce algebra.
 
 use vyre_libs::hash::crc32::{
-    crc32, crc32_chunk, crc32_chunk_count, crc32_chunk_output_words, crc32_map_reduce_plan,
-    crc32_pack_chunks_u32, crc32_pair_reduce_chunk_words, crc32_pair_reduce_chunks,
-    crc32_pair_reduce_output_pairs, crc32_unpack_chunks_u32, Crc32Chunk, Crc32MapReduceStepKind,
+    crc32_chunk_count, crc32_chunk_output_words, crc32_pair_reduce_output_pairs,
 };
+use vyre_reference::composition_witness::{
+    crc32_map_reduce_plan_witness as crc32_map_reduce_plan,
+    crc32_pack_chunks_witness as crc32_pack_chunks_u32,
+    crc32_pair_reduce_chunk_words_witness as crc32_pair_reduce_chunk_words,
+    crc32_pair_reduce_chunks_witness as crc32_pair_reduce_chunks,
+    crc32_unpack_chunks_witness as crc32_unpack_chunks_u32, crc32_witness as crc32,
+    Crc32ChunkWitness as Crc32Chunk, Crc32MapReduceStepKindWitness as Crc32MapReduceStepKind,
+};
+
+fn crc32_chunk(bytes: &[u8]) -> Crc32Chunk {
+    Crc32Chunk {
+        len: bytes.len() as u64,
+        crc: crc32(bytes),
+    }
+}
 
 #[test]
 fn generated_crc32_map_reduce_matches_direct_crc_for_8192_cases() {

@@ -15,7 +15,7 @@
 
 use proptest::prelude::*;
 use vyre_libs::math::stream_compact::stream_compact;
-fn cpu_ref(input: &[u32], flags: &[u32]) -> (Vec<u32>, u32) { let mut out = Vec::new(); for (&x, &f) in input.iter().zip(flags) { if f != 0 { out.push(x); } } let c = out.len() as u32; (out, c) }
+use vyre_reference::composition_witness::stream_compact_witness as cpu_ref;
 use vyre_reference::value::Value;
 
 /// Exclusive prefix sum of a 0/1 flag buffer — the `offsets` the op requires.

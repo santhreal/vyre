@@ -11,10 +11,8 @@
 
 mod action;
 mod c11_expr;
-mod parser;
 mod table;
 
 pub use action::Action;
 pub use c11_expr::{ACTION_TABLE, C11_EXPR, GOTO_TABLE, NT_E, NT_F, NT_T, PRODUCTIONS};
-pub use parser::{parse_lr, ParseError};
 pub use table::{LrTables, Production};

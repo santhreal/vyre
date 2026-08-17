@@ -72,7 +72,7 @@ pub struct MultigridMatroidGpuScratch {
 /// Panics on size mismatches.
 #[must_use]
 #[cfg(test)]
-pub fn reference_matroid_solve_step(
+pub(crate) fn reference_matroid_solve_step(
     a: &[f64],
     b: &[f64],
     x_in: &[f64],
@@ -89,7 +89,7 @@ pub fn reference_matroid_solve_step(
 /// This is the hot path for tolerance loops; it avoids allocating a new
 /// solution vector for every relaxation iteration.
 #[cfg(test)]
-pub fn reference_matroid_solve_step_into(
+pub(crate) fn reference_matroid_solve_step_into(
     a: &[f64],
     b: &[f64],
     x_in: &[f64],
@@ -247,7 +247,7 @@ pub fn matroid_solve_step_fixed_via_with_scratch_into(
 /// loop here is what production matroid-intersection callers want.
 #[must_use]
 #[cfg(test)]
-pub fn solve_to_tolerance(
+pub(crate) fn solve_to_tolerance(
     a: &[f64],
     b: &[f64],
     x0: &[f64],
@@ -267,7 +267,7 @@ pub fn solve_to_tolerance(
 /// Returns the iteration count and leaves the final solution in `x`.
 #[allow(clippy::too_many_arguments)]
 #[cfg(test)]
-pub fn solve_to_tolerance_into(
+pub(crate) fn solve_to_tolerance_into(
     a: &[f64],
     b: &[f64],
     x0: &[f64],
@@ -278,27 +278,9 @@ pub fn solve_to_tolerance_into(
     x: &mut Vec<f64>,
     next: &mut Vec<f64>,
 ) -> u32 {
-    x.clear();
-    x.extend_from_slice(x0);
-    next.clear();
-    let n_us = n as usize;
-    for iter in 0..max_iters {
-        reference_matroid_solve_step_into(a, b, x, omega, n, next);
-        std::mem::swap(x, next);
-        // Residual norm = ||Ax - b||_∞.
-        let mut max_resid = 0.0_f64;
-        for i in 0..n_us {
-            let row_dot: f64 = (0..n_us).map(|j| a[i * n_us + j] * x[j]).sum();
-            let r = (row_dot - b[i]).abs();
-            if r > max_resid {
-                max_resid = r;
-            }
-        }
-        if max_resid < tol {
-            return iter + 1;
-        }
-    }
-    max_iters
+    vyre_reference::composition_witness::jacobi_solve_to_tolerance_witness_into(
+        a, b, x0, omega, n, tol, max_iters, x, next,
+    )
 }
 
 #[cfg(test)]

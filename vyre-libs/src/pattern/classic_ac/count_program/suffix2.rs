@@ -65,44 +65,16 @@ fn classic_ac_bounded_count_suffix2_prefilter_program(
     )
 }
 
-/// Derive the two-byte suffix mask consumed by the suffix2 count prefilter.
-#[must_use]
-pub fn classic_ac_candidate_suffix2_mask_words(
+#[cfg(test)]
+pub(crate) fn classic_ac_candidate_suffix2_mask_words(
     dfa: &CompiledDfa,
 ) -> [u32; CLASSIC_AC_SUFFIX2_MASK_WORDS] {
-    let mut mask = [0_u32; CLASSIC_AC_SUFFIX2_MASK_WORDS];
-    let states = valid_dfa_states(dfa);
-    for state in 0..states {
-        let row = state * 256;
-        for previous in 0..256 {
-            let mid = dfa.transitions[row + previous] as usize;
-            if mid >= states {
-                continue;
-            }
-            let mid_row = mid * 256;
-            for byte in 0..256 {
-                let next = dfa.transitions[mid_row + byte] as usize;
-                if state_accepts(dfa, next) {
-                    let suffix = (previous << 8) | byte;
-                    mask[suffix / 32] |= 1_u32 << (suffix % 32);
-                }
-            }
-        }
-    }
-    mask
+    vyre_reference::composition_witness::classic_ac_candidate_suffix2_mask_words_witness(
+        &dfa.transitions,
+        &dfa.output_offsets,
+        dfa.state_count,
+    )
 }
-
-fn valid_dfa_states(dfa: &CompiledDfa) -> usize {
-    (dfa.state_count as usize)
-        .min(dfa.output_offsets.len().saturating_sub(1))
-        .min(dfa.transitions.len() / 256)
-}
-
-fn state_accepts(dfa: &CompiledDfa, state: usize) -> bool {
-    state + 1 < dfa.output_offsets.len()
-        && dfa.output_offsets[state] != dfa.output_offsets[state + 1]
-}
-
 /// Build the two-byte-suffix prefiltered AC count-only program for a compiled DFA.
 #[must_use]
 pub fn build_ac_bounded_count_suffix2_prefilter_program(dfa: &CompiledDfa) -> Program {
@@ -151,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn suffix2_prefilter_reference_eval_matches_cpu_count() {
+    fn suffix2_prefilter_reference_eval_matches_reference_count() {
         let patterns: [&[u8]; 4] = [b"ab", b"cab", b"token", b"BEGIN"];
         let haystack = b"zzzzab zzzzcab zzzBEGIN zztoken zzz";
         let ac = classic_ac_compile(&patterns);

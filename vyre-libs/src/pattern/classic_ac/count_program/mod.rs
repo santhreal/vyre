@@ -12,15 +12,16 @@ mod suffix2;
 mod suffix3;
 
 pub use suffix2::{
-    build_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_suffix2_mask_words,
-    CLASSIC_AC_SUFFIX2_MASK_WORDS,
+    build_ac_bounded_count_suffix2_prefilter_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
-pub use suffix3::ascii_case_variants;
 pub use suffix3::{
-    build_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_suffix3_bloom_words,
-    classic_ac_candidate_suffix3_bloom_words_ci, classic_ac_suffix3_bloom_contains,
-    CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
+    build_ac_bounded_count_suffix3_prefilter_program, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
+
+#[cfg(test)]
+pub(crate) use suffix2::classic_ac_candidate_suffix2_mask_words;
+#[cfg(test)]
+pub(crate) use suffix3::classic_ac_candidate_suffix3_bloom_words;
 
 pub(in crate::pattern::classic_ac) use suffix3::suffix3_bloom_bit_index_expr;
 
@@ -275,26 +276,13 @@ fn classic_ac_bounded_count_prefilter_program(
     )
 }
 
-/// Derive the 8-word candidate-end-byte bitset consumed by the prefiltered
-/// count program.
-#[must_use]
-pub fn classic_ac_candidate_end_byte_mask_words(dfa: &CompiledDfa) -> [u32; 8] {
-    let mut mask = [0_u32; 8];
-    let states = (dfa.state_count as usize)
-        .min(dfa.output_offsets.len().saturating_sub(1))
-        .min(dfa.transitions.len() / 256);
-    for state in 0..states {
-        let row = state * 256;
-        for byte in 0..256 {
-            let next = dfa.transitions[row + byte] as usize;
-            if next + 1 < dfa.output_offsets.len()
-                && dfa.output_offsets[next] != dfa.output_offsets[next + 1]
-            {
-                mask[byte / 32] |= 1_u32 << (byte % 32);
-            }
-        }
-    }
-    mask
+#[cfg(test)]
+pub(crate) fn classic_ac_candidate_end_byte_mask_words(dfa: &CompiledDfa) -> [u32; 8] {
+    vyre_reference::composition_witness::classic_ac_candidate_end_byte_mask_words_witness(
+        &dfa.transitions,
+        &dfa.output_offsets,
+        dfa.state_count,
+    )
 }
 
 /// Build a bounded-window AC count-only program for a compiled DFA.
@@ -338,7 +326,7 @@ mod tests {
     };
 
     #[test]
-    fn bounded_count_program_reference_eval_matches_cpu_count() {
+    fn bounded_count_program_reference_eval_matches_reference_count() {
         let patterns: [&[u8]; 4] = [b"a", b"aa", b"she", b"he"];
         let haystack = b"aaashehe";
         let ac = classic_ac_compile(&patterns);
@@ -374,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn bounded_count_prefilter_reference_eval_matches_cpu_count() {
+    fn bounded_count_prefilter_reference_eval_matches_reference_count() {
         let patterns: [&[u8]; 4] = [b"ab", b"cab", b"token", b"BEGIN"];
         let haystack = b"zzzzab zzzzcab zzzBEGIN zztoken zzz";
         let ac = classic_ac_compile(&patterns);

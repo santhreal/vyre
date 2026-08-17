@@ -90,18 +90,20 @@ pub fn bitset_any(input: &str, out: &str, words: u32) -> Program {
     )
 }
 
+const EXPECTED_BITSET_ANY_OUTPUT_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_any("input", "out", 2),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0, 1]), to_bytes(&[0])]]
+            vec![vec![
+                vec![0, 0, 0, 0, 1, 0, 0, 0],
+                vec![0, 0, 0, 0],
+            ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[1])]]
+            vec![vec![EXPECTED_BITSET_ANY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -109,18 +111,23 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn cpu_ref(input: &[u32]) -> u32 {
-        u32::from(input.iter().any(|&w| w != 0))
-    }
+    use vyre_reference::composition_witness::reduce_any_witness as reference_bitset_any;
 
     #[test]
     fn any_true_when_single_bit_set() {
-        assert_eq!(cpu_ref(&[0, 1]), 1);
+        assert_eq!(reference_bitset_any(&[0, 1]), 1);
     }
 
     #[test]
     fn any_false_when_all_zero() {
-        assert_eq!(cpu_ref(&[0, 0]), 0);
+        assert_eq!(reference_bitset_any(&[0, 0]), 0);
+    }
+
+    #[test]
+    fn registration_fixture_matches_exact_byte_constant() {
+        assert_eq!(EXPECTED_BITSET_ANY_OUTPUT_BYTES, [1, 0, 0, 0]);
+        let cpu_ref = reference_bitset_any(&[0, 1]);
+        assert_eq!(cpu_ref.to_le_bytes(), EXPECTED_BITSET_ANY_OUTPUT_BYTES);
     }
 
     /// GPU parity tests for bitset_any  -  exercise every word boundary
@@ -177,7 +184,7 @@ mod tests {
             let input = vec![1, 0, 0, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W0B0: GPU output mismatch when only word-0 bit-0 is set"
             );
         }
@@ -187,7 +194,7 @@ mod tests {
             let input = vec![0, 1, 0, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W1B0: GPU output mismatch when only word-1 is set"
             );
         }
@@ -197,7 +204,7 @@ mod tests {
             let input = vec![0, 0, 1, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W2B0: GPU output mismatch when only word-2 is set"
             );
         }
@@ -207,7 +214,7 @@ mod tests {
             let input = vec![0, 0, 0, 1, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W3B0: GPU output mismatch when only word-3 is set"
             );
         }
@@ -217,7 +224,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 1, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W4B0: GPU output mismatch when only word-4 is set"
             );
         }
@@ -227,7 +234,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0, 1, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W5B0: GPU output mismatch when only word-5 is set"
             );
         }
@@ -237,7 +244,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0, 0, 1, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W6B0: GPU output mismatch when only word-6 is set"
             );
         }
@@ -247,7 +254,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0, 0, 0, 1];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W7B0: GPU output mismatch when only word-7 is set"
             );
         }
@@ -259,7 +266,7 @@ mod tests {
             let input = vec![0x8000_0000, 0, 0, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W0B31: GPU output mismatch at bit-31 boundary"
             );
         }
@@ -269,7 +276,7 @@ mod tests {
             let input = vec![0, 0x0000_0001, 0, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W1B0-BIT32: GPU output mismatch at bit-32 boundary"
             );
         }
@@ -279,7 +286,7 @@ mod tests {
             let input = vec![0, 1 << 7, 0, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W1B7: GPU output mismatch at bit-39 (word-1 bit-7)"
             );
         }
@@ -289,7 +296,7 @@ mod tests {
             let input = vec![0, 0x8000_0000, 0, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W1B31-BIT63: GPU output mismatch at bit-63 boundary"
             );
         }
@@ -299,7 +306,7 @@ mod tests {
             let input = vec![0, 0, 0x0000_0001, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W2B0-BIT64: GPU output mismatch at bit-64 boundary"
             );
         }
@@ -309,7 +316,7 @@ mod tests {
             let input = vec![0, 0, 1 << 1, 0, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W2B1: GPU output mismatch at bit-65 (word-2 bit-1)"
             );
         }
@@ -319,7 +326,7 @@ mod tests {
             let input = vec![0, 0, 0, 0x0000_0001, 0, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W3B0-BIT96: GPU output mismatch at bit-96 boundary"
             );
         }
@@ -329,7 +336,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0x0000_0001, 0, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W4B0-BIT128: GPU output mismatch at bit-128 boundary"
             );
         }
@@ -339,7 +346,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0, 0x0000_0001, 0, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W5B0-BIT160: GPU output mismatch at bit-160 boundary"
             );
         }
@@ -349,7 +356,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0, 0, 0x0000_0001, 0];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W6B0-BIT192: GPU output mismatch at bit-192 boundary"
             );
         }
@@ -359,7 +366,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0, 0, 0, 0x0000_0001];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W7B0-BIT224: GPU output mismatch at bit-224 boundary"
             );
         }
@@ -369,7 +376,7 @@ mod tests {
             let input = vec![0, 0, 0, 0, 0, 0, 0, 0x8000_0000];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-W7B31-BIT255: GPU output mismatch at last bit-255"
             );
         }
@@ -379,7 +386,7 @@ mod tests {
             let input = vec![0u32; 8];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-ALLZERO: GPU output mismatch for all-zero bitset"
             );
         }
@@ -389,7 +396,7 @@ mod tests {
             let input = vec![0xffff_ffff; 8];
             assert_eq!(
                 run_gpu_any(&input),
-                cpu_ref(&input),
+                reference_bitset_any(&input),
                 "FINDING-GPU-BITSET-ANY-ALLONE: GPU output mismatch for all-ones bitset"
             );
         }
@@ -397,7 +404,7 @@ mod tests {
         // ---- Bounded adversarial corpus over 256 nodes ----
 
         #[test]
-        fn gpu_any_matches_cpu_oracle_adversarial_256_corpus() {
+        fn gpu_any_matches_reference_adversarial_256_corpus() {
             let backend = CudaBackend::acquire().expect(
                 "Fix: CUDA backend acquisition failed. \
                  Configuration error: no CUDA-capable GPU or driver available on this host.",
@@ -437,7 +444,7 @@ mod tests {
 
             for input in cases {
                 let gpu = run_gpu_any_with_backend(&backend, &input);
-                let cpu = cpu_ref(&input);
+                let cpu = reference_bitset_any(&input);
                 assert_eq!(
                     gpu, cpu,
                     "FINDING-GPU-BITSET-ANY-PROP: GPU any({:?}) = {}, CPU oracle = {}",

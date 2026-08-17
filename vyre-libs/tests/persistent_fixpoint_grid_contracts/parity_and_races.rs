@@ -12,7 +12,11 @@ fn assert_drop_in_parity(
     expected_state: &[u32],
     expected_passes: u32,
 ) {
-    let (oracle_state, oracle_passes) = cpu_ref(seed, max_iterations, cpu_step);
+    let (oracle_state, oracle_passes) = cpu_ref(seed, max_iterations, |current| {
+        let mut next = vec![0; current.len()];
+        cpu_step(current, &mut next);
+        next
+    });
     assert_eq!(
         oracle_state, expected_state,
         "{label}: oracle final state must be the expected fixpoint"

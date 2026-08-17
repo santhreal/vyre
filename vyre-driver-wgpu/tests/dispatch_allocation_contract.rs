@@ -96,7 +96,7 @@ fn direct_dispatch_borrowed_steady_state_alloc_bounded() {
     let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
     let borrowed = [input.as_slice()];
 
     let _ = backend
@@ -134,7 +134,7 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
     let inputs_count: u32 = 12;
     let words: u32 = 256;
     let program = many_input_sum_program(inputs_count, words);
-    let one_input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..words);
+    let one_input: Vec<u8> = (0..words).flat_map(u32::to_le_bytes).collect();
     let owned: Vec<Vec<u8>> = (0..inputs_count).map(|_| one_input.clone()).collect();
     let borrowed: Vec<&[u8]> = owned.iter().map(Vec::as_slice).collect();
 
@@ -173,7 +173,7 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
     let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pipeline = backend
         .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
@@ -211,7 +211,7 @@ fn async_dispatch_steady_state_alloc_bounded() {
     let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pending0 = backend
         .dispatch_async(&program, &[input.clone()], &DispatchConfig::default())
@@ -261,7 +261,7 @@ fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
     let inputs_count: u32 = 3;
     let words: u32 = 256;
     let program = many_input_sum_program(inputs_count, words);
-    let one_input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..words);
+    let one_input: Vec<u8> = (0..words).flat_map(u32::to_le_bytes).collect();
     let owned: Vec<Vec<u8>> = (0..inputs_count).map(|_| one_input.clone()).collect();
 
     let pending0 = backend

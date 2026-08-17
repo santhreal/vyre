@@ -243,11 +243,42 @@ pub fn nfa_step(
     )
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        subgroup_nfa_step_witness, subgroup_nfa_step_witness_into,
+    };
+
+    fn reference_step(
+        state: &[u32],
+        byte: u8,
+        transitions: &[u32],
+        epsilon: &[u32],
+        num_states: usize,
+    ) -> Vec<u32> {
+        subgroup_nfa_step_witness(state, byte, transitions, epsilon, num_states)
+    }
+
+    fn reference_step_into(
+        state: &[u32],
+        byte: u8,
+        transitions: &[u32],
+        epsilon: &[u32],
+        num_states: usize,
+        output: &mut Vec<u32>,
+        scratch: &mut Vec<u32>,
+    ) {
+        subgroup_nfa_step_witness_into(
+            state,
+            byte,
+            transitions,
+            epsilon,
+            num_states,
+            output,
+            scratch,
+        );
+    }
 
     fn pack_lane_row(targets: &[usize]) -> [u32; LANES_PER_SUBGROUP] {
         let mut row = [0_u32; LANES_PER_SUBGROUP];
@@ -290,7 +321,7 @@ mod tests {
     fn single_transition() {
         let trans = build_transition(&[(0, b'a', vec![1])], 2);
         let eps = build_epsilon(&[], 2);
-        let out = cpu_step(&seed_state(&[0]), b'a', &trans, &eps, 2);
+        let out = reference_step(&seed_state(&[0]), b'a', &trans, &eps, 2);
         assert_eq!(out, seed_state(&[1]));
     }
 
@@ -298,7 +329,7 @@ mod tests {
     fn no_transition_on_wrong_byte() {
         let trans = build_transition(&[(0, b'a', vec![1])], 2);
         let eps = build_epsilon(&[], 2);
-        let out = cpu_step(&seed_state(&[0]), b'b', &trans, &eps, 2);
+        let out = reference_step(&seed_state(&[0]), b'b', &trans, &eps, 2);
         assert_eq!(out, vec![0_u32; LANES_PER_SUBGROUP]);
     }
 
@@ -306,7 +337,7 @@ mod tests {
     fn epsilon_closure_applies() {
         let trans = build_transition(&[(0, b'a', vec![1])], 3);
         let eps = build_epsilon(&[(1, vec![2])], 3);
-        let out = cpu_step(&seed_state(&[0]), b'a', &trans, &eps, 3);
+        let out = reference_step(&seed_state(&[0]), b'a', &trans, &eps, 3);
         assert_eq!(out, seed_state(&[1, 2]));
     }
 
@@ -314,7 +345,7 @@ mod tests {
     fn epsilon_closure_transitive() {
         let trans = build_transition(&[(0, b'a', vec![1])], 4);
         let eps = build_epsilon(&[(1, vec![2]), (2, vec![3])], 4);
-        let out = cpu_step(&seed_state(&[0]), b'a', &trans, &eps, 4);
+        let out = reference_step(&seed_state(&[0]), b'a', &trans, &eps, 4);
         assert_eq!(out, seed_state(&[1, 2, 3]));
     }
 
@@ -322,7 +353,7 @@ mod tests {
     fn multiple_sources_union() {
         let trans = build_transition(&[(0, b'a', vec![1]), (2, b'a', vec![3])], 4);
         let eps = build_epsilon(&[], 4);
-        let out = cpu_step(&seed_state(&[0, 2]), b'a', &trans, &eps, 4);
+        let out = reference_step(&seed_state(&[0, 2]), b'a', &trans, &eps, 4);
         assert_eq!(out, seed_state(&[1, 3]));
     }
 
@@ -331,7 +362,7 @@ mod tests {
     fn epsilon_fanout() {
         let trans = build_transition(&[(0, b'a', vec![1])], 5);
         let eps = build_epsilon(&[(1, vec![2, 3, 4])], 5);
-        let out = cpu_step(&seed_state(&[0]), b'a', &trans, &eps, 5);
+        let out = reference_step(&seed_state(&[0]), b'a', &trans, &eps, 5);
         assert_eq!(out, seed_state(&[1, 2, 3, 4]));
     }
 
@@ -339,7 +370,7 @@ mod tests {
     fn empty_state_stays_empty() {
         let trans = build_transition(&[(0, b'a', vec![1])], 2);
         let eps = build_epsilon(&[(1, vec![0])], 2);
-        let out = cpu_step(&[0; LANES_PER_SUBGROUP], b'a', &trans, &eps, 2);
+        let out = reference_step(&[0; LANES_PER_SUBGROUP], b'a', &trans, &eps, 2);
         assert_eq!(out, vec![0_u32; LANES_PER_SUBGROUP]);
     }
 
@@ -347,7 +378,7 @@ mod tests {
     fn self_epsilon_loop_terminates() {
         let trans = build_transition(&[(0, b'a', vec![1])], 2);
         let eps = build_epsilon(&[(1, vec![1])], 2);
-        let out = cpu_step(&seed_state(&[0]), b'a', &trans, &eps, 2);
+        let out = reference_step(&seed_state(&[0]), b'a', &trans, &eps, 2);
         assert_eq!(out, seed_state(&[1]));
     }
 
@@ -355,14 +386,14 @@ mod tests {
     fn cross_lane_state_simulated_correctly() {
         let trans = build_transition(&[(0, b'a', vec![35])], 36);
         let eps = build_epsilon(&[], 36);
-        let out = cpu_step(&seed_state(&[0]), b'a', &trans, &eps, 36);
+        let out = reference_step(&seed_state(&[0]), b'a', &trans, &eps, 36);
         let mut expected = vec![0_u32; LANES_PER_SUBGROUP];
         expected[1] = 1 << 3;
         assert_eq!(out, expected);
     }
 
     #[test]
-    fn cpu_step_into_reuses_buffers_and_rejects_malformed_tables() {
+    fn reference_step_into_reuses_buffers_and_rejects_malformed_tables() {
         let trans = build_transition(&[(0, b'a', vec![1])], 2);
         let eps = build_epsilon(&[], 2);
         let mut acc = Vec::with_capacity(LANES_PER_SUBGROUP + 8);
@@ -370,7 +401,7 @@ mod tests {
         let mut scratch = Vec::with_capacity(LANES_PER_SUBGROUP + 8);
         let scratch_ptr = scratch.as_ptr();
 
-        cpu_step_into(
+        reference_step_into(
             &seed_state(&[0]),
             b'a',
             &trans,
@@ -385,9 +416,9 @@ mod tests {
         assert_eq!(acc, seed_state(&[1]));
 
         let malformed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            cpu_step_into(&[1], b'a', &trans, &eps, 2, &mut acc, &mut scratch);
+            reference_step_into(&[1], b'a', &trans, &eps, 2, &mut acc, &mut scratch);
         }));
-        malformed.expect_err("cpu_step_into with wrong state length must panic");
+        malformed.expect_err("reference_step_into with wrong state length must panic");
     }
 
     #[test]

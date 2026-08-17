@@ -6,8 +6,7 @@ mod graph_sweep_fixtures;
 use graph_sweep_fixtures::bitset_words;
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
-
-use vyre_libs::graph::csr_forward_or_changed;
+use vyre_reference::composition_witness::csr_forward_or_changed_witness;
 
 /// Independent model of one `csr_forward_or_changed` pass.
 ///
@@ -40,7 +39,7 @@ fn sweep_graph_csr_forward_or_changed_volume_oracle_matrix() {
         let (step, oracle_changed) = oracle_forward_step_with_change_flag(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
-        let (actual_step, changed) = csr_forward_or_changed::cpu_ref(
+        let (actual_step, changed) = csr_forward_or_changed_witness(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
         assert_eq!(

@@ -13,7 +13,8 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::do_calculus::{
-    do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
+    do_impact_mask_from_closure, do_intervention_delete_incoming, do_rule2_reverse_incoming,
+    do_rule3_subgraph,
 };
 use crate::prelude::reachability_closure_via_into;
 use vyre_foundation::ir::Program;
@@ -51,28 +52,73 @@ impl DoCalculusImpactScratch {
     }
 }
 
-
-
-
-fn impact_mask_from_closure(
-    intervention_mask: &[u32],
+fn dispatch_impact_mask_from_closure_into(
+    dispatcher: &dyn ProgramDispatcher,
+    mask: &[u32],
     closure: &[u32],
     n: u32,
-    impact_mask: &mut Vec<u32>,
-) {
-    let n_us = n as usize;
-    impact_mask.clear();
-    impact_mask.resize(n_us, 0);
-    for i in 0..n_us {
-        if intervention_mask[i] != 0 {
-            impact_mask[i] = 1; // Itself is impacted.
-            for j in 0..n_us {
-                if closure[i * n_us + j] != 0 {
-                    impact_mask[j] = 1;
-                }
-            }
+    inputs: &mut Vec<Vec<u8>>,
+    out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    if n == 0 {
+        if !mask.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: dispatch_impact_mask_from_closure requires mask.len() == 0 for n=0, got len={}.",
+                mask.len()
+            )));
         }
+        if !closure.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: dispatch_impact_mask_from_closure requires closure.len() == 0 for n=0, got len={}.",
+                closure.len()
+            )));
+        }
+        out.clear();
+        return Ok(());
     }
+
+    let cells = checked_square_cells(n, "dispatch_impact_mask_from_closure")?;
+    if closure.len() != cells {
+        return Err(DispatchError::BadInputs(format!(
+            "Fix: dispatch_impact_mask_from_closure requires closure.len() == n*n, got len={}, n={n}, n*n={cells}.",
+            closure.len()
+        )));
+    }
+    if mask.len() != n as usize {
+        return Err(DispatchError::BadInputs(format!(
+            "Fix: dispatch_impact_mask_from_closure requires mask.len() == n, got len={}, n={n}.",
+            mask.len()
+        )));
+    }
+    let program = do_impact_mask_from_closure("mask", "closure", "out", n);
+    let mask_bytes = (n as usize)
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            DispatchError::BadInputs(format!(
+                "Fix: dispatch_impact_mask_from_closure mask byte size overflows usize for n={n}."
+            ))
+        })?;
+    ensure_input_slots(inputs, 3);
+    write_u32_slice_le_bytes(&mut inputs[0], mask);
+    write_u32_slice_le_bytes(&mut inputs[1], closure);
+    write_zero_bytes(&mut inputs[2], mask_bytes);
+    let outputs =
+        dispatcher.dispatch(&program, &inputs[..3], Some([ceil_div_u32(n, 256), 1, 1]))?;
+    let [impact_out] = match outputs.as_slice() {
+        [impact_out] => [impact_out],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: dispatch_impact_mask_from_closure expected exactly one output buffer, got {}.",
+                outputs.len()
+            )));
+        }
+    };
+    decode_u32_output_exact(
+        impact_out,
+        n as usize,
+        "dispatch_impact_mask_from_closure",
+        out,
+    )
 }
 
 /// GPU-backed impact prediction using primitive-native graph surgery and
@@ -108,6 +154,18 @@ pub fn predict_impact_via_into(
     use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
+        if !adj.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: predict_impact_via requires adj.len() == 0 for n=0, got len={}.",
+                adj.len()
+            )));
+        }
+        if !intervention_mask.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: predict_impact_via requires intervention_mask.len() == 0 for n=0, got len={}.",
+                intervention_mask.len()
+            )));
+        }
         scratch.impact_mask.clear();
         scratch.surgically_modified_adj.clear();
         scratch.closure.clear();
@@ -129,12 +187,14 @@ pub fn predict_impact_via_into(
         &mut scratch.closure,
         &mut scratch.scratch,
     )?;
-    impact_mask_from_closure(
+    dispatch_impact_mask_from_closure_into(
+        dispatcher,
         intervention_mask,
         &scratch.closure,
         n,
+        &mut scratch.dispatch_inputs,
         &mut scratch.impact_mask,
-    );
+    )?;
     Ok(())
 }
 
@@ -304,6 +364,23 @@ where
     use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
+    if n == 0 {
+        if !adj.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: {op_name} requires adj.len() == 0 for n=0, got len={}.",
+                adj.len()
+            )));
+        }
+        if !mask.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: {op_name} requires {mask_buffer}.len() == 0 for n=0, got len={}.",
+                mask.len()
+            )));
+        }
+        out.clear();
+        return Ok(());
+    }
+
     let cells = checked_square_cells(n, op_name)?;
     let cells_u32 = u32::try_from(cells).map_err(|_| {
         DispatchError::BadInputs(format!(
@@ -345,13 +422,16 @@ where
         &inputs[..3],
         Some([ceil_div_u32(cells_u32, 256), 1, 1]),
     )?;
-    if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {op_name} expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], cells, op_name, out)
+    let [out_buf] = match outputs.as_slice() {
+        [out_buf] => [out_buf],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: {op_name} expected exactly one output buffer, got {}.",
+                outputs.len()
+            )));
+        }
+    };
+    decode_u32_output_exact(out_buf, cells, op_name, out)
 }
 
 /// Primitive-native dispatcher path for Pearl Rule 3 graph surgery:
@@ -370,8 +450,7 @@ where
 /// # Errors
 ///
 /// Returns [`DispatchError`] when shapes are invalid, `n * n` overflows the lane
-/// limit, or the backend returns fewer than three output buffers or an
-/// impossible `kept_len`.
+/// limit, or the backend returns anything other than the three output buffers.
 pub fn rule3_subgraph_via(
     dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
@@ -422,6 +501,24 @@ fn rule3_subgraph_via_into_with_inputs(
     use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
 
+    if n == 0 {
+        if !adj.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: rule3_subgraph_via requires adj.len() == 0 for n=0, got len={}.",
+                adj.len()
+            )));
+        }
+        if !keep_mask.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: rule3_subgraph_via requires keep_mask.len() == 0 for n=0, got len={}.",
+                keep_mask.len()
+            )));
+        }
+        reduced.clear();
+        kept.clear();
+        return Ok(());
+    }
+
     let cells = checked_square_cells(n, "rule3_subgraph_via")?;
     if adj.len() != cells {
         return Err(DispatchError::BadInputs(format!(
@@ -435,13 +532,18 @@ fn rule3_subgraph_via_into_with_inputs(
             keep_mask.len()
         )));
     }
+    let k = keep_mask.iter().filter(|&&v| v != 0).count();
+    let k_cells = k.checked_mul(k).ok_or_else(|| {
+        DispatchError::BadInputs(format!(
+            "Fix: rule3_subgraph_via reduced k*k overflows usize for k={k}."
+        ))
+    })?;
 
     let program = do_rule3_subgraph("adj", "keep_mask", "reduced", "kept", "kept_len", n);
     // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
-    // INPUT-CONSUMING buffer in buffer order: `adj` RO (0), `keep_mask` RO (1), then the three
-    // plain-ReadWrite outputs `reduced` (2, n*n), `kept` (3, n), `kept_len` (4, 1). Each plain-RW
-    // output needs a zero-filled input slot for its initial contents (the lane-0-serial kernel writes
-    // them); omitting them would fail the backend's strict `validate_input_lengths` count.
+    // input-consuming buffer in buffer order: `adj` RO (0), `keep_mask` RO (1), then the three
+    // plain-ReadWrite outputs `reduced` (2, n*n), `kept` (3, n), and `kept_len` (4, 1). Each
+    // plain-RW output needs a zero-filled input slot for its initial contents.
     let reduced_bytes = cells
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
@@ -458,43 +560,26 @@ fn rule3_subgraph_via_into_with_inputs(
     write_zero_bytes(&mut inputs[4], std::mem::size_of::<u32>());
     // The kernel is lane-0-serial, so a single workgroup covers it.
     let outputs = dispatcher.dispatch(&program, &inputs[..5], Some([1, 1, 1]))?;
-    if outputs.len() < 3 {
-        return Err(DispatchError::BackendError(format!(
+    let [reduced_out, kept_out, _kept_len_out] = match outputs.as_slice() {
+        [r, k_out, kl] => [r, k_out, kl],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
             "Fix: rule3_subgraph_via expected 3 output buffers (reduced, kept, kept_len), got {}.",
             outputs.len()
-        )));
-    }
-
-    // Canonical output order = writable buffers in binding order: reduced, kept, kept_len.
-    let mut kept_len_words = Vec::new();
-    decode_u32_output_exact(
-        &outputs[2],
-        1,
-        "rule3_subgraph_via kept_len",
-        &mut kept_len_words,
-    )?;
-    let k = kept_len_words[0] as usize;
-    if k > n as usize {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: rule3_subgraph_via backend returned kept_len k={k} exceeding n={n} (impossible retained-count)."
-        )));
-    }
-    let k_cells = k.checked_mul(k).ok_or_else(|| {
-        DispatchError::BackendError(format!(
-            "Fix: rule3_subgraph_via reduced k*k overflows usize for k={k}."
-        ))
-    })?;
+        )))
+        }
+    };
 
     let mut reduced_full = Vec::new();
     decode_u32_output_exact(
-        &outputs[0],
+        reduced_out,
         cells,
         "rule3_subgraph_via reduced",
         &mut reduced_full,
     )?;
     let mut kept_full = Vec::new();
     decode_u32_output_exact(
-        &outputs[1],
+        kept_out,
         n as usize,
         "rule3_subgraph_via kept",
         &mut kept_full,
@@ -506,11 +591,6 @@ fn rule3_subgraph_via_into_with_inputs(
     kept.extend_from_slice(&kept_full[..k]);
     Ok(())
 }
-
-
-
-
-
 
 /// GPU-backed observation-form impact prediction.
 ///
@@ -544,6 +624,18 @@ pub fn predict_impact_observation_form_via_into(
     use crate::telemetry::{bump, do_calculus_change_impact_calls};
     bump(&do_calculus_change_impact_calls);
     if n == 0 {
+        if !adj.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: predict_impact_observation_form_via requires adj.len() == 0 for n=0, got len={}.",
+                adj.len()
+            )));
+        }
+        if !observation_mask.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: predict_impact_observation_form_via requires observation_mask.len() == 0 for n=0, got len={}.",
+                observation_mask.len()
+            )));
+        }
         scratch.impact_mask.clear();
         scratch.surgically_modified_adj.clear();
         scratch.closure.clear();
@@ -565,12 +657,14 @@ pub fn predict_impact_observation_form_via_into(
         &mut scratch.closure,
         &mut scratch.scratch,
     )?;
-    impact_mask_from_closure(
+    dispatch_impact_mask_from_closure_into(
+        dispatcher,
         observation_mask,
         &scratch.closure,
         n,
+        &mut scratch.dispatch_inputs,
         &mut scratch.impact_mask,
-    );
+    )?;
     Ok(())
 }
 
@@ -578,6 +672,132 @@ pub fn predict_impact_observation_form_via_into(
 mod tests {
     use super::*;
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::{
+        do_rule3_subgraph_witness, do_rule3_subgraph_witness_into,
+        predict_impact_observation_form_witness, predict_impact_observation_form_witness_into,
+        predict_impact_witness, predict_impact_witness_into,
+    };
+
+    fn predict_impact(adj: &[u32], intervention_mask: &[u32], n: u32) -> Vec<u32> {
+        predict_impact_witness(adj, intervention_mask, n)
+    }
+
+    fn predict_impact_with_scratch(
+        adj: &[u32],
+        intervention_mask: &[u32],
+        n: u32,
+        scratch: &mut DoCalculusImpactScratch,
+    ) {
+        predict_impact_witness_into(
+            adj,
+            intervention_mask,
+            n,
+            &mut scratch.surgically_modified_adj,
+            &mut scratch.closure,
+            &mut scratch.impact_mask,
+        );
+        scratch.scratch.clear();
+        scratch.scratch.resize((n * n) as usize, 0);
+    }
+
+    fn impact_subgraph(adj: &[u32], mask: &[u32], n: u32) -> (Vec<u32>, Vec<u32>) {
+        let impact = predict_impact_witness(adj, mask, n);
+        do_rule3_subgraph_witness(adj, &impact, n)
+    }
+
+    fn reference_impact_subgraph_with_scratch(
+        adj: &[u32],
+        mask: &[u32],
+        n: u32,
+        scratch: &mut DoCalculusImpactScratch,
+    ) {
+        predict_impact_with_scratch(adj, mask, n, scratch);
+        do_rule3_subgraph_witness_into(
+            adj,
+            &scratch.impact_mask,
+            n,
+            &mut scratch.reduced_adjacency,
+            &mut scratch.kept_indices,
+        );
+    }
+
+    fn predict_impact_observation_form(adj: &[u32], observation_mask: &[u32], n: u32) -> Vec<u32> {
+        predict_impact_observation_form_witness(adj, observation_mask, n)
+    }
+
+    fn predict_impact_observation_form_with_scratch(
+        adj: &[u32],
+        observation_mask: &[u32],
+        n: u32,
+        scratch: &mut DoCalculusImpactScratch,
+    ) {
+        predict_impact_observation_form_witness_into(
+            adj,
+            observation_mask,
+            n,
+            &mut scratch.surgically_modified_adj,
+            &mut scratch.closure,
+            &mut scratch.impact_mask,
+        );
+        scratch.scratch.clear();
+        scratch.scratch.resize((n * n) as usize, 0);
+    }
+
+    #[test]
+    fn zero_node_validation_precedes_scratch_mutation() {
+        struct NoDispatch;
+        impl ProgramDispatcher for NoDispatch {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                panic!("invalid zero-node inputs must fail before dispatch");
+            }
+        }
+
+        let assert_untouched = |scratch: &DoCalculusImpactScratch, case: &str| {
+            assert_eq!(scratch.impact_mask, [11], "{case}: impact mask changed");
+            assert_eq!(
+                scratch.surgically_modified_adj,
+                [12],
+                "{case}: surgery scratch changed"
+            );
+            assert_eq!(scratch.closure, [13], "{case}: closure scratch changed");
+        };
+
+        let mut scratch = seeded_impact_scratch();
+        let result = predict_impact_via_into(&NoDispatch, &[1], &[], 0, &mut scratch);
+        assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+        assert_untouched(&scratch, "impact adjacency");
+
+        let mut scratch = seeded_impact_scratch();
+        let result = predict_impact_via_into(&NoDispatch, &[], &[1], 0, &mut scratch);
+        assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+        assert_untouched(&scratch, "impact mask");
+
+        let mut scratch = seeded_impact_scratch();
+        let result =
+            predict_impact_observation_form_via_into(&NoDispatch, &[1], &[], 0, &mut scratch);
+        assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+        assert_untouched(&scratch, "observation adjacency");
+
+        let mut scratch = seeded_impact_scratch();
+        let result =
+            predict_impact_observation_form_via_into(&NoDispatch, &[], &[1], 0, &mut scratch);
+        assert!(matches!(result, Err(DispatchError::BadInputs(_))));
+        assert_untouched(&scratch, "observation mask");
+    }
+
+    fn seeded_impact_scratch() -> DoCalculusImpactScratch {
+        DoCalculusImpactScratch {
+            impact_mask: vec![11],
+            surgically_modified_adj: vec![12],
+            closure: vec![13],
+            ..DoCalculusImpactScratch::default()
+        }
+    }
 
     #[test]
     fn chain_impact() {
@@ -971,5 +1191,154 @@ mod tests {
     fn rule2_reverse_incoming_via_rejects_bad_shape() {
         let err = rule2_reverse_incoming_via(&Rule2Dispatcher, &[1, 2, 3], &[1, 0], 2).unwrap_err();
         assert!(matches!(err, DispatchError::BadInputs(_)));
+    }
+
+    #[test]
+    fn intervention_delete_incoming_via_handles_zero_nodes() {
+        let out = intervention_delete_incoming_via(&InterventionDispatcher, &[], &[], 0).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn intervention_delete_incoming_via_rejects_non_empty_when_n_zero() {
+        let err =
+            intervention_delete_incoming_via(&InterventionDispatcher, &[1], &[], 0).unwrap_err();
+        assert!(matches!(err, DispatchError::BadInputs(_)));
+    }
+
+    #[test]
+    fn intervention_delete_incoming_via_rejects_extra_outputs() {
+        struct ExtraOutDispatcher;
+        impl ProgramDispatcher for ExtraOutDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 2, 0, 4]),
+                    u32_slice_to_le_bytes(&[0, 0]),
+                ])
+            }
+        }
+        let err = intervention_delete_incoming_via(&ExtraOutDispatcher, &[1, 2, 3, 4], &[1, 0], 2)
+            .unwrap_err();
+        assert!(matches!(err, DispatchError::BackendError(_)));
+    }
+
+    #[test]
+    fn rule2_reverse_incoming_via_handles_zero_nodes() {
+        let out = rule2_reverse_incoming_via(&Rule2Dispatcher, &[], &[], 0).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn rule2_reverse_incoming_via_rejects_extra_outputs() {
+        struct ExtraOutDispatcher;
+        impl ProgramDispatcher for ExtraOutDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 1, 1, 0]),
+                    u32_slice_to_le_bytes(&[0]),
+                ])
+            }
+        }
+        let err =
+            rule2_reverse_incoming_via(&ExtraOutDispatcher, &[0, 1, 1, 0], &[1, 1], 2).unwrap_err();
+        assert!(matches!(err, DispatchError::BackendError(_)));
+    }
+
+    #[test]
+    fn rule3_subgraph_via_handles_zero_nodes() {
+        struct DummyDispatcher;
+        impl ProgramDispatcher for DummyDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                panic!("dispatch should not be invoked for n=0");
+            }
+        }
+        let (reduced, kept) = rule3_subgraph_via(&DummyDispatcher, &[], &[], 0).unwrap();
+        assert!(reduced.is_empty());
+        assert!(kept.is_empty());
+    }
+
+    #[test]
+    fn rule3_subgraph_via_derives_shape_from_inputs_not_gpu_scalar() {
+        struct CorruptedRedundantScalarDispatcher;
+        impl ProgramDispatcher for CorruptedRedundantScalarDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 1, 0, 0]),
+                    u32_slice_to_le_bytes(&[0, 1]),
+                    u32_slice_to_le_bytes(&[999]),
+                ])
+            }
+        }
+        let (reduced, kept) = rule3_subgraph_via(
+            &CorruptedRedundantScalarDispatcher,
+            &[0, 1, 0, 0],
+            &[1, 1],
+            2,
+        )
+        .unwrap();
+        assert_eq!(reduced, [0, 1, 0, 0]);
+        assert_eq!(kept, [0, 1]);
+    }
+
+    #[test]
+    fn rule3_subgraph_via_rejects_missing_outputs() {
+        struct MissingOutDispatcher;
+        impl ProgramDispatcher for MissingOutDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 1, 0, 0]),
+                    u32_slice_to_le_bytes(&[0, 1]),
+                ])
+            }
+        }
+        let err = rule3_subgraph_via(&MissingOutDispatcher, &[0, 1, 0, 0], &[1, 1], 2).unwrap_err();
+        assert!(matches!(err, DispatchError::BackendError(_)));
+    }
+
+    #[test]
+    fn rule3_subgraph_via_rejects_extra_outputs() {
+        struct ExtraOutDispatcher;
+        impl ProgramDispatcher for ExtraOutDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                Ok(vec![
+                    u32_slice_to_le_bytes(&[0, 1, 0, 0]),
+                    u32_slice_to_le_bytes(&[0, 1]),
+                    u32_slice_to_le_bytes(&[0]),
+                    u32_slice_to_le_bytes(&[0]),
+                ])
+            }
+        }
+        let err = rule3_subgraph_via(&ExtraOutDispatcher, &[0, 1, 0, 0], &[1, 1], 2).unwrap_err();
+        assert!(matches!(err, DispatchError::BackendError(_)));
     }
 }

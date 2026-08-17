@@ -102,6 +102,7 @@ pub fn ast_walk_postorder(out: &str, node_count: u32) -> Program {
 ///
 /// Shared by both walk registrations and by the navigation contract tests, so
 /// the tree under test is defined once.
+#[cfg(test)]
 #[must_use]
 pub fn pack_spine_fixture(node_count: u32) -> (Vec<u8>, Vec<u8>) {
     let full = vyre_foundation::vast::pack_spine_vast(&vec![1u32; node_count as usize]);
@@ -206,39 +207,23 @@ pub fn pack_branching_fixture() -> Vec<u8> {
     out
 }
 
-/// Host traversal oracle for the branching fixture, in `order`.
-fn harness_indices(
-    order: VastWalkOrder,
-    nodes: &[u8],
-) -> Result<Vec<u32>, vyre_foundation::vast::VastError> {
-    match order {
-        VastWalkOrder::Preorder => vyre_foundation::vast::walk_preorder_indices(nodes, 6, 128),
-        VastWalkOrder::Postorder => vyre_foundation::vast::walk_postorder_indices(nodes, 6, 128),
-    }
-}
-
 fn harness_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![pack_branching_fixture(), vec![0u8; 32]]]
 }
 
-fn harness_expected(order: VastWalkOrder) -> Vec<Vec<Vec<u8>>> {
-    let node_region = pack_branching_fixture();
-    let Ok(indices) = harness_indices(order, &node_region) else {
-        return Vec::new();
-    };
-    let mut out = vec![0u8; 32];
-    for (i, index) in indices.into_iter().enumerate() {
-        out[i * 4..(i + 1) * 4].copy_from_slice(&index.to_le_bytes());
-    }
-    vec![vec![out]]
-}
+const EXPECTED_AST_WALK_PREORDER_OUTPUT_BYTES: [u8; 32] = [
+    0, 0, 0, 0, 1, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+const EXPECTED_AST_WALK_POSTORDER_OUTPUT_BYTES: [u8; 32] = [
+    4, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         PREORDER_OP_ID,
         || ast_walk_preorder("nodes", "out", 6, 8),
         Some(harness_inputs),
-        Some(|| harness_expected(VastWalkOrder::Preorder)),
+        Some(|| vec![vec![EXPECTED_AST_WALK_PREORDER_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("graph")
 }
@@ -248,7 +233,7 @@ inventory::submit! {
         POSTORDER_OP_ID,
         || ast_walk_postorder_nodes("nodes", "out", 6, 8),
         Some(harness_inputs),
-        Some(|| harness_expected(VastWalkOrder::Postorder)),
+        Some(|| vec![vec![EXPECTED_AST_WALK_POSTORDER_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("graph")
 }

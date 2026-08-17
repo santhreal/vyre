@@ -241,13 +241,13 @@ fn emit_hit_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn emit_hit_expected_output() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![
-        pack_words(&[7, 101, 5, 2, 9, 103, 9, 4, 11, 107, 13, 6, 13, 109, 17, 8]),
-        pack_words(&[4]),
-        pack_words(&[0]),
-    ]]
-}
+const EXPECTED_EMIT_HIT_SLOTS_BYTES: [u8; 64] = [
+    7, 0, 0, 0, 101, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 9, 0, 0, 0, 103, 0, 0, 0, 9, 0, 0, 0, 4, 0,
+    0, 0, 11, 0, 0, 0, 107, 0, 0, 0, 13, 0, 0, 0, 6, 0, 0, 0, 13, 0, 0, 0, 109, 0, 0, 0, 17, 0, 0,
+    0, 8, 0, 0, 0,
+];
+const EXPECTED_EMIT_HIT_COUNT_BYTES: [u8; 4] = [4, 0, 0, 0];
+const EXPECTED_EMIT_HIT_DROPPED_BYTES: [u8; 4] = [0, 0, 0, 0];
 
 fn compact_hits_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
@@ -256,9 +256,7 @@ fn compact_hits_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn compact_hits_expected_output() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![pack_words(&[DEFAULT_MAX_HITS])]]
-}
+const EXPECTED_COMPACT_HITS_OUTPUT_BYTES: [u8; 4] = [4, 0, 0, 0];
 
 // Forwarding alias to the canonical packer in `scan::dispatch_io`.
 // Was a private inline copy with identical body - removed so the
@@ -302,7 +300,13 @@ inventory::submit! {
             "out_cursor",
         ),
         Some(emit_hit_inputs),
-        Some(emit_hit_expected_output),
+        Some(|| {
+            vec![vec![
+                EXPECTED_EMIT_HIT_SLOTS_BYTES.to_vec(),
+                EXPECTED_EMIT_HIT_COUNT_BYTES.to_vec(),
+                EXPECTED_EMIT_HIT_DROPPED_BYTES.to_vec(),
+            ]]
+        }),
     )
 }
 
@@ -311,6 +315,6 @@ inventory::submit! {
         COMPACT_HITS_OP_ID,
         || compact_hits("out_hits", "out_cursor", DEFAULT_MAX_HITS),
         Some(compact_hits_inputs),
-        Some(compact_hits_expected_output),
+        Some(|| vec![vec![EXPECTED_COMPACT_HITS_OUTPUT_BYTES.to_vec()]]),
     )
 }

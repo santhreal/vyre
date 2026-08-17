@@ -262,7 +262,10 @@ pub fn classify_rule(rule: LoweringRewriteRule) -> RewriteApplicabilityContract 
 /// Return all registered applicability contracts.
 #[must_use]
 pub fn all_registered_contracts() -> Vec<RewriteApplicabilityContract> {
-    ALL_REWRITE_RULES.iter().map(|&rule| classify_rule(rule)).collect()
+    ALL_REWRITE_RULES
+        .iter()
+        .map(|&rule| classify_rule(rule))
+        .collect()
 }
 
 /// Return all lowering-owned rewrite rules.

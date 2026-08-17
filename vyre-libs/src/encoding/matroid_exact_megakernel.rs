@@ -3,7 +3,7 @@
 //! Self-consumer for [#10 `matroid_intersection_full`](crate::math::matroid_intersection_full).
 //!
 //! Today the megakernel scheduler uses
-//! [`super::matroid_megakernel_scheduler::max_fusion_subset`] which is
+//! [`vyre_foundation::optimizer::megakernel::matroid_subset::max_fusion_subset`] which is
 //! a discrete BFS-augmenting heuristic  -  fast and bounded but not
 //! provably optimal for graphs with non-trivial exchange structure.
 //! This consumer wraps the substrate's full Edmonds augmenting-path
@@ -42,8 +42,6 @@ pub struct ExactMatroidDispatchScratch {
     inputs: Vec<Vec<u8>>,
 }
 
-
-
 /// Input-shape error from the exact megakernel matroid solver.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExactMatroidError {
@@ -80,6 +78,12 @@ pub enum ExactMatroidError {
         /// Received seed length.
         actual: usize,
     },
+    /// Test-only reference scratch could not reserve its caller-owned buffers.
+    #[cfg(test)]
+    Allocation {
+        /// Allocation diagnostic from the canonical reference witness.
+        source: String,
+    },
 }
 
 impl std::fmt::Display for ExactMatroidError {
@@ -104,6 +108,11 @@ impl std::fmt::Display for ExactMatroidError {
             Self::SeedLen { expected, actual } => write!(
                 f,
                 "exact matroid solver seed length {actual} does not match n={expected}. Fix: pass one seed bit per fusion candidate."
+            ),
+            #[cfg(test)]
+            Self::Allocation { source } => write!(
+                f,
+                "exact matroid reference scratch allocation failed: {source}"
             ),
         }
     }
@@ -323,23 +332,155 @@ pub fn select_optimal_subset_via_with_scratch_into(
     decode_u32_output_exact(&outputs[0], n, "select_optimal_subset_via", out)
 }
 
-
-
-
-
-
-
-/// Convenience: count selected items in a 0/1 retention vector.
-#[must_use]
-pub fn count_selected(subset: &[u32]) -> u32 {
-    subset.iter().map(|&v| if v != 0 { 1 } else { 0 }).sum()
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::reduce_count_non_zero_witness as count_selected;
+    #[derive(Debug, Default)]
+    struct ExactMatroidScratch {
+        current: Vec<u32>,
+        next: Vec<u32>,
+    }
+
+    impl ExactMatroidScratch {
+        fn result(&self) -> &[u32] {
+            &self.current
+        }
+    }
+
+    fn reference_select_optimal_subset(
+        exchange_adj: &[u32],
+        sources: &[u32],
+        sinks: &[u32],
+        seed_x: &[u32],
+        n: usize,
+        max_augmentations: u32,
+    ) -> Result<Vec<u32>, ExactMatroidError> {
+        if n == 0 {
+            return Ok(Vec::new());
+        }
+        if exchange_adj.len() != n * n {
+            return Err(ExactMatroidError::ExchangeAdjLen {
+                expected: n * n,
+                actual: exchange_adj.len(),
+            });
+        }
+        if sources.len() != n {
+            return Err(ExactMatroidError::SourcesLen {
+                expected: n,
+                actual: sources.len(),
+            });
+        }
+        if sinks.len() != n {
+            return Err(ExactMatroidError::SinksLen {
+                expected: n,
+                actual: sinks.len(),
+            });
+        }
+        if seed_x.len() != n {
+            return Err(ExactMatroidError::SeedLen {
+                expected: n,
+                actual: seed_x.len(),
+            });
+        }
+        let result = vyre_reference::composition_witness::matroid_select_optimal_subset_witness(
+            exchange_adj,
+            sources,
+            sinks,
+            seed_x,
+            n,
+            max_augmentations,
+        )
+        .map_err(|source| ExactMatroidError::Allocation { source })?;
+        Ok(result)
+    }
+
+    fn reference_select_optimal_subset_all_eligible(
+        exchange_adj: &[u32],
+        seed_x: &[u32],
+        n: usize,
+        max_augmentations: u32,
+    ) -> Result<Vec<u32>, ExactMatroidError> {
+        let sources = vec![1u32; n];
+        let sinks = vec![1u32; n];
+        reference_select_optimal_subset(
+            exchange_adj,
+            &sources,
+            &sinks,
+            seed_x,
+            n,
+            max_augmentations,
+        )
+    }
+
+    fn reference_select_optimal_subset_into<'a>(
+        exchange_adj: &[u32],
+        sources: &[u32],
+        sinks: &[u32],
+        seed_x: &[u32],
+        n: usize,
+        max_augmentations: u32,
+        scratch: &'a mut ExactMatroidScratch,
+    ) -> Result<&'a [u32], ExactMatroidError> {
+        if n == 0 {
+            scratch.current.clear();
+            return Ok(&scratch.current);
+        }
+        if exchange_adj.len() != n * n {
+            return Err(ExactMatroidError::ExchangeAdjLen {
+                expected: n * n,
+                actual: exchange_adj.len(),
+            });
+        }
+        if sources.len() != n {
+            return Err(ExactMatroidError::SourcesLen {
+                expected: n,
+                actual: sources.len(),
+            });
+        }
+        if sinks.len() != n {
+            return Err(ExactMatroidError::SinksLen {
+                expected: n,
+                actual: sinks.len(),
+            });
+        }
+        if seed_x.len() != n {
+            return Err(ExactMatroidError::SeedLen {
+                expected: n,
+                actual: seed_x.len(),
+            });
+        }
+        vyre_reference::composition_witness::matroid_select_optimal_subset_witness_into(
+            exchange_adj,
+            sources,
+            sinks,
+            seed_x,
+            n,
+            max_augmentations,
+            &mut scratch.current,
+            &mut scratch.next,
+        )
+        .map_err(|source| ExactMatroidError::Allocation { source })?;
+        Ok(&scratch.current)
+    }
+
+    fn reference_select_optimal_subset_all_eligible_into<'a>(
+        exchange_adj: &[u32],
+        seed_x: &[u32],
+        n: usize,
+        max_augmentations: u32,
+        scratch: &'a mut ExactMatroidScratch,
+    ) -> Result<&'a [u32], ExactMatroidError> {
+        scratch.current = reference_select_optimal_subset_all_eligible(
+            exchange_adj,
+            seed_x,
+            n,
+            max_augmentations,
+        )?;
+        Ok(&scratch.current)
+    }
 
     #[test]
     fn empty_seed_grows_to_max() {

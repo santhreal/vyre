@@ -492,14 +492,17 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     // the two plain-RW dual-scaling buffers `u` (4) and `v` (5, both role InputOutput → outputs 0,1)
     // then the `out_assignments` output (6 → output 2). The assignment vector is therefore the THIRD
     // output, not the first (the old program-ignoring mock faked a single-output return, hiding this).
-    if outputs.len() != 3 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: sinkhorn_clustering_via expected 3 writable outputs (u, v, out_assignments), got {}.",
-            outputs.len()
-        )));
-    }
+    let [_, _, assignments_bytes] = match outputs.as_slice() {
+        [u, v, a] => [u, v, a],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: sinkhorn_clustering_via expected 3 writable outputs (u, v, out_assignments), got {}.",
+                outputs.len()
+            )))
+        }
+    };
     decode_u32_output_exact(
-        &outputs[2],
+        assignments_bytes,
         m as usize,
         "sinkhorn_clustering_via out_assignments",
         assignments_out,
@@ -532,14 +535,11 @@ fn byte_count(words: usize, label: &str) -> Result<usize, DispatchError> {
         })
 }
 
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_parity_oracles::StaticOutputs;
+    use vyre_reference::composition_witness::sinkhorn_clustering_witness;
 
     /// Real-backend contract: 4 RO inputs + u/v plain-RW = 6 input-consuming
     /// buffers; out_assignments is a backend-allocated `BufferDecl::output`,
@@ -552,7 +552,7 @@ mod tests {
         let centroids = vec![1.0, 1.0];
         let weights = vec![1.0];
         let capacities = vec![1.0];
-        let assignments = reference_sinkhorn_clustering(
+        let assignments = sinkhorn_clustering_witness(
             &features,
             &centroids,
             &weights,
@@ -574,7 +574,7 @@ mod tests {
         let centroids = vec![0.0, 0.0, 10.0, 10.0];
         let weights = vec![1.0, 1.0];
         let capacities = vec![1.0, 1.0];
-        let assignments = reference_sinkhorn_clustering(
+        let assignments = sinkhorn_clustering_witness(
             &features,
             &centroids,
             &weights,
@@ -602,7 +602,7 @@ mod tests {
         let centroids = vec![0.0, 0.0, 100.0, 0.0];
         let weights = vec![1.0, 1.0, 1.0];
         let capacities = vec![1.0, 2.0];
-        let assignments = reference_sinkhorn_clustering(
+        let assignments = sinkhorn_clustering_witness(
             &features,
             &centroids,
             &weights,
@@ -626,7 +626,7 @@ mod tests {
         let centroids = vec![0.0, 10.0];
         let weights = vec![1.0, 10.0];
         let capacities = vec![1.0, 10.0];
-        let assignments = reference_sinkhorn_clustering(
+        let assignments = sinkhorn_clustering_witness(
             &features,
             &centroids,
             &weights,
@@ -795,7 +795,7 @@ mod tests {
         let centroids = vec![0.0, 0.0, 10.0, 10.0];
         let weights = vec![1.0, 1.0];
         let capacities = vec![1.0, 1.0];
-        let reference_res = reference_sinkhorn_clustering(
+        let reference_res = sinkhorn_clustering_witness(
             &features,
             &centroids,
             &weights,
@@ -810,14 +810,13 @@ mod tests {
     }
 
     #[test]
-    fn clustering_reference_into_reuses_assignment_storage() {
+    fn repeated_clustering_witness_calls_do_not_retain_prior_state() {
         let features = vec![0.0, 0.0, 10.0, 10.0];
         let centroids = vec![0.0, 0.0, 10.0, 10.0];
         let weights = vec![1.0, 1.0];
         let capacities = vec![1.0, 1.0];
-        let mut scratch = SinkhornClusteringScratch::new();
 
-        let first = reference_sinkhorn_clustering_into(
+        let first = sinkhorn_clustering_witness(
             &features,
             &centroids,
             &weights,
@@ -827,11 +826,10 @@ mod tests {
             2,
             20,
             1.0,
-            &mut scratch,
-        )
-        .to_vec();
-        let ptr = scratch.assignment_ptr();
-        let second = reference_sinkhorn_clustering_into(
+        );
+        let unrelated =
+            sinkhorn_clustering_witness(&[3.0], &[3.0], &[1.0], &[1.0], 1, 1, 1, 2, 0.5);
+        let second = sinkhorn_clustering_witness(
             &features,
             &centroids,
             &weights,
@@ -841,12 +839,10 @@ mod tests {
             2,
             20,
             1.0,
-            &mut scratch,
-        )
-        .to_vec();
+        );
 
         assert_eq!(first, vec![0, 1]);
+        assert_eq!(unrelated, vec![0]);
         assert_eq!(second, first);
-        assert_eq!(scratch.assignment_ptr(), ptr);
     }
 }

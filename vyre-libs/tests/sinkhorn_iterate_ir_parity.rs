@@ -17,9 +17,8 @@
 
 use vyre_reference::value::Value;
 
-use vyre_libs::math::sinkhorn_iterate::{
-    cpu_ref, sinkhorn_iterate, SinkhornBuffers, SinkhornExtents,
-};
+use vyre_libs::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
+use vyre_reference::composition_witness::sinkhorn_iterate_witness as cpu_ref;
 
 /// 16.16 fixed-point encode.
 fn enc(v: f64) -> u32 {

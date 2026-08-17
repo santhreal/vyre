@@ -1,11 +1,10 @@
 //! Property and adversarial tests for primitive-owned LZ4 literal extraction.
 
-// `ziftsieve_reference_extract_literals` is gated on `cpu-parity` (unreachable from an
-// integration test under `decode` alone); declare the true dependency.
+// The independent decode witness belongs to `vyre-reference`.
 #![cfg(feature = "decode")]
 
 use proptest::prelude::*;
-fn ziftsieve_reference_extract_literals(_data: &[u8]) -> Vec<u32> { Vec::new() }
+use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
 
 fn literal_only_lz4(bytes: &[u8]) -> Vec<u8> {
     let mut encoded = Vec::with_capacity(bytes.len() + (bytes.len() / 14 + 1) * 3);

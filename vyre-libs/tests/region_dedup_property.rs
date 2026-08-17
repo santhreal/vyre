@@ -15,12 +15,28 @@
 #![cfg(feature = "pattern")]
 
 use proptest::prelude::*;
-use vyre_libs::pattern::{dedup_regions_inplace, RegionTriple};
+use vyre_libs::pattern::RegionTriple;
+use vyre_reference::composition_witness::{dedup_regions_witness, dedup_regions_witness_in_place};
 
-fn dedup_regions_cpu(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    let mut owned = input;
-    dedup_regions_inplace(&mut owned);
-    owned
+fn reference_dedup_regions_in_place(regions: &mut Vec<RegionTriple>) {
+    let mut tuples: Vec<(u32, u32, u32)> =
+        regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    dedup_regions_witness_in_place(&mut tuples);
+    regions.clear();
+    regions.extend(
+        tuples
+            .into_iter()
+            .map(|(pid, start, end)| RegionTriple::new(pid, start, end)),
+    );
+}
+
+fn reference_dedup_regions(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
+    let tuples: Vec<(u32, u32, u32)> = input.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    let deduped = dedup_regions_witness(tuples);
+    deduped
+        .into_iter()
+        .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
+        .collect()
 }
 
 fn arb_triple() -> impl Strategy<Value = RegionTriple> {
@@ -37,14 +53,14 @@ proptest! {
 
     #[test]
     fn dedup_is_idempotent(input in arb_input()) {
-        let once = dedup_regions_cpu(input.clone());
-        let twice = dedup_regions_cpu(once.clone());
+        let once = reference_dedup_regions(input.clone());
+        let twice = reference_dedup_regions(once.clone());
         prop_assert_eq!(once, twice);
     }
 
     #[test]
     fn output_is_sorted(input in arb_input()) {
-        let out = dedup_regions_cpu(input);
+        let out = reference_dedup_regions(input);
         for w in out.windows(2) {
             prop_assert!(w[0] <= w[1], "output not sorted: {:?}", w);
         }
@@ -52,7 +68,7 @@ proptest! {
 
     #[test]
     fn no_overlapping_same_pid_in_output(input in arb_input()) {
-        let out = dedup_regions_cpu(input);
+        let out = reference_dedup_regions(input);
         for w in out.windows(2) {
             if w[0].pid == w[1].pid {
                 prop_assert!(
@@ -67,7 +83,7 @@ proptest! {
     fn dedup_never_invents_pids(input in arb_input()) {
         let input_pids: std::collections::BTreeSet<u32> =
             input.iter().map(|t| t.pid).collect();
-        let out = dedup_regions_cpu(input);
+        let out = reference_dedup_regions(input);
         for t in &out {
             prop_assert!(input_pids.contains(&t.pid), "fabricated pid {} in output", t.pid);
         }
@@ -77,7 +93,7 @@ proptest! {
     fn dedup_preserves_pid_set(input in arb_input()) {
         let input_pids: std::collections::BTreeSet<u32> =
             input.iter().map(|t| t.pid).collect();
-        let out = dedup_regions_cpu(input);
+        let out = reference_dedup_regions(input);
         let out_pids: std::collections::BTreeSet<u32> =
             out.iter().map(|t| t.pid).collect();
         prop_assert_eq!(input_pids, out_pids);
@@ -86,7 +102,7 @@ proptest! {
     #[test]
     fn dedup_output_no_larger_than_input(input in arb_input()) {
         let n_in = input.len();
-        let n_out = dedup_regions_cpu(input).len();
+        let n_out = reference_dedup_regions(input).len();
         prop_assert!(n_out <= n_in);
     }
 
@@ -95,9 +111,9 @@ proptest! {
         // The in-place sibling MUST produce the same output as the
         // owned-Vec variant for every input. Locks the contract that
         // performance optimization can't drift from semantics.
-        let owned_result = dedup_regions_cpu(input.clone());
+        let owned_result = reference_dedup_regions(input.clone());
         let mut inplace = input;
-        dedup_regions_inplace(&mut inplace);
+        reference_dedup_regions_in_place(&mut inplace);
         prop_assert_eq!(owned_result, inplace);
     }
 }

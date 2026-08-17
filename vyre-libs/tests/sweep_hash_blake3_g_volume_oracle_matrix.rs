@@ -6,7 +6,8 @@
 mod wire_words;
 use wire_words::oracle_blake3_g;
 
-use vyre_libs::hash::blake3::{cpu_blake3_g, MSG_SCHEDULE};
+use vyre_libs::hash::blake3::MSG_SCHEDULE;
+use vyre_reference::composition_witness::blake3_g_witness as cpu_blake3_g;
 
 const CASES: usize = 16384;
 

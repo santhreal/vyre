@@ -51,6 +51,10 @@ pub fn linear_silu(
     )
 }
 
+const EXPECTED_LINEAR_SILU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x60, 0x42, 0x00, 0x00, 0x78, 0x42, 0x00, 0x00, 0x88, 0x42, 0x00, 0x00, 0x94, 0x42,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -71,17 +75,7 @@ inventory::submit! {
             vec![vec![x, w, bias]]
         }),
         Some(|| {
-            // linear: x=[0,1,2,3], w[k,i] = k*4+i, b=[0,0,0,0]
-            // out[i] = sum_k x[k] * w[k, i]
-            //        = 0*i + 1*(4+i) + 2*(8+i) + 3*(12+i)
-            //        = (4 + 8*2 + 12*3) + (1 + 2 + 3) * i
-            //        = (4 + 16 + 36) + 6 * i
-            //        = 56 + 6*i
-            // Then silu(z) = z / (1 + exp(-z))
-            let acc: Vec<f32> = (0..4).map(|i| 56.0 + 6.0 * i as f32).collect();
-            let silu: Vec<f32> = acc.iter().map(|z| z / (1.0 + (-z).exp())).collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&silu);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_LINEAR_SILU_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

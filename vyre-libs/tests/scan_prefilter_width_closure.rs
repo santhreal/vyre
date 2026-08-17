@@ -34,13 +34,13 @@ use std::fs;
 
 use vyre_foundation::ir::{BufferAccess, Node, Program};
 use vyre_foundation::visit::referenced_buffers;
-use vyre_libs::pattern::CompiledDfa;
 use vyre_libs::pattern::classic_ac::{
     build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce, classic_ac_compile,
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
+use vyre_libs::pattern::CompiledDfa;
 
 /// The source file that owns the width table, relative to the crate root. Read at
 /// run time so the member set is the shipped enum rather than a copy of it.

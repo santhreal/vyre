@@ -7,10 +7,18 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::math::prefix_scan::{cpu_ref as prefix_cpu, prefix_scan, ScanKind};
+use vyre_libs::math::prefix_scan::{prefix_scan, ScanKind};
 use vyre_libs::math::scan::scan_prefix_sum;
-use vyre_libs::math::stream_compact::{cpu_ref as compact_cpu, stream_compact};
+use vyre_libs::math::stream_compact::stream_compact;
+use vyre_reference::composition_witness::{prefix_scan_witness, stream_compact_witness};
 const BLOCK_LANES: u32 = 1024;
+
+fn expected_prefix_scan(input: &[u32], kind: ScanKind) -> Vec<u32> {
+    match kind {
+        ScanKind::InclusiveSum => prefix_scan_witness(input, true, |a, b| a.wrapping_add(b), 0),
+        ScanKind::ExclusiveSum => prefix_scan_witness(input, false, |a, b| a.wrapping_add(b), 0),
+    }
+}
 
 fn run_prefix_scan(input: &[u32], kind: ScanKind) -> Vec<u32> {
     let n = input.len() as u32;
@@ -76,7 +84,7 @@ fn run_prefix_scan_large(input: &[u32]) -> Vec<u32> {
 #[test]
 fn cuda_prefix_scan_inclusive_sum() {
     let input = vec![1u32, 2, 3, 4];
-    let cpu = prefix_cpu(&input, ScanKind::InclusiveSum);
+    let cpu = expected_prefix_scan(&input, ScanKind::InclusiveSum);
     let gpu = run_prefix_scan(&input, ScanKind::InclusiveSum);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![1, 3, 6, 10]);
@@ -85,7 +93,7 @@ fn cuda_prefix_scan_inclusive_sum() {
 #[test]
 fn cuda_prefix_scan_exclusive_sum() {
     let input = vec![1u32, 2, 3, 4];
-    let cpu = prefix_cpu(&input, ScanKind::ExclusiveSum);
+    let cpu = expected_prefix_scan(&input, ScanKind::ExclusiveSum);
     let gpu = run_prefix_scan(&input, ScanKind::ExclusiveSum);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0, 1, 3, 6]);
@@ -94,7 +102,7 @@ fn cuda_prefix_scan_exclusive_sum() {
 #[test]
 fn cuda_prefix_scan_inclusive_zeros() {
     let input = vec![0u32; 8];
-    let cpu = prefix_cpu(&input, ScanKind::InclusiveSum);
+    let cpu = expected_prefix_scan(&input, ScanKind::InclusiveSum);
     let gpu = run_prefix_scan(&input, ScanKind::InclusiveSum);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; 8]);
@@ -103,7 +111,7 @@ fn cuda_prefix_scan_inclusive_zeros() {
 #[test]
 fn cuda_prefix_scan_inclusive_non_pow2() {
     let input = vec![5u32, 1, 4, 1, 5, 9, 2];
-    let cpu = prefix_cpu(&input, ScanKind::InclusiveSum);
+    let cpu = expected_prefix_scan(&input, ScanKind::InclusiveSum);
     let gpu = run_prefix_scan(&input, ScanKind::InclusiveSum);
     assert_eq!(gpu, cpu);
 }
@@ -118,7 +126,7 @@ fn cuda_prefix_scan_large_crosses_block_boundary() {
                 .wrapping_add(1_013_904_223)
         })
         .collect();
-    let cpu = prefix_cpu(&input, ScanKind::InclusiveSum);
+    let cpu = expected_prefix_scan(&input, ScanKind::InclusiveSum);
     let gpu = run_prefix_scan_large(&input);
 
     assert_eq!(gpu, cpu);
@@ -173,7 +181,7 @@ fn run_stream_compact(payloads: &[u32], flags: &[u32]) -> (Vec<u32>, u32) {
 fn cuda_stream_compact_keeps_live_lanes_in_order() {
     let payloads = vec![10u32, 20, 30, 40, 50];
     let flags = vec![0u32, 1, 1, 0, 1];
-    let cpu = compact_cpu(&payloads, &flags);
+    let cpu = stream_compact_witness(&payloads, &flags);
     let gpu = run_stream_compact(&payloads, &flags);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.0, vec![20, 30, 50]);
@@ -184,7 +192,7 @@ fn cuda_stream_compact_keeps_live_lanes_in_order() {
 fn cuda_stream_compact_all_dead() {
     let payloads = vec![1u32, 2, 3];
     let flags = vec![0u32, 0, 0];
-    let cpu = compact_cpu(&payloads, &flags);
+    let cpu = stream_compact_witness(&payloads, &flags);
     let gpu = run_stream_compact(&payloads, &flags);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.1, 0);
@@ -195,7 +203,7 @@ fn cuda_stream_compact_all_dead() {
 fn cuda_stream_compact_all_live() {
     let payloads = vec![100u32, 200, 300, 400];
     let flags = vec![1u32, 1, 1, 1];
-    let cpu = compact_cpu(&payloads, &flags);
+    let cpu = stream_compact_witness(&payloads, &flags);
     let gpu = run_stream_compact(&payloads, &flags);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu.1, 4);

@@ -546,6 +546,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "xtask_registry::gates::heuristic_audit::tests::a_plain_comment_marker_is_a_finding_at_its_line",
     },
     GateDescriptor {
+        name: "host-oracle-elimination",
+        help: "Enforce zero production host-oracle / cpu_ref mathematical implementations in shipping crates",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "tracked source files",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::host_oracle_elimination::tests::mutation_oracle_detection_catches_production_cpu_ref_fn",
+    },
+    GateDescriptor {
         name: "hot-path-blocking-wait",
         help: "Enforce hot-path-blocking-wait contracts",
         package: "xtask",

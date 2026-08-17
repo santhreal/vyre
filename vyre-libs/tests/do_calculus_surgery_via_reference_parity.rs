@@ -14,16 +14,18 @@
 //! binding order the trait promises), and proves each surgery `_via` reproduces its CPU oracle:
 //!   - `intervention_delete_incoming_via` (column-zeroing, single output)
 //!   - `rule2_reverse_incoming_via` (edge reversal, single output)
-//!   - `rule3_subgraph_via` (subgraph extraction, THREE outputs: reduced k×k + kept map + kept_len)
+//!   - `rule3_subgraph_via` (subgraph extraction, reduced k×k + kept map)
 //! Rule 3 is the one that never had a `_via` at all before; this locks its full round-trip
 //! (compaction + gather + kept-index map + stride-k block) through the real dispatch boundary.
 #![forbid(unsafe_code)]
 
-use vyre_libs::graph::do_calculus::{
-    do_intervention_delete_incoming_cpu, do_rule2_reverse_incoming_cpu, do_rule3_subgraph_cpu,
-};
 use vyre_libs::reasoning::do_calculus_change_impact::{
     intervention_delete_incoming_via, rule2_reverse_incoming_via, rule3_subgraph_via,
+};
+use vyre_reference::composition_witness::{
+    do_intervention_delete_incoming_witness as do_intervention_delete_incoming_cpu,
+    do_rule2_reverse_incoming_witness as do_rule2_reverse_incoming_cpu,
+    do_rule3_subgraph_witness as do_rule3_subgraph_cpu,
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
@@ -126,7 +128,7 @@ fn rule3_subgraph_via_matches_cpu_oracle() {
 #[test]
 fn rule3_subgraph_via_round_trips_a_known_stride_k_extraction() {
     // The same hand-checked case as the primitive-level parity test, but proven through the full
-    // dispatcher boundary (pack → dispatch → 3-output decode → truncate to k×k / k).
+    // dispatcher boundary (pack → three-output dispatch → exact decode → truncate to k×k / k).
     let dispatcher = ReferenceEvalDispatcher;
     let n = 4u32;
     let adj = vec![
@@ -148,4 +150,36 @@ fn rule3_subgraph_via_round_trips_a_known_stride_k_extraction() {
         vec![0, 1, 1, 0, 0, 1, 1, 0, 0],
         "the stride-3 dense subgraph survives the dispatch round-trip"
     );
+}
+
+#[test]
+fn intervention_delete_incoming_via_matches_cpu_oracle_empty_graph() {
+    let dispatcher = ReferenceEvalDispatcher;
+    let via = intervention_delete_incoming_via(&dispatcher, &[], &[], 0)
+        .expect("empty graph intervention must dispatch cleanly");
+    let cpu = do_intervention_delete_incoming_cpu(&[], &[], 0);
+    assert_eq!(via, cpu);
+    assert!(via.is_empty());
+}
+
+#[test]
+fn rule2_reverse_incoming_via_matches_cpu_oracle_empty_graph() {
+    let dispatcher = ReferenceEvalDispatcher;
+    let via = rule2_reverse_incoming_via(&dispatcher, &[], &[], 0)
+        .expect("empty graph rule 2 must dispatch cleanly");
+    let cpu = do_rule2_reverse_incoming_cpu(&[], &[], 0);
+    assert_eq!(via, cpu);
+    assert!(via.is_empty());
+}
+
+#[test]
+fn rule3_subgraph_via_matches_cpu_oracle_empty_graph() {
+    let dispatcher = ReferenceEvalDispatcher;
+    let (via_reduced, via_kept) = rule3_subgraph_via(&dispatcher, &[], &[], 0)
+        .expect("empty graph rule 3 must dispatch cleanly");
+    let (cpu_reduced, cpu_kept) = do_rule3_subgraph_cpu(&[], &[], 0);
+    assert_eq!(via_reduced, cpu_reduced);
+    assert_eq!(via_kept, cpu_kept);
+    assert!(via_reduced.is_empty());
+    assert!(via_kept.is_empty());
 }

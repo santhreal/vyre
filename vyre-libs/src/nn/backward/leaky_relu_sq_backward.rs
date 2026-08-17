@@ -21,6 +21,10 @@ pub fn leaky_relu_sq_backward(input: &str, grad_out: &str, grad_in: &str, n: u32
     })
 }
 
+const EXPECTED_LEAKY_RELU_SQ_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -34,10 +38,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // x=2: max(1,4)=4; x=-4: max(-2,-8)=-2; x=0: 0; x=1: max(0.5,2)=2
-            let out = [4.0_f32, -2.0, 0.0, 2.0];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_LEAKY_RELU_SQ_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

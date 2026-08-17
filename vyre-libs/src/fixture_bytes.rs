@@ -6,10 +6,12 @@ pub(crate) fn f32_bytes(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
 
+#[cfg(test)]
 pub(crate) fn decode_f32(bytes: &[u8]) -> Vec<f32> {
     vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
 }
 
+#[cfg(test)]
 pub(crate) fn decode_f32_one(bytes: &[u8]) -> f32 {
     match try_decode_f32_one(bytes) {
         Ok(value) => value,
@@ -17,10 +19,12 @@ pub(crate) fn decode_f32_one(bytes: &[u8]) -> f32 {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn try_decode_f32_one(bytes: &[u8]) -> Result<f32, String> {
     vyre_primitives::wire::read_f32_le_word(bytes, 0, "f32 scalar fixture output")
 }
 
+#[cfg(test)]
 pub(crate) fn decode_u32_one(bytes: &[u8]) -> u32 {
     match try_decode_u32_one(bytes) {
         Ok(value) => value,
@@ -28,10 +32,12 @@ pub(crate) fn decode_u32_one(bytes: &[u8]) -> u32 {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn try_decode_u32_one(bytes: &[u8]) -> Result<u32, String> {
     vyre_primitives::wire::read_u32_le_word(bytes, 0, "u32 scalar fixture output")
 }
 
+#[cfg(test)]
 pub(crate) fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(slice)
 }

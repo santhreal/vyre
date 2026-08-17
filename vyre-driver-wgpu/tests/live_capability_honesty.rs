@@ -162,7 +162,7 @@ fn async_dispatch_returns_contract_visible_pending_handle() {
     let backend = live_backend();
 
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -178,7 +178,7 @@ fn async_dispatch_returns_contract_visible_pending_handle() {
         .await_result()
         .expect("Fix: pending handle must resolve to correct GPU outputs");
 
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=1024u32);
+    let expected: Vec<u8> = (1..=1024u32).flat_map(u32::to_le_bytes).collect();
     assert_eq!(
         outputs,
         vec![expected],
@@ -191,7 +191,7 @@ fn async_dispatch_is_non_blocking_for_real_gpu_work() {
     let backend = live_backend();
 
     let program = add_one_program(256 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256 * 1024u32);
+    let input: Vec<u8> = (0..256 * 1024u32).flat_map(u32::to_le_bytes).collect();
 
     // Warm the pipeline cache so the measurement is about execution,
     // not shader compilation on the first dispatch.
@@ -243,7 +243,7 @@ fn async_dispatch_ready_state_is_observable_for_non_trivial_work() {
     // Use a large enough program that the GPU won't finish before we
     // can observe the pending state.
     let program = add_one_program(512 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..512 * 1024u32);
+    let input: Vec<u8> = (0..512 * 1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -261,7 +261,7 @@ fn async_dispatch_ready_state_is_observable_for_non_trivial_work() {
         .await_result()
         .expect("Fix: await_result must resolve the dispatch");
 
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=512 * 1024u32);
+    let expected: Vec<u8> = (1..=512 * 1024u32).flat_map(u32::to_le_bytes).collect();
     assert_eq!(
         outputs,
         vec![expected],

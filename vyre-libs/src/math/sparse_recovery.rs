@@ -72,12 +72,6 @@ pub fn iht_threshold(z: &str, threshold: &str, out: &str, n: u32) -> Program {
     )
 }
 
-
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -92,7 +86,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[0, 0, 3, 4])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x04, 0x00, 0x00, 0x00, // 4
+            ]]]
         }),
     )
 }
@@ -100,6 +99,36 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::iht_top_k_witness;
+
+    struct IhtTopKScratch {
+        order: Vec<usize>,
+    }
+
+    impl IhtTopKScratch {
+        fn new() -> Self {
+            Self { order: Vec::new() }
+        }
+    }
+
+    fn try_iht_top_k_cpu_into(
+        z: &[f64],
+        k: usize,
+        out: &mut Vec<f64>,
+        scratch: &mut IhtTopKScratch,
+    ) -> Result<f64, String> {
+        let thresh = vyre_reference::composition_witness::iht_top_k_witness_into(
+            z,
+            k,
+            out,
+            &mut scratch.order,
+        );
+        Ok(thresh)
+    }
+
+    fn iht_top_k_cpu(z: &[f64], k: usize) -> (Vec<f64>, f64) {
+        iht_top_k_witness(z, k)
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
@@ -235,21 +264,7 @@ mod tests {
     }
 
     fn independent_iht_top_k(z: &[f64], k: usize) -> (Vec<f64>, f64) {
-        let n = z.len();
-        if k >= n {
-            return (z.to_vec(), 0.0);
-        }
-        if k == 0 {
-            return (vec![0.0; n], f64::INFINITY);
-        }
-        let mut order: Vec<usize> = (0..n).collect();
-        order.sort_by(|&i, &j| finite_abs_score(z[j]).total_cmp(&finite_abs_score(z[i])));
-        let threshold = z[order[k - 1]].abs();
-        let mut out = vec![0.0; n];
-        for &idx in &order[..k] {
-            out[idx] = z[idx];
-        }
-        (out, threshold)
+        vyre_reference::composition_witness::iht_top_k_witness(z, k)
     }
 
     #[test]

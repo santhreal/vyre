@@ -9,20 +9,7 @@ use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_mask;
 use vyre_reference::value::Value;
 
 fn reference_line_splice_classify(source: &[u8]) -> Vec<u32> {
-    let mut out = Vec::with_capacity(source.len());
-    for i in 0..source.len() {
-        let b_m2 = i.checked_sub(2).map(|j| source[j]).unwrap_or(0);
-        let b_m1 = i.checked_sub(1).map(|j| source[j]).unwrap_or(0);
-        let b_0 = source[i];
-        let b_p1 = source.get(i + 1).copied().unwrap_or(0);
-        let case1 = b_0 == b'\\' && b_p1 == b'\n';
-        let case2 = b_0 == b'\\' && b_p1 == b'\r';
-        let case3 = b_m1 == b'\\' && b_0 == b'\n';
-        let case4 = b_m1 == b'\\' && b_0 == b'\r';
-        let case5 = b_m2 == b'\\' && b_m1 == b'\r' && b_0 == b'\n';
-        out.push(u32::from(!(case1 || case2 || case3 || case4 || case5)));
-    }
-    out
+    vyre_reference::composition_witness::line_splice_classify_witness(source)
 }
 
 fn run_program(source: &[u8]) -> Vec<u32> {

@@ -15,7 +15,7 @@ use proptest::prelude::*;
 use vyre_reference::value::Value;
 
 use vyre_libs::decode::inflate::inflate_stored_block;
-fn inflate_stored_reference_words(bytes: &[u8]) -> Vec<u32> { bytes.chunks(4).map(|c| { let mut w = 0u32; for (i, &b) in c.iter().enumerate() { w |= (b as u32) << (i*8); } w }).collect() }
+use vyre_reference::composition_witness::inflate_stored_witness as inflate_stored_reference_words;
 
 const HEADER_WORDS: usize = 5;
 

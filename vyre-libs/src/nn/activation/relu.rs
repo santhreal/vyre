@@ -28,6 +28,10 @@ pub fn relu(input: &str, output: &str, n: u32) -> Program {
     ElementwiseComposer::u32_unary("vyre-libs::nn::relu", input, output, n, relu_u32_expr)
 }
 
+const EXPECTED_RELU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::relu",
@@ -36,8 +40,7 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[0u32, 5, 10, 0]),
         ]]),
         Some(|| vec![vec![
-            // Only ReadWrite buffer: output = max(0, input) = identity for u32
-            vyre_primitives::wire::pack_u32_slice(&[0u32, 5, 10, 0]),
+            EXPECTED_RELU_OUTPUT_BYTES.to_vec(),
         ]]),
     )
     .with_category("nn")

@@ -14,7 +14,12 @@
 #![forbid(unsafe_code)]
 
 use vyre_libs::encoding::vsa_fingerprint::fingerprint_via;
-fn reference_fingerprint(v: &[u32]) -> u32 { v.iter().copied().fold(0u32, |acc, x| acc.wrapping_mul(31).wrapping_add(x)) }
+use vyre_reference::composition_witness::hypervector_xor_bind_witness;
+
+fn reference_fingerprint(kind: &[u32], signature: &[u32], region: &[u32]) -> Vec<u32> {
+    let kind_signature = hypervector_xor_bind_witness(kind, signature);
+    hypervector_xor_bind_witness(&kind_signature, region)
+}
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

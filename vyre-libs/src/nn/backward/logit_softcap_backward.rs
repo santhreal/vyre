@@ -33,6 +33,10 @@ pub fn logit_softcap_backward(
     })
 }
 
+const EXPECTED_LOGIT_SOFTCAP_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x3F, 0xA5, 0x54, 0x49, 0x3F, 0x61, 0xB1, 0x90, 0x3D, 0x06, 0x62, 0xA6, 0x3B,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -46,14 +50,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let out = [
-                f32::from_bits(0x3f80_0000),
-                f32::from_bits(0x3f49_54a5),
-                f32::from_bits(0x3d90_b161),
-                f32::from_bits(0x3ba6_6206),
-            ];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_LOGIT_SOFTCAP_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

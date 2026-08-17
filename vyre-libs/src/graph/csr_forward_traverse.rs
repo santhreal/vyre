@@ -10,14 +10,12 @@
 //! composing with `super::super::bitset` primitives and
 //! `super::super::fixpoint::bitset_fixpoint`.
 //!
-//! CPU reference + witness ship alongside so the conform harness
-//! can exercise the primitive end-to-end without GPU hardware.
+//! CPU-independent witnesses live in `vyre-reference`.
 
 use vyre_foundation::ir::Program;
 
 use crate::graph::csr_frontier_step::{
-    csr_forward_step_excluding_program, csr_frontier_step_program,
-    define_csr_frontier_step_cpu_ref, CsrFrontierStepKind,
+    csr_forward_step_excluding_program, csr_frontier_step_program, CsrFrontierStepKind,
 };
 use crate::graph::program_graph::ProgramGraphShape;
 
@@ -86,20 +84,7 @@ pub fn csr_forward_traverse_excluding(
     )
 }
 
-define_csr_frontier_step_cpu_ref! {
-    direction: CsrFrontierStepKind::Forward,
-    label: "csr_forward_traverse",
-    /// CPU reference: one forward step. Returns a fresh bitset where bit
-    /// `v` is set iff any predecessor `u` with `frontier_in` bit set has
-    /// an edge `u → v` whose `edge_kind_mask[e] & allow_mask != 0`.
-    pub fn cpu_ref,
-    /// CPU reference using caller-owned output storage.
-    ///
-    /// Malformed CSR inputs fail loudly. GPU parity evidence must not turn a
-    /// truncated row pointer or edge table into an all-zero frontier because that
-    /// would bless corrupted graph inputs as valid dataflow results.
-    pub fn cpu_ref_into,
-}
+const EXPECTED_CSR_FORWARD_TRAVERSE_OUTPUT_BYTES: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -125,9 +110,8 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // Source 0 reaches {1, 2}; excluded source 1 does not reach 3.
-            vec![vec![to_bytes(&[0b0110])]]
+            vec![vec![EXPECTED_CSR_FORWARD_TRAVERSE_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -151,11 +135,54 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // After one forward step starting from {0}: frontier = {1, 2}.
-            vec![vec![to_bytes(&[0b0110])]]
+            vec![vec![EXPECTED_CSR_FORWARD_TRAVERSE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+}
+
+#[cfg(test)]
+pub(crate) fn cpu_ref(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    assert!(
+        row_offsets.len() == (node_count as usize) + 1,
+        "node_count + 1 CSR offsets required"
+    );
+    vyre_reference::composition_witness::csr_forward_traverse_witness(
+        node_count,
+        row_offsets,
+        col_indices,
+        edge_kind_mask,
+        frontier,
+        allow_mask,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn cpu_ref_into(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+    out: &mut Vec<u32>,
+) {
+    vyre_reference::composition_witness::csr_forward_traverse_witness_into(
+        node_count,
+        row_offsets,
+        col_indices,
+        edge_kind_mask,
+        frontier,
+        allow_mask,
+        out,
+    );
 }
 
 #[cfg(test)]

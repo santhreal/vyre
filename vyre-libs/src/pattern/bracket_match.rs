@@ -11,6 +11,11 @@
 
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+#[cfg(test)]
+pub(crate) use vyre_reference::composition_witness::{
+    bracket_match_witness as reference_bracket_match,
+    bracket_match_witness_into as reference_bracket_match_into,
+};
 
 /// Stable op id for the Tier 2.5 primitive.
 pub const BRACKET_MATCH_OP_ID: &str = "vyre-libs::matching::bracket_match";
@@ -256,7 +261,9 @@ fn bracket_match_parallel(
     )
 }
 
-
+const EXPECTED_BRACKET_MATCH_STACK_BYTES: [u8; 16] = [0; 16];
+const EXPECTED_BRACKET_MATCH_PAIRS_BYTES: [u8; 16] =
+    [3, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -268,8 +275,8 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[BRACKET_MATCH_NONE, BRACKET_MATCH_NONE, BRACKET_MATCH_NONE, BRACKET_MATCH_NONE]),
         ]]),
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
-            vyre_primitives::wire::pack_u32_slice(&[3, 2, 1, 0]),
+            EXPECTED_BRACKET_MATCH_STACK_BYTES.to_vec(),
+            EXPECTED_BRACKET_MATCH_PAIRS_BYTES.to_vec(),
         ]]),
     )
 }
@@ -279,9 +286,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cpu_ref_balanced_single_pair() {
+    fn reference_balanced_single_pair() {
         assert_eq!(
-            bracket_match_cpu_ref(
+            reference_bracket_match(
                 &[BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_KIND_CLOSE],
                 3
             ),
@@ -290,9 +297,9 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_nested_pairs() {
+    fn reference_nested_pairs() {
         assert_eq!(
-            bracket_match_cpu_ref(
+            reference_bracket_match(
                 &[
                     BRACKET_KIND_OPEN,
                     BRACKET_KIND_OPEN,
@@ -306,9 +313,9 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_unbalanced_extra_open() {
+    fn reference_unbalanced_extra_open() {
         assert_eq!(
-            bracket_match_cpu_ref(
+            reference_bracket_match(
                 &[BRACKET_KIND_OPEN, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE],
                 3
             ),
@@ -317,9 +324,9 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_unbalanced_extra_close() {
+    fn reference_unbalanced_extra_close() {
         assert_eq!(
-            bracket_match_cpu_ref(
+            reference_bracket_match(
                 &[BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE],
                 3
             ),
@@ -328,9 +335,9 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_depth_cap_truncates_extra_opens() {
+    fn reference_depth_cap_truncates_extra_opens() {
         assert_eq!(
-            bracket_match_cpu_ref(
+            reference_bracket_match(
                 &[
                     BRACKET_KIND_OPEN,
                     BRACKET_KIND_OPEN,
@@ -346,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_into_reuses_output_and_stack_storage() {
+    fn reference_into_reuses_output_and_stack_storage() {
         let mut out = Vec::with_capacity(16);
         out.extend_from_slice(&[7, 8, 9, 10, 11]);
         let mut stack = Vec::with_capacity(8);
@@ -354,7 +361,7 @@ mod tests {
         let out_cap = out.capacity();
         let stack_cap = stack.capacity();
 
-        bracket_match_cpu_ref_into(
+        reference_bracket_match_into(
             &[
                 BRACKET_KIND_OPEN,
                 BRACKET_KIND_OTHER,
@@ -372,10 +379,10 @@ mod tests {
         assert_eq!(
             stack,
             vec![3],
-            "Fix: bracket_match_cpu_ref_into must clear stale stack entries before each run and leave only currently-unmatched opens."
+            "Fix: reference_bracket_match_into must clear stale stack entries before each run and leave only currently-unmatched opens."
         );
 
-        bracket_match_cpu_ref_into(&[BRACKET_KIND_OTHER], 4, &mut out, &mut stack);
+        reference_bracket_match_into(&[BRACKET_KIND_OTHER], 4, &mut out, &mut stack);
         assert_eq!(out, vec![BRACKET_MATCH_NONE]);
         assert!(stack.is_empty());
         assert_eq!(out.capacity(), out_cap);
@@ -422,7 +429,7 @@ mod tests {
                 kinds.push(kind);
             }
 
-            let expected = bracket_match_cpu_ref(&kinds, kinds.len() as u32);
+            let expected = reference_bracket_match(&kinds, kinds.len() as u32);
             for (index, &pair) in expected.iter().enumerate() {
                 if pair == BRACKET_MATCH_NONE {
                     continue;

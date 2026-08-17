@@ -1,188 +1,143 @@
-//! Reference evaluator for [`RuleCondition`] / [`RuleFormula`] trees.
-//!
-//! Mirror of the GPU lowering in [`crate::rule::builder`] but runs the
-//! formula through the deterministic reference oracle. It exists for
-//! parity checks, CI gates, and unit tests that need rule outcomes
-//! without backend dispatch.
-//!
-//! The evaluator is `unsafe`-free, side-effect-free, and `O(formula
-//! size)`.
-//!
-//! # Example
-//!
-//! ```
-//! use vyre_libs::rule::{evaluate_formula, RuleCondition, RuleEvaluationContext, RuleFormula};
-//!
-//! struct Ctx;
-//! impl RuleEvaluationContext for Ctx {
-//!     fn pattern_count(&self, pattern_id: u32) -> u32 {
-//!         if pattern_id == 7 { 5 } else { 0 }
-//!     }
-//!     fn file_size(&self) -> u64 { 1024 }
-//! }
-//!
-//! let f = RuleFormula::and(
-//!     RuleFormula::condition(RuleCondition::PatternCountGte { pattern_id: 7, threshold: 3 }),
-//!     RuleFormula::condition(RuleCondition::FileSizeLt(2048)),
-//! );
-//! assert!(evaluate_formula(&f, &Ctx));
-//! ```
-
-use std::sync::Arc;
+//! Unit test adapter delegating to [`vyre_reference::composition_witness::evaluate_formula_witness`].
 
 use super::ast::{RuleCondition, RuleFormula};
+use vyre_reference::composition_witness::{
+    RuleConditionWitness, RuleEvaluationContextWitness, RuleFormulaWitness,
+};
 
-/// Evaluation context the reference evaluator queries when resolving each
-/// condition variant. Default impls return safe falsy values so a
-/// minimal consumer only has to implement the methods it actually
-/// uses.
+/// Evaluation context the reference evaluator queries when resolving each condition variant.
 pub trait RuleEvaluationContext {
-    /// Number of times pattern `pattern_id` matched in the current
-    /// record. Default: 0 (the pattern never matched). Override to
-    /// resolve `PatternExists` / `PatternCountGt` / `PatternCountGte`.
+    /// Number of times pattern `pattern_id` matched in the current record.
     fn pattern_count(&self, _pattern_id: u32) -> u32 {
         0
     }
 
-    /// File size in bytes for the current record. Default: 0.
-    /// Override to resolve `FileSize*` conditions.
+    /// File size in bytes for the current record.
     fn file_size(&self) -> u64 {
         0
     }
 
-    /// Resolve a named field value. Default: `None`. Override to
-    /// resolve `RegexMatch { field, .. }` / `SubstringMatch { haystack,
-    /// .. }` / `PrefixMatch { value, .. }` / `SuffixMatch { value, .. }`
-    /// / `SetMembership { value, .. }`.
-    ///
-    /// Returns the borrowed field text. Conditions that need the
-    /// caller's value directly carry it inline in the AST and don't
-    /// hit this method.
+    /// Resolve a named field value.
     fn field_value(&self, _name: &str) -> Option<&str> {
         None
     }
 }
 
-/// Evaluate a [`RuleFormula`] against `ctx`. Recursive over
-/// And/Or/Not nodes; returns the boolean verdict.
-#[must_use]
-pub fn evaluate_formula<C: RuleEvaluationContext + ?Sized>(formula: &RuleFormula, ctx: &C) -> bool {
-    match formula {
-        RuleFormula::Condition(cond) => evaluate_condition(cond, ctx),
-        RuleFormula::And(left, right) => {
-            // Short-circuit: don't evaluate `right` if `left` is false.
-            evaluate_formula(left, ctx) && evaluate_formula(right, ctx)
+impl From<&RuleCondition> for RuleConditionWitness {
+    fn from(cond: &RuleCondition) -> Self {
+        match cond {
+            RuleCondition::PatternExists { pattern_id } => Self::PatternExists {
+                pattern_id: *pattern_id,
+            },
+            RuleCondition::PatternCountGt {
+                pattern_id,
+                threshold,
+            } => Self::PatternCountGt {
+                pattern_id: *pattern_id,
+                threshold: *threshold,
+            },
+            RuleCondition::PatternCountGte {
+                pattern_id,
+                threshold,
+            } => Self::PatternCountGte {
+                pattern_id: *pattern_id,
+                threshold: *threshold,
+            },
+            RuleCondition::FileSizeLt(t) => Self::FileSizeLt(*t),
+            RuleCondition::FileSizeLte(t) => Self::FileSizeLte(*t),
+            RuleCondition::FileSizeGt(t) => Self::FileSizeGt(*t),
+            RuleCondition::FileSizeGte(t) => Self::FileSizeGte(*t),
+            RuleCondition::FileSizeEq(t) => Self::FileSizeEq(*t),
+            RuleCondition::FileSizeNe(t) => Self::FileSizeNe(*t),
+            RuleCondition::LiteralTrue => Self::LiteralTrue,
+            RuleCondition::LiteralFalse => Self::LiteralFalse,
+            RuleCondition::RegexMatch { field, pattern } => Self::RegexMatch {
+                field: field.clone(),
+                pattern: pattern.clone(),
+            },
+            RuleCondition::SubstringMatch { haystack, needle } => Self::SubstringMatch {
+                haystack: haystack.clone(),
+                needle: needle.clone(),
+            },
+            RuleCondition::PrefixMatch { value, prefix } => Self::PrefixMatch {
+                value: value.clone(),
+                prefix: prefix.clone(),
+            },
+            RuleCondition::SuffixMatch { value, suffix } => Self::SuffixMatch {
+                value: value.clone(),
+                suffix: suffix.clone(),
+            },
+            RuleCondition::RangeMatch { value, min, max } => Self::RangeMatch {
+                value: *value,
+                min: *min,
+                max: *max,
+            },
+            RuleCondition::SetMembership { value, set } => Self::SetMembership {
+                value: value.clone(),
+                set: set.clone(),
+            },
+            RuleCondition::FieldInSet { field, set } => Self::FieldInSet {
+                field: field.clone(),
+                set: set.clone(),
+            },
+            RuleCondition::Opaque(ext) => Self::Opaque(ext.clone()),
         }
-        RuleFormula::Or(left, right) => evaluate_formula(left, ctx) || evaluate_formula(right, ctx),
-        RuleFormula::Not(inner) => !evaluate_formula(inner, ctx),
     }
 }
 
-/// Evaluate a single [`RuleCondition`] against `ctx`. Pure function;
-/// no I/O, no allocation outside the regex case (see below).
-///
-/// `RegexMatch` compiles its pattern on every call. Callers that
-/// evaluate the same regex thousands of times should hoist the
-/// compile out of the rule by pre-computing a [`RuleCondition::Set
-/// Membership`] or wrapping a custom [`RuleCondition::Opaque`]
-/// extension that caches its own compiled regex.
-///
-/// `Opaque` extension conditions delegate via
-/// [`RuleConditionExt::evaluate_opaque`](vyre_foundation::extension::RuleConditionExt::evaluate_opaque); the trait passes a
-/// `&dyn Any` reference so extensions can downcast to whatever
-/// context type they require. The [`RuleEvaluationContext`] is
-/// passed via the `Any` payload by reference so an extension that
-/// needs the standard context can downcast to `&C`.
+impl From<&RuleFormula> for RuleFormulaWitness {
+    fn from(formula: &RuleFormula) -> Self {
+        match formula {
+            RuleFormula::Condition(cond) => Self::Condition(RuleConditionWitness::from(cond)),
+            RuleFormula::And(left, right) => Self::And(
+                Box::new(RuleFormulaWitness::from(left.as_ref())),
+                Box::new(RuleFormulaWitness::from(right.as_ref())),
+            ),
+            RuleFormula::Or(left, right) => Self::Or(
+                Box::new(RuleFormulaWitness::from(left.as_ref())),
+                Box::new(RuleFormulaWitness::from(right.as_ref())),
+            ),
+            RuleFormula::Not(inner) => {
+                Self::Not(Box::new(RuleFormulaWitness::from(inner.as_ref())))
+            }
+        }
+    }
+}
+
+struct ContextAdapter<'a, C: RuleEvaluationContext + ?Sized>(&'a C);
+
+impl<'a, C: RuleEvaluationContext + ?Sized> RuleEvaluationContextWitness for ContextAdapter<'a, C> {
+    fn pattern_count(&self, pattern_id: u32) -> u32 {
+        self.0.pattern_count(pattern_id)
+    }
+
+    fn file_size(&self) -> u64 {
+        self.0.file_size()
+    }
+
+    fn field_value(&self, name: &str) -> Option<&str> {
+        self.0.field_value(name)
+    }
+}
+
+/// Evaluate a [`RuleFormula`] against `ctx` by delegating to the canonical reference witness.
+#[must_use]
+pub fn evaluate_formula<C: RuleEvaluationContext + ?Sized>(formula: &RuleFormula, ctx: &C) -> bool {
+    let witness = RuleFormulaWitness::from(formula);
+    let adapter = ContextAdapter(ctx);
+    vyre_reference::composition_witness::evaluate_formula_witness(&witness, &adapter)
+}
+
+/// Evaluate a single [`RuleCondition`] against `ctx` by delegating to the canonical reference witness.
 #[must_use]
 pub fn evaluate_condition<C: RuleEvaluationContext + ?Sized>(
     condition: &RuleCondition,
     ctx: &C,
 ) -> bool {
-    match condition {
-        RuleCondition::PatternExists { pattern_id } => ctx.pattern_count(*pattern_id) > 0,
-        RuleCondition::PatternCountGt {
-            pattern_id,
-            threshold,
-        } => ctx.pattern_count(*pattern_id) > *threshold,
-        RuleCondition::PatternCountGte {
-            pattern_id,
-            threshold,
-        } => ctx.pattern_count(*pattern_id) >= *threshold,
-        RuleCondition::FileSizeLt(t) => ctx.file_size() < *t,
-        RuleCondition::FileSizeLte(t) => ctx.file_size() <= *t,
-        RuleCondition::FileSizeGt(t) => ctx.file_size() > *t,
-        RuleCondition::FileSizeGte(t) => ctx.file_size() >= *t,
-        RuleCondition::FileSizeEq(t) => ctx.file_size() == *t,
-        RuleCondition::FileSizeNe(t) => ctx.file_size() != *t,
-        RuleCondition::LiteralTrue => true,
-        RuleCondition::LiteralFalse => false,
-        RuleCondition::RegexMatch { field, pattern } => {
-            // AUDIT_2026-05-23: was compile-on-every-eval (regex::Regex::new).
-            // Added lazy cache. Long-term: replace with vyre AC kernel
-            // (vyre_libs::pattern::aho_corasick) or Opaque pre-compiled condition.
-            let Some(value) = ctx.field_value(field.as_ref()) else {
-                return false;
-            };
-            use std::collections::HashMap;
-            use std::sync::LazyLock;
-            use std::sync::Mutex;
-            static REGEX_CACHE: LazyLock<Mutex<HashMap<String, regex::Regex>>> =
-                LazyLock::new(|| Mutex::new(HashMap::new()));
-            let Ok(cache) = REGEX_CACHE.lock() else {
-                return false;
-            };
-            let re = cache.get(pattern.as_ref()).cloned();
-            drop(cache);
-            match re {
-                Some(re) => re.is_match(value),
-                None => match regex::Regex::new(pattern.as_ref()) {
-                    Ok(re) => {
-                        let Ok(mut cache) = REGEX_CACHE.lock() else {
-                            return false;
-                        };
-                        cache.insert(pattern.to_string(), re.clone());
-                        re.is_match(value)
-                    }
-                    Err(_) => false,
-                },
-            }
-        }
-        RuleCondition::SubstringMatch { haystack, needle } => ctx
-            .field_value(haystack.as_ref())
-            .map(|h| h.contains(needle.as_ref()))
-            .unwrap_or(false),
-        RuleCondition::PrefixMatch { value, prefix } => ctx
-            .field_value(value.as_ref())
-            .map(|v| v.starts_with(prefix.as_ref()))
-            .unwrap_or(false),
-        RuleCondition::SuffixMatch { value, suffix } => ctx
-            .field_value(value.as_ref())
-            .map(|v| v.ends_with(suffix.as_ref()))
-            .unwrap_or(false),
-        RuleCondition::RangeMatch { value, min, max } => *value >= *min && *value <= *max,
-        RuleCondition::SetMembership { value, set } => {
-            set.iter().map(Arc::as_ref).any(|m| m == value.as_ref())
-        }
-        RuleCondition::FieldInSet { field, set } => {
-            let Some(value) = ctx.field_value(field.as_ref()) else {
-                return false;
-            };
-            set.iter().map(Arc::as_ref).any(|m| m == value)
-        }
-        RuleCondition::Opaque(ext) => {
-            // Opaque extensions get a `Unit` `&dyn Any` because the
-            // standard `RuleEvaluationContext` cannot cross the
-            // 'static-required Any boundary as a borrow. Extensions
-            // that need the standard context should be migrated to
-            // a context-aware variant (future RuleConditionExt::
-            // evaluate_with_context); for now the reference evaluator
-            // just respects the upstream contract by passing the
-            // empty payload the GPU lowering also uses.
-            ext.evaluate_opaque(&() as &dyn std::any::Any)
-        }
-    }
+    let witness = RuleConditionWitness::from(condition);
+    let adapter = ContextAdapter(ctx);
+    vyre_reference::composition_witness::evaluate_condition_witness(&witness, &adapter)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

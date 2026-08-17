@@ -8,19 +8,19 @@
 //! file. This is the FIRST-EVER execution of the P2M/M2L/L2P kernels through a boundary that models the
 //! real backend.
 //!
-//! Contracts (audited CLEAN): each stage binds two RO inputs + one RW output = 3 IC, decode
-//! outputs[0]. These are f32 kernels; their in-crate f64 reference oracles are `#[cfg(test)]`-only
-//! (not reachable from an integration test), so the oracle is reimplemented INLINE here in f64 from the
-//! documented zeroth-order semantics (verified against the module's `#[cfg(test)]` refs):
-//!   P2M: `moments[cell] = Σ_{r: assignment[r]==cell} scores[r]`
-//!   M2L: `local[t] = Σ_{s != t} moments[s] / max(dist[t*n+s], 1e-12)`  (skips the self-cell)
-//!   L2P: `region_out[r] = cell_local[assignment[r]]`  (zeroth-order = pass-through gather)
+//! Contracts: each stage binds two read-only inputs and one read-write output.
+//! Independent f64 expectations come from `vyre-reference`'s canonical sequential witnesses:
+//! P2M aggregates scores by cell, M2L translates every non-self cell pair, and L2P gathers
+//! each assigned cell local into its region output.
 //! f32 GPU vs f64 oracle → comparison uses a small numeric TOLERANCE (as the kfac/natural_gradient/
 //! sinkhorn f32 suites do). Inputs are bounded (and M2L distances kept >= 1 so the reciprocal is
 //! well-conditioned) so rounding stays far below tolerance while a wrong kernel fails by orders.
 
 use vyre_libs::solvers::fmm_polyhedral_compress::{
     aggregate_to_cells_via, evaluate_at_regions_via, translate_to_targets_via,
+};
+use vyre_reference::composition_witness::{
+    l2p_zeroth_all_witness, m2l_zeroth_all_witness, p2m_zeroth_moment_witness,
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
@@ -42,38 +42,23 @@ fn approx_slice(got: &[f32], want: &[f64], ctx: &str) {
     }
 }
 
-/// Inline f64 P2M oracle: zeroth moment = sum of contained region scores.
+/// Reference-owned f64 P2M oracle.
 fn p2m_oracle(scores: &[f32], cell_assignment: &[u32]) -> Vec<f64> {
-    let n_cells = cell_assignment.iter().copied().max().unwrap_or(0) as usize + 1;
-    let mut moments = vec![0.0f64; n_cells];
-    for (i, &cell) in cell_assignment.iter().enumerate() {
-        moments[cell as usize] += f64::from(scores[i]);
-    }
-    moments
+    let charges_f64: Vec<f64> = scores.iter().map(|&s| f64::from(s)).collect();
+    p2m_zeroth_moment_witness(&charges_f64, cell_assignment)
 }
 
-/// Inline f64 M2L oracle: local[t] = Σ_{s != t} moments[s] / max(dist[t*n+s], 1e-12).
+/// Reference-owned f64 M2L oracle.
 fn m2l_oracle(moments: &[f32], distances: &[f32]) -> Vec<f64> {
-    let n = moments.len();
-    let mut local = vec![0.0f64; n];
-    for t in 0..n {
-        for s in 0..n {
-            if t == s {
-                continue;
-            }
-            let d = f64::from(distances[t * n + s]).max(1e-12);
-            local[t] += f64::from(moments[s]) / d;
-        }
-    }
-    local
+    let moments_f64: Vec<f64> = moments.iter().map(|&value| f64::from(value)).collect();
+    let distances_f64: Vec<f64> = distances.iter().map(|&value| f64::from(value)).collect();
+    m2l_zeroth_all_witness(&moments_f64, &distances_f64)
 }
 
-/// Inline f64 L2P oracle: pass-through gather.
+/// Reference-owned f64 L2P oracle.
 fn l2p_oracle(cell_local: &[f32], cell_assignment: &[u32]) -> Vec<f64> {
-    cell_assignment
-        .iter()
-        .map(|&c| f64::from(cell_local[c as usize]))
-        .collect()
+    let local_f64: Vec<f64> = cell_local.iter().map(|&value| f64::from(value)).collect();
+    l2p_zeroth_all_witness(&local_f64, cell_assignment, cell_assignment.len() as u32)
 }
 
 #[test]

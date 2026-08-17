@@ -5,9 +5,9 @@
 use crate::builder::reduction::ReductionComposer;
 #[cfg(test)]
 use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::Program;
 #[cfg(test)]
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-use vyre_foundation::ir::Program;
 
 const OP_ID: &str = "vyre-libs::math::reduce_variance";
 #[cfg(test)]
@@ -109,8 +109,9 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_f32_slice;
-            vec![vec![to_bytes(&[0.0_f32])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // variance of constant array = 0.0_f32
+            ]]]
         }),
     )
     .with_category("math")

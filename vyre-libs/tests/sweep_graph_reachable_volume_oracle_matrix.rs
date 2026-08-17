@@ -8,7 +8,7 @@ mod graph_sweep_fixtures;
 
 use std::collections::{HashSet, VecDeque};
 
-use vyre_libs::graph::reachable::reachable;
+use vyre_reference::composition_witness::reachable_witness as reachable;
 
 fn generated_edges(seed: u64, node_count: u32) -> Vec<(u32, u32)> {
     let mut rng = csr_sweep::Rng::new((seed) | 1);

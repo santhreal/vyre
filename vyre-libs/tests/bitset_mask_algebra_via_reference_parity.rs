@@ -15,10 +15,15 @@
 
 use vyre_libs::encoding::bitset_mask_algebra::{
     mask_and_via, mask_clear_bit_via, mask_contains_via, mask_equal_via, mask_not_via, mask_or_via,
-    mask_set_bit_via, mask_subset_of_via, mask_test_bit_via, mask_xor_via, reference_mask_and,
-    reference_mask_clear_bit, reference_mask_contains, reference_mask_equal, reference_mask_not,
-    reference_mask_or, reference_mask_set_bit, reference_mask_subset_of, reference_mask_test_bit,
-    reference_mask_xor,
+    mask_set_bit_via, mask_subset_of_via, mask_test_bit_via, mask_xor_via,
+};
+use vyre_reference::composition_witness::{
+    bitset_and_witness as reference_mask_and, bitset_clear_bit_witness as reference_mask_clear_bit,
+    bitset_contains_witness as reference_mask_contains,
+    bitset_contains_witness as reference_mask_test_bit,
+    bitset_equal_witness as reference_mask_equal, bitset_not_witness as reference_mask_not,
+    bitset_or_witness as reference_mask_or, bitset_set_bit_witness as reference_mask_set_bit,
+    bitset_subset_of_witness as reference_mask_subset_of, bitset_xor_witness as reference_mask_xor,
 };
 
 use vyre_driver_reference::ReferenceEvalDispatcher;

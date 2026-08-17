@@ -1,7 +1,7 @@
 //! CSR frontier expansion over an in-place accumulator bitset.
 
 mod body;
-mod cpu_ref;
+#[cfg(test)]
 mod dispatch_plan;
 mod launch_plan;
 mod layout;
@@ -11,6 +11,9 @@ mod program_parallel;
 mod program_parallel_batch;
 mod program_parallel_batch_global;
 mod program_serial;
+#[cfg(test)]
+#[path = "../../../tests/internal/graph/csr_forward_or_changed/reference_adapter.rs"]
+mod reference_adapter;
 mod validate;
 
 mod registry;
@@ -25,8 +28,8 @@ pub use body::{
 };
 pub use launch_plan::CsrForwardOrChangedLaunchPlan;
 pub use layout::{
-    csr_forward_or_changed_parallel_batch_grid, csr_forward_or_changed_parallel_grid,
-    CsrForwardOrChangedProgramKey, CsrForwardOrChangedStaticInputKey,
+    csr_forward_or_changed_parallel_grid, CsrForwardOrChangedProgramKey,
+    CsrForwardOrChangedStaticInputKey,
 };
 pub use plan::plan_csr_forward_or_changed_launch;
 pub use program_dispatch::build_csr_forward_or_changed_dispatch_program;
@@ -50,9 +53,15 @@ pub use validate::{copy_csr_forward_seed_frontier_into, validate_csr_forward_or_
 
 #[cfg(test)]
 pub(crate) use {
-    cpu_ref::cpu_ref_into,
-    layout::{CsrForwardOrChangedLayout, CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE},
+    layout::{
+        csr_forward_or_changed_parallel_batch_grid, CsrForwardOrChangedLayout,
+        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE,
+    },
     plan::plan_csr_forward_or_changed_dispatch,
     program_parallel_batch_global::try_csr_forward_or_changed_parallel_batch_global_dynamic_slot,
+    reference_adapter::{
+        cpu_ref, cpu_ref_closure, cpu_ref_closure_into, cpu_ref_into,
+        reference_forward_closure_via_change_flag, reference_forward_step_with_change_flag,
+    },
     validate::validate_csr_inputs,
 };

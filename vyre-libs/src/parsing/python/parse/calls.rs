@@ -1,8 +1,5 @@
 use super::walk::{pack_sparse_tokens, DottedName, TokenPass};
-use super::{
-    find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words,
-    write_words,
-};
+use super::{find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words};
 use crate::parsing::python::{CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS};
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_spec::python_token::{
@@ -230,6 +227,33 @@ pub fn python312_extract_calls(
     pass.program(buffers, body)
 }
 
+const EXPECTED_CALLS_RECORDS_BYTES: [u8; 448] = [
+    6, 0, 0, 0, 3, 0, 0, 0, 9, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+];
+const EXPECTED_CALL_COUNTS_BYTES: [u8; 4] = [7, 0, 0, 0];
+const EXPECTED_KWARGS_RECORDS_BYTES: [u8; 128] = [
+    10, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+];
+const EXPECTED_KW_COUNTS_BYTES: [u8; 4] = [2, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -237,7 +261,12 @@ inventory::submit! {
             "tok_types", "tok_starts", "tok_lens", "out_calls", "out_call_counts", "out_kwargs", "out_kw_counts", 16
         ),
         Some(call_fixture_inputs),
-        Some(call_fixture_expected),
+        Some(|| vec![vec![
+            EXPECTED_CALLS_RECORDS_BYTES.to_vec(),
+            EXPECTED_CALL_COUNTS_BYTES.to_vec(),
+            EXPECTED_KWARGS_RECORDS_BYTES.to_vec(),
+            EXPECTED_KW_COUNTS_BYTES.to_vec(),
+        ]]),
     )
     .with_category("parsing")
 }
@@ -264,20 +293,5 @@ fn call_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         vec![0u8; 4],
         vec![0u8; 16 * KWARG_RECORD_WORDS as usize * 4],
         vec![0u8; 4],
-    ]]
-}
-
-fn call_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    let mut calls = vec![0u8; 16 * CALL_RECORD_WORDS as usize * 4];
-    write_words(&mut calls, &[6, 3, 9, 13, 0, 1, 1]);
-
-    let mut kwargs = vec![0u8; 16 * KWARG_RECORD_WORDS as usize * 4];
-    write_words(&mut kwargs, &[10, 1]);
-
-    vec![vec![
-        calls,
-        CALL_RECORD_WORDS.to_le_bytes().to_vec(),
-        kwargs,
-        KWARG_RECORD_WORDS.to_le_bytes().to_vec(),
     ]]
 }

@@ -126,7 +126,7 @@ impl From<NfaToDfaError> for RegexDfaError {
 /// The match-append strategy is the default `append_match_subgroup`
 /// (I.17 - one atomic per subgroup leader). On backends that can't
 /// lower `subgroup_ballot` / `subgroup_shuffle` yet, use
-/// [`build_regex_dfa_pipeline_with_subgroup_coalesce`] with
+/// [`build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce`] with
 /// `use_subgroup_coalesce = false`.
 ///
 /// # Errors
@@ -136,7 +136,12 @@ pub fn build_regex_dfa_pipeline(
     max_matches: u32,
     max_dfa_states: usize,
 ) -> Result<RegexDfaPipeline, RegexDfaError> {
-    build_regex_dfa_pipeline_with_subgroup_coalesce(patterns, max_matches, max_dfa_states, true)
+    build_regex_dfa_pipeline_with_policy(
+        patterns,
+        max_matches,
+        max_dfa_states,
+        RegexReplayPolicy::default(),
+    )
 }
 /// Build a regex DFA pipeline with an explicit open-ended replay budget.
 ///
@@ -169,32 +174,6 @@ pub fn build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce(
     use_subgroup_coalesce: bool,
 ) -> Result<RegexDfaPipeline, RegexDfaError> {
     let regex_set = compile_regex_set_with_policy(patterns, replay_policy)?;
-    finish_regex_dfa_pipeline(
-        regex_set,
-        patterns,
-        max_matches,
-        max_dfa_states,
-        use_subgroup_coalesce,
-        true,
-    )
-}
-
-/// [`build_regex_dfa_pipeline`] with explicit `use_subgroup_coalesce`
-/// control. Pass `false` on backends whose IR lowering cannot yet emit
-/// `subgroup_ballot` + `subgroup_shuffle`, which a backend without them
-/// rejects during canonical pre-emit lowering. Either
-/// flag produces bit-identical match output; the difference is purely
-/// the atomic-coalescing strategy at hit-buffer append time.
-///
-/// # Errors
-/// See [`RegexDfaError`].
-pub fn build_regex_dfa_pipeline_with_subgroup_coalesce(
-    patterns: &[&str],
-    max_matches: u32,
-    max_dfa_states: usize,
-    use_subgroup_coalesce: bool,
-) -> Result<RegexDfaPipeline, RegexDfaError> {
-    let regex_set = compile_regex_set(patterns)?;
     finish_regex_dfa_pipeline(
         regex_set,
         patterns,
@@ -352,6 +331,100 @@ pub fn build_regex_dfa_shards_unanchored(
         max_matches,
         max_dfa_states,
         build_regex_dfa_unanchored,
+    )
+}
+
+/// Canonical op id for regex DFA scan.
+pub const REGEX_DFA_OP_ID: &str = "vyre-libs::matching::regex_dfa";
+
+/// Build a regex DFA scan [`Program`] from regex sources.
+///
+/// Convenience wrapper over [`build_regex_dfa_pipeline`] returning the
+/// compiled IR [`Program`] directly.
+///
+/// # Errors
+/// Forwards [`RegexDfaError`].
+pub fn regex_dfa_program(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+) -> Result<Program, RegexDfaError> {
+    build_regex_dfa_pipeline(patterns, max_matches, max_dfa_states).map(|p| p.program)
+}
+
+/// Build an unanchored regex DFA scan [`Program`] from regex sources.
+///
+/// Convenience wrapper over [`build_regex_dfa_unanchored`] returning the
+/// compiled IR [`Program`] directly.
+///
+/// # Errors
+/// Forwards [`RegexDfaError`].
+pub fn regex_dfa_unanchored_program(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+) -> Result<Program, RegexDfaError> {
+    build_regex_dfa_unanchored(patterns, max_matches, max_dfa_states).map(|p| p.program)
+}
+
+/// Build a list of regex DFA scan [`Program`]s for sharded pattern sets.
+///
+/// Convenience wrapper over [`build_regex_dfa_shards`] returning the
+/// compiled IR [`Program`]s directly.
+///
+/// # Errors
+/// Forwards [`RegexDfaError`].
+pub fn regex_dfa_sharded_programs(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+) -> Result<Vec<Program>, RegexDfaError> {
+    let shards = build_regex_dfa_shards(patterns, max_matches, max_dfa_states)?;
+    Ok(shards
+        .into_iter()
+        .map(|shard| shard.pipeline.program)
+        .collect())
+}
+
+/// Build a list of unanchored regex DFA scan [`Program`]s for sharded pattern sets.
+///
+/// Convenience wrapper over [`build_regex_dfa_shards_unanchored`] returning the
+/// compiled IR [`Program`]s directly.
+///
+/// # Errors
+/// Forwards [`RegexDfaError`].
+pub fn regex_dfa_unanchored_sharded_programs(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+) -> Result<Vec<Program>, RegexDfaError> {
+    let shards = build_regex_dfa_shards_unanchored(patterns, max_matches, max_dfa_states)?;
+    Ok(shards
+        .into_iter()
+        .map(|shard| shard.pipeline.program)
+        .collect())
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        REGEX_DFA_OP_ID,
+        || {
+            regex_dfa_program(&["[a-z]+"], 64, 256)
+                .expect("Fix: canonical fixture regex DFA must compile")
+        },
+        Some(|| {
+            let pipeline = build_regex_dfa_pipeline(&["[a-z]+"], 64, 256)
+                .expect("Fix: canonical fixture regex DFA must compile");
+            vec![vec![
+                vec![0u8; 64],
+                vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.transitions),
+                vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_offsets),
+                vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_records),
+                vyre_primitives::wire::pack_u32_slice(&pipeline.pattern_lengths),
+                vec![0u8; 4],
+            ]]
+        }),
+        None,
     )
 }
 
@@ -550,7 +623,8 @@ mod tests {
         let mut state = 0u32;
         let mut ends = Vec::new();
         for (i, &b) in haystack.iter().enumerate() {
-            state = dfa.transitions[crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
+            state = dfa.transitions
+                [crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
             if dfa.accept[state as usize] != 0 {
                 ends.push(i + 1);
             }
@@ -574,7 +648,8 @@ mod tests {
         let mut prev_end = 0usize;
         let mut prev_accept = false;
         for (i, &b) in haystack.iter().enumerate() {
-            state = dfa.transitions[crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
+            state = dfa.transitions
+                [crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
             let accept = dfa.accept[state as usize] != 0;
             if prev_accept && !accept {
                 // The accepting run ended: `prev_end` was its maximal end.
@@ -631,7 +706,7 @@ mod tests {
         let dfa = build_regex_dfa_unanchored(&["ghp_[A-Za-z0-9]{36}"], 1024, 16384)
             .expect("compiles")
             .dfa;
-        // Exact missed content from a downstream cpu_parity gate (file 120).
+        // Exact missed content from a downstream parity gate (file 120).
         let hay = b"at = \"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\"";
         let ends = single_pass_accept_ends(&dfa, hay);
         assert_eq!(
@@ -647,7 +722,7 @@ mod tests {
     /// the megakernel dispatch, not this primitive's DFA construction.
     #[test]
     fn unanchored_dfa_finds_all_parity_gate_misses_single_pass() {
-        // (pattern, exact missed match content from the cpu_parity gate run)
+        // (pattern, exact missed match content from the parity gate run)
         let cases: &[(&str, &[u8])] = &[
             (
                 "ghp_[A-Za-z0-9]{36}",
@@ -834,7 +909,8 @@ mod tests {
         let mut state = 0u32;
         let mut accepted = false;
         for &b in b"xxabc" {
-            state = pipeline.dfa.transitions[crate::builder::TableStateMachineComposer::flat_byte_index(state as u32, b)];
+            state = pipeline.dfa.transitions
+                [crate::builder::TableStateMachineComposer::flat_byte_index(state as u32, b)];
             if pipeline.dfa.accept[state as usize] != 0 {
                 accepted = true;
             }
@@ -853,7 +929,8 @@ mod tests {
         let mut state = 0u32;
         let mut hits = Vec::new();
         for (i, &b) in hay.iter().enumerate() {
-            state = dfa.transitions[crate::builder::TableStateMachineComposer::flat_byte_index(state as u32, b)];
+            state = dfa.transitions
+                [crate::builder::TableStateMachineComposer::flat_byte_index(state as u32, b)];
             let s = state as usize;
             let lo = dfa.output_offsets[s] as usize;
             let hi = dfa.output_offsets[s + 1] as usize;
@@ -985,5 +1062,22 @@ mod tests {
             None,
             "a state-budget overflow is not a registry unsupported-construct"
         );
+    }
+
+    #[test]
+    fn regex_dfa_program_builders_produce_valid_ir() {
+        let prog =
+            regex_dfa_program(&["[a-z]+"], 64, 256).expect("anchored regex DFA program builds");
+        assert!(!prog.buffers().is_empty());
+        let prog_unanchored = regex_dfa_unanchored_program(&["[a-z]+"], 64, 256)
+            .expect("unanchored regex DFA program builds");
+        assert!(!prog_unanchored.buffers().is_empty());
+        let sharded = regex_dfa_sharded_programs(&["[a-z]+", "[0-9]+"], 64, 256)
+            .expect("sharded regex DFA programs build");
+        assert!(!sharded.is_empty());
+        let unanchored_sharded =
+            regex_dfa_unanchored_sharded_programs(&["[a-z]+", "[0-9]+"], 64, 256)
+                .expect("unanchored sharded programs build");
+        assert!(!unanchored_sharded.is_empty());
     }
 }

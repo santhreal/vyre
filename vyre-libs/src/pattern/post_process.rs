@@ -8,7 +8,88 @@
 // Every item that names these is a host oracle, gated the same way, so the
 // imports carry the gate too rather than making a default build of this module
 // reach a CPU reference.
+#[cfg(test)]
+use crate::pattern::RegionTriple;
+#[cfg(test)]
+use vyre_foundation::match_result::ByteRange;
+#[cfg(test)]
+fn convert_match(
+    m: vyre_reference::composition_witness::WitnessPostProcessedMatch,
+) -> PostProcessedMatch {
+    PostProcessedMatch {
+        pattern_id: m.pattern_id,
+        start: m.start,
+        end: m.end,
+        entropy_bits_per_byte: m.entropy_bits_per_byte,
+        confidence: m.confidence,
+    }
+}
 
+#[cfg(test)]
+fn convert_err(
+    e: vyre_reference::composition_witness::WitnessPostProcessError,
+) -> PostProcessError {
+    match e {
+        vyre_reference::composition_witness::WitnessPostProcessError::InvalidRange {
+            pattern_id,
+            start,
+            end,
+            haystack_len,
+        } => PostProcessError::InvalidRange {
+            pattern_id,
+            start,
+            end,
+            haystack_len,
+        },
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn try_reference_post_process(
+    matches: &[ByteRange],
+    haystack: &[u8],
+) -> Result<Vec<PostProcessedMatch>, PostProcessError> {
+    vyre_reference::composition_witness::try_match_post_process_witness(matches, haystack)
+        .map(|vec| vec.into_iter().map(convert_match).collect())
+        .map_err(convert_err)
+}
+
+#[cfg(test)]
+pub(crate) fn try_reference_post_process_into(
+    matches: &[ByteRange],
+    haystack: &[u8],
+    triples: &mut Vec<RegionTriple>,
+    output: &mut Vec<PostProcessedMatch>,
+) -> Result<(), PostProcessError> {
+    triples.clear();
+    output.clear();
+    vyre_reference::composition_witness::try_match_post_process_records_into(
+        matches,
+        haystack,
+        |pattern_id, start, end, entropy_bits_per_byte, confidence| {
+            triples.push(RegionTriple::new(pattern_id, start, end));
+            output.push(PostProcessedMatch {
+                pattern_id,
+                start,
+                end,
+                entropy_bits_per_byte,
+                confidence,
+            });
+        },
+    )
+    .map_err(convert_err)?;
+    Ok(())
+}
+
+#[cfg(test)]
+#[must_use]
+pub(crate) fn reference_post_process(
+    matches: &[ByteRange],
+    haystack: &[u8],
+) -> Vec<PostProcessedMatch> {
+    try_reference_post_process(matches, haystack)
+        .unwrap_or_else(|err| panic!("post-process contract failed: {err}"))
+}
 
 /// Post-processing contract violation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,10 +146,6 @@ pub struct PostProcessedMatch {
     /// data.
     pub confidence: f32,
 }
-
-
-
-
 
 #[cfg(test)]
 mod tests {

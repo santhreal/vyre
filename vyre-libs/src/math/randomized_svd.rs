@@ -134,14 +134,6 @@ pub fn try_randomized_projection_step(
     ))
 }
 
-
-
-
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -154,10 +146,10 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-                2u32 << 16,
-                3u32 << 16,
-            ])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x02, 0x00, // 2 << 16
+                0x00, 0x00, 0x03, 0x00, // 3 << 16
+            ]]]
         }),
     )
 }
@@ -165,6 +157,79 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_randomized_projection_step_cpu(
+        a: &[f64],
+        omega: &[f64],
+        m: u32,
+        n: u32,
+        l: u32,
+    ) -> Result<Vec<f64>, String> {
+        Ok(independent_projection(
+            a, omega, m as usize, n as usize, l as usize,
+        ))
+    }
+
+    fn randomized_projection_step_cpu_into(
+        a: &[f64],
+        omega: &[f64],
+        m: u32,
+        n: u32,
+        l: u32,
+        y: &mut Vec<f64>,
+    ) {
+        let res = independent_projection(a, omega, m as usize, n as usize, l as usize);
+        y.clear();
+        y.extend_from_slice(&res);
+    }
+
+    fn randomized_projection_step_cpu(
+        a: &[f64],
+        omega: &[f64],
+        m: u32,
+        n: u32,
+        l: u32,
+    ) -> Vec<f64> {
+        independent_projection(a, omega, m as usize, n as usize, l as usize)
+    }
+
+    fn modified_gram_schmidt_cpu_into(y: &[f64], m: u32, l: u32, q: &mut Vec<f64>) {
+        let m = m as usize;
+        let l = l as usize;
+        let mut cols = vec![vec![0.0; m]; l];
+        for j in 0..l {
+            for i in 0..m {
+                cols[j][i] = y.get(i * l + j).copied().unwrap_or(0.0);
+            }
+        }
+        for j in 0..l {
+            let norm_sq: f64 = cols[j].iter().map(|&v| v * v).sum();
+            let norm = norm_sq.sqrt();
+            if norm > 1e-12 {
+                for i in 0..m {
+                    cols[j][i] /= norm;
+                }
+            }
+            for k in (j + 1)..l {
+                let dot: f64 = (0..m).map(|i| cols[j][i] * cols[k][i]).sum();
+                for i in 0..m {
+                    cols[k][i] -= dot * cols[j][i];
+                }
+            }
+        }
+        q.clear();
+        for i in 0..m {
+            for j in 0..l {
+                q.push(cols[j][i]);
+            }
+        }
+    }
+
+    fn modified_gram_schmidt_cpu(y: &[f64], m: u32, l: u32) -> Vec<f64> {
+        let mut q = Vec::new();
+        modified_gram_schmidt_cpu_into(y, m, l, &mut q);
+        q
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())

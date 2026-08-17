@@ -50,32 +50,18 @@ pub fn inverse_sqrt_f32(input: &str, out: &str, n: u32) -> Program {
     )
 }
 
-fn cpu_ref(input: &[f32]) -> Vec<u8> {
-    pack_f32(
-        &input
-            .iter()
-            .map(|&x| {
-                let safe_x = if x.is_finite() && x > f32::MIN_POSITIVE {
-                    x
-                } else {
-                    f32::MIN_POSITIVE
-                };
-                1.0 / safe_x.sqrt()
-            })
-            .collect::<Vec<_>>(),
-    )
-}
-
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
     let input = vec![1.0f32, 4.0, 9.0, 16.0];
     let len = input.len() * 4;
     vec![vec![pack_f32(&input), vec![0u8; len]]]
 }
 
-fn expected_output() -> Vec<Vec<Vec<u8>>> {
-    let input = vec![1.0f32, 4.0, 9.0, 16.0];
-    vec![vec![cpu_ref(&input)]]
-}
+const EXPECTED_INVERSE_SQRT_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x3f, // 1.0f32
+    0x00, 0x00, 0x00, 0x3f, // 0.5f32
+    0xab, 0xaa, 0xaa, 0x3e, // f32::from_bits(0x3eaaaaab)
+    0x00, 0x00, 0x80, 0x3e, // 0.25f32
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::intrinsic(
@@ -83,7 +69,7 @@ inventory::submit! {
         crate::hardware::catalog::F32_UNARY_SIGNATURE,
         Some(|| inverse_sqrt_f32("input", "out", 4)),
         Some(test_inputs),
-        Some(expected_output),
+        Some(|| vec![vec![EXPECTED_INVERSE_SQRT_OUTPUT_BYTES.to_vec()]]),
     )
     .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE)
     .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
@@ -106,6 +92,22 @@ mod tests {
     use super::*;
     use crate::hardware::{lcg_f32, run_program};
 
+    fn test_cpu_ref(input: &[f32]) -> Vec<u8> {
+        pack_f32(
+            &input
+                .iter()
+                .map(|&x| {
+                    let safe_x = if x.is_finite() && x > f32::MIN_POSITIVE {
+                        x
+                    } else {
+                        f32::MIN_POSITIVE
+                    };
+                    1.0 / safe_x.sqrt()
+                })
+                .collect::<Vec<_>>(),
+        )
+    }
+
     fn assert_case(input: &[f32]) {
         let n = input.len() as u32;
         let program = inverse_sqrt_f32("input", "out", n.max(1));
@@ -113,7 +115,7 @@ mod tests {
             &program,
             vec![pack_f32(input), vec![0u8; (n.max(1) * 4) as usize]],
         );
-        assert_eq!(outputs, vec![cpu_ref(input)]);
+        assert_eq!(outputs, vec![test_cpu_ref(input)]);
     }
 
     #[test]
@@ -146,5 +148,13 @@ mod tests {
             f32::from_bits(1),
             f32::MIN_POSITIVE,
         ]);
+    }
+
+    #[test]
+    fn registration_fixture_matches_exact_byte_constant() {
+        assert_eq!(
+            EXPECTED_INVERSE_SQRT_OUTPUT_BYTES.to_vec(),
+            test_cpu_ref(&[1.0, 4.0, 9.0, 16.0])
+        );
     }
 }

@@ -107,10 +107,10 @@ pub fn backdoor_descendants_check(
     )
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::backdoor_descendants_check_witness as backdoor_descendants_check_cpu;
 
     #[test]
     fn cpu_disjoint_z_passes() {

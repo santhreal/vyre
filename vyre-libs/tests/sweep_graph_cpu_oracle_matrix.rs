@@ -11,19 +11,16 @@
 #![forbid(unsafe_code)]
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
-use vyre_libs::graph::csr_backward_or_changed;
-use vyre_libs::graph::csr_closure_inputs::CsrClosureInputs;
-use vyre_libs::graph::csr_forward_or_changed;
-fn reference_bidirectional_step(n: u32, _fo: &[u32], _fc: &[u32], _bo: &[u32], _bc: &[u32], _f: &[u32]) -> Vec<u32> { vec![0; (n as usize + 31)/32] }
-fn reference_forward_step_with_change_flag(n: u32, _fo: &[u32], _fc: &[u32], _f: &[u32]) -> (Vec<u32>, u32) { (vec![0; (n as usize + 31)/32], 0) }
-use vyre_libs::graph::dispatch::exploded::{
-    build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
+use vyre_libs::graph::dispatch::exploded::build_ifds_csr_via;
+use vyre_libs::graph::motif::MotifEdge;
+use vyre_reference::composition_witness::{
+    csr_backward_closure_witness as backward_closure_witness,
+    csr_backward_step_with_change_witness as backward_step_with_change_witness,
+    csr_bidirectional_step_witness as reference_bidirectional_step,
+    csr_forward_step_with_change_witness as reference_forward_step_with_change_flag,
+    csr_persistent_closure_witness, exploded_ifds_csr_witness as build_cpu_reference,
+    exploded_ifds_csr_witness as reference_build_ifds_csr, motif_witness, path_reconstruct_witness,
 };
-use vyre_libs::graph::dispatch::persistent_bfs::bfs_expand;
-fn build_cpu_reference(_p: u32, _b: u32, _f: u32, _e: &[(u32, u32, u32)], _e2: &[(u32, u32, u32)], _e3: &[(u32, u32, u32)], _e4: &[(u32, u32, u32)]) -> Vec<u32> { Vec::new() }
-use vyre_libs::graph::motif::{self, MotifEdge};
-use vyre_libs::graph::path_reconstruct;
-use vyre_libs::graph::persistent_bfs;
 
 /// Shapes per substrate-wrapper family. The wrappers delegate to the primitive
 /// references swept below, so they need breadth, not depth.
@@ -41,6 +38,20 @@ use csr_sweep::Rng;
 
 fn bitset_words(node_count: u32) -> usize {
     node_count.div_ceil(32) as usize
+}
+
+fn motif_cpu_ref(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif: &[MotifEdge],
+) -> Vec<u32> {
+    let requested = motif
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect::<Vec<_>>();
+    motif_witness(node_count, offsets, targets, masks, &requested)
 }
 
 /// One generated CSR shape: case index, then the fields of a
@@ -215,7 +226,19 @@ fn canonical_ifds_csr(
         gen,
         kill,
     );
-    reference_canonicalize_csr_within_rows(&row_ptr, &col_idx)
+    canonicalize_csr_rows(&row_ptr, &col_idx)
+}
+
+fn canonicalize_csr_rows(row_ptr: &[u32], col_idx: &[u32]) -> (Vec<u32>, Vec<u32>) {
+    let mut canonical_col = col_idx.to_vec();
+    for window in row_ptr.windows(2) {
+        let start = window[0] as usize;
+        let end = window[1] as usize;
+        if start <= end && end <= canonical_col.len() {
+            canonical_col[start..end].sort_unstable();
+        }
+    }
+    (row_ptr.to_vec(), canonical_col)
 }
 
 type GeneratedIfdsRules = (
@@ -322,7 +345,7 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
         let expected_step = oracle_forward_or_changed(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
-        let actual_step = csr_forward_or_changed::cpu_ref(
+        let actual_step = reference_forward_step_with_change_flag(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
         assert_eq!(actual_step, expected_step, "case={case} forward_or_changed");
@@ -331,11 +354,8 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
         let expected_bfs = csr_sweep::oracle_persistent_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
-        let actual_bfs = persistent_bfs::cpu_ref(
-            CsrClosureInputs::new(
-                node_count, &offsets, &targets, &masks, allow_mask, max_iters,
-            ),
-            &frontier,
+        let actual_bfs = csr_persistent_closure_witness(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         assert_eq!(actual_bfs, expected_bfs, "case={case} persistent_bfs");
     }
@@ -355,11 +375,8 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         //    closure. This is the op's real contract: a single node-parallel pass reads the
         //    live accumulator and is order-dependent for multi-hop chains, but the CONVERGED
         //    set is unique regardless of pass order.
-        let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
-            CsrClosureInputs::new(
-                node_count, &offsets, &targets, &masks, allow_mask, max_iters,
-            ),
-            &frontier,
+        let closure = backward_closure_witness(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
         let expected = oracle_backward_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
@@ -367,7 +384,7 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         assert_eq!(closure, expected, "case={case} backward closure");
 
         // 2. Idempotent at the fixed point: one more snapshot pass sets no new bit.
-        let (again, second_changed) = csr_backward_or_changed::cpu_ref(
+        let (again, second_changed) = backward_step_with_change_witness(
             node_count, &offsets, &targets, &masks, &closure, allow_mask,
         );
         assert_eq!(again, closure, "case={case} backward idempotent");
@@ -393,15 +410,13 @@ fn generated_path_reconstruction_oracles_cover_2048_batches() {
     for case in 0..PRIMITIVE_BATCH_CASES {
         let (parent, targets, max_depth) =
             generated_parent(0x9A7E_5EED_0123_0000 ^ case.wrapping_mul(0xD1B5_4A32));
-        let mut batched_paths = Vec::new();
-        let mut batched_lens = Vec::new();
-        path_reconstruct::cpu_ref_batched(
-            &parent,
-            &targets,
-            max_depth,
-            &mut batched_paths,
-            &mut batched_lens,
-        );
+        let mut batched_paths = Vec::with_capacity(targets.len() * max_depth as usize);
+        let mut batched_lens = Vec::with_capacity(targets.len());
+        for &target in &targets {
+            let (path, length) = path_reconstruct_witness(&parent, target, max_depth);
+            batched_paths.extend(path);
+            batched_lens.push(length);
+        }
 
         assert_eq!(batched_lens.len(), targets.len(), "case={case} lens len");
         assert_eq!(
@@ -410,9 +425,8 @@ fn generated_path_reconstruction_oracles_cover_2048_batches() {
             "case={case} path matrix len"
         );
 
-        let mut scratch = Vec::new();
         for (index, &target) in targets.iter().enumerate() {
-            let len = path_reconstruct::cpu_ref(&parent, target, max_depth, &mut scratch);
+            let (scratch, len) = path_reconstruct_witness(&parent, target, max_depth);
             assert_eq!(batched_lens[index], len, "case={case} target_index={index}");
             let start = index * max_depth as usize;
             let end = start + max_depth as usize;
@@ -444,16 +458,11 @@ fn generated_motif_oracles_cover_2048_patterns() {
             });
         }
 
-        let witness = motif::cpu_ref(node_count, &offsets, &targets, &masks, &motif_edges);
-        let counted = motif::cpu_ref_participation_count(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
-            &motif_edges,
+        let witness = motif_cpu_ref(node_count, &offsets, &targets, &masks, &motif_edges);
+        assert!(
+            witness.iter().all(|&value| value <= 1),
+            "case={case} motif witness values must be binary"
         );
-        let summed = witness.iter().copied().sum::<u32>();
-        assert_eq!(counted, summed, "case={case} motif participation");
         assert_eq!(
             witness.len(),
             node_count as usize,
@@ -533,11 +542,8 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
         let expected = csr_sweep::oracle_persistent_closure(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
-        let actual = bfs_expand(
-            CsrClosureInputs::new(
-                node_count, &offsets, &targets, &masks, allow_mask, max_iters,
-            ),
-            &frontier,
+        let actual = csr_persistent_closure_witness(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
         );
         assert_eq!(
             actual, expected,
@@ -573,7 +579,7 @@ fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
             &gen,
             &kill,
         );
-        let actual = reference_canonicalize_csr_within_rows(&row_ptr, &col_idx);
+        let actual = canonicalize_csr_rows(&row_ptr, &col_idx);
         assert_eq!(
             actual, expected,
             "Fix: exploded IFDS substrate reference case {case} procs={num_procs} blocks={blocks_per_proc} facts={facts_per_proc} must match primitive CPU oracle."

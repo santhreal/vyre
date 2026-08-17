@@ -19,8 +19,7 @@ use vyre_foundation::ir::{AtomicOp, Expr, MemoryOrdering, Node, Program};
 use vyre_foundation::visit::any_descendant;
 
 use vyre_libs::fixpoint::persistent_fixpoint::{
-    persistent_fixpoint, persistent_fixpoint_grid, OP_ID_GRID,
-    PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
+    persistent_fixpoint, persistent_fixpoint_grid, OP_ID_GRID, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
 use vyre_reference::composition_witness::persistent_fixpoint_witness as cpu_ref;
 use vyre_reference::value::Value;

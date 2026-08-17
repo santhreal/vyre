@@ -208,29 +208,28 @@ fn softmax_tiled_program(
     )
     .with_phases([max_pass, sum_pass])
     .with_writeback(strided_writeback_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            output,
-            vec![
-                Node::let_bind("sum_val", Expr::load("softmax_scratch", Expr::u32(0))),
-                Node::let_bind("max_val", Expr::load("softmax_max", Expr::u32(0))),
-            ],
-            |idx| Expr::BinOp {
-                op: BinOp::Div,
-                left: Box::new(Expr::UnOp {
-                    op: UnOp::Exp,
-                    operand: Box::new(Expr::BinOp {
-                        op: BinOp::Sub,
-                        left: Box::new(Expr::load(input, idx)),
-                        right: Box::new(Expr::var("max_val")),
-                    }),
+        OP_ID,
+        tile,
+        chunks,
+        n,
+        output,
+        vec![
+            Node::let_bind("sum_val", Expr::load("softmax_scratch", Expr::u32(0))),
+            Node::let_bind("max_val", Expr::load("softmax_max", Expr::u32(0))),
+        ],
+        |idx| Expr::BinOp {
+            op: BinOp::Div,
+            left: Box::new(Expr::UnOp {
+                op: UnOp::Exp,
+                operand: Box::new(Expr::BinOp {
+                    op: BinOp::Sub,
+                    left: Box::new(Expr::load(input, idx)),
+                    right: Box::new(Expr::var("max_val")),
                 }),
-                right: Box::new(Expr::var("sum_val")),
-            },
-        )
-    )
+            }),
+            right: Box::new(Expr::var("sum_val")),
+        },
+    ))
     .build()
 }
 

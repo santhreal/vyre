@@ -136,10 +136,10 @@ pub fn simplicial_triangle_message(
     )
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::simplicial_triangle_message_witness as simplicial_triangle_message_cpu;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

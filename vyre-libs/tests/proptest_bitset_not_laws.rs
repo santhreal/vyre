@@ -3,7 +3,7 @@
 #![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
-use vyre_reference::composition_witness::bitset_not_witness;
+use vyre_reference::composition_witness::bitset_not_witness as cpu_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]

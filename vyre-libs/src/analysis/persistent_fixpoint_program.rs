@@ -38,6 +38,7 @@ pub fn persistent_fixpoint_program(
     words: u32,
     max_iterations: u32,
 ) -> Program {
+    let _route = persistent_fixpoint_program_route(words, max_iterations);
     routed_persistent_fixpoint(
         transfer_body,
         FixpointState {

@@ -29,7 +29,12 @@ pub fn rewrite_vector_memory_with_alias_facts(
 ) -> KernelDescriptor {
     let mut output = descriptor.clone();
     let mut next_result_id = find_max_result_id(&descriptor.body).saturating_add(1);
-    rewrite_body(&mut output.body, descriptor, alias_facts, &mut next_result_id);
+    rewrite_body(
+        &mut output.body,
+        descriptor,
+        alias_facts,
+        &mut next_result_id,
+    );
     output
 }
 
@@ -235,7 +240,11 @@ fn try_collect_chain(
     // that cannot precede the store.
     if kind == VectorAccessKind::Store {
         for &op_idx in &op_indices {
-            let val_id = body.ops[op_idx].operands.get(2).copied().unwrap_or(u32::MAX);
+            let val_id = body.ops[op_idx]
+                .operands
+                .get(2)
+                .copied()
+                .unwrap_or(u32::MAX);
             if intervening_pure_indices
                 .iter()
                 .any(|&pure_idx| body.ops[pure_idx].result == Some(val_id))
@@ -313,9 +322,7 @@ fn has_memory_hazard(
 
     if chain_kind == VectorAccessKind::Store || other_kind == VectorAccessKind::Store {
         // Between distinct slots, if no-alias is not proven, treat as potential alias uncertainty.
-        if !alias_facts.is_empty()
-            && !alias_facts.proves_no_alias(chain_slot, 0, other_slot, 0)
-        {
+        if !alias_facts.is_empty() && !alias_facts.proves_no_alias(chain_slot, 0, other_slot, 0) {
             return true;
         }
     }
@@ -350,9 +357,7 @@ fn apply_vector_chain(
 
             // Emit 1 wide VectorLoadGlobal op
             replaced_ops.push(KernelOp {
-                kind: KernelOpKind::VectorLoadGlobal {
-                    width: width as u8,
-                },
+                kind: KernelOpKind::VectorLoadGlobal { width: width as u8 },
                 operands: vec![slot, start_index_op_id],
                 result: Some(vec_result_id),
             });
@@ -361,9 +366,7 @@ fn apply_vector_chain(
             for (lane, &load_idx) in candidate.op_indices.iter().enumerate() {
                 let scalar_result = body.ops[load_idx].result;
                 replaced_ops.push(KernelOp {
-                    kind: KernelOpKind::ExtractLane {
-                        lane: lane as u8,
-                    },
+                    kind: KernelOpKind::ExtractLane { lane: lane as u8 },
                     operands: vec![vec_result_id],
                     result: scalar_result,
                 });
@@ -383,9 +386,7 @@ fn apply_vector_chain(
 
             // Emit 1 wide VectorStoreGlobal op
             replaced_ops.push(KernelOp {
-                kind: KernelOpKind::VectorStoreGlobal {
-                    width: width as u8,
-                },
+                kind: KernelOpKind::VectorStoreGlobal { width: width as u8 },
                 operands,
                 result: None,
             });

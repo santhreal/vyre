@@ -1,7 +1,7 @@
 use super::super::*;
 use super::recording_dispatcher::RecordingBatchDispatcher;
-use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 use crate::graph::csr_frontier_queue::scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
+use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 
 #[test]
 fn budgeted_batch_memory_plan_uses_effective_queue_capacity() {

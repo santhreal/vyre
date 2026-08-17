@@ -40,7 +40,7 @@ impl LrTables {
     #[must_use]
     #[inline]
     pub fn action_at(&self, state: u32, token: u32) -> Action {
-        let idx = crate::builder::TableStateMachineComposer::flat_index(state, self.num_tokens, token);
+        let idx = (state as usize) * (self.num_tokens as usize) + (token as usize);
         Action::unpack(self.action[idx])
     }
 
@@ -52,7 +52,7 @@ impl LrTables {
     #[must_use]
     #[inline]
     pub fn goto_at(&self, state: u32, nt: u32) -> u32 {
-        let idx = crate::builder::TableStateMachineComposer::flat_index(state, self.num_nonterminals, nt);
+        let idx = (state as usize) * (self.num_nonterminals as usize) + (nt as usize);
         self.goto[idx]
     }
 }

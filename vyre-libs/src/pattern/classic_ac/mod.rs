@@ -49,14 +49,17 @@ pub use bounded_ranges::{
 
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub(in crate::pattern) use bounded_ranges::regex_exact_ranges_program;
-pub use count_program::ascii_case_variants;
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
-    build_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
-    classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
-    classic_ac_candidate_suffix3_bloom_words_ci, classic_ac_suffix3_bloom_contains,
-    CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
+    build_ac_bounded_count_suffix3_prefilter_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
+    CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
+};
+
+#[cfg(test)]
+pub(crate) use count_program::{
+    classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
+    classic_ac_candidate_suffix3_bloom_words,
 };
 
 /// THE Aho-Corasick walk lives in [`bounded_ranges`]. Only the state-advance
@@ -89,21 +92,39 @@ pub fn classic_ac_compile(patterns: &[&[u8]]) -> ClassicAcAutomaton {
     ClassicAcAutomaton { dfa }
 }
 
-/// Reference oracle: walk the DFA byte-by-byte and emit **every**
-/// pattern id that matches at each offset.
-///
-/// Returns a vector of `(pattern_id, end_offset)` pairs.  `end_offset`
-/// is the byte position (0-based, inclusive) where the match ends.
-#[must_use]
+#[cfg(test)]
+pub(crate) fn classic_ac_scan(automaton: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<(u32, u32)> {
+    vyre_reference::composition_witness::classic_ac_scan_witness(
+        &automaton.dfa.transitions,
+        &automaton.dfa.output_offsets,
+        &automaton.dfa.output_records,
+        haystack,
+    )
+}
 
+#[cfg(test)]
+pub(crate) fn classic_ac_scan_counts(automaton: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<u32> {
+    vyre_reference::composition_witness::classic_ac_scan_counts_witness(
+        &automaton.dfa.transitions,
+        &automaton.dfa.output_offsets,
+        haystack,
+    )
+}
 
-/// Reference oracle that returns a per-position **count** of matches.
-///
-/// `counts[i]` = number of patterns that match ending at byte `i`.
-/// This is the oracle shape used by the companion GPU emit when the
-/// caller only needs cardinality, not the individual pattern ids.
-#[must_use]
-
+#[cfg(test)]
+pub(crate) fn classic_ac_bounded_ranges_scan(
+    automaton: &ClassicAcAutomaton,
+    pattern_lengths: &[u32],
+    haystack: &[u8],
+) -> Vec<(u32, u32, u32)> {
+    vyre_reference::composition_witness::classic_ac_bounded_ranges_scan_witness(
+        &automaton.dfa.transitions,
+        &automaton.dfa.output_offsets,
+        &automaton.dfa.output_records,
+        pattern_lengths,
+        haystack,
+    )
+}
 
 /// Build a vyre `Program` that scans `haystack` and appends every
 /// matching pattern id to `matches` via an atomic slot counter.
@@ -298,12 +319,11 @@ mod tests {
     }
 
     #[test]
-    fn gpu_emit_matches_cpu_reference() {
+    fn gpu_emit_matches_reference_oracle() {
         let patterns: [&[u8]; 4] = [b"he", b"she", b"his", b"hers"];
         let ac = classic_ac_compile(&patterns);
         let haystack = b"ushers";
-        let cpu = classic_ac_scan(&ac, haystack);
-
+        let reference_matches = classic_ac_scan(&ac, haystack);
         // Build the vyre IR program.
         let program = classic_ac_program(
             "haystack",
@@ -343,17 +363,17 @@ mod tests {
         let gpu_matches_raw = decode_u32_words(&outputs[1].to_bytes());
         let gpu_matches: Vec<u32> = gpu_matches_raw[..match_count as usize].to_vec();
 
-        // CPU gives (pattern_id, end_pos); GPU gives just pattern_id
+        // Reference scan gives (pattern_id, end_pos); GPU gives just pattern_id
         // because each invocation writes its own patterns.  The order
         // is nondeterministic (atomic scheduling), so sort both.
-        let mut cpu_ids: Vec<u32> = cpu.iter().map(|&(pid, _)| pid).collect();
-        cpu_ids.sort_unstable();
+        let mut reference_ids: Vec<u32> = reference_matches.iter().map(|&(pid, _)| pid).collect();
+        reference_ids.sort_unstable();
 
         let mut gpu_ids = gpu_matches;
         gpu_ids.sort_unstable();
 
         assert_eq!(
-            cpu_ids, gpu_ids,
+            reference_ids, gpu_ids,
             "GPU emit must agree with Reference oracle on pattern ids"
         );
     }
@@ -401,5 +421,16 @@ mod tests {
         assert_eq!(match_count, 6, "match_count must reflect total discoveries");
         let stored = decode_u32_words(&outputs[1].to_bytes());
         assert_eq!(stored.len(), 2, "only 2 slots allocated");
+    }
+
+    #[test]
+    fn case_insensitive_classic_ac_automaton_matches() {
+        use crate::pattern::dfa_compile_case_insensitive;
+
+        let dfa = dfa_compile_case_insensitive(&[b"he", b"she"]);
+        let ac = ClassicAcAutomaton { dfa };
+        let matches = classic_ac_scan(&ac, b"UsHeRs");
+        assert!(matches.contains(&(1, 3)), "must match sHe");
+        assert!(matches.contains(&(0, 3)), "must match He");
     }
 }

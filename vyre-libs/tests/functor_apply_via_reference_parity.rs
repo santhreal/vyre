@@ -14,9 +14,8 @@
 //! last-wins tie-break and OOB-drop are actually exercised (not a vacuous injective identity).
 #![forbid(unsafe_code)]
 
-use vyre_libs::reasoning::functorial_pass_composition::{
-    apply_pass_functor, apply_pass_functor_via,
-};
+use vyre_libs::reasoning::functorial_pass_composition::apply_pass_functor_via;
+use vyre_reference::composition_witness::functor_apply_witness as apply_pass_functor;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

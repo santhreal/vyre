@@ -8,13 +8,13 @@ use vyre_foundation::pass_substrate::semiring_closure::reachability_closure_into
 impl DeltaRelationBatch {
     /// Number of inserted tuples.
     #[must_use]
-    pub fn inserted_tuple_count(&self) -> u32 {
+    fn inserted_tuple_count(&self) -> u32 {
         u32::try_from(self.insertions.len()).unwrap_or(u32::MAX)
     }
 
     /// Number of deleted tuples.
     #[must_use]
-    pub fn deleted_tuple_count(&self) -> u32 {
+    fn deleted_tuple_count(&self) -> u32 {
         u32::try_from(self.deletions.len()).unwrap_or(u32::MAX)
     }
 }
@@ -26,7 +26,7 @@ impl DeltaRelationBatch {
 ///
 /// Returns a fix-directed string when dimensions, iteration budget, or edge
 /// coordinates are invalid.
-pub fn compare_delta_maintained_reachability(
+fn compare_delta_maintained_reachability(
     adj: &[u32],
     n: u32,
     max_iters: u32,

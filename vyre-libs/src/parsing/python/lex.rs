@@ -530,12 +530,33 @@ pub fn python312_lexer(
     .with_non_composable_with_self(true)
 }
 
+const EXPECTED_LEXER_TOK_TYPES_BYTES: [u8; 64] = [
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 10, 0, 0, 0, 2, 0, 0, 0, 11, 0, 0,
+    0, 12, 0, 0, 0, 13, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+];
+const EXPECTED_LEXER_TOK_STARTS_BYTES: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7, 0, 0, 0,
+    8, 0, 0, 0, 9, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+];
+const EXPECTED_LEXER_TOK_LENS_BYTES: [u8; 64] = [
+    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+    1, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+const EXPECTED_LEXER_COUNTS_BYTES: [u8; 4] = [9, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::parsing::python312_lexer",
         || python312_lexer("haystack", "tok_types", "tok_starts", "tok_lens", "counts", 16),
         Some(lexer_fixture_inputs),
-        Some(lexer_fixture_expected),
+        Some(|| vec![vec![
+            EXPECTED_LEXER_TOK_TYPES_BYTES.to_vec(),
+            EXPECTED_LEXER_TOK_STARTS_BYTES.to_vec(),
+            EXPECTED_LEXER_TOK_LENS_BYTES.to_vec(),
+            EXPECTED_LEXER_COUNTS_BYTES.to_vec(),
+        ]]),
     )
     .with_category("parsing")
 }
@@ -552,52 +573,5 @@ fn lexer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         vec![0u8; 16 * 4],
         vec![0u8; 16 * 4],
         vec![0u8; 4],
-    ]]
-}
-
-fn write_sparse_token(
-    tok_types: &mut [u8],
-    tok_starts: &mut [u8],
-    tok_lens: &mut [u8],
-    pos: usize,
-    tok: u32,
-    len: u32,
-) {
-    let base = pos * 4;
-    tok_types[base..base + 4].copy_from_slice(&tok.to_le_bytes());
-    tok_starts[base..base + 4].copy_from_slice(&(pos as u32).to_le_bytes());
-    tok_lens[base..base + 4].copy_from_slice(&len.to_le_bytes());
-}
-
-fn lexer_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    let mut tok_types = vec![0u8; 16 * 4];
-    let mut tok_starts = vec![0u8; 16 * 4];
-    let mut tok_lens = vec![0u8; 16 * 4];
-    for (pos, tok, len) in [
-        (0usize, TOK_DEF, 3u32),
-        (4, TOK_IDENTIFIER, 1),
-        (5, TOK_LPAREN, 1),
-        (6, TOK_IDENTIFIER, 1),
-        (7, TOK_RPAREN, 1),
-        (8, TOK_COLON, 1),
-        (9, TOK_NEWLINE, 1),
-        (10, TOK_COMMENT, 2),
-        (12, TOK_NEWLINE, 1),
-    ] {
-        write_sparse_token(
-            &mut tok_types,
-            &mut tok_starts,
-            &mut tok_lens,
-            pos,
-            tok,
-            len,
-        );
-    }
-
-    vec![vec![
-        tok_types,
-        tok_starts,
-        tok_lens,
-        9u32.to_le_bytes().to_vec(),
     ]]
 }

@@ -1,13 +1,13 @@
-//! Property gates for `vyre_libs::text::reference_utf8_validate`.
+//! Property gates for the independent UTF-8 classification witness.
 #![cfg(feature = "text")]
 
 use proptest::prelude::*;
 use vyre_foundation::ir::DataType;
 use vyre_libs::text::{
-    reference_utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2,
-    UTF8_LEAD_3, UTF8_LEAD_4,
+    utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3, UTF8_LEAD_4,
 };
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
+use vyre_reference::composition_witness::utf8_validate_witness as reference_utf8_validate;
 use vyre_reference::value::Value;
 
 fn weighted_utf8_byte() -> impl Strategy<Value = u8> {

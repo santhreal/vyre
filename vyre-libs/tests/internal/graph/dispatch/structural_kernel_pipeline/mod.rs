@@ -1,48 +1,199 @@
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::graph::{
-    adjustment_set::{backdoor_descendants_check, backdoor_descendants_check_cpu},
-    chebyshev_filter::{chebyshev_filter, chebyshev_filter_cpu_into, try_chebyshev_filter},
+    adjustment_set::backdoor_descendants_check,
+    chebyshev_filter::{chebyshev_filter, try_chebyshev_filter},
     csr_backward_or_changed::csr_backward_or_changed_parallel,
     csr_backward_traverse::csr_backward_traverse,
-    csr_frontier_queue::{
-        csr_queue_forward_traverse, csr_queue_forward_traverse_cpu, frontier_to_queue,
-        frontier_to_queue_cpu, try_csr_queue_forward_traverse_cpu, try_frontier_to_queue_cpu,
-    },
+    csr_frontier_queue::{csr_queue_forward_traverse, frontier_to_queue},
     do_calculus::{
-        do_intervention_delete_incoming, do_intervention_delete_incoming_cpu,
-        do_rule2_reverse_incoming, do_rule2_reverse_incoming_cpu, do_rule3_subgraph,
-        do_rule3_subgraph_cpu, try_do_intervention_delete_incoming,
-        try_do_intervention_delete_incoming_cpu, try_do_rule2_reverse_incoming,
-        try_do_rule2_reverse_incoming_cpu, try_do_rule3_subgraph_cpu,
+        do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
+        try_do_intervention_delete_incoming, try_do_rule2_reverse_incoming,
     },
     dominator_frontier::{dominator_frontier, validate_csr_shape},
     exploded::{
         build_ifds_csr_program, decode_node, ifds_node_count_checked, max_ifds_col_count,
         validate_ifds_csr_layout,
     },
-    functorial::{functor_apply, functor_apply_cpu},
-    knowledge_compile::{
-        ddnnf_evaluate, ddnnf_evaluate_cpu, try_ddnnf_evaluate, try_ddnnf_evaluate_cpu, AND_NODE,
-        LITERAL_TRUE,
-    },
-    matroid::{
-        matroid_exchange_bfs_step, matroid_exchange_bfs_step_cpu, try_matroid_exchange_bfs_step,
-    },
-    path_reconstruct::{batched_path_reconstruct, cpu_ref_batched},
+    functorial::functor_apply,
+    knowledge_compile::{ddnnf_evaluate, try_ddnnf_evaluate, AND_NODE, LITERAL_TRUE},
+    matroid::{matroid_exchange_bfs_step, try_matroid_exchange_bfs_step},
+    path_reconstruct::batched_path_reconstruct,
     persistent_bfs::{persistent_bfs_batch, try_persistent_bfs_batch},
     reachable::reachable_program,
     sheaf::{sheaf_diffusion_step, try_sheaf_diffusion_step},
-    string_diagram::{monoidal_compose, monoidal_compose_cpu, try_monoidal_compose},
+    string_diagram::{monoidal_compose, try_monoidal_compose},
     sum_product_circuit::{
-        sum_product_evaluate, sum_product_evaluate_cpu, try_sum_product_evaluate, KIND_LEAF,
-        KIND_PRODUCT, KIND_SUM,
+        sum_product_evaluate, try_sum_product_evaluate, KIND_LEAF, KIND_PRODUCT, KIND_SUM,
     },
     tensor_flow_forward::tensor_flow_forward,
     toposort::toposort_csr,
     union_find::{find_root_body, union_find_program, union_roots_body},
 };
-use crate::math::tensor_scc::{cpu_ref as tensor_scc_cpu_ref, tensor_scc_fixpoint};
+use crate::math::tensor_scc::tensor_scc_fixpoint;
 use vyre_foundation::ir::{Node, Program};
+use vyre_reference::composition_witness::{
+    backdoor_descendants_check_witness as backdoor_descendants_check_cpu,
+    chebyshev_filter_witness_into, compose_ir_arrows_witness as monoidal_compose_cpu,
+    ddnnf_evaluate_witness as ddnnf_evaluate_cpu,
+    do_intervention_delete_incoming_witness as do_intervention_delete_incoming_cpu,
+    do_rule2_reverse_incoming_witness as do_rule2_reverse_incoming_cpu,
+    do_rule3_subgraph_witness as do_rule3_subgraph_cpu, functor_apply_witness as functor_apply_cpu,
+    matroid_exchange_bfs_step_witness as matroid_exchange_bfs_step_cpu,
+    sum_product_evaluate_witness as sum_product_evaluate_cpu,
+    tensor_scc_witness as tensor_scc_cpu_ref, try_ddnnf_evaluate_witness as try_ddnnf_evaluate_cpu,
+};
+
+fn frontier_to_queue_cpu(
+    frontier_in: &[u32],
+    node_count: u32,
+    queue_capacity: usize,
+) -> (Vec<u32>, u32) {
+    vyre_reference::composition_witness::frontier_to_queue_witness(
+        frontier_in,
+        node_count,
+        queue_capacity,
+    )
+}
+
+fn try_frontier_to_queue_cpu(
+    frontier_in: &[u32],
+    node_count: u32,
+    queue_capacity: usize,
+) -> Result<(Vec<u32>, u32), String> {
+    let words = crate::bitset::bitset_words(node_count) as usize;
+    if frontier_in.len() != words {
+        return Err(format!(
+            "frontier_in.len() == bitset_words(node_count), got {} vs {words}",
+            frontier_in.len()
+        ));
+    }
+    Ok(frontier_to_queue_cpu(
+        frontier_in,
+        node_count,
+        queue_capacity,
+    ))
+}
+
+fn csr_queue_forward_traverse_cpu(
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    node_count: u32,
+    allow_mask: u32,
+) -> Vec<u32> {
+    vyre_reference::composition_witness::csr_queue_strided_forward_witness(
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        node_count,
+        allow_mask,
+    )
+}
+
+fn try_csr_queue_forward_traverse_cpu(
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    node_count: u32,
+    allow_mask: u32,
+) -> Result<Vec<u32>, String> {
+    for &target in edge_targets {
+        if target >= node_count {
+            return Err(format!("target {target} outside node_count {node_count}"));
+        }
+    }
+    Ok(csr_queue_forward_traverse_cpu(
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        node_count,
+        allow_mask,
+    ))
+}
+
+fn cpu_ref_batched(
+    parent: &[u32],
+    targets: &[u32],
+    max_depth: u32,
+    paths: &mut Vec<u32>,
+    lens: &mut Vec<u32>,
+) {
+    vyre_reference::composition_witness::try_path_reconstruct_batch_witness_into(
+        parent, targets, max_depth, paths, lens,
+    )
+    .unwrap_or_else(|error| panic!("invalid path reconstruction batch: {error}"));
+}
+
+fn chebyshev_filter_cpu_into(
+    laplacian: &[f32],
+    signal: &[f32],
+    coefficients: &[f32],
+    node_count: u32,
+    order: u32,
+    output: &mut Vec<f32>,
+    previous: &mut Vec<f32>,
+    current: &mut Vec<f32>,
+    next: &mut Vec<f32>,
+) {
+    chebyshev_filter_witness_into(
+        laplacian,
+        signal,
+        coefficients,
+        node_count,
+        order,
+        output,
+        previous,
+        current,
+        next,
+    );
+}
+
+fn validate_causal_inputs(adjacency: &[u32], mask: &[u32], node_count: u32) -> Result<(), String> {
+    if adjacency.len() != node_count as usize * node_count as usize {
+        return Err("adjacency.len() == n*n".to_string());
+    }
+    if mask.len() != node_count as usize {
+        return Err("mask.len() == n".to_string());
+    }
+    Ok(())
+}
+
+fn try_do_intervention_delete_incoming_cpu(
+    adjacency: &[u32],
+    mask: &[u32],
+    node_count: u32,
+) -> Result<Vec<u32>, String> {
+    validate_causal_inputs(adjacency, mask, node_count)?;
+    Ok(do_intervention_delete_incoming_cpu(
+        adjacency, mask, node_count,
+    ))
+}
+
+fn try_do_rule2_reverse_incoming_cpu(
+    adjacency: &[u32],
+    mask: &[u32],
+    node_count: u32,
+) -> Result<Vec<u32>, String> {
+    validate_causal_inputs(adjacency, mask, node_count)?;
+    Ok(do_rule2_reverse_incoming_cpu(adjacency, mask, node_count))
+}
+
+fn try_do_rule3_subgraph_cpu(
+    adjacency: &[u32],
+    mask: &[u32],
+    node_count: u32,
+) -> Result<(Vec<u32>, Vec<u32>), String> {
+    validate_causal_inputs(adjacency, mask, node_count)?;
+    Ok(do_rule3_subgraph_cpu(adjacency, mask, node_count))
+}
 
 fn approx_eq(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-8 * (1.0 + a.abs() + b.abs())

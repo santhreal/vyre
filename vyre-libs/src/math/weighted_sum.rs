@@ -87,8 +87,8 @@ inventory::submit! {
             vec![vec![weights, values]]
         }),
         Some(|| {
-            // 0.5*1 + 0.25*2 + 0.125*4 + 0.125*8 = 0.5 + 0.5 + 0.5 + 1.0 = 2.5
-            vec![vec![crate::fixture_bytes::f32_bytes(&[2.5_f32])]]
+            // 0.5*1 + 0.25*2 + 0.125*4 + 0.125*8 = 0.5 + 0.5 + 0.5 + 1.0 = 2.5 (0x40200000 LE)
+            vec![vec![vec![0x00, 0x00, 0x20, 0x40]]]
         }),
     )
     .with_category("math")

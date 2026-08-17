@@ -133,6 +133,10 @@ fn build_substring_program(
     )
 }
 
+const EXPECTED_SUBSTRING_MATCHES_BYTES: [u8; 32] = [
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         SCAN_SUBSTRING_OP_ID,
@@ -151,15 +155,10 @@ inventory::submit! {
             ]
         }),
         Some(|| {
-            // Case 0: haystack="abcabc++", needle="abc". Matches at
-            //   i ∈ {0, 3}. Positions i > haystack_len - needle_len
-            //   (5) stay at their zero init because the guard never
-            //   fires.
-            // Case 1: haystack="xyzxyzxy", needle="xyz". Matches at
-            //   i ∈ {0, 3}.
-            let case0 = crate::fixture_bytes::u32_bytes(&[1u32, 0, 0, 1, 0, 0, 0, 0]);
-            let case1 = crate::fixture_bytes::u32_bytes(&[1u32, 0, 0, 1, 0, 0, 0, 0]);
-            vec![vec![case0], vec![case1]]
+            vec![
+                vec![EXPECTED_SUBSTRING_MATCHES_BYTES.to_vec()],
+                vec![EXPECTED_SUBSTRING_MATCHES_BYTES.to_vec()],
+            ]
         }),
     )
     .with_category("scan")

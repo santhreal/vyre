@@ -6,9 +6,8 @@ use vyre_driver::megakernel_execution::{
     MegakernelExecutionSample, MegakernelExecutionTopology, MegakernelGraphShape,
     MegakernelMemoryBudget, MegakernelMemoryError, MegakernelTopologyDecision,
 };
-use vyre_libs::scheduling::megakernel_schedule::{
-    try_schedule_via_scale_aware_samples_into, MegakernelScaleSample, MegakernelScheduleError,
-};
+#[cfg(test)]
+use vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample;
 
 use crate::backend::CudaTelemetrySnapshot;
 
@@ -118,6 +117,7 @@ pub fn plan_cuda_megakernel_execution(
     )
 }
 
+#[cfg(test)]
 impl MegakernelScaleSample for CudaMegakernelScheduleSample {
     fn dispatch_cost_ns(&self) -> f64 {
         self.dispatch_cost_ns
@@ -132,48 +132,42 @@ impl MegakernelScaleSample for CudaMegakernelScheduleSample {
     }
 }
 
-/// Schedule megakernel fusion pressure from CUDA telemetry samples.
-///
-/// # Errors
-///
-/// Returns [`MegakernelScheduleError`] when a sample or step count is invalid.
-pub fn schedule_megakernel_from_cuda_samples(
-    samples: &[CudaMegakernelScheduleSample],
-    launch_overhead_ns: f64,
-    n_steps: u32,
-    dt: f64,
-) -> Result<Vec<f64>, MegakernelScheduleError> {
-    let mut out = Vec::new();
-    schedule_megakernel_from_cuda_samples_into(samples, launch_overhead_ns, n_steps, dt, &mut out)?;
-    Ok(out)
-}
-
-/// Schedule megakernel fusion pressure into caller-owned output storage.
-///
-/// # Errors
-///
-/// Returns [`MegakernelScheduleError`] when a sample or step count is invalid.
-pub fn schedule_megakernel_from_cuda_samples_into(
-    samples: &[CudaMegakernelScheduleSample],
-    launch_overhead_ns: f64,
-    n_steps: u32,
-    dt: f64,
-    out: &mut Vec<f64>,
-) -> Result<(), MegakernelScheduleError> {
-    try_schedule_via_scale_aware_samples_into(samples, launch_overhead_ns, n_steps, dt, out)
-}
-
 // Inline: covers `dispatch_cost_ns`, `frontier_density`, `readback_bytes`, which no integration
 // test can name.
 #[cfg(test)]
 mod tests {
-    use super::{
-        schedule_megakernel_from_cuda_samples, schedule_megakernel_from_cuda_samples_into,
-        CudaMegakernelScheduleSample,
-    };
+    use super::*;
     use crate::backend::CudaTelemetrySnapshot;
-    use vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError;
+    use vyre_libs::scheduling::megakernel_schedule::{
+        try_schedule_via_scale_aware_samples_into, MegakernelScheduleError,
+    };
 
+    fn schedule_megakernel_from_cuda_samples(
+        samples: &[CudaMegakernelScheduleSample],
+        launch_overhead_ns: f64,
+        n_steps: u32,
+        dt: f64,
+    ) -> Result<Vec<f64>, MegakernelScheduleError> {
+        let mut out = Vec::new();
+        schedule_megakernel_from_cuda_samples_into(
+            samples,
+            launch_overhead_ns,
+            n_steps,
+            dt,
+            &mut out,
+        )?;
+        Ok(out)
+    }
+
+    fn schedule_megakernel_from_cuda_samples_into(
+        samples: &[CudaMegakernelScheduleSample],
+        launch_overhead_ns: f64,
+        n_steps: u32,
+        dt: f64,
+        out: &mut Vec<f64>,
+    ) -> Result<(), MegakernelScheduleError> {
+        try_schedule_via_scale_aware_samples_into(samples, launch_overhead_ns, n_steps, dt, out)
+    }
     #[test]
     fn telemetry_snapshot_maps_onto_a_scheduler_sample() {
         let sample = CudaMegakernelScheduleSample::from_telemetry_snapshot(

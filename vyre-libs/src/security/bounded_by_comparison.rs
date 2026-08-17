@@ -59,8 +59,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::csr_backward_traverse::cpu_ref;
     use crate::security::flow_composition::diamond_dominance_tree;
+    use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 
     #[test]
     fn bounded_by_comparison_mask_is_dominance_only() {

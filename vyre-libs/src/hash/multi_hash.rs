@@ -9,20 +9,14 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::adler32::{
-    adler32, adler32_finalize_expr, adler32_initial_a_expr, adler32_initial_b_expr,
+    adler32_finalize_expr, adler32_initial_a_expr, adler32_initial_b_expr,
     adler32_update_byte_nodes,
 };
-use super::crc32::{crc32, crc32_finalize_expr, crc32_initial_expr, crc32_update_byte_nodes};
-use super::fnv1a::{fnv1a32, fnv1a32_initial_expr, fnv1a32_update_byte_node};
+use super::crc32::{crc32_finalize_expr, crc32_initial_expr, crc32_update_byte_nodes};
+use super::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_node};
 
 /// Stable Tier 2.5 op id for the fused CRC-32/FNV-1a32/Adler-32 walker.
 pub const MULTI_HASH_OP_ID: &str = "vyre-libs::hash::multi_hash";
-
-/// CPU reference for the fused multi-hash contract.
-#[must_use]
-pub fn multi_hash_reference(bytes: &[u8]) -> (u32, u32, u32) {
-    (crc32(bytes), fnv1a32(bytes), adler32(bytes))
-}
 
 /// Build a Program that computes CRC-32, FNV-1a32, and Adler-32 over
 /// `input[0..n]` in a single walk.
@@ -74,27 +68,28 @@ fn multi_hash_body(input: &str, out: &str, n: u32) -> Vec<Node> {
     )]
 }
 
+const EXPECTED_MULTI_HASH_OUTPUT_BYTES: [u8; 12] = [
+    0xC2, 0x41, 0x24, 0x35, 0x0B, 0xE9, 0x47, 0x1A, 0x27, 0x01, 0x4D, 0x02,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         MULTI_HASH_OP_ID,
         || multi_hash_program("input", "out", 3),
         Some(|| vec![vec![vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc")]]),
-        Some(|| vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-            0x3524_41c2,
-            0x1a47_e90b,
-            0x024D_0127,
-        ])]]),
+        Some(|| vec![vec![EXPECTED_MULTI_HASH_OUTPUT_BYTES.to_vec()]]),
     )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::multi_hash_witness;
 
     #[test]
     fn reference_matches_constituent_hashes() {
         assert_eq!(
-            multi_hash_reference(b"abc"),
+            multi_hash_witness(b"abc"),
             (0x3524_41c2, 0x1a47_e90b, 0x024D_0127)
         );
     }

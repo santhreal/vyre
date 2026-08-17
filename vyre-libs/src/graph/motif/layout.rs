@@ -129,18 +129,6 @@ pub fn validate_motif_inputs(
     })
 }
 
-/// Count nonzero witness entries using the primitive's u32 result contract.
-///
-/// # Errors
-///
-/// Returns an actionable diagnostic if the witness vector is too large to
-/// report with the primitive's u32 count metadata.
-pub fn count_witness_participants(witness: &[u32]) -> Result<u32, String> {
-    let count = witness.iter().filter(|&&value| value != 0).count();
-    u32::try_from(count)
-        .map_err(|_| format!("Fix: motif witness participant count {count} exceeds u32::MAX."))
-}
-
 /// Validate the primitive's u32 witness output contract.
 ///
 /// # Errors

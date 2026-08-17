@@ -2,7 +2,7 @@
 //! Generated scaffold - oracle logic is explicit; do not reduce to `assert!(is_ok)`.
 #![forbid(unsafe_code)]
 
-use vyre_libs::hash::fnv1a;
+use vyre_reference::composition_witness::{fnv1a32_witness, fnv1a64_witness};
 
 fn oracle_fnv1a32(bytes: &[u8]) -> u32 {
     const OFFSET: u32 = 0x811c_9dc5;
@@ -58,9 +58,8 @@ fn hostile_byte_slices() -> Vec<Vec<u8>> {
 fn sweep_fnv1a32_oracle_covers_hostile_byte_corpus() {
     for (idx, bytes) in hostile_byte_slices().into_iter().enumerate() {
         let expected = oracle_fnv1a32(&bytes);
-        let actual = fnv1a::fnv1a32(&bytes);
+        let actual = fnv1a32_witness(&bytes);
         assert_eq!(actual, expected, "fnv1a32 case {idx} len={}", bytes.len());
-        assert_eq!(fnv1a::fnv1a32_const(&bytes), expected, "const case {idx}");
     }
 }
 
@@ -68,7 +67,7 @@ fn sweep_fnv1a32_oracle_covers_hostile_byte_corpus() {
 fn sweep_fnv1a64_oracle_covers_hostile_byte_corpus() {
     for (idx, bytes) in hostile_byte_slices().into_iter().enumerate() {
         let expected = oracle_fnv1a64(&bytes);
-        let actual = fnv1a::fnv1a64(&bytes);
+        let actual = fnv1a64_witness(&bytes);
         assert_eq!(actual, expected, "fnv1a64 case {idx} len={}", bytes.len());
     }
 }
@@ -77,7 +76,8 @@ fn sweep_fnv1a64_oracle_covers_hostile_byte_corpus() {
 fn sweep_fnv1a32_packed_low8_oracle_covers_word_corpus() {
     for (idx, words) in hostile_u32_words().into_iter().enumerate() {
         let expected = oracle_fnv1a32_packed(words.as_slice());
-        let actual = fnv1a::fnv1a32_packed_u32_low8(words.as_slice());
+        let low_bytes: Vec<u8> = words.iter().map(|&w| (w & 0xFF) as u8).collect();
+        let actual = fnv1a32_witness(&low_bytes);
         assert_eq!(actual, expected, "packed case {idx} len={}", words.len());
     }
 }

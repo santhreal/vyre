@@ -1,7 +1,7 @@
 use super::{CachedMotifProgram, MotifGpuScratch};
+use crate::encoding::reduction_metrics::{reduce_any_via, reduce_count_non_zero_via};
 use crate::graph::motif::{
-    count_witness_participants, plan_motif_launch, validate_motif_witness, MotifEdge,
-    MotifStaticInputKey,
+    plan_motif_launch, validate_motif_witness, MotifEdge, MotifStaticInputKey,
 };
 
 use crate::graph::dispatch::dispatch_bridge::{
@@ -186,16 +186,15 @@ pub fn motif_matches_via(
     edge_kind_mask: &[u32],
     motif_edges: &[MotifEdge],
 ) -> Result<bool, DispatchError> {
-    Ok(match_motif_via(
+    let witness = match_motif_via(
         dispatcher,
         node_count,
         edge_offsets,
         edge_targets,
         edge_kind_mask,
         motif_edges,
-    )?
-    .iter()
-    .any(|&value| value != 0))
+    )?;
+    reduce_any_via(dispatcher, &witness)
 }
 
 /// Dispatcher-backed motif participation count.
@@ -219,5 +218,5 @@ pub fn motif_participation_count_via(
         edge_kind_mask,
         motif_edges,
     )?;
-    count_witness_participants(&witness).map_err(DispatchError::BackendError)
+    reduce_count_non_zero_via(dispatcher, &witness)
 }

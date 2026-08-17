@@ -118,10 +118,10 @@ pub fn argmax_of_marginals(
     )
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::argmax_of_marginals_witness as argmax_of_marginals_cpu;
 
     #[test]
     fn cpu_picks_global_max_when_nothing_picked() {

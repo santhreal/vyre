@@ -1,12 +1,59 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::csr_bidirectional::{
-    cpu_ref as reference_csr_bidir, cpu_ref_closure as reference_csr_bidir_closure,
-    reference_bidirectional_closure, reference_bidirectional_closure_into,
-    reference_bidirectional_step,
-};
+fn reference_bidirectional_step(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    vyre_reference::composition_witness::csr_bidirectional_step_witness(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        allow_mask,
+    )
+}
+
+use reference_bidirectional_step as reference_csr_bidir;
+
+fn reference_bidirectional_closure_into(
+    inputs: CsrClosureInputs<'_>,
+    seed: &[u32],
+    current: &mut Vec<u32>,
+    next: &mut Vec<u32>,
+) {
+    vyre_reference::composition_witness::csr_bidirectional_closure_witness_into(
+        inputs.graph.node_count,
+        inputs.graph.edge_offsets,
+        inputs.graph.edge_targets,
+        inputs.graph.edge_kind_mask,
+        seed,
+        inputs.allow_mask,
+        inputs.max_iters,
+        current,
+        next,
+    );
+}
+
+fn reference_bidirectional_closure(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> Vec<u32> {
+    vyre_reference::composition_witness::csr_bidirectional_closure_witness(
+        inputs.graph.node_count,
+        inputs.graph.edge_offsets,
+        inputs.graph.edge_targets,
+        inputs.graph.edge_kind_mask,
+        seed,
+        inputs.allow_mask,
+        inputs.max_iters,
+    )
+}
+
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::test_parity_oracles::{NeverDispatches, StaticOutputs};
+use reference_bidirectional_closure as reference_csr_bidir_closure;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

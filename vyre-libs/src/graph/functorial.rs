@@ -89,8 +89,8 @@ pub fn functor_apply_sized(
     )
 }
 
-
-
+const EXPECTED_FUNCTOR_APPLY_OUTPUT_BYTES: [u8; 16] =
+    [20, 0, 0, 0, 30, 0, 0, 0, 10, 0, 0, 0, 40, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -105,8 +105,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[20, 30, 10, 40])]]
+            vec![vec![EXPECTED_FUNCTOR_APPLY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -114,6 +113,19 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        functor_apply_witness as functor_apply_cpu, functor_apply_witness_into,
+    };
+
+    fn try_functor_apply_cpu_into(
+        source_row: &[u32],
+        mapping: &[u32],
+        target_size: u32,
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        functor_apply_witness_into(source_row, mapping, target_size, out);
+        Ok(())
+    }
 
     #[test]
     fn cpu_identity_mapping() {

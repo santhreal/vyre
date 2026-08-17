@@ -1,8 +1,57 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::dominator_frontier::{
-    cpu_ref as reference_dominator_frontier, dominance_frontier, try_dominance_frontier,
-};
+fn validate_dominator_frontier_seed(node_count: u32, seed: &[u32]) -> Result<(), String> {
+    let expected_words = (node_count as usize).div_ceil(32);
+    if seed.len() < expected_words {
+        return Err(format!(
+            "dominator_frontier expected seed length {expected_words} words for {node_count} nodes, got {}",
+            seed.len()
+        ));
+    }
+    Ok(())
+}
+
+fn try_dominance_frontier(
+    node_count: u32,
+    dom_offsets: &[u32],
+    dom_targets: &[u32],
+    pred_offsets: &[u32],
+    pred_targets: &[u32],
+    seed: &[u32],
+) -> Result<Vec<u32>, String> {
+    validate_dominator_frontier_seed(node_count, seed)?;
+    Ok(
+        vyre_reference::composition_witness::dominator_frontier_witness(
+            node_count,
+            dom_offsets,
+            dom_targets,
+            pred_offsets,
+            pred_targets,
+            seed,
+        ),
+    )
+}
+
+fn dominance_frontier(
+    node_count: u32,
+    dom_offsets: &[u32],
+    dom_targets: &[u32],
+    pred_offsets: &[u32],
+    pred_targets: &[u32],
+    seed: &[u32],
+) -> Vec<u32> {
+    try_dominance_frontier(
+        node_count,
+        dom_offsets,
+        dom_targets,
+        pred_offsets,
+        pred_targets,
+        seed,
+    )
+    .unwrap_or_else(|err| panic!("{err}"))
+}
+
+use dominance_frontier as reference_dominator_frontier;
 use std::sync::Mutex;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

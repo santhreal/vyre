@@ -104,28 +104,6 @@ pub fn security_predicate_row_by_op_id(op_id: &str) -> Option<&'static SecurityP
         .find(|row| row.op_id == op_id)
 }
 
-pub(crate) fn packed_witness_inputs(op_id: &str) -> Vec<Vec<Vec<u8>>> {
-    security_predicate_row_by_op_id(op_id)
-        .map(|row| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&row.witness_lhs),
-                vyre_primitives::wire::pack_u32_slice(&row.witness_rhs),
-                vyre_primitives::wire::pack_u32_slice(&[0]),
-            ]]
-        })
-        .unwrap_or_default()
-}
-
-pub(crate) fn packed_witness_expected(op_id: &str) -> Vec<Vec<Vec<u8>>> {
-    security_predicate_row_by_op_id(op_id)
-        .map(|row| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(
-                &row.witness_expected,
-            )]]
-        })
-        .unwrap_or_default()
-}
-
 fn parse_security_predicates(source: &str) -> Result<Vec<SecurityPredicateRow>, String> {
     let mut schema_version = None;
     let mut current = None::<BTreeMap<String, String>>;

@@ -6,7 +6,6 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::graph::csr_frontier_step::define_csr_frontier_step_cpu_ref;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::traversal::forward_edge_program;
 
@@ -27,26 +26,11 @@ pub fn edge(
     forward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind_mask)
 }
 
-define_csr_frontier_step_cpu_ref! {
-    direction: CsrFrontierStepKind::Forward,
-    label: "predicate::edge",
-    /// CPU reference for the `edge` predicate.
-    ///
-    /// AUDIT_2026-04-24 F-PE-01: the inventory fixture used to ship
-    /// without a `cpu_ref`, leaving the conform harness unable to
-    /// byte-compare GPU output against a reference. `edge` is a thin
-    /// alias for forward traversal, so publishing the same forward step
-    /// under this op id is the exact semantic match.
-    pub fn cpu_ref,
-    /// CPU reference using caller-owned output storage.
-    pub fn cpu_ref_into,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::csr_forward_traverse::cpu_ref_into;
     use vyre_foundation::ir::Node;
-
     #[test]
     fn preserves_wrapper_op_id() {
         let program = edge(ProgramGraphShape::new(4, 2), "fin", "fout", 0xFFFF_FFFF);
@@ -73,6 +57,8 @@ mod tests {
     }
 }
 
+const EXPECTED_EDGE_OUTPUT_BYTES: [u8; 4] = [2, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -90,8 +76,8 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            use super::inventory_u32_le_bytes as b;
-            vec![vec![b(&[0b0010])]]   // {1} reached via any edge
+            // {1} reached via any edge
+            vec![vec![EXPECTED_EDGE_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

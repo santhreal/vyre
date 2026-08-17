@@ -16,7 +16,7 @@
 use vyre_reference::value::Value;
 
 use vyre_libs::math::amg_v_cycle::amg_v_cycle;
-fn cpu_ref(_a: &[f32], _b: &[f32], x: &[f32]) -> Vec<f32> { x.to_vec() }
+use vyre_reference::composition_witness::amg_v_cycle_witness as cpu_ref;
 
 /// Encode an f64 as signed 16.16 fixed-point (two's complement u32).
 fn enc(v: f64) -> u32 {

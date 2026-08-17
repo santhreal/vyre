@@ -35,6 +35,13 @@ pub fn ln_scale_backward(
         })
 }
 
+const EXPECTED_LN_SCALE_BACKWARD_GRAD_X_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x80, 0x3F, 0xCD, 0xCC, 0xCC, 0x3D,
+];
+const EXPECTED_LN_SCALE_BACKWARD_GRAD_SCALE_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x80, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -49,12 +56,9 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // grad_x = dy * scale = [0.5, 2.0, 1.0, 0.1]
-            // grad_scale = dy * input = [1.0, 2.0, 3.0, 4.0]
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
-                to_f32(&[0.5, 2.0, 1.0, 0.1]),
-                to_f32(&[1.0, 2.0, 3.0, 4.0]),
+                EXPECTED_LN_SCALE_BACKWARD_GRAD_X_BYTES.to_vec(),
+                EXPECTED_LN_SCALE_BACKWARD_GRAD_SCALE_BYTES.to_vec(),
             ]]
         }),
     )

@@ -144,11 +144,8 @@ pub use megakernel_plan_cache::{
     CudaMegakernelPlanCache, CudaMegakernelPlanCacheKey, CudaMegakernelPlanCacheStats,
 };
 pub use megakernel_scheduler::{
-    plan_cuda_megakernel_execution, select_cuda_megakernel_topology_stable,
-};
-pub use megakernel_scheduler::{
-    schedule_megakernel_from_cuda_samples, schedule_megakernel_from_cuda_samples_into,
-    select_cuda_megakernel_topology, CudaMegakernelScheduleSample,
+    plan_cuda_megakernel_execution, select_cuda_megakernel_topology,
+    select_cuda_megakernel_topology_stable, CudaMegakernelScheduleSample,
 };
 pub use megakernel_speedup_gate::{
     format_validated_cuda_megakernel_speedup_evidence_csv,

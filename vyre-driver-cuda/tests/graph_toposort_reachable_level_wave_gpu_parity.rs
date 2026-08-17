@@ -9,11 +9,13 @@ use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_libs::graph::level_wave::{
-    cpu_ref as level_wave_cpu, level_wave_dispatch_grid, level_wave_program,
+use vyre_libs::graph::level_wave::{level_wave_dispatch_grid, level_wave_program};
+use vyre_libs::graph::reachable::reachable_program;
+use vyre_libs::graph::toposort::toposort_program;
+use vyre_reference::composition_witness::{
+    level_wave_witness as level_wave_cpu, reachable_witness as reachable,
+    toposort_witness as toposort,
 };
-use vyre_libs::graph::reachable::{reachable, reachable_program};
-use vyre_libs::graph::toposort::{toposort, toposort_program};
 
 /// Build CSR for `toposort_program`: offsets indexed by `to`, targets
 /// listing `from`-nodes. Mirrors the CPU `toposort` "outgoing"

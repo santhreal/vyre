@@ -258,6 +258,10 @@ pub fn filter_chain(
     )
 }
 
+const EXPECTED_FILTER_CHAIN_OUTPUT_BYTES: [u8; 16] = [
+    0x20, 0x40, 0x80, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -268,9 +272,7 @@ inventory::submit! {
             vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels)]]
         }),
         Some(|| {
-            // Identity: output == input.
-            let pixels = [0xFF_804020u32, 0xFF_FF0000, 0xFF_00FF00, 0xFF_0000FF];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&pixels)]]
+            vec![vec![EXPECTED_FILTER_CHAIN_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")

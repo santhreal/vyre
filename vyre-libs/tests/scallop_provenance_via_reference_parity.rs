@@ -15,12 +15,20 @@
 //! across iterations through reference_eval (so the full multi-iteration closure is validated here).
 //! Values are exact bitset unions → BIT-EXACT (no tolerance) vs `reference_provenance_closure`.
 
-use vyre_libs::encoding::scallop_provenance::{
-    provenance_closure_via, reference_provenance_closure,
-};
+use vyre_libs::encoding::scallop_provenance::provenance_closure_via;
+use vyre_reference::composition_witness::scallop_join_fixpoint_witness;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
+
+fn reference_provenance_closure(
+    state: &[u32],
+    join_rules: &[u32],
+    n: u32,
+    max_iterations: u32,
+) -> Vec<u32> {
+    scallop_join_fixpoint_witness(state, join_rules, n, 1, max_iterations).0
+}
 
 #[test]
 fn provenance_closure_via_matches_cpu_ref_over_random_lineage_graphs() {

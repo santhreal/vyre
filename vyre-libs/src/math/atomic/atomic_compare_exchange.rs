@@ -33,16 +33,15 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // Serial CAS starting at state=10:
-            //   i=0: exp=10, state matches → state=11. trace[0]=10.
-            //   i=1: exp=99, no match. trace[1]=11.
-            //   i=2: exp=20, no match. trace[2]=11.
-            //   i=3: exp=30, no match. trace[3]=11.
             // Final state=11, trace=[10,11,11,11].
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
-                to_bytes(&[11u32]),
-                to_bytes(&[10u32, 11, 11, 11]),
+                vec![0x0b, 0x00, 0x00, 0x00], // state: 11
+                vec![
+                    0x0a, 0x00, 0x00, 0x00, // trace[0]: 10
+                    0x0b, 0x00, 0x00, 0x00, // trace[1]: 11
+                    0x0b, 0x00, 0x00, 0x00, // trace[2]: 11
+                    0x0b, 0x00, 0x00, 0x00, // trace[3]: 11
+                ],
             ]]
         }),
     )

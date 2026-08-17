@@ -41,12 +41,14 @@
 
 mod abi;
 mod canonicalize;
-mod cpu_ref;
 mod dispatch_plan;
 mod encoding;
 mod layout;
 mod program_ir;
 mod program_key;
+#[cfg(test)]
+#[path = "../../../tests/internal/graph/exploded/reference_adapter.rs"]
+mod reference_adapter;
 mod validation;
 
 #[cfg(test)]
@@ -63,39 +65,50 @@ pub use abi::{
     IFDS_CSR_KILL_PROC_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
     IFDS_CSR_WORKGROUP_SIZE, OP_ID,
 };
-pub use canonicalize::{canonicalize_csr_within_rows, canonicalize_csr_within_rows_in_place};
+#[cfg(test)]
+pub use canonicalize::canonicalize_csr_within_rows;
+pub use canonicalize::canonicalize_csr_within_rows_in_place;
 pub use dispatch_plan::{
     plan_ifds_csr_dispatch, split_ifds_rule_quads_into, split_ifds_rule_triples_into,
     IfdsCsrDispatchPlan, IfdsCsrRuleColumns,
 };
+#[cfg(test)]
+pub use encoding::{decode_node, dense_to_encoded, encode_node, encoded_to_dense};
 pub use encoding::{
-    decode_node, dense_to_encoded, encode_node, encoded_to_dense, fits, BLOCK_BITS,
-    FACTS_PER_WORKGROUP, FACT_BITS, MAX_BLOCK_ID, MAX_FACT_ID, MAX_PROC_ID, PROC_BITS,
+    fits, BLOCK_BITS, FACTS_PER_WORKGROUP, FACT_BITS, MAX_BLOCK_ID, MAX_FACT_ID, MAX_PROC_ID,
+    PROC_BITS,
 };
 pub use layout::{
     IfdsCsrLayout, IfdsCsrProgramCacheKey, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
 };
 pub use program_ir::build_ifds_csr_program;
+#[cfg(test)]
+pub use validation::{ifds_node_count_checked, ifds_node_count_saturating};
 pub use validation::{
-    ifds_node_count_checked, ifds_node_count_saturating, max_ifds_col_count,
-    validate_ifds_csr_inputs, validate_ifds_csr_layout, validate_ifds_csr_readback,
+    max_ifds_col_count, validate_ifds_csr_inputs, validate_ifds_csr_layout,
+    validate_ifds_csr_readback,
 };
 
 /// Total node count of the exploded supergraph for the given dimensions.
+#[cfg(test)]
 #[must_use]
 pub fn ifds_node_count(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32) -> u32 {
     ifds_node_count_saturating(num_procs, blocks_per_proc, facts_per_proc)
 }
 
 /// Helper: round-trip a dense index through the packed encoding and back.
+#[cfg(test)]
 #[must_use]
 pub fn round_trip_dense(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {
     let encoded = dense_to_encoded(dense, blocks_per_proc, facts_per_proc)?;
     encoded_to_dense(encoded, blocks_per_proc, facts_per_proc)
 }
 
+#[cfg(test)]
 pub use canonicalize::canonicalize_csr_within_rows as reference_canonicalize_csr_within_rows;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::build_cpu_reference as reference_build_ifds_csr;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use cpu_ref::try_build_cpu_reference as try_reference_build_ifds_csr;
+#[cfg(test)]
+pub(crate) use reference_adapter::{
+    build_cpu_reference, build_cpu_reference as reference_build_ifds_csr, try_build_cpu_reference,
+    try_build_cpu_reference as try_reference_build_ifds_csr, try_build_cpu_reference_into,
+    ExplodedIfdsCpuScratch,
+};

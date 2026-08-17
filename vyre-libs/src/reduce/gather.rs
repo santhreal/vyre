@@ -36,9 +36,6 @@ pub fn gather(src: &str, indices: &str, dst: &str, count: u32) -> Program {
     indexed_move_program(OP_ID, src, indices, dst, count, IndexedMoveKind::Gather)
 }
 
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -52,8 +49,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[40, 10, 30, 20])]]
+            vec![vec![vec![
+                0x28, 0x00, 0x00, 0x00, // 40
+                0x0a, 0x00, 0x00, 0x00, // 10
+                0x1e, 0x00, 0x00, 0x00, // 30
+                0x14, 0x00, 0x00, 0x00, // 20
+            ]]]
         }),
     )
 }
@@ -62,82 +63,107 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn reference_gather(src: &[u32], indices: &[u32]) -> Vec<u32> {
+        indices
+            .iter()
+            .map(|&idx| {
+                let i = idx as usize;
+                if i < src.len() {
+                    src[i]
+                } else {
+                    0
+                }
+            })
+            .collect()
+    }
+
+    fn reference_gather_into(src: &[u32], indices: &[u32], out: &mut Vec<u32>) {
+        out.clear();
+        out.extend(indices.iter().map(|&idx| {
+            let i = idx as usize;
+            if i < src.len() {
+                src[i]
+            } else {
+                0
+            }
+        }));
+    }
+
     #[test]
     fn basic_gather() {
         let src = &[10u32, 20, 30, 40];
         let indices = &[3u32, 0, 2, 1];
-        assert_eq!(cpu_ref(src, indices), vec![40, 10, 30, 20]);
+        assert_eq!(reference_gather(src, indices), vec![40, 10, 30, 20]);
     }
 
     #[test]
     fn identity_gather() {
         let src = &[1u32, 2, 3, 4, 5];
         let indices = &[0u32, 1, 2, 3, 4];
-        assert_eq!(cpu_ref(src, indices), vec![1, 2, 3, 4, 5]);
+        assert_eq!(reference_gather(src, indices), vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
     fn empty_indices() {
         let src = &[1u32, 2, 3];
         let indices: &[u32] = &[];
-        assert_eq!(cpu_ref(src, indices), Vec::<u32>::new());
+        assert_eq!(reference_gather(src, indices), Vec::<u32>::new());
     }
 
     #[test]
     fn single_element() {
         let src = &[42u32];
         let indices = &[0u32];
-        assert_eq!(cpu_ref(src, indices), vec![42]);
+        assert_eq!(reference_gather(src, indices), vec![42]);
     }
 
     #[test]
     fn repeated_index() {
         let src = &[7u32, 8, 9];
         let indices = &[0u32, 0, 0, 2, 2];
-        assert_eq!(cpu_ref(src, indices), vec![7, 7, 7, 9, 9]);
+        assert_eq!(reference_gather(src, indices), vec![7, 7, 7, 9, 9]);
     }
 
     #[test]
-    fn cpu_ref_zeroes_out_of_bounds() {
+    fn reference_gather_zeroes_out_of_bounds() {
         let src = &[1u32, 2, 3];
         let indices = &[0u32, 5]; // 5 is out of bounds
-        assert_eq!(cpu_ref(src, indices), vec![1, 0]);
+        assert_eq!(reference_gather(src, indices), vec![1, 0]);
     }
 
     #[test]
-    fn cpu_ref_zeroes_max_u32_index() {
+    fn reference_gather_zeroes_max_u32_index() {
         let src = &[1u32, 2, 3];
         let indices = &[u32::MAX];
-        assert_eq!(cpu_ref(src, indices), vec![0]);
+        assert_eq!(reference_gather(src, indices), vec![0]);
     }
 
     #[test]
-    fn try_cpu_ref_into_reuses_output_and_clears_stale_tail() {
+    fn reference_into_reuses_output_and_clears_stale_tail() {
         let src = &[10u32, 20, 30, 40];
         let indices = &[3u32, 0, u32::MAX, 1];
         let mut out = Vec::with_capacity(16);
         out.extend_from_slice(&[u32::MAX; 16]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(src, indices, &mut out).unwrap();
+        reference_gather_into(src, indices, &mut out);
 
         assert_eq!(out, vec![40, 10, 0, 20]);
         assert_eq!(out.as_ptr(), ptr);
     }
 
     #[test]
-    fn compatibility_wrappers_match_fallible_reference() {
+    fn compatibility_wrappers_match_reference() {
         let src = &[10u32, 20, 30, 40];
         let indices = &[3u32, 0, u32::MAX, 1];
         let mut compat = Vec::with_capacity(8);
-        let mut fallible = Vec::with_capacity(8);
+        let mut reference = Vec::with_capacity(8);
 
-        cpu_ref_into(src, indices, &mut compat);
-        try_cpu_ref_into(src, indices, &mut fallible)
-            .expect("Fix: small gather CPU reference must reserve");
+        reference_gather_into(src, indices, &mut compat);
+        reference_gather_into(src, indices, &mut reference);
 
-        assert_eq!(cpu_ref(src, indices), fallible);
-        assert_eq!(compat, fallible);
+        assert_eq!(reference_gather(src, indices), reference);
+        assert_eq!(compat, reference);
     }
 
     #[test]
@@ -171,12 +197,12 @@ mod tests {
     }
 
     #[test]
-    fn concurrent_access_cpu_simulation() {
+    fn concurrent_access_reference_simulation() {
         // Simulate what 256 parallel threads would do: many threads read
         // from the same source slot.  The result must be deterministic.
         let src = &[100u32; 1];
         let indices = vec![0u32; 10_000];
-        let out = cpu_ref(src, &indices);
+        let out = reference_gather(src, &indices);
         assert_eq!(out.len(), 10_000);
         assert!(out.iter().all(|&v| v == 100));
     }

@@ -22,6 +22,10 @@ use vyre_libs::decode::hex;
 use vyre_libs::graph::{path_reconstruct, scc_decompose};
 use vyre_libs::math::{dp_accountant, spectral_shape};
 use vyre_libs::reduce::radix_sort;
+use vyre_reference::composition_witness::{
+    bitset_and_witness, hex_decode_packed_witness, mp_edge_clip_witness, path_reconstruct_witness,
+    radix_sort_masked_witness, scc_decompose_witness,
+};
 
 fn pack(words: &[u32]) -> Value {
     Value::from(vyre_primitives::wire::pack_u32_slice(words))
@@ -66,7 +70,7 @@ fn hex_decode_real_ir_matches_oracle_for_mixed_case_and_invalid_nibbles() {
 
     assert_eq!(
         output_words(&program, &outputs, "output"),
-        hex::hex_decode_reference_packed(bytes)
+        hex_decode_packed_witness(bytes)
     );
 }
 
@@ -88,7 +92,7 @@ fn radix_sort_real_ir_matches_stable_oracle_across_bit_widths() {
         let outputs = evaluate(&program, vec![pack(input), pack(&vec![0; input.len()])]);
         assert_eq!(
             output_words(&program, &outputs, "output"),
-            radix_sort::cpu_ref(input, bits),
+            radix_sort_masked_witness(input, bits),
             "bits={bits} input={input:?}"
         );
     }
@@ -109,7 +113,7 @@ fn scc_decompose_real_ir_matches_two_pivot_host_redispatch() {
     let mut actual = expected.clone();
 
     for (forward, backward, pivot) in passes {
-        expected = scc_decompose::cpu_ref(node_count, &forward, &backward, &expected, pivot);
+        expected = scc_decompose_witness(node_count, &forward, &backward, &expected, pivot);
         let program =
             scc_decompose::scc_decompose(node_count, "forward", "backward", "components", pivot);
         let outputs = evaluate(
@@ -130,8 +134,7 @@ fn path_reconstruct_real_ir_matches_root_and_cycle_oracles() {
     let cases: &[(&[u32], u32, u32)] = &[(&[0, 0, 1, 2], 3, 8), (&[1, 0], 0, 6)];
 
     for &(parent, target, max_depth) in cases {
-        let mut expected_path = Vec::new();
-        let expected_len = path_reconstruct::cpu_ref(parent, target, max_depth, &mut expected_path);
+        let (expected_path, expected_len) = path_reconstruct_witness(parent, target, max_depth);
         let program =
             path_reconstruct::path_reconstruct("parent", "target", "path", "length", max_depth);
         let outputs = evaluate(
@@ -168,7 +171,7 @@ fn stochastic_and_mul_real_ir_matches_exact_word_oracle() {
 
     assert_eq!(
         output_words(&program, &outputs, "output"),
-        stochastic_compute::cpu_ref(&lhs, &rhs)
+        bitset_and_witness(&lhs, &rhs)
     );
 }
 
@@ -185,7 +188,7 @@ fn spectral_shape_real_ir_matches_integer_projection_of_f64_oracle() {
         &program,
         vec![pack(&values), pack(&[edge]), pack(&vec![0; values.len()])],
     );
-    let expected: Vec<u32> = spectral_shape::mp_edge_clip_cpu(
+    let expected: Vec<u32> = mp_edge_clip_witness(
         &values
             .iter()
             .map(|value| f64::from(*value))

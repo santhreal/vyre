@@ -67,9 +67,7 @@ fn rewrite_body_loads(body: &mut KernelBody, candidate_slots: &FxHashSet<u32>) {
 mod tests {
     use super::*;
     use crate::descriptor_builder::lit;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelOp, LiteralValue,
-    };
+    use crate::{BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelOp, LiteralValue};
     use vyre_foundation::ir::DataType;
 
     fn test_descriptor_with_loads(
@@ -139,7 +137,10 @@ mod tests {
         let desc = test_descriptor_with_loads(vec![slot], vec![0]);
         let rewritten = rewrite_const_buffer_promote(&desc);
 
-        assert_eq!(rewritten.bindings.slots[0].memory_class, MemoryClass::Global);
+        assert_eq!(
+            rewritten.bindings.slots[0].memory_class,
+            MemoryClass::Global
+        );
         assert_eq!(rewritten.body.ops[1].kind, KernelOpKind::LoadGlobal);
     }
 
@@ -157,7 +158,10 @@ mod tests {
         let desc = test_descriptor_with_loads(vec![slot], vec![0, 0]);
         let rewritten = rewrite_const_buffer_promote(&desc);
 
-        assert_eq!(rewritten.bindings.slots[0].memory_class, MemoryClass::Global);
+        assert_eq!(
+            rewritten.bindings.slots[0].memory_class,
+            MemoryClass::Global
+        );
         assert_eq!(rewritten.body.ops[1].kind, KernelOpKind::LoadGlobal);
     }
 
@@ -175,7 +179,10 @@ mod tests {
         let desc = test_descriptor_with_loads(vec![slot], vec![0, 0]);
         let rewritten = rewrite_const_buffer_promote(&desc);
 
-        assert_eq!(rewritten.bindings.slots[0].memory_class, MemoryClass::Global);
+        assert_eq!(
+            rewritten.bindings.slots[0].memory_class,
+            MemoryClass::Global
+        );
         assert_eq!(rewritten.body.ops[1].kind, KernelOpKind::LoadGlobal);
     }
 }

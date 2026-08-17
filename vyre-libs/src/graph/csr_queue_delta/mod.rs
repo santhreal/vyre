@@ -15,9 +15,11 @@ use crate::graph::csr_frontier_step::{
 
 mod strided;
 
+#[cfg(test)]
+pub use strided::csr_queue_delta_strided_dispatch_grid;
 pub use strided::{
-    csr_queue_delta_strided_dispatch_grid, csr_queue_delta_strided_enqueue,
-    csr_queue_delta_strided_enqueue_with, csr_queue_delta_strided_logical_lanes_per_launch,
+    csr_queue_delta_strided_enqueue, csr_queue_delta_strided_enqueue_with,
+    csr_queue_delta_strided_logical_lanes_per_launch,
     csr_queue_delta_strided_source_slots_per_launch,
     CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY, CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID,
     CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE, CSR_QUEUE_DELTA_STRIDED_MAX_SOURCE_SLOTS_PER_LAUNCH,
@@ -178,11 +180,105 @@ impl<'a> CsrQueueDeltaEnqueueParams<'a> {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_csr_queue_delta_enqueue_cpu_into(
+        active_queue: &[u32],
+        active_len: u32,
+        edge_offsets: &[u32],
+        edge_targets: &[u32],
+        edge_kind_mask: &[u32],
+        accumulator: &mut Vec<u32>,
+        node_count: u32,
+        next_queue_capacity: u32,
+        allow_mask: u32,
+        next_queue: &mut Vec<u32>,
+    ) -> Result<u32, String> {
+        let expected_words = crate::bitset::bitset_words(node_count) as usize;
+        if accumulator.len() != expected_words {
+            return Err(format!(
+                "Fix: delta enqueue requires accumulator.len() == bitset_words(node_count), expected {}, got {}.",
+                expected_words,
+                accumulator.len()
+            ));
+        }
+        if edge_offsets.len() != (node_count as usize) + 1 {
+            return Err(format!(
+                "Fix: delta enqueue requires edge_offsets.len() == node_count + 1, expected {}, got {}.",
+                (node_count as usize) + 1,
+                edge_offsets.len()
+            ));
+        }
+        if edge_targets.len() != edge_kind_mask.len() {
+            return Err(format!(
+                "Fix: delta enqueue requires edge_targets.len() == edge_kind_mask.len(), got {} vs {}.",
+                edge_targets.len(),
+                edge_kind_mask.len()
+            ));
+        }
+        let take = (active_len as usize).min(active_queue.len());
+        let mut acc = accumulator.clone();
+        let mut discoveries = Vec::new();
+        for &src in &active_queue[..take] {
+            if src >= node_count {
+                continue;
+            }
+            let start = edge_offsets[src as usize] as usize;
+            let end = edge_offsets[src as usize + 1] as usize;
+            for edge in start..end {
+                if edge_kind_mask[edge] & allow_mask == 0 {
+                    continue;
+                }
+                let dst = edge_targets[edge];
+                if dst < node_count {
+                    let word = (dst / 32) as usize;
+                    let bit = 1_u32 << (dst % 32);
+                    if (acc[word] & bit) == 0 {
+                        acc[word] |= bit;
+                        discoveries.push(dst);
+                    }
+                }
+            }
+        }
+        let total_discoveries = discoveries.len() as u32;
+        let cap = next_queue_capacity as usize;
+        next_queue.clear();
+        next_queue.extend(discoveries.into_iter().take(cap));
+        *accumulator = acc;
+        Ok(total_discoveries)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn csr_queue_delta_enqueue_cpu(
+        active_queue: &[u32],
+        active_len: u32,
+        edge_offsets: &[u32],
+        edge_targets: &[u32],
+        edge_kind_mask: &[u32],
+        accumulator: &[u32],
+        node_count: u32,
+        next_queue_capacity: u32,
+        allow_mask: u32,
+    ) -> (Vec<u32>, Vec<u32>, u32) {
+        let mut acc = accumulator.to_vec();
+        let mut next_queue = Vec::new();
+        let next_len = try_csr_queue_delta_enqueue_cpu_into(
+            active_queue,
+            active_len,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            &mut acc,
+            node_count,
+            next_queue_capacity,
+            allow_mask,
+            &mut next_queue,
+        )
+        .expect("csr_queue_delta_enqueue_cpu failed");
+        (acc, next_queue, next_len)
+    }
 
     /// One positional delta entry point under test.
     pub(super) type DeltaEnqueueBuilder =

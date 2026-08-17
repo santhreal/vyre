@@ -26,6 +26,10 @@ pub fn leaky_relu_sq(input: &str, output: &str, n: u32) -> Program {
     super::unary::f32_unary_activation_program(OP_ID, input, output, n, leaky_relu_sq_expr)
 }
 
+const EXPECTED_LEAKY_RELU_SQ_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x3F,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -37,17 +41,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // leaky_relu(0, 0.5)² = max(0, 0)² = 0
-            // leaky_relu(2, 0.5)² = max(1, 2)² = 4
-            // leaky_relu(-4, 0.5)² = max(-2, -4)² = (-2)² = 4
-            // leaky_relu(1, 0.5)² = max(0.5, 1)² = 1
-            let input = [0.0_f32, 2.0, -4.0, 1.0];
-            let out: Vec<f32> = input.iter().map(|x| {
-                let leaky = (0.5 * x).max(*x);
-                leaky * leaky
-            }).collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_LEAKY_RELU_SQ_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

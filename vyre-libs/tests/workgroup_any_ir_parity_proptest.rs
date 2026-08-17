@@ -9,8 +9,9 @@
 #![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
+use vyre_libs::reduce::workgroup_any::workgroup_any_u32;
+use vyre_reference::composition_witness::reduce_workgroup_any_witness as cpu_ref;
 use vyre_reference::value::Value;
-
 
 fn run_ir(values: &[u32]) -> u32 {
     let program = workgroup_any_u32("values", "out", values.len() as u32);
@@ -55,9 +56,4 @@ fn workgroup_any_ir_boundaries() {
         "every bit set across the workgroup"
     );
     assert_eq!(run_ir(&full), cpu_ref(&full));
-}
-
-#[must_use]
-fn cpu_ref(input: &[u32]) -> u32 {
-    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
 }

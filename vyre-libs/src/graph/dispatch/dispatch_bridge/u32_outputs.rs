@@ -14,13 +14,16 @@ pub(crate) fn dispatch_single_u32_output_from_prepared_into<D: ProgramDispatcher
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let outputs = dispatcher.dispatch(program, scratch_inputs, grid_override)?;
-    if outputs.len() != 1 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {context} expected exactly one u32 output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], expected_output_words, context, out)
+    let [buf] = match outputs.as_slice() {
+        [buf] => [buf],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: {context} expected exactly one u32 output buffer, got {}.",
+                outputs.len()
+            )));
+        }
+    };
+    decode_u32_output_exact(buf, expected_output_words, context, out)
 }
 
 /// Dispatch already-prepared inputs and decode exactly two u32 output buffers.
@@ -38,15 +41,18 @@ pub(crate) fn dispatch_two_u32_outputs_from_prepared_into<D: ProgramDispatcher +
     grid_override: Option<[u32; 3]>,
 ) -> Result<(), DispatchError> {
     let outputs = dispatcher.dispatch(program, scratch_inputs, grid_override)?;
-    if outputs.len() != 2 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {first_context} expected exactly two u32 output buffers, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], first_expected_words, first_context, first_out)?;
+    let [first_buf, second_buf] = match outputs.as_slice() {
+        [first_buf, second_buf] => [first_buf, second_buf],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: {first_context} expected exactly two u32 output buffers, got {}.",
+                outputs.len()
+            )));
+        }
+    };
+    decode_u32_output_exact(first_buf, first_expected_words, first_context, first_out)?;
     decode_u32_output_exact(
-        &outputs[1],
+        second_buf,
         second_expected_words,
         second_context,
         second_out,

@@ -1,7 +1,5 @@
 use super::*;
-use crate::graph::exploded::{
-    reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
-};
+use crate::graph::exploded::{canonicalize_csr_within_rows_in_place, reference_build_ifds_csr};
 use vyre_foundation::ir::Program;
 
 pub(super) fn canonical_expected(
@@ -13,7 +11,7 @@ pub(super) fn canonical_expected(
     gen_edges: &[(u32, u32, u32)],
     kill: &[(u32, u32, u32)],
 ) -> (Vec<u32>, Vec<u32>) {
-    let (row_ptr, col_idx) = reference_build_ifds_csr(
+    let (row_ptr, mut col_idx) = reference_build_ifds_csr(
         num_procs,
         blocks_per_proc,
         facts_per_proc,
@@ -22,7 +20,9 @@ pub(super) fn canonical_expected(
         gen_edges,
         kill,
     );
-    reference_canonicalize_csr_within_rows(&row_ptr, &col_idx)
+    canonicalize_csr_within_rows_in_place(&row_ptr, &mut col_idx)
+        .expect("canonical_expected row sorting failed");
+    (row_ptr, col_idx)
 }
 
 pub(super) struct RecordingIfdsOracle {

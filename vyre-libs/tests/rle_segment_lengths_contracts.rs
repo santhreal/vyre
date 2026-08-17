@@ -1,9 +1,11 @@
 //! RLE segment-length CPU parity and reusable-storage contracts.
 #![cfg(feature = "decode")]
 
-use vyre_libs::decode::rle_segment_lengths::{
-    pack_rle_segments, rle_decode_cpu, rle_segment_lengths, try_rle_decode_cpu_into,
-    try_rle_segment_lengths_cpu_into, try_rle_segment_start_offsets_cpu_into,
+use vyre_libs::decode::rle_segment_lengths::{pack_rle_segments, rle_segment_lengths};
+use vyre_reference::composition_witness::{
+    rle_decode_witness as rle_decode_cpu, try_rle_decode_witness_into as try_rle_decode_cpu_into,
+    try_rle_segment_lengths_witness_into as try_rle_segment_lengths_cpu_into,
+    try_rle_segment_start_offsets_witness_into as try_rle_segment_start_offsets_cpu_into,
 };
 
 #[test]

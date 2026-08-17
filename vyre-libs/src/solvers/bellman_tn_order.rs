@@ -236,8 +236,8 @@ pub fn bellman_tn_order_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
-    use crate::math::bellman_shortest_path::cpu_ref;
     use crate::test_parity_oracles::NeverDispatches;
+    use vyre_reference::composition_witness::bellman_shortest_path_witness as reference_bellman_shortest_path;
 
     /// Terse binding names, for the tests that only care about the program.
     const FIXTURE: BellmanBuffers<'static> = BellmanBuffers::TERSE;
@@ -316,7 +316,8 @@ mod tests {
                 !changed.is_empty() && changed.iter().all(|&word| word == 0),
                 "Fix: the consumer must upload a non-empty, fully cleared convergence-flag buffer, got {changed:?}."
             );
-            let (out, _) = cpu_ref(&src, &dst, &weight, &dist, dist.len() as u32, 10);
+            let (out, _) =
+                reference_bellman_shortest_path(&src, &dst, &weight, &dist, dist.len() as u32, 10);
             Ok(vec![u32_slice_to_le_bytes(&out)])
         }
     }

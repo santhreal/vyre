@@ -6,6 +6,12 @@ use vyre_foundation::ir::DataType;
 use super::affine_grouped::linear_4bit_affine_grouped;
 use super::unpack_on_demand::linear_4bit;
 
+const EXPECTED_LINEAR_4BIT_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x0C, 0x43, 0x00, 0x00, 0xB6, 0x43, 0x00, 0x00, 0xE0, 0x41, 0x00, 0x00, 0x00, 0x00,
+];
+const EXPECTED_LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_BYTES: [u8; 8] =
+    [0x00, 0x00, 0x16, 0x43, 0x00, 0x00, 0x40, 0x40];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::linear_4bit",
@@ -29,8 +35,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let out = [140.0f32, 364.0, 28.0, 0.0];
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&out)]]
+            vec![vec![EXPECTED_LINEAR_4BIT_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")
@@ -64,8 +69,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let out = [150.0f32, 3.0];
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&out)]]
+            vec![vec![EXPECTED_LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

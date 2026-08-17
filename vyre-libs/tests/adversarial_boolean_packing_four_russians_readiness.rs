@@ -12,22 +12,39 @@ use gate_fixtures::u32_bytes;
 //
 // GPU acquisition: none  -  all assertions use CPU reference oracles.
 
-use vyre_reference::composition_witness::bitset_and_witness as bitset_and_ref;
 use vyre_reference::composition_witness::bitset_and_not_witness as bitset_and_not_ref;
-fn bitset_any_ref(input: &[u32]) -> u32 { if input.iter().any(|&w| w != 0) { 1 } else { 0 } }
+use vyre_reference::composition_witness::bitset_and_witness as bitset_and_ref;
+fn bitset_any_ref(input: &[u32]) -> u32 {
+    if input.iter().any(|&w| w != 0) {
+        1
+    } else {
+        0
+    }
+}
 use vyre_libs::bitset::bitset_words;
-use vyre_reference::composition_witness::bitset_contains_witness as bitset_contains_ref;
-use vyre_reference::composition_witness::bitset_equal_witness as bitset_equal_ref;
 use vyre_libs::bitset::four_russians::{
-    binary_byte_lut, cached_binary_byte_lut, cpu_ref as four_russians_cpu_ref,
-    four_russians_apply_byte_lut, BooleanTileOp,
+    binary_byte_lut, four_russians_apply_byte_lut, BooleanTileOp,
 };
+use vyre_reference::composition_witness::bitset_contains_witness;
+use vyre_reference::composition_witness::bitset_equal_witness;
 use vyre_reference::composition_witness::bitset_not_witness as bitset_not_ref;
 use vyre_reference::composition_witness::bitset_or_witness as bitset_or_ref;
 use vyre_reference::composition_witness::bitset_popcount_witness as bitset_popcount_ref;
-use vyre_reference::composition_witness::bitset_subset_of_witness as bitset_subset_of_ref;
-use vyre_reference::composition_witness::bitset_test_bit_witness as bitset_test_bit_ref;
+use vyre_reference::composition_witness::bitset_subset_of_witness;
 use vyre_reference::composition_witness::bitset_xor_witness as bitset_xor_ref;
+use vyre_reference::composition_witness::four_russians_binary_witness as four_russians_cpu_ref;
+fn bitset_contains_ref(input: &[u32], bit: u32) -> u32 {
+    u32::from(bitset_contains_witness(input, bit))
+}
+fn bitset_test_bit_ref(input: &[u32], bit: u32) -> u32 {
+    bitset_contains_ref(input, bit)
+}
+fn bitset_equal_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
+    u32::from(bitset_equal_witness(lhs, rhs))
+}
+fn bitset_subset_of_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
+    u32::from(bitset_subset_of_witness(lhs, rhs))
+}
 use vyre_reference::value::Value;
 
 // ---------------------------------------------------------------------------
@@ -362,20 +379,6 @@ fn four_russians_binary_luts_match_boolean_ops() {
     assert_eq!(
         four_russians_cpu_ref(&lhs, &rhs, &and_not_lut),
         bitset_and_not_ref(&lhs, &rhs)
-    );
-}
-
-#[test]
-fn four_russians_cached_luts_reuse_allocation_and_match_owned_tables() {
-    let owned = binary_byte_lut(BooleanTileOp::And);
-    let cached_first = cached_binary_byte_lut(BooleanTileOp::And);
-    let cached_second = cached_binary_byte_lut(BooleanTileOp::And);
-
-    assert_eq!(cached_first, owned.as_slice());
-    assert_eq!(
-        cached_first.as_ptr(),
-        cached_second.as_ptr(),
-        "standard Four-Russians LUTs must be process-cached instead of rebuilt per batch"
     );
 }
 

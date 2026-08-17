@@ -1,16 +1,18 @@
 //! Sequential mathematical witnesses for prefix scans, reductions, histogramming, and data movement.
 
-/// Sequential mathematical witness for inclusive and exclusive prefix scans.
-#[must_use]
-pub fn prefix_scan_witness(
+/// Sequential mathematical witness for inclusive and exclusive prefix scans writing into caller storage.
+pub fn prefix_scan_witness_into(
     input: &[u32],
     inclusive: bool,
     combine_op: impl Fn(u32, u32) -> u32,
     identity: u32,
-) -> Vec<u32> {
-    let mut out = Vec::with_capacity(input.len());
+    out: &mut Vec<u32>,
+) {
+    if out.capacity() < input.len() {
+        out.reserve(input.len().saturating_sub(out.len()));
+    }
+    out.clear();
     let mut acc = identity;
-
     for &val in input {
         if inclusive {
             acc = combine_op(acc, val);
@@ -20,7 +22,18 @@ pub fn prefix_scan_witness(
             acc = combine_op(acc, val);
         }
     }
+}
 
+/// Sequential mathematical witness for inclusive and exclusive prefix scans.
+#[must_use]
+pub fn prefix_scan_witness(
+    input: &[u32],
+    inclusive: bool,
+    combine_op: impl Fn(u32, u32) -> u32,
+    identity: u32,
+) -> Vec<u32> {
+    let mut out = Vec::with_capacity(input.len());
+    prefix_scan_witness_into(input, inclusive, combine_op, identity, &mut out);
     out
 }
 
@@ -57,7 +70,9 @@ pub fn reduce_max_witness(input: &[u32]) -> u32 {
 /// Sequential total-set-bit reduction witness.
 #[must_use]
 pub fn reduce_count_witness(input: &[u32]) -> u32 {
-    input.iter().fold(0_u32, |count, value| count.wrapping_add(value.count_ones()))
+    input
+        .iter()
+        .fold(0_u32, |count, value| count.wrapping_add(value.count_ones()))
 }
 
 /// Sequential nonzero-word reduction witness.
@@ -69,7 +84,10 @@ pub fn reduce_count_non_zero_witness(input: &[u32]) -> u32 {
 /// Sequential bitwise-OR workgroup reduction witness.
 #[must_use]
 pub fn reduce_workgroup_any_witness(input: &[u32]) -> u32 {
-    input.iter().copied().fold(0, |combined, value| combined | value)
+    input
+        .iter()
+        .copied()
+        .fold(0, |combined, value| combined | value)
 }
 
 /// Sequential inclusive wrapping prefix sum witness.
@@ -177,4 +195,78 @@ pub fn range_counts_witness(input: &[u32], start: u32, end: u32) -> u32 {
         .iter()
         .copied()
         .fold(0, u32::wrapping_add)
+}
+
+/// Fallible sequential wrapping sum for each adjacent pair of segment offsets writing into caller-owned storage.
+pub fn try_segment_reduce_sum_witness_into(
+    input: &[u32],
+    offsets: &[u32],
+    out: &mut Vec<u32>,
+) -> Result<(), String> {
+    if offsets.is_empty() {
+        out.clear();
+        return Ok(());
+    }
+    let segment_count = offsets.len() - 1;
+    for i in 0..segment_count {
+        let start = offsets[i] as usize;
+        let end = offsets[i + 1] as usize;
+        if start > end || end > input.len() {
+            return Err("malformed segment offsets".to_string());
+        }
+    }
+    if out.capacity() < segment_count {
+        out.reserve(segment_count.saturating_sub(out.len()));
+    }
+    out.clear();
+    for i in 0..segment_count {
+        let start = offsets[i] as usize;
+        let end = offsets[i + 1] as usize;
+        let sum = input[start..end]
+            .iter()
+            .copied()
+            .fold(0u32, u32::wrapping_add);
+        out.push(sum);
+    }
+    Ok(())
+}
+
+/// Sequential wrapping sum for each adjacent pair of segment offsets writing into caller-owned storage.
+pub fn segment_reduce_sum_witness_into(input: &[u32], offsets: &[u32], out: &mut Vec<u32>) {
+    try_segment_reduce_sum_witness_into(input, offsets, out)
+        .unwrap_or_else(|error| panic!("invalid segment reduce witness input: {error}"));
+}
+
+/// Sequential wrapping sum for each adjacent pair of segment offsets.
+#[must_use]
+pub fn segment_reduce_sum_witness(input: &[u32], offsets: &[u32]) -> Vec<u32> {
+    let segment_count = offsets.len().saturating_sub(1);
+    let mut out = Vec::with_capacity(segment_count);
+    segment_reduce_sum_witness_into(input, offsets, &mut out);
+    out
+}
+
+/// Stable sort by the selected low-order key bits while retaining full values.
+#[must_use]
+pub fn radix_sort_masked_witness(input: &[u32], bits: u32) -> Vec<u32> {
+    let mask = match bits {
+        0 => 0,
+        1..=31 => (1_u32 << bits) - 1,
+        _ => u32::MAX,
+    };
+    let mut output = input.to_vec();
+    output.sort_by_key(|value| *value & mask);
+    output
+}
+
+/// Sequential sum reduction for f32 values.
+#[must_use]
+pub fn reduce_sum_f32_witness(values: &[f32]) -> f32 {
+    values.iter().copied().sum()
+}
+
+/// Sequential maximum reduction for f32 values.
+#[must_use]
+pub fn reduce_max_f32_witness(values: &[f32]) -> f32 {
+    values.iter().copied().fold(f32::MIN, f32::max)
 }

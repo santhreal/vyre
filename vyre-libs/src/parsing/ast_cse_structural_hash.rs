@@ -4,10 +4,8 @@ use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::hash::fnv1a::fnv1a32_mul_xor_word_expr;
-use crate::hash::fnv1a::fnv1a32_mul_xor_word_state;
-
 use super::ast_ops::{AST_ADD, AST_PTR_DEREF, AST_VAR};
+use crate::hash::fnv1a::fnv1a32_mul_xor_word_expr;
 
 /// Stable op id for the structural CSE child region.
 pub const OP_ID: &str = "vyre-libs::parsing::ast_cse_structural_hash";
@@ -290,10 +288,14 @@ fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
-fn structural_hash(op: u32, left: u32, right: u32) -> u32 {
-    let h = fnv1a32_mul_xor_word_state(op, left);
-    fnv1a32_mul_xor_word_state(h, right)
-}
+const EXPECTED_AST_CSE_STRUCTURAL_HASH_OPCODES_BYTES: [u8; 8] = [10, 0, 0, 0, 1, 0, 0, 0];
+const EXPECTED_AST_CSE_STRUCTURAL_HASH_VALS_BYTES: [u8; 8] = [0; 8];
+const EXPECTED_AST_CSE_STRUCTURAL_HASH_SET_BYTES: [u8; 64] = [
+    0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255,
+    0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255,
+    0, 0, 0, 0, 255, 255, 255, 255, 175, 201, 24, 125, 0, 0, 0, 0,
+];
+const EXPECTED_AST_CSE_STRUCTURAL_HASH_MODIFIED_BYTES: [u8; 4] = [1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -307,21 +309,11 @@ inventory::submit! {
             fixture_u32(&[0; 16]),
             fixture_u32(&[0]),
         ]]),
-        Some(|| {
-            let h = structural_hash(AST_ADD, 1, 2);
-            let mut hash_set = [0_u32; 16];
-            for slot in 0..8 {
-                hash_set[slot * 2 + 1] = u32::MAX;
-            }
-            let slot = (h % 8) as usize;
-            hash_set[slot * 2] = h;
-            hash_set[slot * 2 + 1] = 0;
-            vec![vec![
-                fixture_u32(&[AST_ADD, AST_VAR]),
-                fixture_u32(&[0, 0]),
-                fixture_u32(&hash_set),
-                fixture_u32(&[1]),
-            ]]
-        }),
+        Some(|| vec![vec![
+            EXPECTED_AST_CSE_STRUCTURAL_HASH_OPCODES_BYTES.to_vec(),
+            EXPECTED_AST_CSE_STRUCTURAL_HASH_VALS_BYTES.to_vec(),
+            EXPECTED_AST_CSE_STRUCTURAL_HASH_SET_BYTES.to_vec(),
+            EXPECTED_AST_CSE_STRUCTURAL_HASH_MODIFIED_BYTES.to_vec(),
+        ]]),
     )
 }

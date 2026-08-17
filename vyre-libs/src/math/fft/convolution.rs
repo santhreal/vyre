@@ -284,21 +284,9 @@ fn pointwise_complex_multiply_conjugate_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn pointwise_complex_multiply_conjugate_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![fixture_f32_bytes(&[
-        -7.0, -16.0, -10.0, 5.0, 0.0, -1.25, 0.0, 6.0,
-    ])]]
-}
-
 fn scale_conjugate_inverse_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![fixture_f32_bytes(&[
         4.0, -8.0, -12.0, 16.0, 0.0, 0.0, 2.0, -4.0,
-    ])]]
-}
-
-fn scale_conjugate_inverse_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![fixture_f32_bytes(&[
-        1.0, 2.0, -3.0, -4.0, 0.0, 0.0, 0.5, 1.0,
     ])]]
 }
 
@@ -307,7 +295,18 @@ inventory::submit! {
         MULTIPLY_OP_ID,
         pointwise_complex_multiply_conjugate_program,
         Some(pointwise_complex_multiply_conjugate_inputs),
-        Some(pointwise_complex_multiply_conjugate_expected),
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0xe0, 0xc0, // -7.0
+                0x00, 0x00, 0x80, 0xc1, // -16.0
+                0x00, 0x00, 0x20, 0xc1, // -10.0
+                0x00, 0x00, 0xa0, 0x40, // 5.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xa0, 0xbf, // -1.25
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xc0, 0x40, // 6.0
+            ]]]
+        }),
     )
     .with_category("math")
 }
@@ -317,7 +316,18 @@ inventory::submit! {
         SCALE_OP_ID,
         scale_conjugate_inverse_program,
         Some(scale_conjugate_inverse_inputs),
-        Some(scale_conjugate_inverse_expected),
+        Some(|| {
+            vec![vec![vec![
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+                0x00, 0x00, 0x40, 0xc0, // -3.0
+                0x00, 0x00, 0x80, 0xc0, // -4.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x00, 0x3f, // 0.5
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+            ]]]
+        }),
     )
     .with_category("math")
 }
@@ -341,7 +351,16 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![crate::fixture_bytes::f32_bytes(&[5.0, 0.0, 3.0, 0.0, 5.0, 0.0, 7.0, 0.0])]]
+            vec![vec![vec![
+                0x00, 0x00, 0xa0, 0x40, // 5.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x40, 0x40, // 3.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xa0, 0x40, // 5.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0xe0, 0x40, // 7.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+            ]]]
         }),
     )
     .with_category("math")

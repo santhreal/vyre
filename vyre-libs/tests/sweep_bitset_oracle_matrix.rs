@@ -17,10 +17,79 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "bitset")]
 
-use vyre_libs::bitset::{
-    and, and_into, and_not, and_not_into, any, clear_bit, contains, copy, equal, not, or, or_into,
-    popcount, set_bit, stochastic_compute, subset_of, test_bit, xor, xor_into, zero,
-};
+mod and {
+    pub(super) use vyre_reference::composition_witness::bitset_and_witness as cpu_ref;
+    pub(super) use vyre_reference::composition_witness::bitset_and_witness_into as cpu_ref_into;
+}
+mod or {
+    pub(super) use vyre_reference::composition_witness::bitset_or_witness as cpu_ref;
+    pub(super) use vyre_reference::composition_witness::bitset_or_witness_into as cpu_ref_into;
+}
+mod xor {
+    pub(super) use vyre_reference::composition_witness::bitset_xor_witness as cpu_ref;
+    pub(super) use vyre_reference::composition_witness::bitset_xor_witness_into as cpu_ref_into;
+}
+mod and_not {
+    pub(super) use vyre_reference::composition_witness::bitset_and_not_witness as cpu_ref;
+    pub(super) use vyre_reference::composition_witness::bitset_and_not_witness_into as cpu_ref_into;
+}
+mod stochastic_compute {
+    pub(super) use vyre_reference::composition_witness::bitset_and_witness as cpu_ref;
+    pub(super) use vyre_reference::composition_witness::bitset_and_witness_into as cpu_ref_into;
+}
+mod not {
+    pub(super) use vyre_reference::composition_witness::bitset_not_witness as cpu_ref;
+    pub(super) use vyre_reference::composition_witness::bitset_not_witness_into as cpu_ref_into;
+}
+mod popcount {
+    pub(super) use vyre_reference::composition_witness::bitset_popcount_witness as cpu_ref;
+    pub(super) use vyre_reference::composition_witness::bitset_popcount_witness_into as cpu_ref_into;
+}
+mod any {
+    pub(super) use vyre_reference::composition_witness::reduce_any_witness as cpu_ref;
+}
+mod equal {
+    pub(super) fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
+        u32::from(vyre_reference::composition_witness::bitset_equal_witness(
+            lhs, rhs,
+        ))
+    }
+}
+mod subset_of {
+    pub(super) fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
+        u32::from(vyre_reference::composition_witness::bitset_subset_of_witness(lhs, rhs))
+    }
+}
+mod contains {
+    pub(super) use vyre_reference::composition_witness::bitset_test_bit_witness as cpu_ref;
+}
+mod test_bit {
+    pub(super) use super::contains::cpu_ref;
+}
+mod zero {
+    pub(super) use vyre_reference::composition_witness::bitset_zero_inplace_witness as cpu_ref;
+}
+mod copy {
+    pub(super) use vyre_reference::composition_witness::bitset_copy_witness as cpu_ref;
+}
+mod and_into {
+    pub(super) use vyre_reference::composition_witness::bitset_and_inplace_witness as cpu_ref;
+}
+mod or_into {
+    pub(super) use vyre_reference::composition_witness::bitset_or_inplace_witness as cpu_ref;
+}
+mod xor_into {
+    pub(super) use vyre_reference::composition_witness::bitset_xor_inplace_witness as cpu_ref;
+}
+mod and_not_into {
+    pub(super) use vyre_reference::composition_witness::bitset_and_not_inplace_witness as cpu_ref;
+}
+mod set_bit {
+    pub(super) use vyre_reference::composition_witness::bitset_set_bit_inplace_witness as cpu_ref;
+}
+mod clear_bit {
+    pub(super) use vyre_reference::composition_witness::bitset_clear_bit_inplace_witness as cpu_ref;
+}
 
 /// Cases produced by each of the two generators below.
 const CASES: usize = 16384;

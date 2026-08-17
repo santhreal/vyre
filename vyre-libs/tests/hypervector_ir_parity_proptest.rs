@@ -17,8 +17,10 @@
 use proptest::prelude::*;
 use vyre_reference::value::Value;
 
-use vyre_libs::hash::hypervector::{
-    hypervector_majority_bundle, hypervector_xor_bind, majority_bundle_cpu, xor_bind_cpu,
+use vyre_libs::hash::hypervector::{hypervector_majority_bundle, hypervector_xor_bind};
+use vyre_reference::composition_witness::{
+    hypervector_majority_bundle_witness as majority_bundle_cpu,
+    hypervector_xor_bind_witness as xor_bind_cpu,
 };
 
 fn pack(d: &[u32]) -> Value {

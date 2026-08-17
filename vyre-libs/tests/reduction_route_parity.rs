@@ -3,6 +3,7 @@
 #![cfg(feature = "reduce")]
 #![forbid(unsafe_code)]
 
+use vyre_reference::composition_witness::wrapping_sum_witness;
 use vyre_reference::value::Value;
 
 use vyre_libs::reduce::{sum, workgroup_tree};
@@ -38,7 +39,7 @@ fn generated_values(count: u32) -> Vec<u32> {
 fn atomic_and_tree_routes_match_exactly_across_crossover_boundaries() {
     for count in [1, 31, 32, 33, 255, 256, 257, 1024] {
         let values = generated_values(count);
-        let expected = sum::cpu_ref(&values);
+        let expected = wrapping_sum_witness(&values);
         let atomic = sum::reduce_sum("values", "out", count);
         let tile = count.min(256).next_power_of_two();
         let tree = workgroup_tree::workgroup_sum_u32("values", "out", count, tile);
@@ -63,7 +64,7 @@ fn atomic_and_tree_routes_match_exactly_across_crossover_boundaries() {
 #[test]
 fn atomic_and_tree_routes_preserve_wrapping_overflow() {
     let values = [u32::MAX, 1, u32::MAX, 2, 0x8000_0000, 0x8000_0000];
-    let expected = sum::cpu_ref(&values);
+    let expected = wrapping_sum_witness(&values);
     let atomic = sum::reduce_sum("values", "out", values.len() as u32);
     let tree = workgroup_tree::workgroup_sum_u32("values", "out", values.len() as u32, 8);
 

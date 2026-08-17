@@ -88,13 +88,53 @@ pub fn vietoris_rips_edge_filter(
     )
 }
 
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        vietoris_rips_edge_filter_witness as vietoris_rips_edge_filter_cpu,
+        vietoris_rips_edges_witness as extract_edges_cpu,
+    };
+
+    fn try_vietoris_rips_edge_filter_cpu_into(
+        distances: &[f64],
+        epsilon: f64,
+        point_count: u32,
+        output: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let points =
+            usize::try_from(point_count).map_err(|_| "n does not fit usize".to_string())?;
+        let cells = points
+            .checked_mul(points)
+            .ok_or_else(|| format!("n * n overflows usize for n={points}"))?;
+        output
+            .try_reserve_exact(cells.saturating_sub(output.len()))
+            .map_err(|error| format!("failed to reserve edge mask: {error}"))?;
+        let result = vietoris_rips_edge_filter_cpu(distances, epsilon, point_count);
+        output.clear();
+        output.extend_from_slice(&result);
+        Ok(())
+    }
+
+    fn try_extract_edges_cpu_into(
+        mask: &[u32],
+        point_count: u32,
+        output: &mut Vec<(u32, u32)>,
+    ) -> Result<(), String> {
+        let points =
+            usize::try_from(point_count).map_err(|_| "n does not fit usize".to_string())?;
+        let edge_count = (0..points)
+            .flat_map(|row| ((row + 1)..points).map(move |column| (row, column)))
+            .filter(|&(row, column)| mask.get(row * points + column).copied().unwrap_or(0) != 0)
+            .count();
+        output
+            .try_reserve_exact(edge_count.saturating_sub(output.len()))
+            .map_err(|error| format!("failed to reserve edge list: {error}"))?;
+        let result = extract_edges_cpu(mask, point_count);
+        output.clear();
+        output.extend_from_slice(&result);
+        Ok(())
+    }
 
     #[test]
     fn cpu_edge_filter_full_threshold_includes_all() {

@@ -1,3 +1,4 @@
+#[cfg(test)]
 use super::dispatch_plan::CsrForwardOrChangedDispatchPlan;
 use super::launch_plan::CsrForwardOrChangedLaunchPlan;
 use super::layout::{
@@ -44,6 +45,7 @@ pub fn plan_csr_forward_or_changed_launch(
 ///
 /// Returns an actionable diagnostic when CSR inputs are malformed or the
 /// changed-history fast path cannot be represented by the primitive builders.
+#[cfg(test)]
 pub(crate) fn plan_csr_forward_or_changed_dispatch(
     inputs: CsrClosureInputs<'_>,
 ) -> Result<CsrForwardOrChangedDispatchPlan, String> {

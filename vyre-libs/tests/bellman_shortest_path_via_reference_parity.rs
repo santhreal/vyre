@@ -25,8 +25,8 @@
 //! authoritative CPU reference. Values are exact integers → BIT-EXACT (no tolerance).
 
 use vyre_foundation::program_dispatch::DispatchError;
-fn cpu_ref(_offsets: &[u32], _cols: &[u32], _weights: &[f32], _src: u32, n: u32) -> Vec<f32> { vec![0.0; n as usize] }
 use vyre_libs::solvers::bellman_tn_order::bellman_tn_order_via;
+use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;

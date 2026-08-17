@@ -1,7 +1,5 @@
 use super::{BidirectionalGpuScratch, CachedBidirectionalProgram};
-use crate::graph::csr_bidirectional::{
-    plan_csr_bidirectional_step, run_csr_bidirectional_closure_plan_with_step,
-};
+use crate::graph::csr_bidirectional::plan_csr_bidirectional_step;
 use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::dispatch::csr_bidirectional::dispatch::{
     bidirectional_step_dispatch_prepared_inputs_into, refresh_bidirectional_step_inputs,
@@ -70,6 +68,36 @@ pub fn bidirectional_closure_via_with_scratch_into(
         inputs.allow_mask,
     )
     .map_err(DispatchError::BadInputs)?;
+    if seed.len() != plan.frontier_words {
+        return Err(DispatchError::BadInputs(format!(
+            "Fix: csr_bidirectional closure expected seed length {} words for {} nodes, got {}.",
+            plan.frontier_words,
+            plan.layout.node_count,
+            seed.len()
+        )));
+    }
+    crate::plumbing::host::scratch::reserve_items_with(
+        current,
+        plan.frontier_words,
+        "csr_bidirectional closure runner",
+        "current frontier",
+        DispatchError::BadInputs,
+    )?;
+    crate::plumbing::host::scratch::reserve_items_with(
+        next,
+        plan.frontier_words,
+        "csr_bidirectional closure runner",
+        "next frontier",
+        DispatchError::BadInputs,
+    )?;
+
+    current.clear();
+    current.extend_from_slice(seed);
+    next.clear();
+    if plan.layout.node_count == 0 || inputs.max_iters == 0 {
+        return Ok(());
+    }
+
     let BidirectionalGpuScratch {
         inputs: dispatch_inputs,
         static_input_key,
@@ -79,35 +107,38 @@ pub fn bidirectional_closure_via_with_scratch_into(
     let static_key = plan
         .static_input_key(graph.edge_offsets, graph.edge_targets, graph.edge_kind_mask)
         .map_err(DispatchError::BadInputs)?;
-    run_csr_bidirectional_closure_plan_with_step(
-        &plan,
-        seed,
-        inputs.max_iters,
-        current,
-        next,
-        DispatchError::BadInputs,
-        |frontier, step_out| {
-            let cached =
-                program_cache.get_or_insert_with(program_key, || CachedBidirectionalProgram {
-                    program: plan.program(),
-                });
-            refresh_bidirectional_step_inputs(
-                dispatch_inputs,
-                static_input_key,
-                static_key,
-                &plan,
-                graph.edge_offsets,
-                graph.edge_targets,
-                graph.edge_kind_mask,
-                frontier,
-            )?;
-            bidirectional_step_dispatch_prepared_inputs_into(
-                dispatcher,
-                &plan,
-                &cached.program,
-                dispatch_inputs,
-                step_out,
-            )
-        },
-    )
+    let cached = program_cache.get_or_insert_with(program_key, || CachedBidirectionalProgram {
+        program: plan.program(),
+    });
+
+    for _ in 0..inputs.max_iters {
+        next.clear();
+        refresh_bidirectional_step_inputs(
+            dispatch_inputs,
+            static_input_key,
+            static_key,
+            &plan,
+            graph.edge_offsets,
+            graph.edge_targets,
+            graph.edge_kind_mask,
+            current,
+        )?;
+        bidirectional_step_dispatch_prepared_inputs_into(
+            dispatcher,
+            &plan,
+            &cached.program,
+            dispatch_inputs,
+            next,
+        )?;
+        let mut changed = false;
+        for (dst, src) in current.iter_mut().zip(next.iter()) {
+            let merged = *dst | *src;
+            changed |= merged != *dst;
+            *dst = merged;
+        }
+        if !changed {
+            return Ok(());
+        }
+    }
+    Ok(())
 }

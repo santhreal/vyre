@@ -147,6 +147,7 @@ impl StateIndexFrontierHeader {
 ///
 /// Returns an actionable error when the frontier length cannot fit the u32
 /// header or output storage cannot be reserved.
+#[cfg(test)]
 pub fn try_compact_state_index_frontier_into(
     domain: StateIndexFrontierDomain,
     items: &[StateIndexFrontierItem],

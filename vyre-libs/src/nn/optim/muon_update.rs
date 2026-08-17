@@ -28,6 +28,10 @@ pub fn muon_update(
     muon_step_program(OP_ID, params, grads, momentum_buf, output, n, lr, momentum)
 }
 
+const EXPECTED_MUON_UPDATE_MOMENTUM_BYTES: [u8; 8] =
+    [0xCD, 0xCC, 0xCC, 0x3D, 0xCD, 0xCC, 0x4C, 0x3E];
+const EXPECTED_MUON_UPDATE_OUTPUT_BYTES: [u8; 8] = [0x1E, 0x8A, 0x7E, 0x3F, 0x1E, 0x8A, 0xFE, 0x3F];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -42,8 +46,8 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vec![205, 204, 204, 61, 205, 204, 76, 62],
-                vec![30, 138, 126, 63, 30, 138, 254, 63],
+                EXPECTED_MUON_UPDATE_MOMENTUM_BYTES.to_vec(),
+                EXPECTED_MUON_UPDATE_OUTPUT_BYTES.to_vec(),
             ]]
         }),
     )

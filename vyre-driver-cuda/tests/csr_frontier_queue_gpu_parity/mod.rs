@@ -26,8 +26,7 @@ use vyre_libs::graph::csr_frontier_queue::{
     frontier_to_queue_cpu, frontier_to_queue_parallel,
 };
 use vyre_libs::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_enqueue_cpu, csr_queue_delta_strided_dispatch_grid,
-    csr_queue_delta_strided_enqueue,
+    csr_queue_delta_enqueue, csr_queue_delta_enqueue_cpu, csr_queue_delta_strided_enqueue,
 };
 use vyre_libs::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
@@ -38,6 +37,26 @@ use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGra
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
     resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
+
+const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
+    let source_slots = if active_queue_capacity == 0 {
+        1
+    } else if active_queue_capacity > 65_536 {
+        65_536
+    } else {
+        active_queue_capacity
+    };
+    let total_lanes = source_slots * 8;
+    [
+        if total_lanes == 0 {
+            1
+        } else {
+            (total_lanes + 255) / 256
+        },
+        1,
+        1,
+    ]
+}
 
 fn skewed_high_degree_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     assert!(

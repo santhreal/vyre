@@ -16,9 +16,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{
-    GraphInput, GraphOutput, ProgramGraph, ValueContract, ValueLifetime,
-};
+use vyre_foundation::ir::{GraphInput, GraphOutput, ProgramGraph, ValueContract, ValueLifetime};
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
     compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
@@ -27,8 +25,8 @@ use vyre_megakernel::{
 
 #[path = "graph_fixtures/mod.rs"]
 mod graph_fixtures;
-use vyre_test_support::pass_programs::copy_program;
 use graph_fixtures::{invocation_contract, producer_consumer_pair};
+use vyre_test_support::pass_programs::copy_program;
 
 fn facts() -> ExternalFacts {
     ExternalFacts::new(Digest([0x77; 32]), BTreeMap::from([("items".into(), 64)]))
@@ -286,7 +284,8 @@ fn fixed_spatial_mask_rejected_without_enforceable_hardware_capability() {
     .validate()
     .expect("request must validate");
 
-    let artifact = compile(&request).expect("compilation must succeed with fallback to legal topologies");
+    let artifact =
+        compile(&request).expect("compilation must succeed with fallback to legal topologies");
     assert!(artifact.selected_plan().candidates_explored >= 1);
 }
 
@@ -308,7 +307,8 @@ fn bounded_work_queue_rejected_without_cooperative_launch() {
     .validate()
     .expect("request must validate");
 
-    let artifact = compile(&request).expect("compilation must succeed with fallback to legal topologies");
+    let artifact =
+        compile(&request).expect("compilation must succeed with fallback to legal topologies");
     assert!(artifact.selected_plan().candidates_explored >= 1);
 }
 
@@ -372,8 +372,7 @@ fn artifact_encoding_preserves_schema_7_and_compiled_topology_schedule() {
     // Verify stale schema version is rejected
     let mut stale_bytes = wire_bytes.clone();
     stale_bytes[4..6].copy_from_slice(&6u16.to_le_bytes());
-    let error = Artifact::from_bytes(&stale_bytes)
-        .expect_err("stale schema version 6 must fail");
+    let error = Artifact::from_bytes(&stale_bytes).expect_err("stale schema version 6 must fail");
     assert_eq!(error.diagnostic.code.as_str(), "MKC015_VERSION_SKEW");
 }
 

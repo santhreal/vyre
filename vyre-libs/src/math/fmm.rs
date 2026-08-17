@@ -377,82 +377,43 @@ pub fn l2p_zeroth_f32_step(
     )
 }
 
-/// CPU reference for `p2m_step`  -  sums particle charges into per-cell
-/// total charge (zeroth-order moment).
 #[cfg(test)]
 #[must_use]
-pub fn p2m_zeroth_moment_cpu(charges: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
-    let mut moments = Vec::new();
-    try_p2m_zeroth_moment_cpu_into(charges, cell_assignment, &mut moments)
-        .unwrap_or_else(|error| panic!("{error}"));
-    moments
+fn p2m_zeroth_moment_cpu(charges: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
+    vyre_reference::composition_witness::p2m_zeroth_moment_truncating_witness(
+        charges,
+        cell_assignment,
+    )
 }
 
-/// CPU reference for `p2m_step` using caller-owned moment storage.
 #[cfg(test)]
-pub fn p2m_zeroth_moment_cpu_into(
-    charges: &[f64],
-    cell_assignment: &[u32],
-    moments: &mut Vec<f64>,
-) {
-    try_p2m_zeroth_moment_cpu_into(charges, cell_assignment, moments)
-        .unwrap_or_else(|error| panic!("{error}"));
-}
-
-/// Fallible CPU reference for `p2m_step` using caller-owned moment storage.
-#[cfg(test)]
-pub fn try_p2m_zeroth_moment_cpu_into(
+fn try_p2m_zeroth_moment_cpu_into(
     charges: &[f64],
     cell_assignment: &[u32],
     moments: &mut Vec<f64>,
 ) -> Result<(), String> {
-    if charges.is_empty() {
-        debug_assert!(cell_assignment.is_empty());
-        moments.clear();
-        return Ok(());
-    }
-    let n_cells = cell_assignment.iter().max().copied().unwrap_or(0) as usize + 1;
-    if n_cells > moments.capacity() {
-        crate::plumbing::host::scratch::reserve_items(
-            moments,
-            n_cells - moments.len(),
-            "FMM CPU oracle",
-            "p2m zeroth moments",
-        )?;
-    }
-    moments.clear();
-    moments.resize(n_cells, 0.0);
-    for (&charge, &cell) in charges.iter().zip(cell_assignment.iter()) {
-        moments[cell as usize] += charge;
-    }
-    Ok(())
+    vyre_reference::composition_witness::try_p2m_zeroth_moment_truncating_witness_into(
+        charges,
+        cell_assignment,
+        moments,
+    )
 }
 
-/// CPU reference for **L2P** evaluation  -  given a cell's local
-/// expansion (zeroth-order = total far-field potential) and a target
-/// particle position, return the contributed potential. For the
-/// zeroth-order primitive, this is just the local moment value.
 #[cfg(test)]
 #[must_use]
-pub fn l2p_zeroth_eval_cpu(local_moment: f64, _target_x: f64, _target_y: f64) -> f64 {
-    local_moment
+fn l2p_zeroth_eval_cpu(local_moment: f64, _target_x: f64, _target_y: f64) -> f64 {
+    vyre_reference::composition_witness::l2p_zeroth_eval_witness(local_moment)
 }
 
-/// CPU reference for **M2L** translation  -  given a source cell's
-/// multipole expansion (zeroth-order = total source charge), the
-/// distance to the target cell, return the target cell's local
-/// expansion contribution. For Coulomb 2D: `local_0 = source_0 / r`.
 #[cfg(test)]
 #[must_use]
-pub fn m2l_zeroth_translate_cpu(source_moment: f64, distance: f64) -> f64 {
-    let r = distance.max(1e-12);
-    source_moment / r
+fn m2l_zeroth_translate_cpu(source_moment: f64, distance: f64) -> f64 {
+    vyre_reference::composition_witness::m2l_zeroth_translate_witness(source_moment, distance)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
     }

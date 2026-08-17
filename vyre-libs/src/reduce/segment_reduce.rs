@@ -65,9 +65,6 @@ pub fn segment_reduce_sum(
     )
 }
 
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -81,8 +78,10 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[3, 12])]]
+            vec![vec![vec![
+                0x03, 0x00, 0x00, 0x00, // 3
+                0x0c, 0x00, 0x00, 0x00, // 12
+            ]]]
         }),
     )
 }
@@ -91,53 +90,85 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn reference_segment_reduce_sum(input: &[u32], offsets: &[u32]) -> Vec<u32> {
+        let mut out = Vec::new();
+        try_reference_segment_reduce_sum_into(input, offsets, &mut out).unwrap();
+        out
+    }
+
+    fn reference_segment_reduce_sum_into(input: &[u32], offsets: &[u32], out: &mut Vec<u32>) {
+        try_reference_segment_reduce_sum_into(input, offsets, out).unwrap();
+    }
+
+    fn try_reference_segment_reduce_sum_into(
+        input: &[u32],
+        offsets: &[u32],
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        vyre_reference::composition_witness::try_segment_reduce_sum_witness_into(
+            input, offsets, out,
+        )
+    }
+
     #[test]
     fn two_segments() {
-        assert_eq!(cpu_ref(&[1, 2, 3, 4, 5], &[0, 2, 5]), vec![3, 12]);
+        assert_eq!(
+            reference_segment_reduce_sum(&[1, 2, 3, 4, 5], &[0, 2, 5]),
+            vec![3, 12]
+        );
     }
 
     #[test]
     fn single_segment() {
-        assert_eq!(cpu_ref(&[10, 20, 30], &[0, 3]), vec![60]);
+        assert_eq!(
+            reference_segment_reduce_sum(&[10, 20, 30], &[0, 3]),
+            vec![60]
+        );
     }
 
     #[test]
     fn empty_segment() {
-        assert_eq!(cpu_ref(&[1, 2, 3], &[0, 0, 3]), vec![0, 6]);
+        assert_eq!(
+            reference_segment_reduce_sum(&[1, 2, 3], &[0, 0, 3]),
+            vec![0, 6]
+        );
     }
 
     #[test]
     fn wraps_on_overflow() {
-        assert_eq!(cpu_ref(&[u32::MAX, 1, 2], &[0, 2, 3]), vec![0, 2]);
+        assert_eq!(
+            reference_segment_reduce_sum(&[u32::MAX, 1, 2], &[0, 2, 3]),
+            vec![0, 2]
+        );
     }
 
     #[test]
-    fn cpu_ref_into_reuses_output_buffer() {
+    fn reference_into_reuses_output_buffer() {
         let mut out = Vec::with_capacity(8);
         let ptr = out.as_ptr();
-        cpu_ref_into(&[1, 2, 3, 4, 5], &[0, 2, 5], &mut out);
+        reference_segment_reduce_sum_into(&[1, 2, 3, 4, 5], &[0, 2, 5], &mut out);
         assert_eq!(out, vec![3, 12]);
         assert_eq!(out.as_ptr(), ptr);
     }
 
     #[test]
-    fn try_cpu_ref_into_clears_stale_tail_without_reallocating() {
+    fn try_reference_into_clears_stale_tail_without_reallocating() {
         let mut out = Vec::with_capacity(8);
         out.extend_from_slice(&[u32::MAX; 8]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(&[1, 2, 3, 4, 5], &[0, 2, 5], &mut out).unwrap();
+        try_reference_segment_reduce_sum_into(&[1, 2, 3, 4, 5], &[0, 2, 5], &mut out).unwrap();
 
         assert_eq!(out, vec![3, 12]);
         assert_eq!(out.as_ptr(), ptr);
     }
 
     #[test]
-    fn try_cpu_ref_into_rejects_bad_offsets_without_mutating_output() {
+    fn try_reference_into_rejects_bad_offsets_without_mutating_output() {
         let mut out = vec![0xDEAD_BEEF, 0xCAFE_BABE];
         let before = out.clone();
 
-        let err = try_cpu_ref_into(&[1, 2, 3], &[0, 4], &mut out)
+        let err = try_reference_segment_reduce_sum_into(&[1, 2, 3], &[0, 4], &mut out)
             .expect_err("out-of-bounds segment must be rejected");
 
         assert!(err.contains("malformed segment"));
@@ -145,20 +176,19 @@ mod tests {
     }
 
     #[test]
-    fn compatibility_wrappers_match_fallible_reference() {
+    fn compatibility_wrappers_match_reference() {
         let input = &[1, 2, 3, 4, 5];
         let offsets = &[0, 2, 5];
         let mut compat = Vec::with_capacity(8);
         let mut fallible = Vec::with_capacity(8);
 
-        cpu_ref_into(input, offsets, &mut compat);
-        try_cpu_ref_into(input, offsets, &mut fallible)
-            .expect("Fix: small segment_reduce_sum CPU reference must reserve");
+        reference_segment_reduce_sum_into(input, offsets, &mut compat);
+        try_reference_segment_reduce_sum_into(input, offsets, &mut fallible)
+            .expect("Fix: small segment_reduce_sum reference must reserve");
 
-        assert_eq!(cpu_ref(input, offsets), fallible);
+        assert_eq!(reference_segment_reduce_sum(input, offsets), fallible);
         assert_eq!(compat, fallible);
     }
-
     #[test]
     fn emitted_program_has_expected_buffers() {
         let p = segment_reduce_sum("input", "segment_offsets", "output", 4);

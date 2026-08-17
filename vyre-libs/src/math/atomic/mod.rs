@@ -31,7 +31,9 @@ macro_rules! define_atomic_serial_module {
         $values:expr,
         $initial:expr,
         $final_state:expr,
-        $trace:expr
+        $final_state_bytes:expr,
+        $trace:expr,
+        $trace_bytes:expr
     ) => {
         use vyre_foundation::ir::Program;
 
@@ -60,9 +62,7 @@ macro_rules! define_atomic_serial_module {
                     vec![vec![to_bytes(values), to_bytes(&[$initial])]]
                 }),
                 Some(|| {
-                    let to_bytes = vyre_primitives::wire::pack_u32_slice;
-                    let trace: &[u32] = &$trace;
-                    vec![vec![to_bytes(&[$final_state]), to_bytes(trace)]]
+                    vec![vec![$final_state_bytes.to_vec(), $trace_bytes.to_vec()]]
                 }),
             )
             .with_category("math")
@@ -101,7 +101,12 @@ mod atomic_add {
         [1u32, 5, u32::MAX, 3],
         7u32,
         15u32,
-        [7u32, 8, 13, 12]
+        [0x0f, 0x00, 0x00, 0x00],
+        [7u32, 8, 13, 12],
+        [
+            0x07, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x0c, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
@@ -115,7 +120,12 @@ mod atomic_and {
         [0xFFu32, 0xF0, 0x0F, 0x33],
         u32::MAX,
         0x00u32,
-        [u32::MAX, 0xFF, 0xF0, 0x00]
+        [0x00, 0x00, 0x00, 0x00],
+        [u32::MAX, 0xFF, 0xF0, 0x00],
+        [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
@@ -130,7 +140,12 @@ mod atomic_exchange {
         [100u32, 200, 300, 400],
         42u32,
         400u32,
-        [42u32, 100, 200, 300]
+        [0x90, 0x01, 0x00, 0x00],
+        [42u32, 100, 200, 300],
+        [
+            0x2a, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, 0x00, 0x00, 0x00, 0x2c, 0x01,
+            0x00, 0x00
+        ]
     );
 }
 
@@ -145,7 +160,12 @@ mod atomic_max {
         [50u32, 20, 80, 10],
         0u32,
         80u32,
-        [0u32, 50, 50, 80]
+        [0x50, 0x00, 0x00, 0x00],
+        [0u32, 50, 50, 80],
+        [
+            0x00, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x50, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
@@ -159,7 +179,12 @@ mod atomic_min {
         [50u32, 20, 80, 10],
         100u32,
         10u32,
-        [100u32, 50, 20, 20]
+        [0x0a, 0x00, 0x00, 0x00],
+        [100u32, 50, 20, 20],
+        [
+            0x64, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x14, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
@@ -173,7 +198,12 @@ mod atomic_or {
         [0x01u32, 0x02, 0x04, 0x08],
         0u32,
         0x0Fu32,
-        [0u32, 1, 3, 7]
+        [0x0f, 0x00, 0x00, 0x00],
+        [0u32, 1, 3, 7],
+        [
+            0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x07, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 
@@ -187,7 +217,12 @@ mod atomic_xor {
         [0xF0u32, 0x0F, 0xFF, 0x55],
         0u32,
         0x55u32,
-        [0u32, 0xF0, 0xFF, 0x00]
+        [0x55, 0x00, 0x00, 0x00],
+        [0u32, 0xF0, 0xFF, 0x00],
+        [
+            0x00, 0x00, 0x00, 0x00, 0xf0, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00
+        ]
     );
 }
 

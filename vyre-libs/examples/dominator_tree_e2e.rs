@@ -4,12 +4,12 @@
 //! prints the immediate-dominator array computed by the exact CPU oracle.
 //!
 //! Example:
-//!   echo -e "0 1\n0 2\n1 3\n2 3" | cargo run --example dominator_tree_e2e --features graph,cpu-parity
+//!   echo -e "0 1\n0 2\n1 3\n2 3" | cargo run --example dominator_tree_e2e --features graph
 
 use std::io::{self, BufRead};
 
 fn main() {
-    println!("vyre-primitives dominator_tree e2e example");
+    println!("vyre-libs dominator_tree e2e example");
 
     let stdin = io::stdin();
     let mut edges: Vec<(u32, u32)> = Vec::new();
@@ -44,5 +44,8 @@ fn main() {
 
     println!("Nodes: {node_count}, Edges: {}", edges.len());
 
-    println!("Dominator tree graph representation: {node_count} nodes, {} edges.", edges.len());
+    println!(
+        "Dominator tree graph representation: {node_count} nodes, {} edges.",
+        edges.len()
+    );
 }

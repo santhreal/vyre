@@ -19,6 +19,7 @@ pub fn bitset_copy(target: &str, source: &str, words: u32) -> Program {
     copy_word_program(OP_ID, target, source, words)
 }
 
+const EXPECTED_BITSET_COPY_OUTPUT_BYTES: [u8; 8] = [0xAD, 0xDE, 0x00, 0x00, 0xEF, 0xBE, 0x00, 0x00];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -32,29 +33,32 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0xDEAD, 0xBEEF])]]
+            vec![vec![EXPECTED_BITSET_COPY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
+    fn reference_copy(dst: &mut [u32], src: &[u32]) {
+        let len = dst.len().min(src.len());
+        dst[..len].copy_from_slice(&src[..len]);
+    }
 
     #[test]
-    fn cpu_ref_copies_word_for_word() {
+    fn reference_copies_word_for_word() {
         let src = vec![0x1234_5678, 0xDEAD_BEEF, 0x0000_FFFF, 0xFFFF_0000];
         let mut dst = vec![0u32; src.len()];
-        cpu_ref(&mut dst, &src);
+        reference_copy(&mut dst, &src);
         assert_eq!(dst, src);
     }
 
     #[test]
-    fn cpu_ref_stops_at_shorter_source() {
+    fn reference_stops_at_shorter_source() {
         let src = vec![1u32, 2, 3];
         let mut dst = vec![10u32, 20, 30, 40, 50];
-        cpu_ref(&mut dst, &src);
+        reference_copy(&mut dst, &src);
         assert_eq!(dst, vec![1u32, 2, 3, 40, 50]);
     }
 }

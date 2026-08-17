@@ -29,90 +29,74 @@ pub fn stochastic_and_mul(a: &str, b: &str, out: &str, n_words: u32) -> Program 
     binary_word_program(OP_ID, a, b, out, n_words, BitwiseBinaryOp::And)
 }
 
+#[cfg(test)]
+fn reference_stochastic_and_mul(left: &[u32], right: &[u32]) -> Vec<u32> {
+    vyre_reference::composition_witness::bitset_and_witness(left, right)
+}
 
+#[cfg(test)]
+fn reference_stochastic_and_mul_into(left: &[u32], right: &[u32], output: &mut Vec<u32>) {
+    vyre_reference::composition_witness::bitset_and_witness_into(left, right, output);
+}
 
+#[cfg(test)]
+fn try_reference_stochastic_and_mul_into(
+    left: &[u32],
+    right: &[u32],
+    output: &mut Vec<u32>,
+) -> Result<(), String> {
+    reference_stochastic_and_mul_into(left, right, output);
+    Ok(())
+}
 
-/// CPU helper: encode `p ∈ [0, 1]` as bitstream of length `len_bits`.
-///
-/// # Panics
-/// Panics when `p` is outside `[0, 1]` or `len_bits` is unrepresentable. Callers that
-/// must recover use the `try_` twin.
+#[cfg(test)]
 #[must_use]
-pub fn encode_bitstream(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
-    let mut out = Vec::new();
-    match try_encode_bitstream_into(p, len_bits, seed, &mut out) {
-        Ok(()) => out,
-        // Returning an empty bitstream on failure silently corrupts the encoded
-        // probability (downstream stochastic math reads zeros), a silent
-        // fallback (Law 10). Fail loud; callers use try_encode_bitstream_into.
-        Err(error) => panic!("vyre-primitives stochastic bitstream encode failed: {error}"),
-    }
+fn encode_bitstream(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
+    vyre_reference::composition_witness::stochastic_encode_witness(p, len_bits, seed)
 }
 
-/// CPU helper: encode into a caller-owned bitstream buffer.
-///
-/// # Panics
-/// Panics when `p` is outside `[0, 1]` or `len_bits` is unrepresentable; see
-/// [`encode_bitstream`].
-pub fn encode_bitstream_into(p: f64, len_bits: usize, seed: u32, out: &mut Vec<u32>) {
-    if let Err(error) = try_encode_bitstream_into(p, len_bits, seed, out) {
-        panic!("vyre-primitives stochastic bitstream encode_into failed: {error}");
-    }
+#[cfg(test)]
+fn encode_bitstream_into(p: f64, len_bits: usize, seed: u32, out: &mut Vec<u32>) {
+    try_encode_bitstream_into(p, len_bits, seed, out)
+        .unwrap_or_else(|error| panic!("stochastic bitstream test witness failed: {error}"));
 }
 
-/// CPU helper: fallibly encode into a caller-owned bitstream buffer.
-pub fn try_encode_bitstream_into(
+#[cfg(test)]
+fn try_encode_bitstream_into(
     p: f64,
     len_bits: usize,
     seed: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    let n_words = (len_bits + 31) / 32;
-    vyre_foundation::allocation::reserve_exact_cleared(out, n_words).map_err(|err| {
-        format!("stochastic bitstream encoder could not reserve {n_words} words: {err}")
-    })?;
-    out.resize(n_words, 0);
-    let mut state = seed.max(1);
-    let threshold = (p.clamp(0.0, 1.0) * (u32::MAX as f64)) as u32;
-    for i in 0..len_bits {
-        // xorshift32 for cheap deterministic pseudo-random
-        state ^= state << 13;
-        state ^= state >> 17;
-        state ^= state << 5;
-        if state < threshold {
-            out[i / 32] |= 1 << (i % 32);
-        }
-    }
-    Ok(())
+    vyre_reference::composition_witness::try_stochastic_encode_witness_into(p, len_bits, seed, out)
 }
 
-/// CPU helper: decode bitstream to `p ∈ [0, 1]` by counting set bits.
+#[cfg(test)]
 #[must_use]
-pub fn decode_bitstream(bs: &[u32], len_bits: usize) -> f64 {
-    let count: u32 = bs.iter().map(|w| w.count_ones()).sum();
-    let count = count.min(len_bits as u32);
-    count as f64 / len_bits as f64
+fn decode_bitstream(bitstream: &[u32], len_bits: usize) -> f64 {
+    vyre_reference::composition_witness::stochastic_decode_witness(bitstream, len_bits)
 }
 
 #[cfg(test)]
 mod non_panic_wrapper_tests {
     use super::{
-        cpu_ref, cpu_ref_into, encode_bitstream, encode_bitstream_into, try_cpu_ref_into,
-        try_encode_bitstream_into,
+        encode_bitstream, encode_bitstream_into, reference_stochastic_and_mul,
+        reference_stochastic_and_mul_into, try_encode_bitstream_into,
+        try_reference_stochastic_and_mul_into,
     };
 
     #[test]
-    fn convenience_cpu_wrappers_match_fallible_reference() {
+    fn convenience_reference_wrappers_match_fallible_reference() {
         let a = [0xF0F0_F0F0, 0xAAAA_AAAA];
         let b = [0xFF00_00FF, 0x5555_FFFF];
         let mut compat = Vec::with_capacity(4);
         let mut fallible = Vec::with_capacity(4);
 
-        cpu_ref_into(&a, &b, &mut compat);
-        try_cpu_ref_into(&a, &b, &mut fallible)
-            .expect("Fix: small stochastic CPU oracle must reserve");
+        reference_stochastic_and_mul_into(&a, &b, &mut compat);
+        try_reference_stochastic_and_mul_into(&a, &b, &mut fallible)
+            .expect("Fix: small stochastic reference witness must reserve");
 
-        assert_eq!(cpu_ref(&a, &b), fallible);
+        assert_eq!(reference_stochastic_and_mul(&a, &b), fallible);
         assert_eq!(compat, fallible);
     }
 
@@ -129,6 +113,8 @@ mod non_panic_wrapper_tests {
         assert_eq!(compat, fallible);
     }
 }
+const EXPECTED_STOCHASTIC_AND_MUL_OUTPUT_BYTES: [u8; 8] =
+    [0xF0, 0x00, 0x00, 0xF0, 0xAA, 0xAA, 0x00, 0x00];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -142,7 +128,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[0xF000_00F0, 0x0000_AAAA])]]
+            vec![vec![EXPECTED_STOCHASTIC_AND_MUL_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -152,14 +138,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cpu_encode_decode_roundtrip_low_p() {
+    fn encode_decode_roundtrip_low_p() {
         let bs = encode_bitstream(0.25, 1024, 42);
         let p = decode_bitstream(&bs, 1024);
         assert!((p - 0.25).abs() < 0.05);
     }
 
     #[test]
-    fn cpu_encode_decode_roundtrip_high_p() {
+    fn encode_decode_roundtrip_high_p() {
         let bs = encode_bitstream(0.75, 1024, 42);
         let p = decode_bitstream(&bs, 1024);
         assert!((p - 0.75).abs() < 0.05);
@@ -188,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_zero_p_yields_zero_bitstream() {
+    fn zero_p_yields_zero_bitstream() {
         let bs = encode_bitstream(0.0, 256, 1);
         for w in bs {
             assert_eq!(w, 0);
@@ -196,29 +182,29 @@ mod tests {
     }
 
     #[test]
-    fn cpu_ref_multiplies_bitstreams_with_and() {
+    fn reference_multiplies_bitstreams_with_and() {
         assert_eq!(
-            cpu_ref(&[0xF0F0_F0F0, 0xAAAA_AAAA], &[0xFF00_00FF, 0x5555_FFFF]),
+            reference_stochastic_and_mul(&[0xF0F0_F0F0, 0xAAAA_AAAA], &[0xFF00_00FF, 0x5555_FFFF]),
             vec![0xF000_00F0, 0x0000_AAAA]
         );
     }
 
     #[test]
-    fn try_cpu_ref_into_truncates_stale_tail_without_reallocating() {
+    fn try_reference_stochastic_and_mul_into_truncates_stale_tail_without_reallocating() {
         let a = [0xffff_0000, 0x1357_9bdf, 0x2468_ace0];
         let b = [0x0f0f_f0f0, 0xffff_ffff];
         let mut out = Vec::with_capacity(8);
         out.extend_from_slice(&[u32::MAX; 8]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(&a, &b, &mut out).unwrap();
+        try_reference_stochastic_and_mul_into(&a, &b, &mut out).unwrap();
 
         assert_eq!(out, vec![a[0] & b[0], a[1] & b[1]]);
         assert_eq!(out.as_ptr(), ptr);
     }
 
     #[test]
-    fn generated_cpu_ref_matches_wordwise_and() {
+    fn generated_reference_matches_wordwise_and() {
         let mut out = Vec::new();
         for case in 0..4096_u32 {
             let a = [
@@ -229,7 +215,7 @@ mod tests {
                 case.rotate_right((case + 7) % 31) ^ 0x5A5A_A5A5,
                 case.wrapping_mul(0x85EB_CA6B),
             ];
-            cpu_ref_into(&a, &b, &mut out);
+            reference_stochastic_and_mul_into(&a, &b, &mut out);
             assert_eq!(
                 out,
                 vec![a[0] & b[0], a[1] & b[1]],

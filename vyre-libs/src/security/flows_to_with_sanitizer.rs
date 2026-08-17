@@ -28,10 +28,9 @@
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
-use vyre_spec::{
-    analysis::AnalysisFactKind,
-    soundness::{DynamicPrimitiveSoundness, Soundness},
-};
+#[cfg(test)]
+use vyre_spec::soundness::DynamicPrimitiveSoundness;
+use vyre_spec::{analysis::AnalysisFactKind, soundness::Soundness};
 
 #[cfg(test)]
 use vyre_spec::soundness::{validate_dynamic_pipeline, PrecisionContract};
@@ -111,6 +110,7 @@ impl SanitizedFlowExecutionMode {
 
 impl SanitizedFlowSoundnessContract {
     /// Convert this contract into serializable primitive evidence for findings.
+    #[cfg(test)]
     #[must_use]
     pub fn primitive_soundness(&self) -> DynamicPrimitiveSoundness {
         let evidence = DynamicPrimitiveSoundness::new(self.op_id, self.soundness);
@@ -177,6 +177,7 @@ pub fn sanitized_flow_final_soundness_contract(
 ///
 /// Returns [`SanitizedFlowContractViolation`] when `mode` is not a converged
 /// fixpoint.
+#[cfg(test)]
 pub fn sanitized_flow_final_finding_soundness(
     mode: SanitizedFlowExecutionMode,
 ) -> Result<DynamicPrimitiveSoundness, SanitizedFlowContractViolation> {
@@ -274,13 +275,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
-                to_bytes(&[0b0001]),              // clean = {0}
-                to_bytes(&[0b0011]),              // reach = {0,1}
-                to_bytes(&[0b0011]),              // alive = {0,1}
-                to_bytes(&[0b0010]),              // hits = {1}
-                to_bytes(&[0b0001]),              // out_scalar = 1
+                vec![1, 0, 0, 0], // clean = {0}
+                vec![3, 0, 0, 0], // reach = {0, 1}
+                vec![3, 0, 0, 0], // alive = {0, 1}
+                vec![2, 0, 0, 0], // hits = {1}
+                vec![1, 0, 0, 0], // out_scalar = 1
             ]]
         }),
     )

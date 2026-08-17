@@ -87,6 +87,12 @@ pub fn flash_attention(
     Ok(compose_online_softmax_attention(OP_ID, q, k, v, out, &plan))
 }
 
+const EXPECTED_FLASH_ATTENTION_OUTPUT_BYTES: [u8; 36] = [
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40,
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0x80, 0x40,
+    0x00, 0x00, 0x80, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::flash_attention",
@@ -115,7 +121,7 @@ inventory::submit! {
         // online-softmax flash kernel. With zero Q/K, every row has uniform
         // weights and returns mean(V)=4.0.
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_f32_slice(&[4.0_f32; 9])]]
+            vec![vec![EXPECTED_FLASH_ATTENTION_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

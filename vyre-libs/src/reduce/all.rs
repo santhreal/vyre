@@ -6,5 +6,5 @@ crate::reduce::atomic_scalar::define_bool_reduce_op! {
     kind: AllNonZero,
     true_case: [1, 7, 9],
     false_case: [1, 0, 9],
-    inventory_expected: [0]
+    inventory_expected: [0x00, 0x00, 0x00, 0x00]
 }

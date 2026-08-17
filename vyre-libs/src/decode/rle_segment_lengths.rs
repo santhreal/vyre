@@ -48,6 +48,18 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    rle_decode_witness as reference_rle_decode,
+    rle_decode_witness_into as reference_rle_decode_into,
+    rle_segment_lengths_witness as reference_rle_segment_lengths,
+    rle_segment_lengths_witness_into as reference_rle_segment_lengths_into,
+    rle_segment_start_offsets_witness as reference_rle_segment_start_offsets,
+    rle_segment_start_offsets_witness_into as reference_rle_segment_start_offsets_into,
+    try_rle_decode_witness_into as try_reference_rle_decode_into,
+    try_rle_segment_lengths_witness_into as try_reference_rle_segment_lengths_into,
+    try_rle_segment_start_offsets_witness_into as try_reference_rle_segment_start_offsets_into,
+};
 
 /// Canonical op id for region-chain audits and bench attribution.
 pub const OP_ID: &str = "vyre-libs::decode::rle_segment_lengths";
@@ -70,6 +82,7 @@ pub const MAX_SEGMENT_VALUE: u32 = 0xFF;
 pub const RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid that covers every packed RLE segment lane.
+#[cfg(test)]
 #[must_use]
 pub const fn rle_segment_lengths_dispatch_grid(segment_count: u32) -> [u32; 3] {
     vyre_primitives::lane_grid(segment_count, RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE[0])
@@ -190,6 +203,7 @@ pub fn pack_rle_segments(segments: &[(u32, u8)]) -> Result<Vec<u32>, PackError> 
 ///
 /// Returns the first encoding overflow encountered. On error, `out` is
 /// cleared and contains only segments packed before the failing one.
+#[cfg(test)]
 pub fn pack_rle_segments_into(segments: &[(u32, u8)], out: &mut Vec<u32>) -> Result<(), PackError> {
     try_pack_rle_segments_into(segments, out)
 }
@@ -228,22 +242,11 @@ pub fn try_pack_rle_segments_into(
     Ok(())
 }
 
-
-
-
-
-
-
-
-
-
-
-
 fn reserve_items<T>(out: &mut Vec<T>, len: usize, context: &str, name: &str) -> Result<(), String> {
     if len > out.capacity() {
         out.try_reserve(len - out.len()).map_err(|err| {
             format!(
-                "{context}: failed to reserve {len} items for {name}: {err}. Fix: shard the RLE stream before CPU parity evaluation."
+                "{context}: failed to reserve {len} items for {name}: {err}. Fix: shard the RLE stream before reference evaluation."
             )
         })?;
     }
@@ -253,6 +256,9 @@ fn reserve_items<T>(out: &mut Vec<T>, len: usize, context: &str, name: &str) -> 
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
+
+const EXPECTED_RLE_LENS_BYTES: [u8; 12] = [2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0];
+const EXPECTED_RLE_SYMS_BYTES: [u8; 12] = [65, 0, 0, 0, 88, 0, 0, 0, 66, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -268,8 +274,8 @@ inventory::submit! {
             ]]
         }),
         Some(|| vec![vec![
-            fixture_u32(&[2, 0, 3]),
-            fixture_u32(&[u32::from(b'A'), u32::from(b'X'), u32::from(b'B')]),
+            EXPECTED_RLE_LENS_BYTES.to_vec(),
+            EXPECTED_RLE_SYMS_BYTES.to_vec(),
         ]]),
     )
 }
@@ -282,7 +288,7 @@ mod tests {
     fn pack_then_unpack_round_trips_simple_segments() {
         let segments = [(1u32, 0xABu8), (5u32, 0xCDu8)];
         let packed = pack_rle_segments(&segments).expect("Fix: pack must succeed");
-        let (lengths, values) = rle_segment_lengths_cpu(&packed);
+        let (lengths, values) = reference_rle_segment_lengths(&packed);
         assert_eq!(lengths, vec![1, 5]);
         assert_eq!(values, vec![0xAB, 0xCD]);
     }
@@ -302,7 +308,7 @@ mod tests {
     fn pack_handles_max_representable_length() {
         let segments = [(MAX_SEGMENT_LENGTH, 0xFFu8)];
         let packed = pack_rle_segments(&segments).expect("Fix: max-length must pack");
-        let (lengths, values) = rle_segment_lengths_cpu(&packed);
+        let (lengths, values) = reference_rle_segment_lengths(&packed);
         assert_eq!(lengths, vec![MAX_SEGMENT_LENGTH]);
         assert_eq!(values, vec![0xFF]);
     }
@@ -313,7 +319,7 @@ mod tests {
         // padding); they expand to nothing.
         let segments = [(0u32, 0xABu8)];
         let packed = pack_rle_segments(&segments).expect("Fix: zero-length must pack");
-        let (lengths, _values) = rle_segment_lengths_cpu(&packed);
+        let (lengths, _values) = reference_rle_segment_lengths(&packed);
         assert_eq!(lengths, vec![0]);
     }
 
@@ -331,7 +337,7 @@ mod tests {
     #[test]
     fn start_offsets_are_exclusive_prefix_sum() {
         let lengths = [3u32, 5, 2, 7];
-        let (offsets, total) = rle_segment_start_offsets_cpu(&lengths);
+        let (offsets, total) = reference_rle_segment_start_offsets(&lengths);
         assert_eq!(offsets, vec![0, 3, 8, 10]);
         assert_eq!(total, 17, "sum of lengths");
     }
@@ -339,14 +345,14 @@ mod tests {
     #[test]
     fn start_offsets_handle_zero_length_runs_correctly() {
         let lengths = [3u32, 0, 5, 0, 2];
-        let (offsets, total) = rle_segment_start_offsets_cpu(&lengths);
+        let (offsets, total) = reference_rle_segment_start_offsets(&lengths);
         assert_eq!(offsets, vec![0, 3, 3, 8, 8]);
         assert_eq!(total, 10);
     }
 
     #[test]
     fn start_offsets_handle_empty_input() {
-        let (offsets, total) = rle_segment_start_offsets_cpu(&[]);
+        let (offsets, total) = reference_rle_segment_start_offsets(&[]);
         assert!(offsets.is_empty());
         assert_eq!(total, 0);
     }
@@ -356,7 +362,7 @@ mod tests {
         // [(3, 'A'), (2, 'B'), (1, 'C')] → "AAABBC"
         let segments = [(3u32, b'A'), (2u32, b'B'), (1u32, b'C')];
         let packed = pack_rle_segments(&segments).expect("Fix: pack must succeed");
-        let decoded = rle_decode_cpu(&packed);
+        let decoded = reference_rle_decode(&packed);
         assert_eq!(decoded, b"AAABBC".to_vec());
     }
 
@@ -365,7 +371,7 @@ mod tests {
         // 1000 copies of 0x42 in a single segment.
         let segments = [(1000u32, 0x42u8)];
         let packed = pack_rle_segments(&segments).expect("Fix: pack must succeed");
-        let decoded = rle_decode_cpu(&packed);
+        let decoded = reference_rle_decode(&packed);
         assert_eq!(decoded.len(), 1000);
         assert!(decoded.iter().all(|&b| b == 0x42));
     }
@@ -378,7 +384,7 @@ mod tests {
             segments.push((1u32, if i % 2 == 0 { 0xAAu8 } else { 0xBBu8 }));
         }
         let packed = pack_rle_segments(&segments).expect("Fix: pack must succeed");
-        let decoded = rle_decode_cpu(&packed);
+        let decoded = reference_rle_decode(&packed);
         assert_eq!(decoded.len(), 256);
         for (i, byte) in decoded.iter().enumerate() {
             let expected = if i % 2 == 0 { 0xAA } else { 0xBB };
@@ -388,7 +394,7 @@ mod tests {
 
     #[test]
     fn end_to_end_decode_handles_empty_input() {
-        let decoded = rle_decode_cpu(&[]);
+        let decoded = reference_rle_decode(&[]);
         assert!(decoded.is_empty());
     }
 
@@ -396,7 +402,7 @@ mod tests {
     fn end_to_end_decode_handles_zero_length_segments_as_skips() {
         let segments = [(2u32, b'A'), (0u32, b'X'), (3u32, b'B')];
         let packed = pack_rle_segments(&segments).expect("Fix: pack must succeed");
-        let decoded = rle_decode_cpu(&packed);
+        let decoded = reference_rle_decode(&packed);
         assert_eq!(decoded, b"AABBB".to_vec());
     }
 
@@ -431,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_unpack_into_reuses_existing_capacity() {
+    fn unpack_into_reuses_existing_capacity() {
         let segments = [(2u32, b'A'), (4u32, b'B')];
         let packed = pack_rle_segments(&segments).expect("Fix: pack must succeed");
         let mut lengths = Vec::with_capacity(64);
@@ -439,7 +445,7 @@ mod tests {
         let lengths_capacity = lengths.capacity();
         let values_capacity = values.capacity();
 
-        rle_segment_lengths_cpu_into(&packed, &mut lengths, &mut values);
+        reference_rle_segment_lengths_into(&packed, &mut lengths, &mut values);
 
         assert_eq!(lengths, vec![2, 4]);
         assert_eq!(values, vec![u32::from(b'A'), u32::from(b'B')]);
@@ -448,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    fn cpu_unpack_into_truncates_stale_tail_without_reallocating() {
+    fn unpack_into_truncates_stale_tail_without_reallocating() {
         let segments = [(2u32, b'A'), (4u32, b'B')];
         let packed = pack_rle_segments(&segments).expect("Fix: pack must succeed");
         let mut lengths = Vec::with_capacity(64);
@@ -458,7 +464,7 @@ mod tests {
         let lengths_ptr = lengths.as_ptr();
         let values_ptr = values.as_ptr();
 
-        try_rle_segment_lengths_cpu_into(&packed, &mut lengths, &mut values).unwrap();
+        try_reference_rle_segment_lengths_into(&packed, &mut lengths, &mut values).unwrap();
 
         assert_eq!(lengths, vec![2, 4]);
         assert_eq!(values, vec![u32::from(b'A'), u32::from(b'B')]);
@@ -470,7 +476,7 @@ mod tests {
     fn start_offsets_into_reuses_existing_capacity() {
         let mut offsets = Vec::with_capacity(64);
         let capacity = offsets.capacity();
-        let total = rle_segment_start_offsets_cpu_into(&[2, 0, 4], &mut offsets);
+        let total = reference_rle_segment_start_offsets_into(&[2, 0, 4], &mut offsets);
 
         assert_eq!(offsets, vec![0, 2, 2]);
         assert_eq!(total, 6);
@@ -483,7 +489,7 @@ mod tests {
         offsets.extend([99u32; 16]);
         let ptr = offsets.as_ptr();
 
-        let total = try_rle_segment_start_offsets_cpu_into(&[2, 0, 4], &mut offsets).unwrap();
+        let total = try_reference_rle_segment_start_offsets_into(&[2, 0, 4], &mut offsets).unwrap();
 
         assert_eq!(offsets, vec![0, 2, 2]);
         assert_eq!(total, 6);
@@ -497,7 +503,7 @@ mod tests {
         let mut decoded = Vec::with_capacity(64);
         let capacity = decoded.capacity();
 
-        rle_decode_cpu_into(&packed, &mut decoded);
+        reference_rle_decode_into(&packed, &mut decoded);
 
         assert_eq!(decoded, b"AABBB".to_vec());
         assert_eq!(decoded.capacity(), capacity);
@@ -511,7 +517,7 @@ mod tests {
         decoded.extend([0xFFu8; 16]);
         let ptr = decoded.as_ptr();
 
-        try_rle_decode_cpu_into(&packed, &mut decoded).unwrap();
+        try_reference_rle_decode_into(&packed, &mut decoded).unwrap();
 
         assert_eq!(decoded, b"AABBB".to_vec());
         assert_eq!(decoded.as_ptr(), ptr);
@@ -543,9 +549,10 @@ mod tests {
                 segments.iter().map(|(len, _)| *len as usize).sum::<usize>() + 3,
             );
 
-            try_rle_segment_lengths_cpu_into(&packed, &mut lengths, &mut values).unwrap();
-            let total = try_rle_segment_start_offsets_cpu_into(&lengths, &mut offsets).unwrap();
-            try_rle_decode_cpu_into(&packed, &mut decoded).unwrap();
+            try_reference_rle_segment_lengths_into(&packed, &mut lengths, &mut values).unwrap();
+            let total =
+                try_reference_rle_segment_start_offsets_into(&lengths, &mut offsets).unwrap();
+            try_reference_rle_decode_into(&packed, &mut decoded).unwrap();
 
             let expected_lengths: Vec<u32> = segments.iter().map(|(len, _)| *len).collect();
             let expected_values: Vec<u32> = segments
@@ -633,16 +640,16 @@ mod non_panicking_wrapper_tests {
 
         let mut lengths = Vec::new();
         let mut values = Vec::new();
-        try_rle_segment_lengths_cpu_into(&packed, &mut lengths, &mut values)
+        try_reference_rle_segment_lengths_into(&packed, &mut lengths, &mut values)
             .expect("Fix: unit-test oracle precondition - fallible length/value oracle must accept valid packed input");
         assert_eq!(
-            rle_segment_lengths_cpu(&packed),
+            reference_rle_segment_lengths(&packed),
             (lengths.clone(), values.clone())
         );
 
         lengths.fill(u32::MAX);
         values.fill(u32::MAX);
-        rle_segment_lengths_cpu_into(&packed, &mut lengths, &mut values);
+        reference_rle_segment_lengths_into(&packed, &mut lengths, &mut values);
         assert_eq!(lengths, vec![3, 0, 2]);
         assert_eq!(
             values,
@@ -650,26 +657,26 @@ mod non_panicking_wrapper_tests {
         );
 
         let mut offsets = Vec::new();
-        let total = try_rle_segment_start_offsets_cpu_into(&lengths, &mut offsets).expect(
+        let total = try_reference_rle_segment_start_offsets_into(&lengths, &mut offsets).expect(
             "Fix: unit-test oracle precondition - fallible offset oracle must accept valid lengths",
         );
         assert_eq!(
-            rle_segment_start_offsets_cpu(&lengths),
+            reference_rle_segment_start_offsets(&lengths),
             (offsets.clone(), total)
         );
 
         offsets.fill(u32::MAX);
-        let total = rle_segment_start_offsets_cpu_into(&lengths, &mut offsets);
+        let total = reference_rle_segment_start_offsets_into(&lengths, &mut offsets);
         assert_eq!(offsets, vec![0, 3, 3]);
         assert_eq!(total, 5);
 
         let mut decoded = Vec::new();
-        try_rle_decode_cpu_into(&packed, &mut decoded)
+        try_reference_rle_decode_into(&packed, &mut decoded)
             .expect("Fix: unit-test oracle precondition - fallible decode oracle must accept valid packed input");
-        assert_eq!(rle_decode_cpu(&packed), decoded);
+        assert_eq!(reference_rle_decode(&packed), decoded);
 
         decoded.fill(0);
-        rle_decode_cpu_into(&packed, &mut decoded);
+        reference_rle_decode_into(&packed, &mut decoded);
         assert_eq!(decoded, b"aaacc");
     }
 }

@@ -39,7 +39,7 @@
 //! 2. host-side compiler: compile the formula to d-DNNF
 //!    (one-time per pass, cached)
 //! 3. per Program: extract feature assignments, run
-//!    ddnnf_evaluate_cpu  -  returns 1 iff the precondition holds
+//!    ddnnf_evaluate  -  returns 1 iff the precondition holds
 //! ```
 //!
 //! This module consumes compiled d-DNNF circuits and evaluates them
@@ -51,8 +51,6 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use crate::graph::knowledge_compile::ddnnf_evaluate;
-#[cfg(test)]
-use crate::graph::knowledge_compile::ddnnf_evaluate_cpu;
 use crate::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -63,36 +61,6 @@ pub struct KnowledgeCompilePassScratch {
     child_offsets: Vec<u32>,
     child_counts: Vec<u32>,
     inputs: Vec<Vec<u8>>,
-}
-
-/// Evaluate a compiled pass-precondition circuit against a Program's
-/// feature assignment. Returns 1 iff the precondition holds, 0
-/// otherwise. The circuit is the bottom-up-topologically-ordered
-/// d-DNNF representation; `var_assignments[i]` is feature i's value
-/// (`0` / `1` / `u32::MAX` = unknown).
-#[must_use]
-#[cfg(test)]
-pub fn reference_pass_applies(
-    nodes: &[(u32, u32, u32)],
-    node_var: &[u32],
-    children: &[u32],
-    var_assignments: &[u32],
-    topo_order: &[u32],
-) -> u32 {
-    use crate::telemetry::{bump, knowledge_compile_pass_precondition_calls};
-    bump(&knowledge_compile_pass_precondition_calls);
-    let evals = ddnnf_evaluate_cpu(nodes, node_var, children, var_assignments, topo_order);
-    // The root of the topological order is the formula's overall
-    // truth value. By d-DNNF construction the root is the LAST node
-    // in topo_order.
-    if topo_order.is_empty() {
-        return 0;
-    }
-    let Some(root) = topo_order.last().copied() else {
-        return 0;
-    };
-    let root = root as usize;
-    evals[root]
 }
 
 /// Evaluate a compiled pass-precondition circuit through the dispatcher.
@@ -308,21 +276,6 @@ pub fn pass_applies_via_with_scratch_into(
     Ok(())
 }
 
-/// Convenience: does pass X conflict with the current Program?
-/// Returns true iff the precondition is unsatisfied at the given
-/// feature assignment.
-#[must_use]
-#[cfg(test)]
-pub fn pass_conflicts(
-    nodes: &[(u32, u32, u32)],
-    node_var: &[u32],
-    children: &[u32],
-    var_assignments: &[u32],
-    topo_order: &[u32],
-) -> bool {
-    reference_pass_applies(nodes, node_var, children, var_assignments, topo_order) == 0
-}
-
 /// Dispatcher-backed pass-conflict predicate.
 ///
 /// # Errors
@@ -394,6 +347,38 @@ mod tests {
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use crate::graph::knowledge_compile::{AND_NODE, LITERAL_TRUE};
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::ddnnf_evaluate_witness as reference_ddnnf_evaluate;
+
+    fn reference_pass_applies(
+        nodes: &[(u32, u32, u32)],
+        node_var: &[u32],
+        children: &[u32],
+        var_assignments: &[u32],
+        topo_order: &[u32],
+    ) -> u32 {
+        use crate::telemetry::{bump, knowledge_compile_pass_precondition_calls};
+        bump(&knowledge_compile_pass_precondition_calls);
+        let evals =
+            reference_ddnnf_evaluate(nodes, node_var, children, var_assignments, topo_order);
+        if topo_order.is_empty() {
+            return 0;
+        }
+        let Some(root) = topo_order.last().copied() else {
+            return 0;
+        };
+        let root = root as usize;
+        evals[root]
+    }
+
+    fn pass_conflicts(
+        nodes: &[(u32, u32, u32)],
+        node_var: &[u32],
+        children: &[u32],
+        var_assignments: &[u32],
+        topo_order: &[u32],
+    ) -> bool {
+        reference_pass_applies(nodes, node_var, children, var_assignments, topo_order) == 0
+    }
 
     #[test]
     fn unconditional_pass_always_applies() {

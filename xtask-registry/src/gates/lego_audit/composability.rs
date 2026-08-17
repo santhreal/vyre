@@ -94,9 +94,9 @@ mod tests {
         let mut report = Report::clean();
         let flagged = check_8_composability(&mut report, &[composed_primitive]);
         assert_eq!(flagged, 1, "composable primitive must be flagged");
-        assert!(report.findings[0]
-            .message
-            .contains("primitive `vyre-primitives::hardware::bad_composed_intrinsic` is composable"));
+        assert!(report.findings[0].message.contains(
+            "primitive `vyre-primitives::hardware::bad_composed_intrinsic` is composable"
+        ));
     }
 
     #[test]

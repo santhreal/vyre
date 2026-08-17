@@ -77,6 +77,8 @@ pub fn ast_binding_strength(
     .with_entry_op_id("vyre-libs::parsing::ast_binding_strength")
     .with_non_composable_with_self(true)
 }
+const EXPECTED_AST_BINDING_STRENGTH_BYTES: [u8; 16] =
+    [140, 0, 0, 0, 130, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -93,9 +95,7 @@ inventory::submit! {
             vec![vec![to_bytes(&tokens), to_bytes(&depths), vec![0u8; 4 * 4]]]
         }),
         Some(|| {
-            let strengths: [u32; 4] = [140, 130, 10, 0];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&strengths);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_AST_BINDING_STRENGTH_BYTES.to_vec()]]
         }),
     )
     .with_category("parsing")

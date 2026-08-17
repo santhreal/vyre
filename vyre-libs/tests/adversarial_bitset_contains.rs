@@ -18,9 +18,7 @@ mod gate_fixtures;
 use vyre_libs::bitset::contains::*;
 
 fn cpu_ref(input: &[u32], index: u32) -> u32 {
-    let word = (index / 32) as usize;
-    let bit = index % 32;
-    input.get(word).map_or(0, |value| (value >> bit) & 1)
+    vyre_reference::composition_witness::bitset_test_bit_witness(input, index)
 }
 
 adversarial_vec_u32_cases! {

@@ -91,12 +91,39 @@ pub fn score_denoise_step(
     )
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn try_score_denoise_step_cpu_into(
+        x: &[f64],
+        score: &[f64],
+        noise: &[f64],
+        alpha: f64,
+        beta: f64,
+        sigma: f64,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let len = x.len().min(score.len()).min(noise.len());
+        out.clear();
+        for i in 0..len {
+            out.push(alpha * x[i] + beta * score[i] + sigma * noise[i]);
+        }
+        Ok(())
+    }
+
+    fn score_denoise_step_cpu(
+        x: &[f64],
+        score: &[f64],
+        noise: &[f64],
+        alpha: f64,
+        beta: f64,
+        sigma: f64,
+    ) -> Vec<f64> {
+        let mut out = Vec::new();
+        try_score_denoise_step_cpu_into(x, score, noise, alpha, beta, sigma, &mut out).unwrap();
+        out
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

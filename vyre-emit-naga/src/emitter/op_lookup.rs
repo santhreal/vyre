@@ -176,9 +176,7 @@ fn barrier_body_spaces(body: &KernelBody) -> (bool, bool) {
             | KernelOpKind::StoreGlobal
             | KernelOpKind::VectorLoadGlobal { .. }
             | KernelOpKind::VectorStoreGlobal { .. }
-            | KernelOpKind::Atomic { .. } => {
-                storage = true
-            }
+            | KernelOpKind::Atomic { .. } => storage = true,
             KernelOpKind::LoadShared | KernelOpKind::StoreShared => workgroup = true,
             _ => {}
         }

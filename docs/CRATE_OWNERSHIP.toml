@@ -689,16 +689,6 @@ default_features = true
 boundary = "public"
 seam = "foundation-ir"
 
-[[crate.dependency]]
-package = "vyre-libs"
-purpose = "host-side helpers the oracle shares with the composition it checks: the FNV-1a state functions and the DFA compiler"
-features = ["pattern-dfa"]
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = false
-boundary = "public"
-seam = "product-libraries"
 
 [[crate.dependency]]
 package = "vyre-primitives"
@@ -1512,7 +1502,7 @@ seam = "lowering"
 [[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
-features = ["cpu-parity", "hardware"]
+features = ["hardware"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

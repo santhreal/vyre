@@ -1,5 +1,5 @@
 use super::*;
-
+use vyre_reference::composition_witness::utf8_validate_witness as reference_utf8_validate;
 #[test]
 fn program_uses_block_sized_workgroup() {
     let program = utf8_validate("source", "classes", 513);

@@ -2,8 +2,8 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::builder::reduction::ReductionComposer;
 use super::atomic_scalar::AtomicReduceKind;
+use crate::builder::reduction::ReductionComposer;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::reduce::count_non_zero";
@@ -11,9 +11,14 @@ pub const OP_ID: &str = "vyre-libs::reduce::count_non_zero";
 /// Build a Program: `out[0] = |{ i | values[i] != 0 }|`.
 #[must_use]
 pub fn reduce_count_non_zero(values: &str, out: &str, count: u32) -> Program {
-    ReductionComposer::atomic_scalar_reduction(OP_ID, values, out, count, AtomicReduceKind::CountNonZero)
+    ReductionComposer::atomic_scalar_reduction(
+        OP_ID,
+        values,
+        out,
+        count,
+        AtomicReduceKind::CountNonZero,
+    )
 }
-
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -26,10 +31,7 @@ inventory::submit! {
                 to_bytes(&[0]),
             ]]
         }),
-        Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[3])]]
-        }),
+        Some(|| vec![vec![vec![0x03, 0x00, 0x00, 0x00]]]),
     )
 }
 
@@ -37,16 +39,19 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn reference_count_non_zero(values: &[u32]) -> u32 {
+        values.iter().filter(|&&value| value != 0).count() as u32
+    }
+
     #[test]
     fn counts_non_zero_lanes() {
-        assert_eq!(cpu_ref(&[0, 7, 0, 9, 1]), 3);
+        assert_eq!(reference_count_non_zero(&[0, 7, 0, 9, 1]), 3);
     }
 
     #[test]
     fn empty_values_count_zero() {
-        assert_eq!(cpu_ref(&[]), 0);
+        assert_eq!(reference_count_non_zero(&[]), 0);
     }
-
     #[test]
     fn program_uses_parallel_grid_stride() {
         let program = reduce_count_non_zero("values", "out", 513);
@@ -74,7 +79,11 @@ mod tests {
             }
 
             let expected = values.iter().filter(|&&value| value != 0).count() as u32;
-            assert_eq!(cpu_ref(&values), expected, "generated case {case}");
+            assert_eq!(
+                reference_count_non_zero(&values),
+                expected,
+                "generated case {case}"
+            );
         }
     }
 }

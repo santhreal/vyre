@@ -166,3 +166,41 @@ impl ProgramDispatcher for StaticOutputs {
         Ok(self.outputs.clone())
     }
 }
+
+/// A dispatcher that returns sequential output buffers across multiple dispatches.
+#[allow(dead_code)]
+pub(crate) struct SequentialOutputs {
+    contract: &'static str,
+    steps: std::sync::Mutex<Vec<Vec<Vec<u8>>>>,
+}
+
+#[allow(dead_code)]
+impl SequentialOutputs {
+    pub(crate) fn new(contract: &'static str, steps: Vec<Vec<Vec<u8>>>) -> Self {
+        Self {
+            contract,
+            steps: std::sync::Mutex::new(steps),
+        }
+    }
+}
+
+impl ProgramDispatcher for SequentialOutputs {
+    fn dispatch(
+        &self,
+        _program: &Program,
+        _inputs: &[Vec<u8>],
+        _grid_override: Option<[u32; 3]>,
+    ) -> Result<Vec<Vec<u8>>, DispatchError> {
+        let mut guard = self
+            .steps
+            .lock()
+            .expect("Fix: sequential-output dispatcher mutex should not be poisoned");
+        if guard.is_empty() {
+            return Err(DispatchError::BackendError(format!(
+                "{}: sequential dispatcher ran out of expected steps",
+                self.contract
+            )));
+        }
+        Ok(guard.remove(0))
+    }
+}

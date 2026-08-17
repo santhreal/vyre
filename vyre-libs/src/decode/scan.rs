@@ -16,12 +16,7 @@ pub(crate) fn linear_aho_scan_body(
     matches: &str,
     valid_len: Expr,
 ) -> Vec<Node> {
-    TableStateMachineComposer::new(transitions).linear_scan_body(
-        input,
-        accept,
-        matches,
-        valid_len,
-    )
+    TableStateMachineComposer::new(transitions).linear_scan_body(input, accept, matches, valid_len)
 }
 
 /// Build a single-invocation tiled Aho-Corasick body over a caller-supplied

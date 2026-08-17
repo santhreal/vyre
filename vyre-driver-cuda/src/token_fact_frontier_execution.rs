@@ -501,13 +501,15 @@ fn empty_device_work_queue_plan() -> DeviceWorkQueuePlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frontier_typed_ir_adapter::adapt_frontier_typed_ir_to_cuda;
+    use crate::frontier_typed_ir_adapter::{
+        adapt_frontier_typed_ir_to_cuda, plan_frontier_typed_ir,
+    };
     use vyre_libs::device::device_resident_token_fact_graph::{
         plan_device_resident_token_fact_graph, plan_device_resident_token_fact_graph_layout,
         TokenFactEdge, TokenFactEdgeKind, TokenFactNode, TokenFactNodeKind,
     };
     use vyre_libs::scheduling::frontier_typed_ir::{
-        plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
+        FrontierDependency, FrontierDomain, FrontierNode,
     };
 
     #[test]

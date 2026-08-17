@@ -221,6 +221,13 @@ fn output_projection_body(
     )]
 }
 
+const EXPECTED_MLP_OUTPUT_BYTES: [u8; 8] = [0x33, 0x33, 0x83, 0x40, 0x52, 0xB8, 0xBE, 0x40];
+const EXPECTED_HIDDEN_PROJECTION_OUTPUT_BYTES: [u8; 16] = [
+    0x48, 0xE1, 0x9A, 0x3F, 0x48, 0xE1, 0xFA, 0x3F, 0xC3, 0xF5, 0x38, 0x40, 0x00, 0x00, 0x80, 0x40,
+];
+const EXPECTED_OUTPUT_PROJECTION_OUTPUT_BYTES: [u8; 8] =
+    [0x33, 0x33, 0x83, 0x40, 0x52, 0xB8, 0xBE, 0x40];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -238,31 +245,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // model_dim=2, hidden_dim=4
-            // x=[1,2], w1=[0.1,0.2,0.3,0.4, 0.5,0.6,0.7,0.8], b1=[0;4]
-            // w2=[1,0,0,1, 1,0,0,1], b2=[0,0]
-            let x = [1.0_f32, 2.0];
-            let w1 = [0.1_f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-            let b1 = [0.0_f32; 4];
-            let w2 = [1.0_f32, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
-            let b2 = [0.0_f32; 2];
-            let model_dim = 2usize;
-            let hidden_dim = 4usize;
-            // h[j] = b1[j] + sum_k x[k]*w1[k*hid+j]
-            let h: Vec<f32> = (0..hidden_dim).map(|j| {
-                b1[j] + (0..model_dim).map(|k| x[k] * w1[k * hidden_dim + j]).sum::<f32>()
-            }).collect();
-            // act[j] = max(0.5*h, h)^2 = h^2 (all positive)
-            let act: Vec<f32> = h.iter().map(|v| {
-                let lk = v.max(0.5 * v);
-                lk * lk
-            }).collect();
-            // out[i] = b2[i] + sum_j act[j]*w2[j*model+i]
-            let out: Vec<f32> = (0..model_dim).map(|i| {
-                b2[i] + (0..hidden_dim).map(|j| act[j] * w2[j * model_dim + i]).sum::<f32>()
-            }).collect();
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_MLP_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")
@@ -327,15 +310,7 @@ inventory::submit! {
             f32_fixture(&[0.0; 4]),
         ]]),
         Some(|| {
-            let x = [1.0_f32, 2.0];
-            let w1 = [0.1_f32, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
-            let mut out = [0.0_f32; 4];
-            for j in 0..4 {
-                let h = x[0] * w1[j] + x[1] * w1[4 + j];
-                let lk = h.max(0.5 * h);
-                out[j] = lk * lk;
-            }
-            vec![vec![f32_fixture(&out)]]
+            vec![vec![EXPECTED_HIDDEN_PROJECTION_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")
@@ -351,15 +326,7 @@ inventory::submit! {
             f32_fixture(&[1.21, 1.96, 2.89, 4.0]),
         ]]),
         Some(|| {
-            let hidden = [1.21_f32, 1.96, 2.89, 4.0];
-            let w2 = [1.0_f32, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
-            let mut out = [0.0_f32; 2];
-            for i in 0..2 {
-                for j in 0..4 {
-                    out[i] += hidden[j] * w2[j * 2 + i];
-                }
-            }
-            vec![vec![f32_fixture(&out)]]
+            vec![vec![EXPECTED_OUTPUT_PROJECTION_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

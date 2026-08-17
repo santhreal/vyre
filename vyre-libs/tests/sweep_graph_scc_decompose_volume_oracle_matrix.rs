@@ -8,6 +8,7 @@ use graph_sweep_fixtures::bitset_words;
 mod csr_sweep;
 
 use vyre_libs::graph::scc_decompose;
+use vyre_reference::composition_witness::scc_decompose_witness;
 
 fn generated_scc_case(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, u32) {
     let mut rng = csr_sweep::Rng::new((seed) | 1);
@@ -70,16 +71,20 @@ fn oracle_scc(
 
 const CASES: usize = 32768;
 
+fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
+    vyre_primitives::lane_grid(node_count, scc_decompose::SCC_DECOMPOSE_WORKGROUP_SIZE[0])
+}
+
 #[test]
 fn sweep_graph_scc_decompose_volume_oracle_matrix() {
     for case in 0..CASES {
         let seed = case as u64 ^ 0x5CCDEC0D;
         let (node_count, forward, backward, component_in, pivot) = generated_scc_case(seed);
         let expected = oracle_scc(node_count, &forward, &backward, &component_in, pivot);
-        let actual = scc_decompose::cpu_ref(node_count, &forward, &backward, &component_in, pivot);
+        let actual = scc_decompose_witness(node_count, &forward, &backward, &component_in, pivot);
         assert_eq!(actual, expected, "Fix: scc_decompose volume case {case}");
 
-        let grid = scc_decompose::scc_decompose_dispatch_grid(node_count);
+        let grid = scc_decompose_dispatch_grid(node_count);
         assert_eq!(
             grid[1], 1,
             "Fix: SCC grid y dimension drifted at case {case}"

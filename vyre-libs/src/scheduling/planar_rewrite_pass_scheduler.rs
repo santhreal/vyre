@@ -48,34 +48,12 @@ use crate::dispatch_buffers::{
     write_zero_bytes,
 };
 use crate::parsing::planar_rewrite::planar_rewrite_schedule;
-#[cfg(test)]
-use crate::parsing::planar_rewrite::reference_planar_rewrite_schedule;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned GPU dispatch scratch for planar rewrite scheduling.
 #[derive(Debug, Default)]
 pub struct PlanarRewriteScheduleGpuScratch {
     inputs: Vec<Vec<u8>>,
-}
-
-/// Schedule a batch of non-conflicting IR rewrites. `candidates` is
-/// a `h × w` row-major 0/1 grid where 1 marks a rewrite-pattern
-/// match. `k` is the rewrite footprint (each selected rewrite
-/// "covers" a k × k sub-region).
-///
-/// Returns a 0/1 grid where 1 marks a rewrite to apply in this
-/// batch. Selected rewrites are disjoint by construction.
-///
-/// # Panics
-///
-/// Panics if `candidates.len() != h*w` or `k == 0`.
-#[must_use]
-#[cfg(test)]
-pub fn schedule_disjoint_rewrites(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
-    use crate::telemetry::{bump, planar_rewrite_pass_scheduler_calls};
-    bump(&planar_rewrite_pass_scheduler_calls);
-    assert!(k > 0, "Fix: rewrite footprint k must be > 0.");
-    reference_planar_rewrite_schedule(candidates, h, w, k)
 }
 
 /// Schedule a batch of non-conflicting IR rewrites through the dispatcher.
@@ -178,29 +156,22 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
     decode_u32_output_exact(&outputs[0], cells, "schedule_disjoint_rewrites_via", out)
 }
 
-/// Convenience: count how many rewrites the schedule selected.
-#[must_use]
-pub fn count_scheduled(schedule: &[u32]) -> u32 {
-    schedule.iter().filter(|&&v| v != 0).count() as u32
-}
-
-/// Convenience: estimate batch reduction. Returns the speedup
-/// ratio (candidates / scheduled)  -  a 100× speedup means the
-/// scheduler picked 1% of candidates per batch (others apply in
-/// later batches).
-#[must_use]
-pub fn batch_reduction_ratio(candidate_count: u32, scheduled_count: u32) -> f64 {
-    if scheduled_count == 0 {
-        return 0.0;
-    }
-    candidate_count as f64 / scheduled_count as f64
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::{
+        planar_rewrite_schedule_witness as reference_planar_rewrite_schedule,
+        reduce_count_non_zero_witness as count_scheduled,
+    };
+
+    fn schedule_disjoint_rewrites(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
+        use crate::telemetry::{bump, planar_rewrite_pass_scheduler_calls};
+        bump(&planar_rewrite_pass_scheduler_calls);
+        assert!(k > 0, "Fix: rewrite footprint k must be > 0.");
+        reference_planar_rewrite_schedule(candidates, h, w, k)
+    }
 
     #[test]
     fn empty_grid_yields_no_schedule() {
@@ -219,13 +190,6 @@ mod tests {
         // Disjointness with k=2 footprint allows at most 4 rewrites.
         assert!(count >= 1, "at least one rewrite must be schedulable");
         assert!(count <= 4, "at most 4 disjoint k=2 rewrites in a 4x4 grid");
-    }
-
-    #[test]
-    fn batch_reduction_well_defined() {
-        assert_eq!(batch_reduction_ratio(0, 0), 0.0);
-        let r = batch_reduction_ratio(100, 4);
-        assert!((r - 25.0).abs() < 1e-9);
     }
 
     #[test]

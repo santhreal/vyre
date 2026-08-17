@@ -140,6 +140,8 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
     )
 }
 
+const EXPECTED_ALPHA_OVER_OUTPUT_BYTES: [u8; 8] = [0xFF, 0x00, 0x7F, 0xFF, 0x00, 0xFF, 0x00, 0xFF];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -156,16 +158,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // Pixel 0: fg_r=255 fg_a=128, bg_b=255 bg_a=255
-            //   inv_a = 127
-            //   out_r = 255 + 0 = 255
-            //   out_g = 0 + 0 = 0
-            //   out_b = 0 + (255*127+128)*257>>16 = 0 + 127 = 127
-            //   out_a = 128 + (255*127+128)*257>>16 = 128 + 127 = 255
-            // Pixel 1: fg fully opaque → output == fg
-            //   out = 0xFF00FF00 (green)
-            let expected = [0xFF7F_00FFu32, 0xFF00_FF00u32];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
+            vec![vec![EXPECTED_ALPHA_OVER_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")

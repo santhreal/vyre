@@ -45,8 +45,9 @@ pub(crate) fn cpu_dominator_sets(
     entry: u32,
     edges: &[(u32, u32)],
 ) -> Vec<Vec<u32>> {
-    let idoms = crate::graph::dominator_tree::cpu_ref(num_nodes, entry, edges);
-    crate::graph::dominator_tree::idoms_to_dominator_sets(&idoms, num_nodes)
+    let idoms =
+        vyre_reference::composition_witness::dominator_sets_idoms_witness(num_nodes, entry, edges);
+    vyre_reference::composition_witness::idoms_to_dominator_sets_witness(&idoms, num_nodes)
 }
 
 inventory::submit! {
@@ -69,8 +70,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::csr_backward_traverse::cpu_ref;
     use crate::security::flow_composition::diamond_dominance_tree;
+    use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 
     #[test]
     fn cpu_dominator_sets_linear_chain() {

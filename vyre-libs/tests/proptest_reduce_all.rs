@@ -1,8 +1,8 @@
-//! Property gates for `vyre_libs::reduce::all::cpu_ref`.
-
+//! Property gates for `reduce::all` reduction witness.
 #![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
+use vyre_reference::composition_witness::reduce_all_witness as reference_all;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -12,7 +12,7 @@ proptest! {
         values in proptest::collection::vec(any::<u32>(), 1..=64),
     ) {
         let values: Vec<u32> = values.iter().map(|v| if *v == 0 { 1 } else { *v }).collect();
-        prop_assert_eq!(cpu_ref(&values), 1);
+        prop_assert_eq!(reference_all(&values), 1);
     }
 
     #[test]
@@ -23,21 +23,16 @@ proptest! {
         let mut values = values;
         let i = idx % values.len();
         values[i] = 0;
-        prop_assert_eq!(cpu_ref(&values), 0);
+        prop_assert_eq!(reference_all(&values), 0);
     }
 
     #[test]
     fn empty_returns_one(_dummy in 0u32..1) {
-        prop_assert_eq!(cpu_ref(&[]), 1);
+        prop_assert_eq!(reference_all(&[]), 1);
     }
 
     #[test]
     fn single_element(v in any::<u32>()) {
-        prop_assert_eq!(cpu_ref(&[v]), if v != 0 { 1 } else { 0 });
+        prop_assert_eq!(reference_all(&[v]), if v != 0 { 1 } else { 0 });
     }
-}
-
-#[must_use]
-fn cpu_ref(input: &[u32]) -> u32 {
-    if input.iter().all(|&w| w != 0) { 1 } else { 0 }
 }

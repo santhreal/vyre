@@ -28,14 +28,15 @@
 
 use vyre_foundation::pass_substrate::semiring_closure::Semiring;
 
+#[cfg(test)]
 mod delta_maintenance;
+#[cfg(test)]
 mod dense_matrix;
+#[cfg(test)]
 mod fixpoint_comparison;
 mod gpu_dispatch;
 mod scc_decomposition;
 
-pub use delta_maintenance::compare_delta_maintained_reachability;
-pub use fixpoint_comparison::compare_static_analysis_reachability_fixpoints;
 pub use gpu_dispatch::{
     forward_backward_bitsets_for_pivot_via, lineage_closure_via, reachability_closure_via,
     reachability_closure_via_into, reachability_closure_via_with_scratch_into,
@@ -66,92 +67,99 @@ pub struct SccComponentsGpuScratch {
 }
 
 /// Telemetry emitted by one static-analysis fixpoint formulation.
+#[cfg(test)]
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FixpointEngineTelemetry {
+pub(crate) struct FixpointEngineTelemetry {
     /// Stable engine id.
-    pub engine_id: &'static str,
+    pub(crate) engine_id: &'static str,
     /// Fixpoint iterations or frontier layers evaluated.
-    pub iterations: u32,
+    pub(crate) iterations: u32,
     /// Estimated host bytes touched while producing the closure.
-    pub bytes_touched: u64,
+    pub(crate) bytes_touched: u64,
     /// Average active-frontier density in basis points.
-    pub frontier_density_bps: u32,
+    pub(crate) frontier_density_bps: u32,
     /// Measured active CPU time for the comparison implementation.
-    pub active_time_ns: u128,
+    pub(crate) active_time_ns: u128,
 }
 
 /// Reachability output plus telemetry for one formulation.
+#[cfg(test)]
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FixpointEngineReport {
+pub(crate) struct FixpointEngineReport {
     /// Engine telemetry.
-    pub telemetry: FixpointEngineTelemetry,
+    pub(crate) telemetry: FixpointEngineTelemetry,
     /// Dense `n*n` boolean reachability matrix, row-major.
-    pub reachability: Vec<u32>,
+    pub(crate) reachability: Vec<u32>,
 }
 
 /// Side-by-side reachability comparison for static-analysis fixpoints.
+#[cfg(test)]
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StaticAnalysisFixpointComparison {
+pub(crate) struct StaticAnalysisFixpointComparison {
     /// Number of graph nodes.
-    pub node_count: u32,
+    pub(crate) node_count: u32,
     /// Maximum iterations supplied to each formulation.
-    pub max_iterations: u32,
+    pub(crate) max_iterations: u32,
     /// Vyre dense semiring-GEMM closure report.
-    pub vyre_semiring: FixpointEngineReport,
+    pub(crate) vyre_semiring: FixpointEngineReport,
     /// external-engine CSR frontier closure report.
-    pub external_frontier: FixpointEngineReport,
+    pub(crate) external_frontier: FixpointEngineReport,
     /// GraphBLAS-style sparse boolean frontier closure report.
-    pub graphblas_sparse: FixpointEngineReport,
+    pub(crate) graphblas_sparse: FixpointEngineReport,
     /// Whether all three closures are byte-identical.
-    pub exact_reachability_sets: bool,
+    pub(crate) exact_reachability_sets: bool,
 }
 
 /// One directed relation tuple insertion or deletion.
+#[cfg(test)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-pub struct DeltaRelationChange {
+pub(crate) struct DeltaRelationChange {
     /// Source node.
-    pub source: u32,
+    pub(crate) source: u32,
     /// Target node.
-    pub target: u32,
+    pub(crate) target: u32,
 }
 
 /// Insertion/deletion batch for a boolean dataflow relation.
+#[cfg(test)]
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
-pub struct DeltaRelationBatch {
+pub(crate) struct DeltaRelationBatch {
     /// Tuples inserted into the relation.
-    pub insertions: Vec<DeltaRelationChange>,
+    pub(crate) insertions: Vec<DeltaRelationChange>,
     /// Tuples deleted from the relation.
-    pub deletions: Vec<DeltaRelationChange>,
+    pub(crate) deletions: Vec<DeltaRelationChange>,
 }
 
 /// Delta-maintained reachability evidence compared against full recompute.
+#[cfg(test)]
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct DeltaDataflowEvidence {
+pub(crate) struct DeltaDataflowEvidence {
     /// Number of graph nodes.
-    pub node_count: u32,
+    pub(crate) node_count: u32,
     /// Inserted tuple count.
-    pub inserted_tuple_count: u32,
+    pub(crate) inserted_tuple_count: u32,
     /// Deleted tuple count.
-    pub deleted_tuple_count: u32,
+    pub(crate) deleted_tuple_count: u32,
     /// Reachability tuples that changed after applying the batch.
-    pub changed_tuple_count: u32,
+    pub(crate) changed_tuple_count: u32,
     /// Tuples recomputed by the delta path.
-    pub recomputed_tuple_count: u32,
+    pub(crate) recomputed_tuple_count: u32,
     /// Delta fixpoint passes or full-recompute iterations.
-    pub iterations: u32,
+    pub(crate) iterations: u32,
     /// Measured active time for the delta path.
-    pub elapsed_active_time_ns: u128,
+    pub(crate) elapsed_active_time_ns: u128,
     /// Whether delta-maintained output matched full recompute.
-    pub exact_result_parity: bool,
+    pub(crate) exact_result_parity: bool,
 }
 
 /// Delta-maintained closure plus full-recompute comparator output.
+#[cfg(test)]
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct DeltaDataflowReport {
+pub(crate) struct DeltaDataflowReport {
     /// Evidence row.
-    pub evidence: DeltaDataflowEvidence,
+    pub(crate) evidence: DeltaDataflowEvidence,
     /// Closure produced by the delta-maintained relation path.
-    pub delta_closure: Vec<u32>,
+    pub(crate) delta_closure: Vec<u32>,
     /// Closure produced by full recompute after applying the batch.
-    pub full_recompute_closure: Vec<u32>,
+    pub(crate) full_recompute_closure: Vec<u32>,
 }

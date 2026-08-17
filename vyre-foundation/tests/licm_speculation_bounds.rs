@@ -48,8 +48,13 @@ fn loop_over(from: Expr, to: Expr) -> Program {
 
 /// Names bound at the top level of the entry body, which is where a hoist lands.
 fn hoisted_names(program: &Program) -> Vec<String> {
-    program
-        .entry()
+    let nodes = match program.entry() {
+        [Node::Region {
+            generator, body, ..
+        }] if generator.as_str() == Program::ROOT_REGION_GENERATOR => body.as_ref(),
+        nodes => nodes,
+    };
+    nodes
         .iter()
         .filter_map(|node| match node {
             Node::Let { name, .. } => Some(name.as_str().to_string()),

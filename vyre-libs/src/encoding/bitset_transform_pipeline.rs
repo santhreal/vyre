@@ -12,16 +12,14 @@ use crate::bitset::{
     any::bitset_any,
     copy::bitset_copy,
     four_russians::{
-        binary_byte_lut, cached_binary_byte_lut, dense_matvec_byte_lut,
-        dense_matvec_byte_lut_words, four_russians_apply_byte_lut,
-        four_russians_dense_matvec_byte_lut, frontier_words_for_byte_tiles, BooleanTileOp,
+        four_russians_apply_byte_lut, four_russians_dense_matvec_byte_lut,
+        frontier_words_for_byte_tiles,
     },
     or_into::bitset_or_into,
     select::select1_query,
     xor_into::bitset_xor_into,
 };
 use vyre_foundation::ir::Program;
-
 
 /// Build `out = lhs & !rhs` for subtracting an exclusion mask.
 #[must_use]
@@ -77,34 +75,10 @@ pub fn select1_navigation_program(
     select1_query(bits, k_indices, out, word_count, query_count)
 }
 
-/// Build a Method-of-Four-Russians byte-tile LUT.
-#[must_use]
-pub fn boolean_tile_lut(op: BooleanTileOp) -> Vec<u32> {
-    binary_byte_lut(op)
-}
-
-/// Reuse a cached Method-of-Four-Russians byte-tile LUT.
-#[must_use]
-pub fn cached_boolean_tile_lut(op: BooleanTileOp) -> &'static [u32] {
-    cached_binary_byte_lut(op)
-}
-
 /// Frontier words needed for dense byte-tile Four-Russians matvec.
 #[must_use]
 pub const fn dense_matvec_frontier_words(tile_count: u32) -> u32 {
     frontier_words_for_byte_tiles(tile_count)
-}
-
-/// LUT words needed for dense byte-tile Four-Russians matvec.
-#[must_use]
-pub fn dense_matvec_lut_words(tile_count: u32, dst_words: u32) -> u32 {
-    dense_matvec_byte_lut_words(tile_count, dst_words)
-}
-
-/// Build a dense byte-tile Four-Russians matvec LUT from source columns.
-#[must_use]
-pub fn dense_boolean_matvec_lut(columns: &[u32], tile_count: u32, dst_words: u32) -> Vec<u32> {
-    dense_matvec_byte_lut(columns, tile_count, dst_words)
 }
 
 /// Build the GPU byte-tile lookup program.
@@ -131,18 +105,45 @@ pub fn four_russians_dense_matvec_program(
     four_russians_dense_matvec_byte_lut(frontier, tile_lut, out, tile_count, dst_words)
 }
 
-
-
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bitset::four_russians::{
+        binary_byte_lut as boolean_tile_lut, cached_binary_byte_lut as cached_boolean_tile_lut,
+        dense_matvec_byte_lut as dense_boolean_matvec_lut,
+        dense_matvec_byte_lut_words as dense_matvec_lut_words, BooleanTileOp,
+    };
+    use vyre_reference::composition_witness::{
+        bitset_and_inplace_witness, bitset_and_not_inplace_witness,
+        bitset_and_not_witness as reference_subtract_mask, bitset_copy_witness,
+        bitset_or_inplace_witness, bitset_xor_inplace_witness,
+        four_russians_binary_witness as reference_four_russians_transform,
+        four_russians_dense_matvec_witness as reference_dense_boolean_matvec, reduce_any_witness,
+    };
+
+    fn reference_narrow_mask_in_place(target: &mut [u32], operand: &[u32]) {
+        bitset_and_inplace_witness(target, operand);
+    }
+
+    fn reference_grow_mask_in_place(target: &mut [u32], operand: &[u32]) {
+        bitset_or_inplace_witness(target, operand);
+    }
+
+    fn reference_diff_mask_in_place(target: &mut [u32], operand: &[u32]) {
+        bitset_xor_inplace_witness(target, operand);
+    }
+
+    fn reference_subtract_mask_in_place(target: &mut [u32], operand: &[u32]) {
+        bitset_and_not_inplace_witness(target, operand);
+    }
+
+    fn reference_copy_mask(target: &mut [u32], source: &[u32]) {
+        bitset_copy_witness(target, source);
+    }
+
+    fn reference_any_mask(input: &[u32]) -> bool {
+        reduce_any_witness(input) != 0
+    }
 
     #[test]
     fn program_builders_emit_expected_bitset_primitives() {

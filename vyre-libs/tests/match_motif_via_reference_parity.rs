@@ -10,17 +10,55 @@
 //! Contract (audited CLEAN): `match_motif`'s IR binds nodes RW(0) + edge_offsets RO(1) + edge_targets RO(2)
 //! + edge_kind_mask RO(3) + node_tags RW(4) + motif_hits RW(5) + witness_out RW(6) = 7 IC (the RW slots
 //! zero-filled by the wrapper), decoding TWO outputs (motif_hits + witness_out). The importable
-//! `match_motif` / `motif_matches` / `motif_participation_count` references (cpu-parity gated) are the
-//! authoritative oracles; values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
+//! `motif_witness` from `vyre-reference` is the authoritative witness;
+//! values are integer witnesses / bool / counts → BIT-EXACT (no tolerance).
 
 use vyre_libs::graph::dispatch::motif::{
-    match_motif, match_motif_via, motif_matches, motif_matches_via, motif_participation_count,
-    motif_participation_count_via,
+    match_motif_via, motif_matches_via, motif_participation_count_via,
 };
 use vyre_libs::graph::motif::MotifEdge;
+use vyre_reference::composition_witness::{
+    motif_witness, reduce_any_witness, reduce_count_non_zero_witness,
+};
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::xorshift32 as xorshift;
+
+fn match_motif(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif: &[MotifEdge],
+) -> Vec<u32> {
+    let edges: Vec<_> = motif
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect();
+    motif_witness(node_count, offsets, targets, masks, &edges)
+}
+
+fn motif_matches(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif: &[MotifEdge],
+) -> bool {
+    let witness = match_motif(node_count, offsets, targets, masks, motif);
+    reduce_any_witness(&witness) != 0
+}
+
+fn motif_participation_count(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    motif: &[MotifEdge],
+) -> u32 {
+    let witness = match_motif(node_count, offsets, targets, masks, motif);
+    reduce_count_non_zero_witness(&witness)
+}
 
 /// Build a random valid CSR graph: `n` nodes, each with 0..=3 out-edges to random targets carrying a
 /// small kind mask. Returns (edge_offsets[n+1], edge_targets, edge_kind_mask).

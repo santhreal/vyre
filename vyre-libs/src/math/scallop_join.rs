@@ -77,7 +77,7 @@
 //!
 //! # CPU reference
 //!
-//! `cpu_ref` (requires the `cpu-parity` feature) performs the same fixpoint iteration on host arrays and
+//! The `vyre-reference` scallop join witness performs the same fixpoint iteration on host arrays and
 //! is the parity oracle for every GPU dispatch.
 
 use vyre_foundation::composition::trap_program;
@@ -187,8 +187,6 @@ pub fn scallop_join(
     lineage_fixpoint_program(OP_ID, &spec, SCALLOP_JOIN_WORKGROUP_SIZE, body)
 }
 
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -206,11 +204,20 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
-                to_bytes(&[0, 0b11, 0, 0]), // state
-                to_bytes(&[0, 0b11, 0, 0]), // next
-                to_bytes(&[0]),             // changed
+                vec![
+                    0x00, 0x00, 0x00, 0x00,
+                    0x03, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                ], // state
+                vec![
+                    0x00, 0x00, 0x00, 0x00,
+                    0x03, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                ], // next
+                vec![0x00, 0x00, 0x00, 0x00], // changed
             ]]
         }),
     )
@@ -222,7 +229,33 @@ mod tests {
 
     use super::*;
     use crate::fixpoint::persistent_fixpoint::count_grid_sync;
-    use crate::math::semiring_gemm::{semiring_gemm_cpu_into, Semiring};
+    use crate::math::semiring_gemm::Semiring;
+    use vyre_reference::composition_witness::{
+        scallop_join_fixpoint_witness as cpu_ref, scallop_join_fixpoint_witness_into,
+        semiring_gemm_witness,
+    };
+
+    fn cpu_ref_into(
+        state: &[u32],
+        join_rules: &[u32],
+        n: u32,
+        w: u32,
+        max_iterations: u32,
+        current: &mut Vec<u32>,
+        next: &mut Vec<u32>,
+    ) -> u32 {
+        scallop_join_fixpoint_witness_into(state, join_rules, n, w, max_iterations, current, next)
+    }
+
+    fn accumulate_lineage_words(current: &mut [u32], derived: &[u32]) -> bool {
+        let mut changed = false;
+        for (value, &new_bits) in current.iter_mut().zip(derived) {
+            let accumulated = *value | new_bits;
+            changed |= accumulated != *value;
+            *value = accumulated;
+        }
+        changed
+    }
 
     #[test]
     fn cpu_ref_one_step_join() {
@@ -271,10 +304,16 @@ mod tests {
         let (actual, actual_iters) = cpu_ref(&state, &join_rules, n, 1, 16);
 
         let mut current = state.clone();
-        let mut next = Vec::new();
         let mut expected_iters = 16;
         for iter in 0..16 {
-            semiring_gemm_cpu_into(&current, &join_rules, n, n, n, Semiring::Lineage, &mut next);
+            let next = semiring_gemm_witness(
+                &current,
+                &join_rules,
+                n as usize,
+                n as usize,
+                n as usize,
+                Semiring::Lineage,
+            );
             if !accumulate_lineage_words(&mut current, &next) {
                 expected_iters = iter;
                 break;

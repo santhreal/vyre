@@ -143,6 +143,13 @@ pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
     )
 }
 
+const EXPECTED_CELL_GRID_BYTES: [u8; 64] = [
+    0xFF, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+    0xFF, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+    0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -164,19 +171,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // Each cell covers a 2x2 block, so every colour appears four
-            // times, in a quadrant rather than a run.
-            const R: u32 = 0xFF00_00FF;
-            const G: u32 = 0xFF00_FF00;
-            const B: u32 = 0xFFFF_0000;
-            const W: u32 = 0xFFFF_FFFF;
-            let expected = [
-                R, R, G, G,
-                R, R, G, G,
-                B, B, W, W,
-                B, B, W, W,
-            ];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
+            vec![vec![EXPECTED_CELL_GRID_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")

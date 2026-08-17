@@ -1,9 +1,10 @@
-//! Property gates for `vyre_libs::reduce::min::cpu_ref` and
-//! `vyre_libs::reduce::max::cpu_ref`.
-
+//! Property gates for `reduce::min` and `reduce::max` reduction witnesses.
 #![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
+use vyre_reference::composition_witness::{
+    reduce_max_witness as max_ref, reduce_min_witness as min_ref,
+};
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -46,13 +47,4 @@ proptest! {
         let _ = _dummy;
         prop_assert_eq!(max_ref(&[]), 0u32);
     }
-}
-
-#[must_use]
-fn min_ref(input: &[u32]) -> u32 {
-    input.iter().copied().min().unwrap_or(u32::MAX)
-}
-#[must_use]
-fn max_ref(input: &[u32]) -> u32 {
-    input.iter().copied().max().unwrap_or(0)
 }

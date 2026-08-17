@@ -1,9 +1,5 @@
 use vyre_foundation::operation::OperationRegistration;
 
-fn u32s(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
-
 macro_rules! bitset_and_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
@@ -11,10 +7,14 @@ macro_rules! bitset_and_entry {
                 super::$module::OP_ID,
                 $build,
                 Some(|| {
-                    super::predicate_catalog::packed_witness_inputs(super::$module::OP_ID)
+                    vec![vec![
+                        vec![12, 0, 0, 0],
+                        vec![10, 0, 0, 0],
+                        vec![0, 0, 0, 0],
+                    ]]
                 }),
                 Some(|| {
-                    super::predicate_catalog::packed_witness_expected(super::$module::OP_ID)
+                    vec![vec![vec![8, 0, 0, 0]]]
                 }),
             )
             .with_category("security")
@@ -29,10 +29,14 @@ macro_rules! bitset_and_not_entry {
                 super::$module::OP_ID,
                 $build,
                 Some(|| {
-                    super::predicate_catalog::packed_witness_inputs(super::$module::OP_ID)
+                    vec![vec![
+                        vec![15, 0, 0, 0],
+                        vec![12, 0, 0, 0],
+                        vec![0, 0, 0, 0],
+                    ]]
                 }),
                 Some(|| {
-                    super::predicate_catalog::packed_witness_expected(super::$module::OP_ID)
+                    vec![vec![vec![3, 0, 0, 0]]]
                 }),
             )
             .with_category("security")
@@ -77,14 +81,14 @@ inventory::submit! {
         super::sink_intersection::OP_ID,
         || super::sink_intersection::sink_intersection(4, "a", "b", "scratch", "out"),
         Some(|| vec![vec![
-            u32s(&[0b1100]),
-            u32s(&[0b1010]),
-            u32s(&[0]),
-            u32s(&[0]),
+            vec![12, 0, 0, 0],
+            vec![10, 0, 0, 0],
+            vec![0, 0, 0, 0],
+            vec![0, 0, 0, 0],
         ]]),
         Some(|| vec![vec![
-            u32s(&[0b1000]),
-            u32s(&[1]),
+            vec![8, 0, 0, 0],
+            vec![1, 0, 0, 0],
         ]]),
     )
     .with_category("security")
@@ -100,15 +104,15 @@ inventory::submit! {
         },
         // Declaration order: arith, reach, scratch, guards, out.
         Some(|| vec![vec![
-            u32s(&[0b1111]),
-            u32s(&[0b1100]),
-            u32s(&[0]),
-            u32s(&[0b1000]),
-            u32s(&[0]),
+            vec![15, 0, 0, 0],
+            vec![12, 0, 0, 0],
+            vec![0, 0, 0, 0],
+            vec![8, 0, 0, 0],
+            vec![0, 0, 0, 0],
         ]]),
         Some(|| vec![vec![
-            u32s(&[0b1100]),
-            u32s(&[0b0100]),
+            vec![12, 0, 0, 0],
+            vec![4, 0, 0, 0],
         ]]),
     )
     .with_category("security")

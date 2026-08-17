@@ -276,7 +276,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![crate::fixture_bytes::u32_bytes(&[19, 22, 43, 50])]]
+            vec![vec![vec![
+                0x13, 0x00, 0x00, 0x00, // 19
+                0x16, 0x00, 0x00, 0x00, // 22
+                0x2b, 0x00, 0x00, 0x00, // 43
+                0x32, 0x00, 0x00, 0x00, // 50
+            ]]]
         }),
     )
     .with_category("math")
@@ -294,7 +299,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70])]]
+            vec![vec![vec![
+                0x1d, 0x00, 0x00, 0x00, // 29
+                0x2a, 0x00, 0x00, 0x00, // 42
+                0x35, 0x00, 0x00, 0x00, // 53
+                0x46, 0x00, 0x00, 0x00, // 70
+            ]]]
         }),
     )
     .with_category("math")
@@ -330,19 +340,9 @@ mod tests {
         k: u32,
         n: u32,
     ) -> Vec<u32> {
-        let mut out = Vec::with_capacity((m * n) as usize);
-        for row in 0..m {
-            for col in 0..n {
-                let mut acc = bias.map_or(0, |values| values[col as usize]);
-                for kk in 0..k {
-                    let av = a[(row * k + kk) as usize];
-                    let bv = b[(kk * n + col) as usize];
-                    acc = acc.wrapping_add(av.wrapping_mul(bv));
-                }
-                out.push(acc);
-            }
-        }
-        out
+        vyre_reference::composition_witness::matmul_u32_witness(
+            a, b, bias, m as usize, k as usize, n as usize,
+        )
     }
 
     fn pseudo_random_words(count: usize, seed: &mut u32) -> Vec<u32> {

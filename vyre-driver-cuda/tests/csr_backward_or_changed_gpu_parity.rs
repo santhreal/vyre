@@ -6,9 +6,11 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::csr_backward_or_changed::{
-    csr_backward_or_changed_parallel, csr_backward_or_changed_parallel_grid,
-};
+use vyre_libs::graph::csr_backward_or_changed::csr_backward_or_changed_parallel;
+
+fn csr_backward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
+    vyre_primitives::lane_grid(node_count, 32)
+}
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 
 fn set_bit(words: &mut [u32], node: u32) {

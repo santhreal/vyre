@@ -8,10 +8,6 @@
 //! element `w * 32 + i`. Sizes are declared at `Program` build
 //! time so the backend can allocate + validate layout up front.
 
-
-
-
-
 /// Per-word bitwise AND over two packed bitsets.
 pub mod and {
     crate::bitset::binary_word::define_bitwise_binary_op! {
@@ -23,6 +19,9 @@ pub mod and {
         inventory_lhs: [0xFF00, 0x0F0F],
         inventory_rhs: [0xF0F0, 0xFF00],
         inventory_expected: [0xF000, 0x0F00],
+        inventory_lhs_bytes: [0x00, 0xFF, 0x00, 0x00, 0x0F, 0x0F, 0x00, 0x00],
+        inventory_rhs_bytes: [0xF0, 0xF0, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00],
+        inventory_expected_bytes: [0x00, 0xF0, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00],
         single_lhs: [0xFFFF_FFFF],
         single_rhs: [0xFFFF_FFFF],
         single_expected: [0xFFFF_FFFF],
@@ -42,6 +41,9 @@ pub mod and_into {
         inventory_target: [0xFFFF, 0xF0F0],
         inventory_operand: [0xFF00, 0xFFFF],
         inventory_expected: [0xFF00, 0xF0F0],
+        inventory_target_bytes: [0xFF, 0xFF, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x00],
+        inventory_operand_bytes: [0x00, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00],
+        inventory_expected_bytes: [0x00, 0xFF, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x00],
         cases: {
             full_mask_is_identity: {
                 target: [0xDEAD_BEEF, 0x1234_5678],
@@ -73,6 +75,9 @@ pub mod and_not_into {
         inventory_target: [0xFFFF, 0xF0F0],
         inventory_operand: [0x0F0F, 0x00FF],
         inventory_expected: [0xF0F0, 0xF000],
+        inventory_target_bytes: [0xFF, 0xFF, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x00],
+        inventory_operand_bytes: [0x0F, 0x0F, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00],
+        inventory_expected_bytes: [0xF0, 0xF0, 0x00, 0x00, 0x00, 0xF0, 0x00, 0x00],
         cases: {
             subtraction_drops_waypoint_bits: {
                 target: [0xFFFF, 0xF0F0],
@@ -107,7 +112,8 @@ pub mod clear_bit {
         fn_name: bitset_clear_bit,
         kind: Clear,
         inventory_input: [0xFFFF_FFFF, 0xFFFF_FFFF],
-        inventory_expected: [0xFFFF_FFFE, 0xFFFF_FFFF]
+        inventory_expected: [0xFFFF_FFFE, 0xFFFF_FFFF],
+        inventory_expected_bytes: [0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
     }
 }
 pub mod contains;
@@ -127,6 +133,9 @@ pub mod or {
         inventory_lhs: [0xFF00, 0x0F0F],
         inventory_rhs: [0x00FF, 0xF0F0],
         inventory_expected: [0xFFFF, 0xFFFF],
+        inventory_lhs_bytes: [0x00, 0xFF, 0x00, 0x00, 0x0F, 0x0F, 0x00, 0x00],
+        inventory_rhs_bytes: [0xFF, 0x00, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x00],
+        inventory_expected_bytes: [0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00],
         single_lhs: [0xFFFF_FFFF],
         single_rhs: [0x0000_0000],
         single_expected: [0xFFFF_FFFF],
@@ -146,6 +155,9 @@ pub mod or_into {
         inventory_target: [0xFFFF, 0xF0F0],
         inventory_operand: [0x0F0F, 0x00FF],
         inventory_expected: [0xFFFF, 0xF0FF],
+        inventory_target_bytes: [0xFF, 0xFF, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x00],
+        inventory_operand_bytes: [0x0F, 0x0F, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00],
+        inventory_expected_bytes: [0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xF0, 0x00, 0x00],
         cases: {
             grows_empty_accumulator: {
                 target: [0, 0],
@@ -175,7 +187,8 @@ pub mod set_bit {
         fn_name: bitset_set_bit,
         kind: Set,
         inventory_input: [0, 0],
-        inventory_expected: [1, 0]
+        inventory_expected: [1, 0],
+        inventory_expected_bytes: [1, 0, 0, 0, 0, 0, 0, 0]
     }
 }
 pub mod subset_of;
@@ -192,6 +205,9 @@ pub mod xor {
         inventory_lhs: [0xFFFF_0000],
         inventory_rhs: [0x0000_FFFF],
         inventory_expected: [0xFFFF_FFFF],
+        inventory_lhs_bytes: [0x00, 0x00, 0xFF, 0xFF],
+        inventory_rhs_bytes: [0xFF, 0xFF, 0x00, 0x00],
+        inventory_expected_bytes: [0xFF, 0xFF, 0xFF, 0xFF],
         single_lhs: [0xFFFF_FFFF],
         single_rhs: [0xFFFF_FFFF],
         single_expected: [0x0000_0000],
@@ -211,6 +227,9 @@ pub mod xor_into {
         inventory_target: [0xFFFF, 0xF0F0],
         inventory_operand: [0x0F0F, 0x00FF],
         inventory_expected: [0xF0F0, 0xF00F],
+        inventory_target_bytes: [0xFF, 0xFF, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x00],
+        inventory_operand_bytes: [0x0F, 0x0F, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00],
+        inventory_expected_bytes: [0xF0, 0xF0, 0x00, 0x00, 0x0F, 0xF0, 0x00, 0x00],
         cases: {
             xor_with_self_zeros: {
                 target: [0xDEAD_BEEF, 0x1234_5678],

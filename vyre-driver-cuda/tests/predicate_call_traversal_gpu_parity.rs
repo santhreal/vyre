@@ -14,10 +14,13 @@ use vyre_driver_cuda::CudaBackend;
 use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
 use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
-use vyre_libs::predicate::arg_of::{arg_of, cpu_ref as arg_of_cpu};
-use vyre_libs::predicate::call_to::{call_to, cpu_ref as call_to_cpu};
+use vyre_libs::predicate::arg_of::arg_of;
+use vyre_libs::predicate::call_to::call_to;
 use vyre_libs::predicate::edge_kind;
-use vyre_libs::predicate::return_value_of::{cpu_ref as return_value_of_cpu, return_value_of};
+use vyre_libs::predicate::return_value_of::return_value_of;
+use vyre_reference::composition_witness::{
+    csr_backward_traverse_witness, csr_forward_traverse_witness,
+};
 
 /// Run a forward-traversal wrapper (call_to, return_value_of).
 fn run_forward<B>(
@@ -109,7 +112,14 @@ fn cuda_call_to_one_step() {
         let edge_targets = vec![1u32];
         let edge_kind_mask = vec![edge_kind::CALL_ARG];
         let frontier = vec![0b01u32]; // {0}
-        let cpu = call_to_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let cpu = csr_forward_traverse_witness(
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+            edge_kind::CALL_ARG,
+        );
         let gpu = run_forward(
             backend,
             call_to,
@@ -132,7 +142,14 @@ fn cuda_call_to_skips_non_call_edges() {
         let edge_targets = vec![1u32];
         let edge_kind_mask = vec![edge_kind::ASSIGNMENT];
         let frontier = vec![0b01u32];
-        let cpu = call_to_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let cpu = csr_forward_traverse_witness(
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+            edge_kind::CALL_ARG,
+        );
         let gpu = run_forward(
             backend,
             call_to,
@@ -155,7 +172,14 @@ fn cuda_return_value_of_one_step() {
         let edge_targets = vec![1u32];
         let edge_kind_mask = vec![edge_kind::RETURN];
         let frontier = vec![0b01u32];
-        let cpu = return_value_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let cpu = csr_forward_traverse_witness(
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+            edge_kind::RETURN,
+        );
         let gpu = run_forward(
             backend,
             return_value_of,
@@ -177,7 +201,14 @@ fn cuda_return_value_of_ignores_call_arg_edges() {
         let edge_targets = vec![1u32];
         let edge_kind_mask = vec![edge_kind::CALL_ARG];
         let frontier = vec![0b01u32];
-        let cpu = return_value_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let cpu = csr_forward_traverse_witness(
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+            edge_kind::RETURN,
+        );
         let gpu = run_forward(
             backend,
             return_value_of,
@@ -200,7 +231,14 @@ fn cuda_arg_of_unspecified_one_step_backward() {
         let edge_targets = vec![1u32];
         let edge_kind_mask = vec![edge_kind::CALL_ARG];
         let frontier = vec![0b10u32]; // {1}
-        let cpu = arg_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let cpu = csr_backward_traverse_witness(
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+            edge_kind::CALL_ARG,
+        );
         let gpu = run_backward(
             backend,
             arg_of,
@@ -223,7 +261,14 @@ fn cuda_arg_of_kind_filtered_out() {
         let edge_targets = vec![1u32];
         let edge_kind_mask = vec![edge_kind::RETURN];
         let frontier = vec![0b10u32];
-        let cpu = arg_of_cpu(2, &edge_offsets, &edge_targets, &edge_kind_mask, &frontier);
+        let cpu = csr_backward_traverse_witness(
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &frontier,
+            edge_kind::CALL_ARG,
+        );
         let gpu = run_backward(
             backend,
             arg_of,
@@ -254,12 +299,13 @@ fn cuda_arg_of_reaches_source_past_first_workgroup() {
             let mut frontier = vec![0u32; words];
             frontier[512 / 32] |= 1u32 << (512 % 32);
 
-            let cpu = arg_of_cpu(
+            let cpu = csr_backward_traverse_witness(
                 node_count,
                 &edge_offsets,
                 &edge_targets,
                 &edge_kind_mask,
                 &frontier,
+                edge_kind::CALL_ARG,
             );
             let gpu = run_backward(
                 backend,

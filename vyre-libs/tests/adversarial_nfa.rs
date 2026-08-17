@@ -4,6 +4,7 @@
 #![cfg(feature = "nfa")]
 
 use vyre_libs::nfa::subgroup_nfa::*;
+use vyre_reference::composition_witness::subgroup_nfa_step_witness as cpu_step;
 
 #[test]
 fn cpu_step_empty_state_stays_empty() {

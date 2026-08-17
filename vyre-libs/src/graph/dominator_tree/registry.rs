@@ -6,6 +6,13 @@ const OP_ID: &str = "vyre-libs::graph::dominator_tree";
 const DEPTH_OP_ID: &str = "vyre-libs::graph::dominator_tree_depth";
 const INTERSECT_STEP_OP_ID: &str = "vyre-libs::graph::dominator_tree_intersect_step";
 
+const EXPECTED_DOM_TREE_IDOM_BYTES: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0];
+const EXPECTED_DOM_TREE_ORDER_BYTES: [u8; 16] = [0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0];
+const EXPECTED_DOM_TREE_DEPTH_BYTES: [u8; 16] = [0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0];
+const EXPECTED_DOM_TREE_STEP_IDOM_BYTES: [u8; 16] =
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const EXPECTED_DOM_TREE_STEP_CHANGED_BYTES: [u8; 4] = [1, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -22,8 +29,8 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0, 0, 1, 2]),
-                vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 3]),
+                EXPECTED_DOM_TREE_IDOM_BYTES.to_vec(),
+                EXPECTED_DOM_TREE_ORDER_BYTES.to_vec(),
             ]]
         }),
     )
@@ -41,7 +48,7 @@ inventory::submit! {
                 vyre_primitives::wire::pack_u32_slice(&[0; 4]),
             ]]
         }),
-        Some(|| vec![vec![vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 0])]]),
+        Some(|| vec![vec![EXPECTED_DOM_TREE_DEPTH_BYTES.to_vec()]]),
     )
 }
 
@@ -63,8 +70,8 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
-                vyre_primitives::wire::pack_u32_slice(&[1]),
+                EXPECTED_DOM_TREE_STEP_IDOM_BYTES.to_vec(),
+                EXPECTED_DOM_TREE_STEP_CHANGED_BYTES.to_vec(),
             ]]
         }),
     )

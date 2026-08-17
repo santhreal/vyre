@@ -10,11 +10,11 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-#[cfg(test)]
-use crate::math::conv1d::cpu_conv1d;
 use crate::math::conv1d::{conv1d_node, conv1d_program, gaussian_weights, pack_params};
 use vyre_foundation::ir::Node;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+#[cfg(test)]
+use vyre_reference::composition_witness::conv1d_witness as reference_conv1d;
 
 /// Caller-owned scratch for latency-trace smoothing dispatches.
 #[derive(Debug, Default)]
@@ -154,12 +154,16 @@ pub fn smooth_latency_trace_via_with_scratch_into(
 /// CPU oracle for latency smoothing, enabled only for parity tests.
 #[cfg(test)]
 #[must_use]
-pub fn reference_smooth_latency_trace(latency_fixed: &[u32], radius: u32, sigma: f32) -> Vec<u32> {
+pub(crate) fn reference_smooth_latency_trace(
+    latency_fixed: &[u32],
+    radius: u32,
+    sigma: f32,
+) -> Vec<u32> {
     if latency_fixed.is_empty() {
         return Vec::new();
     }
     let weights = gaussian_weights(radius, sigma);
-    cpu_conv1d(latency_fixed, &weights, 1)
+    reference_conv1d(latency_fixed, &weights, 1)
 }
 
 #[cfg(test)]
@@ -179,10 +183,10 @@ mod tests {
     }
 
     #[test]
-    fn reference_smoothing_matches_conv1d_cpu_oracle() {
+    fn reference_smoothing_matches_conv1d_reference() {
         let trace = [100u32, 1_000, 200, 900, 300];
         let weights = gaussian_weights(1, 1.0);
-        let expected = cpu_conv1d(&trace, &weights, 1);
+        let expected = reference_conv1d(&trace, &weights, 1);
         assert_eq!(reference_smooth_latency_trace(&trace, 1, 1.0), expected);
     }
 

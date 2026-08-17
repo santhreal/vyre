@@ -24,15 +24,14 @@
 //! region produce two output spans (cross-pattern dedup is a
 //! different operation; consumers that want it apply a second pass).
 //!
-//! # CPU + GPU
+//! # Reference + GPU
 //!
-//! - `dedup_regions_cpu` is the reference implementation: pure data,
-//!   no IR, no backend. CPU-side consumers and parity tests use it.
+//! - `reference_dedup_regions` is the reference implementation: pure data,
+//!   no IR, no backend. Test consumers and parity tests use it.
 //! - `region_sort_program` and `dedup_regions_cluster_program` emit
 //!   GPU-resident sorted spans, survivor flags, and merged cluster ends
 //!   so parser/scanner pipelines can compact deduped triples without a
 //!   host readback between stages.
-//!
 //! Both share a single golden test fixture set so any divergence is
 //! caught at conform time.
 
@@ -87,4 +86,50 @@ impl PartialOrd for RegionTriple {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
+}
+
+#[cfg(test)]
+#[must_use]
+pub(crate) fn reference_dedup_regions(regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
+    let input: Vec<(u32, u32, u32)> = regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    let deduped = vyre_reference::composition_witness::dedup_regions_witness(input);
+    deduped
+        .into_iter()
+        .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
+        .collect()
+}
+
+#[cfg(test)]
+pub(crate) fn reference_dedup_regions_in_place(regions: &mut Vec<RegionTriple>) {
+    let deduped = reference_dedup_regions(std::mem::take(regions));
+    *regions = deduped;
+}
+
+#[cfg(test)]
+pub(crate) fn reference_sort_regions(regions: &mut [RegionTriple]) {
+    regions.sort();
+}
+
+#[cfg(test)]
+#[must_use]
+pub(crate) fn reference_cap_regions_per_pattern_survivors(
+    pattern_ids: &[u32],
+    limit: u32,
+) -> Vec<u32> {
+    vyre_reference::composition_witness::cap_regions_per_pattern_survivors_witness(
+        pattern_ids,
+        limit,
+    )
+}
+
+#[cfg(test)]
+#[must_use]
+pub(crate) fn reference_compact_first_per_region_pattern_survivors(
+    regions: &[u32],
+    pattern_ids: &[u32],
+) -> Vec<u32> {
+    vyre_reference::composition_witness::compact_first_per_region_pattern_survivors_witness(
+        regions,
+        pattern_ids,
+    )
 }

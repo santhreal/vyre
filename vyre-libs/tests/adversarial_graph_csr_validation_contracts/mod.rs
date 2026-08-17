@@ -37,7 +37,6 @@ fn csr_cpu_ref(
     frontier_in: &[u32],
     allow_mask: u32,
 ) -> Vec<u32> {
-    let mut out = zero_frontier(node_count);
     let expected_offsets = node_count as usize + 1;
     assert_eq!(
         edge_offsets.len(),
@@ -58,31 +57,14 @@ fn csr_cpu_ref(
             "csr_forward_traverse test oracle received non-monotonic CSR offsets"
         );
     }
-    for src in 0..node_count {
-        let src_word = (src / 32) as usize;
-        let src_bit = 1u32 << (src % 32);
-        if src_word >= frontier_in.len() || (frontier_in[src_word] & src_bit) == 0 {
-            continue;
-        }
-        let edge_start = edge_offsets[src as usize];
-        let edge_end = edge_offsets[src as usize + 1];
-        for edge in edge_start as usize..edge_end as usize {
-            let kind = edge_kind_mask[edge];
-            if (kind & allow_mask) == 0 {
-                continue;
-            }
-            let dst = edge_targets[edge];
-            if dst >= node_count {
-                continue;
-            }
-            let dst_word = (dst / 32) as usize;
-            let dst_bit = 1u32 << (dst % 32);
-            if let Some(slot) = out.get_mut(dst_word) {
-                *slot |= dst_bit;
-            }
-        }
-    }
-    out
+    vyre_reference::composition_witness::csr_forward_traverse_witness(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        allow_mask,
+    )
 }
 
 // ---------------------------------------------------------------------------

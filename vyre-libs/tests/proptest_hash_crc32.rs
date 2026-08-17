@@ -2,7 +2,7 @@
 #![cfg(feature = "hash")]
 
 use proptest::prelude::*;
-use vyre_libs::hash::crc32::crc32;
+use vyre_reference::composition_witness::crc32_witness as crc32;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]

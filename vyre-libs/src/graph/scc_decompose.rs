@@ -11,12 +11,13 @@
 //! id. The CPU reference below shows the composition; the Program
 //! ships one pass.
 
-use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::bitset::bitset_words;
 use crate::graph::frontier_bits::{bind_bit_address, bind_word, bit_is_set, BitAccess};
+#[cfg(test)]
 use vyre_primitives::lane_grid;
 
 /// Canonical op id.
@@ -25,9 +26,131 @@ pub const OP_ID: &str = "vyre-libs::graph::scc_decompose";
 pub const SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid for one SCC decomposition pass over `node_count` lanes.
+#[cfg(test)]
 #[must_use]
 pub const fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
     lane_grid(node_count, SCC_DECOMPOSE_WORKGROUP_SIZE[0])
+}
+
+/// Internal operation id for GPU packing of dense pivot-reachability rows.
+pub(crate) const DENSE_REACHABILITY_BITSETS_OP_ID: &str =
+    "vyre-libs::graph::dense_reachability_bitsets";
+
+/// Build a program that packs one pivot row from each dense closure into bitsets with checked dimensions.
+pub(crate) fn try_dense_reachability_bitsets(
+    node_count: u32,
+    dense_count: u32,
+    pivot: u32,
+    forward_closure: &str,
+    backward_closure: &str,
+    forward_bitset: &str,
+    backward_bitset: &str,
+) -> Result<Program, String> {
+    if node_count == 0 {
+        return Err(format!(
+            "Fix: {DENSE_REACHABILITY_BITSETS_OP_ID} requires node_count > 0, got 0."
+        ));
+    }
+    if pivot >= node_count {
+        return Err(format!(
+            "Fix: {DENSE_REACHABILITY_BITSETS_OP_ID} requires pivot < node_count, got pivot={pivot}, node_count={node_count}."
+        ));
+    }
+    let expected_dense = node_count.checked_mul(node_count).ok_or_else(|| {
+        format!(
+            "Fix: {DENSE_REACHABILITY_BITSETS_OP_ID} node_count*node_count overflows u32 for node_count={node_count}."
+        )
+    })?;
+    if dense_count != expected_dense {
+        return Err(format!(
+            "Fix: {DENSE_REACHABILITY_BITSETS_OP_ID} requires dense_count == node_count*node_count == {expected_dense}, got {dense_count}."
+        ));
+    }
+    let pivot_row_offset = pivot.checked_mul(node_count).ok_or_else(|| {
+        format!(
+            "Fix: {DENSE_REACHABILITY_BITSETS_OP_ID} pivot*node_count overflows u32 for pivot={pivot}, node_count={node_count}."
+        )
+    })?;
+
+    let lane = Expr::InvocationId { axis: 0 };
+    let row_index = Expr::add(Expr::u32(pivot_row_offset), lane.clone());
+    let word_index = Expr::div(lane.clone(), Expr::u32(32));
+    let bit = Expr::shl(Expr::u32(1), Expr::bitand(lane.clone(), Expr::u32(31)));
+    let forward_reachable = Expr::or(
+        Expr::eq(lane.clone(), Expr::u32(pivot)),
+        Expr::ne(Expr::load(forward_closure, row_index.clone()), Expr::u32(0)),
+    );
+    let backward_reachable = Expr::or(
+        Expr::eq(lane.clone(), Expr::u32(pivot)),
+        Expr::ne(Expr::load(backward_closure, row_index), Expr::u32(0)),
+    );
+
+    let words = bitset_words(node_count);
+
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(forward_closure, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(dense_count),
+            BufferDecl::storage(backward_closure, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(dense_count),
+            BufferDecl::storage(forward_bitset, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(words),
+            BufferDecl::storage(backward_bitset, 3, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(words),
+        ],
+        SCC_DECOMPOSE_WORKGROUP_SIZE,
+        vec![wrap_anonymous_region(
+            DENSE_REACHABILITY_BITSETS_OP_ID,
+            vec![Node::if_then(
+                Expr::lt(lane, Expr::u32(node_count)),
+                vec![
+                    Node::if_then(
+                        forward_reachable,
+                        vec![Node::let_bind(
+                            "forward_prior",
+                            Expr::atomic_or(forward_bitset, word_index.clone(), bit.clone()),
+                        )],
+                    ),
+                    Node::if_then(
+                        backward_reachable,
+                        vec![Node::let_bind(
+                            "backward_prior",
+                            Expr::atomic_or(backward_bitset, word_index, bit),
+                        )],
+                    ),
+                ],
+            )],
+        )],
+    ))
+}
+
+/// Build a program that packs one pivot row from each dense closure into bitsets.
+#[must_use]
+pub(crate) fn dense_reachability_bitsets(
+    node_count: u32,
+    dense_count: u32,
+    pivot: u32,
+    forward_closure: &str,
+    backward_closure: &str,
+    forward_bitset: &str,
+    backward_bitset: &str,
+) -> Program {
+    match try_dense_reachability_bitsets(
+        node_count,
+        dense_count,
+        pivot,
+        forward_closure,
+        backward_closure,
+        forward_bitset,
+        backward_bitset,
+    ) {
+        Ok(program) => program,
+        Err(error) => trap_program(
+            DENSE_REACHABILITY_BITSETS_OP_ID,
+            Some((forward_bitset, DataType::U32)),
+            error,
+        ),
+    }
 }
 
 /// Build a Program that marks every node in the intersection of
@@ -131,11 +254,9 @@ pub fn scc_decompose(
     )
 }
 
-
-
 #[cfg(test)]
 mod regression_tests {
-    use super::*;
+    use vyre_reference::composition_witness::scc_decompose_witness as cpu_ref;
 
     /// PHASE7_GRAPH HIGH regression: two pivots stamping the same
     /// node  -  the first pivot's assignment must survive. Prior
@@ -179,6 +300,10 @@ mod regression_tests {
     }
 }
 
+const EXPECTED_SCC_DECOMPOSE_OUTPUT_BYTES: [u8; 16] = [
+    0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255, 255,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -199,9 +324,8 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // forward ∩ backward = 0b0101 → nodes 0 and 2 stamped.
-            vec![vec![to_bytes(&[0, u32::MAX, 0, u32::MAX])]]
+            vec![vec![EXPECTED_SCC_DECOMPOSE_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -209,6 +333,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::scc_decompose_witness as cpu_ref;
 
     #[test]
     fn program_uses_packed_source_lane_workgroup() {
@@ -309,5 +434,30 @@ mod tests {
         assert_eq!(out[31], u32::MAX);
         assert_eq!(out[33], u32::MAX);
         assert_eq!(out[63], u32::MAX);
+    }
+
+    #[test]
+    fn try_dense_reachability_bitsets_validates_dimensions() {
+        let ok = try_dense_reachability_bitsets(4, 16, 0, "fc", "bc", "fb", "bb");
+        assert!(ok.is_ok());
+
+        let err_zero = try_dense_reachability_bitsets(0, 0, 0, "fc", "bc", "fb", "bb");
+        assert!(err_zero.unwrap_err().contains("requires node_count > 0"));
+
+        let err_pivot = try_dense_reachability_bitsets(4, 16, 4, "fc", "bc", "fb", "bb");
+        assert!(err_pivot
+            .unwrap_err()
+            .contains("requires pivot < node_count"));
+
+        let err_dense = try_dense_reachability_bitsets(4, 15, 0, "fc", "bc", "fb", "bb");
+        assert!(err_dense
+            .unwrap_err()
+            .contains("requires dense_count == node_count*node_count == 16"));
+    }
+
+    #[test]
+    fn dense_reachability_bitsets_invalid_emits_trap() {
+        let trapped = dense_reachability_bitsets(0, 0, 0, "fc", "bc", "fb", "bb");
+        assert!(trapped.stats().trap());
     }
 }

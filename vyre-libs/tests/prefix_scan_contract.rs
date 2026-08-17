@@ -17,7 +17,16 @@ use std::collections::HashMap;
 use vyre_foundation::ir::{BinOp, BufferAccess, Expr, Node, Program};
 use vyre_foundation::visit::child_bodies;
 use vyre_libs::math::prefix_scan::{prefix_scan, ScanKind};
-fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> { match kind { ScanKind::Inclusive => { let mut acc = 0u32; input.iter().map(|&x| { acc = acc.wrapping_add(x); acc }).collect() } ScanKind::Exclusive => { let mut acc = 0u32; let mut out = Vec::with_capacity(input.len()); for &x in input { out.push(acc); acc = acc.wrapping_add(x); } out } } }
+fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> {
+    match kind {
+        ScanKind::InclusiveSum => {
+            vyre_reference::composition_witness::inclusive_prefix_sum_witness(input)
+        }
+        ScanKind::ExclusiveSum => {
+            vyre_reference::composition_witness::exclusive_prefix_sum_witness(input)
+        }
+    }
+}
 use vyre_reference::value::Value;
 
 /// Every `n` the contract has a distinct shape for: the degenerate sizes, both

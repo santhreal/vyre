@@ -17,6 +17,10 @@ pub fn newton_schulz_5step(mat: &str, output: &str, rows: u32, cols: u32) -> Pro
     tag_program(OP_ID, newton_schulz_poly5_f32(mat, output, rows, cols))
 }
 
+const EXPECTED_NEWTON_SCHULZ_OUTPUT_BYTES: [u8; 16] = [
+    0xB2, 0xF3, 0x43, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xB2, 0xF3, 0x43, 0x3F,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -27,11 +31,7 @@ inventory::submit! {
                 to_f32(&[0.5, 0.0, 0.0, 0.5]),
             ]]
         }),
-        Some(|| {
-            vec![vec![vec![
-                178, 243, 67, 63, 0, 0, 0, 0, 0, 0, 0, 0, 178, 243, 67, 63,
-            ]]]
-        }),
+        Some(|| vec![vec![EXPECTED_NEWTON_SCHULZ_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
     .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(64))

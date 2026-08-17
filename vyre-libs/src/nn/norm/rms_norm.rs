@@ -134,6 +134,10 @@ fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Pr
     )
 }
 
+const EXPECTED_RMS_NORM_OUTPUT_BYTES: [u8; 16] = [
+    0xB2, 0xF4, 0xBA, 0x3E, 0xB2, 0xF4, 0x3A, 0x3F, 0x86, 0x37, 0x8C, 0x3F, 0xB2, 0xF4, 0xBA, 0x3F,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::rms_norm",
@@ -144,17 +148,7 @@ inventory::submit! {
             // Input = [1.0, 2.0, 3.0, 4.0].
             vec![vec![to_bytes(&[1.0, 2.0, 3.0, 4.0])]]
         }),
-        Some(|| {
-            let to_bytes =
-                |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            // mean(x^2) = (1+4+9+16)/4 = 7.5.
-            // rms = inverseSqrt(7.5 + 1e-5).
-            // y_i = x_i * rms.
-            let mean_sq = (1.0_f32 + 4.0 + 9.0 + 16.0) / 4.0;
-            let rms = (mean_sq + 1e-5_f32).sqrt().recip();
-            let y: [f32; 4] = [1.0 * rms, 2.0 * rms, 3.0 * rms, 4.0 * rms];
-            vec![vec![to_bytes(&y)]]
-        }),
+        Some(|| vec![vec![EXPECTED_RMS_NORM_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
     .with_tolerance(vyre_foundation::operation::TolerancePolicy::f32_ulp(2))

@@ -181,6 +181,8 @@ pub fn downsample_2x(input: &str, output: &str, width: u32, height: u32) -> Prog
     )
 }
 
+const EXPECTED_DOWNSAMPLE_2X_OUTPUT_BYTES: [u8; 16] = [0xFF; 16];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -194,8 +196,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let expected = vec![0xFFFF_FFFFu32; 4];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
+            vec![vec![EXPECTED_DOWNSAMPLE_2X_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")

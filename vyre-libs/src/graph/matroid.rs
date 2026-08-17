@@ -144,12 +144,58 @@ pub fn try_matroid_exchange_bfs_step(
     ))
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        matroid_exchange_bfs_step_witness, matroid_exchange_bfs_step_witness_into,
+    };
+
+    fn matroid_exchange_bfs_step_cpu(
+        frontier_in: &[u32],
+        exchange_adj: &[u32],
+        visited: &[u32],
+        n: u32,
+    ) -> (Vec<u32>, bool) {
+        let n_usize = n as usize;
+        assert_eq!(
+            frontier_in.len(),
+            n_usize,
+            "one frontier slot per matroid element"
+        );
+        assert_eq!(
+            visited.len(),
+            n_usize,
+            "one visited slot per matroid element"
+        );
+        assert_eq!(
+            exchange_adj.len(),
+            n_usize * n_usize,
+            "dense n*n matroid exchange matrix"
+        );
+        matroid_exchange_bfs_step_witness(frontier_in, exchange_adj, visited, n_usize)
+    }
+
+    fn try_matroid_exchange_bfs_step_cpu_into(
+        frontier_in: &[u32],
+        exchange_adj: &[u32],
+        visited: &[u32],
+        n: usize,
+        out: &mut Vec<u32>,
+    ) -> Result<bool, String> {
+        if frontier_in.len() != n {
+            return Err("frontier_in.len() != n".to_owned());
+        }
+        if visited.len() != n {
+            return Err("visited.len() != n".to_owned());
+        }
+        if exchange_adj.len() != n * n {
+            return Err("exchange_adj.len() != n*n".to_owned());
+        }
+        let any =
+            matroid_exchange_bfs_step_witness_into(frontier_in, exchange_adj, visited, n, out);
+        Ok(any)
+    }
 
     #[test]
     fn cpu_one_step_advances() {

@@ -12,8 +12,9 @@
 #![cfg(feature = "math")]
 
 use proptest::prelude::*;
-use vyre_libs::math::sos_certificate::{sos_gram_construct, sos_gram_construct_cpu};
+use vyre_libs::math::sos_certificate::sos_gram_construct;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::sos_gram_construct_witness as sos_gram_construct_cpu;
 use vyre_reference::value::Value;
 
 fn run_ir(monomial_pairs: &[u32], p_coeffs: &[u32], m: u32, coeff_count: u32) -> Vec<u32> {

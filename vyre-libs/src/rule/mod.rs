@@ -133,6 +133,7 @@ pub mod pattern_exists;
 /// Reference evaluator for `RuleCondition` / `RuleFormula` trees.
 /// Mirror of the GPU lowering for parity checks, CI gates, and unit
 /// tests that need deterministic rule outcomes without backend dispatch.
+#[cfg(test)]
 pub(crate) mod reference_eval;
 
 pub use ast::{RuleCondition, RuleFormula};
@@ -142,6 +143,7 @@ pub use builder::{
     rule_nodes, try_build_rule_program, try_condition_expr, try_formula_expr, try_rule_nodes,
     RuleBuildError, RULE_SET_OP_ID, WORKGROUP_SIZE,
 };
+#[cfg(test)]
 pub use reference_eval::{evaluate_condition, evaluate_formula, RuleEvaluationContext};
 
 #[cfg(test)]

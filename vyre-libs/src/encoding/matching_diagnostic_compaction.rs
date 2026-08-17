@@ -9,21 +9,13 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
-use crate::matching::{
-    bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
-    BRACKET_KIND_OTHER,
-};
-use crate::matching::{
-    dedup_regions_flag_program, region_dedup_dispatch_grid, region_sort_program, RegionTriple,
-};
-use crate::matching::{
-    dfa_compile, dfa_compile_with_budget, dfa_fingerprint, dfa_wire_bytes, nfa_to_dfa, CompiledDfa,
-    DfaCompileError, DfaDedupBatch, DfaDedupResult, DfaDedupTable, NfaTables, NfaToDfaError,
+use crate::pattern::{
+    bracket_match, bracket_match_dispatch_grid, dedup_regions_flag_program,
+    region_dedup_dispatch_grid, region_sort_program, RegionTriple, BRACKET_KIND_CLOSE,
+    BRACKET_KIND_OPEN, BRACKET_KIND_OTHER,
 };
 use crate::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-use vyre_primitives::wire::pack_u32_slice;
-
 
 /// Caller-owned dispatch scratch for matching diagnostic compaction.
 #[derive(Debug, Default)]
@@ -36,93 +28,6 @@ pub struct MatchingDiagnosticCompactionGpuScratch {
     decoded_starts: Vec<u32>,
     decoded_ends: Vec<u32>,
     decoded_regions: Vec<RegionTriple>,
-}
-
-/// Compile diagnostic patterns to a DFA using the default primitive budget.
-#[must_use]
-pub fn compile_diagnostic_dfa(patterns: &[&[u8]]) -> CompiledDfa {
-    dfa_compile(patterns)
-}
-
-/// Compile diagnostic patterns to a DFA using an explicit transition-table budget.
-///
-/// # Errors
-///
-/// Returns [`DfaCompileError`] when the pattern set exceeds the caller budget.
-pub fn compile_diagnostic_dfa_with_budget(
-    patterns: &[&[u8]],
-    budget_bytes: usize,
-) -> Result<CompiledDfa, DfaCompileError> {
-    dfa_compile_with_budget(patterns, budget_bytes)
-}
-
-/// Compile a diagnostic NFA table into the dense DFA used by the bounded scan path.
-///
-/// This is the self-substrate bridge for regex-style diagnostics: pattern sets
-/// that remain within `max_dfa_states` can run on the dense one-load-per-byte
-/// DFA kernel, while state-exploding sets report a structured error and stay on
-/// the NFA path.
-///
-/// # Errors
-///
-/// Returns [`NfaToDfaError`] when the NFA table shape is malformed or subset
-/// construction exceeds `max_dfa_states`.
-pub fn compile_diagnostic_nfa_to_dfa(
-    tables: &NfaTables<'_>,
-    max_dfa_states: usize,
-) -> Result<CompiledDfa, NfaToDfaError> {
-    nfa_to_dfa(tables, max_dfa_states)
-}
-
-/// Stable content-addressed key for deduplicating diagnostic DFA plans.
-#[must_use]
-pub fn diagnostic_dfa_fingerprint(dfa: &CompiledDfa) -> u64 {
-    dfa_fingerprint(dfa)
-}
-
-/// Wire-relevant byte size for diagnostic DFA reuse accounting.
-#[must_use]
-pub fn diagnostic_dfa_wire_bytes(dfa: &CompiledDfa) -> usize {
-    dfa_wire_bytes(dfa)
-}
-
-/// Retained wire bytes across all canonical diagnostic DFA plans.
-#[must_use]
-pub fn diagnostic_dfa_canonical_wire_bytes(table: &DfaDedupTable) -> usize {
-    table.canonical_wire_bytes()
-}
-
-/// Saved diagnostic DFA wire bytes as parts-per-million of submitted bytes.
-#[must_use]
-pub fn diagnostic_dfa_saved_wire_ppm(batch: &DfaDedupBatch) -> u32 {
-    batch.saved_wire_ppm()
-}
-
-/// Deduplicate a diagnostic DFA plan into a caller-owned content-addressed table.
-pub fn dedup_diagnostic_dfa_plan(table: &mut DfaDedupTable, dfa: CompiledDfa) -> DfaDedupResult {
-    table.insert(dfa)
-}
-
-/// Deduplicate a batch of diagnostic DFA plans and retain input-order mappings.
-pub fn dedup_diagnostic_dfa_plans<I>(table: &mut DfaDedupTable, dfas: I) -> DfaDedupBatch
-where
-    I: IntoIterator<Item = CompiledDfa>,
-{
-    table.insert_many(dfas)
-}
-
-/// Merge another diagnostic DFA table into this table without recompilation.
-pub fn merge_diagnostic_dfa_tables(
-    table: &mut DfaDedupTable,
-    other: &DfaDedupTable,
-) -> DfaDedupBatch {
-    table.merge_from(other)
-}
-
-/// Return the little-endian u32 byte layout used for diagnostic fixture uploads.
-#[must_use]
-pub fn pack_diagnostic_u32(words: &[u32]) -> Vec<u8> {
-    pack_u32_slice(words)
 }
 
 /// Match diagnostic brace tokens through the bracket-match primitive.
@@ -319,10 +224,6 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
     )
 }
 
-
-
-
-
 /// Build a compact fixture token stream for one nested diagnostic block.
 #[must_use]
 pub fn nested_diagnostic_brace_fixture() -> Vec<u32> {
@@ -449,7 +350,35 @@ fn decode_output_at(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::pattern::{
+        dfa_compile as compile_diagnostic_dfa,
+        dfa_compile_with_budget as compile_diagnostic_dfa_with_budget,
+    };
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::bracket_match_witness as reference_bracket_pairs;
+
+    fn reference_sort_regions(mut regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
+        regions.sort();
+        regions
+    }
+
+    fn sort_regions_witness_in_place(regions: &mut [RegionTriple]) {
+        regions.sort();
+    }
+
+    fn reference_dedup_regions(regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
+        let input: Vec<(u32, u32, u32)> = regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
+        let deduped = vyre_reference::composition_witness::dedup_regions_witness(input);
+        deduped
+            .into_iter()
+            .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
+            .collect()
+    }
+
+    fn reference_dedup_regions_inplace(regions: &mut Vec<RegionTriple>) {
+        let deduped = reference_dedup_regions(std::mem::take(regions));
+        *regions = deduped;
+    }
 
     struct MatchingDispatcher;
 
@@ -469,7 +398,7 @@ mod tests {
                 })
                 .expect("Fix: matching primitive should expose a region generator");
             match op_id {
-                crate::matching::BRACKET_MATCH_OP_ID => {
+                crate::pattern::BRACKET_MATCH_OP_ID => {
                     // Two input-consuming buffers: kinds ReadOnly(0), stack plain-ReadWrite(1).
                     // `match_pairs` output(2) is backend-allocated (no input slot).
                     assert_eq!(
@@ -489,7 +418,7 @@ mod tests {
                     // pairs from outputs[1], not outputs[0] (the stack scratch).
                     Ok(vec![
                         inputs[1].clone(),
-                        u32_slice_to_le_bytes(&primitive_bracket_match(&kinds, depth_words as u32)),
+                        u32_slice_to_le_bytes(&reference_bracket_pairs(&kinds, depth_words as u32)),
                     ])
                 }
                 "vyre-libs::matching::region::region_sort" => {
@@ -578,10 +507,6 @@ mod tests {
         assert_eq!(
             bracket_pairs_via(&MatchingDispatcher, &fixture, 8).unwrap(),
             reference_bracket_pairs(&fixture, 8)
-        );
-        assert_eq!(
-            pack_diagnostic_u32(&[BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE]),
-            pack_u32_slice(&[BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE])
         );
     }
 
@@ -689,7 +614,7 @@ mod tests {
             }
 
             let mut sorted = regions;
-            sort_regions_cpu(&mut sorted);
+            sort_regions_witness_in_place(&mut sorted);
             let flags = dedup_region_survivor_flags_via(&MatchingDispatcher, &sorted).unwrap();
             let actual_cluster_starts = sorted
                 .iter()
@@ -709,16 +634,12 @@ mod tests {
     }
 
     #[test]
-    fn region_cpu_wrappers_match_primitives_exactly() {
+    fn region_reference_wrappers_match_primitives_exactly() {
         let regions = vec![
             RegionTriple::new(0, 7, 10),
             RegionTriple::new(0, 5, 8),
             RegionTriple::new(1, 5, 8),
         ];
-        assert_eq!(
-            reference_dedup_regions(regions.clone()),
-            dedup_regions_cpu(regions.clone())
-        );
         let mut in_place = regions.clone();
         reference_dedup_regions_inplace(&mut in_place);
         assert_eq!(in_place, reference_dedup_regions(regions));

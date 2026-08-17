@@ -16,16 +16,7 @@
 mod gate_fixtures;
 
 use vyre_libs::reduce::histogram::*;
-
-fn cpu_ref(input: &[u32], num_bins: u32) -> Vec<u32> {
-    let mut out = vec![0u32; num_bins as usize];
-    for bin in input.iter().copied() {
-        if let Some(slot) = out.get_mut(bin as usize) {
-            *slot = (*slot).wrapping_add(1);
-        }
-    }
-    out
-}
+use vyre_reference::composition_witness::histogram_witness as cpu_ref;
 
 adversarial_vec_u32_cases! {
     test_reduce_histogram_adv_0: vec![0u32; 0], 1u32 => vec![0], "FINDING-ADV-REDUCE-HISTOGRAM-0: Exact bit output mismatch";

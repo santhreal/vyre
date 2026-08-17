@@ -372,9 +372,12 @@ inventory::submit! {
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
         Some(|| {
-            let expected = [0xFFFFFFFFu32, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            vec![vec![vec![
+                0xff, 0xff, 0xff, 0xff,
+                0xff, 0xff, 0xff, 0xff,
+                0x00, 0x00, 0x00, 0x00,
+                0xff, 0xff, 0xff, 0xff,
+            ]]]
         }),
     )
     .with_category("math")
@@ -391,9 +394,12 @@ inventory::submit! {
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
         Some(|| {
-            let expected = [0x00000000u32, 0x00000000, 0x00000000, 0x00000000];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ]]]
         }),
     )
     .with_category("math")
@@ -410,9 +416,12 @@ inventory::submit! {
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
         Some(|| {
-            let expected = [11u32, 22, u32::MAX, u32::MAX];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            vec![vec![vec![
+                0x0b, 0x00, 0x00, 0x00, // 11
+                0x16, 0x00, 0x00, 0x00, // 22
+                0xff, 0xff, 0xff, 0xff, // u32::MAX
+                0xff, 0xff, 0xff, 0xff, // u32::MAX
+            ]]]
         }),
     )
     .with_category("math")
@@ -429,9 +438,12 @@ inventory::submit! {
             vec![vec![to_bytes(&a), to_bytes(&b)]]
         }),
         Some(|| {
-            let expected = [0u32, 1, 1, 0];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            vec![vec![vec![
+                0x00, 0x00, 0x00, 0x00, // 0
+                0x01, 0x00, 0x00, 0x00, // 1
+                0x01, 0x00, 0x00, 0x00, // 1
+                0x00, 0x00, 0x00, 0x00, // 0
+            ]]]
         }),
     )
     .with_category("math")
@@ -447,20 +459,12 @@ inventory::submit! {
             vec![vec![to_bytes(&input)]]
         }),
         Some(|| {
-            // We'll let the reference interpreter verify the mix logic matches.
-            // Thomas Wang's 32 bit mix:
-            let mix = |mut h: u32| {
-                h = h.wrapping_add(!(h << 15));
-                h ^= h >> 12;
-                h = h.wrapping_add(h << 2);
-                h ^= h >> 4;
-                h = h.wrapping_mul(2057);
-                h ^= h >> 16;
-                h
-            };
-            let expected = [mix(1), mix(2), mix(3), mix(4)];
-            let bytes = vyre_primitives::wire::pack_u32_slice(&expected);
-            vec![vec![bytes]]
+            vec![vec![vec![
+                0x18, 0xfc, 0x55, 0xbd, // mix(1) = 0xbd55fc18
+                0xf1, 0x52, 0x4f, 0xf0, // mix(2) = 0xf04f52f1
+                0x2c, 0x71, 0xef, 0xd2, // mix(3) = 0xd2ef712c
+                0x3b, 0xa8, 0x5a, 0x85, // mix(4) = 0x855aa83b
+            ]]]
         }),
     )
     .with_category("math")

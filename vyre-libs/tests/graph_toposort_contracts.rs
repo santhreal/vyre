@@ -1,10 +1,86 @@
 //! Contracts for both topological-sort oracles and the emitted program.
 
 use vyre_libs::graph::toposort::{
-    toposort, toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch, toposort_program,
-    validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrError, ToposortCsrLayout,
-    ToposortCsrScratch, ToposortError,
+    toposort_program, validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrError,
+    ToposortCsrLayout, ToposortError,
 };
+use vyre_reference::composition_witness::{
+    toposort_csr_with_scratch_into_witness, toposort_csr_witness, toposort_witness,
+};
+
+#[derive(Debug, Default, Clone)]
+struct ToposortCsrScratch {
+    indeg: Vec<u32>,
+    queue: Vec<u32>,
+}
+
+impl ToposortCsrScratch {
+    fn new() -> Self {
+        Self::default()
+    }
+}
+
+fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, ToposortError> {
+    for (edge, &(from, to)) in edges.iter().enumerate() {
+        if from >= node_count {
+            return Err(ToposortError::UnknownNode { edge, node: from });
+        }
+        if to >= node_count {
+            return Err(ToposortError::UnknownNode { edge, node: to });
+        }
+    }
+    toposort_witness(node_count, edges).map_err(|err| {
+        if let Some(rest) = err.strip_prefix("Cycle detected involving node ") {
+            if let Ok(node) = rest.parse::<u32>() {
+                return ToposortError::Cycle { node };
+            }
+        }
+        ToposortError::InconsistentState { message: err }
+    })
+}
+
+fn toposort_csr(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+) -> Result<Vec<u32>, ToposortCsrError> {
+    validate_toposort_csr_inputs(node_count, offsets, targets)?;
+    let order = toposort_csr_witness(node_count, offsets, targets)
+        .map_err(|message| ToposortCsrError::BadOrder { message })?;
+    validate_toposort_csr_order(node_count, offsets, targets, &order)?;
+    Ok(order)
+}
+
+fn toposort_csr_into(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    order: &mut Vec<u32>,
+) -> Result<(), ToposortCsrError> {
+    let mut scratch = ToposortCsrScratch::default();
+    toposort_csr_into_with_scratch(node_count, offsets, targets, order, &mut scratch)
+}
+
+fn toposort_csr_into_with_scratch(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    order: &mut Vec<u32>,
+    scratch: &mut ToposortCsrScratch,
+) -> Result<(), ToposortCsrError> {
+    validate_toposort_csr_inputs(node_count, offsets, targets)?;
+    toposort_csr_with_scratch_into_witness(
+        node_count,
+        offsets,
+        targets,
+        order,
+        &mut scratch.indeg,
+        &mut scratch.queue,
+    )
+    .map_err(|message| ToposortCsrError::BadOrder { message })?;
+    validate_toposort_csr_order(node_count, offsets, targets, order)?;
+    Ok(())
+}
 
 #[test]
 fn empty_graph_sorts_to_empty() {

@@ -10,10 +10,14 @@
 //! frontier and LUT sizing, its LUT builder, its CPU parity oracle, and the
 //! Program it composes.
 
-use vyre_libs::encoding::bitset_transform_pipeline::{
-    dense_boolean_matvec_lut, dense_matvec_frontier_words, dense_matvec_lut_words,
-    four_russians_dense_matvec_program, reference_dense_boolean_matvec,
+use vyre_libs::bitset::four_russians::{
+    dense_matvec_byte_lut as dense_boolean_matvec_lut,
+    dense_matvec_byte_lut_words as dense_matvec_lut_words,
 };
+use vyre_libs::encoding::bitset_transform_pipeline::{
+    dense_matvec_frontier_words, four_russians_dense_matvec_program,
+};
+use vyre_reference::composition_witness::dense_boolean_matvec_witness as reference_dense_boolean_matvec;
 
 #[path = "../../tests/support/dense_matvec_cases.rs"]
 mod dense_matvec_cases;

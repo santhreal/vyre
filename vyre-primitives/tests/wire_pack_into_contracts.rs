@@ -7,10 +7,9 @@
 
 use vyre_primitives::wire::{
     append_packed_byte_lane, pack_bytes_as_u32_slice, pack_bytes_as_u32_slice_min_words,
-    pack_f32_slice, pack_f32_slice_into_uninit, pack_i32_slice, pack_i32_slice_into,
-    pack_u16_slice, pack_u16_slice_into, pack_u32_slice, pack_u32_slice_into,
-    pack_u32_slice_into_uninit, pack_u32_slice_min_words_into, pack_u64_slice, pack_u64_slice_into,
-    unpack_f32_slice, unpack_f32_slice_into, unpack_u32_slice_into,
+    pack_f32_slice, pack_i32_slice, pack_i32_slice_into, pack_u16_slice_into, pack_u32_slice,
+    pack_u32_slice_into, pack_u32_slice_min_words_into, pack_u64_slice_into, unpack_f32_slice,
+    unpack_f32_slice_into, unpack_u32_slice_into,
 };
 
 #[test]
@@ -72,8 +71,22 @@ fn generated_non_u32_pack_into_variants_match_owned_and_clear_for_4096_cases() {
         pack_u16_slice_into(&u16_values, &mut u16_buf);
 
         assert_eq!(i32_buf, pack_i32_slice(&i32_values), "case {case} i32");
-        assert_eq!(u64_buf, pack_u64_slice(&u64_values), "case {case} u64");
-        assert_eq!(u16_buf, pack_u16_slice(&u16_values), "case {case} u16");
+        assert_eq!(
+            u64_buf,
+            u64_values
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<u8>>(),
+            "case {case} u64"
+        );
+        assert_eq!(
+            u16_buf,
+            u16_values
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<u8>>(),
+            "case {case} u16"
+        );
         assert_eq!(i32_buf.len(), i32_values.len() * 4, "case {case} i32 len");
         assert_eq!(u64_buf.len(), u64_values.len() * 8, "case {case} u64 len");
         assert_eq!(u16_buf.len(), u16_values.len() * 2, "case {case} u16 len");
@@ -97,12 +110,17 @@ fn pack_u32_slice_min_words_into_pads_with_zeros() {
 
 #[test]
 fn pack_u32_slice_min_words_into_rejects_smaller_min_than_input() {
-    let mut buf: Vec<u8> = Vec::new();
+    let mut buf = vec![0xaa; 8];
+    let before = buf.clone();
     let err =
         pack_u32_slice_min_words_into(&[1u32, 2, 3], 2, &mut buf).expect_err("min < len must fail");
     assert!(
         err.contains("input has 12 bytes but minimum buffer only has 8"),
         "error must surface both byte counts: got {err}",
+    );
+    assert_eq!(
+        buf, before,
+        "validation failure must not mutate caller storage"
     );
 }
 
@@ -215,39 +233,6 @@ fn unpack_f32_slice_into_clears_existing_contents() {
     let mut out: Vec<f32> = vec![999.0; 4];
     unpack_f32_slice_into(&bytes, 2, "clear", &mut out).expect("ok");
     assert_eq!(out, vec![1.0_f32, 2.0]);
-}
-
-#[test]
-fn pack_u32_slice_into_uninit_matches_pack_u32_slice() {
-    let words: Vec<u32> = (0..1024u32).map(|i| i.wrapping_mul(0x0101_0101)).collect();
-    let owned = pack_u32_slice(&words);
-    let uninit = pack_u32_slice_into_uninit(&words);
-    assert_eq!(uninit, owned);
-    assert_eq!(uninit.len(), words.len() * 4);
-    assert_eq!(uninit.capacity(), words.len() * 4);
-}
-
-#[test]
-fn pack_u32_slice_into_uninit_empty_returns_empty() {
-    let out = pack_u32_slice_into_uninit(&[]);
-    assert!(out.is_empty());
-}
-
-#[test]
-fn pack_f32_slice_into_uninit_bit_exact() {
-    let values = [
-        0.0f32,
-        -0.0,
-        f32::INFINITY,
-        f32::NEG_INFINITY,
-        f32::NAN,
-        f32::MIN_POSITIVE,
-        f32::MAX,
-        f32::MIN,
-    ];
-    let owned = pack_f32_slice(&values);
-    let uninit = pack_f32_slice_into_uninit(&values);
-    assert_eq!(uninit, owned, "uninit and owned bytes must agree bit-exact");
 }
 
 #[test]

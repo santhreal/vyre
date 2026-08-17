@@ -5,6 +5,10 @@
 use proptest::prelude::*;
 use vyre_reference::composition_witness::bitset_or_witness;
 
+fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
+    bitset_or_witness(lhs, rhs)
+}
+
 #[macro_use]
 mod bitset_law_properties;
 

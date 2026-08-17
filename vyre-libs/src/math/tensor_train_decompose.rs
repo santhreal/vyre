@@ -291,15 +291,6 @@ pub fn tensor_train_decompose_step(
     )
 }
 
-
-
-
-
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -340,13 +331,38 @@ inventory::submit! {
         // the tall unfolding above. Ordering is not an ambiguity here because the two
         // eigenvalues differ by three orders of magnitude.
         Some(|| {
-            let to_bytes = |vals: &[f32]| vyre_primitives::wire::pack_f32_slice(vals);
             vec![vec![
-                to_bytes(&[0.15248324, 0.3499184, 0.5473535, 0.7447886]), // u_out = M*v1/sigma1
-                to_bytes(&[9.152527, 10.947071]),                        // rem_out = sigma1*v1t
-                to_bytes(&[0.39291155, 0.0, 0.0, 203.6071]),             // tt_ata diagonalized
-                to_bytes(&[0.7671874, 0.64142305, -0.64142305, 0.7671874]), // tt_evec columns
-                to_bytes(&[0.39291155, -1.0e30]),                        // tt_eval, top marked used
+                // u_out = M*v1/sigma1
+                vec![
+                    0x91, 0x24, 0x1c, 0x3e, // 0.15248324
+                    0x81, 0x28, 0xb3, 0x3e, // 0.3499184
+                    0x5c, 0x1f, 0x0c, 0x3f, // 0.5473535
+                    0x77, 0xaa, 0x3e, 0x3f, // 0.7447886
+                ],
+                // rem_out = sigma1*v1t
+                vec![
+                    0xc0, 0x70, 0x12, 0x41, // 9.152527
+                    0x34, 0x27, 0x2f, 0x41, // 10.947071
+                ],
+                // tt_ata diagonalized
+                vec![
+                    0xb4, 0x2b, 0xc9, 0x3e, // 0.39291155
+                    0x00, 0x00, 0x00, 0x00, // 0.0
+                    0x00, 0x00, 0x00, 0x00, // 0.0
+                    0x6b, 0x9b, 0x4b, 0x43, // 203.6071
+                ],
+                // tt_evec columns
+                vec![
+                    0x65, 0x66, 0x44, 0x3f, // 0.7671874
+                    0x4d, 0x34, 0x24, 0x3f, // 0.64142305
+                    0x4d, 0x34, 0x24, 0xbf, // -0.64142305
+                    0x65, 0x66, 0x44, 0x3f, // 0.7671874
+                ],
+                // tt_eval, top marked used
+                vec![
+                    0xb4, 0x2b, 0xc9, 0x3e, // 0.39291155
+                    0xca, 0xf2, 0x49, 0xf1, // -1.0e30
+                ],
             ]]
         }),
     )
@@ -355,6 +371,263 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct TensorTrainCpuScratch {
+        c: Vec<f64>,
+        next_c: Vec<f64>,
+        u: Vec<f64>,
+        s: Vec<f64>,
+        vt: Vec<f64>,
+        ata: Vec<f64>,
+        eigenvalues: Vec<f64>,
+        eigenvectors: Vec<f64>,
+        order: Vec<usize>,
+    }
+
+    impl TensorTrainCpuScratch {
+        fn new() -> Self {
+            Self {
+                c: Vec::new(),
+                next_c: Vec::new(),
+                u: Vec::new(),
+                s: Vec::new(),
+                vt: Vec::new(),
+                ata: Vec::new(),
+                eigenvalues: Vec::new(),
+                eigenvectors: Vec::new(),
+                order: Vec::new(),
+            }
+        }
+    }
+
+    fn jacobi_eigensolve(a: &[f64], n: usize, evals: &mut Vec<f64>, evecs: &mut Vec<f64>) {
+        evals.clear();
+        evals.resize(n, 0.0);
+        evecs.clear();
+        evecs.resize(n * n, 0.0);
+        for i in 0..n {
+            evecs[i * n + i] = 1.0;
+        }
+        let mut mat = a.to_vec();
+        mat.resize(n * n, 0.0);
+
+        for _ in 0..100 {
+            let mut max_off = 0.0f64;
+            for i in 0..n {
+                for j in i + 1..n {
+                    max_off = max_off.max(mat[i * n + j].abs());
+                }
+            }
+            if max_off < 1e-12 {
+                break;
+            }
+
+            for p in 0..n {
+                for q in p + 1..n {
+                    let apq = mat[p * n + q];
+                    if apq.abs() < 1e-15 {
+                        continue;
+                    }
+                    let app = mat[p * n + p];
+                    let aqq = mat[q * n + q];
+                    let theta = 0.5 * (2.0 * apq).atan2(app - aqq);
+                    let c = theta.cos();
+                    let s = theta.sin();
+
+                    let mut mat_col_p = vec![0.0; n];
+                    let mut mat_col_q = vec![0.0; n];
+                    for i in 0..n {
+                        mat_col_p[i] = c * mat[i * n + p] + s * mat[i * n + q];
+                        mat_col_q[i] = -s * mat[i * n + p] + c * mat[i * n + q];
+                    }
+                    for i in 0..n {
+                        mat[i * n + p] = mat_col_p[i];
+                        mat[p * n + i] = mat_col_p[i];
+                        mat[i * n + q] = mat_col_q[i];
+                        mat[q * n + i] = mat_col_q[i];
+                    }
+                    mat[p * n + p] = c * c * app + 2.0 * s * c * apq + s * s * aqq;
+                    mat[q * n + q] = s * s * app - 2.0 * s * c * apq + c * c * aqq;
+                    mat[p * n + q] = 0.0;
+                    mat[q * n + p] = 0.0;
+
+                    for i in 0..n {
+                        let vip = evecs[i * n + p];
+                        let viq = evecs[i * n + q];
+                        evecs[i * n + p] = c * vip + s * viq;
+                        evecs[i * n + q] = -s * vip + c * viq;
+                    }
+                }
+            }
+        }
+
+        for i in 0..n {
+            evals[i] = mat[i * n + i];
+        }
+    }
+
+    fn truncated_svd_into(
+        matrix: &[f64],
+        rows: usize,
+        cols: usize,
+        rank: usize,
+        u: &mut Vec<f64>,
+        s: &mut Vec<f64>,
+        vt: &mut Vec<f64>,
+        ata: &mut Vec<f64>,
+        eigenvalues: &mut Vec<f64>,
+        eigenvectors: &mut Vec<f64>,
+        order: &mut Vec<usize>,
+    ) {
+        let m = rows;
+        let n = cols;
+        ata.clear();
+        ata.resize(n * n, 0.0);
+        for ca in 0..n {
+            for cb in 0..n {
+                let mut sum = 0.0;
+                for r in 0..m {
+                    sum += matrix[r * n + ca] * matrix[r * n + cb];
+                }
+                ata[ca * n + cb] = sum;
+            }
+        }
+
+        jacobi_eigensolve(ata, n, eigenvalues, eigenvectors);
+
+        order.clear();
+        order.extend(0..n);
+        order.sort_by(|&a, &b| {
+            eigenvalues[b]
+                .partial_cmp(&eigenvalues[a])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        u.clear();
+        u.resize(m * rank, 0.0);
+        s.clear();
+        s.resize(rank, 0.0);
+        vt.clear();
+        vt.resize(rank * n, 0.0);
+
+        for r in 0..rank {
+            if r < n {
+                let eidx = order[r];
+                let val = eigenvalues[eidx].max(0.0);
+                let sigma = val.sqrt();
+                s[r] = sigma;
+
+                for c in 0..n {
+                    vt[r * n + c] = eigenvectors[c * n + eidx];
+                }
+
+                if sigma > 1e-12 {
+                    for row in 0..m {
+                        let mut sum = 0.0;
+                        for c in 0..n {
+                            sum += matrix[row * n + c] * eigenvectors[c * n + eidx];
+                        }
+                        u[row * rank + r] = sum / sigma;
+                    }
+                }
+            }
+        }
+    }
+
+    fn truncated_svd(
+        matrix: &[f64],
+        rows: usize,
+        cols: usize,
+        rank: usize,
+    ) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+        let mut u = Vec::new();
+        let mut s = Vec::new();
+        let mut vt = Vec::new();
+        let mut ata = Vec::new();
+        let mut eigenvalues = Vec::new();
+        let mut eigenvectors = Vec::new();
+        let mut order = Vec::new();
+        truncated_svd_into(
+            matrix,
+            rows,
+            cols,
+            rank,
+            &mut u,
+            &mut s,
+            &mut vt,
+            &mut ata,
+            &mut eigenvalues,
+            &mut eigenvectors,
+            &mut order,
+        );
+        (u, s, vt)
+    }
+
+    fn cpu_ref_into(
+        tensor: &[f64],
+        dims: &[usize],
+        ranks: &[usize],
+        cores: &mut Vec<Vec<f64>>,
+        scratch: &mut TensorTrainCpuScratch,
+    ) {
+        let d = dims.len();
+        while cores.len() < d {
+            cores.push(Vec::new());
+        }
+        cores.truncate(d);
+        if d == 0 {
+            return;
+        }
+
+        scratch.c.clear();
+        scratch.c.extend_from_slice(tensor);
+
+        for k in 0..d - 1 {
+            let r_prev = ranks[k];
+            let n_k = dims[k];
+            let r_next = ranks[k + 1];
+            let m = r_prev * n_k;
+            let n = if m == 0 { 0 } else { scratch.c.len() / m };
+
+            truncated_svd_into(
+                &scratch.c,
+                m,
+                n,
+                r_next,
+                &mut scratch.u,
+                &mut scratch.s,
+                &mut scratch.vt,
+                &mut scratch.ata,
+                &mut scratch.eigenvalues,
+                &mut scratch.eigenvectors,
+                &mut scratch.order,
+            );
+
+            cores[k].clear();
+            cores[k].extend_from_slice(&scratch.u);
+
+            scratch.next_c.clear();
+            scratch.next_c.resize(r_next * n, 0.0);
+            for i in 0..r_next {
+                let sigma = scratch.s[i];
+                for j in 0..n {
+                    scratch.next_c[i * n + j] = sigma * scratch.vt[i * n + j];
+                }
+            }
+
+            std::mem::swap(&mut scratch.c, &mut scratch.next_c);
+        }
+
+        cores[d - 1].clear();
+        cores[d - 1].extend_from_slice(&scratch.c);
+    }
+
+    fn cpu_ref(tensor: &[f64], dims: &[usize], ranks: &[usize]) -> Vec<Vec<f64>> {
+        let mut cores = Vec::new();
+        let mut scratch = TensorTrainCpuScratch::new();
+        cpu_ref_into(tensor, dims, ranks, &mut cores, &mut scratch);
+        cores
+    }
 
     #[test]
     fn cpu_ref_rank_1_decomposition() {

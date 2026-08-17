@@ -2,20 +2,16 @@
 //!
 //! Focus: hostile boundaries, overflow, invalid offsets, property invariants.
 #![cfg(feature = "fixpoint")]
+use vyre_reference::composition_witness::{
+    bitset_difference_flag_witness, bitset_warm_start_witness,
+};
 
 fn reference_eval(current: &[u32], next: &[u32]) -> u32 {
-    u32::from(current != next)
+    bitset_difference_flag_witness(current, next)
 }
 
 fn reference_eval_warm_start(current: &[u32], next: &[u32], seed: &[u32]) -> (Vec<u32>, u32) {
-    debug_assert_eq!(current.len(), seed.len());
-    debug_assert_eq!(current.len(), next.len());
-    let updated = current
-        .iter()
-        .zip(seed.iter())
-        .map(|(current_word, seed_word)| current_word | seed_word)
-        .collect();
-    (updated, u32::from(current != next))
+    bitset_warm_start_witness(current, next, seed)
 }
 
 #[test]

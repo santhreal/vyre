@@ -3,6 +3,7 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use super::{ac_output_span_nodes, ac_transition_step_nodes, AcInputBindings};
 use crate::pattern::builders::{append_match, append_match_subgroup};
+const REGION_GENERATOR: &str = "anonymous::vyre-libs::matching::regex_exact_ranges";
 
 /// Build the regex whole-buffer program with exact origin-derived starts.
 ///
@@ -83,9 +84,6 @@ pub(in crate::pattern) fn regex_exact_ranges_program(
     Program::wrapped(
         buffers,
         [128, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::matching::regex_exact_ranges",
-            invocation,
-        )],
+        vec![wrap_anonymous_region(REGION_GENERATOR, invocation)],
     )
 }

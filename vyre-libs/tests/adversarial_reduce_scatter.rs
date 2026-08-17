@@ -16,19 +16,7 @@
 mod gate_fixtures;
 
 use vyre_libs::reduce::scatter::*;
-
-fn cpu_ref(src: &[u32], indices: &[u32], dst_len: usize) -> Vec<u32> {
-    let mut dst = vec![0; dst_len];
-    for (index, target) in indices.iter().copied().enumerate() {
-        let target = target as usize;
-        if target < dst.len() {
-            if let Some(value) = src.get(index).copied() {
-                dst[target] = value;
-            }
-        }
-    }
-    dst
-}
+use vyre_reference::composition_witness::scatter_witness as cpu_ref;
 
 adversarial_binary_vec_usize_cases! {
     test_reduce_scatter_adv_0: vec![0u32; 0], vec![0u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-0: Exact bit output mismatch";

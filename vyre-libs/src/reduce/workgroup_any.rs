@@ -83,7 +83,6 @@ pub fn workgroup_any_u32(values: &str, out: &str, count: u32) -> Program {
     )
 }
 
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         WORKGROUP_ANY_U32_OP_ID,
@@ -92,16 +91,16 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[0u32, 0, 7, 0]),
             vec![0; 4],
         ]]),
-        Some(|| vec![vec![7u32.to_le_bytes().to_vec()]]),
+        Some(|| vec![vec![vec![0x07, 0x00, 0x00, 0x00]]]),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use vyre_reference::composition_witness::reduce_workgroup_any_witness as reference_workgroup_any;
 
     #[test]
-    fn cpu_ref_ors_values() {
-        assert_eq!(cpu_ref(&[0, 2, 4, 0]), 6);
+    fn reference_ors_values() {
+        assert_eq!(reference_workgroup_any(&[0, 2, 4, 0]), 6);
     }
 }

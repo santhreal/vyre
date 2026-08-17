@@ -59,6 +59,10 @@ fn strided_accumulate_program() -> Program {
     )
 }
 
+const EXPECTED_INDEXED_MAP_OUTPUT_BYTES: [u8; 16] =
+    [2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0];
+const EXPECTED_STRIDED_ACCUMULATE_OUTPUT_BYTES: [u8; 4] = [7, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         INDEXED_MAP_OP_ID,
@@ -66,7 +70,7 @@ inventory::submit! {
         Some(|| vec![vec![
             u32s(&[1, 2, 3, 4]),
         ]]),
-        Some(|| vec![vec![u32s(&[2, 3, 4, 5])]]),
+        Some(|| vec![vec![EXPECTED_INDEXED_MAP_OUTPUT_BYTES.to_vec()]]),
     )
 }
 
@@ -77,6 +81,6 @@ inventory::submit! {
         Some(|| vec![vec![
             u32s(&[7, 11, 13, 17]),
         ]]),
-        Some(|| vec![vec![u32s(&[7])]]),
+        Some(|| vec![vec![EXPECTED_STRIDED_ACCUMULATE_OUTPUT_BYTES.to_vec()]]),
     )
 }

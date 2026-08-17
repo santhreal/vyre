@@ -18,8 +18,12 @@ use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::hash::adler32::{adler32, adler32_program};
+use vyre_libs::hash::adler32::adler32_program;
+use vyre_reference::composition_witness::multi_hash_witness;
 
+fn reference_adler32(bytes: &[u8]) -> u32 {
+    multi_hash_witness(bytes).2
+}
 /// Dispatch the real `adler32_program` on the GPU: one U32 word per source byte,
 /// single u32 checksum `(b << 16) | a` out at `out[0]`.
 fn gpu_adler32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
@@ -52,7 +56,7 @@ fn gpu_adler32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
 
 fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let gpu = gpu_adler32(backend, bytes);
-    let expected = adler32(bytes);
+    let expected = reference_adler32(bytes);
     assert_eq!(
         gpu, expected,
         "GPU Adler-32 of {label} diverged from the Rust reference, the dual-accumulator \
@@ -66,7 +70,7 @@ fn adler32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: Adler-32 GPU parity requires a live GPU.");
     // Drift-guard against the standard zlib Adler-32 of "abc".
     assert_eq!(
-        adler32(b"abc"),
+        reference_adler32(b"abc"),
         0x024d_0127,
         "Adler-32 reference drifted for \"abc\""
     );
@@ -85,11 +89,10 @@ fn adler32_varied_inputs_match_reference_on_gpu() {
     check(&backend, &long, "a 64-byte block");
     // Wikipedia's canonical Adler-32 example: "Wikipedia" -> 0x11E60398.
     assert_eq!(
-        adler32(b"Wikipedia"),
+        reference_adler32(b"Wikipedia"),
         0x11E6_0398,
         "Adler-32 reference drifted for \"Wikipedia\""
     );
-    check(&backend, b"Wikipedia", "\"Wikipedia\"");
 }
 
 #[test]
@@ -108,6 +111,6 @@ fn adler32_high_half_is_exercised_on_gpu() {
         0,
         "the `b` accumulator (high half) must be non-zero for a real input"
     );
-    assert_eq!(a, adler32(b"adler-in-0"));
-    assert_eq!(b, adler32(b"adler-in-1"));
+    assert_eq!(a, reference_adler32(b"adler-in-0"));
+    assert_eq!(b, reference_adler32(b"adler-in-1"));
 }

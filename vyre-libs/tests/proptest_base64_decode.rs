@@ -1,12 +1,9 @@
-//! Property and adversarial tests for the primitive-owned base64 decode oracle.
-// The oracle `decode_standard_packed_reference` is gated on `cpu-parity` (unreachable
-// from an integration test under `decode` alone); declare the true dependency.
+//! Property and adversarial tests for the independent base64 decode witness.
 #![cfg(feature = "decode")]
 
 use proptest::prelude::*;
-use vyre_libs::decode::base64::{
-    decode_standard_packed_reference, decoded_capacity, standard_decode_table, INVALID,
-};
+use vyre_libs::decode::base64::{decoded_capacity, standard_decode_table, INVALID};
+use vyre_reference::composition_witness::base64_decode_packed_witness as decode_standard_packed_reference;
 
 fn manual_decode(input: &[u8]) -> (Vec<u32>, u32) {
     let table = standard_decode_table();

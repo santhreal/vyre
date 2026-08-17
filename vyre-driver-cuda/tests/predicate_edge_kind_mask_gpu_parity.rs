@@ -9,8 +9,9 @@ use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
-use vyre_libs::predicate::edge::{cpu_ref as edge_cpu, edge};
+use vyre_libs::predicate::edge::edge;
 use vyre_libs::predicate::edge_kind;
+use vyre_reference::composition_witness::csr_forward_traverse_witness;
 
 fn run_edge(
     node_count: u32,
@@ -59,7 +60,7 @@ fn cuda_predicate_edge_one_step() {
     let edge_kind_mask = vec![edge_kind::ASSIGNMENT];
     let frontier = vec![0b01u32];
     let allow = edge_kind::ASSIGNMENT;
-    let cpu = edge_cpu(
+    let cpu = csr_forward_traverse_witness(
         2,
         &edge_offsets,
         &edge_targets,
@@ -86,7 +87,7 @@ fn cuda_predicate_edge_kind_mask_skips() {
     let edge_kind_mask = vec![edge_kind::ASSIGNMENT];
     let frontier = vec![0b01u32];
     let allow = edge_kind::CALL_ARG;
-    let cpu = edge_cpu(
+    let cpu = csr_forward_traverse_witness(
         2,
         &edge_offsets,
         &edge_targets,
@@ -120,7 +121,7 @@ fn cuda_predicate_edge_reaches_source_past_first_workgroup() {
     frontier[300 / 32] |= 1u32 << (300 % 32);
     let allow = edge_kind::ASSIGNMENT;
 
-    let cpu = edge_cpu(
+    let cpu = csr_forward_traverse_witness(
         node_count,
         &edge_offsets,
         &edge_targets,

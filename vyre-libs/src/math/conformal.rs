@@ -31,6 +31,8 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+#[cfg(test)]
+use vyre_reference::composition_witness::conformal_threshold_witness as conformal_threshold_cpu;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::math::conformal_threshold";
@@ -82,6 +84,7 @@ pub fn conformal_threshold(scores_sorted: &str, q_hat: &str, n: u32, k: u32) -> 
 /// Compute the conformal rank `k = ⌈(1 - α)(n + 1)⌉`. Host helper
 /// because the calculation is non-vectorized and called once per
 /// dispatch.
+#[cfg(test)]
 #[must_use]
 pub fn conformal_rank(n: u32, alpha: f64) -> u32 {
     let Some(rank) = try_conformal_rank(n, alpha) else {
@@ -89,7 +92,6 @@ pub fn conformal_rank(n: u32, alpha: f64) -> u32 {
     };
     rank
 }
-
 /// Fallible conformal rank helper for callers that need explicit validation.
 #[must_use]
 pub fn try_conformal_rank(n: u32, alpha: f64) -> Option<u32> {
@@ -101,17 +103,16 @@ pub fn try_conformal_rank(n: u32, alpha: f64) -> Option<u32> {
     Some(rank.clamp(1, n))
 }
 
-
 /// CPU reference: prediction interval `[y - q_hat, y + q_hat]`. Tiny
 /// helper that pairs with the threshold; not a primitive (one
 /// elementwise add saturates with arithmetic).
+#[cfg(test)]
 #[must_use]
 pub fn predict_interval(y: u32, q_hat: u32) -> (u32, u32) {
     let lo = y.saturating_sub(q_hat);
     let hi = y.saturating_add(q_hat);
     (lo, hi)
 }
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -125,7 +126,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[20])]]
+            vec![vec![vec![0x14, 0x00, 0x00, 0x00]]] // 20
         }),
     )
 }

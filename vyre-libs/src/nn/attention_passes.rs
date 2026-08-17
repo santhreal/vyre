@@ -510,6 +510,10 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
     )
 }
 
+const EXPECTED_ATTENTION_MAX_PASS_OUTPUT_BYTES: [u8; 4] = [0x00, 0x00, 0x00, 0x00];
+const EXPECTED_ATTENTION_SUM_PASS_OUTPUT_BYTES: [u8; 4] = [0x00, 0x00, 0x00, 0x40];
+const EXPECTED_ATTENTION_WRITE_PASS_OUTPUT_BYTES: [u8; 4] = [0x00, 0x00, 0xA0, 0x41];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         ATTENTION_MAX_PASS_OP_ID,
@@ -523,8 +527,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32_bytes(&[0.0])]]
+            vec![vec![EXPECTED_ATTENTION_MAX_PASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -543,8 +546,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32_bytes(&[2.0])]]
+            vec![vec![EXPECTED_ATTENTION_SUM_PASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -576,8 +578,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32_bytes(&[20.0])]]
+            vec![vec![EXPECTED_ATTENTION_WRITE_PASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

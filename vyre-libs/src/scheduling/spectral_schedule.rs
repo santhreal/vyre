@@ -11,12 +11,8 @@ use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
-#[cfg(test)]
-use crate::graph::chebyshev_filter::chebyshev_filter_cpu;
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use crate::math::spectral_shape::mp_edge_clip;
-#[cfg(test)]
-use crate::math::spectral_shape::{mp_edge_clip_cpu, mp_upper_edge};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Caller-owned dispatch scratch for spectral scheduling primitives.
@@ -24,21 +20,6 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 pub struct SpectralScheduleGpuScratch {
     inputs: Vec<Vec<u8>>,
     mp_edge: Vec<u32>,
-}
-
-/// Score nodes for fusion clustering by applying a low-pass Chebyshev
-/// filter (coeffs [1, 0.5, 0.25] = exponential decay) to a unit-energy
-/// signal at each node. Nodes returning high scores are spectrally
-/// connected.
-#[must_use]
-#[cfg(test)]
-pub fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
-    use crate::telemetry::{bump, spectral_schedule_calls};
-    bump(&spectral_schedule_calls);
-    assert_eq!(laplacian.len(), (n * n) as usize);
-    let signal: Vec<f32> = (0..n).map(|_| 1.0 / (n as f32).sqrt()).collect();
-    let coeffs: Vec<f32> = vec![1.0, 0.5, 0.25];
-    chebyshev_filter_cpu(laplacian, &signal, &coeffs, n, 2)
 }
 
 /// Fixed-point production path for spectral fusion scores.
@@ -195,19 +176,6 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
     decode_u32_output_exact(&outputs[0], n as usize, "fusion_scores_fixed_via", out)
 }
 
-/// Clip outlier eigenvalues at the Marchenko-Pastur upper edge. Used
-/// to filter spurious high-frequency dispatch-graph correlations.
-#[must_use]
-#[cfg(test)]
-pub fn reference_shape_spectrum(
-    eigenvalues: &[f64],
-    n_dispatches: u32,
-    n_features: u32,
-) -> Vec<f64> {
-    let edge = mp_upper_edge(n_dispatches, n_features, 1.0);
-    mp_edge_clip_cpu(eigenvalues, edge)
-}
-
 /// Fixed-point production path for Marchenko-Pastur edge clipping.
 ///
 /// `mp_edge_fixed` is the already-scaled 16.16 upper edge. Callers that need
@@ -310,7 +278,30 @@ pub fn shape_spectrum_fixed_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use crate::math::spectral_shape::mp_upper_edge;
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::{
+        chebyshev_filter_witness as reference_chebyshev_filter,
+        mp_edge_clip_witness as reference_mp_edge_clip,
+    };
+
+    fn reference_fusion_scores(laplacian: &[f32], n: u32) -> Vec<f32> {
+        use crate::telemetry::{bump, spectral_schedule_calls};
+        bump(&spectral_schedule_calls);
+        assert_eq!(laplacian.len(), (n * n) as usize);
+        let signal: Vec<f32> = (0..n).map(|_| 1.0 / (n as f32).sqrt()).collect();
+        let coeffs: Vec<f32> = vec![1.0, 0.5, 0.25];
+        reference_chebyshev_filter(laplacian, &signal, &coeffs, n, 2)
+    }
+
+    fn reference_shape_spectrum(
+        eigenvalues: &[f64],
+        n_dispatches: u32,
+        n_features: u32,
+    ) -> Vec<f64> {
+        let edge = mp_upper_edge(n_dispatches, n_features, 1.0);
+        reference_mp_edge_clip(eigenvalues, edge)
+    }
 
     fn approx_eq_f32(a: f32, b: f32) -> bool {
         (a - b).abs() < 1e-4 * (1.0 + a.abs() + b.abs())

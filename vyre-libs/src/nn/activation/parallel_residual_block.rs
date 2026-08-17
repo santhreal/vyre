@@ -47,6 +47,10 @@ pub fn parallel_residual_block(
     ))
 }
 
+const EXPECTED_PARALLEL_RESIDUAL_BLOCK_OUTPUT_BYTES: [u8; 16] = [
+    0x7B, 0x14, 0x8E, 0x3F, 0x7B, 0x14, 0x0E, 0x40, 0xB8, 0x1E, 0x55, 0x40, 0x7B, 0x14, 0x8E, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -62,9 +66,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let out = [1.11_f32, 2.22, 3.33, 4.44];
-            let bytes = vyre_primitives::wire::pack_f32_slice(&out);
-            vec![vec![bytes]]
+            vec![vec![EXPECTED_PARALLEL_RESIDUAL_BLOCK_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

@@ -85,7 +85,11 @@ impl ElementwiseComposer {
     pub fn add_input(self, name: &str, dtype: DataType, count: u32) -> Self {
         let idx = self.buffers.len() as u32;
         let decl = BufferDecl::storage(name, idx, BufferAccess::ReadOnly, dtype);
-        let decl = if count == 0 { decl } else { decl.with_count(count) };
+        let decl = if count == 0 {
+            decl
+        } else {
+            decl.with_count(count)
+        };
         self.add_buffer(decl)
     }
 
@@ -100,7 +104,11 @@ impl ElementwiseComposer {
     ) -> Self {
         let idx = self.buffers.len() as u32;
         let decl = BufferDecl::storage(name, idx, access, dtype);
-        let decl = if count == 0 { decl } else { decl.with_count(count) };
+        let decl = if count == 0 {
+            decl
+        } else {
+            decl.with_count(count)
+        };
         self.add_buffer(decl)
     }
 
@@ -144,7 +152,11 @@ impl ElementwiseComposer {
     ) -> Self {
         let idx = self.buffers.len() as u32;
         let decl = BufferDecl::storage(name, idx, access, dtype);
-        let decl = if count == 0 { decl } else { decl.with_count(count) };
+        let decl = if count == 0 {
+            decl
+        } else {
+            decl.with_count(count)
+        };
         self.add_buffer(decl)
     }
 
@@ -158,12 +170,10 @@ impl ElementwiseComposer {
     {
         let loop_idx = Expr::InvocationId { axis: 0 };
         let inner_nodes = body_fn(loop_idx.clone());
-        let loop_body = vec![
-            Node::if_then(
-                Expr::lt(loop_idx, Expr::u32(self.count)),
-                inner_nodes,
-            ),
-        ];
+        let loop_body = vec![Node::if_then(
+            Expr::lt(loop_idx, Expr::u32(self.count)),
+            inner_nodes,
+        )];
         let region = if self.anonymous {
             if let Some(child_op) = self.child_op_id {
                 wrap_anonymous_region(
@@ -242,20 +252,48 @@ impl ElementwiseComposer {
 
     /// Helper for u32 unary elementwise op.
     #[must_use]
-    pub fn u32_unary<F>(op_id: &'static str, input: &str, output: &str, count: u32, op: F) -> Program
+    pub fn u32_unary<F>(
+        op_id: &'static str,
+        input: &str,
+        output: &str,
+        count: u32,
+        op: F,
+    ) -> Program
     where
         F: FnOnce(Expr) -> Expr,
     {
-        Self::unary(op_id, input, DataType::U32, output, DataType::U32, count, op)
+        Self::unary(
+            op_id,
+            input,
+            DataType::U32,
+            output,
+            DataType::U32,
+            count,
+            op,
+        )
     }
 
     /// Helper for f32 unary elementwise op.
     #[must_use]
-    pub fn f32_unary<F>(op_id: &'static str, input: &str, output: &str, count: u32, op: F) -> Program
+    pub fn f32_unary<F>(
+        op_id: &'static str,
+        input: &str,
+        output: &str,
+        count: u32,
+        op: F,
+    ) -> Program
     where
         F: FnOnce(Expr) -> Expr,
     {
-        Self::unary(op_id, input, DataType::F32, output, DataType::F32, count, op)
+        Self::unary(
+            op_id,
+            input,
+            DataType::F32,
+            output,
+            DataType::F32,
+            count,
+            op,
+        )
     }
 
     /// Helper for binary elementwise op `out[i] = op(lhs[i], rhs[i])`.
@@ -435,13 +473,7 @@ impl ElementwiseComposer {
     where
         F: FnOnce(Expr) -> Expr,
     {
-        check_tensors(
-            op_id,
-            &[
-                (&a, DataType::U32),
-                (&out, DataType::U32),
-            ],
-        )?;
+        check_tensors(op_id, &[(&a, DataType::U32), (&out, DataType::U32)])?;
 
         if a.shape != out.shape {
             return Err(TensorRefError::ShapeMismatch {
@@ -452,10 +484,12 @@ impl ElementwiseComposer {
             });
         }
 
-        let n = a.element_count().ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: a.name_str().to_string(),
-            shape: a.shape.to_vec(),
-        })?;
+        let n = a
+            .element_count()
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: a.name_str().to_string(),
+                shape: a.shape.to_vec(),
+            })?;
 
         Ok(Self::new(op_id, n)
             .with_options(&options)
@@ -503,14 +537,18 @@ impl ElementwiseComposer {
             });
         }
 
-        let a_count = a.element_count().ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: a.name_str().to_string(),
-            shape: a.shape.to_vec(),
-        })?;
-        let out_count = out.element_count().ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.name_str().to_string(),
-            shape: out.shape.to_vec(),
-        })?;
+        let a_count = a
+            .element_count()
+            .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                name: a.name_str().to_string(),
+                shape: a.shape.to_vec(),
+            })?;
+        let out_count =
+            out.element_count()
+                .ok_or_else(|| TensorRefError::ElementCountOverflow {
+                    name: out.name_str().to_string(),
+                    shape: out.shape.to_vec(),
+                })?;
         if out_count < a_count {
             return Err(TensorRefError::ShapeMismatch {
                 name: out.name_str().to_string(),
@@ -656,13 +694,10 @@ mod tests {
 
     #[test]
     fn elementwise_composer_unary_emits_expected_structure() {
-        let program = ElementwiseComposer::f32_unary(
-            "vyre-libs::test::unary",
-            "in",
-            "out",
-            100,
-            |x| Expr::mul(x, Expr::f32(2.0)),
-        );
+        let program =
+            ElementwiseComposer::f32_unary("vyre-libs::test::unary", "in", "out", 100, |x| {
+                Expr::mul(x, Expr::f32(2.0))
+            });
         assert_eq!(program.buffers().len(), 2);
         assert_eq!(program.workgroup_size(), [64, 1, 1]);
         assert_eq!(program.buffers()[0].name(), "in");

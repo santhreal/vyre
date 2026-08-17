@@ -125,6 +125,9 @@ mod tests {
     }
 }
 
+const EXPECTED_TOP_K_INDICES_BYTES: [u8; 8] = [0x07, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00];
+const EXPECTED_TOP_K_VALUES_BYTES: [u8; 8] = [0x00, 0x00, 0x00, 0x41, 0x00, 0x00, 0xE0, 0x40];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::top_k",
@@ -139,13 +142,10 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // Top-2 of ascending [1..8] are indices 7 and 6
-            let best_vals = vyre_primitives::wire::pack_f32_slice(&[8.0f32, 7.0f32]);
-            let best_idxs = vyre_primitives::wire::pack_u32_slice(&[7u32, 6u32]);
             vec![vec![
-                best_idxs.clone(),
-                best_vals,
-                best_idxs,
+                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
+                EXPECTED_TOP_K_VALUES_BYTES.to_vec(),
+                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
             ]]
         }),
     )

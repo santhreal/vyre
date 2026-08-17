@@ -32,6 +32,10 @@ pub fn qk_gain_backward(
         })
 }
 
+const EXPECTED_QK_GAIN_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0xA8, 0x40, 0x00, 0x00, 0xA8, 0x40, 0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x40, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -45,8 +49,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![to_f32(&[5.25, 5.25, 3.0, 3.0])]]
+            vec![vec![EXPECTED_QK_GAIN_BACKWARD_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

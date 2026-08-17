@@ -157,8 +157,12 @@ inventory::submit! {
             vec![vec![to_bytes(&[-1.0, 0.0, 0.0, 2.0])]]
         }),
         Some(|| {
-            let to_bytes = |vals: &[f32]| vyre_primitives::wire::pack_f32_slice(vals);
-            vec![vec![to_bytes(&[1.0, 0.0, -0.0, 2.0])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x80, 0x3f, // 1.0
+                0x00, 0x00, 0x00, 0x00, // 0.0
+                0x00, 0x00, 0x00, 0x80, // -0.0
+                0x00, 0x00, 0x00, 0x40, // 2.0
+            ]]]
         }),
     )
 }

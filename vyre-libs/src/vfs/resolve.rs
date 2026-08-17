@@ -62,6 +62,8 @@ pub fn vfs_resolve_dma(
     )
 }
 
+const EXPECTED_VFS_RESOLVE_OUTPUT_BYTES: [u8; 4] = [1, 2, 3, 4];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         VFS_RESOLVE_OP_ID,
@@ -77,7 +79,7 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                vec![1, 2, 3, 4],
+                EXPECTED_VFS_RESOLVE_OUTPUT_BYTES.to_vec(),
             ]]
         }),
     )

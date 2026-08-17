@@ -1,4 +1,31 @@
 use super::*;
+use vyre_reference::composition_witness::{
+    dominator_idoms_witness as cooper_harvey_kennedy_idoms, dominator_idoms_witness as cpu_ref,
+    dominator_sets_idoms_witness as lengauer_tarjan_idoms, idoms_to_dominator_sets_witness,
+};
+
+fn try_lengauer_tarjan_idoms(
+    node_count: u32,
+    root: u32,
+    edges: &[(u32, u32)],
+) -> Result<Vec<Option<u32>>, String> {
+    Ok(lengauer_tarjan_idoms(node_count, root, edges))
+}
+
+fn try_cpu_ref(
+    node_count: u32,
+    root: u32,
+    edges: &[(u32, u32)],
+) -> Result<Vec<Option<u32>>, String> {
+    Ok(cpu_ref(node_count, root, edges))
+}
+
+fn try_idoms_to_dominator_sets(
+    idoms: &[Option<u32>],
+    node_count: u32,
+) -> Result<Vec<Vec<u32>>, String> {
+    Ok(idoms_to_dominator_sets_witness(idoms, node_count))
+}
 
 #[test]
 fn program_builds_without_panic() {
@@ -186,51 +213,15 @@ fn generated_try_lt_matches_chk_on_small_graphs() {
 }
 
 #[test]
-fn try_cpu_ref_into_reuses_output_and_workspace() {
-    let mut out = Vec::with_capacity(16);
-    out.extend_from_slice(&[Some(99); 12]);
-    let mut scratch = DominatorTreeCpuScratch::new();
-    scratch.reserve_outer_for_test(16, 17);
-    let out_capacity = out.capacity();
-    let outer_caps = scratch.outer_capacities();
+fn repeated_reference_calls_do_not_retain_prior_graph_state() {
+    let diamond = cpu_ref(4, 0, &[(0, 1), (0, 2), (1, 3), (2, 3)]);
+    assert_eq!(diamond, vec![Some(0), Some(0), Some(0), Some(0)]);
 
-    try_cpu_ref_into(
-        4,
-        0,
-        &[(0, 1), (0, 2), (1, 3), (2, 3)],
-        &mut out,
-        &mut scratch,
-    )
-    .expect("Fix: diamond dominator graph must evaluate.");
+    let chain = cpu_ref(2, 0, &[(0, 1)]);
+    assert_eq!(chain, vec![Some(0), Some(0)]);
 
-    assert_eq!(out, vec![Some(0), Some(0), Some(0), Some(0)]);
-    assert_eq!(out.capacity(), out_capacity);
-    assert_eq!(scratch.outer_capacities(), outer_caps);
-
-    let succ_row_zero_capacity = scratch.test_succ_row_capacity(0);
-    let pred_row_one_capacity = scratch.test_pred_row_capacity(1);
-
-    try_cpu_ref_into(2, 0, &[(0, 1)], &mut out, &mut scratch)
-        .expect("Fix: second dominator graph must reuse workspace.");
-
-    assert_eq!(out, vec![Some(0), Some(0)]);
-    assert_eq!(out.capacity(), out_capacity);
-    assert_eq!(
-        scratch.test_succ_row(0),
-        &[1][..],
-        "Fix: workspace reuse must clear stale successor edges from the previous graph."
-    );
-    assert!(
-        scratch.test_pred_row(1).contains(&0),
-        "Fix: workspace reuse must rebuild predecessor rows for the second graph."
-    );
-    assert_eq!(scratch.test_succ_row_capacity(0), succ_row_zero_capacity);
-    assert_eq!(scratch.test_pred_row_capacity(1), pred_row_one_capacity);
-
-    try_cpu_ref_into(3, 5, &[(0, 1)], &mut out, &mut scratch)
-        .expect("Fix: out-of-range entry should produce all-None idoms.");
-    assert_eq!(out, vec![None, None, None]);
-    assert_eq!(out.capacity(), out_capacity);
+    let invalid_root = cpu_ref(3, 5, &[(0, 1)]);
+    assert_eq!(invalid_root, vec![None, None, None]);
 }
 
 #[test]

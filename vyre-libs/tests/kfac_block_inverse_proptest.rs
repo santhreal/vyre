@@ -15,7 +15,7 @@
 
 use proptest::prelude::*;
 use vyre_libs::math::kfac_block_inverse::kfac_block_inverse;
-fn cpu_ref(m: &[f32], _n: usize) -> Vec<f32> { m.to_vec() }
+use vyre_reference::composition_witness::kfac_block_inverse_witness as cpu_ref;
 use vyre_reference::value::Value;
 
 /// Well-conditioned tolerance: both sides run identical f32 Gauss-Jordan, and strict diagonal

@@ -17,7 +17,6 @@ use crate::dispatch_buffers::{
 };
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
-
 /// Caller-owned dispatch scratch for bitset mask algebra.
 #[derive(Debug, Default)]
 pub struct BitsetMaskAlgebraGpuScratch {
@@ -321,16 +320,6 @@ pub fn mask_clear_bit_via(
     )
 }
 
-
-
-
-
-
-
-
-
-
-
 fn scalar_binary_predicate_via(
     dispatcher: &dyn ProgramDispatcher,
     context: &'static str,
@@ -402,6 +391,19 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::{
+        bitset_and_witness as reference_mask_and,
+        bitset_clear_bit_witness as reference_mask_clear_bit,
+        bitset_contains_witness as reference_mask_contains,
+        bitset_equal_witness as reference_mask_equal, bitset_not_witness as reference_mask_not,
+        bitset_or_witness as reference_mask_or, bitset_set_bit_witness as reference_mask_set_bit,
+        bitset_subset_of_witness as reference_mask_subset_of,
+        bitset_xor_witness as reference_mask_xor,
+    };
+
+    fn reference_mask_test_bit(input: &[u32], bit_idx: u32) -> bool {
+        reference_mask_contains(input, bit_idx)
+    }
 
     struct MaskDispatcher;
 
@@ -457,8 +459,8 @@ mod tests {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     let index = crate::dispatch_buffers::read_u32s(&inputs[1])[0];
-                    Ok(vec![u32_slice_to_le_bytes(&[primitive_contains(
-                        &input, index,
+                    Ok(vec![u32_slice_to_le_bytes(&[u32::from(
+                        reference_mask_contains(&input, index),
                     )])])
                 }
                 crate::bitset::test_bit::OP_ID => {
@@ -467,14 +469,14 @@ mod tests {
                 }
                 crate::bitset::set_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let mut target = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                    primitive_set_bit(&mut target, 1);
+                    let target = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    let target = reference_mask_set_bit(&target, 1);
                     Ok(vec![u32_slice_to_le_bytes(&target)])
                 }
                 crate::bitset::clear_bit::OP_ID => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
-                    let mut target = crate::dispatch_buffers::read_u32s(&inputs[0]);
-                    primitive_clear_bit(&mut target, 1);
+                    let target = crate::dispatch_buffers::read_u32s(&inputs[0]);
+                    let target = reference_mask_clear_bit(&target, 1);
                     Ok(vec![u32_slice_to_le_bytes(&target)])
                 }
                 other => panic!("unexpected primitive op id {other}"),
@@ -501,10 +503,10 @@ mod tests {
         let lhs = [0xF0F0u32, 0xAAAA_AAAA];
         let rhs = [0x0FF0u32, 0xFFFF_0000];
 
-        assert_eq!(reference_mask_and(&lhs, &rhs), primitive_and(&lhs, &rhs));
-        assert_eq!(reference_mask_or(&lhs, &rhs), primitive_or(&lhs, &rhs));
-        assert_eq!(reference_mask_xor(&lhs, &rhs), primitive_xor(&lhs, &rhs));
-        assert_eq!(reference_mask_not(&lhs), primitive_not(&lhs));
+        assert_eq!(reference_mask_and(&lhs, &rhs), vec![0x00F0, 0xAAAA_0000]);
+        assert_eq!(reference_mask_or(&lhs, &rhs), vec![0xFFF0, 0xFFFF_AAAA]);
+        assert_eq!(reference_mask_xor(&lhs, &rhs), vec![0xFF00, 0x5555_AAAA]);
+        assert_eq!(reference_mask_not(&lhs), vec![!0xF0F0u32, !0xAAAA_AAAA]);
         assert!(reference_mask_equal(&lhs, &lhs));
         assert!(!reference_mask_equal(&lhs, &rhs));
         assert!(reference_mask_subset_of(&[0b0011], &[0b1111]));

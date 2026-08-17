@@ -1,4 +1,5 @@
 use super::*;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Compute a batch of packed signed INT4 row-scaled matrix-vector products through the backend.
 ///

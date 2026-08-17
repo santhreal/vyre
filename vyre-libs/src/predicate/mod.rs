@@ -180,6 +180,7 @@ macro_rules! define_tag_family_predicate {
         $family:expr,
         $fixture_tags:expr,
         $expected_nodeset:expr,
+        $expected_bytes:expr,
         $doc:literal
     ) => {
         #[doc = $doc]
@@ -190,6 +191,7 @@ macro_rules! define_tag_family_predicate {
 
             /// Canonical op id.
             pub const OP_ID: &str = $op_id;
+            const EXPECTED_REGISTRATION_BYTES: [u8; 4] = $expected_bytes;
 
             /// Build the canonical tag-family predicate program.
             #[must_use]
@@ -200,7 +202,11 @@ macro_rules! define_tag_family_predicate {
                 )
             }
 
-
+            #[must_use]
+            #[cfg(test)]
+            pub(crate) fn cpu_ref(node_tags: &[u32]) -> Vec<u32> {
+                vyre_reference::composition_witness::resolve_family_witness(node_tags, $family)
+            }
             inventory::submit! {
                 vyre_foundation::operation::OperationRegistration::library(
                     OP_ID,
@@ -213,8 +219,7 @@ macro_rules! define_tag_family_predicate {
                         ]]
                     }),
                     Some(|| {
-                        let to_bytes = crate::predicate::inventory_u32_le_bytes;
-                        vec![vec![to_bytes($expected_nodeset)]]
+                        vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                     }),
                 )
             }
@@ -243,6 +248,7 @@ macro_rules! define_fixed_forward_edge_predicate {
         $fixture_edge_targets:expr,
         $fixture_edge_masks:expr,
         $expected_nodeset:expr,
+        $expected_bytes:expr,
         $module_doc:literal,
         $function_doc:literal,
         $region_label:literal
@@ -256,6 +262,7 @@ macro_rules! define_fixed_forward_edge_predicate {
 
             /// Canonical op id.
             pub const OP_ID: &str = $op_id;
+            const EXPECTED_REGISTRATION_BYTES: [u8; 4] = $expected_bytes;
 
             #[doc = $function_doc]
             #[must_use]
@@ -266,8 +273,6 @@ macro_rules! define_fixed_forward_edge_predicate {
             ) -> Program {
                 forward_edge_program(OP_ID, shape, frontier_in, frontier_out, $edge_mask)
             }
-
-
 
             inventory::submit! {
                 vyre_foundation::operation::OperationRegistration::library(
@@ -286,8 +291,7 @@ macro_rules! define_fixed_forward_edge_predicate {
                         ]]
                     }),
                     Some(|| {
-                        let b = crate::predicate::inventory_u32_le_bytes;
-                        vec![vec![b($expected_nodeset)]]
+                        vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                     }),
                 )
             }
@@ -318,6 +322,7 @@ define_fixed_forward_edge_predicate!(
     &[1, 2],
     &[2, 2],
     &[0b0010],
+    [2, 0, 0, 0],
     "`call_to` - forward-traverse along `CALL_ARG` edges.",
     "Build a Program that emits the callee NodeSet reachable via `CallArg` edges from the input frontier.",
     "call_to"
@@ -331,6 +336,7 @@ define_tag_family_predicate!(
     crate::predicate::tag_family::FILE,
     &[2, 2, 0, 0],
     &[0b0011],
+    [3, 0, 0, 0],
     "`in_file` - NodeSet of file-tagged nodes."
 );
 define_tag_family_predicate!(
@@ -340,6 +346,7 @@ define_tag_family_predicate!(
     crate::predicate::tag_family::FUNCTION,
     &[1, 0, 1, 0],
     &[0b0101],
+    [5, 0, 0, 0],
     "`in_function` - NodeSet of function-tagged nodes."
 );
 define_tag_family_predicate!(
@@ -349,6 +356,7 @@ define_tag_family_predicate!(
     crate::predicate::tag_family::PACKAGE,
     &[4, 0, 4, 0],
     &[0b0101],
+    [5, 0, 0, 0],
     "`in_package` - NodeSet of package-tagged nodes."
 );
 pub mod literal_of;
@@ -363,6 +371,7 @@ define_fixed_forward_edge_predicate!(
     &[1],
     &[4],
     &[0b0010],
+    [2, 0, 0, 0],
     "`return_value_of` - forward-traverse along `RETURN` edges.",
     "Build a Program that emits the NodeSet of return-value bindings reached from the caller frontier via `Return` edges.",
     "return_value_of"
@@ -371,8 +380,6 @@ pub mod size_argument_of;
 
 /// Little-endian `u32` word packing for [`inventory::submit!`] GPU fixtures.
 ///
-/// One owner for the `to_le_bytes` flatten every graph predicate's registry
-/// block would otherwise restate.
-pub(crate) fn inventory_u32_le_bytes(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
+/// Routes through the canonical `vyre-primitives::wire::pack_u32_slice`
+/// LEGO primitive.
+pub(crate) use vyre_primitives::wire::pack_u32_slice as inventory_u32_le_bytes;

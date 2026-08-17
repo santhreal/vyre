@@ -3,8 +3,8 @@
 //! Host-side packed layout lives in [`vyre_foundation::vast`]. The programs
 //! here are minimal GPU-facing slices of that contract.
 //!
-//! The path IS the interface. Callers write
-//! `vyre_libs::graph::toposort::toposort(...)`; no wildcard re-exports.
+//! The path IS the interface. Callers address primitive program builders
+//! and layout validators by explicit module path; no wildcard re-exports.
 
 /// AST walk orders over the packed VAST buffer layout.
 ///
@@ -16,10 +16,12 @@ pub(crate) mod ast_walk;
 #[cfg(feature = "graph-dispatch")]
 pub mod dispatch;
 
+#[cfg(test)]
+pub use ast_walk::pack_spine_fixture;
 #[cfg(feature = "graph")]
 pub use ast_walk::{
     ast_walk, ast_walk_postorder, ast_walk_postorder_nodes, ast_walk_preorder,
-    pack_branching_fixture, pack_spine_fixture,
+    pack_branching_fixture,
 };
 
 /// Kahn's-algorithm topological sort.
@@ -73,10 +75,6 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
     hash
 }
 
-/// The published call shapes of a CSR closure, stated once for every op that
-/// iterates a one-step traversal to a fixpoint.
-#[cfg(feature = "graph")]
-pub(crate) mod csr_closure_entry_points;
 /// The ONE named-field input bundle every CSR closure entry point takes, so a
 /// run of same-typed CSR slices cannot transpose silently at a call site.
 #[cfg(feature = "graph")]
@@ -118,11 +116,6 @@ pub mod csr_frontier_degree_sum;
 /// expansion for sparse dataflow waves.
 #[cfg(feature = "graph")]
 pub mod csr_frontier_queue;
-/// Device-sharded forward frontier expansion: partition the active frontier
-/// across device shards by vertex ownership and OR-merge the per-shard outputs,
-/// exactly reproducing a single-device expansion.
-#[cfg(feature = "graph")]
-pub mod csr_frontier_shard;
 /// The one CSR frontier step: the Program builder for either edge direction and
 /// the host reference that walks the same two directions.
 #[cfg(feature = "graph")]
@@ -166,7 +159,7 @@ pub mod motif;
 pub mod scc_decompose;
 
 /// Vector nearest-neighbor graph construction plus graph-ranking parity.
-#[cfg(feature = "graph")]
+#[cfg(all(test, feature = "graph"))]
 pub mod vector_neighbor_graph;
 
 /// Exploded-supergraph builder  -  (CFG x fact) pairs as graph vertices so
@@ -188,7 +181,7 @@ pub mod persistent_bfs;
 
 /// IR Extension interface registering Alias-solving opcodes to the compiler
 /// front-end.
-#[cfg(feature = "graph")]
+#[cfg(all(test, feature = "graph"))]
 pub mod alias_registry;
 
 /// Lock-free Union-Find for subset alias resolving constraint grids.

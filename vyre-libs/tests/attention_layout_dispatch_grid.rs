@@ -22,9 +22,17 @@ mod harness;
 use std::collections::BTreeSet;
 
 use vyre_foundation::ir::{DataType, Program};
-use vyre_libs::llm::paged_kv::{
-    paged_kv_append, paged_kv_dispatch_grid, paged_kv_gather, PagedKvCache, PagedKvError,
-};
+use vyre_libs::llm::paged_kv::{paged_kv_append, paged_kv_gather, PagedKvCache, PagedKvError};
+
+fn paged_kv_dispatch_grid(spec: &PagedKvCache<'_>, tokens: u32) -> Result<[u32; 3], PagedKvError> {
+    let moved = spec
+        .sequences
+        .checked_mul(spec.heads)
+        .and_then(|x| x.checked_mul(tokens))
+        .and_then(|x| x.checked_mul(spec.head_dim))
+        .ok_or(PagedKvError::ElementCountOverflow)?;
+    Ok(attention_layout_dispatch_grid(moved))
+}
 use vyre_libs::nn::attention::{
     attention_head_to_token, attention_layout_dispatch_grid, attention_token_to_head,
     kv_cache_append, partial_rope, AttentionPermuteSpec, KvCacheAppendSpec,

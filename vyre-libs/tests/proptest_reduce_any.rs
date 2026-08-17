@@ -1,8 +1,8 @@
-//! Property gates for `vyre_libs::reduce::any::cpu_ref`.
-
+//! Property gates for `reduce::any` reduction witness.
 #![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
+use vyre_reference::composition_witness::reduce_any_witness as reference_any;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -21,28 +21,23 @@ proptest! {
         } else {
             values.push(nonzero);
         }
-        prop_assert_eq!(cpu_ref(&values), 1);
+        prop_assert_eq!(reference_any(&values), 1);
     }
 
     #[test]
     fn all_zero_returns_zero(len in 0usize..64) {
         let values = vec![0u32; len];
-        prop_assert_eq!(cpu_ref(&values), 0);
+        prop_assert_eq!(reference_any(&values), 0);
     }
 
     #[test]
     fn empty_returns_zero(_dummy in 0u32..1) {
-        prop_assert_eq!(cpu_ref(&[]), 0);
+        prop_assert_eq!(reference_any(&[]), 0);
     }
 
     #[test]
     fn single_nonzero_returns_one(v in any::<u32>()) {
         let v = if v == 0 { 1 } else { v };
-        prop_assert_eq!(cpu_ref(&[v]), 1);
+        prop_assert_eq!(reference_any(&[v]), 1);
     }
-}
-
-#[must_use]
-fn cpu_ref(input: &[u32]) -> u32 {
-    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
 }

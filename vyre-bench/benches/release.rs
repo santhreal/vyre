@@ -27,7 +27,10 @@ fn bitset_and_cpu_ref_scale(criterion: &mut Criterion) {
             &(lhs.clone(), rhs.clone()),
             |bencher, (lhs, rhs)| {
                 bencher.iter(|| {
-                    let output = vyre_reference::composition_witness::bitset_and_witness(black_box(lhs), black_box(rhs));
+                    let output = vyre_reference::composition_witness::bitset_and_witness(
+                        black_box(lhs),
+                        black_box(rhs),
+                    );
                     black_box(output);
                 });
             },

@@ -19,7 +19,6 @@ use crate::pattern::builders::{
 
 use crate::pattern::CompiledDfa;
 
-
 mod prefilter;
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 mod regex_exact;
@@ -874,12 +873,11 @@ pub fn try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
     )
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pattern::classic_ac::classic_ac_compile;
     use crate::pattern::classic_ac::test_dispatch_and_decode::assert_infallible_matches_try;
+    use crate::pattern::classic_ac::{classic_ac_bounded_ranges_scan, classic_ac_compile};
 
     /// Behavioral regression guard: the infallible builder must wire the REAL DFA
     /// metadata (delegating to the `try_` variant's Ok program), never the deleted

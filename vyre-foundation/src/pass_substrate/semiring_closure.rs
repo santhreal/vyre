@@ -79,9 +79,9 @@ pub fn semiring_gemm_cpu_into(
                 };
 
                 acc = match semiring {
-                    Semiring::Real | Semiring::MaxPlus => acc.wrapping_add(combined),
+                    Semiring::Real => acc.wrapping_add(combined),
                     Semiring::MinPlus => acc.min(combined),
-                    Semiring::MaxTimes => acc.max(combined),
+                    Semiring::MaxPlus | Semiring::MaxTimes => acc.max(combined),
                     Semiring::BoolOr | Semiring::Lineage => acc | combined,
                     Semiring::BoolAnd => acc & combined,
                     Semiring::Gf2 => acc ^ combined,
@@ -277,6 +277,11 @@ mod tests {
         semiring_gemm_cpu_into(&left, &right, 2, 2, 3, Semiring::Real, &mut out);
         assert_eq!(out, vec![58, 64, 139, 154]);
         assert_eq!(out.as_ptr(), ptr);
+
+        semiring_gemm_cpu_into(&[2, 5], &[3, 4], 1, 1, 2, Semiring::MaxPlus, &mut out);
+        assert_eq!(out, vec![9]);
+        semiring_gemm_cpu_into(&[2, 5], &[3, 4], 1, 1, 2, Semiring::MaxTimes, &mut out);
+        assert_eq!(out, vec![20]);
 
         semiring_gemm_cpu_into(&left, &right, 2, 2, u32::MAX, Semiring::Real, &mut out);
         assert!(out.is_empty());

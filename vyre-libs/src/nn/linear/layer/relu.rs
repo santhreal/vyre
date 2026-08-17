@@ -35,6 +35,10 @@ pub fn linear_relu(
     )
 }
 
+const EXPECTED_LINEAR_RELU_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x60, 0x42, 0x00, 0x00, 0x78, 0x42, 0x00, 0x00, 0x88, 0x42, 0x00, 0x00, 0x94, 0x42,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -55,8 +59,7 @@ inventory::submit! {
             vec![vec![x, w, bias]]
         }),
         Some(|| {
-            let f32_bytes = vyre_primitives::wire::pack_f32_slice;
-            vec![vec![f32_bytes(&[56.0, 62.0, 68.0, 74.0])]]
+            vec![vec![EXPECTED_LINEAR_RELU_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

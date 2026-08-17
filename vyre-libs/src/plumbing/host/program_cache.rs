@@ -48,28 +48,6 @@ impl<K: Eq, V> ProgramCache<K, V> {
         self.hot_value()
     }
 
-    /// Return the cached value for `key`, building it on a miss.
-    ///
-    /// # Errors
-    /// Propagates the error `build` returns; nothing is cached in that case.
-    pub(crate) fn get_or_try_insert_with<E>(
-        &mut self,
-        key: K,
-        build: impl FnOnce() -> Result<V, E>,
-    ) -> Result<&V, E> {
-        if self.hot_matches(&key) {
-            return Ok(self.hot_value());
-        }
-        if self.warm_matches(&key) {
-            self.promote_warm();
-            return Ok(self.hot_value());
-        }
-
-        let value = build()?;
-        self.insert_hot(key, value);
-        Ok(self.hot_value())
-    }
-
     fn hot_matches(&self, key: &K) -> bool {
         self.hot.as_ref().is_some_and(|entry| entry.key == *key)
     }
@@ -136,30 +114,6 @@ mod tests {
         assert_eq!(*cache.get_or_insert_with(2, || 22), 22);
 
         assert_eq!(cache.builds(), 4);
-    }
-
-    #[test]
-    fn fallible_builder_does_not_poison_existing_entries_on_error() {
-        let mut cache = ProgramCache::<u32, u32>::default();
-
-        assert_eq!(
-            *cache
-                .get_or_try_insert_with::<&'static str>(1, || Ok(10))
-                .expect("Fix: cache warm-up must succeed for valid keys; return Err on corrupt cache config - first build succeeds"),
-            10
-        );
-        assert_eq!(
-            cache.get_or_try_insert_with(2, || Err("failed build")),
-            Err("failed build")
-        );
-        assert_eq!(
-            *cache
-                .get_or_try_insert_with::<&'static str>(1, || Ok(99))
-                .expect("Fix: failed miss must not evict valid hot entries; return cache miss Err - existing hot entry survives failed miss"),
-            10
-        );
-
-        assert_eq!(cache.builds(), 1);
     }
 
     #[test]

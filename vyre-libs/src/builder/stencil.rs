@@ -39,6 +39,7 @@ impl Grid2DShape {
     }
 
     /// Total elements in the 2D grid, returning `None` on u32 multiplication overflow.
+    #[cfg(test)]
     #[must_use]
     pub const fn checked_pixel_count(&self) -> Option<u32> {
         self.width.checked_mul(self.height)

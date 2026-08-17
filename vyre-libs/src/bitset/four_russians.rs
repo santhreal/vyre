@@ -5,6 +5,7 @@
 //! boolean-matrix and reachability kernels can specialize the LUT once, then
 //! replace branchy byte logic with coalesced table loads.
 
+#[cfg(test)]
 use std::sync::LazyLock;
 use vyre_foundation::composition::wrap_anonymous_region;
 
@@ -61,6 +62,7 @@ pub fn binary_byte_lut(op: BooleanTileOp) -> Vec<u32> {
 /// The Method-of-Four-Russians table is 65,536 `u32`s. Rebuilding it for every
 /// rule batch or graph shard is pure allocator and cache churn, so common
 /// operations share one immutable table per process.
+#[cfg(test)]
 #[must_use]
 pub fn cached_binary_byte_lut(op: BooleanTileOp) -> &'static [u32] {
     static AND: LazyLock<Vec<u32>> = LazyLock::new(|| binary_byte_lut(BooleanTileOp::And));
@@ -336,16 +338,6 @@ pub fn four_russians_dense_matvec_byte_lut(
     )
 }
 
-
-
-
-
-
-
-fn checked_dense_column_words(tile_count: u32, dst_words: u32) -> usize {
-    try_checked_dense_column_words(tile_count, dst_words).unwrap_or(usize::MAX)
-}
-
 fn try_checked_dense_column_words(tile_count: u32, dst_words: u32) -> Result<usize, String> {
     let tile_count = usize_from_u32(tile_count, "tile_count");
     let dst_words = usize_from_u32(dst_words, "dst_words");
@@ -355,10 +347,6 @@ fn try_checked_dense_column_words(tile_count: u32, dst_words: u32) -> Result<usi
         .ok_or_else(|| {
             "dense Four-Russians column table size overflowed usize. Fix: split the graph into smaller source/destination shards.".to_string()
         })
-}
-
-fn checked_dense_lut_words_usize(tile_count: usize, dst_words: usize) -> usize {
-    try_checked_dense_lut_words_usize(tile_count, dst_words).unwrap_or(usize::MAX)
 }
 
 fn try_checked_dense_lut_words_usize(tile_count: usize, dst_words: usize) -> Result<usize, String> {
@@ -375,6 +363,9 @@ fn usize_from_u32(value: u32, field: &'static str) -> usize {
     usize::try_from(value).unwrap_or(usize::MAX)
 }
 
+const EXPECTED_FOUR_RUSSIANS_APPLY_OUTPUT_BYTES: [u8; 8] =
+    [0x00, 0xF0, 0x00, 0xF0, 0x00, 0x00, 0x0F, 0x0F];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -389,11 +380,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0xF000_F000, 0x0F0F_0000])]]
+            vec![vec![EXPECTED_FOUR_RUSSIANS_APPLY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
+
+const EXPECTED_FOUR_RUSSIANS_DENSE_MATVEC_OUTPUT_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -410,8 +402,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0101])]]
+            vec![vec![EXPECTED_FOUR_RUSSIANS_DENSE_MATVEC_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -419,13 +410,67 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        four_russians_binary_witness as reference_four_russians_binary,
+        four_russians_binary_witness_into,
+        four_russians_dense_matvec_witness as reference_four_russians_dense_matvec,
+        four_russians_dense_matvec_witness_into,
+    };
+    fn try_reference_four_russians_binary_into(
+        lhs: &[u32],
+        rhs: &[u32],
+        lut: &[u32],
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        if lhs.len() != rhs.len() {
+            return Err("equal-width lhs and rhs required".to_string());
+        }
+        if lut.len() != 65_536 {
+            return Err("complete 256x256 (65,536-entry) byte-LUT required".to_string());
+        }
+        four_russians_binary_witness_into(lhs, rhs, lut, out);
+        Ok(())
+    }
+
+    fn try_reference_four_russians_dense_matvec_into(
+        frontier: &[u32],
+        tile_lut: &[u32],
+        tile_count: u32,
+        dst_words: u32,
+        out: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let expected_frontier_words = tile_count.div_ceil(4) as usize;
+        if frontier.len() < expected_frontier_words {
+            return Err(format!(
+                "insufficient frontier words: got {}, need at least {} (frontier_len)",
+                frontier.len(),
+                expected_frontier_words
+            ));
+        }
+        let expected_lut_words = (tile_count as usize)
+            .checked_mul(256)
+            .and_then(|w| w.checked_mul(dst_words as usize))
+            .ok_or_else(|| "overflow calculating expected lut words".to_string())?;
+        if tile_lut.len() < expected_lut_words {
+            return Err(format!(
+                "insufficient lut words: got {}, need at least {} (lut_len)",
+                tile_lut.len(),
+                expected_lut_words
+            ));
+        }
+        four_russians_dense_matvec_witness_into(frontier, tile_lut, tile_count, dst_words, out);
+        Ok(())
+    }
 
     #[test]
     fn byte_lut_matches_word_and() {
         let lhs = [0xFF00_FF00u32, 0x0F0F_0F0F];
         let rhs = [0xF0F0_F0F0u32, 0xFFFF_0000];
         let lut = binary_byte_lut(BooleanTileOp::And);
-        assert_eq!(cpu_ref(&lhs, &rhs, &lut), vec![0xF000_F000, 0x0F0F_0000]);
+        assert_eq!(
+            reference_four_russians_binary(&lhs, &rhs, &lut),
+            vec![0xF000_F000, 0x0F0F_0000]
+        );
     }
 
     #[test]
@@ -436,7 +481,10 @@ mod tests {
         let lut = dense_matvec_byte_lut(&columns, 1, 1);
         let frontier = [0b0000_0101u32];
 
-        assert_eq!(dense_matvec_cpu_ref(&frontier, &lut, 1, 1), vec![0b0101]);
+        assert_eq!(
+            reference_four_russians_dense_matvec(&frontier, &lut, 1, 1),
+            vec![0b0101]
+        );
     }
 
     #[test]
@@ -483,9 +531,22 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn cached_luts_reuse_allocation_and_match_owned_tables() {
+        let owned = binary_byte_lut(BooleanTileOp::And);
+        let cached_first = cached_binary_byte_lut(BooleanTileOp::And);
+        let cached_second = cached_binary_byte_lut(BooleanTileOp::And);
+
+        assert_eq!(cached_first, owned.as_slice());
+        assert_eq!(
+            cached_first.as_ptr(),
+            cached_second.as_ptr(),
+            "standard Four-Russians LUTs must be process-cached instead of rebuilt per batch"
+        );
+    }
 
     #[test]
-    fn try_cpu_ref_into_reuses_output_and_rejects_bad_shapes() {
+    fn try_reference_binary_into_reuses_output_and_rejects_bad_shapes() {
         let lhs = [0x0123_4567u32, 0x89ab_cdef];
         let rhs = [0xffff_0000u32, 0x1357_9bdf];
         let lut = binary_byte_lut(BooleanTileOp::Xor);
@@ -493,23 +554,28 @@ mod tests {
         out.extend_from_slice(&[u32::MAX; 8]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(&lhs, &rhs, &lut, &mut out).unwrap();
+        try_reference_four_russians_binary_into(&lhs, &rhs, &lut, &mut out).unwrap();
 
-        assert_eq!(out, cpu_ref(&lhs, &rhs, &lut));
+        assert_eq!(out, reference_four_russians_binary(&lhs, &rhs, &lut));
         assert_eq!(out.as_ptr(), ptr);
-        assert!(try_cpu_ref_into(&lhs, &rhs[..1], &lut, &mut out)
-            .unwrap_err()
-            .contains("equal-width"));
-        assert!(try_cpu_ref_into(&lhs, &rhs, &lut[..1024], &mut out)
-            .unwrap_err()
-            .contains("complete 256x256"));
+        assert!(
+            try_reference_four_russians_binary_into(&lhs, &rhs[..1], &lut, &mut out)
+                .unwrap_err()
+                .contains("equal-width")
+        );
+        assert!(
+            try_reference_four_russians_binary_into(&lhs, &rhs, &lut[..1024], &mut out)
+                .unwrap_err()
+                .contains("complete 256x256")
+        );
     }
 
     #[test]
-    fn try_dense_matvec_cpu_ref_reuses_output_and_rejects_bad_shapes() {
+    fn try_dense_matvec_reference_reuses_output_and_rejects_bad_shapes() {
         let tile_count = 2;
         let dst_words = 2;
-        let mut columns = vec![0u32; checked_dense_column_words(tile_count, dst_words)];
+        let mut columns =
+            vec![0u32; try_checked_dense_column_words(tile_count, dst_words).unwrap()];
         for tile in 0..tile_count as usize {
             for source_bit in 0..BYTE_TILE_WIDTH as usize {
                 for dst_word in 0..dst_words as usize {
@@ -527,19 +593,26 @@ mod tests {
         out.extend_from_slice(&[u32::MAX; 8]);
         let ptr = out.as_ptr();
 
-        try_dense_matvec_cpu_ref_into(&frontier, &lut, tile_count, dst_words, &mut out).unwrap();
+        try_reference_four_russians_dense_matvec_into(
+            &frontier, &lut, tile_count, dst_words, &mut out,
+        )
+        .unwrap();
 
         assert_eq!(
             out,
-            dense_matvec_cpu_ref(&frontier, &lut, tile_count, dst_words)
+            reference_four_russians_dense_matvec(&frontier, &lut, tile_count, dst_words)
         );
         assert_eq!(out.as_ptr(), ptr);
-        assert!(
-            try_dense_matvec_cpu_ref_into(&[], &lut, tile_count, dst_words, &mut out)
-                .unwrap_err()
-                .contains("frontier_len")
-        );
-        assert!(try_dense_matvec_cpu_ref_into(
+        assert!(try_reference_four_russians_dense_matvec_into(
+            &[],
+            &lut,
+            tile_count,
+            dst_words,
+            &mut out
+        )
+        .unwrap_err()
+        .contains("frontier_len"));
+        assert!(try_reference_four_russians_dense_matvec_into(
             &frontier,
             &lut[..lut.len() - 1],
             tile_count,

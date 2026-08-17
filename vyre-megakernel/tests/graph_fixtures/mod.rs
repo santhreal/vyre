@@ -25,7 +25,6 @@ pub(crate) fn invocation_contract() -> ValueContract {
     }
 }
 
-
 /// A producer and a consumer joined by one invocation-scoped value.
 ///
 /// `producer` reads `input` and writes `intermediate`; `consumer` reads

@@ -6,9 +6,7 @@
 //! partials. The kernel domains in this crate own the executable semantics.
 
 use crate::{
-    bitset::stochastic_compute::{
-        decode_bitstream, encode_bitstream, encode_bitstream_into, stochastic_and_mul,
-    },
+    bitset::stochastic_compute::stochastic_and_mul,
     fixpoint::bitset_fixpoint::{bitset_fixpoint, bitset_fixpoint_warm_start},
     math::{
         differentiable::softmax_step,
@@ -20,18 +18,6 @@ use crate::{
     },
 };
 use vyre_foundation::ir::{Expr, Node, Program};
-
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::{
-    fixpoint::bitset_fixpoint::reference_eval_warm_start,
-    math::{
-        differentiable::{differentiable_argmax_cpu, softmax_cpu},
-        dp_clip::dp_clip_per_sample_cpu,
-        interval::cpu_interval_merge,
-        sparse_recovery::iht_top_k_cpu,
-        stream_compact::cpu_ref as stream_compact_cpu,
-    },
-};
 
 /// Build a cold bitset fixpoint convergence-flag dispatch.
 #[must_use]
@@ -51,17 +37,6 @@ pub fn dispatch_bitset_fixpoint_warm_start(
     bitset_fixpoint_warm_start(current, next, changed, seed, words)
 }
 
-/// Reference warm-start convergence result.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_bitset_fixpoint_warm_start(
-    current: &[u32],
-    next: &[u32],
-    seed: &[u32],
-) -> (Vec<u32>, u32) {
-    reference_eval_warm_start(current, next, seed)
-}
-
 /// Build a stream-compaction dispatch consuming exclusive prefix offsets.
 #[must_use]
 pub fn dispatch_stream_compact(
@@ -73,13 +48,6 @@ pub fn dispatch_stream_compact(
     count: u32,
 ) -> Program {
     stream_compact(payloads, flags, offsets, compacted, live_count, count)
-}
-
-/// CPU stream-compaction reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_stream_compact(payloads: &[u32], flags: &[u32]) -> (Vec<u32>, u32) {
-    stream_compact_cpu(payloads, flags)
 }
 
 /// Emit a composable interval merge body.
@@ -115,29 +83,10 @@ pub fn dispatch_interval_merge(
     )
 }
 
-/// CPU interval merge reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_interval_merge(
-    mins_a: &[u32],
-    maxs_a: &[u32],
-    mins_b: &[u32],
-    maxs_b: &[u32],
-) -> (Vec<u32>, Vec<u32>) {
-    cpu_interval_merge(mins_a, maxs_a, mins_b, maxs_b)
-}
-
 /// Build an iterative-hard-thresholding dispatch.
 #[must_use]
 pub fn dispatch_iht_threshold(z: &str, threshold: &str, out: &str, n: u32) -> Program {
     iht_threshold(z, threshold, out, n)
-}
-
-/// CPU top-k hard-thresholding reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_iht_top_k(z: &[f64], k: usize) -> (Vec<f64>, f64) {
-    iht_top_k_cpu(z, k)
 }
 
 /// Build a per-sample DP clipping dispatch.
@@ -153,37 +102,10 @@ pub fn dispatch_dp_clip_per_sample(
     dp_clip_per_sample(grads, norms, clip_norm, clipped, b, d)
 }
 
-/// CPU per-sample DP clipping reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_dp_clip_per_sample(
-    grads: &[f64],
-    norms: &[f64],
-    clip_norm: f64,
-    b: u32,
-    d: u32,
-) -> Vec<f64> {
-    dp_clip_per_sample_cpu(grads, norms, clip_norm, b, d)
-}
-
 /// Build a softmax normalization dispatch over precomputed exponentials.
 #[must_use]
 pub fn dispatch_softmax(pre_exp: &str, out: &str, n: u32) -> Program {
     softmax_step(pre_exp, out, n)
-}
-
-/// CPU softmax reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_softmax(x: &[f64]) -> Vec<f64> {
-    softmax_cpu(x)
-}
-
-/// CPU differentiable argmax reference.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-pub fn reference_differentiable_argmax(x: &[f64], temperature: f64) -> Vec<f64> {
-    differentiable_argmax_cpu(x, temperature)
 }
 
 /// Emit a composable dot-partial accumulator node.
@@ -211,27 +133,57 @@ pub fn dispatch_stochastic_and_mul(a: &str, b: &str, out: &str, n_words: u32) ->
     stochastic_and_mul(a, b, out, n_words)
 }
 
-/// Encode a probability as a deterministic stochastic bitstream.
-#[must_use]
-pub fn stochastic_encode(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
-    encode_bitstream(p, len_bits, seed)
-}
-
-/// Encode a probability into caller-owned stochastic bitstream storage.
-pub fn stochastic_encode_into(p: f64, len_bits: usize, seed: u32, out: &mut Vec<u32>) {
-    encode_bitstream_into(p, len_bits, seed, out);
-}
-
-/// Decode a stochastic bitstream back into a probability estimate.
-#[must_use]
-pub fn stochastic_decode(bs: &[u32], len_bits: usize) -> f64 {
-    decode_bitstream(bs, len_bits)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        bitset_warm_start_witness, differentiable_argmax_witness, dp_clip_per_sample_witness,
+        iht_top_k_witness, interval_merge_witness, softmax_witness, stochastic_decode_witness,
+        stochastic_encode_witness, stream_compact_witness, try_stochastic_encode_witness_into,
+    };
 
+    fn reference_bitset_fixpoint_warm_start(
+        current: &[u32],
+        next: &[u32],
+        seed: &[u32],
+    ) -> (Vec<u32>, u32) {
+        bitset_warm_start_witness(current, next, seed)
+    }
+
+    fn reference_stream_compact(payloads: &[u32], flags: &[u32]) -> (Vec<u32>, u32) {
+        stream_compact_witness(payloads, flags)
+    }
+
+    fn reference_interval_merge(
+        mins_a: &[u32],
+        maxs_a: &[u32],
+        mins_b: &[u32],
+        maxs_b: &[u32],
+    ) -> (Vec<u32>, Vec<u32>) {
+        interval_merge_witness(mins_a, maxs_a, mins_b, maxs_b)
+    }
+
+    fn reference_iht_top_k(z: &[f64], k: usize) -> (Vec<f64>, f64) {
+        iht_top_k_witness(z, k)
+    }
+
+    fn reference_dp_clip_per_sample(
+        grads: &[f64],
+        norms: &[f64],
+        clip_norm: f64,
+        b: u32,
+        d: u32,
+    ) -> Vec<f64> {
+        dp_clip_per_sample_witness(grads, norms, clip_norm, b, d)
+    }
+
+    fn reference_softmax(x: &[f64]) -> Vec<f64> {
+        softmax_witness(x)
+    }
+
+    fn reference_differentiable_argmax(x: &[f64], temperature: f64) -> Vec<f64> {
+        differentiable_argmax_witness(x, temperature)
+    }
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-8 * (1.0 + a.abs() + b.abs())
     }
@@ -323,13 +275,14 @@ mod tests {
     }
 
     #[test]
-    fn stochastic_bitstream_wrappers_roundtrip_probability() {
-        let bitstream = stochastic_encode(0.25, 1024, 42);
-        let decoded = stochastic_decode(&bitstream, 1024);
+    fn stochastic_bitstream_witness_roundtrips_probability() {
+        let bitstream = stochastic_encode_witness(0.25, 1024, 42);
+        let decoded = stochastic_decode_witness(&bitstream, 1024);
         assert!((decoded - 0.25).abs() < 0.05);
 
         let mut into = Vec::with_capacity(bitstream.len());
-        stochastic_encode_into(0.25, 1024, 42, &mut into);
+        try_stochastic_encode_witness_into(0.25, 1024, 42, &mut into)
+            .expect("small stochastic witness must reserve output");
         assert_eq!(into, bitstream);
     }
 }

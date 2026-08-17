@@ -50,8 +50,6 @@ pub const DEFAULT_OMEGA: f64 = 0.66;
 /// This is the primitive-native equivalent of [`DEFAULT_OMEGA`].
 pub const DEFAULT_OMEGA_FIXED: u32 = 43_254;
 
-
-
 /// Primitive-native fixed-point production path for one AMG V-cycle.
 ///
 /// Inputs are 16.16 u32 buffers. This dispatches the complete
@@ -243,102 +241,21 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
         &scratch.inputs,
         Some([ceil_div_u32(n_fine.max(n_coarse), 256), 1, 1]),
     )?;
-    if outputs.is_empty() {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: smooth_matroid_flow_fixed_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
+    let [out_buf, ..] = match outputs.as_slice() {
+        [b, ..] => [b],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: smooth_matroid_flow_fixed_via expected at least one output buffer, got {}.",
+                outputs.len()
+            )))
+        }
+    };
     decode_u32_output_exact(
-        &outputs[0],
+        out_buf,
         n_fine as usize,
         "smooth_matroid_flow_fixed_via",
         out,
     )
-}
-
-/// Run V-cycles until residual norm `||A·x − b||_∞` drops below `tol`
-/// or `max_cycles` is reached. Returns `(x_final, cycles_run)`.
-#[must_use]
-#[cfg(test)]
-#[allow(clippy::too_many_arguments)]
-pub fn solve_to_tolerance(
-    a: &[f64],
-    b: &[f64],
-    x0: &[f64],
-    r_mat: &[f64],
-    p_mat: &[f64],
-    a_c: &[f64],
-    n_fine: u32,
-    n_coarse: u32,
-    tol: f64,
-    max_cycles: u32,
-) -> (Vec<f64>, u32) {
-    use crate::telemetry::{amg_pass_solver_calls, bump};
-    bump(&amg_pass_solver_calls);
-    let mut x = Vec::new();
-    let mut next = Vec::new();
-    let mut scratch = AmgVcycleScratch::default();
-    let cycles = solve_to_tolerance_into(
-        a,
-        b,
-        x0,
-        r_mat,
-        p_mat,
-        a_c,
-        n_fine,
-        n_coarse,
-        tol,
-        max_cycles,
-        &mut scratch,
-        &mut x,
-        &mut next,
-    );
-    (x, cycles)
-}
-
-/// Run V-cycles until tolerance using caller-owned solver buffers.
-///
-/// Returns the cycle count and leaves the final solution in `x`.
-#[allow(clippy::too_many_arguments)]
-#[cfg(test)]
-pub fn solve_to_tolerance_into(
-    a: &[f64],
-    b: &[f64],
-    x0: &[f64],
-    r_mat: &[f64],
-    p_mat: &[f64],
-    a_c: &[f64],
-    n_fine: u32,
-    n_coarse: u32,
-    tol: f64,
-    max_cycles: u32,
-    scratch: &mut AmgVcycleScratch,
-    x: &mut Vec<f64>,
-    next: &mut Vec<f64>,
-) -> u32 {
-    let nf = n_fine as usize;
-    x.clear();
-    x.extend_from_slice(x0);
-    next.clear();
-    for cycle in 0..max_cycles {
-        reference_smooth_matroid_flow_into(
-            a, b, x, r_mat, p_mat, a_c, n_fine, n_coarse, scratch, next,
-        );
-        std::mem::swap(x, next);
-        let mut max_resid: f64 = 0.0;
-        for i in 0..nf {
-            let row_dot: f64 = (0..nf).map(|j| a[i * nf + j] * x[j]).sum();
-            let r = (row_dot - b[i]).abs();
-            if r > max_resid {
-                max_resid = r;
-            }
-        }
-        if max_resid < tol {
-            return cycle + 1;
-        }
-    }
-    max_cycles
 }
 
 #[cfg(test)]
@@ -346,6 +263,149 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
+
+    /// Caller-owned scratch for CPU reference AMG V-cycle execution.
+    #[derive(Debug, Default, Clone)]
+    pub(crate) struct AmgVcycleScratch {
+        pub(crate) inner: vyre_reference::composition_witness::AmgSolveScratchWitness,
+    }
+
+    /// Execute one AMG V-cycle on the dense matroid system via the reference witness.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn reference_smooth_matroid_flow(
+        a: &[f64],
+        b: &[f64],
+        x: &[f64],
+        r_mat: &[f64],
+        p_mat: &[f64],
+        a_c: &[f64],
+        n_fine: u32,
+        n_coarse: u32,
+    ) -> Vec<f64> {
+        if n_fine == 0 {
+            return Vec::new();
+        }
+        vyre_reference::composition_witness::amg_v_cycle_witness(
+            a,
+            b,
+            x,
+            r_mat,
+            p_mat,
+            a_c,
+            DEFAULT_OMEGA,
+            n_fine,
+            n_coarse,
+        )
+    }
+
+    /// Execute one AMG V-cycle into caller-owned storage.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn reference_smooth_matroid_flow_into(
+        a: &[f64],
+        b: &[f64],
+        x: &[f64],
+        r_mat: &[f64],
+        p_mat: &[f64],
+        a_c: &[f64],
+        n_fine: u32,
+        n_coarse: u32,
+        scratch: &mut AmgVcycleScratch,
+        out: &mut Vec<f64>,
+    ) {
+        if n_fine == 0 {
+            out.clear();
+            return;
+        }
+        vyre_reference::composition_witness::amg_v_cycle_witness_with_scratch_into(
+            a,
+            b,
+            x,
+            r_mat,
+            p_mat,
+            a_c,
+            DEFAULT_OMEGA,
+            n_fine,
+            n_coarse,
+            &mut scratch.inner.v_cycle,
+            out,
+        );
+    }
+
+    /// Run V-cycles until residual norm `||A·x − b||_∞` drops below `tol`
+    /// or `max_cycles` is reached. Returns `(x_final, cycles_run)`.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn solve_to_tolerance(
+        a: &[f64],
+        b: &[f64],
+        x0: &[f64],
+        r_mat: &[f64],
+        p_mat: &[f64],
+        a_c: &[f64],
+        n_fine: u32,
+        n_coarse: u32,
+        tol: f64,
+        max_cycles: u32,
+    ) -> (Vec<f64>, u32) {
+        use crate::telemetry::{amg_pass_solver_calls, bump};
+        bump(&amg_pass_solver_calls);
+        let mut x = Vec::new();
+        let mut next = Vec::new();
+        let mut scratch = AmgVcycleScratch::default();
+        let cycles = solve_to_tolerance_into(
+            a,
+            b,
+            x0,
+            r_mat,
+            p_mat,
+            a_c,
+            n_fine,
+            n_coarse,
+            tol,
+            max_cycles,
+            &mut scratch,
+            &mut x,
+            &mut next,
+        );
+        (x, cycles)
+    }
+
+    /// Run V-cycles until tolerance using caller-owned solver buffers.
+    ///
+    /// Returns the cycle count and leaves the final solution in `x`.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn solve_to_tolerance_into(
+        a: &[f64],
+        b: &[f64],
+        x0: &[f64],
+        r_mat: &[f64],
+        p_mat: &[f64],
+        a_c: &[f64],
+        n_fine: u32,
+        n_coarse: u32,
+        tol: f64,
+        max_cycles: u32,
+        scratch: &mut AmgVcycleScratch,
+        x: &mut Vec<f64>,
+        _next: &mut Vec<f64>,
+    ) -> u32 {
+        vyre_reference::composition_witness::amg_solve_to_tolerance_witness_with_scratch_into(
+            a,
+            b,
+            x0,
+            r_mat,
+            p_mat,
+            a_c,
+            DEFAULT_OMEGA,
+            n_fine,
+            n_coarse,
+            tol,
+            max_cycles,
+            &mut scratch.inner,
+            x,
+        )
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())

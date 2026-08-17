@@ -148,7 +148,7 @@ pub fn kfac_autotune_step_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::f32_slice_to_le_bytes;
-    use crate::math::kfac_block_inverse::cpu_ref;
+    use vyre_reference::composition_witness::kfac_block_inverse_witness as reference_kfac_block_inverse;
 
     struct KfacDispatcher;
 
@@ -164,7 +164,7 @@ mod tests {
             assert_eq!(inputs[0].len(), inputs[1].len());
             assert_eq!(inputs[2].len(), inputs[1].len());
             let blocks_in = crate::dispatch_buffers::read_f32s(&inputs[1]);
-            let out = cpu_ref(&blocks_in, 1, 2);
+            let out = reference_kfac_block_inverse(&blocks_in, 1, 2);
             Ok(vec![f32_slice_to_le_bytes(&out)])
         }
     }
@@ -188,7 +188,7 @@ mod tests {
             2.0, 0.0, 0.0, 4.0, // block 1
         ];
 
-        let out = cpu_ref(&blocks_in, num_blocks, n);
+        let out = reference_kfac_block_inverse(&blocks_in, num_blocks, n);
 
         assert_eq!(out[0..4], vec![1.0, 0.0, 0.0, 1.0]);
         assert_eq!(out[4..8], vec![0.5, 0.0, 0.0, 0.25]);
@@ -203,7 +203,7 @@ mod tests {
         // determinant = 4*2 - 3*3 = 8 - 9 = -1
         // inverse = [-2, 3; 3, -4]
 
-        let out = cpu_ref(&blocks_in, num_blocks, n);
+        let out = reference_kfac_block_inverse(&blocks_in, num_blocks, n);
 
         assert_eq!(out, vec![-2.0, 3.0, 3.0, -4.0]);
     }

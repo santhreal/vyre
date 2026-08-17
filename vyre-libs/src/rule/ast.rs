@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use crate::rule::builder;
 use vyre_foundation::extension::RuleConditionExt;
-use vyre_foundation::ir::{BufferDecl, Program};
+use vyre_foundation::ir::Program;
 
 /// A typed rule leaf condition.
 ///
@@ -248,23 +248,6 @@ impl PartialEq for RuleCondition {
 }
 
 impl Eq for RuleCondition {}
-
-impl RuleCondition {
-    /// Return the buffer declarations this condition requires.
-    ///
-    /// Frozen conditions need only the six canonical rule buffers
-    /// (`rule_ids`, `pattern_ids`, `rule_bitmaps`, `rule_counts`,
-    /// `file_size`, `verdicts`). Extension conditions contribute extra
-    /// buffers via [`RuleConditionExt::required_buffers`]  -  callers merge
-    /// the results.
-    #[must_use]
-    pub fn required_extension_buffers(&self) -> Vec<BufferDecl> {
-        match self {
-            Self::Opaque(ext) => ext.required_buffers(),
-            _ => Vec::new(),
-        }
-    }
-}
 
 /// A typed boolean rule formula tree.
 ///

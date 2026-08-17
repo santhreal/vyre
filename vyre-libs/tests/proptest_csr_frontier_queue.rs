@@ -4,9 +4,9 @@
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
-use vyre_libs::graph::csr_frontier_queue::{
-    try_csr_queue_forward_traverse_cpu, try_frontier_to_queue_cpu, validate_csr_queue_graph,
-    CsrQueueGraphLayout,
+use vyre_libs::graph::csr_frontier_queue::{validate_csr_queue_graph, CsrQueueGraphLayout};
+use vyre_reference::composition_witness::{
+    csr_queue_strided_forward_witness, frontier_to_queue_witness,
 };
 
 #[derive(Clone, Debug)]
@@ -34,8 +34,7 @@ proptest! {
             .take(queue_capacity)
             .collect::<Vec<_>>();
 
-        let (queue, seen) = try_frontier_to_queue_cpu(&frontier, node_count, queue_capacity)
-            .expect("Fix: generated canonical frontier should materialize");
+        let (queue, seen) = frontier_to_queue_witness(&frontier, node_count, queue_capacity);
 
         prop_assert_eq!(seen, expected_nodes.len() as u32);
         prop_assert_eq!(queue, expected_queue);
@@ -52,8 +51,7 @@ proptest! {
         let graph = generated_csr(node_count, graph_seed);
         let frontier = generated_frontier_words(node_count, frontier_seed);
         let queue_capacity = (capacity_salt as usize) % (node_count as usize + 1);
-        let (queue, queue_len) = try_frontier_to_queue_cpu(&frontier, node_count, queue_capacity)
-            .expect("Fix: generated canonical frontier should materialize");
+        let (queue, queue_len) = frontier_to_queue_witness(&frontier, node_count, queue_capacity);
         let expected = queue_forward_oracle(
             &queue,
             queue_len,
@@ -64,7 +62,7 @@ proptest! {
             allow_mask,
         );
 
-        let actual = try_csr_queue_forward_traverse_cpu(
+        let actual = csr_queue_strided_forward_witness(
             &queue,
             queue_len,
             &graph.edge_offsets,
@@ -72,8 +70,7 @@ proptest! {
             &graph.edge_kind_mask,
             node_count,
             allow_mask,
-        )
-        .expect("Fix: generated canonical CSR queue graph should traverse");
+        );
 
         prop_assert_eq!(actual, expected);
     }
@@ -97,7 +94,7 @@ proptest! {
             allow_mask,
         );
 
-        let actual = try_csr_queue_forward_traverse_cpu(
+        let actual = csr_queue_strided_forward_witness(
             &active_queue,
             queue_len,
             &graph.edge_offsets,
@@ -105,8 +102,7 @@ proptest! {
             &graph.edge_kind_mask,
             node_count,
             allow_mask,
-        )
-        .expect("Fix: generated canonical CSR queue graph should traverse adversarial queues");
+        );
 
         prop_assert_eq!(actual, expected);
     }

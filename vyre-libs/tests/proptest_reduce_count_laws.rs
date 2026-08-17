@@ -2,6 +2,7 @@
 #![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
+use vyre_reference::composition_witness::reduce_count_witness as cpu_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -51,9 +52,4 @@ proptest! {
     fn count_of_single_word_matches_count_ones(w in any::<u32>()) {
         prop_assert_eq!(cpu_ref(&[w]), w.count_ones());
     }
-}
-
-#[must_use]
-fn cpu_ref(input: &[u32], target: u32) -> u32 {
-    input.iter().filter(|&&w| w == target).count() as u32
 }

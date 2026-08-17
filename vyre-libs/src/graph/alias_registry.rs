@@ -1,3 +1,5 @@
+#![cfg(all(test, feature = "graph"))]
+
 //! Compiler Extension Bridge: Binds lock-free aliasing to vyre_foundation.
 //!
 //! Provides the generic `OpId` interception mechanism mapping the generic query dialect AST
@@ -47,6 +49,9 @@ pub struct AliasRegistry {
 impl AliasRegistry {
     /// Register a descriptor under a stable op id.
     pub fn register(&mut self, op_id: &'static str, descriptor: AliasOpDescriptor) {
+        if op_id.is_empty() {
+            return;
+        }
         if op_id == ALIAS_UNION_OP_ID {
             self.alias_union = Some(descriptor);
             return;

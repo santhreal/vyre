@@ -97,6 +97,11 @@ pub fn embedding_typed(
     ))
 }
 
+const EXPECTED_EMBEDDING_OUTPUT_BYTES: [u8; 24] = [
+    0x00, 0x00, 0x80, 0x40, 0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0xC0, 0x40, 0x00, 0x00, 0x80, 0x3F,
+    0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x40, 0x40,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -110,9 +115,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            // token 1 → [4,5,6], token 0 → [1,2,3]
-            vec![vec![to_f32(&[4.0, 5.0, 6.0, 1.0, 2.0, 3.0])]]
+            vec![vec![EXPECTED_EMBEDDING_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

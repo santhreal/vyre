@@ -56,20 +56,16 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// Reusable buffers for string-diagram IR rewrites.
 #[derive(Debug, Default)]
 pub struct StringDiagramRewriteScratch {
+    dispatch_inputs: Vec<Vec<u8>>,
+}
+
+impl StringDiagramRewriteScratch {
     /// Create empty reusable rewrite scratch.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 }
-
-/// Sequential composition of two IR-arrow morphisms. `f` has shape
-/// `a × b`, `g` has shape `b × c`. Returns `g ∘ f` with shape
-/// `a × c`.
-///
-/// In vyre IR terms: `f` describes how Region F transforms its
-/// `a`-dimensional input buffer into a `b`-dimensional intermediate;
-
 
 /// Primitive-native fixed-point production path for sequential IR-arrow
 /// composition.
@@ -201,15 +197,16 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     decode_u32_output_exact(&outputs[0], out_cells, "compose_ir_arrows_fixed_via", out)
 }
 
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_foundation::ir::Program;
+    use vyre_reference::composition_witness::{
+        compose_ir_arrows_witness as compose_ir_arrows,
+        composition_associates_witness as composition_associates,
+        identity_arrow_witness as identity_arrow,
+    };
 
     fn approx_eq_vec(a: &[f64], b: &[f64]) -> bool {
         if a.len() != b.len() {
@@ -270,20 +267,62 @@ mod tests {
 
     #[test]
     fn reusable_outputs_preserve_associativity() {
-        let f = vec![1.0, 0.5, -0.25, 0.5];
-        let g = vec![0.5, 0.5, 0.5, -0.5];
-        let h = vec![1.0, 0.0, 0.0, 1.0];
+        let one = 1u32 << 16;
+        let f = vec![one, one / 2, 0, one / 2];
+        let g = vec![one / 2, one / 2, one / 2, 0];
+        let h = vec![one, 0, 0, one];
         let mut scratch = StringDiagramRewriteScratch::new();
-        assert!(composition_associates_with_scratch(
-            &f,
+        let mut gh = Vec::new();
+        compose_ir_arrows_fixed_via_with_scratch_into(
+            &ComposeDispatcher,
             &g,
             &h,
             2,
             2,
             2,
+            &mut scratch,
+            &mut gh,
+        )
+        .unwrap();
+        let mut left = Vec::new();
+        compose_ir_arrows_fixed_via_with_scratch_into(
+            &ComposeDispatcher,
+            &f,
+            &gh,
             2,
-            &mut scratch
-        ));
+            2,
+            2,
+            &mut scratch,
+            &mut left,
+        )
+        .unwrap();
+
+        let mut fg = Vec::new();
+        compose_ir_arrows_fixed_via_with_scratch_into(
+            &ComposeDispatcher,
+            &f,
+            &g,
+            2,
+            2,
+            2,
+            &mut scratch,
+            &mut fg,
+        )
+        .unwrap();
+        let mut right = Vec::new();
+        compose_ir_arrows_fixed_via_with_scratch_into(
+            &ComposeDispatcher,
+            &fg,
+            &h,
+            2,
+            2,
+            2,
+            &mut scratch,
+            &mut right,
+        )
+        .unwrap();
+
+        assert_eq!(left, right);
     }
 
     struct ComposeDispatcher;

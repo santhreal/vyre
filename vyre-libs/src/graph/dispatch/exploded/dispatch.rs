@@ -11,7 +11,7 @@ use crate::graph::exploded::{
     IFDS_CSR_KILL_PROC_BUFFER, IFDS_CSR_ROW_CURSOR_BUFFER, IFDS_CSR_ROW_PTR_BUFFER,
 };
 
-use crate::dispatch_buffers::{decode_u32_output_exact, u32_word_bytes};
+use crate::dispatch_buffers::decode_u32_output_exact;
 use crate::graph::dispatch::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -264,51 +264,58 @@ fn dispatch_ifds_csr_outputs_from_prepared_into(
     col_len_out: &mut Vec<u32>,
     grid_override: Option<[u32; 3]>,
 ) -> Result<(), DispatchError> {
+    let expected_killed_bytes = plan.killed_words * std::mem::size_of::<u32>();
     let outputs = dispatcher.dispatch(program, scratch_inputs, grid_override)?;
-    let output_base = match outputs.len() {
-        4 => 0,
-        5 => {
-            let expected_killed_bytes =
-                u32_word_bytes(plan.killed_words, "exploded IFDS killed scratch")?;
-            if outputs[0].len() != expected_killed_bytes {
-                return Err(DispatchError::BackendError(format!(
-                    "Fix: {IFDS_CSR_KILLED_BUFFER} expected {expected_killed_bytes} byte(s), got {}.",
-                    outputs[0].len()
-                )));
-            }
-            1
+    let (row_ptr_bytes, row_cursor_bytes, col_idx_bytes, col_len_bytes) = match outputs.as_slice() {
+        [b0, b1, b2, b3] => (b0.as_slice(), b1.as_slice(), b2.as_slice(), b3.as_slice()),
+        [killed, b0, b1, b2, b3] => {
+            validate_ifds_csr_killed_scratch_bytes(killed.len(), expected_killed_bytes)?;
+            (b0.as_slice(), b1.as_slice(), b2.as_slice(), b3.as_slice())
         }
-        count => {
+        _ => {
             return Err(DispatchError::BackendError(format!(
-                "Fix: {row_ptr_context} expected four u32 output buffers or killed scratch plus four u32 output buffers, got {count}.",
+                "Fix: {row_ptr_context} expected four u32 output buffers or killed scratch plus four u32 output buffers, got {}.",
+                outputs.len()
             )));
         }
     };
     decode_u32_output_exact(
-        &outputs[output_base],
+        row_ptr_bytes,
         row_ptr_expected_words,
         row_ptr_context,
         row_ptr_out,
     )?;
     decode_u32_output_exact(
-        &outputs[output_base + 1],
+        row_cursor_bytes,
         row_cursor_expected_words,
         row_cursor_context,
         row_cursor_out,
     )?;
     decode_u32_output_exact(
-        &outputs[output_base + 2],
+        col_idx_bytes,
         col_idx_expected_words,
         col_idx_context,
         col_idx_out,
     )?;
     decode_u32_output_exact(
-        &outputs[output_base + 3],
+        col_len_bytes,
         col_len_expected_words,
         col_len_context,
         col_len_out,
     )
 }
+fn validate_ifds_csr_killed_scratch_bytes(
+    actual_len: usize,
+    expected_len: usize,
+) -> Result<(), DispatchError> {
+    if actual_len != expected_len {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: {IFDS_CSR_KILLED_BUFFER} expected {expected_len} byte(s), got {actual_len}.",
+        )));
+    }
+    Ok(())
+}
+
 fn canonicalize_csr_within_rows_in_place(
     row_ptr: &[u32],
     col_idx: &mut [u32],

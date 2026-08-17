@@ -35,6 +35,7 @@ pub mod fixture_checkout;
 pub mod frozen_contract;
 pub mod gate_canon;
 pub mod gpu_loudness;
+pub mod host_oracle_elimination;
 pub mod hot_path;
 pub mod hot_path_scan;
 pub mod hygiene_matrix;
@@ -110,6 +111,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("readback-ring", &frozen_contract::ReadbackRing),
     ("gate-canon", &gate_canon::GateCanon),
     ("gpu-loudness", &gpu_loudness::GpuLoudness),
+    (
+        "host-oracle-elimination",
+        &host_oracle_elimination::HostOracleElimination,
+    ),
     ("hot-path-blocking-wait", &hot_path::BlockingWait),
     ("hot-path-reserve", &hot_path::ReserveArgument),
     ("hot-path-unbounded-cache", &hot_path::UnboundedCache),

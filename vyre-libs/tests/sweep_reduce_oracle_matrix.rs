@@ -16,9 +16,12 @@
 mod wire_words;
 use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
-use vyre_libs::reduce::{
-    all, any, count, count_non_zero, gather, histogram, max, min, multi_block_prefix_scan,
-    range_counts, scatter, sum, workgroup_any,
+use vyre_reference::composition_witness::{
+    exclusive_prefix_sum_witness, gather_witness, gather_witness_into, histogram_witness,
+    histogram_witness_into, inclusive_prefix_sum_witness, inclusive_prefix_sum_witness_into,
+    range_counts_witness, reduce_all_witness, reduce_any_witness, reduce_count_non_zero_witness,
+    reduce_count_witness, reduce_max_witness, reduce_min_witness, reduce_workgroup_any_witness,
+    scatter_witness, scatter_witness_into, wrapping_sum_witness,
 };
 
 type ScalarReduce = fn(&[u32]) -> u32;
@@ -26,47 +29,55 @@ type VectorReduce = fn(&[u32]) -> Vec<u32>;
 
 /// Reducers collapsing a u32 slice to one u32.
 const SCALAR: &[(&str, ScalarReduce, ScalarReduce)] = &[
-    ("reduce_any", any::cpu_ref, |input| {
+    ("reduce_any", reduce_any_witness, |input| {
         u32::from(input.iter().any(|value| *value != 0))
     }),
-    ("reduce_all", all::cpu_ref, |input| {
+    ("reduce_all", reduce_all_witness, |input| {
         u32::from(input.iter().all(|value| *value != 0))
     }),
-    ("reduce_sum", sum::cpu_ref, |input| {
+    ("reduce_sum", wrapping_sum_witness, |input| {
         // Widened accumulation truncated once, versus the production per-element
         // wrapping u32 fold.
         let wide: u64 = input.iter().map(|value| u64::from(*value)).sum();
         wide as u32
     }),
-    ("reduce_min", min::cpu_ref, |input| {
+    ("reduce_min", reduce_min_witness, |input| {
         input.iter().copied().min().unwrap_or(u32::MAX)
     }),
-    ("reduce_max", max::cpu_ref, |input| {
+    ("reduce_max", reduce_max_witness, |input| {
         input.iter().copied().max().unwrap_or(0)
     }),
-    ("reduce_count", count::cpu_ref, |input| {
+    ("reduce_count", reduce_count_witness, |input| {
         // Kernighan clear-lowest-set-bit loop, versus the production `count_ones`.
         input.iter().copied().map(kernighan_popcount).sum()
     }),
-    ("reduce_count_non_zero", count_non_zero::cpu_ref, |input| {
-        // Complement of the zero count, versus the production non-zero filter.
-        let zeros = input.iter().filter(|value| **value == 0).count();
-        (input.len() - zeros) as u32
-    }),
-    ("reduce_workgroup_any", workgroup_any::cpu_ref, |input| {
-        // `workgroup_any_u32` reduces with `Expr::bitor`, so the result is the
-        // bitwise OR of every value (`[0,0,7,0] -> 7`), not a boolean 0/1.
-        // Computed here as the halving tree the GPU actually emits, versus the
-        // production left-to-right fold.
-        tree_or(input)
-    }),
+    (
+        "reduce_count_non_zero",
+        reduce_count_non_zero_witness,
+        |input| {
+            // Complement of the zero count, versus the production non-zero filter.
+            let zeros = input.iter().filter(|value| **value == 0).count();
+            (input.len() - zeros) as u32
+        },
+    ),
+    (
+        "reduce_workgroup_any",
+        reduce_workgroup_any_witness,
+        |input| {
+            // `workgroup_any_u32` reduces with `Expr::bitor`, so the result is the
+            // bitwise OR of every value (`[0,0,7,0] -> 7`), not a boolean 0/1.
+            // Computed here as the halving tree the GPU actually emits, versus the
+            // production left-to-right fold.
+            tree_or(input)
+        },
+    ),
 ];
 
 /// Reducers producing one u32 per input element.
 const VECTOR: &[(&str, VectorReduce, VectorReduce)] = &[
     (
         "multi_block_prefix_scan_inclusive",
-        multi_block_prefix_scan::cpu_ref,
+        inclusive_prefix_sum_witness,
         |input| {
             let mut acc = 0u32;
             input
@@ -80,7 +91,7 @@ const VECTOR: &[(&str, VectorReduce, VectorReduce)] = &[
     ),
     (
         "multi_block_prefix_scan_exclusive",
-        multi_block_prefix_scan::cpu_ref_exclusive,
+        exclusive_prefix_sum_witness,
         |input| {
             let mut acc = 0u32;
             input
@@ -128,10 +139,10 @@ fn vector_reducers_match_independent_oracles() {
 fn multi_block_prefix_scan_into_overwrites_stale_output() {
     for (case_idx, input) in reduce_inputs().enumerate() {
         let mut out = vec![0xDEAD_BEEFu32; input.len() + 7];
-        multi_block_prefix_scan::cpu_ref_into(&input, &mut out);
+        inclusive_prefix_sum_witness_into(&input, &mut out);
         assert_eq!(
             out,
-            multi_block_prefix_scan::cpu_ref(&input),
+            inclusive_prefix_sum_witness(&input),
             "Fix: multi_block_prefix_scan cpu_ref_into case {case_idx} len={} must overwrite every stale word and resize the buffer.",
             input.len()
         );
@@ -146,14 +157,14 @@ fn gather_matches_independent_oracle() {
             .map(|index| src.get(*index as usize).copied().unwrap_or(0))
             .collect();
         assert_eq!(
-            gather::cpu_ref(&src, &indices),
+            gather_witness(&src, &indices),
             expected,
             "Fix: reduce_gather case {case_idx} src_len={} indices_len={} must match the independent oracle.",
             src.len(),
             indices.len()
         );
         let mut out = vec![0xDEAD_BEEFu32; indices.len() + 5];
-        gather::cpu_ref_into(&src, &indices, &mut out);
+        gather_witness_into(&src, &indices, &mut out);
         assert_eq!(
             out, expected,
             "Fix: reduce_gather cpu_ref_into case {case_idx} must overwrite every stale word and resize the buffer."
@@ -172,13 +183,13 @@ fn scatter_matches_independent_oracle() {
             }
         }
         assert_eq!(
-            scatter::cpu_ref(&src, &indices, dst_len),
+            scatter_witness(&src, &indices, dst_len),
             expected,
             "Fix: reduce_scatter case {case_idx} src_len={} dst_len={dst_len} must match the independent oracle.",
             src.len()
         );
         let mut out = vec![0xDEAD_BEEFu32; dst_len + 5];
-        scatter::cpu_ref_into(&src, &indices, dst_len, &mut out);
+        scatter_witness_into(&src, &indices, dst_len, &mut out);
         assert_eq!(
             out, expected,
             "Fix: reduce_scatter cpu_ref_into case {case_idx} must overwrite every stale word and resize the buffer."
@@ -195,13 +206,13 @@ fn histogram_matches_independent_oracle() {
             .map(|bin| input.iter().filter(|value| **value == bin).count() as u32)
             .collect();
         assert_eq!(
-            histogram::cpu_ref(&input, num_bins),
+            histogram_witness(&input, num_bins),
             expected,
             "Fix: reduce_histogram case {case_idx} len={} num_bins={num_bins} must match the independent oracle.",
             input.len()
         );
         let mut out = vec![0xDEAD_BEEFu32; num_bins as usize + 5];
-        histogram::cpu_ref_into(&input, num_bins, &mut out);
+        histogram_witness_into(&input, num_bins, &mut out);
         assert_eq!(
             out, expected,
             "Fix: reduce_histogram cpu_ref_into case {case_idx} must overwrite every stale bin and resize the buffer."
@@ -228,7 +239,7 @@ fn range_counts_matches_independent_oracle() {
             wide as u32
         };
         assert_eq!(
-            range_counts::cpu_ref(&input, start, end),
+            range_counts_witness(&input, start, end),
             expected,
             "Fix: reduce_range_counts case {case_idx} len={} start={start} end={end} must match the independent oracle.",
             input.len()

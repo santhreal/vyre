@@ -228,11 +228,7 @@ impl<'a> TableStateMachineComposer<'a> {
                         end,
                         vec![self.advance_node(Expr::load(haystack, Expr::var("step")))],
                     ),
-                    Node::store(
-                        matches,
-                        i,
-                        Expr::load(accept, Expr::var(self.state_var)),
-                    ),
+                    Node::store(matches, i, Expr::load(accept, Expr::var(self.state_var))),
                 ],
             ),
         ]
@@ -334,7 +330,6 @@ impl<'a> TableStateMachineComposer<'a> {
         ]);
         vec![Node::if_then(Expr::lt(index, valid_len), body)]
     }
-
 }
 
 impl TableStateMachineComposer<'_> {
@@ -343,6 +338,7 @@ impl TableStateMachineComposer<'_> {
     // -----------------------------------------------------------------------
 
     /// Compute host-side flat 1D index: `row * stride + col`.
+    #[cfg(test)]
     #[must_use]
     #[inline]
     pub const fn flat_index(row: u32, stride: u32, col: u32) -> usize {
@@ -414,7 +410,10 @@ mod tests {
     #[test]
     fn flat_indices_match_layout_contract() {
         assert_eq!(TableStateMachineComposer::flat_byte_index(0, b'a'), 97);
-        assert_eq!(TableStateMachineComposer::flat_byte_index(1, b'b'), 256 + 98);
+        assert_eq!(
+            TableStateMachineComposer::flat_byte_index(1, b'b'),
+            256 + 98
+        );
         assert_eq!(TableStateMachineComposer::flat_index(3, 10, 5), 35);
     }
 
@@ -478,7 +477,8 @@ mod tests {
 
     #[test]
     fn table_lookup_2d_and_byte_lookup() {
-        let lookup2d = TableStateMachineComposer::table_lookup_2d("table", Expr::var("r"), 16, Expr::var("c"));
+        let lookup2d =
+            TableStateMachineComposer::table_lookup_2d("table", Expr::var("r"), 16, Expr::var("c"));
         let rendered2d = format!("{lookup2d:?}");
         assert!(rendered2d.contains("table"));
         assert!(rendered2d.contains("16"));

@@ -1,276 +1,88 @@
 //! Contracts for the motif primitive.
 
 use vyre_libs::graph::motif::{
-    count_witness_participants, cpu_ref, cpu_ref_into, cpu_ref_matches,
-    cpu_ref_participation_count, plan_motif_dispatch, plan_motif_launch, try_cpu_ref_into,
-    try_cpu_ref_participation_count, try_cpu_ref_participation_count_with_scratch,
-    validate_csr_inputs, validate_motif_inputs, MotifCpuScratch, MotifEdge, MotifLayout,
-    MotifProgramCacheKey, MOTIF_DISPATCH_GRID, MOTIF_HITS_BUFFER, MOTIF_WITNESS_OUT_BUFFER,
-    MOTIF_WORKGROUP_SIZE, TWO_EDGE_PATH_MOTIF,
+    plan_motif_dispatch, plan_motif_launch, validate_csr_inputs, validate_motif_inputs, MotifEdge,
+    MotifLayout, MotifProgramCacheKey, MOTIF_DISPATCH_GRID, MOTIF_HITS_BUFFER,
+    MOTIF_WITNESS_OUT_BUFFER, MOTIF_WORKGROUP_SIZE, TWO_EDGE_PATH_MOTIF,
 };
+use vyre_reference::composition_witness::{motif_witness, reduce_count_non_zero_witness};
+
+fn reference_witness(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif_edges: &[MotifEdge],
+) -> Vec<u32> {
+    let edges = motif_edges
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect::<Vec<_>>();
+    motif_witness(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        &edges,
+    )
+}
 
 #[test]
-fn try_cpu_ref_into_rejects_bad_motif_endpoint_without_clobbering_witness() {
-    let mut witness = vec![9, 8, 7];
-    let motif = [MotifEdge {
+fn validation_rejects_bad_motif_endpoints() {
+    let to_outside = [MotifEdge {
         from: 0,
         kind_mask: 1,
         to: 3,
     }];
-
-    let err = try_cpu_ref_into(3, &[0, 1, 1, 1], &[1], &[1], &motif, &mut witness)
+    let err = validate_motif_inputs(3, &[0, 1, 1, 1], &[1], &[1], &to_outside)
         .expect_err("motif endpoint beyond node_count must fail validation");
-
     assert!(
         err.contains("motif_edges[0].to=3 is outside node_count 3"),
-        "Fix: motif endpoint errors must identify the bad endpoint, got: {err}"
+        "endpoint errors must identify the bad destination, got: {err}"
     );
-    assert_eq!(
-        witness,
-        vec![9, 8, 7],
-        "failed motif preflight must preserve the previous witness vector"
-    );
-}
 
-#[test]
-fn try_participation_count_rejects_bad_motif_endpoint() {
-    let motif = [MotifEdge {
+    let from_outside = [MotifEdge {
         from: 4,
         kind_mask: 1,
         to: 0,
     }];
-
-    let err = try_cpu_ref_participation_count(3, &[0, 0, 0, 0], &[], &[], &motif)
-        .expect_err("motif participation count must validate pattern endpoints");
-
+    let err = validate_motif_inputs(3, &[0, 0, 0, 0], &[], &[], &from_outside)
+        .expect_err("motif source beyond node_count must fail validation");
     assert!(
         err.contains("motif_edges[0].from=4 is outside node_count 3"),
-        "Fix: motif participation count must surface endpoint shape errors, got: {err}"
+        "endpoint errors must identify the bad source, got: {err}"
     );
 }
 
 #[test]
-fn try_participation_count_with_scratch_reuses_endpoint_storage() {
-    let mut endpoints = Vec::with_capacity(8);
-    endpoints.extend_from_slice(&[99, 98, 97]);
-    let mut scratch = MotifCpuScratch { endpoints };
-    let capacity = scratch.endpoints.capacity();
-    let motif = TWO_EDGE_PATH_MOTIF;
-
-    let count = try_cpu_ref_participation_count_with_scratch(
-        3,
-        &[0, 1, 2, 2],
-        &[1, 2],
-        &[1, 1],
-        &motif,
-        &mut scratch,
-    )
-    .expect("Fix: valid motif count must run with reusable endpoint scratch.");
-
-    assert_eq!(count, 3);
-    assert_eq!(scratch.endpoints.capacity(), capacity);
-    assert_eq!(
-        scratch.endpoints,
-        vec![0, 1, 2],
-        "Fix: endpoint scratch must be sorted and deduplicated for the live motif."
-    );
-
-    let count = try_cpu_ref_participation_count_with_scratch(
-        3,
-        &[0, 1, 1, 1],
-        &[1],
-        &[1],
-        &motif,
-        &mut scratch,
-    )
-    .expect("Fix: valid graph with missing motif must return zero without stale endpoints.");
-
-    assert_eq!(count, 0);
-    assert_eq!(scratch.endpoints.capacity(), capacity);
-    assert!(
-        scratch.endpoints.is_empty(),
-        "Fix: missing motif must clear stale endpoint scratch."
-    );
-}
-
-#[test]
-fn try_participation_count_with_scratch_validates_before_mutating_storage() {
-    let mut scratch = MotifCpuScratch {
-        endpoints: vec![0xCAFE_BABE, 0xDEAD_BEEF],
-    };
-    let motif = [MotifEdge {
-        from: 4,
-        kind_mask: 1,
-        to: 0,
-    }];
-
-    let err = try_cpu_ref_participation_count_with_scratch(
-        3,
-        &[0, 0, 0, 0],
-        &[],
-        &[],
-        &motif,
-        &mut scratch,
-    )
-    .expect_err("Fix: motif endpoint validation must run before scratch reuse.");
-
-    assert!(
-        err.contains("motif_edges[0].from=4 is outside node_count 3"),
-        "Fix: motif participation count must surface endpoint shape errors, got: {err}"
-    );
-    assert_eq!(
-        scratch.endpoints,
-        vec![0xCAFE_BABE, 0xDEAD_BEEF],
-        "Fix: validation failure must not clear reusable endpoint scratch."
-    );
-}
-
-#[test]
-fn generated_participation_count_matches_witness_count() {
+fn generated_participant_count_matches_witness_count() {
     for node_count in 2u32..=7 {
-        let mut offsets = Vec::with_capacity(node_count as usize + 1);
-        let mut targets = Vec::new();
-        let mut masks = Vec::new();
-        offsets.push(0);
-        for node in 0..node_count {
-            targets.push((node + 1) % node_count);
-            masks.push(1);
-            offsets.push(targets.len() as u32);
-        }
-        let motif = [MotifEdge {
-            from: 0,
-            kind_mask: 1,
-            to: 1,
-        }];
-        let witness = cpu_ref(node_count, &offsets, &targets, &masks, &motif);
-        let witness_count =
-            count_witness_participants(&witness).expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated witness count must fit u32");
-        let count =
-            try_cpu_ref_participation_count(node_count, &offsets, &targets, &masks, &motif)
-                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated motif participation count must pass validation");
-
-        assert_eq!(
-            count, witness_count,
-            "participation count diverged from witness count at node_count={node_count}"
-        );
-    }
-}
-
-#[test]
-fn three_node_chain_motif_marks_every_participant() {
-    let witness = cpu_ref(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &TWO_EDGE_PATH_MOTIF);
-    assert_eq!(witness, vec![1, 1, 1]);
-}
-
-#[test]
-fn missing_motif_edge_clears_all_participants() {
-    let witness = cpu_ref(3, &[0, 1, 1, 1], &[1], &[1], &TWO_EDGE_PATH_MOTIF);
-    assert_eq!(witness, vec![0, 0, 0]);
-}
-
-#[test]
-fn cpu_ref_into_reuses_witness_storage() {
-    let mut witness = Vec::with_capacity(8);
-    cpu_ref_into(
-        3,
-        &[0, 1, 2, 2],
-        &[1, 2],
-        &[1, 1],
-        &TWO_EDGE_PATH_MOTIF,
-        &mut witness,
-    );
-    let capacity = witness.capacity();
-    assert_eq!(witness, vec![1, 1, 1]);
-
-    cpu_ref_into(
-        3,
-        &[0, 1, 1, 1],
-        &[1],
-        &[1],
-        &[MotifEdge {
-            from: 1,
-            kind_mask: 1,
-            to: 2,
-        }],
-        &mut witness,
-    );
-    assert_eq!(witness.capacity(), capacity);
-    assert_eq!(witness, vec![0, 0, 0]);
-}
-
-#[test]
-fn cpu_ref_into_validates_before_clearing_witness_storage() {
-    let mut witness = vec![0xCAFE_BABEu32, 0xDEAD_BEEF];
-    let ptr = witness.as_ptr();
-    let previous_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(|_| {}));
-    let err = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        cpu_ref_into(
-            2,
-            &[0, 1, 1],
-            &[1],
-            &[],
-            &[MotifEdge {
-                from: 0,
-                kind_mask: 1,
-                to: 1,
-            }],
-            &mut witness,
-        );
-    }));
-    std::panic::set_hook(previous_hook);
-
-    assert!(err.is_err(), "mismatched CSR edge arrays must be rejected");
-    assert_eq!(
-        witness,
-        vec![0xCAFE_BABEu32, 0xDEAD_BEEF],
-        "Fix: motif CPU oracle must validate before clearing caller witness storage."
-    );
-    assert_eq!(witness.as_ptr(), ptr);
-}
-
-#[test]
-fn generated_try_cpu_ref_into_and_count_match_witness() {
-    for node_count in 1u32..=64 {
-        let mut scratch = MotifCpuScratch::new();
-        let edge_offsets: Vec<u32> = (0..=node_count).collect();
-        let edge_targets: Vec<u32> = (0..node_count)
+        let edge_offsets = (0..=node_count).collect::<Vec<_>>();
+        let edge_targets = (0..node_count)
             .map(|node| (node + 1) % node_count)
-            .collect();
-        let edge_kind_mask = vec![1u32; node_count as usize];
+            .collect::<Vec<_>>();
+        let edge_kind_mask = vec![1; node_count as usize];
         for motif_len in 0usize..64 {
-            let motif_edges: Vec<MotifEdge> = (0..motif_len)
+            let motif_edges = (0..motif_len)
                 .map(|index| {
-                    let from = (index as u32) % node_count;
+                    let from = index as u32 % node_count;
                     MotifEdge {
                         from,
                         kind_mask: 1,
                         to: (from + 1) % node_count,
                     }
                 })
-                .collect();
-            let mut witness = vec![0xCAFE_BABEu32; 3];
-            try_cpu_ref_into(
+                .collect::<Vec<_>>();
+            let witness = reference_witness(
                 node_count,
                 &edge_offsets,
                 &edge_targets,
                 &edge_kind_mask,
                 &motif_edges,
-                &mut witness,
-            )
-            .unwrap();
-            let count = try_cpu_ref_participation_count_with_scratch(
-                node_count,
-                &edge_offsets,
-                &edge_targets,
-                &edge_kind_mask,
-                &motif_edges,
-                &mut scratch,
-            )
-            .unwrap();
+            );
             assert_eq!(witness.len(), node_count as usize);
             assert_eq!(
-                count,
+                reduce_count_non_zero_witness(&witness),
                 witness.iter().filter(|&&value| value != 0).count() as u32
             );
         }
@@ -278,27 +90,33 @@ fn generated_try_cpu_ref_into_and_count_match_witness() {
 }
 
 #[test]
-fn allocation_free_predicates_match_witness_contract() {
-    let motif = TWO_EDGE_PATH_MOTIF;
-    assert!(cpu_ref_matches(&[0, 1, 2, 2], &[1, 2], &[1, 1], &motif));
-    assert_eq!(
-        cpu_ref_participation_count(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &motif),
-        3
-    );
-    assert!(!cpu_ref_matches(&[0, 1, 1, 1], &[1], &[1], &motif));
-    assert_eq!(
-        cpu_ref_participation_count(3, &[0, 1, 1, 1], &[1], &[1], &motif),
-        0
-    );
-    assert!(
-        cpu_ref_matches(&[0, 1, 2, 2], &[1, 2], &[1, 1], &[]),
-        "empty motif has no missing edges"
-    );
-    assert_eq!(
-        cpu_ref_participation_count(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &[]),
-        0,
-        "empty motif has no participating nodes"
-    );
+fn complete_path_motif_marks_every_participant() {
+    let witness = reference_witness(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &TWO_EDGE_PATH_MOTIF);
+    assert_eq!(witness, vec![1, 1, 1]);
+}
+
+#[test]
+fn missing_motif_edge_clears_all_participants() {
+    let witness = reference_witness(3, &[0, 1, 1, 1], &[1], &[1], &TWO_EDGE_PATH_MOTIF);
+    assert_eq!(witness, vec![0, 0, 0]);
+}
+
+#[test]
+fn repeated_reference_calls_do_not_retain_previous_state() {
+    let complete = reference_witness(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &TWO_EDGE_PATH_MOTIF);
+    let missing = reference_witness(3, &[0, 1, 1, 1], &[1], &[1], &TWO_EDGE_PATH_MOTIF);
+    let complete_again =
+        reference_witness(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &TWO_EDGE_PATH_MOTIF);
+    assert_eq!(complete, vec![1, 1, 1]);
+    assert_eq!(missing, vec![0, 0, 0]);
+    assert_eq!(complete_again, complete);
+}
+
+#[test]
+fn empty_motif_matches_without_participants() {
+    let witness = reference_witness(3, &[0, 1, 2, 2], &[1, 2], &[1, 1], &[]);
+    assert_eq!(witness, vec![0, 0, 0]);
+    assert_eq!(reduce_count_non_zero_witness(&witness), 0);
 }
 
 #[test]
@@ -400,7 +218,7 @@ fn dispatch_plan_owns_shape_grid_buffers_and_readback_words() {
 
 #[test]
 fn witness_participant_count_uses_primitive_contract() {
-    assert_eq!(count_witness_participants(&[1, 0, 2, 0]).unwrap(), 2);
+    assert_eq!(reduce_count_non_zero_witness(&[1, 0, 2, 0]), 2);
 }
 
 #[test]

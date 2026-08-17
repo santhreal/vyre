@@ -22,17 +22,10 @@ pub(crate) fn fixed_u32_matvec_program(
     let matrix_ref = TensorRef::u32_2d(matrix, n, n);
     let vector_ref = TensorRef::u32_1d(vector, n);
     let out_ref = TensorRef::u32_1d(out, n);
-    ContractionComposer::fixed_u32_matvec(
-        op_id,
-        matrix_ref,
-        vector_ref,
-        out_ref,
-        n,
-        matrix_cells,
-    )
-    .with_region_generator(op_id)
-    .build()
-    .expect("Fix: fixed_u32_matvec_program failed to build contraction program")
+    ContractionComposer::fixed_u32_matvec(op_id, matrix_ref, vector_ref, out_ref, n, matrix_cells)
+        .with_region_generator(op_id)
+        .build()
+        .expect("Fix: fixed_u32_matvec_program failed to build contraction program")
 }
 
 pub(crate) struct FixedMatmulContext {
@@ -108,16 +101,7 @@ where
     let rhs_ref = TensorRef::u32_2d(rhs, shared, cols);
     let out_ref = TensorRef::u32_2d(out, rows, cols);
     ContractionComposer::custom_u32_2d(
-        op_id,
-        lhs_ref,
-        rhs_ref,
-        out_ref,
-        rows,
-        shared,
-        cols,
-        identity,
-        combine,
-        accumulate,
+        op_id, lhs_ref, rhs_ref, out_ref, rows, shared, cols, identity, combine, accumulate,
     )
     .with_region_generator(op_id)
     .build()

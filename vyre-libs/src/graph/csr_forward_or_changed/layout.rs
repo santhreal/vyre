@@ -19,8 +19,9 @@ pub const fn csr_forward_or_changed_parallel_grid(node_count: u32) -> [u32; 3] {
 /// Dispatch grid for a batched node-parallel CSR forward-or-changed pass.
 ///
 /// One y group per query, floored at one so a zero-query batch still launches.
+#[cfg(test)]
 #[must_use]
-pub const fn csr_forward_or_changed_parallel_batch_grid(
+pub(crate) const fn csr_forward_or_changed_parallel_batch_grid(
     node_count: u32,
     query_count: u32,
 ) -> [u32; 3] {

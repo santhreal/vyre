@@ -57,19 +57,23 @@ pub use four_russians::{
     four_russians_dense_lut_from_adj_rows, four_russians_dense_lut_words,
     four_russians_frontier_words, four_russians_source_tile_count,
 };
+#[cfg(test)]
+pub use frontier_plan::{adaptive_frontier_popcount, adaptive_frontier_popcount_in_domain};
 pub use frontier_plan::{
-    adaptive_frontier_popcount, adaptive_frontier_popcount_in_domain, adaptive_frontier_stats,
-    adaptive_node_dispatch_grid, plan_adaptive_frontier_work, plan_adaptive_resident_auto_step,
-    plan_adaptive_resident_frontier_step, plan_adaptive_resident_sparse_queue_step,
-    validate_adaptive_frontier, validate_adaptive_traversal_layout, AdaptiveFrontierLayout,
-    AdaptiveFrontierStats, AdaptiveFrontierWorkPlan, AdaptiveResidentAutoStepPlan,
-    AdaptiveResidentFrontierPlan, AdaptiveResidentSparseQueuePlan, AdaptiveTraversalLayout,
+    adaptive_frontier_stats, adaptive_node_dispatch_grid, plan_adaptive_frontier_work,
+    plan_adaptive_resident_auto_step, plan_adaptive_resident_frontier_step,
+    plan_adaptive_resident_sparse_queue_step, validate_adaptive_frontier,
+    validate_adaptive_traversal_layout, AdaptiveFrontierLayout, AdaptiveFrontierStats,
+    AdaptiveFrontierWorkPlan, AdaptiveResidentAutoStepPlan, AdaptiveResidentFrontierPlan,
+    AdaptiveResidentSparseQueuePlan, AdaptiveTraversalLayout,
     ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_LANES, ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE,
     ADAPTIVE_TRAVERSAL_POPCOUNT_BYTES,
 };
+#[cfg(test)]
+pub use mode_selection::should_use_dense;
 pub use mode_selection::{
-    select_adaptive_traversal_mode, select_dense_traversal_kernel, should_use_dense,
-    AdaptiveTraversalMode, DenseTraversalKernel,
+    select_adaptive_traversal_mode, select_dense_traversal_kernel, AdaptiveTraversalMode,
+    DenseTraversalKernel,
 };
 pub use plan_cache_key::{
     adaptive_four_russians_graph_content_hash, adaptive_sparse_queue_graph_content_hash,

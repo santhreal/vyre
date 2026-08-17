@@ -74,7 +74,7 @@ Run the checked-in behavior from `vyre-pass-engine/examples/vyre_pass_engine_rel
 
 ### Features
 
-- Manifest features: `all-solvers`, `cpu-parity`, `default`, `optimizer`
+- Manifest features: `all-solvers`, `default`, `optimizer`
 - Default feature members: `optimizer`
 
 ### Errors and unsupported behavior

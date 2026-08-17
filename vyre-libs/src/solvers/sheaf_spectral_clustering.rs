@@ -38,9 +38,45 @@ pub const DEFAULT_SPECTRUM_ITERATIONS: u32 = 32;
 
 /// Reusable buffers for the sheaf-spectral dominant-eigenpair scan.
 #[derive(Debug, Default)]
-pub struct SheafSpectrumScratch {
+#[cfg(test)]
+pub(crate) struct SheafSpectrumScratch {
+    v_init: Vec<f64>,
+    v: Vec<f64>,
+    v_next: Vec<f64>,
 }
 
+#[cfg(test)]
+impl SheafSpectrumScratch {
+    /// Dominant eigenvector from the last spectral solve.
+    #[must_use]
+    pub(crate) fn eigenvector(&self) -> &[f64] {
+        &self.v
+    }
+}
+
+#[must_use]
+#[cfg(test)]
+pub(crate) fn dominant_spectrum(restriction_diag: &[f64], iterations: u32) -> (f64, Vec<f64>) {
+    vyre_reference::composition_witness::sheaf_dominant_spectrum_witness(
+        restriction_diag,
+        iterations,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn dominant_spectrum_with_scratch(
+    restriction_diag: &[f64],
+    iterations: u32,
+    scratch: &mut SheafSpectrumScratch,
+) -> f64 {
+    scratch.v_init.clear();
+    scratch.v_next.clear();
+    vyre_reference::composition_witness::sheaf_dominant_spectrum_witness_into(
+        restriction_diag,
+        iterations,
+        &mut scratch.v,
+    )
+}
 /// Caller-owned GPU dispatch scratch for fixed-point sheaf spectra.
 #[derive(Debug, Default)]
 pub struct SheafSpectrumGpuScratch {
@@ -55,9 +91,6 @@ pub struct FixedSheafSpectrum {
     /// Final eigenvector buffer in primitive-native 16.16 storage.
     pub eigenvector: Vec<u32>,
 }
-
-
-
 
 /// Fixed-point production path for sheaf spectral clustering.
 ///
@@ -192,23 +225,25 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     )?;
     // The kernel's writable buffers, in binding order, are exactly `v` (the eigenvector) then
     // `lambda`; the running max/arg-max are loop-carried locals, not storage buffers, so a faithful
-    // backend returns precisely these two outputs. Reject any other count.
-    if outputs.len() != 2 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: dominant_spectrum_fixed_via expected exactly eigenvector and lambda outputs, got {} buffer(s).",
-            outputs.len()
-        )));
-    }
+    let [eigenvector_out_buf, lambda_out_buf] = match outputs.as_slice() {
+        [ev, l] => [ev, l],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: dominant_spectrum_fixed_via expected exactly eigenvector and lambda outputs, got {} buffer(s).",
+                outputs.len()
+            )))
+        }
+    };
 
     decode_u32_output_exact(
-        &outputs[0],
+        eigenvector_out_buf,
         cells,
         "dominant_spectrum_fixed_via eigenvector",
         eigenvector_out,
     )?;
     let mut lambda = Vec::with_capacity(1);
     decode_u32_output_exact(
-        &outputs[1],
+        lambda_out_buf,
         1,
         "dominant_spectrum_fixed_via lambda",
         &mut lambda,
@@ -220,24 +255,26 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
 /// dominant eigenvalue. Higher = cleaner cluster separation.
 #[must_use]
 #[cfg(test)]
-pub fn spectral_gap(restriction_diag: &[f64]) -> f64 {
-    let mut scratch = SheafSpectrumScratch::default();
-    spectral_gap_into(restriction_diag, &mut scratch)
+pub(crate) fn spectral_gap(restriction_diag: &[f64]) -> f64 {
+    vyre_reference::composition_witness::sheaf_spectral_gap_witness(
+        restriction_diag,
+        DEFAULT_SPECTRUM_ITERATIONS,
+    )
 }
 
 /// Compute spectral gap using caller-owned dominant-eigenpair scratch.
 #[cfg(test)]
-pub fn spectral_gap_into(restriction_diag: &[f64], scratch: &mut SheafSpectrumScratch) -> f64 {
-    let lambda =
-        dominant_spectrum_with_scratch(restriction_diag, DEFAULT_SPECTRUM_ITERATIONS, scratch);
-    // Eigenvalues of a sheaf Laplacian on transmission diagonals are
-    // bounded by max(restriction_diag); normalize to [0, 1].
-    let max_diag = restriction_diag.iter().cloned().fold(0.0_f64, f64::max);
-    if max_diag <= 1e-20 {
-        0.0
-    } else {
-        (lambda / max_diag).clamp(0.0, 1.0)
-    }
+pub(crate) fn spectral_gap_into(
+    restriction_diag: &[f64],
+    scratch: &mut SheafSpectrumScratch,
+) -> f64 {
+    scratch.v_init.clear();
+    scratch.v_next.clear();
+    vyre_reference::composition_witness::sheaf_spectral_gap_witness_into(
+        restriction_diag,
+        DEFAULT_SPECTRUM_ITERATIONS,
+        &mut scratch.v,
+    )
 }
 
 /// Derive a suggested cluster count from the principal eigenvector
@@ -247,34 +284,21 @@ pub fn spectral_gap_into(restriction_diag: &[f64], scratch: &mut SheafSpectrumSc
 /// runs (≥ 1).
 #[must_use]
 #[cfg(test)]
-pub fn suggested_cluster_count(restriction_diag: &[f64]) -> u32 {
+pub(crate) fn suggested_cluster_count(restriction_diag: &[f64]) -> u32 {
     let mut scratch = SheafSpectrumScratch::default();
+    dominant_spectrum_with_scratch(restriction_diag, DEFAULT_SPECTRUM_ITERATIONS, &mut scratch);
     suggested_cluster_count_into(restriction_diag, &mut scratch)
 }
 
 /// Derive suggested cluster count using caller-owned spectral scratch.
 #[cfg(test)]
-pub fn suggested_cluster_count_into(
-    restriction_diag: &[f64],
+pub(crate) fn suggested_cluster_count_into(
+    _restriction_diag: &[f64],
     scratch: &mut SheafSpectrumScratch,
 ) -> u32 {
-    dominant_spectrum_with_scratch(restriction_diag, DEFAULT_SPECTRUM_ITERATIONS, scratch);
-    let v = scratch.eigenvector();
-    if v.is_empty() {
-        return 0;
-    }
-    let mut count: u32 = 1;
-    let mut last_sign = v[0].signum();
-    for &x in v.iter().skip(1) {
-        let sign = x.signum();
-        if sign != 0.0 && sign != last_sign && last_sign != 0.0 {
-            count = count.saturating_add(1);
-            last_sign = sign;
-        } else if last_sign == 0.0 && sign != 0.0 {
-            last_sign = sign;
-        }
-    }
-    count
+    vyre_reference::composition_witness::sheaf_suggested_cluster_count_witness(
+        scratch.eigenvector(),
+    )
 }
 
 #[cfg(test)]

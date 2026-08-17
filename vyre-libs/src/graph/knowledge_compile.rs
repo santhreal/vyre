@@ -5,7 +5,7 @@
 //! compilation step is host-side; the **evaluation** of a compiled
 //! circuit is GPU-shaped  -  exactly what #10 sum_product_circuit
 //! does. This file ships a thin wrapper that confirms the compose
-//! contract and adds a host-side d-DNNF satisfiability oracle helper.
+//! contract for device-resident d-DNNF evaluation.
 //!
 //! # Why this primitive is dual-use
 //!
@@ -33,6 +33,7 @@ pub const OP_ID: &str = "vyre-libs::graph::ddnnf_evaluate";
 pub const DDNNF_EVALUATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid that covers every compiled d-DNNF node lane.
+#[cfg(test)]
 #[must_use]
 pub const fn ddnnf_evaluate_dispatch_grid(n_nodes: u32) -> [u32; 3] {
     vyre_primitives::lane_grid(n_nodes, DDNNF_EVALUATE_WORKGROUP_SIZE[0])
@@ -247,16 +248,62 @@ pub fn try_ddnnf_evaluate(
     ))
 }
 
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        ddnnf_evaluate_witness as ddnnf_evaluate_cpu, try_ddnnf_evaluate_witness,
+        try_ddnnf_evaluate_witness_into,
+    };
+
+    #[derive(Default)]
+    struct DdnnfCpuScratch {
+        values: Vec<u32>,
+    }
+
+    impl DdnnfCpuScratch {
+        fn new() -> Self {
+            Self::default()
+        }
+    }
+
+    fn try_ddnnf_evaluate_cpu(
+        nodes: &[(u32, u32, u32)],
+        node_variables: &[u32],
+        children: &[u32],
+        assignments: &[u32],
+        topological_order: &[u32],
+    ) -> Result<Vec<u32>, String> {
+        try_ddnnf_evaluate_witness(
+            nodes,
+            node_variables,
+            children,
+            assignments,
+            topological_order,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_ddnnf_evaluate_cpu_into_with_scratch(
+        nodes: &[(u32, u32, u32)],
+        node_variables: &[u32],
+        children: &[u32],
+        assignments: &[u32],
+        topological_order: &[u32],
+        output: &mut Vec<u32>,
+        scratch: &mut DdnnfCpuScratch,
+    ) -> Result<(), String> {
+        try_ddnnf_evaluate_witness_into(
+            nodes,
+            node_variables,
+            children,
+            assignments,
+            topological_order,
+            &mut scratch.values,
+        )?;
+        std::mem::swap(output, &mut scratch.values);
+        Ok(())
+    }
 
     #[test]
     fn cpu_single_true_literal_with_assigned_var() {
@@ -394,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn scratch_cpu_oracle_reuses_values_and_clears_stale_tail() {
+    fn scratch_cpu_oracle_ping_pongs_values_without_allocating() {
         let nodes = vec![(LITERAL_TRUE, 0, 0), (LITERAL_FALSE, 0, 0), (OR_NODE, 0, 2)];
         let node_var = vec![0, 1, 0];
         let children = vec![0, 1];
@@ -408,6 +455,8 @@ mod tests {
         scratch.values.extend_from_slice(&[11, 12, 13, 14, 15]);
         let out_capacity = out.capacity();
         let scratch_capacity = scratch.values.capacity();
+        let out_pointer = out.as_ptr();
+        let scratch_pointer = scratch.values.as_ptr();
 
         try_ddnnf_evaluate_cpu_into_with_scratch(
             &nodes,
@@ -421,9 +470,11 @@ mod tests {
         .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - valid d-DNNF circuit must evaluate into reusable storage");
 
         assert_eq!(out, vec![1, 1, 2]);
-        assert_eq!(scratch.values, vec![1, 1, 2]);
-        assert_eq!(out.capacity(), out_capacity);
-        assert_eq!(scratch.values.capacity(), scratch_capacity);
+        assert_eq!(scratch.values, vec![99, 98, 97, 96]);
+        assert_eq!(out.as_ptr(), scratch_pointer);
+        assert_eq!(scratch.values.as_ptr(), out_pointer);
+        assert_eq!(out.capacity(), scratch_capacity);
+        assert_eq!(scratch.values.capacity(), out_capacity);
 
         try_ddnnf_evaluate_cpu_into_with_scratch(
             &nodes[..1],
@@ -437,7 +488,9 @@ mod tests {
         .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - smaller d-DNNF circuit must reuse and truncate storage");
 
         assert_eq!(out, vec![1]);
-        assert_eq!(scratch.values, vec![1]);
+        assert_eq!(scratch.values, vec![1, 1, 2]);
+        assert_eq!(out.as_ptr(), out_pointer);
+        assert_eq!(scratch.values.as_ptr(), scratch_pointer);
         assert_eq!(out.capacity(), out_capacity);
         assert_eq!(scratch.values.capacity(), scratch_capacity);
     }

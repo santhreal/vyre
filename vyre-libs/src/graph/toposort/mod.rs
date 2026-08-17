@@ -25,13 +25,13 @@ mod error;
 mod plan;
 mod program;
 
-pub use csr::{
-    toposort_csr, toposort_csr_into, toposort_csr_into_with_scratch, validate_toposort_csr_inputs,
-    validate_toposort_csr_order, ToposortCsrLayout, ToposortCsrScratch,
+#[cfg(test)]
+pub(crate) use csr::{toposort_csr, toposort_csr_into};
+pub use csr::{validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrLayout};
+#[cfg(test)]
+pub(crate) use edge_list::{
+    reference_all_reachable, reference_reachable_set, reference_topo_order, toposort,
 };
-pub use edge_list::toposort;
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use edge_list::{reference_all_reachable, reference_reachable_set, reference_topo_order};
 pub use error::{ToposortCsrError, ToposortError};
 pub use plan::{
     plan_toposort_csr_dispatch, toposort_csr_slice_fingerprint, ToposortCsrDispatchPlan,

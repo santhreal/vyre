@@ -55,6 +55,8 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
     )
 }
 
+const EXPECTED_UPSAMPLE_2X_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -68,8 +70,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let expected = vec![0xFFFF_FFFFu32; 16];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
+            vec![vec![EXPECTED_UPSAMPLE_2X_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")

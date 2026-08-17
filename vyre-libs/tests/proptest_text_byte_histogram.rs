@@ -1,13 +1,12 @@
 //! Property gates for `text::byte_histogram::reference_byte_histogram`.
-//! Requires `cpu-parity` because the reference CPU oracle is gated
-//! behind that feature alongside `text`.
+//! Requires `text` to build the IR Program, evaluated against the `vyre-reference` witness.
 #![cfg(feature = "text")]
 
 use proptest::prelude::*;
 use vyre_foundation::ir::DataType;
 use vyre_libs::text::byte_histogram_256_u8;
-use vyre_reference::composition_witness::byte_histogram_witness as reference_byte_histogram;
 use vyre_primitives::wire::decode_u32_le_bytes_all as unpack_u32s;
+use vyre_reference::composition_witness::byte_histogram_witness as reference_byte_histogram;
 use vyre_reference::value::Value;
 
 fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {

@@ -8,22 +8,27 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::bitset::and_into::{bitset_and_into, cpu_ref as and_into_cpu};
-use vyre_libs::bitset::and_not_into::{bitset_and_not_into, cpu_ref as and_not_into_cpu};
-use vyre_libs::bitset::clear_bit::{bitset_clear_bit, cpu_ref as clear_bit_cpu};
-use vyre_libs::bitset::contains::{bitset_contains, cpu_ref as contains_cpu};
-use vyre_libs::bitset::copy::{bitset_copy, cpu_ref as copy_cpu};
-use vyre_libs::bitset::equal::{bitset_equal, cpu_ref as equal_cpu};
-use vyre_libs::bitset::frontier::{
-    absorb_new_frontier_bits, frontier_absorb_new_bits_no_counts_for_node_count_program,
+use vyre_libs::bitset::and_into::bitset_and_into;
+use vyre_libs::bitset::and_not_into::bitset_and_not_into;
+use vyre_libs::bitset::clear_bit::bitset_clear_bit;
+use vyre_libs::bitset::contains::bitset_contains;
+use vyre_libs::bitset::copy::bitset_copy;
+use vyre_libs::bitset::equal::bitset_equal;
+use vyre_libs::bitset::frontier::frontier_absorb_new_bits_no_counts_for_node_count_program;
+use vyre_libs::bitset::not::bitset_not;
+use vyre_libs::bitset::or::bitset_or;
+use vyre_libs::bitset::or_into::bitset_or_into;
+use vyre_libs::bitset::subset_of::bitset_subset_of;
+use vyre_libs::bitset::test_bit::bitset_test_bit;
+use vyre_libs::bitset::xor_into::bitset_xor_into;
+use vyre_libs::bitset::zero::bitset_zero;
+use vyre_reference::composition_witness::{
+    bitset_and_inplace_witness, bitset_and_not_inplace_witness, bitset_clear_bit_inplace_witness,
+    bitset_contains_witness, bitset_copy_witness, bitset_equal_witness, bitset_not_witness,
+    bitset_or_inplace_witness, bitset_or_witness, bitset_subset_of_witness,
+    bitset_test_bit_witness, bitset_xor_inplace_witness, bitset_zero_inplace_witness,
+    try_frontier_absorb_witness_into,
 };
-use vyre_libs::bitset::not::{bitset_not, cpu_ref as not_cpu};
-use vyre_libs::bitset::or::{bitset_or, cpu_ref as or_cpu};
-use vyre_libs::bitset::or_into::{bitset_or_into, cpu_ref as or_into_cpu};
-use vyre_libs::bitset::subset_of::{bitset_subset_of, cpu_ref as subset_of_cpu};
-use vyre_libs::bitset::test_bit::{bitset_test_bit, cpu_ref as test_bit_cpu};
-use vyre_libs::bitset::xor_into::{bitset_xor_into, cpu_ref as xor_into_cpu};
-use vyre_libs::bitset::zero::{bitset_zero, cpu_ref as zero_cpu};
 
 fn dispatch_grid(program: &vyre::ir::Program, inputs: &[Vec<u8>], grid_x: u32) -> Vec<Vec<u8>> {
     let mut config = DispatchConfig::default();
@@ -38,7 +43,7 @@ fn dispatch_grid(program: &vyre::ir::Program, inputs: &[Vec<u8>], grid_x: u32) -
 #[test]
 fn cuda_bitset_not_parity() {
     let input = vec![0x0F0F_0F0Fu32, 0xCAFE_BABE];
-    let cpu = not_cpu(&input);
+    let cpu = bitset_not_witness(&input);
     let program = bitset_not("input", "out", 2);
     let inputs = vec![u32_bytes(&input), vec![0u8; 8]];
     let outputs = dispatch_grid(&program, &inputs, 1);
@@ -51,7 +56,7 @@ fn cuda_bitset_not_parity() {
 fn cuda_bitset_or_parity() {
     let lhs = vec![0xFF00u32, 0x0F0F];
     let rhs = vec![0x00FFu32, 0xF0F0];
-    let cpu = or_cpu(&lhs, &rhs);
+    let cpu = bitset_or_witness(&lhs, &rhs);
     let program = bitset_or("lhs", "rhs", "out", 2);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 8]];
     let outputs = dispatch_grid(&program, &inputs, 1);
@@ -64,7 +69,7 @@ fn cuda_bitset_or_parity() {
 fn cuda_bitset_equal_parity() {
     let lhs = vec![0xDEADu32, 0xBEEF];
     let rhs = vec![0xDEADu32, 0xBEEF];
-    let expected = equal_cpu(&lhs, &rhs);
+    let expected = u32::from(bitset_equal_witness(&lhs, &rhs));
     let program = bitset_equal("lhs", "rhs", "out", 2);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
     let outputs = dispatch_grid(&program, &inputs, 1);
@@ -76,7 +81,7 @@ fn cuda_bitset_equal_parity() {
     let inputs2 = vec![u32_bytes(&lhs), u32_bytes(&rhs_diff), vec![0u8; 4]];
     let outputs2 = dispatch_grid(&program, &inputs2, 1);
     let scalar2 = bytes_u32(&outputs2[0])[0];
-    assert_eq!(scalar2, equal_cpu(&lhs, &rhs_diff));
+    assert_eq!(scalar2, u32::from(bitset_equal_witness(&lhs, &rhs_diff)));
     assert_eq!(scalar2, 0);
 }
 
@@ -88,14 +93,17 @@ fn cuda_bitset_equal_crosses_workgroup_lanes() {
     let program = bitset_equal("lhs", "rhs", "out", lhs.len() as u32);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
     let outputs = dispatch_grid(&program, &inputs, 1);
-    assert_eq!(bytes_u32(&outputs[0])[0], equal_cpu(&lhs, &rhs));
+    assert_eq!(
+        bytes_u32(&outputs[0])[0],
+        u32::from(bitset_equal_witness(&lhs, &rhs))
+    );
 }
 
 #[test]
 fn cuda_bitset_subset_of_parity() {
     let lhs = vec![0b0011u32];
     let rhs = vec![0b1111u32];
-    let cpu = subset_of_cpu(&lhs, &rhs);
+    let cpu = u32::from(bitset_subset_of_witness(&lhs, &rhs));
     let program = bitset_subset_of("lhs", "rhs", "out", 1);
     let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
     let outputs = dispatch_grid(&program, &inputs, 1);
@@ -113,12 +121,15 @@ fn cuda_bitset_subset_of_crosses_workgroup_lanes() {
     let program = bitset_subset_of("lhs", "rhs", "out", lhs.len() as u32);
     let ok_inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 4]];
     let ok_outputs = dispatch_grid(&program, &ok_inputs, 1);
-    assert_eq!(bytes_u32(&ok_outputs[0])[0], subset_of_cpu(&lhs, &rhs));
+    assert_eq!(
+        bytes_u32(&ok_outputs[0])[0],
+        u32::from(bitset_subset_of_witness(&lhs, &rhs))
+    );
     let bad_inputs = vec![u32_bytes(&not_subset), u32_bytes(&rhs), vec![0u8; 4]];
     let bad_outputs = dispatch_grid(&program, &bad_inputs, 1);
     assert_eq!(
         bytes_u32(&bad_outputs[0])[0],
-        subset_of_cpu(&not_subset, &rhs)
+        u32::from(bitset_subset_of_witness(&not_subset, &rhs))
     );
 }
 
@@ -126,7 +137,7 @@ fn cuda_bitset_subset_of_crosses_workgroup_lanes() {
 fn cuda_bitset_test_bit_parity() {
     let buf = vec![0b1010u32];
     let bit_idx = 1u32;
-    let expected = test_bit_cpu(&buf, bit_idx);
+    let expected = bitset_test_bit_witness(&buf, bit_idx);
     let program = bitset_test_bit("buf", bit_idx, "out", buf.len() as u32);
     let inputs = vec![u32_bytes(&buf), vec![0u8; 4]];
     let outputs = dispatch_grid(&program, &inputs, 1);
@@ -137,7 +148,7 @@ fn cuda_bitset_test_bit_parity() {
 #[test]
 fn cuda_bitset_contains_parity() {
     let buf = vec![0b1010u32];
-    let cpu = contains_cpu(&buf, 1);
+    let cpu = u32::from(bitset_contains_witness(&buf, 1));
     let program = bitset_contains("buf", "idx", "out", 1);
     let inputs = vec![u32_bytes(&buf), u32_bytes(&[1u32]), vec![0u8; 4]];
     let outputs = dispatch_grid(&program, &inputs, 1);
@@ -148,7 +159,7 @@ fn cuda_bitset_contains_parity() {
 fn cuda_bitset_copy_parity() {
     let src = vec![0xCAFEu32, 0xBABE];
     let mut cpu_dst = vec![0u32; 2];
-    copy_cpu(&mut cpu_dst, &src);
+    bitset_copy_witness(&mut cpu_dst, &src);
     let program = bitset_copy("dst", "src", 2);
     // RW target then RO source order in declaration.
     let inputs = vec![vec![0u8; 8], u32_bytes(&src)];
@@ -166,7 +177,7 @@ fn cuda_bitset_zero_parity_crosses_workgroup_lanes() {
     let outputs = dispatch_grid(&program, &inputs, 3);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(cpu_target.len());
-    zero_cpu(&mut cpu_target);
+    bitset_zero_inplace_witness(&mut cpu_target);
     assert_eq!(gpu, cpu_target);
 }
 
@@ -176,7 +187,7 @@ fn cuda_frontier_absorb_no_counts_masks_tail_and_emits_new_wave() {
     let mut visited = vec![0b0001u32, 0, 0];
     let neighbors = vec![0b0111u32, u32::MAX, u32::MAX];
     let mut expected_next = Vec::new();
-    absorb_new_frontier_bits(node_count, &mut visited, &neighbors, &mut expected_next)
+    try_frontier_absorb_witness_into(&mut visited, &neighbors, node_count, &mut expected_next)
         .expect("Fix: frontier absorb CPU oracle should accept canonical shapes");
 
     let program = frontier_absorb_new_bits_no_counts_for_node_count_program(
@@ -213,7 +224,7 @@ fn cuda_bitset_and_into_parity() {
     let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
-    and_into_cpu(&mut cpu_target, &mask);
+    bitset_and_inplace_witness(&mut cpu_target, &mask);
     assert_eq!(gpu, cpu_target);
 }
 
@@ -226,7 +237,7 @@ fn cuda_bitset_or_into_parity() {
     let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
-    or_into_cpu(&mut cpu_target, &addend);
+    bitset_or_inplace_witness(&mut cpu_target, &addend);
     assert_eq!(gpu, cpu_target);
 }
 
@@ -239,7 +250,7 @@ fn cuda_bitset_xor_into_parity() {
     let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
-    xor_into_cpu(&mut cpu_target, &addend);
+    bitset_xor_inplace_witness(&mut cpu_target, &addend);
     assert_eq!(gpu, cpu_target);
 }
 
@@ -252,7 +263,7 @@ fn cuda_bitset_and_not_into_parity() {
     let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
-    and_not_into_cpu(&mut cpu_target, &subtrahend);
+    bitset_and_not_inplace_witness(&mut cpu_target, &subtrahend);
     assert_eq!(gpu, cpu_target);
 }
 
@@ -265,6 +276,6 @@ fn cuda_bitset_clear_bit_parity() {
     let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
-    clear_bit_cpu(&mut cpu_target, bit_idx);
+    bitset_clear_bit_inplace_witness(&mut cpu_target, bit_idx);
     assert_eq!(gpu, cpu_target);
 }

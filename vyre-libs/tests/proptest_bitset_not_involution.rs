@@ -3,7 +3,7 @@
 
 use proptest::prelude::*;
 use vyre_reference::composition_witness::bitset_equal_witness as bitset_equal;
-use vyre_reference::composition_witness::bitset_not_witness;
+use vyre_reference::composition_witness::bitset_not_witness as cpu_ref;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -14,7 +14,7 @@ proptest! {
     ) {
         let not_a = cpu_ref(&a);
         let not_not_a = cpu_ref(&not_a);
-        prop_assert_eq!(bitset_equal(&a, &not_not_a), 1, "!!a must equal a");
+        prop_assert!(bitset_equal(&a, &not_not_a), "!!a must equal a");
     }
 
     #[test]
@@ -22,7 +22,7 @@ proptest! {
         let zeros = vec![0u32; n];
         let ones = vec![0xFFFFFFFFu32; n];
         let result = cpu_ref(&zeros);
-        prop_assert_eq!(bitset_equal(&result, &ones), 1, "!0 must equal 1");
+        prop_assert!(bitset_equal(&result, &ones), "!0 must equal 1");
     }
 
     #[test]
@@ -30,7 +30,7 @@ proptest! {
         let ones = vec![0xFFFFFFFFu32; n];
         let zeros = vec![0u32; n];
         let result = cpu_ref(&ones);
-        prop_assert_eq!(bitset_equal(&result, &zeros), 1, "!1 must equal 0");
+        prop_assert!(bitset_equal(&result, &zeros), "!1 must equal 0");
     }
 
     #[test]

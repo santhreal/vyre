@@ -6,16 +6,17 @@
 //! constraints.
 
 use crate::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, require_exactly_one_output,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::level_wave::level_wave_dispatch_grid;
-#[cfg(test)]
-use crate::graph::sum_product_circuit::sum_product_evaluate_cpu;
 use crate::graph::sum_product_circuit::{sum_product_depths, sum_product_evaluate_leveled};
-#[cfg(test)]
-use crate::math::conformal::conformal_threshold_cpu;
 use crate::math::conformal::{conformal_threshold, try_conformal_rank};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    conformal_threshold_witness, sum_product_evaluate_witness,
+};
 
 /// Caller-owned dispatch scratch for probabilistic runtime prediction.
 #[derive(Debug, Default)]
@@ -23,38 +24,6 @@ pub struct CostModelGpuScratch {
     inputs: Vec<Vec<u8>>,
     circuit_out: Vec<u32>,
     conformal_out: Vec<u32>,
-}
-
-/// Predict expected runtime for a Program using a sum-product circuit
-/// over its features. Returns (point_estimate, conformal_upper_bound).
-#[must_use]
-#[cfg(test)]
-#[allow(clippy::too_many_arguments)]
-pub fn reference_predict_runtime(
-    feature_circuit_kinds: &[u32],
-    feature_circuit_offsets: &[u32],
-    feature_circuit_counts: &[u32],
-    feature_circuit_children: &[u32],
-    feature_circuit_weights: &[f64],
-    feature_values: &[f64],
-    historical_residuals: &[u32],
-    alpha: f64,
-) -> (f64, u32) {
-    use crate::telemetry::{bump, cost_model_calls};
-    bump(&cost_model_calls);
-    let topo: Vec<u32> = (0..feature_circuit_kinds.len() as u32).collect();
-    let result = sum_product_evaluate_cpu(
-        feature_circuit_kinds,
-        feature_circuit_offsets,
-        feature_circuit_counts,
-        feature_circuit_children,
-        feature_circuit_weights,
-        feature_values,
-        &topo,
-    );
-    let point_estimate = *result.last().unwrap_or(&0.0);
-    let upper_bound = conformal_threshold_cpu(historical_residuals, alpha);
-    (point_estimate, upper_bound)
 }
 
 /// Predict runtime with primitive-native fixed-point buffers through the active backend.
@@ -194,12 +163,8 @@ pub fn predict_runtime_fixed_via_with_scratch(
         &scratch.inputs[..8],
         Some(level_wave_dispatch_grid(n_nodes)),
     )?;
-    let circuit_output = circuit_outputs.first().ok_or_else(|| {
-        DispatchError::BackendError(format!(
-            "Fix: predict_runtime_fixed_via expected one sum-product output, got {}.",
-            circuit_outputs.len()
-        ))
-    })?;
+    let circuit_output =
+        require_exactly_one_output(&circuit_outputs, "predict_runtime_fixed_via sum-product")?;
     decode_u32_output_exact(
         circuit_output,
         n_nodes as usize,
@@ -213,12 +178,8 @@ pub fn predict_runtime_fixed_via_with_scratch(
     let conformal = conformal_threshold("scores_sorted", "q_hat", residual_count, k);
     let conformal_outputs =
         dispatcher.dispatch(&conformal, &scratch.inputs[..2], Some([1, 1, 1]))?;
-    let conformal_output = conformal_outputs.first().ok_or_else(|| {
-        DispatchError::BackendError(format!(
-            "Fix: predict_runtime_fixed_via expected one conformal output, got {}.",
-            conformal_outputs.len()
-        ))
-    })?;
+    let conformal_output =
+        require_exactly_one_output(&conformal_outputs, "predict_runtime_fixed_via conformal")?;
     decode_u32_output_exact(
         conformal_output,
         1,
@@ -315,6 +276,32 @@ mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use crate::graph::sum_product_circuit::{KIND_LEAF, KIND_PRODUCT, KIND_SUM};
+    fn reference_predict_runtime(
+        feature_circuit_kinds: &[u32],
+        feature_circuit_offsets: &[u32],
+        feature_circuit_counts: &[u32],
+        feature_circuit_children: &[u32],
+        feature_circuit_weights: &[f64],
+        feature_values: &[f64],
+        historical_residuals: &[u32],
+        alpha: f64,
+    ) -> (f64, u32) {
+        use crate::telemetry::{bump, cost_model_calls};
+        bump(&cost_model_calls);
+        let topo: Vec<u32> = (0..feature_circuit_kinds.len() as u32).collect();
+        let result = sum_product_evaluate_witness(
+            feature_circuit_kinds,
+            feature_circuit_offsets,
+            feature_circuit_counts,
+            feature_circuit_children,
+            feature_circuit_weights,
+            feature_values,
+            &topo,
+        );
+        let point_estimate = *result.last().unwrap_or(&0.0);
+        let upper_bound = conformal_threshold_witness(historical_residuals, alpha);
+        (point_estimate, upper_bound)
+    }
 
     #[test]
     fn predict_returns_point_plus_conformal_interval() {

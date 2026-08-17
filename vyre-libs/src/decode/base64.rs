@@ -1,13 +1,7 @@
-//! Base64 decode: one module, one op id.
+//! Base64 decode `Program` construction and RFC 4648 lookup-table ownership.
 //!
-//! The kernel body, the CPU reference oracle, the lookup table, the public
-//! builder and the fused decode-then-scan builder all live here. The op id is
-//! `vyre-libs::decode::base64`; the program is one region carrying that
-//! generator, so a caller reads one name for one kernel.
+//! Independent decode witnesses live in `vyre-reference`.
 
-use std::error::Error as StdError;
-use std::fmt;
-use std::sync::OnceLock;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -17,6 +11,15 @@ use crate::buffer_names::fixed_name;
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
 use crate::decode::scan::linear_aho_scan_body;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    base64_decode_bytes_witness as decode_standard_bytes_reference,
+    base64_decode_packed_witness as decode_standard_packed_reference,
+    base64_decode_packed_witness_into as decode_standard_packed_reference_into,
+    try_base64_decode_packed_witness as try_decode_standard_packed_reference,
+    try_base64_decode_packed_witness_into as try_decode_standard_packed_reference_into,
+    Base64DecodeWitnessError as Base64DecodeReferenceError,
+};
 
 /// Canonical op id for base64 decode.
 pub const OP_ID: &str = "vyre-libs::decode::base64";
@@ -39,59 +42,21 @@ pub const BASE64_DECODE_TABLE_WORDS: u32 = 256;
 /// Canonical base64 decode workgroup size.
 pub const BASE64_WORKGROUP_SIZE: [u32; 3] = [64, 1, 1];
 
-static STANDARD_DECODE_TABLE: OnceLock<[u32; 256]> = OnceLock::new();
-
-/// CPU-reference base64 decode failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Base64DecodeReferenceError {
-    /// Base64 input must be padded to full 4-byte quads.
-    InvalidLength {
-        /// Input byte length.
-        len: usize,
-    },
-    /// Decoded fixed-capacity word count overflowed host `usize`.
-    CapacityOverflow {
-        /// Number of four-byte quads.
-        blocks: usize,
-    },
-    /// Decoded fixed-capacity word count cannot fit the public u32 length ABI.
-    DecodedLengthOverflow {
-        /// Decoded capacity in u32 slots.
-        decoded_words: usize,
-    },
-    /// Host output staging reservation failed.
-    Allocation {
-        /// Requested u32 slots.
-        requested: usize,
-        /// Allocator detail.
-        source: String,
-    },
-}
-
-impl fmt::Display for Base64DecodeReferenceError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidLength { len } => write!(
-                formatter,
-                "base64 reference input length {len} is not a multiple of 4. Fix: pad with '=' or reject the payload before decode."
-            ),
-            Self::CapacityOverflow { blocks } => write!(
-                formatter,
-                "base64 reference decoded capacity overflowed for {blocks} input quads. Fix: shard the payload before CPU/GPU parity decode."
-            ),
-            Self::DecodedLengthOverflow { decoded_words } => write!(
-                formatter,
-                "base64 reference decoded capacity {decoded_words} cannot fit u32. Fix: shard the payload before dispatch."
-            ),
-            Self::Allocation { requested, source } => write!(
-                formatter,
-                "base64 reference could not reserve {requested} decoded u32 slots: {source}. Fix: shard the payload before CPU/GPU parity decode."
-            ),
-        }
-    }
-}
-
-impl StdError for Base64DecodeReferenceError {}
+static STANDARD_DECODE_TABLE: [u32; 256] = [
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 62, 255, 255, 255, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 255,
+    255, 255, 0, 255, 255, 255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+    19, 20, 21, 22, 23, 24, 25, 255, 255, 255, 255, 255, 255, 26, 27, 28, 29, 30, 31, 32, 33, 34,
+    35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+];
 
 fn blocks_for_len(input_len: u32) -> u32 {
     input_len / 4
@@ -109,24 +74,7 @@ pub fn standard_decode_table() -> [u32; 256] {
 /// should use this reference when they do not need an owned copy.
 #[must_use]
 pub fn standard_decode_table_ref() -> &'static [u32; 256] {
-    STANDARD_DECODE_TABLE.get_or_init(build_standard_decode_table)
-}
-
-fn build_standard_decode_table() -> [u32; 256] {
-    let mut table = [INVALID; 256];
-    for byte in b'A'..=b'Z' {
-        table[usize::from(byte)] = u32::from(byte - b'A');
-    }
-    for byte in b'a'..=b'z' {
-        table[usize::from(byte)] = u32::from(byte - b'a' + 26);
-    }
-    for byte in b'0'..=b'9' {
-        table[usize::from(byte)] = u32::from(byte - b'0' + 52);
-    }
-    table[usize::from(b'+')] = 62;
-    table[usize::from(b'/')] = 63;
-    table[usize::from(b'=')] = 0;
-    table
+    &STANDARD_DECODE_TABLE
 }
 
 /// Decoded capacity for a padded base64 input.
@@ -134,10 +82,6 @@ fn build_standard_decode_table() -> [u32; 256] {
 pub fn decoded_capacity(input_len: u32) -> u32 {
     blocks_for_len(input_len) * 3
 }
-
-
-
-
 
 fn clamp_lookup(name: &str, table: &str) -> Vec<Node> {
     let raw = format!("{name}_raw");
@@ -423,7 +367,7 @@ pub fn base64_decode_then_aho_corasick(
     )
 }
 #[cfg(test)]
-fn cpu_ref(input: &[u8]) -> (Vec<u32>, u32) {
+fn reference_base64_decode_packed(input: &[u8]) -> (Vec<u32>, u32) {
     decode_standard_packed_reference(input)
 }
 
@@ -474,41 +418,62 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]
 }
 
-fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
-    vec![
-        vec![pack_words(&[77, 97, 110, 77, 97, 110]), pack_words(&[6])],
-        vec![pack_words(&[77, 97, 0, 77, 97, 0]), pack_words(&[5])],
-        vec![pack_words(&[72, 101, 108, 108, 111, 0]), pack_words(&[6])],
-    ]
-}
+const EXPECTED_BASE64_CASE0_BYTES: [u8; 24] = [
+    77, 0, 0, 0, 97, 0, 0, 0, 110, 0, 0, 0, 77, 0, 0, 0, 97, 0, 0, 0, 110, 0, 0, 0,
+];
+const EXPECTED_BASE64_CASE0_LEN: [u8; 4] = [6, 0, 0, 0];
+const EXPECTED_BASE64_CASE1_BYTES: [u8; 24] = [
+    77, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 77, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0,
+];
+const EXPECTED_BASE64_CASE1_LEN: [u8; 4] = [5, 0, 0, 0];
+const EXPECTED_BASE64_CASE2_BYTES: [u8; 24] = [
+    72, 0, 0, 0, 101, 0, 0, 0, 108, 0, 0, 0, 108, 0, 0, 0, 111, 0, 0, 0, 0, 0, 0, 0,
+];
+const EXPECTED_BASE64_CASE2_LEN: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || base64_decode("input", "output", 8),
         Some(fixture_inputs),
-        Some(fixture_outputs),
+        Some(|| {
+            vec![
+                vec![EXPECTED_BASE64_CASE0_BYTES.to_vec(), EXPECTED_BASE64_CASE0_LEN.to_vec()],
+                vec![EXPECTED_BASE64_CASE1_BYTES.to_vec(), EXPECTED_BASE64_CASE1_LEN.to_vec()],
+                vec![EXPECTED_BASE64_CASE2_BYTES.to_vec(), EXPECTED_BASE64_CASE2_LEN.to_vec()],
+            ]
+        }),
     )
-}
-// ---------------------------------------------------------------------------
-// CPU reference implementation
-// ---------------------------------------------------------------------------
-
-    standard_decode_table()
 }
 
 #[cfg(test)]
 mod primitive_tests {
     use super::*;
-
-    #[test]
-    fn decode_man() {
-        assert_eq!(cpu_base64_decode(b"TWFu"), b"Man");
+    fn build_standard_decode_table() -> [u32; 256] {
+        let mut table = [INVALID; 256];
+        for byte in b'A'..=b'Z' {
+            table[usize::from(byte)] = u32::from(byte - b'A');
+        }
+        for byte in b'a'..=b'z' {
+            table[usize::from(byte)] = u32::from(byte - b'a' + 26);
+        }
+        for byte in b'0'..=b'9' {
+            table[usize::from(byte)] = u32::from(byte - b'0' + 52);
+        }
+        table[usize::from(b'+')] = 62;
+        table[usize::from(b'/')] = 63;
+        table[usize::from(b'=')] = 0;
+        table
     }
 
     #[test]
-    fn cpu_table_is_the_standard_primitive_table() {
-        assert_eq!(cpu_base64_table(), standard_decode_table());
+    fn decode_man() {
+        assert_eq!(decode_standard_bytes_reference(b"TWFu"), b"Man");
+    }
+
+    #[test]
+    fn standard_table_is_the_primitive_table() {
+        assert_eq!(*standard_decode_table_ref(), standard_decode_table());
         assert_eq!(standard_decode_table()[b'/' as usize], 63);
         assert_eq!(standard_decode_table()[b'*' as usize], INVALID);
     }
@@ -572,53 +537,56 @@ mod primitive_tests {
     // Each wrapper gets its own #[should_panic] behavioral proof; callers that
     // need to tolerate bad input use the try_ fallible variants instead.
     #[test]
-    #[should_panic(expected = "vyre-primitives base64 decode reference failed")]
+    #[should_panic(expected = "base64 decode witness failed")]
     fn decode_reference_fails_loud_on_invalid_length() {
         let _ = decode_standard_packed_reference(b"abc");
     }
 
     #[test]
-    #[should_panic(expected = "vyre-primitives base64 decode reference failed")]
+    #[should_panic(expected = "base64 decode witness failed")]
     fn decode_reference_into_fails_loud_on_invalid_length() {
         let mut out = vec![1, 2, 3];
         let _ = decode_standard_packed_reference_into(b"abc", &mut out);
     }
 
     #[test]
-    #[should_panic(expected = "vyre-primitives base64 decode reference failed")]
-    fn cpu_base64_decode_fails_loud_on_invalid_length() {
-        let _ = cpu_base64_decode(b"abc");
+    #[should_panic(expected = "base64 decode witness failed")]
+    fn decode_standard_bytes_reference_fails_loud_on_invalid_length() {
+        let _ = decode_standard_bytes_reference(b"abc");
     }
 
     #[test]
     fn decode_padded_1() {
-        assert_eq!(cpu_base64_decode(b"TWE="), b"Ma");
+        assert_eq!(decode_standard_bytes_reference(b"TWE="), b"Ma");
     }
 
     #[test]
     fn decode_padded_2() {
-        assert_eq!(cpu_base64_decode(b"TQ=="), b"M");
+        assert_eq!(decode_standard_bytes_reference(b"TQ=="), b"M");
     }
 
     #[test]
     fn decode_empty() {
-        assert_eq!(cpu_base64_decode(b""), b"");
+        assert_eq!(decode_standard_bytes_reference(b""), b"");
     }
 
     #[test]
     fn decode_hello_world() {
-        assert_eq!(cpu_base64_decode(b"SGVsbG8gV29ybGQ="), b"Hello World");
+        assert_eq!(
+            decode_standard_bytes_reference(b"SGVsbG8gV29ybGQ="),
+            b"Hello World"
+        );
     }
 
     #[test]
     fn decode_roundtrip_rfc4648_vectors() {
         // RFC 4648 test vectors
-        assert_eq!(cpu_base64_decode(b"Zg=="), b"f");
-        assert_eq!(cpu_base64_decode(b"Zm8="), b"fo");
-        assert_eq!(cpu_base64_decode(b"Zm9v"), b"foo");
-        assert_eq!(cpu_base64_decode(b"Zm9vYg=="), b"foob");
-        assert_eq!(cpu_base64_decode(b"Zm9vYmE="), b"fooba");
-        assert_eq!(cpu_base64_decode(b"Zm9vYmFy"), b"foobar");
+        assert_eq!(decode_standard_bytes_reference(b"Zg=="), b"f");
+        assert_eq!(decode_standard_bytes_reference(b"Zm8="), b"fo");
+        assert_eq!(decode_standard_bytes_reference(b"Zm9v"), b"foo");
+        assert_eq!(decode_standard_bytes_reference(b"Zm9vYg=="), b"foob");
+        assert_eq!(decode_standard_bytes_reference(b"Zm9vYmE="), b"fooba");
+        assert_eq!(decode_standard_bytes_reference(b"Zm9vYmFy"), b"foobar");
     }
 
     #[test]
@@ -775,7 +743,7 @@ mod tests {
     }
 
     #[test]
-    fn generated_quads_match_cpu_reference_for_invalid_padding_and_symbols() {
+    fn generated_quads_match_reference_for_invalid_padding_and_symbols() {
         const ALPHABET: &[u8] =
             b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=*#\n";
 
@@ -789,7 +757,7 @@ mod tests {
             }
 
             let (actual, actual_len) = run(&input);
-            let (expected, expected_len) = cpu_ref(&input);
+            let (expected, expected_len) = reference_base64_decode_packed(&input);
             assert_eq!(actual_len, expected_len, "decoded length seed {seed}");
             assert_eq!(actual, expected, "decoded bytes seed {seed}");
         }

@@ -197,12 +197,34 @@ pub fn kfac_block_inverse(
     )
 }
 
+/// CPU reference.
+#[cfg(test)]
+#[must_use]
+fn cpu_ref(blocks_in: &[f32], num_blocks: u32, n: u32) -> Vec<f32> {
+    vyre_reference::composition_witness::kfac_block_inverse_witness(blocks_in, num_blocks, n)
+}
 
+/// CPU reference using caller-owned output and per-block scratch buffers.
+///
+/// Uses flat `n*n` scratch matrices rather than allocating nested vectors for
+/// every block. `out` is overwritten with one inverse block per input block.
+#[cfg(test)]
+fn cpu_ref_into(
+    blocks_in: &[f32],
+    num_blocks: u32,
+    n: u32,
+    out: &mut Vec<f32>,
+    mat: &mut Vec<f32>,
+    inv: &mut Vec<f32>,
+) {
+    vyre_reference::composition_witness::kfac_block_inverse_witness_into(
+        blocks_in, num_blocks, n, out, mat, inv,
+    );
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_cpu_ref_1x1() {
         let blocks_in = vec![2.0];

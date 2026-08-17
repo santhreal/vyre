@@ -175,6 +175,9 @@ impl Cl2Mv {
     }
 }
 
+const EXPECTED_CLIFFORD_OUTPUT_BYTES: [u8; 32] = [
+    0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0,
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -189,10 +192,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let one = 1u32 << 16;
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-                2 * one, 3 * one, 0, 0, 4 * one, 0, 5 * one, 0,
-            ])]]
+            vec![vec![EXPECTED_CLIFFORD_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -210,6 +210,19 @@ mod tests {
             && approx_eq(a.e1, b.e1)
             && approx_eq(a.e2, b.e2)
             && approx_eq(a.e12, b.e12)
+    }
+
+    fn clifford2_product_cpu(a: Cl2Mv, b: Cl2Mv) -> Cl2Mv {
+        let res = vyre_reference::composition_witness::clifford2_product_witness(
+            [a.s, a.e1, a.e2, a.e12],
+            [b.s, b.e1, b.e2, b.e12],
+        );
+        Cl2Mv {
+            s: res[0],
+            e1: res[1],
+            e2: res[2],
+            e12: res[3],
+        }
     }
 
     #[test]

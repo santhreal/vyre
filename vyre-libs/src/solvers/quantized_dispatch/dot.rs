@@ -1,4 +1,5 @@
 use super::*;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Compute a packed signed INT4 scaled dot product through the dispatch backend.
 ///

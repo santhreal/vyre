@@ -45,18 +45,17 @@ jobs:
         run: ./cargo_full test --workspace
 
 
-      - name: composition-library CPU-parity oracle tests (cpu-parity)
+      - name: composition-library reference-parity tests
         shell: bash
         # The `--workspace` default-feature run above compiles NONE of the
-        # `cpu-parity`-gated tests: the CSR/graph CPU oracle matrices AND the
         # `_via` end-to-end reference-parity suites (which run each production
-        # dispatch form through a reference-eval dispatcher against its CPU
-        # oracle: do-calculus surgery, functor_apply, hypervector xor-bind, and
-        # the Mori-Zwanzig fixed-point projection). Wire the specific
-        # integration binaries so a composition parity regression fails the main
-        # PR check, not only the slower --all-features job. (Scoped to `--test`
-        # targets rather than `-p` so this step is not coupled to unrelated
-        # `--lib` release-evidence state.)
+        # dispatch form through a reference-eval dispatcher against its
+        # direct vyre-reference witness: do-calculus surgery, functor_apply,
+        # hypervector xor-bind, and the Mori-Zwanzig fixed-point projection).
+        # Wire the specific integration binaries so a composition parity
+        # regression fails the main PR check, not only the slower --all-features job.
+        # (Scoped to `--test` targets rather than `-p` so this step is not coupled
+        # to unrelated `--lib` release-evidence state.)
         run: >-
           ./cargo_full test -p vyre-libs
           --features analysis,encoding,graph-dispatch,reasoning,scheduling,solvers,test-fixtures
@@ -101,12 +100,12 @@ jobs:
           --test match_motif_via_reference_parity
           --test smooth_matroid_flow_via_reference_parity
 
-      - name: pass-engine CPU-parity oracle tests (cpu-parity)
+      - name: pass-engine reference-parity tests
         shell: bash
-        # The pass engine's own reference-parity suite is gated the same way and
+        # The pass engine's own reference-parity suite is gated on all-solvers and
         # is likewise invisible to the default-feature workspace run.
         run: >-
-          ./cargo_full test -p vyre-pass-engine --features cpu-parity
+          ./cargo_full test -p vyre-pass-engine --features all-solvers
           --test optimizer_bfs_and_softmax_parity
 
       - name: cargo_full doc

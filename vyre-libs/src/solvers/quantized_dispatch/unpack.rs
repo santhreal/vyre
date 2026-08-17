@@ -1,4 +1,5 @@
 use super::*;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Unpack packed signed INT4 lanes through the dispatch backend.
 ///

@@ -11,12 +11,10 @@
 #![cfg(all(feature = "graph", feature = "bitset"))]
 
 use vyre_foundation::ir::Program;
-use vyre_libs::graph::csr_backward_or_changed::{
-    cpu_ref_closure, csr_backward_or_changed_parallel,
-};
-use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_backward_or_changed::csr_backward_or_changed_parallel;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::csr_backward_closure_witness as cpu_ref_closure;
 use vyre_reference::value::Value;
 
 fn bitset_words(node_count: u32) -> usize {
@@ -133,19 +131,7 @@ fn ir_program_fixpoint_matches_cpu_ref_closure_across_generated_shapes() {
         }
 
         let ir = ir_fixpoint(node_count, &offsets, &targets, &masks, &frontier, allow);
-        let (oracle, _changed) = cpu_ref_closure(
-            CsrClosureInputs {
-                graph: CsrGraphView {
-                    node_count,
-                    edge_offsets: &offsets,
-                    edge_targets: &targets,
-                    edge_kind_mask: &masks,
-                },
-                allow_mask: allow,
-                max_iters: node_count + 1,
-            },
-            &frontier,
-        );
+        let oracle = cpu_ref_closure(node_count, &offsets, &targets, &masks, &frontier, allow);
 
         assert_eq!(
             ir, oracle,

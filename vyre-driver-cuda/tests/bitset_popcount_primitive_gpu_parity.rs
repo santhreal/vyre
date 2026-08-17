@@ -7,7 +7,8 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::bitset::popcount::{bitset_popcount, cpu_ref as popcount_cpu};
+use vyre_libs::bitset::popcount::bitset_popcount;
+use vyre_reference::composition_witness::bitset_popcount_witness;
 
 fn run_popcount(input: &[u32]) -> Vec<u32> {
     let words = input.len() as u32;
@@ -30,7 +31,7 @@ fn run_popcount(input: &[u32]) -> Vec<u32> {
 #[test]
 fn cuda_bitset_popcount_basic() {
     let input = vec![0xFFFF_FFFFu32, 0u32, 0b1010_1010_u32, 0xAA55u32];
-    let cpu = popcount_cpu(&input);
+    let cpu = bitset_popcount_witness(&input);
     let gpu = run_popcount(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![32, 0, 4, 8]);
@@ -39,7 +40,7 @@ fn cuda_bitset_popcount_basic() {
 #[test]
 fn cuda_bitset_popcount_all_zero() {
     let input = vec![0u32; 16];
-    let cpu = popcount_cpu(&input);
+    let cpu = bitset_popcount_witness(&input);
     let gpu = run_popcount(&input);
     assert_eq!(gpu, cpu);
     assert_eq!(gpu, vec![0u32; 16]);

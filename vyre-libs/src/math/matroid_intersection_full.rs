@@ -341,26 +341,130 @@ pub fn matroid_intersection_full(
     )
 }
 
-
-
-
-
-
-crate::plumbing::host::scratch::define_reserve_capacity!(
-    reserve_u32,
-    u32,
-    "matroid intersection CPU oracle"
-);
-
-crate::plumbing::host::scratch::define_reserve_capacity!(
-    reserve_usize,
-    usize,
-    "matroid intersection CPU oracle"
-);
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::matroid_intersection_augmentation_witness_into;
+
+    fn try_cpu_ref_into(
+        exchange_adj: &[u32],
+        sources: &[u32],
+        sinks: &[u32],
+        x: &[u32],
+        n: u32,
+        out: &mut Vec<u32>,
+        parent: &mut Vec<u32>,
+        visited: &mut Vec<u32>,
+        queue: &mut Vec<usize>,
+    ) -> Result<(), String> {
+        let n_usize = n as usize;
+        if exchange_adj.len() < n_usize * n_usize {
+            return Err(format!(
+                "exchange_adj buffer is too short: expected {}, got {}",
+                n_usize * n_usize,
+                exchange_adj.len()
+            ));
+        }
+        if sources.len() < n_usize {
+            return Err(format!(
+                "sources buffer is too short: expected {}, got {}",
+                n_usize,
+                sources.len()
+            ));
+        }
+        if sinks.len() < n_usize {
+            return Err(format!(
+                "sinks buffer is too short: expected {}, got {}",
+                n_usize,
+                sinks.len()
+            ));
+        }
+        if x.len() < n_usize {
+            return Err(format!(
+                "x buffer is too short: expected {}, got {}",
+                n_usize,
+                x.len()
+            ));
+        }
+
+        let mut frontier = Vec::new();
+        let mut next_frontier = Vec::new();
+        matroid_intersection_augmentation_witness_into(
+            &exchange_adj[..n_usize * n_usize],
+            &sources[..n_usize],
+            &sinks[..n_usize],
+            &x[..n_usize],
+            n_usize,
+            out,
+            parent,
+            visited,
+            &mut frontier,
+            &mut next_frontier,
+        );
+        queue.clear();
+        queue.resize(n_usize, 0);
+        Ok(())
+    }
+
+    fn cpu_ref_into(
+        exchange_adj: &[u32],
+        sources: &[u32],
+        sinks: &[u32],
+        x: &[u32],
+        n: u32,
+        out: &mut Vec<u32>,
+        parent: &mut Vec<u32>,
+        visited: &mut Vec<u32>,
+        queue: &mut Vec<usize>,
+    ) {
+        try_cpu_ref_into(
+            exchange_adj,
+            sources,
+            sinks,
+            x,
+            n,
+            out,
+            parent,
+            visited,
+            queue,
+        )
+        .unwrap();
+    }
+
+    fn try_cpu_ref(
+        exchange_adj: &[u32],
+        sources: &[u32],
+        sinks: &[u32],
+        x: &[u32],
+        n: u32,
+    ) -> Result<Vec<u32>, String> {
+        let mut out = Vec::new();
+        let mut parent = Vec::new();
+        let mut visited = Vec::new();
+        let mut queue = Vec::new();
+        try_cpu_ref_into(
+            exchange_adj,
+            sources,
+            sinks,
+            x,
+            n,
+            &mut out,
+            &mut parent,
+            &mut visited,
+            &mut queue,
+        )?;
+        Ok(out)
+    }
+
+    fn cpu_ref(
+        exchange_adj: &[u32],
+        sources: &[u32],
+        sinks: &[u32],
+        x: &[u32],
+        n: u32,
+    ) -> Vec<u32> {
+        try_cpu_ref(exchange_adj, sources, sinks, x, n).unwrap()
+    }
 
     #[test]
     fn cpu_ref_single_augmentation() {
@@ -482,7 +586,7 @@ mod tests {
                             &sources,
                             &sinks,
                             &seed,
-                            n,
+                            n as u32,
                             &mut out,
                             &mut parent,
                             &mut visited,

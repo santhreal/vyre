@@ -136,6 +136,10 @@ pub fn try_rms_norm_linear(
     .with_entry_op_id("vyre-libs::nn::rms_norm_linear"))
 }
 
+const EXPECTED_RMS_NORM_LINEAR_OUTPUT_BYTES: [u8; 16] = [
+    0xDF, 0xB1, 0xE9, 0x41, 0x0E, 0x74, 0x03, 0x42, 0x2C, 0x0F, 0x12, 0x42, 0x4A, 0xAA, 0x20, 0x42,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::nn::rms_norm_linear",
@@ -151,20 +155,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_f32_slice;
-            let input = [1.0_f32, 2.0, 3.0, 4.0];
-            let eps = 1e-5_f32;
-            let inv_scale =
-                1.0_f32 / (input.iter().map(|v| v * v).sum::<f32>() / 4.0_f32 + eps).sqrt();
-            let mut out = Vec::with_capacity(4);
-            for j in 0..4usize {
-                let mut acc = 0.0_f32;
-                for k in 0..4usize {
-                    acc += input[k] * inv_scale * (k * 4 + j) as f32;
-                }
-                out.push(acc);
-            }
-            vec![vec![to_bytes(&out)]]
+            vec![vec![EXPECTED_RMS_NORM_LINEAR_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

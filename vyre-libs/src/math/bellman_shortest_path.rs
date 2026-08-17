@@ -306,8 +306,6 @@ fn bellman_single_word_harness(buffers: BellmanBuffers<'_>, extents: BellmanExte
     bellman_wrap(&inner, buffers, extents, 1)
 }
 
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -333,11 +331,20 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
-                to_bytes(&[0, 10, 30, 60]), // dist
-                to_bytes(&[0, 10, 30, 60]), // next_dist
-                to_bytes(&[0]),             // changed
+                vec![
+                    0x00, 0x00, 0x00, 0x00, // 0
+                    0x0a, 0x00, 0x00, 0x00, // 10
+                    0x1e, 0x00, 0x00, 0x00, // 30
+                    0x3c, 0x00, 0x00, 0x00, // 60
+                ],
+                vec![
+                    0x00, 0x00, 0x00, 0x00, // 0
+                    0x0a, 0x00, 0x00, 0x00, // 10
+                    0x1e, 0x00, 0x00, 0x00, // 30
+                    0x3c, 0x00, 0x00, 0x00, // 60
+                ],
+                vec![0x00, 0x00, 0x00, 0x00], // 0
             ]]
         }),
     )
@@ -347,6 +354,33 @@ inventory::submit! {
 mod tests {
     use super::*;
     use std::sync::Arc;
+    use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
+
+    #[allow(clippy::too_many_arguments)]
+    fn cpu_ref_into(
+        sources: &[u32],
+        destinations: &[u32],
+        weights: &[u32],
+        initial: &[u32],
+        node_count: u32,
+        max_iterations: u32,
+        current: &mut Vec<u32>,
+        next: &mut Vec<u32>,
+    ) -> u32 {
+        let (final_dist, iters) = cpu_ref(
+            sources,
+            destinations,
+            weights,
+            initial,
+            node_count,
+            max_iterations,
+        );
+        current.clear();
+        current.extend_from_slice(&final_dist);
+        next.clear();
+        next.extend_from_slice(&final_dist);
+        iters
+    }
 
     /// The binding names the program tests in this module build against.
     const FIXTURE: BellmanBuffers<'static> = BellmanBuffers::TERSE;

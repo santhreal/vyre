@@ -8,9 +8,14 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::math::bigint_add_carry::{
-    bigint_add_carry, bigint_add_carry_cpu, bigint_add_carry_dispatch_grid, BINDING_A_IN,
-    BINDING_B_IN, BINDING_CARRY_PARTIAL_OUT, BINDING_SUM_PARTIAL_OUT,
+    bigint_add_carry, BIGINT_ADD_CARRY_WORKGROUP_SIZE, BINDING_A_IN, BINDING_B_IN,
+    BINDING_CARRY_PARTIAL_OUT, BINDING_SUM_PARTIAL_OUT,
 };
+use vyre_reference::composition_witness::bigint_add_carry_witness;
+
+fn bigint_add_carry_dispatch_grid(limb_count: u32) -> [u32; 3] {
+    vyre_primitives::lane_grid(limb_count, BIGINT_ADD_CARRY_WORKGROUP_SIZE[0])
+}
 
 fn run_bigint_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
     assert_eq!(a.len(), b.len());
@@ -41,7 +46,7 @@ fn run_bigint_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
 fn cuda_bigint_add_carry_no_overflow() {
     let a = vec![1u32, 2, 3, 4];
     let b = vec![10u32, 20, 30, 40];
-    let (cpu_sum, cpu_carry) = bigint_add_carry_cpu(&a, &b).expect("ok");
+    let (cpu_sum, cpu_carry) = bigint_add_carry_witness(&a, &b).expect("ok");
     let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
     assert_eq!(gpu_sum, cpu_sum);
     assert_eq!(gpu_carry, cpu_carry);
@@ -53,7 +58,7 @@ fn cuda_bigint_add_carry_with_overflow() {
     // Each limb wraps: 0xFFFF_FFFF + 1 → carry.
     let a = vec![u32::MAX, u32::MAX, 0u32];
     let b = vec![1u32, 1u32, 1u32];
-    let (cpu_sum, cpu_carry) = bigint_add_carry_cpu(&a, &b).expect("ok");
+    let (cpu_sum, cpu_carry) = bigint_add_carry_witness(&a, &b).expect("ok");
     let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
     assert_eq!(gpu_sum, cpu_sum);
     assert_eq!(gpu_carry, cpu_carry);
@@ -65,7 +70,7 @@ fn cuda_bigint_add_carry_with_overflow() {
 fn cuda_bigint_add_carry_zero_operands() {
     let a = vec![0u32; 5];
     let b = vec![0u32; 5];
-    let (cpu_sum, cpu_carry) = bigint_add_carry_cpu(&a, &b).expect("ok");
+    let (cpu_sum, cpu_carry) = bigint_add_carry_witness(&a, &b).expect("ok");
     let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
     assert_eq!(gpu_sum, cpu_sum);
     assert_eq!(gpu_carry, cpu_carry);
@@ -96,7 +101,7 @@ fn cuda_bigint_add_carry_multi_block_overflow_pattern() {
         b.push(right);
     }
 
-    let (cpu_sum, cpu_carry) = bigint_add_carry_cpu(&a, &b).expect("ok");
+    let (cpu_sum, cpu_carry) = bigint_add_carry_witness(&a, &b).expect("ok");
     let (gpu_sum, gpu_carry) = run_bigint_add_carry(&a, &b);
 
     assert_eq!(bigint_add_carry_dispatch_grid(limb_count), [5, 1, 1]);

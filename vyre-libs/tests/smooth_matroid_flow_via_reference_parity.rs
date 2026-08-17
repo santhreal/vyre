@@ -32,14 +32,37 @@
 //!     exercises (and regression-locks) the signed multiply + signed divide fix.
 //! Every input value is a multiple of 0.5 or a power of two → exact in 16.16.
 
-use vyre_libs::solvers::amg_pass_solver::{
-    reference_smooth_matroid_flow, smooth_matroid_flow_fixed_via,
-};
+use vyre_libs::solvers::amg_pass_solver::{smooth_matroid_flow_fixed_via, DEFAULT_OMEGA};
+use vyre_reference::composition_witness::amg_v_cycle_witness;
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_test_support::fixed_point::{from_fixed, xorshift32 as xorshift};
 
 const FIXED_ONE: f64 = 65536.0;
+
+#[allow(clippy::too_many_arguments)]
+fn reference_smooth_matroid_flow(
+    a: &[f64],
+    b: &[f64],
+    x: &[f64],
+    restriction: &[f64],
+    prolongation: &[f64],
+    coarse: &[f64],
+    n_fine: u32,
+    n_coarse: u32,
+) -> Vec<f64> {
+    amg_v_cycle_witness(
+        a,
+        b,
+        x,
+        restriction,
+        prolongation,
+        coarse,
+        DEFAULT_OMEGA,
+        n_fine,
+        n_coarse,
+    )
+}
 
 /// Convert a non-negative f64 (a multiple of 0.5 or a power of two in this suite) to 16.16 fixed-point.
 fn to_fixed(v: f64) -> u32 {

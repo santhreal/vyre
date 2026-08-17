@@ -19,7 +19,7 @@
 //!
 //! - [`crate::hash::sketch::count_sketch_update`]  -  given an item and its hash + sign,
 //!   add to the sketch table. Single-lane stream model.
-//! - `count_sketch_query_cpu` (requires the `cpu-parity` feature)  -  estimate frequency of an item by
+//! - `count_sketch_query` witness in `vyre-reference`  -  estimate frequency of an item by
 //!   reading hash·sign-indexed cells across `d` independent sketches
 //!   and taking the median of `sign * cell` reads.
 
@@ -193,14 +193,72 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
 
 // ---- CPU references ----
 
-
-
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        count_sketch_query_witness, count_sketch_table_len, count_sketch_update_witness,
+        try_count_sketch_query_into_witness,
+    };
+
+    fn count_sketch_update_cpu(table: &mut [u32], hashes: &[u32], signs: &[i32], d: u32, w: u32) {
+        count_sketch_update_witness(table, hashes, signs, d, w);
+    }
+
+    fn count_sketch_query_cpu(table: &[u32], hashes: &[u32], signs: &[i32], d: u32, w: u32) -> i32 {
+        count_sketch_query_witness(table, hashes, signs, d, w)
+    }
+
+    fn count_sketch_query_cpu_into(
+        table: &[u32],
+        hashes: &[u32],
+        signs: &[i32],
+        d: u32,
+        w: u32,
+        estimates: &mut Vec<i32>,
+    ) -> i32 {
+        try_count_sketch_query_cpu_into(table, hashes, signs, d, w, estimates).unwrap_or(0)
+    }
+
+    fn try_count_sketch_query_cpu_into(
+        table: &[u32],
+        hashes: &[u32],
+        signs: &[i32],
+        d: u32,
+        w: u32,
+        estimates: &mut Vec<i32>,
+    ) -> Result<i32, CountSketchError> {
+        if d == 0 || w == 0 {
+            return Err(CountSketchError::InvalidDimensions { d, w });
+        }
+        let table_len = count_sketch_table_len(d, w)
+            .map_err(|_| CountSketchError::TableSizeOverflow { d, w })?;
+        if table.len() != table_len {
+            return Err(CountSketchError::BadTableShape {
+                expected: table_len,
+                actual: table.len(),
+            });
+        }
+        let d_len = usize::try_from(d).map_err(|_| CountSketchError::TableSizeOverflow { d, w })?;
+        if hashes.len() < d_len || signs.len() < d_len {
+            return Err(CountSketchError::BadQueryShape {
+                d: d_len,
+                hashes: hashes.len(),
+                signs: signs.len(),
+            });
+        }
+        for (row, &col) in hashes.iter().take(d_len).enumerate() {
+            if col >= w {
+                return Err(CountSketchError::HashOutOfRange { row, col, w });
+            }
+        }
+        try_count_sketch_query_into_witness(table, hashes, signs, d, w, estimates).map_err(|err| {
+            CountSketchError::Allocation {
+                requested: d_len,
+                source: err,
+            }
+        })
+    }
 
     #[test]
     fn cpu_single_item_round_trip() {

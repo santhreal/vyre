@@ -82,14 +82,6 @@ pub fn try_qsvt_block_encode(
     ))
 }
 
-
-
-
-
-
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -102,12 +94,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[
-                65_536, 131_072, 196_608, 262_144,
-                327_680, 393_216, 458_752, 524_288,
-                589_824, 655_360, 720_896, 786_432,
-                851_968, 917_504, 983_040, 1_048_576,
-            ])]]
+            vec![vec![vec![
+                0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00,
+                0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x08, 0x00,
+                0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00, 0x0c, 0x00,
+                0x00, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x10, 0x00,
+            ]]]
         }),
     )
 }
@@ -115,6 +107,66 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        qsvt_apply_witness, qsvt_apply_witness_with_scratch_into, qsvt_block_encode_witness,
+        qsvt_block_encode_witness_into,
+    };
+
+    fn try_qsvt_block_encode_cpu_into(
+        matrix: &[f64],
+        dimension: u32,
+        out: &mut Vec<f64>,
+    ) -> Result<f64, String> {
+        let norm = qsvt_block_encode_witness_into(matrix, dimension, out);
+        Ok(norm)
+    }
+
+    fn qsvt_block_encode_cpu(matrix: &[f64], dimension: u32) -> (Vec<f64>, f64) {
+        qsvt_block_encode_witness(matrix, dimension)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_qsvt_apply_cpu_into(
+        a_scaled: &[f64],
+        v: &[f64],
+        coeffs: &[f64],
+        n: u32,
+        out: &mut Vec<f64>,
+        prev: &mut Vec<f64>,
+        curr: &mut Vec<f64>,
+        next: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let n_usize = n as usize;
+        if a_scaled.len() < n_usize * n_usize {
+            return Err(format!(
+                "a_scaled_len expected {}, got {}",
+                n_usize * n_usize,
+                a_scaled.len()
+            ));
+        }
+        if v.len() < n_usize {
+            return Err(format!("v_len expected {}, got {}", n_usize, v.len()));
+        }
+        qsvt_apply_witness_with_scratch_into(a_scaled, v, coeffs, n, out, prev, curr, next)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn qsvt_apply_cpu_into(
+        a_scaled: &[f64],
+        v: &[f64],
+        coeffs: &[f64],
+        n: u32,
+        out: &mut Vec<f64>,
+        prev: &mut Vec<f64>,
+        curr: &mut Vec<f64>,
+        next: &mut Vec<f64>,
+    ) {
+        try_qsvt_apply_cpu_into(a_scaled, v, coeffs, n, out, prev, curr, next).unwrap();
+    }
+
+    fn qsvt_apply_cpu(a_scaled: &[f64], v: &[f64], coeffs: &[f64], n: u32) -> Vec<f64> {
+        qsvt_apply_witness(a_scaled, v, coeffs, n).unwrap()
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())

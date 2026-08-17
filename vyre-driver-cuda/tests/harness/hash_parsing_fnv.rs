@@ -2,9 +2,8 @@ use crate::harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_libs::hash::fnv1a::{
-    fnv1a32, fnv1a32_program, fnv1a32_program_u8, fnv1a64, fnv1a64_program_n_u8,
-};
+use vyre_libs::hash::fnv1a::{fnv1a32_program, fnv1a32_program_u8, fnv1a64_program_n_u8};
+use vyre_reference::composition_witness::{fnv1a32_witness as fnv1a32, fnv1a64_witness as fnv1a64};
 
 fn run_fnv1a32(backend: &CudaBackend, bytes: &[u8]) -> u32 {
     let words: Vec<u32> = bytes.iter().map(|b| *b as u32).collect();

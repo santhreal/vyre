@@ -1,4 +1,4 @@
-//! d-DNNF knowledge compilation: host compiler, device evaluator, model count.
+//! d-DNNF knowledge compilation test-adapter and device evaluator bindings.
 //!
 //! d-DNNF is the canonical knowledge-compilation target. A Boolean formula is
 //! rewritten into a directed acyclic graph of AND/OR gates over literals such
@@ -10,16 +10,12 @@
 //! Those two invariants are what make model counting and weighted model
 //! counting linear in the gate count rather than exponential in the variables.
 //!
-//! `analysis::knowledge_compile_pass_precondition` compiles each pass
-//! precondition once at startup and evaluates the DAG per Program at dispatch
-//! time, which is what turns pass-precondition evaluation from exponential per
-//! pass per Program into linear per gate.
+//! Sequential d-DNNF compilation and exact model counting are centralized in
+//! `vyre_reference::composition_witness`.
 //!
-//! [`compile_dnnf`] and [`model_count`] run on the host. The device program
-//! that evaluates a compiled DAG bottom-up over the graph wave scheduler is
-//! [`crate::graph::knowledge_compile::ddnnf_evaluate`], which owns the gate
-//! encoding constants and the registered op id along with it.
+//! The device program that evaluates a compiled DAG bottom-up over the graph
+//! wave scheduler is [`crate::graph::knowledge_compile::ddnnf_evaluate`],
+//! which owns the gate encoding constants and the registered op id along with it.
 
+#[cfg(test)]
 pub(crate) mod compile;
-
-pub use compile::{compile_dnnf, is_satisfiable, is_tautology, model_count, DnnfDag, DnnfGate};

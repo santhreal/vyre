@@ -8,9 +8,18 @@ use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::graph::tensor_flow_forward::{
-    tensor_flow_forward, tensor_flow_forward_dispatch_grid, tensor_words,
-    try_tensor_flow_forward_cpu,
+    tensor_flow_forward, try_tensor_words, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE,
 };
+use vyre_reference::composition_witness::try_tensor_flow_forward_witness as try_tensor_flow_forward_cpu;
+
+fn tensor_flow_forward_dispatch_grid(node_count: u32) -> [u32; 3] {
+    vyre_primitives::lane_grid(node_count, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE[0])
+}
+
+fn tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> u32 {
+    try_tensor_words(node_count, context_limit, field_limit)
+        .expect("Fix: tensor words should fit valid test shape")
+}
 
 fn tensor_bit_index(node: u32, ctx: u32, fld: u32, context_limit: u32, field_limit: u32) -> u32 {
     node * context_limit * field_limit + ctx * field_limit + fld

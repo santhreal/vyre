@@ -1,13 +1,71 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::graph::dispatch::motif::{motif_matches_via, motif_participation_count_via};
 use crate::graph::motif::{
-    cpu_ref as reference_motif, cpu_ref_matches as reference_motif_matches,
-    cpu_ref_participation_count as reference_motif_participation_count, match_motif, motif_matches,
-    motif_participation_count, plan_motif_launch, try_match_motif, try_motif_matches,
-    try_motif_participation_count, MotifEdge,
+    match_motif, motif_matches, motif_participation_count, plan_motif_launch, try_match_motif,
+    try_motif_matches, try_motif_participation_count, MotifEdge,
 };
-use crate::test_parity_oracles::StaticOutputs;
+use crate::test_parity_oracles::{SequentialOutputs, StaticOutputs};
 use vyre_foundation::program_dispatch::DispatchError;
+use vyre_reference::composition_witness::motif_witness;
+
+fn reference_motif(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_masks: &[u32],
+    motif_edges: &[MotifEdge],
+) -> Vec<u32> {
+    let edges = motif_edges
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect::<Vec<_>>();
+    motif_witness(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_masks,
+        &edges,
+    )
+}
+
+fn reference_motif_matches(
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_masks: &[u32],
+    motif_edges: &[MotifEdge],
+) -> bool {
+    let node_count = edge_offsets.len().saturating_sub(1) as u32;
+    motif_edges.is_empty()
+        || reference_motif(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_masks,
+            motif_edges,
+        )
+        .into_iter()
+        .any(|value| value != 0)
+}
+
+fn reference_motif_participation_count(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_masks: &[u32],
+    motif_edges: &[MotifEdge],
+) -> u32 {
+    reference_motif(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_masks,
+        motif_edges,
+    )
+    .into_iter()
+    .filter(|&value| value != 0)
+    .count() as u32
+}
 
 const MOTIF_CONTRACT: &str = "motif match dispatch";
 
@@ -307,4 +365,40 @@ fn via_rejects_malformed_csr_before_dispatch() {
     let err = match_motif_via(&dispatcher, 2, &[0, 1, 1], &[1], &[], &[])
         .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));
+}
+
+#[test]
+fn motif_matches_via_dispatches_match_and_reduction() {
+    let dispatcher = SequentialOutputs::new(
+        "motif_matches_via test",
+        vec![
+            vec![
+                u32_slice_to_le_bytes(&[1, 1, 1]),
+                u32_slice_to_le_bytes(&[1, 1, 1]),
+            ],
+            vec![u32_slice_to_le_bytes(&[1])],
+        ],
+    );
+    let (offsets, targets, masks, motif) = chain_graph();
+    let matches = motif_matches_via(&dispatcher, 3, &offsets, &targets, &masks, &motif)
+        .expect("motif_matches_via must succeed");
+    assert!(matches);
+}
+
+#[test]
+fn motif_participation_count_via_dispatches_match_and_reduction() {
+    let dispatcher = SequentialOutputs::new(
+        "motif_participation_count_via test",
+        vec![
+            vec![
+                u32_slice_to_le_bytes(&[1, 1, 1]),
+                u32_slice_to_le_bytes(&[1, 1, 1]),
+            ],
+            vec![u32_slice_to_le_bytes(&[3])],
+        ],
+    );
+    let (offsets, targets, masks, motif) = chain_graph();
+    let count = motif_participation_count_via(&dispatcher, 3, &offsets, &targets, &masks, &motif)
+        .expect("motif_participation_count_via must succeed");
+    assert_eq!(count, 3);
 }

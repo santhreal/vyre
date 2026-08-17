@@ -9,9 +9,12 @@ use vyre_foundation::pass_substrate::semiring_closure::{
     lineage_closure, reachability_closure, shortest_path_closure,
 };
 use vyre_libs::analysis::dataflow_fixpoint::{
-    forward_backward_bitsets_for_pivot, forward_backward_bitsets_for_pivot_via,
-    lineage_closure_via, reachability_closure_via, scc_components_via_substrate,
+    forward_backward_bitsets_for_pivot_via, lineage_closure_via, reachability_closure_via,
     scc_components_via_substrate_via, shortest_path_closure_via,
+};
+use vyre_reference::composition_witness::{
+    dense_reachability_bitsets_witness as forward_backward_bitsets_for_pivot,
+    dense_scc_components_witness as scc_components_via_substrate,
 };
 
 #[test]

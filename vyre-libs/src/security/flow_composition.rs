@@ -16,18 +16,13 @@
 //! ```
 
 use crate::bitset::and::bitset_and;
-#[cfg(test)]
-use crate::bitset::and::cpu_ref as bitset_and_cpu_ref;
 use crate::bitset::and_not::bitset_and_not;
-#[cfg(test)]
-use crate::bitset::and_not::cpu_ref as bitset_and_not_cpu_ref;
 use crate::bitset::any::bitset_any;
 use crate::bitset::bitset_words;
 use crate::graph::csr_backward_traverse::csr_backward_traverse;
-#[cfg(test)]
-use crate::graph::csr_forward_traverse::cpu_ref as csr_forward_cpu_ref;
 use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::program_graph::ProgramGraphShape;
+#[cfg(test)]
 use crate::predicate::edge_kind;
 use vyre_foundation::composition::{
     reparent_program_children, tag_program, trap_program, wrap_anonymous_region,
@@ -35,6 +30,11 @@ use vyre_foundation::composition::{
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    bitset_and_not_witness as bitset_and_not_cpu_ref, bitset_and_witness as bitset_and_cpu_ref,
+    csr_forward_traverse_witness as csr_forward_cpu_ref,
+};
 
 use crate::security::flows_to::{FLOWS_TO_MASK, OP_ID as FLOWS_TO_OP_ID};
 
@@ -275,68 +275,73 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
 // Registration fixtures. The conformance harness feeds these to every family
 // member, so they live here rather than being retyped per file.
 // ---------------------------------------------------------------------------
-
-fn pack(words: &[u32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_u32_slice(words)
-}
+const FORWARD_REACH_EXPECTED_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+const DOMINANCE_EXPECTED_BYTES: [u8; 4] = [0x0E, 0x00, 0x00, 0x00];
+const DATAFLOW_HIT_REACH_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+const DATAFLOW_HIT_SINK_BYTES: [u8; 4] = [0x02, 0x00, 0x00, 0x00];
+const DATAFLOW_HIT_SCALAR_BYTES: [u8; 4] = [0x01, 0x00, 0x00, 0x00];
 
 /// Linear chain `0 → 1 → 2 → 3` over ASSIGNMENT edges, frontier seeded at {0}.
 /// `fout` seeds as the accumulator so the convergence lens grows monotonically.
 pub(crate) fn forward_reach_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        pack(&[0, 0, 0, 0]),               // pg_nodes
-        pack(&[0, 1, 2, 3, 3]),            // pg_edge_offsets
-        pack(&[1, 2, 3]),                  // pg_edge_targets
-        pack(&[edge_kind::ASSIGNMENT; 3]), // pg_edge_kind_mask
-        pack(&[0, 0, 0, 0]),               // pg_node_tags
-        pack(&[0b0001]),                   // frontier_in = {0}
-        pack(&[0b0001]),                   // frontier_out accumulator seed
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_nodes
+        vec![0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // pg_edge_offsets
+        vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],             // pg_edge_targets
+        vec![1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],             // pg_edge_kind_mask (ASSIGNMENT=1)
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_node_tags
+        vec![1, 0, 0, 0],                                     // frontier_in = {0}
+        vec![1, 0, 0, 0],                                     // frontier_out accumulator seed
     ]]
 }
 
 /// One forward hop from {0} writes {1} into the accumulator. A no-op that
 /// leaves the accumulator at {0} fails this oracle.
 pub(crate) fn forward_reach_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![pack(&[0b0011])]]
+    vec![vec![FORWARD_REACH_EXPECTED_BYTES.to_vec()]]
 }
 
 /// Diamond dominance tree `0 → {1, 2} → 3`, frontier seeded at {3}.
 pub(crate) fn dominance_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        pack(&[0, 0, 0, 0]),              // pg_nodes
-        pack(&[0, 2, 3, 4, 4]),           // pg_edge_offsets
-        pack(&[1, 2, 3, 3]),              // pg_edge_targets
-        pack(&[edge_kind::DOMINANCE; 4]), // pg_edge_kind_mask
-        pack(&[0, 0, 0, 0]),              // pg_node_tags
-        pack(&[0b1000]),                  // frontier_in = {3}
-        pack(&[0b1000]),                  // frontier_out accumulator seed
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_nodes
+        vec![0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0], // pg_edge_offsets
+        vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // pg_edge_targets
+        vec![8, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0], // pg_edge_kind_mask (DOMINANCE=8)
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_node_tags
+        vec![8, 0, 0, 0],                                     // frontier_in = {3} (0b1000)
+        vec![8, 0, 0, 0],                                     // frontier_out accumulator seed
     ]]
 }
 
 /// One backward hop from {3} lights up nodes 1 and 2; the seed survives.
 pub(crate) fn dominance_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![pack(&[0b1110])]]
+    vec![vec![DOMINANCE_EXPECTED_BYTES.to_vec()]]
 }
 
 /// The forward chain again, with source {0} and the sink tag on {1}.
 pub(crate) fn dataflow_hit_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        pack(&[0, 0, 0, 0]),               // pg_nodes
-        pack(&[0, 1, 2, 3, 3]),            // pg_edge_offsets
-        pack(&[1, 2, 3]),                  // pg_edge_targets
-        pack(&[edge_kind::ASSIGNMENT; 3]), // pg_edge_kind_mask
-        pack(&[0, 0, 0, 0]),               // pg_node_tags
-        pack(&[0b0001]),                   // source = {0}
-        pack(&[0b0001]),                   // reach accumulator seed
-        pack(&[0b0010]),                   // sink = {1}
-        pack(&[0b0000]),                   // hits
-        pack(&[0b0000]),                   // out_scalar
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_nodes
+        vec![0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // pg_edge_offsets
+        vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],             // pg_edge_targets
+        vec![1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],             // pg_edge_kind_mask (ASSIGNMENT=1)
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_node_tags
+        vec![1, 0, 0, 0],                                     // source = {0}
+        vec![1, 0, 0, 0],                                     // reach accumulator seed
+        vec![2, 0, 0, 0],                                     // sink = {1}
+        vec![0, 0, 0, 0],                                     // hits
+        vec![0, 0, 0, 0],                                     // out_scalar
     ]]
 }
 
 /// Reach grows to {0, 1}, the sink at {1} is hit, the witness reads 1.
 pub(crate) fn dataflow_hit_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![pack(&[0b0011]), pack(&[0b0010]), pack(&[0b0001])]]
+    vec![vec![
+        DATAFLOW_HIT_REACH_BYTES.to_vec(),
+        DATAFLOW_HIT_SINK_BYTES.to_vec(),
+        DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
+    ]]
 }
 
 // ---------------------------------------------------------------------------
@@ -531,5 +536,25 @@ mod tests {
         ));
 
         assert_eq!(actual.fingerprint(), expected.fingerprint());
+    }
+
+    #[test]
+    fn registration_fixtures_match_exact_byte_constants() {
+        assert_eq!(
+            forward_reach_fixture_expected(),
+            vec![vec![vec![0x03, 0x00, 0x00, 0x00]]]
+        );
+        assert_eq!(
+            dominance_fixture_expected(),
+            vec![vec![vec![0x0E, 0x00, 0x00, 0x00]]]
+        );
+        assert_eq!(
+            dataflow_hit_fixture_expected(),
+            vec![vec![
+                vec![0x03, 0x00, 0x00, 0x00],
+                vec![0x02, 0x00, 0x00, 0x00],
+                vec![0x01, 0x00, 0x00, 0x00],
+            ]]
+        );
     }
 }

@@ -6,7 +6,7 @@
 mod csr_sweep;
 mod graph_sweep_fixtures;
 
-use vyre_libs::graph::csr_forward_traverse;
+use vyre_reference::composition_witness::csr_forward_traverse_witness;
 
 const CASES: usize = 16384;
 
@@ -21,7 +21,7 @@ fn sweep_graph_csr_forward_traverse_volume_oracle_matrix() {
         let expected = csr_sweep::oracle_forward_step(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
-        let actual = csr_forward_traverse::cpu_ref(
+        let actual = csr_forward_traverse_witness(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
         assert_eq!(

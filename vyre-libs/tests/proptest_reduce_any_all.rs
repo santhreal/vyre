@@ -1,8 +1,10 @@
-//! Property gates for `reduce::any::cpu_ref` and `reduce::all::cpu_ref`.
+//! Property gates for `reduce::any` and `reduce::all` reduction witnesses.
 #![cfg(feature = "reduce")]
 
 use proptest::prelude::*;
-
+use vyre_reference::composition_witness::{
+    reduce_all_witness as all_ref, reduce_any_witness as any_ref,
+};
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
 
@@ -57,13 +59,4 @@ proptest! {
             "all=1 implies any=1 for single word"
         );
     }
-}
-
-#[must_use]
-fn all_ref(input: &[u32]) -> u32 {
-    if input.iter().all(|&w| w != 0) { 1 } else { 0 }
-}
-#[must_use]
-fn any_ref(input: &[u32]) -> u32 {
-    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
 }

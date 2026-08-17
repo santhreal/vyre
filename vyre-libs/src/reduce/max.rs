@@ -7,5 +7,6 @@ crate::reduce::atomic_scalar::define_u32_reduce_op! {
     identity: 0,
     fold: u32::max,
     sample: [9, 3, 7, 5],
-    expected: 9
+    expected: 9,
+    expected_bytes: [0x09, 0x00, 0x00, 0x00]
 }

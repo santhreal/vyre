@@ -5,9 +5,9 @@
 use crate::builder::reduction::ReductionComposer;
 #[cfg(test)]
 use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::Program;
 #[cfg(test)]
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-use vyre_foundation::ir::Program;
 
 const OP_ID: &str = "vyre-libs::math::reduce_mean";
 #[cfg(test)]
@@ -84,10 +84,9 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_f32_slice;
-            vec![vec![
-                to_bytes(&[2.5_f32]), // mean of [1,2,3,4]
-            ]]
+            vec![vec![vec![
+                0x00, 0x00, 0x20, 0x40, // mean of [1,2,3,4] = 2.5_f32
+            ]]]
         }),
     )
     .with_category("math")

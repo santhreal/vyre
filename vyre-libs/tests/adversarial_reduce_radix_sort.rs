@@ -16,21 +16,7 @@
 mod gate_fixtures;
 
 use vyre_libs::reduce::radix_sort::*;
-
-fn cpu_ref(input: &[u32], bits: u32) -> Vec<u32> {
-    let bits = bits.min(32);
-    let mut out = input.to_vec();
-    if bits == 0 {
-        return out;
-    }
-    let mask = if bits == 32 {
-        u32::MAX
-    } else {
-        (1u32 << bits) - 1
-    };
-    out.sort_by_key(|value| *value & mask);
-    out
-}
+use vyre_reference::composition_witness::radix_sort_masked_witness as cpu_ref;
 
 adversarial_vec_u32_cases! {
     test_reduce_radix_sort_adv_0: vec![0u32; 0], 0u32 => Vec::<u32>::new(), "FINDING-ADV-REDUCE-RADIX_SORT-0: Exact bit output mismatch";

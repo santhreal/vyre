@@ -6,12 +6,13 @@
 //! and AST constant-fold wave construction all route through
 //! `vyre-primitives::parsing` rather than duplicating layout rules here.
 
-use crate::parsing::{
-    ast_cse_constant_fold::{ast_cse_constant_fold, OP_ID as AST_CSE_CONSTANT_FOLD_PRIMITIVE_ID},
-    bytecode_dispatch_table_pack::{
-        pack_dispatch_table_into, packed_dispatch_table_len, unpack_entry, OpcodeHandlerEntry,
-        PackError,
-    },
+use crate::parsing::ast_cse_constant_fold::{
+    ast_cse_constant_fold, OP_ID as AST_CSE_CONSTANT_FOLD_PRIMITIVE_ID,
+};
+#[cfg(test)]
+use crate::parsing::bytecode_dispatch_table_pack::{
+    pack_dispatch_table_into, packed_dispatch_table_len, unpack_entry, OpcodeHandlerEntry,
+    PackError,
 };
 use vyre_foundation::ir::{Expr, Node};
 
@@ -51,6 +52,7 @@ pub fn emit_self_hosted_ast_constant_fold_wave(
 }
 
 /// Return the exact packed-word count needed for a bytecode handler table.
+#[cfg(test)]
 #[must_use]
 pub const fn self_hosted_dispatch_table_words(entries_len: usize) -> usize {
     packed_dispatch_table_len(entries_len)
@@ -66,6 +68,7 @@ pub const fn self_hosted_dispatch_table_words(entries_len: usize) -> usize {
 ///
 /// Returns [`PackError`] when an entry cannot be represented in the one-word
 /// dispatch-table ABI.
+#[cfg(test)]
 pub fn pack_self_hosted_bytecode_dispatch_table(
     entries: &[OpcodeHandlerEntry],
     out: &mut Vec<u32>,
@@ -74,6 +77,7 @@ pub fn pack_self_hosted_bytecode_dispatch_table(
 }
 
 /// Decode one self-hosted interpreter dispatch-table entry.
+#[cfg(test)]
 #[must_use]
 pub fn decode_self_hosted_dispatch_entry(packed: u32) -> OpcodeHandlerEntry {
     unpack_entry(packed)

@@ -76,11 +76,12 @@ pub fn stream_compact(
     )
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        stream_compact_witness as cpu_ref, stream_compact_witness_into as cpu_ref_into,
+    };
 
     #[test]
     fn cpu_ref_compacts_live_lanes_in_order() {

@@ -3,8 +3,11 @@
 #![cfg(feature = "text")]
 
 use proptest::prelude::*;
-use vyre_reference::composition_witness::byte_histogram_witness;
-use vyre_libs::text::{classify_from_histogram, ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
+use vyre_libs::text::{ENC_ASCII, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8};
+use vyre_reference::composition_witness::{
+    byte_histogram_witness as reference_byte_histogram,
+    encoding_classify_histogram_witness as classify_from_histogram,
+};
 
 fn weighted_byte_strategy() -> impl Strategy<Value = u8> {
     prop_oneof![

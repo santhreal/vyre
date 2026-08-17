@@ -43,40 +43,6 @@ use crate::dispatch_buffers::{ceil_div_u32, decode_u32_output_exact, u32_slice_t
 use crate::graph::functorial::functor_apply_sized;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
-/// Apply a functor to a row of IR-view data. `view_in[i]` is the
-/// i-th column's value in the input view; `column_mapping[i]` is
-/// the target-view column index for input column i. Returns the
-/// transformed row in the output view of size `target_n_cols`.
-///
-/// # Panics
-///
-/// Panics if `view_in.len() != column_mapping.len()`.
-#[must_use]
-pub fn apply_pass_functor(view_in: &[u32], column_mapping: &[u32], target_n_cols: u32) -> Vec<u32> {
-    let mut out = Vec::new();
-    apply_pass_functor_into(view_in, column_mapping, target_n_cols, &mut out);
-    out
-}
-
-/// Apply a functor into caller-owned output storage.
-pub fn apply_pass_functor_into(
-    view_in: &[u32],
-    column_mapping: &[u32],
-    target_n_cols: u32,
-    out: &mut Vec<u32>,
-) {
-    use crate::telemetry::{bump, functorial_pass_composition_calls};
-    bump(&functorial_pass_composition_calls);
-    assert_eq!(view_in.len(), column_mapping.len());
-    out.clear();
-    out.resize(target_n_cols as usize, 0);
-    for (i, &dst) in column_mapping.iter().enumerate() {
-        if (dst as usize) < out.len() {
-            out[dst as usize] = view_in[i];
-        }
-    }
-}
-
 /// Dispatcher-backed functor application for IR-view rows.
 ///
 /// The primitive preserves the host contract for duplicate mappings:
@@ -167,92 +133,15 @@ pub fn apply_pass_functor_via_into(
     )
 }
 
-/// Compose two functors: F ∘ G applied to a single row. Returns
-/// `(F ∘ G)(row) = F(G(row))`.
-///
-/// `mapping_g` maps view_in (size n_in) → middle view (size n_mid).
-/// `mapping_f` maps middle view (size n_mid) → view_out (size n_out).
-///
-/// # Panics
-///
-/// Panics on size mismatches.
-#[must_use]
-pub fn compose_passes(
-    view_in: &[u32],
-    mapping_g: &[u32],
-    n_mid: u32,
-    mapping_f: &[u32],
-    n_out: u32,
-) -> Vec<u32> {
-    let mut out = Vec::new();
-    let mut combined = Vec::new();
-    compose_passes_into(
-        view_in,
-        mapping_g,
-        n_mid,
-        mapping_f,
-        n_out,
-        &mut combined,
-        &mut out,
-    );
-    out
-}
-
-/// Compose two functors into caller-owned scratch and output buffers.
-pub fn compose_passes_into(
-    view_in: &[u32],
-    mapping_g: &[u32],
-    n_mid: u32,
-    mapping_f: &[u32],
-    n_out: u32,
-    combined: &mut Vec<u32>,
-    out: &mut Vec<u32>,
-) {
-    assert_eq!(view_in.len(), mapping_g.len());
-    assert_eq!(mapping_f.len(), n_mid as usize);
-    // Collapse G then F into one column map so scatter/gather matches a single
-    // `apply_pass_functor` (two-step apply can disagree when mid columns alias).
-    combined.clear();
-    combined.reserve(mapping_g.len());
-    combined.extend(mapping_g.iter().map(|&mid_dst| mapping_f[mid_dst as usize]));
-    apply_pass_functor_into(view_in, combined, n_out, out);
-}
-
-/// Categorical identity functor: maps each column to itself.
-/// Used as the "no-op pass"  -  composes with anything as identity.
-#[must_use]
-pub fn identity_functor(n_cols: u32) -> Vec<u32> {
-    let mut out = Vec::new();
-    identity_functor_into(n_cols, &mut out);
-    out
-}
-
-/// Write the identity functor into caller-owned storage.
-pub fn identity_functor_into(n_cols: u32, out: &mut Vec<u32>) {
-    out.clear();
-    out.reserve(n_cols as usize);
-    out.extend(0..n_cols);
-}
-
-/// Test whether two functors commute on a given input row.
-/// `f_then_g(x) == g_then_f(x)` for x = `view_in`.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn passes_commute_on(
-    view_in: &[u32],
-    mapping_a: &[u32],
-    n_mid_a: u32,
-    mapping_b_after_a: &[u32],
-    mapping_b: &[u32],
-    n_mid_b: u32,
-    mapping_a_after_b: &[u32],
-    n_out: u32,
-) -> bool {
-    let ab = compose_passes(view_in, mapping_a, n_mid_a, mapping_b_after_a, n_out);
-    let ba = compose_passes(view_in, mapping_b, n_mid_b, mapping_a_after_b, n_out);
-    ab == ba
-}
-
+#[cfg(test)]
+pub use vyre_reference::composition_witness::{
+    compose_passes_witness as compose_passes, compose_passes_witness_into as compose_passes_into,
+    functor_apply_witness as apply_pass_functor,
+    functor_apply_witness_into as apply_pass_functor_into,
+    identity_functor_witness as identity_functor,
+    identity_functor_witness_into as identity_functor_into,
+    passes_commute_on_witness as passes_commute_on,
+};
 #[cfg(test)]
 mod tests {
     use super::*;

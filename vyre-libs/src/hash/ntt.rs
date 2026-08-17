@@ -71,48 +71,34 @@ const MONTGOMERY_R2: u32 = 932_051_910;
 const MONTGOMERY_N_PRIME: u32 = 998_244_351;
 
 /// Modular addition in `Z/p`.
+#[cfg(test)]
 #[inline]
 #[must_use]
 pub fn mod_add(a: u32, b: u32) -> u32 {
-    let s = (a as u64) + (b as u64);
-    (if s >= PRIME_P as u64 {
-        s - PRIME_P as u64
-    } else {
-        s
-    }) as u32
+    vyre_reference::composition_witness::ntt_mod_add_witness(a, b)
 }
 
 /// Modular subtraction in `Z/p`.
+#[cfg(test)]
 #[inline]
 #[must_use]
 pub fn mod_sub(a: u32, b: u32) -> u32 {
-    if a >= b {
-        a - b
-    } else {
-        PRIME_P - (b - a)
-    }
+    vyre_reference::composition_witness::ntt_mod_sub_witness(a, b)
 }
 
 /// Modular multiplication in `Z/p` via 64-bit wide intermediate.
+#[cfg(test)]
 #[inline]
 #[must_use]
 pub fn mod_mul(a: u32, b: u32) -> u32 {
-    ((a as u64 * b as u64) % PRIME_P as u64) as u32
+    vyre_reference::composition_witness::ntt_mod_mul_witness(a, b)
 }
 
 /// Modular exponentiation `base^exp mod p`.
+#[cfg(test)]
 #[must_use]
-pub fn mod_pow(mut base: u32, mut exp: u32) -> u32 {
-    let mut result: u32 = 1;
-    base %= PRIME_P;
-    while exp > 0 {
-        if exp & 1 == 1 {
-            result = mod_mul(result, base);
-        }
-        exp >>= 1;
-        base = mod_mul(base, base);
-    }
-    result
+pub fn mod_pow(base: u32, exp: u32) -> u32 {
+    vyre_reference::composition_witness::ntt_mod_pow_witness(base, exp)
 }
 
 fn mod_add_expr(left: Expr, right: Expr) -> Expr {
@@ -155,10 +141,9 @@ fn mod_mul_expr(left: Expr, right: Expr) -> Expr {
     montgomery_reduce_product_expr(product_mont, Expr::u32(1))
 }
 
-
-
 /// Bit-reversal permutation of `a` (in place). Helper for both
 /// forward and inverse NTT.
+#[cfg(test)]
 pub fn bit_reverse<T: Copy>(a: &mut [T]) {
     let n = a.len();
     let mut j = 0;
@@ -280,6 +265,10 @@ pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -
     )
 }
 
+const EXPECTED_NTT_BUTTERFLY_OUTPUT_BYTES: [u8; 16] = [
+    3, 0, 0, 0, 0x00, 0x00, 0x80, 0x3B, 7, 0, 0, 0, 0x00, 0x00, 0x80, 0x3B,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -288,12 +277,11 @@ inventory::submit! {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
                 to_bytes(&[1, 2, 3, 4]),
-                to_bytes(&[1, mod_pow(GENERATOR_G, (PRIME_P - 1) / 4)]),
+                to_bytes(&[1, 911_660_635]), // 3^((PRIME_P - 1) / 4) mod PRIME_P = 911660635
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[3, PRIME_P - 1, 7, PRIME_P - 1])]]
+            vec![vec![EXPECTED_NTT_BUTTERFLY_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -301,6 +289,15 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{ntt_forward_witness, ntt_inverse_witness};
+
+    fn ntt_forward_cpu(a: &mut [u32]) {
+        ntt_forward_witness(a);
+    }
+
+    fn ntt_inverse_cpu(a: &mut [u32]) {
+        ntt_inverse_witness(a);
+    }
 
     #[test]
     fn mod_ops_roundtrip() {

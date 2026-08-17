@@ -9,6 +9,7 @@ use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
+use crate::graph::scc_decompose::dense_reachability_bitsets;
 use crate::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -118,13 +119,16 @@ pub fn semiring_gemm_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], c_bytes);
     let grid_x = ceil_div_u32(c_words_u32, 256);
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
-    if outputs.len() != 1 {
-        return Err(DispatchError::BackendError(format!(
-            "Fix: semiring_gemm_via expected exactly one c output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], c_words, "semiring_gemm_via c", c)
+    let [c_out] = match outputs.as_slice() {
+        [c_out] => [c_out],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: semiring_gemm_via expected exactly one c output buffer, got {}.",
+                outputs.len()
+            )));
+        }
+    };
+    decode_u32_output_exact(c_out, c_words, "semiring_gemm_via c", c)
 }
 
 /// Boolean-OR semiring specialisation of [`semiring_gemm_via`].
@@ -340,6 +344,12 @@ pub fn forward_backward_bitsets_for_pivot_via(
             adj.len()
         )));
     }
+    let dense_count = n.checked_mul(n).ok_or_else(|| {
+        DispatchError::BadInputs(format!(
+            "Fix: forward_backward_bitsets_for_pivot_via n*n exceeds the GPU u32 buffer domain for n={n}."
+        ))
+    })?;
+    let words = ((n + 31) / 32) as usize;
 
     let fwd_closure = reachability_closure_via(dispatcher, adj, n, n)?;
     let mut transpose = vec![0u32; cells];
@@ -349,17 +359,51 @@ pub fn forward_backward_bitsets_for_pivot_via(
         }
     }
     let bwd_closure = reachability_closure_via(dispatcher, &transpose, n, n)?;
-    let words = ((n + 31) / 32) as usize;
-    let mut forward = vec![0u32; words];
-    let mut backward = vec![0u32; words];
-    write_pivot_bitsets(
-        &fwd_closure,
-        &bwd_closure,
+    let bitset_bytes = words
+        .checked_mul(std::mem::size_of::<u32>())
+        .ok_or_else(|| {
+            DispatchError::BadInputs(format!(
+                "Fix: forward_backward_bitsets_for_pivot_via bitset byte count overflows usize for {words} words."
+            ))
+        })?;
+    let program = dense_reachability_bitsets(
+        n,
+        dense_count,
         pivot,
-        n_us,
-        &mut forward,
-        &mut backward,
+        "forward_closure",
+        "backward_closure",
+        "forward",
+        "backward",
     );
+    let mut inputs = vec![Vec::new(); 4];
+    write_u32_slice_le_bytes(&mut inputs[0], &fwd_closure);
+    write_u32_slice_le_bytes(&mut inputs[1], &bwd_closure);
+    write_zero_bytes(&mut inputs[2], bitset_bytes);
+    write_zero_bytes(&mut inputs[3], bitset_bytes);
+    let outputs = dispatcher.dispatch(&program, &inputs, Some([ceil_div_u32(n, 256), 1, 1]))?;
+    let [fwd_out, bwd_out] = match outputs.as_slice() {
+        [fwd_out, bwd_out] => [fwd_out, bwd_out],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: forward_backward_bitsets_for_pivot_via expected exactly two bitset output buffers, got {}.",
+                outputs.len()
+            )));
+        }
+    };
+    let mut forward = Vec::with_capacity(words);
+    let mut backward = Vec::with_capacity(words);
+    decode_u32_output_exact(
+        fwd_out,
+        words,
+        "forward_backward_bitsets_for_pivot_via forward",
+        &mut forward,
+    )?;
+    decode_u32_output_exact(
+        bwd_out,
+        words,
+        "forward_backward_bitsets_for_pivot_via backward",
+        &mut backward,
+    )?;
     Ok((forward, backward))
 }
 
@@ -401,11 +445,20 @@ pub fn scc_components_via_substrate_with_scratch_via(
     Ok(components)
 }
 
+/// Return the SCC-decomposition launch grid for `node_count` lanes.
+const fn scc_decompose_dispatch_grid(node_count: u32) -> [u32; 3] {
+    vyre_primitives::lane_grid(
+        node_count,
+        crate::graph::scc_decompose::SCC_DECOMPOSE_WORKGROUP_SIZE[0],
+    )
+}
+
 /// GPU-backed SCC composition into caller-owned output storage.
 ///
 /// # Errors
 ///
-/// Propagates closure or SCC-decompose dispatch failures.
+/// Returns [`DispatchError::BadInputs`] for malformed adjacency storage and
+/// propagates closure or SCC-decompose dispatch failures.
 pub fn scc_components_via_substrate_with_scratch_into(
     dispatcher: &dyn ProgramDispatcher,
     adj: &[u32],
@@ -414,6 +467,12 @@ pub fn scc_components_via_substrate_with_scratch_into(
     components: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     if n == 0 {
+        if !adj.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: scc_components_via_substrate_via expected adj.len() == 0 for n=0, got {}.",
+                adj.len()
+            )));
+        }
         components.clear();
         return Ok(());
     }
@@ -429,6 +488,7 @@ pub fn scc_components_via_substrate_with_scratch_into(
             adj.len()
         )));
     }
+    let words = ((n + 31) / 32) as usize;
 
     reachability_closure_via_with_scratch_into(
         dispatcher,
@@ -455,7 +515,6 @@ pub fn scc_components_via_substrate_with_scratch_into(
         &mut scratch.bwd_closure,
         &mut scratch.bwd_next,
     )?;
-    let words = ((n + 31) / 32) as usize;
     scratch.forward.clear();
     scratch.forward.resize(words, 0);
     scratch.backward.clear();
@@ -465,8 +524,9 @@ pub fn scc_components_via_substrate_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 3);
 
     for pivot in 0..n {
-        if components[pivot as usize] != u32::MAX {
-            continue;
+        match components.get(pivot as usize) {
+            Some(&u32::MAX) => {}
+            _ => continue,
         }
         write_pivot_bitsets(
             &scratch.fwd_closure,
@@ -486,15 +546,22 @@ pub fn scc_components_via_substrate_with_scratch_into(
         write_u32_slice_le_bytes(&mut scratch.inputs[0], &scratch.forward);
         write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.backward);
         write_u32_slice_le_bytes(&mut scratch.inputs[2], components);
-        let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([n, 1, 1]))?;
-        if outputs.len() != 1 {
-            return Err(DispatchError::BackendError(format!(
-                "Fix: scc_components_via_substrate_via expected exactly one component output, got {}.",
-                outputs.len()
-            )));
-        }
+        let outputs = dispatcher.dispatch(
+            &program,
+            &scratch.inputs,
+            Some(scc_decompose_dispatch_grid(n)),
+        )?;
+        let [comp_out] = match outputs.as_slice() {
+            [comp_out] => [comp_out],
+            _ => {
+                return Err(DispatchError::BackendError(format!(
+                    "Fix: scc_components_via_substrate_via expected exactly one component output, got {}.",
+                    outputs.len()
+                )));
+            }
+        };
         decode_u32_output_exact(
-            &outputs[0],
+            comp_out,
             n_us,
             "scc_components_via_substrate_via components",
             components,
@@ -511,7 +578,8 @@ mod tests {
 
     use super::super::{SccComponentsGpuScratch, Semiring};
     use super::{
-        scc_components_via_substrate_with_scratch_into, semiring_gemm_via, semiring_gemm_via_into,
+        forward_backward_bitsets_for_pivot_via, scc_components_via_substrate_with_scratch_into,
+        scc_decompose_dispatch_grid, semiring_gemm_via, semiring_gemm_via_into,
     };
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
     use crate::test_parity_oracles::StaticOutputs;
@@ -519,6 +587,7 @@ mod tests {
 
     struct SequenceDispatcher {
         outputs: Vec<Vec<Vec<u8>>>,
+        expected_input_counts: Vec<usize>,
         cursor: Cell<usize>,
     }
 
@@ -529,13 +598,22 @@ mod tests {
             inputs: &[Vec<u8>],
             _grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            if inputs.len() != 3 {
+            let idx = self.cursor.get();
+            let expected_inputs =
+                self.expected_input_counts
+                    .get(idx)
+                    .copied()
+                    .ok_or_else(|| {
+                        DispatchError::BackendError(
+                            "Fix: sequence dispatcher exhausted input expectations.".into(),
+                        )
+                    })?;
+            if inputs.len() != expected_inputs {
                 return Err(DispatchError::BadInputs(format!(
-                    "Fix: sequence test dispatcher expected 3 inputs, got {}.",
+                    "Fix: sequence test dispatcher expected {expected_inputs} inputs, got {}.",
                     inputs.len()
                 )));
             }
-            let idx = self.cursor.get();
             self.cursor.set(idx + 1);
             self.outputs.get(idx).cloned().ok_or_else(|| {
                 DispatchError::BackendError("Fix: sequence dispatcher exhausted outputs.".into())
@@ -605,6 +683,7 @@ mod tests {
                 vec![semiring_step_b],
                 vec![components_done],
             ],
+            expected_input_counts: vec![3; 10],
             cursor: Cell::new(0),
         };
         let mut scratch = SccComponentsGpuScratch::default();
@@ -630,6 +709,126 @@ mod tests {
         )
         .unwrap();
         assert_eq!(components.capacity(), capacity);
+        assert_eq!(components, vec![0, 0]);
+    }
+
+    #[test]
+    fn scc_components_zero_node_validation_precedes_output_mutation() {
+        let dispatcher = SequenceDispatcher {
+            outputs: vec![],
+            expected_input_counts: vec![],
+            cursor: Cell::new(0),
+        };
+        let mut scratch = SccComponentsGpuScratch::default();
+        let mut components = vec![9, 8];
+        let err = scc_components_via_substrate_with_scratch_into(
+            &dispatcher,
+            &[1],
+            0,
+            &mut scratch,
+            &mut components,
+        )
+        .expect_err("non-empty zero-node adjacency must fail");
+        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert_eq!(components, [9, 8]);
+    }
+
+    #[test]
+    fn forward_backward_bitsets_for_pivot_dispatches_dual_closures_and_gpu_packing() {
+        let adj = vec![0, 1, 1, 0];
+        let semiring_step_a = u32_slice_to_le_bytes(&[1, 0, 0, 1]);
+        let semiring_step_b = u32_slice_to_le_bytes(&[1, 1, 1, 1]);
+        let packed_bitsets = u32_slice_to_le_bytes(&[0b11]);
+        let dispatcher = SequenceDispatcher {
+            outputs: vec![
+                vec![semiring_step_a.clone()],
+                vec![semiring_step_b.clone()],
+                vec![semiring_step_a],
+                vec![semiring_step_b],
+                vec![packed_bitsets.clone(), packed_bitsets],
+            ],
+            expected_input_counts: vec![3, 3, 3, 3, 4],
+            cursor: Cell::new(0),
+        };
+        let (fwd, bwd) = forward_backward_bitsets_for_pivot_via(&dispatcher, &adj, 0, 2).unwrap();
+        assert_eq!(fwd, vec![0b11]);
+        assert_eq!(bwd, vec![0b11]);
+    }
+
+    #[test]
+    fn forward_backward_bitsets_for_pivot_rejects_extra_outputs() {
+        let adj = vec![0, 1, 1, 0];
+        let semiring_step_a = u32_slice_to_le_bytes(&[1, 0, 0, 1]);
+        let semiring_step_b = u32_slice_to_le_bytes(&[1, 1, 1, 1]);
+        let packed_bitsets = u32_slice_to_le_bytes(&[0b11]);
+        let dispatcher = SequenceDispatcher {
+            outputs: vec![
+                vec![semiring_step_a.clone()],
+                vec![semiring_step_b.clone()],
+                vec![semiring_step_a],
+                vec![semiring_step_b],
+                vec![
+                    packed_bitsets.clone(),
+                    packed_bitsets.clone(),
+                    packed_bitsets,
+                ],
+            ],
+            expected_input_counts: vec![3, 3, 3, 3, 4],
+            cursor: Cell::new(0),
+        };
+        let err = forward_backward_bitsets_for_pivot_via(&dispatcher, &adj, 0, 2).unwrap_err();
+        assert!(matches!(err, DispatchError::BackendError(_)));
+    }
+
+    #[test]
+    fn forward_backward_bitsets_for_pivot_rejects_invalid_pivot() {
+        let dispatcher = SequenceDispatcher {
+            outputs: vec![],
+            expected_input_counts: vec![],
+            cursor: Cell::new(0),
+        };
+        let err =
+            forward_backward_bitsets_for_pivot_via(&dispatcher, &[0, 0, 0, 0], 2, 2).unwrap_err();
+        assert!(matches!(err, DispatchError::BadInputs(_)));
+    }
+
+    #[test]
+    fn scc_components_gpu_dispatches_with_workgroup_grid() {
+        struct GridCheckDispatcher {
+            expected_grid: [u32; 3],
+        }
+        impl ProgramDispatcher for GridCheckDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                inputs: &[Vec<u8>],
+                grid_override: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                if inputs.len() == 3
+                    && inputs[2].len() == 8
+                    && grid_override == Some(self.expected_grid)
+                {
+                    Ok(vec![u32_slice_to_le_bytes(&[0, 0])])
+                } else {
+                    // Semiring closure steps
+                    Ok(vec![u32_slice_to_le_bytes(&[1, 1, 1, 1])])
+                }
+            }
+        }
+        let dispatcher = GridCheckDispatcher {
+            expected_grid: scc_decompose_dispatch_grid(2),
+        };
+        let adj = vec![0, 1, 1, 0];
+        let mut scratch = SccComponentsGpuScratch::default();
+        let mut components = Vec::new();
+        scc_components_via_substrate_with_scratch_into(
+            &dispatcher,
+            &adj,
+            2,
+            &mut scratch,
+            &mut components,
+        )
+        .expect("dispatch with correct grid override succeeds");
         assert_eq!(components, vec![0, 0]);
     }
 }

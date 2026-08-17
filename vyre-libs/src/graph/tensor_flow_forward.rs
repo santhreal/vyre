@@ -26,6 +26,7 @@ pub const BINDING_TENSOR_IN: u32 = BINDING_PRIMITIVE_START;
 pub const BINDING_TENSOR_OUT: u32 = BINDING_PRIMITIVE_START + 1;
 
 /// Dispatch grid for source-node tensor-flow propagation.
+#[cfg(test)]
 #[must_use]
 pub const fn tensor_flow_forward_dispatch_grid(node_count: u32) -> [u32; 3] {
     vyre_primitives::lane_grid(node_count, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE[0])
@@ -38,6 +39,7 @@ pub const fn tensor_flow_forward_dispatch_grid(node_count: u32) -> [u32; 3] {
 /// taken. `try_tensor_words` is the checked twin every release builder uses; this
 /// const form exists for buffer metadata and saturates rather than wrapping to a
 /// small, silently mis-sized allocation.
+#[cfg(test)]
 #[must_use]
 pub const fn tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> u32 {
     let bits = (node_count as u64)
@@ -245,10 +247,7 @@ pub fn try_tensor_flow_forward(
     ))
 }
 
-
-
-
-
+const EXPECTED_TENSOR_FLOW_FORWARD_OUTPUT_BYTES: [u8; 4] = [0x10, 0x11, 0x00, 0x00];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -267,8 +266,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0x1110])]]
+            vec![vec![EXPECTED_TENSOR_FLOW_FORWARD_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

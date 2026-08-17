@@ -4,12 +4,12 @@
 #![cfg(feature = "text")]
 #![allow(clippy::needless_range_loop)]
 
-use vyre_reference::composition_witness::utf8_shape_counts_witness;
+use vyre_reference::composition_witness::utf8_histogram_shape_counts_witness;
 
 #[test]
 fn reference_utf8_shape_counts_empty_histogram() {
     let histogram = [0u32; 256];
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 0);
     assert_eq!(expected, 0);
 }
@@ -20,7 +20,7 @@ fn reference_utf8_shape_counts_all_continuations() {
     for i in 0x80..0xC0 {
         histogram[i] = 1;
     }
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 0xC0 - 0x80);
     assert_eq!(expected, 0);
 }
@@ -40,7 +40,7 @@ fn reference_utf8_shape_counts_all_starters() {
     for i in 0xF0..0xF5 {
         histogram[i] = 1;
     }
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 0);
     let starter_2 = 0xE0 - 0xC2;
     let starter_3 = 0xF0 - 0xE0;
@@ -54,7 +54,7 @@ fn reference_utf8_shape_counts_large_counts() {
     histogram[0xC2] = 100_000_000;
     histogram[0xE0] = 100_000_000;
     histogram[0xF0] = 100_000_000;
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 0);
     assert_eq!(expected, 100_000_000 + 100_000_000 * 2 + 100_000_000 * 3);
 }
@@ -63,7 +63,7 @@ fn reference_utf8_shape_counts_large_counts() {
 fn reference_utf8_shape_counts_saturates_three_byte_multiplier() {
     let mut histogram = [0u32; 256];
     histogram[0xE0] = u32::MAX / 2 + 1;
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 0);
     assert_eq!(expected, u32::MAX);
 }
@@ -72,7 +72,7 @@ fn reference_utf8_shape_counts_saturates_three_byte_multiplier() {
 fn reference_utf8_shape_counts_saturates_four_byte_multiplier() {
     let mut histogram = [0u32; 256];
     histogram[0xF0] = u32::MAX / 3 + 1;
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 0);
     assert_eq!(expected, u32::MAX);
 }
@@ -82,7 +82,7 @@ fn reference_utf8_shape_counts_saturates_accumulated_expected_count() {
     let mut histogram = [0u32; 256];
     histogram[0xC2] = u32::MAX;
     histogram[0xE0] = 1;
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 0);
     assert_eq!(expected, u32::MAX);
 }
@@ -103,7 +103,7 @@ fn reference_utf8_shape_counts_boundary_bytes() {
     histogram[0xF0] = 1; // first 4-byte starter
     histogram[0xF4] = 1; // last 4-byte starter
     histogram[0xF5] = 1; // just after 4-byte range (excluded by loop)
-    let (cont, expected) = reference_utf8_shape_counts(&histogram);
+    let (cont, expected) = utf8_histogram_shape_counts_witness(&histogram);
     assert_eq!(cont, 2); // 0x80, 0xBF
                          // 0xC0, 0xC1 are NOT counted (excluded by >0xC1)
                          // 0xC2, 0xDF counted as 2-byte (2)

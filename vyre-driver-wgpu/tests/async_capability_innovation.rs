@@ -283,7 +283,7 @@ fn dispatch_async_overlaps_with_host_work() {
     let backend = live_backend();
 
     let program = add_one_program(256 * 1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256 * 1024u32);
+    let input: Vec<u8> = add_one_input(256 * 1024);
 
     let start = Instant::now();
     let pending = backend
@@ -310,7 +310,7 @@ fn dispatch_async_overlaps_with_host_work() {
         "Fix: host work must have taken measurable time"
     );
 
-    let expected: Vec<u8> = vyre_primitives::wire::pack_u32_iter(1..=256 * 1024u32);
+    let expected: Vec<u8> = add_one_expected(256 * 1024);
     assert_eq!(
         outputs,
         vec![expected],

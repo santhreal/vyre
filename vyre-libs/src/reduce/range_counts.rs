@@ -63,7 +63,6 @@ pub fn range_counts_u32(histogram: &str, out: &str, start: u32, end: u32) -> Pro
     )
 }
 
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         RANGE_COUNTS_U32_OP_ID,
@@ -75,16 +74,16 @@ inventory::submit! {
             }
             vec![vec![histogram, vec![0; 4]]]
         }),
-        Some(|| vec![vec![10u32.to_le_bytes().to_vec()]]),
+        Some(|| vec![vec![vec![0x0a, 0x00, 0x00, 0x00]]]),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use vyre_reference::composition_witness::range_counts_witness as reference_range_counts;
 
     #[test]
-    fn cpu_ref_sums_half_open_range() {
-        assert_eq!(cpu_ref(&[9, 2, 3, 5, 11], 1, 4), 10);
+    fn reference_sums_half_open_range() {
+        assert_eq!(reference_range_counts(&[9, 2, 3, 5, 11], 1, 4), 10);
     }
 }

@@ -66,13 +66,11 @@ use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 /// graphs or raise it for adversarial test corpora.
 pub const DEFAULT_PROVENANCE_MAX_ITERATIONS: u32 = 64;
 
-
 /// Caller-owned GPU dispatch scratch for provenance closure.
 #[derive(Default, Debug)]
 pub struct ScallopProvenanceGpuScratch {
     inputs: Vec<Vec<u8>>,
 }
-
 
 /// Build the GPU-resident provenance-closure Program. The returned
 /// `Program` declares four buffers: `state` (RW), `next` (RW scratch),
@@ -100,12 +98,11 @@ pub fn build_provenance_program(n: u32, max_iterations: u32) -> Program {
     )
 }
 
-
-
 /// Convenience: project the closure matrix into a per-output-cell
 /// clause bitset. `out` is the row index; the returned vector has
 /// one entry per source column with the bitset for that (out, src)
 /// pair.
+#[cfg(test)]
 #[must_use]
 pub fn lineage_for_output(closure: &[u32], n: u32, out: u32) -> Vec<u32> {
     let mut row = Vec::new();
@@ -114,11 +111,13 @@ pub fn lineage_for_output(closure: &[u32], n: u32, out: u32) -> Vec<u32> {
 }
 
 /// Project one output row into caller-owned storage.
+#[cfg(test)]
 pub fn lineage_for_output_into(closure: &[u32], n: u32, out: u32, row: &mut Vec<u32>) {
     use crate::telemetry::{bump, scallop_provenance_calls};
+    let slice = lineage_for_output_slice(closure, n, out);
     bump(&scallop_provenance_calls);
     row.clear();
-    row.extend_from_slice(lineage_for_output_slice(closure, n, out));
+    row.extend_from_slice(slice);
 }
 
 /// Build the provenance program once via [`build_provenance_program`],
@@ -259,11 +258,17 @@ pub fn provenance_closure_via_with_scratch_into(
 ///
 /// Hot invalidation paths should use this instead of [`lineage_for_output`]
 /// when they only need to inspect the row.
+#[cfg(test)]
 #[must_use]
 pub fn lineage_for_output_slice(closure: &[u32], n: u32, out: u32) -> &[u32] {
     assert!(out < n, "Fix: lineage_for_output requires out < n.");
-    let row = (out as usize) * (n as usize);
-    &closure[row..row + (n as usize)]
+    let n_usize = n as usize;
+    let row = (out as usize) * n_usize;
+    assert!(
+        closure.len() >= row + n_usize,
+        "Fix: lineage_for_output closure buffer too short for n={n}, out={out}."
+    );
+    &closure[row..row + n_usize]
 }
 
 #[cfg(test)]
@@ -271,6 +276,45 @@ mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;
+    use vyre_reference::composition_witness::scallop_join_fixpoint_witness;
+
+    struct ScallopProvenanceScratch {
+        closure: Vec<u32>,
+        join_scratch: Vec<u32>,
+    }
+
+    impl ScallopProvenanceScratch {
+        fn closure(&self) -> &[u32] {
+            &self.closure
+        }
+    }
+
+    fn reference_provenance_closure(
+        state: &[u32],
+        join_rules: &[u32],
+        n: u32,
+        max_iterations: u32,
+    ) -> Vec<u32> {
+        scallop_join_fixpoint_witness(state, join_rules, n, 1, max_iterations).0
+    }
+
+    fn reference_provenance_closure_with_scratch(
+        state: &[u32],
+        join_rules: &[u32],
+        n: u32,
+        max_iterations: u32,
+        scratch: &mut ScallopProvenanceScratch,
+    ) -> u32 {
+        vyre_reference::composition_witness::scallop_join_fixpoint_witness_into(
+            state,
+            join_rules,
+            n,
+            1,
+            max_iterations,
+            &mut scratch.closure,
+            &mut scratch.join_scratch,
+        )
+    }
     use crate::test_parity_oracles::StaticOutputs;
 
     #[test]

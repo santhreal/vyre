@@ -603,9 +603,9 @@ mod dispatch_plan_tests {
     }
 }
 
-
-
-
+const EXPECTED_PATH_RECONSTRUCT_PATH_BYTES: [u8; 16] =
+    [3, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
+const EXPECTED_PATH_RECONSTRUCT_LEN_BYTES: [u8; 4] = [4, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -624,10 +624,9 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
-                to_bytes(&[3, 2, 1, 0]),
-                to_bytes(&[4]),
+                EXPECTED_PATH_RECONSTRUCT_PATH_BYTES.to_vec(),
+                EXPECTED_PATH_RECONSTRUCT_LEN_BYTES.to_vec(),
             ]]
         }),
     )
@@ -636,6 +635,55 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::path_reconstruct_witness_into;
+
+    fn cpu_ref(parent: &[u32], target: u32, max_depth: u32, scratch: &mut Vec<u32>) -> u32 {
+        path_reconstruct_witness_into(parent, target, max_depth, scratch)
+    }
+
+    fn try_cpu_ref_batched(
+        parent: &[u32],
+        targets: &[u32],
+        max_depth: u32,
+        paths: &mut Vec<u32>,
+        lens: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        let mut scratch = Vec::new();
+        try_cpu_ref_batched_with_scratch(parent, targets, max_depth, paths, lens, &mut scratch)
+    }
+
+    fn try_cpu_ref_batched_with_scratch(
+        parent: &[u32],
+        targets: &[u32],
+        max_depth: u32,
+        paths: &mut Vec<u32>,
+        lens: &mut Vec<u32>,
+        scratch: &mut Vec<u32>,
+    ) -> Result<(), String> {
+        if max_depth == 0 {
+            return Err("Fix: batched_path_reconstruct max_depth must be >= 1.".to_string());
+        }
+        paths.clear();
+        lens.clear();
+        scratch.clear();
+        for &target in targets {
+            let len = cpu_ref(parent, target, max_depth, scratch);
+            paths.extend_from_slice(scratch);
+            lens.push(len);
+        }
+        Ok(())
+    }
+
+    fn cpu_ref_batched(
+        parent: &[u32],
+        targets: &[u32],
+        max_depth: u32,
+        paths: &mut Vec<u32>,
+        lens: &mut Vec<u32>,
+    ) {
+        try_cpu_ref_batched(parent, targets, max_depth, paths, lens)
+            .expect("cpu_ref_batched failed");
+    }
 
     #[test]
     fn walks_parent_chain_to_root() {

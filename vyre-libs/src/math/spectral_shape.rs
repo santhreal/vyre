@@ -62,9 +62,6 @@ pub fn mp_upper_edge(m: u32, n: u32, sigma_sq: f64) -> f64 {
     sigma_sq * factor
 }
 
-
-
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -79,7 +76,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[1, 4, 4, 3])]]
+            vec![vec![vec![
+                0x01, 0x00, 0x00, 0x00, // 1
+                0x04, 0x00, 0x00, 0x00, // 4
+                0x04, 0x00, 0x00, 0x00, // 4
+                0x03, 0x00, 0x00, 0x00, // 3
+            ]]]
         }),
     )
 }
@@ -87,6 +89,18 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::mp_edge_clip_witness as mp_edge_clip_cpu;
+
+    fn try_mp_edge_clip_cpu_into(
+        eigenvalues: &[f64],
+        edge: f64,
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        let res = mp_edge_clip_cpu(eigenvalues, edge);
+        out.clear();
+        out.extend_from_slice(&res);
+        Ok(())
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())

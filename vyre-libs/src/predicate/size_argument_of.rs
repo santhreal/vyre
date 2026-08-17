@@ -32,8 +32,6 @@ pub fn size_argument_of(
     backward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,6 +47,8 @@ mod tests {
         assert_eq!(generator, OP_ID);
     }
 }
+
+const EXPECTED_SIZE_ARGUMENT_OF_OUTPUT_BYTES: [u8; 4] = [5, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -67,8 +67,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b0101])]]
+            vec![vec![EXPECTED_SIZE_ARGUMENT_OF_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

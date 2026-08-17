@@ -256,25 +256,8 @@ fn cross_entropy_body(
     body
 }
 
-fn reference_cross_entropy_bytes(logits: &[f32], targets: &[u32], vocab_size: usize) -> Vec<u8> {
-    let mut out = Vec::with_capacity(targets.len() * core::mem::size_of::<f32>());
-    for (token, &target) in targets.iter().enumerate() {
-        let row = &logits[token * vocab_size..(token + 1) * vocab_size];
-        let max_logit = row
-            .iter()
-            .copied()
-            .fold(f32::MIN, |acc, value| acc.max(value));
-        let sum = row
-            .iter()
-            .copied()
-            .map(|value| libm::expf(value - max_logit))
-            .sum::<f32>();
-        let target_logit = row.get(target as usize).copied().unwrap_or(0.0);
-        let loss = max_logit + libm::logf(sum) - target_logit;
-        vyre_primitives::wire::append_f32_slice_le_bytes(&[loss], &mut out);
-    }
-    out
-}
+const EXPECTED_CROSS_ENTROPY_OUTPUT_BYTES: [u8; 8] =
+    [0x81, 0xEA, 0xEB, 0x3E, 0xCE, 0x71, 0xC5, 0x3F];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -291,9 +274,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let logits = [1.0_f32, 2.0, 3.0, 0.5, 0.1, 0.2, 0.3, 0.4];
-            let targets = [2_u32, 0];
-            vec![vec![reference_cross_entropy_bytes(&logits, &targets, 4)]]
+            vec![vec![EXPECTED_CROSS_ENTROPY_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")
@@ -301,6 +282,30 @@ inventory::submit! {
 
 #[cfg(test)]
 mod tests {
+    fn reference_cross_entropy_bytes(
+        logits: &[f32],
+        targets: &[u32],
+        vocab_size: usize,
+    ) -> Vec<u8> {
+        let mut out = Vec::with_capacity(targets.len() * core::mem::size_of::<f32>());
+        for (token, &target) in targets.iter().enumerate() {
+            let row = &logits[token * vocab_size..(token + 1) * vocab_size];
+            let max_logit = row
+                .iter()
+                .copied()
+                .fold(f32::MIN, |acc, value| acc.max(value));
+            let sum = row
+                .iter()
+                .copied()
+                .map(|value| libm::expf(value - max_logit))
+                .sum::<f32>();
+            let target_logit = row.get(target as usize).copied().unwrap_or(0.0);
+            let loss = max_logit + libm::logf(sum) - target_logit;
+            vyre_primitives::wire::append_f32_slice_le_bytes(&[loss], &mut out);
+        }
+        out
+    }
+
     use super::*;
     use vyre_reference::value::Value;
 

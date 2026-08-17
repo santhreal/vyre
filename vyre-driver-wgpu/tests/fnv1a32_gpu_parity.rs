@@ -20,8 +20,12 @@ use harness::u32_bytes;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::hash::fnv1a::{fnv1a32, fnv1a32_program};
+use vyre_libs::hash::fnv1a::fnv1a32_program;
+use vyre_reference::composition_witness::multi_hash_witness;
 
+fn reference_fnv1a32(bytes: &[u8]) -> u32 {
+    multi_hash_witness(bytes).1
+}
 /// Dispatch the real `fnv1a32_program` on the GPU: one U32 word per source byte
 /// (the builder masks each to its low 8 bits), single u32 hash out at `out[0]`.
 fn gpu_fnv1a32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
@@ -56,7 +60,7 @@ fn gpu_fnv1a32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
 
 fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {
     let gpu = gpu_fnv1a32(backend, bytes);
-    let expected = fnv1a32(bytes);
+    let expected = reference_fnv1a32(bytes);
     assert_eq!(
         gpu, expected,
         "GPU FNV-1a32 of {label} diverged from the Rust reference, the loop carrier \
@@ -70,7 +74,7 @@ fn fnv1a32_abc_matches_reference_on_gpu() {
     let backend = WgpuBackend::acquire().expect("Fix: FNV GPU parity requires a live GPU.");
     // Drift-guard the reference against the published FNV-1a 32 vector for "abc".
     assert_eq!(
-        fnv1a32(b"abc"),
+        reference_fnv1a32(b"abc"),
         0x1a47_e90b,
         "FNV-1a32 reference drifted for \"abc\""
     );
@@ -100,6 +104,6 @@ fn fnv1a32_distinguishes_inputs_on_gpu() {
         a, b,
         "FNV must distinguish one-byte-different inputs on the GPU"
     );
-    assert_eq!(a, fnv1a32(b"hash-me-0"));
-    assert_eq!(b, fnv1a32(b"hash-me-1"));
+    assert_eq!(a, reference_fnv1a32(b"hash-me-0"));
+    assert_eq!(b, reference_fnv1a32(b"hash-me-1"));
 }

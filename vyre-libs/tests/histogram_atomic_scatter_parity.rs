@@ -11,8 +11,8 @@
 #![cfg(feature = "reduce")]
 
 use vyre_libs::reduce::histogram::histogram_atomic_scatter;
-fn cpu_ref(input: &[u32], num_bins: u32) -> Vec<u32> { let mut out = vec![0u32; num_bins as usize]; for &x in input { if (x as usize) < out.len() { out[x as usize] += 1; } } out }
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::histogram_witness as reference_histogram;
 use vyre_reference::value::Value;
 
 fn eval(input: &[u32], num_bins: u32) -> Vec<u32> {
@@ -33,7 +33,7 @@ fn atomic_scatter_counts_bins_matching_cpu_ref() {
     // bin5 is out of range (num_bins=3) and must be dropped.
     let input = [0u32, 2, 1, 2, 0, 5, 2];
     let num_bins = 3u32;
-    let cpu = cpu_ref(&input, num_bins);
+    let cpu = reference_histogram(&input, num_bins);
     assert_eq!(
         cpu,
         vec![2, 1, 3],
@@ -50,7 +50,7 @@ fn atomic_scatter_counts_bins_matching_cpu_ref() {
 fn atomic_scatter_all_same_bin() {
     let input = [1u32, 1, 1, 1];
     let num_bins = 4u32;
-    let cpu = cpu_ref(&input, num_bins);
+    let cpu = reference_histogram(&input, num_bins);
     assert_eq!(cpu, vec![0, 4, 0, 0]);
     assert_eq!(eval(&input, num_bins), cpu);
 }
@@ -59,7 +59,7 @@ fn atomic_scatter_all_same_bin() {
 fn atomic_scatter_all_out_of_range_is_all_zero() {
     let input = [7u32, 8, 9];
     let num_bins = 3u32;
-    let cpu = cpu_ref(&input, num_bins);
+    let cpu = reference_histogram(&input, num_bins);
     assert_eq!(cpu, vec![0, 0, 0], "every input >= num_bins is dropped");
     assert_eq!(eval(&input, num_bins), cpu);
 }

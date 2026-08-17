@@ -131,24 +131,83 @@ pub fn semiring_gemm(
         .build()
         .unwrap_or_else(|err| trap_program(OP_ID, Some((c, DataType::U32)), format!("Fix: {err}")))
 }
-    }
 
-    let a_ref = TensorRef::u32_2d(a, m, k);
-    let b_ref = TensorRef::u32_2d(b, k, n);
-    let c_ref = TensorRef::u32_2d(c, m, n);
-
-    ContractionComposer::semiring_2d(OP_ID, a_ref, b_ref, c_ref, m, k, n, semiring)
-        .with_region_generator(OP_ID)
-        .build()
-        .unwrap_or_else(|err| trap_program(OP_ID, Some((c, DataType::U32)), format!("Fix: {err}")))
+/// CPU reference - exact byte-for-byte target the GPU dispatch must hit.
+#[must_use]
+#[cfg(test)]
+pub(crate) fn semiring_gemm_cpu(
+    a: &[u32],
+    b: &[u32],
+    m: u32,
+    n: u32,
+    k: u32,
+    semiring: Semiring,
+) -> Vec<u32> {
+    let mut c = Vec::new();
+    try_semiring_gemm_cpu_into(a, b, m, n, k, semiring, &mut c)
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - semiring_gemm_cpu failed: invalid GEMM shape");
+    c
 }
 
+/// CPU reference using a caller-owned output buffer.
+#[cfg(test)]
+pub(crate) fn semiring_gemm_cpu_into(
+    a: &[u32],
+    b: &[u32],
+    m: u32,
+    n: u32,
+    k: u32,
+    semiring: Semiring,
+    c: &mut Vec<u32>,
+) {
+    try_semiring_gemm_cpu_into(a, b, m, n, k, semiring, c)
+        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - semiring_gemm_cpu_into failed: invalid GEMM shape");
+}
 
-
-
-
-
-
+/// Fallible CPU reference using a caller-owned output buffer.
+#[cfg(test)]
+pub(crate) fn try_semiring_gemm_cpu_into(
+    a: &[u32],
+    b: &[u32],
+    m: u32,
+    n: u32,
+    k: u32,
+    semiring: Semiring,
+    c: &mut Vec<u32>,
+) -> Result<(), String> {
+    if m == 0 || n == 0 || k == 0 {
+        return Err(format!(
+            "semiring_gemm CPU oracle requires non-zero dimensions, got m={m}, n={n}, k={k}."
+        ));
+    }
+    let m_usize =
+        usize::try_from(m).map_err(|_| format!("semiring_gemm m={m} does not fit usize."))?;
+    let n_usize =
+        usize::try_from(n).map_err(|_| format!("semiring_gemm n={n} does not fit usize."))?;
+    let k_usize =
+        usize::try_from(k).map_err(|_| format!("semiring_gemm k={k} does not fit usize."))?;
+    let cell_count = m_usize
+        .checked_mul(n_usize)
+        .ok_or_else(|| format!("semiring_gemm CPU oracle output cells overflow: m={m}, n={n}."))?;
+    m_usize.checked_mul(k_usize).ok_or_else(|| {
+        format!("semiring_gemm CPU oracle A buffer cells overflow: m={m}, k={k}.")
+    })?;
+    k_usize.checked_mul(n_usize).ok_or_else(|| {
+        format!("semiring_gemm CPU oracle B buffer cells overflow: k={k}, n={n}.")
+    })?;
+    if cell_count > c.capacity() {
+        crate::plumbing::host::scratch::reserve_items(
+            c,
+            cell_count - c.len(),
+            "semiring GEMM CPU oracle",
+            "output matrix",
+        )?;
+    }
+    vyre_reference::composition_witness::semiring_gemm_witness_into(
+        a, b, m_usize, n_usize, k_usize, semiring, c,
+    );
+    Ok(())
+}
 
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
@@ -163,7 +222,14 @@ inventory::submit! {
             fixture_u32(&[5, 6, 7, 8]),
             fixture_u32(&[0, 0, 0, 0]),
         ]]),
-        Some(|| vec![vec![fixture_u32(&[19, 22, 43, 50])]]),
+        Some(|| {
+            vec![vec![vec![
+                0x13, 0x00, 0x00, 0x00, // 19
+                0x16, 0x00, 0x00, 0x00, // 22
+                0x2b, 0x00, 0x00, 0x00, // 43
+                0x32, 0x00, 0x00, 0x00, // 50
+            ]]]
+        }),
     )
 }
 

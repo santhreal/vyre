@@ -204,6 +204,13 @@ fn exp_expr(operand: Expr) -> Expr {
     }
 }
 
+const EXPECTED_MOE_GATE_INDICES_BYTES: [u8; 8] = [0x05, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00];
+const EXPECTED_MOE_GATE_WEIGHTS_BYTES: [u8; 8] = [0xE6, 0xEE, 0x0A, 0x3F, 0x53, 0x71, 0x4C, 0x3E];
+const EXPECTED_SOFTMAX_STATS_OUTPUT_BYTES: [u8; 8] =
+    [0x00, 0x00, 0x40, 0x40, 0xB7, 0xDA, 0xEB, 0x3F];
+const EXPECTED_WEIGHT_WRITE_OUTPUT_BYTES: [u8; 8] =
+    [0xE6, 0xEE, 0x0A, 0x3F, 0x53, 0x71, 0x4C, 0x3E];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -216,20 +223,10 @@ inventory::submit! {
             vec![vec![scores_bytes, vec![0u8; 4 * 2], vec![0u8; 4 * 2]]]
         }),
         Some(|| {
-            let scores: [f32; 8] = [0.5, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
-            let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let sum_exp = scores
-                .iter()
-                .map(|score| libm::expf(*score - max_score))
-                .sum::<f32>();
-            let indices: [u32; 2] = [5, 3];
-            let idx_bytes = vyre_primitives::wire::pack_u32_slice(&indices);
-            let expected_weights = [
-                libm::expf(scores[5] - max_score) / sum_exp,
-                libm::expf(scores[3] - max_score) / sum_exp,
-            ];
-            let weights = vyre_primitives::wire::pack_f32_slice(&expected_weights);
-            vec![vec![idx_bytes, weights]]
+            vec![vec![
+                EXPECTED_MOE_GATE_INDICES_BYTES.to_vec(),
+                EXPECTED_MOE_GATE_WEIGHTS_BYTES.to_vec(),
+            ]]
         }),
     )
     .with_category("nn")
@@ -289,13 +286,7 @@ inventory::submit! {
             vec![vec![f32_fixture(&scores), f32_fixture(&[0.0; 2])]]
         }),
         Some(|| {
-            let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
-            let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let sum_exp = scores
-                .iter()
-                .map(|score| libm::expf(*score - max_score))
-                .sum::<f32>();
-            vec![vec![f32_fixture(&[max_score, sum_exp])]]
+            vec![vec![EXPECTED_SOFTMAX_STATS_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")
@@ -320,16 +311,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
-            let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let sum_exp = scores
-                .iter()
-                .map(|score| libm::expf(*score - max_score))
-                .sum::<f32>();
-            vec![vec![f32_fixture(&[
-                libm::expf(scores[5] - max_score) / sum_exp,
-                libm::expf(scores[3] - max_score) / sum_exp,
-            ])]]
+            vec![vec![EXPECTED_WEIGHT_WRITE_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

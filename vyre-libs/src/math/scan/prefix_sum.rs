@@ -67,10 +67,12 @@ inventory::submit! {
         Some(|| vec![vec![
             vyre_primitives::wire::pack_u32_slice(&[1u32, 2, 3, 4]),
         ]]),
-        Some(|| vec![vec![
-            // Only ReadWrite buffer: prefix sum [1, 3, 6, 10]
-            vyre_primitives::wire::pack_u32_slice(&[1u32, 3, 6, 10]),
-        ]]),
+        Some(|| vec![vec![vec![
+            0x01, 0x00, 0x00, 0x00, // 1
+            0x03, 0x00, 0x00, 0x00, // 3
+            0x06, 0x00, 0x00, 0x00, // 6
+            0x0a, 0x00, 0x00, 0x00, // 10
+        ]]]),
     )
     .with_category("math")
 }

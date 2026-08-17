@@ -166,6 +166,10 @@ pub fn glyph_grid_blend(
     )
 }
 
+const EXPECTED_GLYPH_GRID_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0x80, 0x00, 0x7F, 0xFF, 0xFF, 0x00, 0x00, 0xFF,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -197,13 +201,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            // Coverage 0 leaves the background, 255 takes the foreground, and
-            // 128 lands between them:
-            //   r = (255*128 + 0*127 + 128) * 257 >> 16 = 128
-            //   b = (0*128 + 255*127 + 128) * 257 >> 16 = 127
-            //   a = (255*128 + 255*127 + 128) * 257 >> 16 = 255
-            let expected = [0xFFFF_0000u32, 0xFF00_00FF, 0xFF7F_0080, 0xFF00_00FF];
-            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(&expected)]]
+            vec![vec![EXPECTED_GLYPH_GRID_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("visual")

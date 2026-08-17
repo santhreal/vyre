@@ -18,12 +18,28 @@ pub fn bitset_popcount(input: &str, count_words: &str, words: u32) -> Program {
     bitset_unary_word_program(OP_ID, input, count_words, words, UnOp::Popcount)
 }
 
+#[cfg(test)]
+fn reference_bitset_popcount(input: &[u32]) -> Vec<u32> {
+    vyre_reference::composition_witness::bitset_popcount_witness(input)
+}
 
+#[cfg(test)]
+fn reference_bitset_popcount_into(input: &[u32], output: &mut Vec<u32>) {
+    vyre_reference::composition_witness::bitset_popcount_witness_into(input, output);
+}
 
+#[cfg(test)]
+fn try_reference_bitset_popcount_into(input: &[u32], output: &mut Vec<u32>) -> Result<(), String> {
+    reference_bitset_popcount_into(input, output);
+    Ok(())
+}
 
 #[cfg(test)]
 mod non_panic_wrapper_tests {
-    use super::{cpu_ref, cpu_ref_into, try_cpu_ref_into};
+    use super::{
+        reference_bitset_popcount, reference_bitset_popcount_into,
+        try_reference_bitset_popcount_into,
+    };
 
     #[test]
     fn compatibility_wrappers_match_fallible_reference() {
@@ -31,14 +47,15 @@ mod non_panic_wrapper_tests {
         let mut compat = Vec::with_capacity(8);
         let mut fallible = Vec::with_capacity(8);
 
-        cpu_ref_into(&input, &mut compat);
-        try_cpu_ref_into(&input, &mut fallible)
-            .expect("Fix: small bitset_popcount CPU oracle must reserve");
+        reference_bitset_popcount_into(&input, &mut compat);
+        try_reference_bitset_popcount_into(&input, &mut fallible)
+            .expect("Fix: small bitset_popcount reference witness must reserve");
 
-        assert_eq!(cpu_ref(&input), fallible);
+        assert_eq!(reference_bitset_popcount(&input), fallible);
         assert_eq!(compat, fallible);
     }
 }
+const EXPECTED_BITSET_POPCOUNT_OUTPUT_BYTES: [u8; 8] = [4, 0, 0, 0, 32, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -49,8 +66,7 @@ inventory::submit! {
             vec![vec![to_bytes(&[0b1111, 0xFFFF_FFFF]), to_bytes(&[0, 0])]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[4, 32])]]
+            vec![vec![EXPECTED_BITSET_POPCOUNT_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -61,17 +77,20 @@ mod tests {
 
     #[test]
     fn popcount_per_word() {
-        assert_eq!(cpu_ref(&[0b1111, 0xFFFF_FFFF]), vec![4, 32]);
+        assert_eq!(
+            reference_bitset_popcount(&[0b1111, 0xFFFF_FFFF]),
+            vec![4, 32]
+        );
     }
 
     #[test]
     fn popcount_into_reuses_output() {
         let mut out = Vec::with_capacity(4);
-        cpu_ref_into(&[0b1111, 0xFFFF_FFFF], &mut out);
+        reference_bitset_popcount_into(&[0b1111, 0xFFFF_FFFF], &mut out);
         let capacity = out.capacity();
         assert_eq!(out, vec![4, 32]);
 
-        cpu_ref_into(&[0b1010], &mut out);
+        reference_bitset_popcount_into(&[0b1010], &mut out);
         assert_eq!(out.capacity(), capacity);
         assert_eq!(out, vec![2]);
     }
@@ -82,7 +101,7 @@ mod tests {
         out.extend([99u32; 8]);
         let ptr = out.as_ptr();
 
-        try_cpu_ref_into(&[0b1111, 0xFFFF_FFFF], &mut out).unwrap();
+        try_reference_bitset_popcount_into(&[0b1111, 0xFFFF_FFFF], &mut out).unwrap();
 
         assert_eq!(out, vec![4, 32]);
         assert_eq!(out.as_ptr(), ptr);
@@ -94,31 +113,34 @@ mod tests {
 
     #[test]
     fn empty_bitset() {
-        assert_eq!(cpu_ref(&[]), Vec::<u32>::new());
+        assert_eq!(reference_bitset_popcount(&[]), Vec::<u32>::new());
     }
 
     #[test]
     fn single_word_all_zeros() {
-        assert_eq!(cpu_ref(&[0]), vec![0]);
+        assert_eq!(reference_bitset_popcount(&[0]), vec![0]);
     }
 
     #[test]
     fn single_word_all_ones() {
-        assert_eq!(cpu_ref(&[0xFFFF_FFFF]), vec![32]);
+        assert_eq!(reference_bitset_popcount(&[0xFFFF_FFFF]), vec![32]);
     }
 
     #[test]
     fn alternating_pattern() {
         // 0xAAAA_AAAA = 1010...1010 → 16 ones
-        assert_eq!(cpu_ref(&[0xAAAA_AAAA]), vec![16]);
+        assert_eq!(reference_bitset_popcount(&[0xAAAA_AAAA]), vec![16]);
         // 0x5555_5555 = 0101...0101 → 16 ones
-        assert_eq!(cpu_ref(&[0x5555_5555]), vec![16]);
+        assert_eq!(reference_bitset_popcount(&[0x5555_5555]), vec![16]);
     }
 
     #[test]
     fn cross_word_boundary() {
         // Two words: one with bit 31 set, one with bit 0 set.
-        assert_eq!(cpu_ref(&[0x8000_0000, 0x0000_0001]), vec![1, 1]);
+        assert_eq!(
+            reference_bitset_popcount(&[0x8000_0000, 0x0000_0001]),
+            vec![1, 1]
+        );
     }
 
     #[test]
@@ -133,7 +155,7 @@ mod tests {
                 .collect();
             let mut out = Vec::with_capacity(len + 3);
 
-            try_cpu_ref_into(&input, &mut out).unwrap();
+            try_reference_bitset_popcount_into(&input, &mut out).unwrap();
 
             assert_eq!(
                 out,

@@ -1,4 +1,4 @@
-//! Property gates for `vyre_libs::bitset::any::cpu_ref`.
+//! Property gates for `vyre_reference::composition_witness::reduce_any_witness`.
 
 #![cfg(feature = "bitset")]
 
@@ -56,5 +56,5 @@ proptest! {
 
 #[must_use]
 fn cpu_ref(input: &[u32]) -> u32 {
-    if input.iter().any(|&w| w != 0) { 1 } else { 0 }
+    vyre_reference::composition_witness::reduce_any_witness(input)
 }

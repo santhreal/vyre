@@ -14,9 +14,9 @@
 
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::predicate::arg_of::arg_of_slot;
-fn cpu_ref_slot(arg_slot: u32, target: u32) -> u32 { (arg_slot == target) as u32 }
 use vyre_libs::predicate::edge_kind;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::csr_backward_traverse_witness;
 use vyre_reference::value::Value;
 
 /// Four nodes; three call-argument edges carrying the generic bit and one slot
@@ -58,13 +58,13 @@ fn gpu_frontier(slot: u32) -> Vec<u32> {
 }
 
 fn cpu_frontier(slot: u32) -> Vec<u32> {
-    cpu_ref_slot(
+    csr_backward_traverse_witness(
         NODE_COUNT,
         &EDGE_OFFSETS,
         &EDGE_TARGETS,
         &edge_kinds(),
         &FRONTIER_IN,
-        slot,
+        edge_kind::call_arg_slot(slot),
     )
 }
 

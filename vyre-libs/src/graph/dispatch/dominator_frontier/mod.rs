@@ -27,9 +27,10 @@ mod dispatch;
 #[path = "../../../../tests/internal/graph/dispatch/dominator_frontier/mod.rs"]
 mod tests;
 
+#[cfg(test)]
+use crate::graph::dominator_frontier::frontier_size as primitive_frontier_size;
 use crate::graph::dominator_frontier::{
-    frontier_size as primitive_frontier_size, DominatorFrontierProgramShape,
-    DominatorFrontierStaticInputKey,
+    DominatorFrontierProgramShape, DominatorFrontierStaticInputKey,
 };
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};
@@ -59,6 +60,7 @@ impl DominanceFrontierGpuScratch {
 /// dispatch-time telemetry value: a high frontier count on a small
 /// seed indicates a wide-merge program shape that fusion passes
 /// should leave alone.
+#[cfg(test)]
 #[must_use]
 pub fn frontier_size(frontier: &[u32]) -> u32 {
     primitive_frontier_size(frontier)

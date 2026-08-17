@@ -63,10 +63,10 @@ crates one crate that cannot be built, reviewed or published apart.
 - Every edge above is declared in `docs/CRATE_OWNERSHIP.toml`. An edge in
   `Cargo.toml` that the registry does not carry, and a registry row no manifest
   declares, both fail.
-- The crate declares 59 features beyond `default`: `analysis`, `bitset`,
-  `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`,
+- The crate declares 62 features beyond `default`: `analysis`, `bitset`,
+  `builder-ops`, `cat-a-builder-options`, `crypto`, `crypto-blake3`, `decode`,
   `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`,
-  `graph-dispatch`, `hash`, `intern`, `label`, `logical`, `math`,
+  `graph-dispatch`, `hash`, `intern`, `label`, `llm`, `logical`, `math`,
   `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`,
   `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`,
   `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`,
@@ -74,8 +74,8 @@ crates one crate that cannot be built, reviewed or published apart.
   `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-kernels`,
   `pattern-nfa`, `pattern-regex`, `pattern-substring`,
   `predicate`, `python-parser`, `reasoning`, `reduce`,
-  `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`,
-  `text`, `topology`, `visual`. Each builds alone.
+  `representation`, `rule`, `scheduling`, `security`, `solvers`,
+  `telemetry`, `test-fixtures`, `text`, `topology`, `vfs`, `visual`. Each builds alone.
 - The public surface is recorded in `docs/public-api/vyre-libs.txt`. An item
   added, removed or moved changes that file in the same change.
 

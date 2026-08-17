@@ -101,12 +101,21 @@ fn generator_is_allowed(generator: &str, registered: &BTreeSet<String>) -> bool 
     if generator.is_empty()
         || generator.starts_with("anonymous")
         || generator.starts_with("inline")
-        || generator == "vyre.program.root"
         || generator.starts_with("vyre-runtime::")
     {
         return true;
     }
     false
+}
+
+#[test]
+fn only_the_canonical_root_generator_is_an_anonymous_boundary() {
+    let registered = BTreeSet::new();
+    assert!(!generator_is_allowed("vyre.program.root", &registered));
+    assert!(generator_is_allowed(
+        Program::ROOT_REGION_GENERATOR,
+        &registered
+    ));
 }
 
 #[test]
@@ -132,7 +141,7 @@ fn every_tier3_op_region_chain_resolves_to_registered_generators() {
          registered op(s) name a generator in their Region chain that \
          does not resolve to a registered op id. Every generator must \
          either (a) be a known op id or (b) open with anonymous / \
-         inline / vyre.program.root / vyre-runtime::. Offenders:\n{}",
+         inline / vyre-runtime::. Offenders:\n{}",
         offenders.len(),
         offenders
             .iter()

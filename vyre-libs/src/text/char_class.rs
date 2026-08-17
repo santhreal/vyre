@@ -84,6 +84,7 @@ pub const CHAR_CLASS_OP_ID: &str = "vyre-libs::text::char_class";
 pub const CHAR_CLASS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
 /// Dispatch grid for classifying `n` byte lanes.
+#[cfg(test)]
 #[must_use]
 pub const fn char_class_dispatch_grid(n: u32) -> [u32; 3] {
     let blocks = n.div_ceil(CHAR_CLASS_WORKGROUP_SIZE[0]);
@@ -194,6 +195,7 @@ fn char_class_with_source_type(
     )
 }
 
+const EXPECTED_CHAR_CLASS_OUTPUT_BYTES: [u8; 12] = [3, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -208,7 +210,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![vyre_primitives::wire::pack_u32_slice(&[C_ALPHA, C_DIGIT, C_WS])]]
+            vec![vec![EXPECTED_CHAR_CLASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -216,7 +218,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use vyre_reference::composition_witness::char_class_witness as reference_char_class;
     #[test]
     fn table_classifies_ascii_letter_as_alpha() {
         let table = build_char_class_table();

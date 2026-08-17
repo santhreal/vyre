@@ -30,16 +30,6 @@ pub fn fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> Program {
     ternary_f32_program(OP_ID, a, b, c, out, n)
 }
 
-fn cpu_ref(a: &[f32], b: &[f32], c: &[f32]) -> Vec<u8> {
-    pack_f32(
-        &a.iter()
-            .zip(b.iter())
-            .zip(c.iter())
-            .map(|((&x, &y), &z)| x.mul_add(y, z))
-            .collect::<Vec<_>>(),
-    )
-}
-
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
     let a = vec![0.0f32, 1.0, -2.5, f32::MAX];
     let b = vec![1.0f32, -3.0, 4.0, 0.5];
@@ -53,12 +43,12 @@ fn test_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
-fn expected_output() -> Vec<Vec<Vec<u8>>> {
-    let a = vec![0.0f32, 1.0, -2.5, f32::MAX];
-    let b = vec![1.0f32, -3.0, 4.0, 0.5];
-    let c = vec![0.0f32, 0.25, -1.0, 2.0];
-    vec![vec![cpu_ref(&a, &b, &c)]]
-}
+const EXPECTED_FMA_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0x00, 0x00, // 0.0f32
+    0x00, 0x00, 0x30, 0xc0, // -2.75f32
+    0x00, 0x00, 0x30, 0xc1, // -11.0f32
+    0xff, 0xff, 0x7f, 0x7e, // f32::from_bits(0x7e7f_ffff)
+];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::intrinsic(
@@ -66,7 +56,7 @@ inventory::submit! {
         crate::hardware::catalog::F32_TERNARY_SIGNATURE,
         Some(|| fma_f32("a", "b", "c", "out", 4)),
         Some(test_inputs),
-        Some(expected_output),
+        Some(|| vec![vec![EXPECTED_FMA_OUTPUT_BYTES.to_vec()]]),
     )
     .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE)
     .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
@@ -89,6 +79,16 @@ mod tests {
     use super::*;
     use crate::hardware::{lcg_f32, run_program};
 
+    fn test_cpu_ref(a: &[f32], b: &[f32], c: &[f32]) -> Vec<u8> {
+        pack_f32(
+            &a.iter()
+                .zip(b.iter())
+                .zip(c.iter())
+                .map(|((&x, &y), &z)| x.mul_add(y, z))
+                .collect::<Vec<_>>(),
+        )
+    }
+
     fn assert_case(a: &[f32], b: &[f32], c: &[f32]) {
         let n = a.len() as u32;
         let program = fma_f32("a", "b", "c", "out", n.max(1));
@@ -101,7 +101,7 @@ mod tests {
                 vec![0u8; (n.max(1) * 4) as usize],
             ],
         );
-        assert_eq!(outputs, vec![cpu_ref(a, b, c)]);
+        assert_eq!(outputs, vec![test_cpu_ref(a, b, c)]);
     }
 
     #[test]
@@ -120,5 +120,17 @@ mod tests {
         let b = lcg_f32(0x0F1A_A002, 64);
         let c = lcg_f32(0x0F1A_A003, 64);
         assert_case(&a, &b, &c);
+    }
+
+    #[test]
+    fn registration_fixture_matches_exact_byte_constant() {
+        assert_eq!(
+            EXPECTED_FMA_OUTPUT_BYTES.to_vec(),
+            test_cpu_ref(
+                &[0.0, 1.0, -2.5, f32::MAX],
+                &[1.0, -3.0, 4.0, 0.5],
+                &[0.0, 0.25, -1.0, 2.0]
+            )
+        );
     }
 }

@@ -23,8 +23,9 @@
 #![cfg(feature = "nfa")]
 
 use proptest::prelude::*;
-use vyre_libs::nfa::subgroup_nfa::{cpu_step, nfa_step, LANES_PER_SUBGROUP};
+use vyre_libs::nfa::subgroup_nfa::{nfa_step, LANES_PER_SUBGROUP};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::subgroup_nfa_step_witness as cpu_step;
 use vyre_reference::value::Value;
 
 const LANES: usize = LANES_PER_SUBGROUP;

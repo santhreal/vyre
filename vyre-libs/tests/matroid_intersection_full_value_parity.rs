@@ -24,8 +24,8 @@
 #![cfg(all(feature = "math-kernels", feature = "graph"))]
 
 use vyre_libs::math::matroid_intersection_full::matroid_intersection_full;
-fn cpu_ref(_ground_size: u32, _r1: &[u32], _r2: &[u32]) -> Vec<u32> { Vec::new() }
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::matroid_intersection_augmentation_witness as cpu_ref;
 use vyre_reference::value::Value;
 
 fn next_u32(state: &mut u32) -> u32 {

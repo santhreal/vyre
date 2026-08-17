@@ -106,16 +106,11 @@ pub(crate) fn resident_dispatch_three_u32_outputs_into<D: ProgramDispatcher + ?S
         &read_ranges,
         readbacks,
     )?;
-    if readbacks.len() != 3 {
-        let (_, first_context, _) = &outs[0];
-        return Err(DispatchError::BackendError(format!(
-            "Fix: {first_context} expected exactly three resident readbacks, got {}.",
-            readbacks.len()
-        )));
-    }
-    for (index, (expected_words, context, out)) in outs.into_iter().enumerate() {
-        decode_u32_output_exact(&readbacks[index], expected_words, context, out)?;
-    }
+    validate_resident_three_readbacks_len(readbacks.len(), outs[0].1)?;
+    let [(exp0, ctx0, out0), (exp1, ctx1, out1), (exp2, ctx2, out2)] = outs;
+    decode_u32_output_exact(&readbacks[0], exp0, ctx0, out0)?;
+    decode_u32_output_exact(&readbacks[1], exp1, ctx1, out1)?;
+    decode_u32_output_exact(&readbacks[2], exp2, ctx2, out2)?;
     Ok(())
 }
 
@@ -136,11 +131,29 @@ pub(crate) fn resident_sequence_single_u32_output_into<D: ProgramDispatcher + ?S
         &[read_range],
         readbacks,
     )?;
-    if readbacks.len() != 1 {
+    validate_resident_single_readback_len(readbacks.len(), context)?;
+    decode_u32_output_exact(&readbacks[0], expected_words, context, out)
+}
+fn validate_resident_three_readbacks_len(
+    readbacks_len: usize,
+    context: &str,
+) -> Result<(), DispatchError> {
+    if readbacks_len != 3 {
         return Err(DispatchError::BackendError(format!(
-            "Fix: {context} expected exactly one resident readback, got {}.",
-            readbacks.len()
+            "Fix: {context} expected exactly three resident readbacks, got {readbacks_len}.",
         )));
     }
-    decode_u32_output_exact(&readbacks[0], expected_words, context, out)
+    Ok(())
+}
+
+fn validate_resident_single_readback_len(
+    readbacks_len: usize,
+    context: &str,
+) -> Result<(), DispatchError> {
+    if readbacks_len != 1 {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: {context} expected exactly one resident readback, got {readbacks_len}.",
+        )));
+    }
+    Ok(())
 }

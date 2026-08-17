@@ -29,6 +29,10 @@ use proptest::prelude::*;
 use vyre_reference::value::Value;
 
 use vyre_libs::reduce::{all, any, count, count_non_zero, max, min, sum};
+use vyre_reference::composition_witness::{
+    reduce_all_witness, reduce_any_witness, reduce_count_non_zero_witness, reduce_count_witness,
+    reduce_max_witness, reduce_min_witness, wrapping_sum_witness,
+};
 
 /// Which family member to build + oracle. Covers ALL seven `AtomicReduceKind`/`AtomicBoolReduceKind`
 /// variants of the shared `atomic_scalar` grid-stride kernel: Max/Min/AnyNonZero/AllNonZero plus
@@ -60,13 +64,13 @@ impl Op {
 
     fn oracle(self, values: &[u32]) -> u32 {
         match self {
-            Op::Max => max::cpu_ref(values),
-            Op::Min => min::cpu_ref(values),
-            Op::Any => any::cpu_ref(values),
-            Op::All => all::cpu_ref(values),
-            Op::Sum => sum::cpu_ref(values),
-            Op::Count => count::cpu_ref(values),
-            Op::CountNonZero => count_non_zero::cpu_ref(values),
+            Op::Max => reduce_max_witness(values),
+            Op::Min => reduce_min_witness(values),
+            Op::Any => reduce_any_witness(values),
+            Op::All => reduce_all_witness(values),
+            Op::Sum => wrapping_sum_witness(values),
+            Op::Count => reduce_count_witness(values),
+            Op::CountNonZero => reduce_count_non_zero_witness(values),
         }
     }
 }

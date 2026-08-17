@@ -79,96 +79,38 @@ fn classic_ac_bounded_count_suffix3_prefilter_program(
     )
 }
 
-/// Derive the hashed three-byte suffix mask consumed by the suffix3 prefilter.
-#[must_use]
-pub fn classic_ac_candidate_suffix3_bloom_words(patterns: &[&[u8]]) -> Vec<u32> {
-    classic_ac_candidate_suffix3_bloom_words_ci(patterns, false)
+#[cfg(test)]
+pub(crate) fn classic_ac_candidate_suffix3_bloom_words(patterns: &[&[u8]]) -> Vec<u32> {
+    vyre_reference::composition_witness::classic_ac_candidate_suffix3_bloom_words_witness(patterns)
 }
 
-/// The RAW haystack bytes a case-`ci` scan must treat as equal to `byte`:
-/// `([byte, _], 1)` normally, or `([lower, upper], 2)` for an ASCII letter under
-/// case-insensitive matching. Returned as a fixed array + count so callers can
-/// iterate the cartesian product with plain nested loops (no closures capturing
-/// the mutable mask). The ONE owner of the case fold shared by the end / suffix2
-/// / suffix3 mask builders.
-#[must_use]
-pub fn ascii_case_variants(byte: u8, case_insensitive: bool) -> ([u8; 2], usize) {
-    if case_insensitive && byte.is_ascii_alphabetic() {
-        ([byte.to_ascii_lowercase(), byte.to_ascii_uppercase()], 2)
-    } else {
-        ([byte, 0], 1)
-    }
+#[cfg(test)]
+pub(crate) fn ascii_case_variants(byte: u8, case_insensitive: bool) -> ([u8; 2], usize) {
+    vyre_reference::composition_witness::ascii_case_variants_witness(byte, case_insensitive)
 }
 
-/// ASCII-case-aware variant of [`classic_ac_candidate_suffix3_bloom_words`]: when
-/// `case_insensitive`, every ASCII-letter byte of the 3-byte suffix is expanded
-/// to BOTH cases (a `2^k`-way cartesian product for `k` letters among the three),
-/// so a raw uppercase candidate triple passes the bloom. The prefilter reads the
-/// unfolded haystack, so the mask (not the haystack (must carry both cases)).
-#[must_use]
-pub fn classic_ac_candidate_suffix3_bloom_words_ci(
+#[cfg(test)]
+pub(crate) fn classic_ac_candidate_suffix3_bloom_words_ci(
     patterns: &[&[u8]],
     case_insensitive: bool,
 ) -> Vec<u32> {
-    let mut mask = vec![0_u32; CLASSIC_AC_SUFFIX3_BLOOM_WORDS];
-    for pattern in patterns
-        .iter()
-        .copied()
-        .filter(|pattern| !pattern.is_empty())
-    {
-        match pattern.len() {
-            1 => {
-                let (cv, cn) = ascii_case_variants(pattern[0], case_insensitive);
-                for previous2 in 0..=u8::MAX {
-                    for previous in 0..=u8::MAX {
-                        for &c in &cv[..cn] {
-                            set_suffix3_bloom_bit(&mut mask, previous2, previous, c);
-                        }
-                    }
-                }
-            }
-            2 => {
-                let (bv, bn) = ascii_case_variants(pattern[0], case_insensitive);
-                let (cv, cn) = ascii_case_variants(pattern[1], case_insensitive);
-                for previous2 in 0..=u8::MAX {
-                    for &b in &bv[..bn] {
-                        for &c in &cv[..cn] {
-                            set_suffix3_bloom_bit(&mut mask, previous2, b, c);
-                        }
-                    }
-                }
-            }
-            len => {
-                let (av, an) = ascii_case_variants(pattern[len - 3], case_insensitive);
-                let (bv, bn) = ascii_case_variants(pattern[len - 2], case_insensitive);
-                let (cv, cn) = ascii_case_variants(pattern[len - 1], case_insensitive);
-                for &a in &av[..an] {
-                    for &b in &bv[..bn] {
-                        for &c in &cv[..cn] {
-                            set_suffix3_bloom_bit(&mut mask, a, b, c);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    mask
+    vyre_reference::composition_witness::classic_ac_candidate_suffix3_bloom_words_ci_witness(
+        patterns,
+        case_insensitive,
+    )
 }
 
-/// Return whether the hashed suffix3 mask admits this candidate triple.
-#[must_use]
-pub fn classic_ac_suffix3_bloom_contains(
+#[cfg(test)]
+pub(crate) fn classic_ac_suffix3_bloom_contains(
     mask: &[u32],
     previous2: u8,
     previous: u8,
     current: u8,
 ) -> bool {
-    let bit_index = classic_ac_suffix3_bloom_bit_index(previous2, previous, current);
-    let word = bit_index / 32;
-    mask.get(word)
-        .is_some_and(|word_value| (word_value & (1_u32 << (bit_index % 32))) != 0)
+    vyre_reference::composition_witness::classic_ac_suffix3_bloom_contains_witness(
+        mask, previous2, previous, current,
+    )
 }
-
 /// Build the three-byte-suffix prefiltered AC count-only program for a compiled DFA.
 #[must_use]
 pub fn build_ac_bounded_count_suffix3_prefilter_program(dfa: &CompiledDfa) -> Program {
@@ -184,21 +126,6 @@ pub fn build_ac_bounded_count_suffix3_prefilter_program(dfa: &CompiledDfa) -> Pr
         dfa.state_count,
         dfa.max_pattern_len,
     )
-}
-
-fn set_suffix3_bloom_bit(mask: &mut [u32], previous2: u8, previous: u8, current: u8) {
-    let bit_index = classic_ac_suffix3_bloom_bit_index(previous2, previous, current);
-    mask[bit_index / 32] |= 1_u32 << (bit_index % 32);
-}
-
-fn classic_ac_suffix3_bloom_bit_index(previous2: u8, previous: u8, current: u8) -> usize {
-    let suffix = (u32::from(previous2) << 16) | (u32::from(previous) << 8) | u32::from(current);
-    (suffix3_bloom_hash(suffix) & CLASSIC_AC_SUFFIX3_BLOOM_INDEX_MASK) as usize
-}
-
-fn suffix3_bloom_hash(suffix: u32) -> u32 {
-    let mixed = (suffix ^ (suffix >> 11)).wrapping_mul(0x9E37_79B1);
-    mixed ^ (mixed >> 15)
 }
 
 pub(in crate::pattern::classic_ac) fn suffix3_bloom_bit_index_expr(suffix: Expr) -> Expr {
@@ -238,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn suffix3_prefilter_reference_eval_matches_cpu_count() {
+    fn suffix3_prefilter_reference_eval_matches_reference_count() {
         let patterns: [&[u8]; 5] = [b"a", b"bc", b"ab", b"abcd", b"BEGIN"];
         let haystack = b"abcd a bc BEGIN zabcda";
         let ac = classic_ac_compile(&patterns);
@@ -286,5 +213,45 @@ mod tests {
         );
         assert_eq!(program.buffers()[7].name(), "match_count");
         assert_eq!(program.buffers()[7].count, 1);
+    }
+
+    #[test]
+    fn ascii_case_variants_expands_only_when_requested() {
+        assert_eq!(ascii_case_variants(b'a', false), ([b'a', 0], 1));
+        assert_eq!(ascii_case_variants(b'a', true), ([b'a', b'A'], 2));
+        assert_eq!(ascii_case_variants(b'Z', true), ([b'z', b'Z'], 2));
+        assert_eq!(ascii_case_variants(b'1', true), ([b'1', 0], 1));
+        assert_eq!(ascii_case_variants(b'_', true), ([b'_', 0], 1));
+    }
+
+    #[test]
+    fn suffix3_bloom_ci_expands_all_case_permutations() {
+        let patterns: [&[u8]; 1] = [b"cat"];
+        let mask_cs = classic_ac_candidate_suffix3_bloom_words_ci(&patterns, false);
+        let mask_ci = classic_ac_candidate_suffix3_bloom_words_ci(&patterns, true);
+
+        assert!(classic_ac_suffix3_bloom_contains(
+            &mask_cs, b'c', b'a', b't'
+        ));
+        assert!(!classic_ac_suffix3_bloom_contains(
+            &mask_cs, b'C', b'A', b'T'
+        ));
+        assert!(!classic_ac_suffix3_bloom_contains(
+            &mask_cs, b'c', b'A', b't'
+        ));
+
+        for &c in &[b'c', b'C'] {
+            for &a in &[b'a', b'A'] {
+                for &t in &[b't', b'T'] {
+                    assert!(
+                        classic_ac_suffix3_bloom_contains(&mask_ci, c, a, t),
+                        "candidate triple ({}, {}, {}) must be admitted in CI mode",
+                        c as char,
+                        a as char,
+                        t as char,
+                    );
+                }
+            }
+        }
     }
 }

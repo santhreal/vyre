@@ -216,14 +216,7 @@ pub fn resident_csr_queue_batch_into(
         &mut scratch.readbacks,
     )?;
 
-    if outputs.len() < frontiers.len() {
-        outputs.resize_with(frontiers.len(), Vec::new);
-    }
-    outputs.truncate(frontiers.len());
-    for (output, readback) in outputs.iter_mut().zip(&scratch.readbacks) {
-        output.clear();
-        output.extend_from_slice(readback);
-    }
+    outputs.clone_from(&scratch.readbacks);
     Ok(())
 }
 

@@ -13,9 +13,10 @@
 #![cfg(feature = "math")]
 
 use vyre_libs::math::bellman_shortest_path::{
-    bellman_shortest_path, cpu_ref, BellmanBuffers, BellmanExtents,
+    bellman_shortest_path, BellmanBuffers, BellmanExtents,
 };
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
 use vyre_reference::value::Value;
 
 const INF: u32 = u32::MAX;

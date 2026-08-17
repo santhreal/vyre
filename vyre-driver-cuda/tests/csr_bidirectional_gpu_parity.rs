@@ -7,10 +7,24 @@ mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
 use vyre_libs::graph::dispatch::csr_bidirectional::{
-    bidirectional_closure_via, bidirectional_step_via, reference_bidirectional_closure,
-    reference_bidirectional_step,
+    bidirectional_closure_via, bidirectional_step_via,
+};
+use vyre_reference::composition_witness::{
+    csr_bidirectional_closure_witness,
+    csr_bidirectional_step_witness as reference_bidirectional_step,
 };
 
+fn reference_bidirectional_closure(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> Vec<u32> {
+    csr_bidirectional_closure_witness(
+        inputs.graph.node_count,
+        inputs.graph.edge_offsets,
+        inputs.graph.edge_targets,
+        inputs.graph.edge_kind_mask,
+        seed,
+        inputs.allow_mask,
+        inputs.max_iters,
+    )
+}
 fn linear_chain() -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> 3
     (4, vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])

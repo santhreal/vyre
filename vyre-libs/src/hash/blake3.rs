@@ -180,6 +180,8 @@ fn store_state_nodes(out: &str) -> Vec<Node> {
         .collect()
 }
 
+const EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES: [u8; 64] = [0; 64];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         BLAKE3_G_OP_ID,
@@ -193,8 +195,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0; 16])]]
+            vec![vec![EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -212,8 +213,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0; 16])]]
+            vec![vec![EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -222,11 +222,12 @@ inventory::submit! {
 // CPU reference implementations
 // ---------------------------------------------------------------------------
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_reference::composition_witness::{
+        blake3_g_witness as cpu_blake3_g, blake3_round_witness as cpu_blake3_round,
+    };
 
     #[test]
     fn g_zero_state_zero_message_is_identity() {

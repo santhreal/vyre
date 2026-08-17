@@ -30,34 +30,30 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+#[cfg(test)]
 use crate::pattern::CompiledDfa;
 
 use crate::pattern::classic_ac::bounded_ranges::{
     ac_output_span_nodes, ac_transition_step_nodes, classic_ac_dfa_buffer_decls,
     output_record_loop_node, presence_bit_write_node, region_search_prologue_nodes,
 };
+#[cfg(test)]
 use crate::pattern::regex_anchored_window::AnchoredWindowValidator;
 
 /// Presence-bitmap word count per region for `pattern_count` patterns
 /// (`ceil(pattern_count / 32)`, min 1). One owner so the program, the CPU
 /// oracle, and consumers agree on row width.
+#[cfg(test)]
 #[must_use]
-pub fn regex_admission_presence_words(pattern_count: u32) -> u32 {
+pub(crate) fn regex_admission_presence_words(pattern_count: u32) -> u32 {
     pattern_count.div_ceil(32).max(1)
 }
 
-/// Largest region index `r` with `region_starts[r] <= pos`. `region_starts` is
-/// ascending with `region_starts[0] == 0`; every `pos` therefore lands in a
-/// region. Shared by the CPU oracle, the GPU program (as IR), and the fused
-/// evidence oracle in [`crate::pattern::fused_region_evidence`]. ONE owner.
+/// Test-private adapter for the reference witness's region ownership rule.
+#[cfg(test)]
 #[must_use]
-pub fn region_of(pos: u32, region_starts: &[u32]) -> usize {
-    match region_starts.binary_search(&pos) {
-        Ok(exact) => exact,
-        // `Err(insert)` is the count of starts `<= pos` is `insert`; the owning
-        // region is the one before the insertion point (>= 1 since starts[0]=0).
-        Err(insert) => insert - 1,
-    }
+pub(crate) fn region_of(pos: u32, region_starts: &[u32]) -> usize {
+    vyre_reference::composition_witness::region_of_witness(pos, region_starts)
 }
 
 /// CPU reference for regex-DFA per-region admission (the GPU parity oracle).
@@ -67,8 +63,9 @@ pub fn region_of(pos: u32, region_starts: &[u32]) -> usize {
 /// pattern `p` starts a match within that region. Reuses
 /// [`AnchoredWindowValidator`] for the walk (ONE source of truth) and attributes
 /// each extracted match's `start` to its region.
+#[cfg(test)]
 #[must_use]
-pub fn regex_admission_by_region_reference(
+pub(crate) fn regex_admission_by_region_reference(
     dfa: &CompiledDfa,
     haystack: &[u8],
     region_starts: &[u32],
@@ -294,10 +291,10 @@ mod tests {
         assert_eq!(region_of(1000, &starts), 2);
     }
 
-    /// The CPU oracle sets exactly the patterns that start in each region, and
+    /// The reference oracle sets exactly the patterns that start in each region, and
     /// nothing in a region with no matches.
     #[test]
-    fn cpu_oracle_admits_patterns_per_region() {
+    fn reference_oracle_admits_patterns_per_region() {
         // Two coalesced "files": region 0 = "abc AKIA\n", region 1 = "token bcd\n".
         let patterns = ["abc", "AKIA", "token", "bcd", "zzz"];
         let dfa = dfa_for(&patterns);
@@ -330,11 +327,11 @@ mod tests {
         assert!(!presence_bit(&bitmap, 0, words, 4) && !presence_bit(&bitmap, 1, words, 4));
     }
 
-    /// GPU program ↔ CPU oracle parity via the reference backend: the emitted IR,
+    /// GPU program ↔ reference oracle parity via the reference backend: the emitted IR,
     /// evaluated by the reference interpreter, must produce the byte-identical
-    /// per-region admission bitmap the CPU oracle defines.
+    /// per-region admission bitmap the reference oracle defines.
     #[test]
-    fn admission_program_reference_eval_matches_cpu_oracle() {
+    fn admission_program_reference_eval_matches_reference_oracle() {
         let patterns = ["abc", "AKIA", "token", "bcd", "secret"];
         let dfa = dfa_for(&patterns);
         let haystack = b"xx abc AKIA\nsecret token\nbcd abc\n";

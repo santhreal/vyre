@@ -7,6 +7,9 @@
 //! not restate any of the arithmetic here. Every term is backend-neutral so the
 //! same layout serves every target.
 
+use vyre_foundation::composition::wrap_anonymous_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
 /// Number of rank buckets carried for token/fact out-degree skew planning.
 pub const TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize = 16;
 
@@ -504,6 +507,50 @@ pub fn plan_device_resident_token_fact_graph_layout_with_scratch(
         payload_bytes: graph.payload_bytes,
         resident_bytes,
     })
+}
+
+/// Canonical op id for device-resident token/fact graph traversal.
+pub const OP_ID: &str = "vyre-libs::device::device_resident_token_fact_graph";
+
+/// Build a Program that dispatches device-resident token/fact graph traversal.
+pub fn device_resident_token_fact_graph_program(
+    nodes: &[TokenFactNode],
+    edges: &[TokenFactEdge],
+    payload_bytes: u64,
+    node_record_bytes: u64,
+    edge_record_bytes: u64,
+    row_offsets_buf: &str,
+    column_indices_buf: &str,
+    out_buf: &str,
+) -> Result<Program, DeviceResidentTokenFactGraphError> {
+    let graph = plan_device_resident_token_fact_graph(nodes, edges, payload_bytes)?;
+    let layout =
+        plan_device_resident_token_fact_graph_layout(&graph, node_record_bytes, edge_record_bytes)?;
+    let node_count = u32::try_from(layout.node_count)
+        .map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
+    let edge_count = u32::try_from(layout.edge_count)
+        .map_err(|_| DeviceResidentTokenFactGraphError::CsrIndexOverflow)?;
+    let t = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::store(
+        out_buf,
+        t.clone(),
+        Expr::load(column_indices_buf, t.clone()),
+    )];
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(row_offsets_buf, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(node_count.saturating_add(1)),
+            BufferDecl::storage(column_indices_buf, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(edge_count),
+            BufferDecl::storage(out_buf, 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(edge_count),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::lt(t, Expr::u32(edge_count)), body)],
+        )],
+    ))
 }
 
 fn checked_mul(
@@ -1026,5 +1073,26 @@ mod tests {
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
         *state
+    }
+
+    #[test]
+    fn device_resident_token_fact_graph_program_builds_valid_ir() {
+        let nodes = [
+            TokenFactNode::new(1, TokenFactNodeKind::Token, 0, 16),
+            TokenFactNode::new(2, TokenFactNodeKind::Fact, 16, 16),
+        ];
+        let edges = [TokenFactEdge::new(1, 2, TokenFactEdgeKind::FactDependency)];
+        let program = device_resident_token_fact_graph_program(
+            &nodes,
+            &edges,
+            32,
+            32,
+            16,
+            "row_offsets",
+            "col_indices",
+            "out",
+        )
+        .expect("Fix: valid token/fact graph program must build");
+        assert_eq!(program.buffers().len(), 3);
     }
 }

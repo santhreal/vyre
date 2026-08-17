@@ -237,11 +237,7 @@ pub(super) const CANONICAL_BLOCK_SKELETONS: &[&str] = &[
     "TableStateMachineComposer",
 ];
 
-fn check_for_duplicate_block_skeletons(
-    path: &Path,
-    rel_path: &str,
-    findings: &mut Vec<Finding>,
-) {
+fn check_for_duplicate_block_skeletons(path: &Path, rel_path: &str, findings: &mut Vec<Finding>) {
     if rel_path.starts_with("vyre-libs/src/builder/") || rel_path == "vyre-libs/src/builder.rs" {
         return;
     }
@@ -276,7 +272,6 @@ pub(super) const RECOGNIZED_DOMAINS: &[&str] = &[
     "label",
     "llm",
     "logical",
-
     "math",
     "nfa",
     "nn",
@@ -288,7 +283,6 @@ pub(super) const RECOGNIZED_DOMAINS: &[&str] = &[
     "reduce",
     "representation",
     "rule",
-
     "scheduling",
     "security",
     "solvers",

@@ -4,7 +4,7 @@
 
 use proptest::prelude::*;
 use std::collections::HashSet;
-use vyre_libs::graph::reachable::reachable;
+use vyre_reference::composition_witness::reachable_witness as reachable;
 
 fn bfs_reachable(node_count: u32, edges: &[(u32, u32)], sources: &[u32]) -> HashSet<u32> {
     let n = node_count as usize;

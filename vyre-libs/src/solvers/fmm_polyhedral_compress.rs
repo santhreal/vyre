@@ -42,13 +42,16 @@
 //! each multipole order has an explicit schema and test oracle.
 
 use crate::dispatch_buffers::{
-    ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    ceil_div_u32, decode_f32_output_exact, ensure_input_slots, require_exactly_one_output,
+    write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
-#[cfg(test)]
-use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+#[cfg(test)]
+use vyre_reference::composition_witness::{
+    try_l2p_zeroth_all_witness_into, try_m2l_zeroth_all_witness_into,
+    try_p2m_zeroth_moment_witness_into,
+};
 
 /// Caller-owned GPU dispatch scratch for zeroth-moment FMM compression.
 #[derive(Debug, Default)]
@@ -59,28 +62,13 @@ pub struct FmmPolyhedralGpuScratch {
 }
 
 #[cfg(test)]
-fn p2m_zeroth_moment_cpu_into(charges: &[f64], cell_assignment: &[u32], moments: &mut Vec<f64>) {
-    if charges.is_empty() {
-        debug_assert!(cell_assignment.is_empty());
-        moments.clear();
-        return;
-    }
-    let n_cells = cell_assignment.iter().max().copied().unwrap_or(0) as usize + 1;
-    moments.clear();
-    moments.resize(n_cells, 0.0);
-    for (i, &cell) in cell_assignment.iter().enumerate() {
-        moments[cell as usize] += charges[i];
-    }
-}
-
-#[cfg(test)]
-fn m2l_zeroth_translate_cpu(source_moment: f64, distance: f64) -> f64 {
-    source_moment / distance.max(1e-12)
-}
-
-#[cfg(test)]
-fn l2p_zeroth_eval_cpu(local_moment: f64, _target_x: f64, _target_y: f64) -> f64 {
-    local_moment
+fn reference_p2m_zeroth_moment_into(
+    charges: &[f64],
+    cell_assignment: &[u32],
+    moments: &mut Vec<f64>,
+) {
+    try_p2m_zeroth_moment_witness_into(charges, cell_assignment, moments)
+        .expect("validated P2M adapter inputs must be accepted by the reference witness");
 }
 
 /// Aggregate per-Region fusion-affinity scores into per-cell multipole
@@ -93,7 +81,7 @@ fn l2p_zeroth_eval_cpu(local_moment: f64, _target_x: f64, _target_y: f64) -> f64
 /// Panics if `scores.len() != cell_assignment.len()`.
 #[must_use]
 #[cfg(test)]
-pub fn aggregate_to_cells(scores: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
+pub(crate) fn aggregate_to_cells(scores: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
     let mut out = Vec::new();
     reference_aggregate_to_cells_into(scores, cell_assignment, &mut out);
     out
@@ -101,7 +89,7 @@ pub fn aggregate_to_cells(scores: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
 
 /// Aggregate per-Region fusion-affinity scores into caller-owned cell moments.
 #[cfg(test)]
-pub fn reference_aggregate_to_cells_into(
+pub(crate) fn reference_aggregate_to_cells_into(
     scores: &[f64],
     cell_assignment: &[u32],
     out: &mut Vec<f64>,
@@ -109,7 +97,7 @@ pub fn reference_aggregate_to_cells_into(
     use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
     assert_eq!(scores.len(), cell_assignment.len());
-    p2m_zeroth_moment_cpu_into(scores, cell_assignment, out);
+    reference_p2m_zeroth_moment_into(scores, cell_assignment, out);
 }
 
 /// Translate source-cell moments to target-cell local expansions.
@@ -124,7 +112,7 @@ pub fn reference_aggregate_to_cells_into(
 /// Panics if `cell_distances.len() != cell_moments.len() * cell_moments.len()`.
 #[must_use]
 #[cfg(test)]
-pub fn translate_to_targets(cell_moments: &[f64], cell_distances: &[f64]) -> Vec<f64> {
+pub(crate) fn translate_to_targets(cell_moments: &[f64], cell_distances: &[f64]) -> Vec<f64> {
     let mut local = Vec::new();
     reference_translate_to_targets_into(cell_moments, cell_distances, &mut local);
     local
@@ -132,31 +120,15 @@ pub fn translate_to_targets(cell_moments: &[f64], cell_distances: &[f64]) -> Vec
 
 /// Translate source-cell moments into caller-owned target locals.
 #[cfg(test)]
-pub fn reference_translate_to_targets_into(
+pub(crate) fn reference_translate_to_targets_into(
     cell_moments: &[f64],
     cell_distances: &[f64],
     local: &mut Vec<f64>,
 ) {
     use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
-    let num_cells = cell_moments.len();
-    assert_eq!(
-        cell_distances.len(),
-        num_cells * num_cells,
-        "Fix: cell_distances must be num_cells*num_cells row-major."
-    );
-
-    local.clear();
-    local.resize(num_cells, 0.0);
-    for t in 0..num_cells {
-        for s in 0..num_cells {
-            if t == s {
-                continue; // self-cell handled by direct evaluation
-            }
-            let d = cell_distances[t * num_cells + s];
-            local[t] += m2l_zeroth_translate_cpu(cell_moments[s], d);
-        }
-    }
+    try_m2l_zeroth_all_witness_into(cell_moments, cell_distances, local)
+        .expect("validated M2L adapter inputs must be accepted by the reference witness");
 }
 
 /// Evaluate local expansions at each Region to recover its
@@ -165,7 +137,7 @@ pub fn reference_translate_to_targets_into(
 /// cell. Returns the per-Region affinity sum.
 #[must_use]
 #[cfg(test)]
-pub fn evaluate_at_regions(cell_local: &[f64], cell_assignment: &[u32], n: u32) -> Vec<f64> {
+pub(crate) fn evaluate_at_regions(cell_local: &[f64], cell_assignment: &[u32], n: u32) -> Vec<f64> {
     let mut out = Vec::new();
     reference_evaluate_at_regions_into(cell_local, cell_assignment, n, &mut out);
     out
@@ -173,7 +145,7 @@ pub fn evaluate_at_regions(cell_local: &[f64], cell_assignment: &[u32], n: u32) 
 
 /// Evaluate local expansions into caller-owned per-Region output.
 #[cfg(test)]
-pub fn reference_evaluate_at_regions_into(
+pub(crate) fn reference_evaluate_at_regions_into(
     cell_local: &[f64],
     cell_assignment: &[u32],
     n: u32,
@@ -181,19 +153,8 @@ pub fn reference_evaluate_at_regions_into(
 ) {
     use crate::telemetry::{bump, fmm_polyhedral_compress_calls};
     bump(&fmm_polyhedral_compress_calls);
-    assert_eq!(cell_assignment.len(), n as usize);
-    out.clear();
-    reserve_vec_capacity_or_panic(out, n as usize, "FMM region evaluation output");
-    #[allow(clippy::needless_range_loop)]
-    for i in 0..n as usize {
-        let cell = cell_assignment[i] as usize;
-        assert!(
-            cell < cell_local.len(),
-            "Fix: cell assignment {cell} out of bounds for {} cells",
-            cell_local.len()
-        );
-        out.push(l2p_zeroth_eval_cpu(cell_local[cell], 0.0, 0.0));
-    }
+    try_l2p_zeroth_all_witness_into(cell_local, cell_assignment, n, out)
+        .expect("validated L2P adapter inputs must be accepted by the reference witness");
 }
 
 /// Run the full P2M → M2L → L2P pipeline. `scores` are per-Region
@@ -203,7 +164,7 @@ pub fn reference_evaluate_at_regions_into(
 /// the zeroth-moment FMM truncation.
 #[must_use]
 #[cfg(test)]
-pub fn fmm_compress_pairwise(
+pub(crate) fn fmm_compress_pairwise(
     scores: &[f64],
     cell_assignment: &[u32],
     cell_distances: &[f64],
@@ -226,7 +187,7 @@ pub fn fmm_compress_pairwise(
 
 /// Run the full P2M → M2L → L2P pipeline into caller-owned buffers.
 #[cfg(test)]
-pub fn fmm_compress_pairwise_into(
+pub(crate) fn fmm_compress_pairwise_into(
     scores: &[f64],
     cell_assignment: &[u32],
     cell_distances: &[f64],
@@ -302,7 +263,7 @@ pub fn aggregate_to_cells_via_with_scratch_into(
         &scratch.inputs,
         Some([ceil_div_u32(n_cells, 256), 1, 1]),
     )?;
-    let output = require_first_output(&outputs, "aggregate_to_cells_via")?;
+    let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")?;
     decode_f32_output_exact(output, n_cells as usize, "aggregate_to_cells_via", out)
 }
 
@@ -365,7 +326,7 @@ pub fn translate_to_targets_via_with_scratch_into(
         &scratch.inputs,
         Some([ceil_div_u32(n_cells, 256), 1, 1]),
     )?;
-    let output = require_first_output(&outputs, "translate_to_targets_via")?;
+    let output = require_exactly_one_output(&outputs, "translate_to_targets_via")?;
     decode_f32_output_exact(output, n_cells as usize, "translate_to_targets_via", out)
 }
 
@@ -441,7 +402,7 @@ pub fn evaluate_at_regions_via_with_scratch_into(
         &scratch.inputs,
         Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
-    let output = require_first_output(&outputs, "evaluate_at_regions_via")?;
+    let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")?;
     decode_f32_output_exact(output, out_len, "evaluate_at_regions_via", out)
 }
 
@@ -492,6 +453,12 @@ pub fn fmm_compress_pairwise_via_with_scratch_into(
         "fmm_compress_pairwise_via",
     )?;
     if n == 0 {
+        if !cell_distances.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: fmm_compress_pairwise_via expected cell_distances.len() == 0 for n=0, got {}.",
+                cell_distances.len()
+            )));
+        }
         out.clear();
         scratch.cell_moments.clear();
         scratch.cell_local.clear();
@@ -618,15 +585,6 @@ fn bytes_for_f32_count(count: usize, context: &str) -> Result<usize, DispatchErr
         })
 }
 
-fn require_first_output<'a>(
-    outputs: &'a [Vec<u8>],
-    context: &str,
-) -> Result<&'a [u8], DispatchError> {
-    outputs.first().map(Vec::as_slice).ok_or_else(|| {
-        DispatchError::BackendError(format!("Fix: {context} expected one output buffer, got 0."))
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -635,6 +593,65 @@ mod tests {
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-6 * (1.0 + a.abs() + b.abs())
+    }
+
+    #[test]
+    fn zero_region_distance_validation_precedes_output_mutation() {
+        struct NoDispatch;
+        impl ProgramDispatcher for NoDispatch {
+            fn dispatch(
+                &self,
+                _program: &vyre_foundation::ir::Program,
+                _inputs: &[Vec<u8>],
+                _grid_override: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                panic!("invalid zero-region inputs must fail before dispatch");
+            }
+        }
+
+        let mut scratch = FmmPolyhedralGpuScratch {
+            cell_moments: vec![1.0],
+            cell_local: vec![2.0],
+            ..FmmPolyhedralGpuScratch::default()
+        };
+        let mut out = vec![3.0];
+        let err = fmm_compress_pairwise_via_with_scratch_into(
+            &NoDispatch,
+            &[],
+            &[],
+            &[1.0],
+            0,
+            &mut scratch,
+            &mut out,
+        )
+        .expect_err("non-empty zero-region distance matrix must fail");
+        assert!(matches!(err, DispatchError::BadInputs(_)));
+        assert_eq!(scratch.cell_moments, [1.0]);
+        assert_eq!(scratch.cell_local, [2.0]);
+        assert_eq!(out, [3.0]);
+    }
+
+    #[test]
+    fn fmm_dispatch_output_count_is_exact() {
+        let empty: Vec<Vec<u8>> = Vec::new();
+        let missing =
+            require_exactly_one_output(&empty, "fmm").expect_err("missing output must fail");
+        assert!(missing
+            .to_string()
+            .contains("exactly one output buffer, got 0"));
+
+        let extra = vec![vec![1], vec![2]];
+        let surplus =
+            require_exactly_one_output(&extra, "fmm").expect_err("surplus output must fail");
+        assert!(surplus
+            .to_string()
+            .contains("exactly one output buffer, got 2"));
+
+        let one = vec![vec![3]];
+        assert_eq!(
+            require_exactly_one_output(&one, "fmm").expect("one output is exact"),
+            [3]
+        );
     }
 
     #[test]
@@ -654,8 +671,8 @@ mod tests {
         let distances = vec![0.0, 1.0, 1.0, 0.0];
         let local = translate_to_targets(&moments, &distances);
         // local[0] = m2l(20, 1.0); local[1] = m2l(10, 1.0).
-        assert!(approx_eq(local[0], m2l_zeroth_translate_cpu(20.0, 1.0)));
-        assert!(approx_eq(local[1], m2l_zeroth_translate_cpu(10.0, 1.0)));
+        assert!(approx_eq(local[0], 20.0));
+        assert!(approx_eq(local[1], 10.0));
     }
 
     #[test]

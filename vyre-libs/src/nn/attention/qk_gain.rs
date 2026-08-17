@@ -68,6 +68,10 @@ pub fn qk_gain(
         })
 }
 
+const EXPECTED_QK_GAIN_OUTPUT_BYTES: [u8; 16] = [
+    0x00, 0x00, 0xA8, 0x40, 0x00, 0x00, 0x28, 0x41, 0x00, 0x00, 0x10, 0x41, 0x00, 0x00, 0x40, 0x41,
+];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -81,10 +85,7 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            // h0: [1*5.25, 2*5.25] = [5.25, 10.5]
-            // h1: [3*3.0, 4*3.0] = [9.0, 12.0]
-            vec![vec![to_f32(&[5.25, 10.5, 9.0, 12.0])]]
+            vec![vec![EXPECTED_QK_GAIN_OUTPUT_BYTES.to_vec()]]
         }),
     )
     .with_category("nn")

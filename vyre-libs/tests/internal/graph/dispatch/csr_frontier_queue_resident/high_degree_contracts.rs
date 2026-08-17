@@ -1,7 +1,7 @@
 use super::super::*;
 use super::recording_dispatcher::RecordingResidentDispatcher;
-use crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 use crate::graph::csr_frontier_queue::scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
+use crate::graph::csr_queue_strided::csr_queue_strided_forward_dispatch_grid;
 
 #[test]
 fn skewed_high_degree_resident_query_uses_bounded_split_queue() {

@@ -104,8 +104,17 @@ pub fn plan_bitset_compression(
                 field: "dense word count",
             })?
             / 64;
-    let dense_bytes = checked_mul(word_count, 8, "dense bytes")?;
-    let sparse_bytes = checked_mul(profile.active_bits, profile.index_bytes, "sparse bytes")?;
+    let dense_bytes =
+        word_count
+            .checked_mul(8)
+            .ok_or(BitsetCompressionError::ByteCountOverflow {
+                field: "dense bytes",
+            })?;
+    let sparse_bytes = profile.active_bits.checked_mul(profile.index_bytes).ok_or(
+        BitsetCompressionError::ByteCountOverflow {
+            field: "sparse bytes",
+        },
+    )?;
     let density_bps = if profile.universe_bits == 0 {
         0
     } else {
@@ -128,11 +137,6 @@ pub fn plan_bitset_compression(
         avoided_dense_bytes: dense_bytes.saturating_sub(encoded_bytes),
         density_bps,
     })
-}
-
-fn checked_mul(lhs: u64, rhs: u64, field: &'static str) -> Result<u64, BitsetCompressionError> {
-    lhs.checked_mul(rhs)
-        .ok_or(BitsetCompressionError::ByteCountOverflow { field })
 }
 
 #[cfg(test)]

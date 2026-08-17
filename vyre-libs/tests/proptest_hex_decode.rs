@@ -1,11 +1,12 @@
 //! Property and adversarial tests for the primitive-owned hex decode oracle.
-// The oracle `hex_decode_reference_packed` is gated on `cpu-parity` (unreachable from
-// an integration test under `decode` alone); declare the true dependency.
+// Gated under `decode`; declare the true dependency.
 #![cfg(feature = "decode")]
 
 use proptest::prelude::*;
 use vyre_libs::decode::hex::{hex_decode_table, hex_decoded_capacity};
-fn hex_decode_reference_packed(ascii: &[u8]) -> Vec<u32> { let mut out = Vec::with_capacity((ascii.len() + 7) / 8); for chunk in ascii.chunks(8) { let mut word = 0u32; for (i, &b) in chunk.iter().enumerate() { let nibble = match b { b'0'..=b'9' => b - b'0', b'a'..=b'f' => b - b'a' + 10, b'A'..=b'F' => b - b'A' + 10, _ => 0 }; word |= (nibble as u32) << (i * 4); } out.push(word); } out }
+fn hex_decode_reference_packed(ascii: &[u8]) -> Vec<u32> {
+    vyre_reference::composition_witness::hex_decode_packed_witness(ascii)
+}
 
 fn manual_hex_decode(input: &[u8]) -> Vec<u32> {
     let table = hex_decode_table();

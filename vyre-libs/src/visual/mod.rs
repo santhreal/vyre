@@ -52,10 +52,11 @@ pub use cell_grid::{cell_grid_fill, GridShape};
 pub use composite::alpha_over;
 pub use downsample::downsample_2x;
 pub use filter_chain::filter_chain;
+#[cfg(test)]
+pub use glass::glass_stages_half_res;
+#[cfg(test)]
 pub use glass::GlassHalfResPipeline;
-pub use glass::{
-    glass_blur_stage, glass_filter_stage, glass_stages, glass_stages_half_res, GlassParams,
-};
+pub use glass::{glass_blur_stage, glass_filter_stage, glass_stages, GlassParams};
 pub use glyph_grid::glyph_grid_blend;
 pub use gradient::try_linear_gradient;
 pub use gradient::{linear_gradient, ColorStop};

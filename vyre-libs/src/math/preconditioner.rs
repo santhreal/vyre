@@ -164,22 +164,6 @@ fn fixture_f32(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }
 
-fn poly5_fixture_expected(values: &[f32]) -> Vec<f32> {
-    values
-        .iter()
-        .copied()
-        .map(|mut x| {
-            for _ in 0..5 {
-                let x2 = x * x;
-                let x3 = x2 * x;
-                let x5 = x3 * x2;
-                x = 3.4445 * x + -4.7750 * x3 + 2.0315 * x5;
-            }
-            x
-        })
-        .collect()
-}
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         POLY5_F32_OP_ID,
@@ -189,32 +173,78 @@ inventory::submit! {
             fixture_f32(&[0.0; 4]),
         ]]),
         Some(|| {
-            let expected = poly5_fixture_expected(&[0.25, 0.5, 0.75, 1.0]);
-            vec![vec![fixture_f32(&expected)]]
+            vec![vec![vec![
+                0x34, 0xeb, 0x36, 0x3f, // 0.7145264
+                0xb2, 0xf3, 0x43, 0x3f, // 0.76543725
+                0xfc, 0xf9, 0x85, 0x3f, // 1.0466914
+                0xa8, 0x49, 0x32, 0x3f, // 0.6964364
+            ]]]
         }),
     )
 }
-
-
-
 
 /// Helper: f64 matrix-matrix multiply (for the CPU reference test
 /// driver below). Not an op  -  testing convenience.
 #[cfg(test)]
 fn matmul_dense(a: &[f64], b: &[f64], n: usize) -> Vec<f64> {
-    let mut c = Vec::new();
-    matmul_dense_into(a, b, n, &mut c);
-    c
+    vyre_reference::composition_witness::dense_matrix_multiply_witness(a, b, n, n, n)
 }
-
-
-
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    type NewtonSchulzScratch = vyre_reference::composition_witness::NewtonSchulzScratchWitness;
+
+    fn try_newton_schulz_y_step_cpu_into(
+        y: &[f64],
+        yzy: &[f64],
+        out: &mut Vec<f64>,
+    ) -> Result<(), String> {
+        vyre_reference::composition_witness::newton_schulz_y_step_witness_into(y, yzy, out);
+        Ok(())
+    }
+
+    fn newton_schulz_y_step_cpu_into(y: &[f64], yzy: &[f64], out: &mut Vec<f64>) {
+        vyre_reference::composition_witness::newton_schulz_y_step_witness_into(y, yzy, out);
+    }
+
+    fn newton_schulz_y_step_cpu(y: &[f64], yzy: &[f64]) -> Vec<f64> {
+        vyre_reference::composition_witness::newton_schulz_y_step_witness(y, yzy)
+    }
+
+    fn matmul_dense(a: &[f64], b: &[f64], n: usize) -> Vec<f64> {
+        let mut out = vec![0.0; n * n];
+        for i in 0..n {
+            for j in 0..n {
+                let mut sum = 0.0;
+                for k in 0..n {
+                    sum += a.get(i * n + k).copied().unwrap_or(0.0)
+                        * b.get(k * n + j).copied().unwrap_or(0.0);
+                }
+                out[i * n + j] = sum;
+            }
+        }
+        out
+    }
+
+    fn newton_schulz_inverse_sqrt_cpu_into(
+        m: &[f64],
+        n: u32,
+        iters: u32,
+        out: &mut Vec<f64>,
+        scratch: &mut NewtonSchulzScratch,
+    ) {
+        vyre_reference::composition_witness::newton_schulz_inverse_sqrt_witness_into(
+            m, n as usize, iters, out, scratch,
+        );
+    }
+
+    fn newton_schulz_inverse_sqrt_cpu(m: &[f64], n: u32, iters: u32) -> Vec<f64> {
+        vyre_reference::composition_witness::newton_schulz_inverse_sqrt_witness(
+            m, n as usize, iters,
+        )
+    }
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())

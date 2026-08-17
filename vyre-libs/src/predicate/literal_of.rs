@@ -21,7 +21,7 @@ pub fn literal_of(nodes: &str, nodeset_out: &str, node_count: u32) -> Program {
     node_kind_eq_with_op_id(OP_ID, nodes, nodeset_out, node_count, node_kind::LITERAL)
 }
 
-
+const EXPECTED_LITERAL_OF_OUTPUT_BYTES: [u8; 4] = [8, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -35,8 +35,8 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b1000])]] // node 3 (LITERAL)
+            // node 3 (LITERAL)
+            vec![vec![EXPECTED_LITERAL_OF_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }

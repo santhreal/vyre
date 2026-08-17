@@ -17,7 +17,7 @@ pub fn bitset_zero(target: &str, words: u32) -> Program {
         .add_output_storage(target, BufferAccess::WriteOnly, DataType::U32, words)
         .build_pointwise(target, |_| Expr::u32(0))
 }
-
+const EXPECTED_BITSET_ZERO_OUTPUT_BYTES: [u8; 12] = [0; 12];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -28,8 +28,7 @@ inventory::submit! {
             vec![vec![to_bytes(&[1, 0xDEAD_BEEF, u32::MAX])]]
         }),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0, 0, 0])]]
+            vec![vec![EXPECTED_BITSET_ZERO_OUTPUT_BYTES.to_vec()]]
         }),
     )
 }
@@ -38,17 +37,12 @@ inventory::submit! {
 mod tests {
     use super::*;
 
-    fn cpu_ref(target: &mut [u32]) {
-        target.fill(0);
-    }
-
     #[test]
-    fn cpu_ref_clears_all_words() {
-        let mut words = vec![1u32, 0xDEAD_BEEF, u32::MAX];
-        cpu_ref(&mut words);
-        assert_eq!(words, vec![0, 0, 0]);
+    fn reference_clears_all_words() {
+        let words = vec![1u32, 0xDEAD_BEEF, u32::MAX];
+        let cleared = vyre_reference::composition_witness::bitset_zero_witness(&words);
+        assert_eq!(cleared, vec![0, 0, 0]);
     }
-
     #[test]
     fn emitted_program_has_one_rw_target_buffer() {
         let program = bitset_zero("target", 17);
