@@ -52,6 +52,7 @@ use crate::dispatch_buffers::{
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::plumbing::host::scratch::reserve_vec_capacity_or_panic;
 #[cfg(any(test, feature = "cpu-parity"))]
+use crate::topology::betti_persistence::betti_persistence_into;
 use crate::topology::vietoris_rips::extract_edges_cpu;
 use crate::topology::vietoris_rips::vietoris_rips_edge_filter;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -314,82 +315,6 @@ pub fn reference_h1_birth_scales_into(
         }
         prev_b1 = b1;
     }
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-fn betti_persistence_into(
-    mask: &[u32],
-    n: u32,
-    parent: &mut Vec<u32>,
-    rank: &mut Vec<u32>,
-) -> (u32, u32, u32) {
-    let n_us = n as usize;
-    assert_eq!(
-        mask.len(),
-        n_us * n_us,
-        "Fix: betti_persistence requires mask of length n*n."
-    );
-    if n == 0 {
-        parent.clear();
-        rank.clear();
-        return (0, 0, 0);
-    }
-
-    parent.clear();
-    parent.extend(0..n);
-    rank.clear();
-    rank.resize(n_us, 0);
-
-    let mut edges: u32 = 0;
-    let mut tree_edges: u32 = 0;
-    for i in 0..n_us {
-        for j in (i + 1)..n_us {
-            if mask[i * n_us + j] == 0 {
-                continue;
-            }
-            edges = edges.saturating_add(1);
-            if union(parent, rank, i as u32, j as u32) {
-                tree_edges = tree_edges.saturating_add(1);
-            }
-        }
-    }
-
-    let mut b0 = 0u32;
-    for v in 0..n {
-        if find(parent, v) == v {
-            b0 = b0.saturating_add(1);
-        }
-    }
-    (b0, edges - tree_edges, edges)
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-fn find(parent: &mut [u32], mut x: u32) -> u32 {
-    while parent[x as usize] != x {
-        let p = parent[x as usize];
-        parent[x as usize] = parent[p as usize];
-        x = parent[x as usize];
-    }
-    x
-}
-
-#[cfg(any(test, feature = "cpu-parity"))]
-fn union(parent: &mut [u32], rank: &mut [u32], a: u32, b: u32) -> bool {
-    let ra = find(parent, a);
-    let rb = find(parent, b);
-    if ra == rb {
-        return false;
-    }
-    let (ra_rank, rb_rank) = (rank[ra as usize], rank[rb as usize]);
-    match ra_rank.cmp(&rb_rank) {
-        std::cmp::Ordering::Less => parent[ra as usize] = rb,
-        std::cmp::Ordering::Greater => parent[rb as usize] = ra,
-        std::cmp::Ordering::Equal => {
-            parent[rb as usize] = ra;
-            rank[ra as usize] = ra_rank + 1;
-        }
-    }
-    true
 }
 
 #[cfg(test)]
