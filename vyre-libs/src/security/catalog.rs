@@ -83,8 +83,6 @@ inventory::submit! {
         Some(|| vec![vec![
             vec![12, 0, 0, 0],
             vec![10, 0, 0, 0],
-            vec![0, 0, 0, 0],
-            vec![0, 0, 0, 0],
         ]]),
         Some(|| vec![vec![
             vec![8, 0, 0, 0],
@@ -102,13 +100,10 @@ inventory::submit! {
                 4, "arith", "reach", "guards", "scratch", "out",
             )
         },
-        // Declaration order: arith, reach, scratch, guards, out.
         Some(|| vec![vec![
             vec![15, 0, 0, 0],
             vec![12, 0, 0, 0],
-            vec![0, 0, 0, 0],
             vec![8, 0, 0, 0],
-            vec![0, 0, 0, 0],
         ]]),
         Some(|| vec![vec![
             vec![12, 0, 0, 0],

@@ -257,7 +257,6 @@ inventory::submit! {
             vec![vec![
                 to_bytes(&[0b0001]),              // source = {0}
                 to_bytes(&[0b0000]),              // sanitizer = {}
-                to_bytes(&[0b0001]),              // clean = {0}
                 to_bytes(&[0, 0, 0, 0]),          // pg_nodes
                 to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets
                 to_bytes(&[1, 2, 3]),             // pg_edge_targets
@@ -268,10 +267,7 @@ inventory::submit! {
                 ]),                               // pg_edge_kind_mask
                 to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
                 to_bytes(&[0b0001]),              // reach = {0}
-                to_bytes(&[0b0000]),              // alive
                 to_bytes(&[0b0010]),              // sink = {1}
-                to_bytes(&[0b0000]),              // hits
-                to_bytes(&[0b0000]),              // out_scalar
             ]]
         }),
         Some(|| {

@@ -198,8 +198,20 @@ pub(crate) fn fuse_security_flow(op_id: &'static str, parts: &[Program], output:
             );
         }
     };
+    let buffers = fused
+        .buffers()
+        .iter()
+        .cloned()
+        .map(|mut buffer| {
+            if buffer.name() == output {
+                buffer.is_output = true;
+                buffer.pipeline_live_out = true;
+            }
+            buffer
+        })
+        .collect();
     Program::wrapped(
-        fused.buffers().to_vec(),
+        buffers,
         fused.workgroup_size(),
         vec![wrap_anonymous_region(
             op_id,
@@ -320,6 +332,8 @@ pub(crate) fn dominance_fixture_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 /// The forward chain again, with source {0} and the sink tag on {1}.
+/// Omits backend-allocated outputs (hits, out_scalar), supplying only
+/// canonical logical inputs including the reach accumulator seed.
 pub(crate) fn dataflow_hit_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_nodes
@@ -328,10 +342,8 @@ pub(crate) fn dataflow_hit_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         vec![1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],             // pg_edge_kind_mask (ASSIGNMENT=1)
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_node_tags
         vec![1, 0, 0, 0],                                     // source = {0}
-        vec![1, 0, 0, 0],                                     // reach accumulator seed
-        vec![2, 0, 0, 0],                                     // sink = {1}
-        vec![0, 0, 0, 0],                                     // hits
-        vec![0, 0, 0, 0],                                     // out_scalar
+        vec![1, 0, 0, 0],                                     // reach accumulator seed = {0}
+        vec![2, 0, 0, 0],                                     // sink / label_set = {1}
     ]]
 }
 

@@ -66,12 +66,14 @@ fn lower_for_gpu(program: &Program) -> Program {
         .expect("registered optimizer must converge")
 }
 
-/// Maps witness inputs from the original program buffer order to the surviving lowered buffers.
+/// Maps inputs from the original program buffer layout to the lowered program ABI by exact binding slot.
 ///
-/// WHY: `lower_for_gpu` eliminates dead buffers and prunes intermediate buffers marked as
-/// `is_backend_allocated_output`. The differential test harness must map fixture inputs by buffer
-/// identity to the lowered program's expected input buffers, supporting both logical witness
-/// input order (excluding backend-allocated outputs) and legacy input order (all non-workgroup buffers).
+/// WHY: Operates over canonical logical inputs (non-workgroup, non-backend-allocated buffers)
+/// as well as legacy inputs (all non-workgroup buffers) supplied by registry operations.
+/// When `lower_for_gpu` eliminates dead buffers and intermediate pipeline-live-out buffers, surviving
+/// input buffers retain their original binding slots (in group 0). We index original inputs by the
+/// original program's declared buffer binding slots, ensure every required lowered input binding is present,
+/// and fail closed on any mismatch.
 fn map_inputs_for_lowered(
     original_program: &Program,
     original_inputs: &[Vec<u8>],
@@ -88,28 +90,60 @@ fn map_inputs_for_lowered(
         .filter(|buf| buf.access() != BufferAccess::Workgroup)
         .collect();
 
-    let mut name_to_input: std::collections::HashMap<&str, &Vec<u8>> =
+    let original_input_buffers = if original_inputs.len() == logical_buffers.len() {
+        logical_buffers
+    } else if original_inputs.len() == all_non_workgroup.len() {
+        all_non_workgroup
+    } else {
+        panic!(
+            "input count ({}) matches neither logical ({}) nor legacy ({}) buffer count for program `{}`",
+            original_inputs.len(),
+            logical_buffers.len(),
+            all_non_workgroup.len(),
+            original_program.entry_op_id().unwrap_or("unknown")
+        );
+    };
+
+    let mut binding_to_input: std::collections::HashMap<u32, &Vec<u8>> =
         std::collections::HashMap::new();
 
-    if original_inputs.len() == logical_buffers.len() {
-        for (buf, bytes) in logical_buffers.iter().zip(original_inputs.iter()) {
-            name_to_input.insert(buf.name(), bytes);
-        }
-    } else {
-        for (buf, bytes) in all_non_workgroup.iter().zip(original_inputs.iter()) {
-            name_to_input.insert(buf.name(), bytes);
-        }
+    for (buf, bytes) in original_input_buffers.iter().zip(original_inputs.iter()) {
+        let binding = buf.binding();
+        assert!(
+            binding_to_input.insert(binding, bytes).is_none(),
+            "duplicate binding slot {binding} in original program `{}`",
+            original_program.entry_op_id().unwrap_or("unknown")
+        );
     }
 
-    let mut lowered_inputs = Vec::new();
-    for buf in lowered.buffers() {
-        if buf.access() == BufferAccess::Workgroup || buf.is_backend_allocated_output() {
-            continue;
-        }
-        if let Some(&bytes) = name_to_input.get(buf.name()) {
-            lowered_inputs.push(bytes.clone());
-        }
+    let lowered_input_buffers: Vec<_> = lowered
+        .buffers()
+        .iter()
+        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .collect();
+
+    let mut lowered_inputs = Vec::with_capacity(lowered_input_buffers.len());
+    for buf in &lowered_input_buffers {
+        let binding = buf.binding();
+        let bytes = binding_to_input.get(&binding).unwrap_or_else(|| {
+            panic!(
+                "missing input for lowered buffer `{}` at binding slot {binding} in program `{}`",
+                buf.name(),
+                lowered.entry_op_id().unwrap_or("unknown")
+            );
+        });
+        lowered_inputs.push((*bytes).clone());
     }
+
+    assert_eq!(
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        "lowered input count ({}) must match lowered input buffer count ({}) for program `{}`",
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        lowered.entry_op_id().unwrap_or("unknown")
+    );
+
     lowered_inputs
 }
 fn run_gpu(lowered: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
