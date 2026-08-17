@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:518586efa1bd46905438f44cae6005e4d8ea8427:dirty=true:worktree=7aa6f646821e67ad47098581c63561f3020799ac626306bb13152939a14bfe84",
+  "source_fingerprint": "git:6ce42901b6aecd3228a4a139f61d7f3c2abb49c8:dirty=true:worktree=04b5df5779e4679968d17f9d5ba1225cebf149e9b8a9e4d2998ea93134824960",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -29,7 +29,7 @@
       "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 8808,
+      "source_bytes": 4509,
       "implementation_tokens": [
         "mma",
         "fragment"
@@ -43,10 +43,11 @@
       "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 8170,
+      "source_bytes": 4881,
       "implementation_tokens": [
-        "ldmatrix",
-        "cp.async"
+        "supports_async_copy",
+        "supports_ldmatrix",
+        "KernelOpKind::StoreShared"
       ],
       "missing_tokens": [],
       "unresolved_markers": [],
@@ -57,7 +58,7 @@
       "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14705,
+      "source_bytes": 14827,
       "implementation_tokens": [
         "predicate",
         "predicated"
@@ -71,7 +72,7 @@
       "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 6962,
+      "source_bytes": 3770,
       "implementation_tokens": [
         "schedule",
         "latency"
@@ -99,7 +100,7 @@
       "path": "vyre-emit-ptx/src/emitter/schedule.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3717,
+      "source_bytes": 3883,
       "implementation_tokens": [
         "KernelOpKind::Fma",
         "KernelOpKind::MatrixMma",
@@ -170,7 +171,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_dispatch/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 1127,
+      "source_bytes": 13109,
       "implementation_tokens": [
         "dispatch_resident",
         "ptx"
@@ -184,7 +185,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_io.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 42377,
+      "source_bytes": 42505,
       "implementation_tokens": [
         "download_resident_readbacks_many",
         "upload_resident_at_many",
@@ -199,7 +200,7 @@
       "path": "vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 50297,
+      "source_bytes": 51828,
       "implementation_tokens": [
         "record_cuda_graph",
         "cugraph"
@@ -213,7 +214,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache/module_registry.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17810,
+      "source_bytes": 20949,
       "implementation_tokens": [
         "function_for_ptx",
         "ptx_target_sm"
@@ -227,7 +228,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache/ptx_source_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 20867,
+      "source_bytes": 20955,
       "implementation_tokens": [
         "CudaPtxSourceCache",
         "CudaPtxSourceCacheSnapshot",
@@ -245,7 +246,7 @@
       "path": "vyre-driver-cuda/src/backend/ptx_target.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4015,
+      "source_bytes": 4094,
       "implementation_tokens": [
         "select_loadable_ptx_target_sm",
         "cumoduleloaddata"
@@ -259,7 +260,7 @@
       "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9358,
+      "source_bytes": 9517,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
@@ -277,7 +278,7 @@
       "path": "vyre-driver-wgpu/src/materializer.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 12879,
+      "source_bytes": 16729,
       "implementation_tokens": [
         "impl ArtifactMaterializer",
         "fn materialize",
@@ -292,7 +293,7 @@
       "path": "vyre-runtime/src/artifact_admission.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 23300,
+      "source_bytes": 43260,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"
@@ -320,7 +321,7 @@
       "path": "vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14458,
+      "source_bytes": 14566,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"
@@ -334,7 +335,7 @@
       "path": "vyre-driver-wgpu/src/engine/dispatch_scratch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 6187,
+      "source_bytes": 6266,
       "implementation_tokens": [
         "thread_local",
         "reset"
@@ -348,7 +349,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 22547,
+      "source_bytes": 49711,
       "implementation_tokens": [
         "cache",
         "pipeline",
@@ -359,26 +360,40 @@
       "role": "WGPU pipeline disk cache"
     },
     {
-      "id": "wgpu-no-cpu-fallback-test",
-      "path": "vyre-driver-wgpu/tests/dispatch_never_cpu_fallback.rs",
+      "id": "wgpu-megakernel-dispatcher",
+      "path": "vyre-driver-wgpu/src/pipeline/persistent.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3937,
+      "source_bytes": 29349,
       "implementation_tokens": [
-        "never",
-        "cpu",
-        "fallback"
+        "dispatch_persistent_batched",
+        "dispatch_borrowed_persistent_batched",
+        "DispatchItem"
       ],
       "missing_tokens": [],
       "unresolved_markers": [],
-      "role": "WGPU no-hidden-CPU-fallback contract"
+      "role": "WGPU batched megakernel dispatch through persistent bindings"
+    },
+    {
+      "id": "wgpu-no-cpu-fallback",
+      "path": "vyre-driver-wgpu/src/runtime/device/selector.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 19490,
+      "implementation_tokens": [
+        "has_real_gpu_adapter",
+        "DeviceType::Cpu"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "WGPU adapter selection that refuses a CPU adapter"
     },
     {
       "id": "megakernel-paired-speculation",
       "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9358,
+      "source_bytes": 9517,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
