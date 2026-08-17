@@ -46,20 +46,14 @@ pub(crate) use live_result::LiveResult;
 /// The identifier set liveness propagates; the only place its type is named.
 pub(crate) use live_result::LiveSet;
 
-/// Iterative `Expr::Var` collector.
-pub mod collect_expr_refs;
-/// Detect statically empty loops.
-pub mod const_loop_empty;
-/// Partial constant evaluator for boolean expressions.
-pub mod const_truth;
-/// Backward liveness pass that strips dead `let` bindings.
-pub mod eliminate_dead_lets;
-/// Forward pass folding constant branches and truncating after `Return`.
-pub mod eliminate_unreachable;
+pub(crate) mod collect_expr_refs;
+pub(crate) mod const_loop_empty;
+pub(crate) mod const_truth;
+pub(crate) mod eliminate_dead_lets;
+pub(crate) mod eliminate_unreachable;
 /// Entry point for the dead-code elimination pass.
 pub(crate) mod engine;
-/// Result bundle returned by `eliminate_dead_lets`.
-pub mod live_result;
+pub(crate) mod live_result;
 /// Registered `DcePass` (ProgramPass impl) for the engine.
 pub(crate) mod program_pass;
 pub use engine::dce;

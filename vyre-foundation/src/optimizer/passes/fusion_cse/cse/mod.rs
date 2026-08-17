@@ -39,20 +39,15 @@ pub(crate) mod cse_ctx;
 pub(crate) mod engine;
 /// Conservative predicate: does this expression have observable side effects?
 pub mod expr_has_effect;
-/// Structural key for comparing candidate expressions during CSE.
-pub mod expr_key;
-/// Core CSE algorithm (`CseCtx::node` / `expr`).
-pub mod impl_csectx;
-/// Build an `ExprKey` from an [`Expr`](crate::ir::Expr).
-pub mod impl_exprkey;
-/// `From<DataType>` implementation for `TypeKey`.
-pub mod impl_typekey_from;
+pub(crate) mod expr_key;
+pub(crate) mod impl_csectx;
+pub(crate) mod impl_exprkey;
+pub(crate) mod impl_typekey_from;
 /// Which binary operators are commutative under CSE canonicalisation?
 pub mod is_commutative;
 /// Registered `CsePass` (ProgramPass impl) for the engine.
 pub(crate) mod program_pass;
-/// Compact `Copy` key for expression result types used by the CSE table.
-pub mod type_key;
+pub(crate) mod type_key;
 
 pub use engine::{cse, cse_into};
 pub use program_pass::CsePass;
