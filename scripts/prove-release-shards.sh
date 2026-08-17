@@ -49,9 +49,20 @@ case "$PROFILE" in
         ;;
 esac
 
-./cargo_full "${build_args[@]}"
+vyre_select_cargo_runner() {
+    if [[ -n "${CARGO:-}" ]]; then
+        printf '%s\n' "$CARGO"
+    elif [[ -x "$ROOT_DIR/cargo_full" ]]; then
+        printf '%s\n' "$ROOT_DIR/cargo_full"
+    else
+        printf 'cargo\n'
+    fi
+}
 
-target_root="$(./cargo_full metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
+CARGO_RUNNER="$(vyre_select_cargo_runner)"
+"$CARGO_RUNNER" "${build_args[@]}"
+
+target_root="$("$CARGO_RUNNER" metadata --no-deps --format-version 1 | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')"
 target_root="${target_root:-$ROOT_DIR/target}"
 if [[ "$target_root" != /* ]]; then
     target_root="$ROOT_DIR/$target_root"
