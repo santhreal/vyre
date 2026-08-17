@@ -66,11 +66,56 @@ fn lower_for_gpu(program: &Program) -> Program {
         .expect("registered optimizer must converge")
 }
 
-fn run_gpu(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    let lowered = lower_for_gpu(program);
-    let config = dispatch_config_for(&lowered);
+/// Maps witness inputs from the original program buffer order to the surviving lowered buffers.
+///
+/// WHY: `lower_for_gpu` eliminates dead buffers and prunes intermediate buffers marked as
+/// `is_backend_allocated_output`. The differential test harness must map fixture inputs by buffer
+/// identity to the lowered program's expected input buffers, supporting both logical witness
+/// input order (excluding backend-allocated outputs) and legacy input order (all non-workgroup buffers).
+fn map_inputs_for_lowered(
+    original_program: &Program,
+    original_inputs: &[Vec<u8>],
+    lowered: &Program,
+) -> Vec<Vec<u8>> {
+    let logical_buffers: Vec<_> = original_program
+        .buffers()
+        .iter()
+        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .collect();
+    let all_non_workgroup: Vec<_> = original_program
+        .buffers()
+        .iter()
+        .filter(|buf| buf.access() != BufferAccess::Workgroup)
+        .collect();
+
+    let mut name_to_input: std::collections::HashMap<&str, &Vec<u8>> =
+        std::collections::HashMap::new();
+
+    if original_inputs.len() == logical_buffers.len() {
+        for (buf, bytes) in logical_buffers.iter().zip(original_inputs.iter()) {
+            name_to_input.insert(buf.name(), bytes);
+        }
+    } else {
+        for (buf, bytes) in all_non_workgroup.iter().zip(original_inputs.iter()) {
+            name_to_input.insert(buf.name(), bytes);
+        }
+    }
+
+    let mut lowered_inputs = Vec::new();
+    for buf in lowered.buffers() {
+        if buf.access() == BufferAccess::Workgroup || buf.is_backend_allocated_output() {
+            continue;
+        }
+        if let Some(&bytes) = name_to_input.get(buf.name()) {
+            lowered_inputs.push(bytes.clone());
+        }
+    }
+    lowered_inputs
+}
+fn run_gpu(lowered: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let config = dispatch_config_for(lowered);
     backend()
-        .dispatch(&lowered, &inputs, &config)
+        .dispatch(lowered, &inputs, &config)
         .expect("5090 must execute Cat-A op")
 }
 
@@ -159,7 +204,9 @@ fn assert_buffer_within_tolerance(
 fn assert_diff(op: &'static str, tolerance: u32, program: &Program, inputs: Vec<Vec<u8>>) {
     let cpu_inputs: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
     let cpu = run_cpu(program, cpu_inputs);
-    let gpu = run_gpu(program, inputs);
+    let lowered = lower_for_gpu(program);
+    let lowered_inputs = map_inputs_for_lowered(program, &inputs, &lowered);
+    let gpu = run_gpu(&lowered, lowered_inputs);
     assert_eq!(
         cpu.len(),
         gpu.len(),
