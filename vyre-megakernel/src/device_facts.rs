@@ -20,6 +20,9 @@ pub struct DeviceFacts {
     pub(crate) capabilities: BackendCapabilities,
     supports_cooperative_launch: bool,
     supports_device_timestamps: bool,
+    supports_spatial_partitioning: bool,
+    compute_units: u32,
+    concurrent_queues: u32,
     max_invocations_per_workgroup: u32,
     registers_per_invocation: u32,
     shared_scratch_bytes_per_workgroup: u32,
@@ -79,6 +82,9 @@ impl DeviceFacts {
             capabilities,
             supports_cooperative_launch: false,
             supports_device_timestamps: false,
+            supports_spatial_partitioning: false,
+            compute_units: 0,
+            concurrent_queues: 0,
             max_invocations_per_workgroup,
             registers_per_invocation: 0,
             shared_scratch_bytes_per_workgroup: 0,
@@ -101,6 +107,26 @@ impl DeviceFacts {
     #[must_use]
     pub const fn with_device_timestamps(mut self, supported: bool) -> Self {
         self.supports_device_timestamps = supported;
+        self
+    }
+    /// Record the number of hardware compute units on the device.
+    #[must_use]
+    pub const fn with_compute_units(mut self, compute_units: u32) -> Self {
+        self.compute_units = compute_units;
+        self
+    }
+
+    /// Record the number of independent concurrent hardware queues/streams.
+    #[must_use]
+    pub const fn with_concurrent_queues(mut self, concurrent_queues: u32) -> Self {
+        self.concurrent_queues = concurrent_queues;
+        self
+    }
+
+    /// Record whether the target hardware/driver exposes enforceable spatial partitioning capability.
+    #[must_use]
+    pub const fn with_spatial_partitioning(mut self, supported: bool) -> Self {
+        self.supports_spatial_partitioning = supported;
         self
     }
 
@@ -183,6 +209,23 @@ impl DeviceFacts {
     #[must_use]
     pub const fn supports_device_timestamps(&self) -> bool {
         self.supports_device_timestamps
+    }
+    /// Number of hardware compute units on the device, or zero when unknown.
+    #[must_use]
+    pub const fn compute_units(&self) -> u32 {
+        self.compute_units
+    }
+
+    /// Number of independent concurrent hardware queues/streams, or zero when unknown.
+    #[must_use]
+    pub const fn concurrent_queues(&self) -> u32 {
+        self.concurrent_queues
+    }
+
+    /// Whether the device exposes an enforceable hardware spatial partitioning capability.
+    #[must_use]
+    pub const fn supports_spatial_partitioning(&self) -> bool {
+        self.supports_spatial_partitioning
     }
 
     /// Largest legal invocation count in one workgroup.

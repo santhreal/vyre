@@ -1,9 +1,12 @@
 use vyre_foundation::ir::ProgramGraph;
 
 use crate::{
-    candidate::CandidatePlan,
+    candidate::{CandidatePlan, ExecutionTopology, ResidentPartitionMode},
     facts::{DataflowEdge, PlanningFacts},
-    legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
+    legality::{
+        analyze_fusion_pair, analyze_topology_legality, FusionDecision, FusionRejectionReason,
+        TopologyDecision,
+    },
     DependencyEdge, DeviceFacts, FusionGroupId, SearchBudget, SearchWork,
 };
 
@@ -113,7 +116,56 @@ pub(crate) fn explore(
             candidates.push(grouping.with_workgroup_width(Some(*width)));
         }
         if candidates.len() < budget.max_candidates as usize {
-            candidates.push(grouping);
+            candidates.push(grouping.clone());
+        }
+
+        // Explore candidate execution topologies for this grouping
+        if device.concurrent_queues() >= 2
+            && candidates.len() < budget.max_candidates as usize
+            && can_spend(cpu_work, budget)
+        {
+            let queues = 2.min(device.concurrent_queues());
+            let cq = grouping.with_topology(ExecutionTopology::ConcurrentQueue { queues });
+            cpu_work = cpu_work.saturating_add(1);
+            if analyze_topology_legality(&cq, graph, facts, dependencies, device)
+                == TopologyDecision::Legal
+            {
+                candidates.push(cq);
+            }
+        }
+
+        if device.compute_units() >= 2
+            && candidates.len() < budget.max_candidates as usize
+            && can_spend(cpu_work, budget)
+        {
+            let partitions = 2.min(device.compute_units());
+            if device.supports_spatial_partitioning() {
+                let sp = grouping.with_topology(ExecutionTopology::ResidentPartition {
+                    partitions,
+                    mode: ResidentPartitionMode::FixedSpatialMask,
+                });
+                cpu_work = cpu_work.saturating_add(1);
+                if analyze_topology_legality(&sp, graph, facts, dependencies, device)
+                    == TopologyDecision::Legal
+                {
+                    candidates.push(sp);
+                }
+            }
+            if device.supports_cooperative_launch()
+                && candidates.len() < budget.max_candidates as usize
+                && can_spend(cpu_work, budget)
+            {
+                let bwq = grouping.with_topology(ExecutionTopology::ResidentPartition {
+                    partitions,
+                    mode: ResidentPartitionMode::BoundedWorkQueue,
+                });
+                cpu_work = cpu_work.saturating_add(1);
+                if analyze_topology_legality(&bwq, graph, facts, dependencies, device)
+                    == TopologyDecision::Legal
+                {
+                    candidates.push(bwq);
+                }
+            }
         }
     }
     SearchResult {
