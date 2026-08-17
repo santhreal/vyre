@@ -694,6 +694,10 @@ impl CallGraphClosure {
     /// Solve the call graph closure to a fixed point over a collection of registrations.
     ///
     /// Every canonical program is built at most once during this solve pass.
+    ///
+    /// # Panics
+    ///
+    /// Panics if internal call graph propagation encounters inconsistent node registration state.
     #[must_use]
     pub fn solve_from_registrations<'a, I>(registrations: I) -> Self
     where
@@ -815,24 +819,28 @@ impl CallGraphClosure {
                         let eff = transitive_effects
                             .get(v)
                             .copied()
-                            .unwrap_or(OperationEffects::ALL);
+                            .expect("Fix: registered callee must have transitive effect state");
                         let caps = transitive_capabilities
                             .get(v)
                             .copied()
-                            .unwrap_or_else(RequiredCapabilities::all);
+                            .expect("Fix: registered callee must have transitive capability state");
                         (eff, caps)
                     } else {
                         (OperationEffects::ALL, RequiredCapabilities::all())
                     };
 
-                    let u_eff = transitive_effects.get_mut(u).unwrap();
+                    let u_eff = transitive_effects
+                        .get_mut(u)
+                        .expect("Fix: caller node in direct_callees must be registered in transitive_effects");
                     let merged_eff = u_eff.union(v_eff);
                     if merged_eff != *u_eff {
                         *u_eff = merged_eff;
                         changed = true;
                     }
 
-                    let u_caps = transitive_capabilities.get_mut(u).unwrap();
+                    let u_caps = transitive_capabilities
+                        .get_mut(u)
+                        .expect("Fix: caller node in direct_callees must be registered in transitive_capabilities");
                     let merged_caps = u_caps.join(v_caps);
                     if merged_caps != *u_caps {
                         *u_caps = merged_caps;
@@ -929,6 +937,11 @@ impl CallGraphClosure {
     }
 }
 
+/// Compute strongly connected components for the call graph adjacency map.
+///
+/// # Panics
+///
+/// Panics if Tarjan traversal state invariants are violated.
 fn compute_sccs(adj: &BTreeMap<&'static str, Vec<&'static str>>) -> Vec<Vec<&'static str>> {
     struct Tarjan<'a> {
         adj: &'a BTreeMap<&'static str, Vec<&'static str>>,
@@ -941,6 +954,11 @@ fn compute_sccs(adj: &BTreeMap<&'static str, Vec<&'static str>>) -> Vec<Vec<&'st
     }
 
     impl<'a> Tarjan<'a> {
+        /// Recursively traverse and find strongly connected components from node `v`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if internal Tarjan state invariants are violated (missing index/lowlink entries).
         fn strongconnect(&mut self, v: &'static str) {
             self.indices.insert(v, self.index);
             self.lowlinks.insert(v, self.index);
@@ -948,27 +966,59 @@ fn compute_sccs(adj: &BTreeMap<&'static str, Vec<&'static str>>) -> Vec<Vec<&'st
             self.stack.push(v);
             self.on_stack.insert(v);
 
-            if let Some(neighbors) = self.adj.get(v) {
-                for &w in neighbors {
-                    if !self.indices.contains_key(w) {
-                        if self.adj.contains_key(w) {
-                            self.strongconnect(w);
-                            let w_low = self.lowlinks[w];
-                            let v_low = self.lowlinks.get_mut(v).unwrap();
-                            *v_low = (*v_low).min(w_low);
-                        }
-                    } else if self.on_stack.contains(w) {
-                        let w_idx = self.indices[w];
-                        let v_low = self.lowlinks.get_mut(v).unwrap();
-                        *v_low = (*v_low).min(w_idx);
+            let neighbors = self
+                .adj
+                .get(v)
+                .expect("Fix: Tarjan traversal node must have an adjacency entry");
+            for &w in neighbors {
+                if !self.indices.contains_key(w) {
+                    if self.adj.contains_key(w) {
+                        self.strongconnect(w);
+                        let w_low = self
+                            .lowlinks
+                            .get(w)
+                            .copied()
+                            .expect("Fix: Tarjan visited child node must have a lowlink entry");
+                        let v_low = self
+                            .lowlinks
+                            .get_mut(v)
+                            .expect("Fix: Tarjan active node must have a lowlink entry");
+                        *v_low = (*v_low).min(w_low);
                     }
+                } else if self.on_stack.contains(w) {
+                    let w_idx = self
+                        .indices
+                        .get(w)
+                        .copied()
+                        .expect("Fix: Tarjan on-stack node must have an index entry");
+                    let v_low = self
+                        .lowlinks
+                        .get_mut(v)
+                        .expect("Fix: Tarjan active node must have a lowlink entry");
+                    *v_low = (*v_low).min(w_idx);
                 }
             }
-
-            if self.lowlinks[v] == self.indices[v] {
+            let v_low = self
+                .lowlinks
+                .get(v)
+                .copied()
+                .expect("Fix: Tarjan active node must have a lowlink entry");
+            let v_idx = self
+                .indices
+                .get(v)
+                .copied()
+                .expect("Fix: Tarjan active node must have an index entry");
+            if v_low == v_idx {
                 let mut scc = Vec::new();
-                while let Some(w) = self.stack.pop() {
-                    self.on_stack.remove(w);
+                loop {
+                    let w = self
+                        .stack
+                        .pop()
+                        .expect("Fix: Tarjan component stack must contain its root");
+                    assert!(
+                        self.on_stack.remove(w),
+                        "Fix: Tarjan component member must be marked on-stack"
+                    );
                     scc.push(w);
                     if w == v {
                         break;
@@ -1081,6 +1131,10 @@ impl OperationRegistry {
     }
 
     /// Return the process-wide validated semantic operation registry.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the static operation inventory fails validation or contains duplicate IDs.
     #[must_use]
     pub fn global() -> &'static Self {
         static REGISTRY: LazyLock<OperationRegistry> = LazyLock::new(|| {

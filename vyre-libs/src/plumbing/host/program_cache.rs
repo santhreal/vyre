@@ -48,6 +48,25 @@ impl<K: Eq, V> ProgramCache<K, V> {
         self.hot_value()
     }
 
+    /// Return the cached value for `key`, building and inserting it on a miss using a fallible constructor.
+    pub(crate) fn try_get_or_insert_with<E>(
+        &mut self,
+        key: K,
+        build: impl FnOnce() -> Result<V, E>,
+    ) -> Result<&V, E> {
+        if self.hot_matches(&key) {
+            return Ok(self.hot_value());
+        }
+        if self.warm_matches(&key) {
+            self.promote_warm();
+            return Ok(self.hot_value());
+        }
+
+        let value = build()?;
+        self.insert_hot(key, value);
+        Ok(self.hot_value())
+    }
+
     fn hot_matches(&self, key: &K) -> bool {
         self.hot.as_ref().is_some_and(|entry| entry.key == *key)
     }
@@ -114,6 +133,20 @@ mod tests {
         assert_eq!(*cache.get_or_insert_with(2, || 22), 22);
 
         assert_eq!(cache.builds(), 4);
+    }
+
+    #[test]
+    fn failed_fallible_build_preserves_both_cache_slots() {
+        let mut cache = ProgramCache::<u32, u32>::default();
+        assert_eq!(*cache.get_or_insert_with(1, || 10), 10);
+        assert_eq!(*cache.get_or_insert_with(2, || 20), 20);
+
+        let failure = cache.try_get_or_insert_with(3, || Err::<u32, _>("build failed"));
+        assert_eq!(failure, Err("build failed"));
+        assert_eq!(cache.builds(), 2);
+        assert_eq!(*cache.get_or_insert_with(1, || 99), 10);
+        assert_eq!(*cache.get_or_insert_with(2, || 99), 20);
+        assert_eq!(cache.builds(), 2);
     }
 
     #[test]

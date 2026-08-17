@@ -80,20 +80,21 @@ use vyre_reference::composition_witness::{
     try_amg_v_cycle_witness_with_scratch_into, try_argmin_cost_witness,
     try_cluster_projection_matrix_witness_into, try_count_sketch_query_into_witness,
     try_ddnnf_evaluate_witness, try_differentiable_autotune_gradient_witness_into,
-    try_exploded_ifds_csr_witness_into, try_fractional_derivative_witness_into,
-    try_frontier_absorb_witness_into, try_gaussian_rdp_step_witness_into,
-    try_grunwald_letnikov_kernel_witness_into, try_identity_matrix_witness_into,
-    try_jacobi_solve_to_tolerance_witness_into, try_kernel_to_fixed_16_16_witness_into,
-    try_l2p_zeroth_all_witness_into, try_m2l_zeroth_all_witness_into,
-    try_match_post_process_witness, try_p2m_zeroth_moment_witness_into,
-    try_sinkhorn_iterate_f64_witness_into, try_sinkhorn_iterate_witness,
-    try_stochastic_encode_witness_into, try_tensor_flow_forward_witness_into,
-    try_tensor_train_contract_step_witness, try_tensor_train_full_chain_witness_into,
-    union_find_alias_witness, unpack_i4x8_witness, vector_graph_traverse_from_seed_witness,
-    vector_top_k_witness, vietoris_rips_edge_filter_witness, vietoris_rips_edges_witness,
-    vsa_fingerprint_witness, AmgSolveScratchWitness, ExplodedIfdsScratchWitness,
-    MegakernelScaleSampleWitness, NewtonSchulzScratchWitness, RuleConditionWitness,
-    RuleEvaluationContextWitness, RuleFormulaWitness,
+    try_differentiable_autotune_pick_config_witness_into, try_exploded_ifds_csr_witness_into,
+    try_fractional_derivative_witness_into, try_frontier_absorb_witness_into,
+    try_gaussian_rdp_step_witness_into, try_grunwald_letnikov_kernel_witness_into,
+    try_identity_matrix_witness_into, try_jacobi_solve_to_tolerance_witness_into,
+    try_kernel_to_fixed_16_16_witness_into, try_l2p_zeroth_all_witness_into,
+    try_m2l_zeroth_all_witness_into, try_match_post_process_witness,
+    try_p2m_zeroth_moment_witness_into, try_sinkhorn_iterate_f64_witness_into,
+    try_sinkhorn_iterate_witness, try_stochastic_encode_witness_into,
+    try_tensor_flow_forward_witness_into, try_tensor_train_contract_step_witness,
+    try_tensor_train_full_chain_witness_into, union_find_alias_witness, unpack_i4x8_witness,
+    vector_graph_traverse_from_seed_witness, vector_top_k_witness,
+    vietoris_rips_edge_filter_witness, vietoris_rips_edges_witness, vsa_fingerprint_witness,
+    AmgSolveScratchWitness, ExplodedIfdsScratchWitness, MegakernelScaleSampleWitness,
+    NewtonSchulzScratchWitness, RuleConditionWitness, RuleEvaluationContextWitness,
+    RuleFormulaWitness,
 };
 use vyre_reference::{reference_eval, value::Value};
 use vyre_spec::Semiring;
@@ -2305,6 +2306,23 @@ fn differentiable_autotune_witness_contracts() {
     assert!((out.iter().sum::<f64>() - 1.0).abs() < 1e-6);
     assert_eq!(scaled.as_ptr(), scaled_ptr);
     assert_eq!(out.as_ptr(), out_ptr);
+
+    let previous_neg_costs = neg_costs.clone();
+    let previous_scaled = scaled.clone();
+    let previous_out = out.clone();
+    assert_eq!(
+        try_differentiable_autotune_pick_config_witness_into(
+            &costs,
+            0.0,
+            &mut neg_costs,
+            &mut scaled,
+            &mut out,
+        ),
+        Err("temperature must be positive".to_string())
+    );
+    assert_eq!(neg_costs, previous_neg_costs);
+    assert_eq!(scaled, previous_scaled);
+    assert_eq!(out, previous_out);
 }
 
 #[test]

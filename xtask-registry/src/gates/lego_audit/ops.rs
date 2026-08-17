@@ -290,6 +290,13 @@ fn detect_unclosed_cyclic_nodes(ops: &[OpInfo], index_map: &HashMap<String, usiz
     let mut stack = Vec::new();
     let mut is_cyclic = vec![false; n];
 
+    /// Visit one node in Tarjan's strongly connected component walk.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the traversal stack loses `v` before its component closes or
+    /// a popped component member is not marked on-stack, which indicates an
+    /// internal Tarjan invariant violation.
     fn strongconnect(
         v: usize,
         adj: &[Vec<usize>],
@@ -318,7 +325,13 @@ fn detect_unclosed_cyclic_nodes(ops: &[OpInfo], index_map: &HashMap<String, usiz
         if lowlinks[v] == indices[v] {
             let mut scc = Vec::new();
             loop {
-                let w = stack.pop().unwrap();
+                let w = stack
+                    .pop()
+                    .expect("Tarjan stack must retain its component root");
+                assert!(
+                    on_stack[w],
+                    "Tarjan component member must be marked on-stack"
+                );
                 on_stack[w] = false;
                 scc.push(w);
                 if w == v {

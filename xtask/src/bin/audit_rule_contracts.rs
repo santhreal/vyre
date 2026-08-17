@@ -31,11 +31,29 @@ fn main() {
     }
 
     let mut failed = false;
-    for entry in fs::read_dir(launch_dir).unwrap() {
-        let entry = entry.unwrap();
+    let entries = match fs::read_dir(&launch_dir) {
+        Ok(entries) => entries,
+        Err(error) => {
+            eprintln!("Fix: cannot read `{}`: {error}", launch_dir.display());
+            std::process::exit(1);
+        }
+    };
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                eprintln!("FAIL: cannot read a rule-tree entry: {error}");
+                failed = true;
+                continue;
+            }
+        };
         let path = entry.path();
         if path.is_dir() {
-            let slug = path.file_name().unwrap().to_str().unwrap();
+            let Some(slug) = path.file_name().and_then(|f| f.to_str()) else {
+                eprintln!("FAIL: rule path is not valid UTF-8: {}", path.display());
+                failed = true;
+                continue;
+            };
             println!("Auditing rule {}", slug);
 
             let contract = path.join("CONTRACT.md");

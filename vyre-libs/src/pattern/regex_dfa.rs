@@ -408,26 +408,39 @@ pub fn regex_dfa_unanchored_sharded_programs(
 const EXPECTED_REGEX_DFA_MATCH_COUNT_BYTES: [u8; 4] = [0; 4];
 const EXPECTED_REGEX_DFA_MATCHES_BYTES: [u8; 768] = [0; 768];
 
+/// Canonical registration fixture program for regex DFA scanning.
+///
+/// # Panics
+///
+/// Panics if the canonical regex DFA fixture pattern fails to compile.
+fn canonical_regex_dfa_program() -> Program {
+    regex_dfa_program(&["[a-z]+"], 64, 256).expect("Fix: canonical fixture regex DFA must compile")
+}
+
+/// Canonical registration fixture inputs for regex DFA scanning.
+///
+/// # Panics
+///
+/// Panics if the canonical regex DFA fixture pipeline fails to build.
+fn canonical_regex_dfa_inputs() -> Vec<Vec<Vec<u8>>> {
+    let pipeline = build_regex_dfa_pipeline(&["[a-z]+"], 64, 256)
+        .expect("Fix: canonical fixture regex DFA must compile");
+    vec![vec![
+        vec![0u8; 64],
+        vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.transitions),
+        vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_offsets),
+        vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_records),
+        vyre_primitives::wire::pack_u32_slice(&pipeline.pattern_lengths),
+        vec![0u8; 4],
+        vec![0u8; 4],
+    ]]
+}
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         REGEX_DFA_OP_ID,
-        || {
-            regex_dfa_program(&["[a-z]+"], 64, 256)
-                .expect("Fix: canonical fixture regex DFA must compile")
-        },
-        Some(|| {
-            let pipeline = build_regex_dfa_pipeline(&["[a-z]+"], 64, 256)
-                .expect("Fix: canonical fixture regex DFA must compile");
-            vec![vec![
-                vec![0u8; 64],
-                vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.transitions),
-                vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_offsets),
-                vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_records),
-                vyre_primitives::wire::pack_u32_slice(&pipeline.pattern_lengths),
-                vec![0u8; 4],
-                vec![0u8; 4],
-            ]]
-        }),
+        canonical_regex_dfa_program,
+        Some(canonical_regex_dfa_inputs),
         Some(|| vec![vec![
             EXPECTED_REGEX_DFA_MATCH_COUNT_BYTES.to_vec(),
             EXPECTED_REGEX_DFA_MATCHES_BYTES.to_vec(),

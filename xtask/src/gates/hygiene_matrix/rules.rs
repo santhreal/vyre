@@ -119,6 +119,13 @@ pub(crate) fn is_fn_signature_line(trimmed: &str) -> bool {
         if rest.starts_with("fn ") {
             return true;
         }
+        if let Some(restricted) = rest.strip_prefix("pub(") {
+            let Some(close) = restricted.find(')') else {
+                return false;
+            };
+            rest = restricted[close + 1..].trim_start();
+            continue;
+        }
         let Some((head, tail)) = rest.split_once(' ') else {
             return false;
         };

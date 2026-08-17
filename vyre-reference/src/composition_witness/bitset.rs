@@ -215,6 +215,11 @@ pub fn four_russians_binary_witness(lhs: &[u32], rhs: &[u32], lut: &[u32]) -> Ve
 }
 
 /// Sequential dense Boolean matvec over byte-tile Four-Russians lookup tables into caller storage.
+///
+/// # Panics
+///
+/// Panics if `frontier` is shorter than required, if `tile_lut` dimensions overflow `usize`,
+/// or if `tile_lut` length does not match expected LUT words.
 pub fn four_russians_dense_matvec_witness_into(
     frontier: &[u32],
     tile_lut: &[u32],
@@ -272,6 +277,10 @@ pub fn four_russians_dense_matvec_witness(
 }
 
 /// Encode a probability as a deterministic packed stochastic bitstream.
+///
+/// # Panics
+///
+/// Panics if the packed word count overflows or storage cannot be reserved.
 #[must_use]
 pub fn stochastic_encode_witness(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
     let mut out = Vec::new();
@@ -482,6 +491,11 @@ pub fn try_frontier_absorb_witness_into(
 }
 
 /// Sequential mathematical witness for absorbing new frontier bits.
+///
+/// # Panics
+///
+/// Panics if buffer lengths do not match expected words for `node_count`,
+/// if trailing unused bits are non-zero, or if popcount exceeds `u32::MAX`.
 pub fn frontier_absorb_witness(
     visited: &mut [u32],
     neighbors: &[u32],

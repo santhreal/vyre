@@ -11,6 +11,11 @@ use vyre_foundation::ir::{Expr, Program};
 use crate::builder::gemm::ContractionComposer;
 use crate::plumbing::operand::tensor_ref::TensorRef;
 
+/// Build a fixed-point u32 matrix-vector contraction program.
+///
+/// # Panics
+///
+/// Panics if the contraction composer fails to build the program.
 pub(crate) fn fixed_u32_matvec_program(
     op_id: &'static str,
     matrix: &str,
@@ -76,6 +81,10 @@ pub(crate) fn try_fixed_u32_matmul(
 /// The caller supplies the scalar combine operation for each
 /// `lhs[i, kk]`/`rhs[kk, j]` pair and the accumulator operation that folds it
 /// into `acc`.
+///
+/// # Panics
+///
+/// Panics if the contraction composer fails to build the program.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn u32_matmul_program<C, A>(

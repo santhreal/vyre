@@ -330,14 +330,26 @@ fn has_memory_hazard(
     false
 }
 
+/// Rewrite a validated contiguous vector chain candidate into wide vector operations.
+///
+/// # Panics
+///
+/// Panics if `candidate` violates the validated vector-chain invariants: empty
+/// or out-of-bounds operation indices, or malformed scalar load/store operands.
 fn apply_vector_chain(
     body: &mut KernelBody,
     candidate: VectorChainCandidate,
     width: usize,
     next_result_id: &mut u32,
 ) -> usize {
-    let anchor_idx = candidate.op_indices[0];
-    let end_idx = *candidate.op_indices.last().unwrap();
+    let anchor_idx = *candidate
+        .op_indices
+        .first()
+        .expect("Fix: vector chain candidate must contain at least one operation");
+    let end_idx = *candidate
+        .op_indices
+        .last()
+        .expect("Fix: vector chain candidate must contain at least one operation");
 
     let mut intervening_ops = Vec::with_capacity(candidate.intervening_pure_indices.len());
     for &idx in &candidate.intervening_pure_indices {

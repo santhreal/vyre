@@ -82,6 +82,10 @@ impl fmt::Display for Base64DecodeWitnessError {
 impl std::error::Error for Base64DecodeWitnessError {}
 
 /// Decode RFC 4648 input into the fixed-capacity packed GPU ABI witness.
+///
+/// # Panics
+///
+/// Panics if `input` is not valid RFC 4648 base64 or if decoded capacity overflows.
 #[must_use]
 pub fn base64_decode_packed_witness(input: &[u8]) -> (Vec<u32>, u32) {
     try_base64_decode_packed_witness(input)
@@ -89,6 +93,10 @@ pub fn base64_decode_packed_witness(input: &[u8]) -> (Vec<u32>, u32) {
 }
 
 /// Decode RFC 4648 input into caller-owned fixed-capacity packed storage.
+///
+/// # Panics
+///
+/// Panics if `input` is not valid RFC 4648 base64 or if decoded capacity overflows.
 pub fn base64_decode_packed_witness_into(input: &[u8], out: &mut Vec<u32>) -> u32 {
     try_base64_decode_packed_witness_into(input, out)
         .unwrap_or_else(|error| panic!("base64 decode witness failed: {error}"))
@@ -191,6 +199,10 @@ pub fn try_rle_segment_lengths_witness_into(
 }
 
 /// Return unpacked canonical RLE segment lengths and values.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output buffers.
 #[must_use]
 pub fn rle_segment_lengths_witness(packed: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let mut lengths = Vec::new();
@@ -201,6 +213,10 @@ pub fn rle_segment_lengths_witness(packed: &[u32]) -> (Vec<u32>, Vec<u32>) {
 }
 
 /// Unpack canonical RLE segment lengths and values into caller-supplied vectors.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output buffers.
 pub fn rle_segment_lengths_witness_into(
     packed: &[u32],
     lengths: &mut Vec<u32>,
@@ -228,6 +244,10 @@ pub fn try_rle_segment_start_offsets_witness_into(
 }
 
 /// Return exclusive RLE segment offsets and the saturated total length.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output buffers.
 #[must_use]
 pub fn rle_segment_start_offsets_witness(lengths: &[u32]) -> (Vec<u32>, u32) {
     let mut offsets = Vec::new();
@@ -237,6 +257,10 @@ pub fn rle_segment_start_offsets_witness(lengths: &[u32]) -> (Vec<u32>, u32) {
 }
 
 /// Compute exclusive RLE segment offsets into caller-supplied vector and return the saturated total length.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output buffers.
 pub fn rle_segment_start_offsets_witness_into(lengths: &[u32], offsets: &mut Vec<u32>) -> u32 {
     try_rle_segment_start_offsets_witness_into(lengths, offsets)
         .unwrap_or_else(|error| panic!("RLE offset witness failed: {error}"))
@@ -263,6 +287,10 @@ pub fn try_rle_decode_witness_into(packed: &[u32], decoded: &mut Vec<u8>) -> Res
 }
 
 /// Expand canonical packed RLE segments into caller-owned bytes.
+///
+/// # Panics
+///
+/// Panics if decoded length overflows `usize` or if memory allocation fails.
 pub fn rle_decode_witness_into(packed: &[u32], decoded: &mut Vec<u8>) {
     try_rle_decode_witness_into(packed, decoded)
         .unwrap_or_else(|error| panic!("RLE decode witness failed: {error}"));

@@ -245,6 +245,10 @@ where
 }
 
 /// Sequential mathematical witness for persistent fixed-point iteration into caller-provided ping-pong buffers (panicking wrapper).
+///
+/// # Panics
+///
+/// Panics if scratch memory reservation fails for `current` or `next`.
 pub fn persistent_fixpoint_into_witness<F>(
     seed: &[u32],
     max_iterations: u32,

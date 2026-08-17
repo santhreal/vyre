@@ -414,6 +414,10 @@ impl Diagnostic {
     /// Every field is an owned string, integer, or enum, so `serde_json` has no
     /// failing path here: it fails only on a map with non-string keys, a
     /// non-finite float, or a `Serialize` impl that returns an error.
+    ///
+    /// # Panics
+    ///
+    /// Panics if serialization fails due to a custom `Serialize` implementation returning an error.
     #[must_use]
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).expect(

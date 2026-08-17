@@ -57,6 +57,10 @@ const AREA_HELP: &[(&str, &str)] = &[
 ];
 
 /// Named subsets derived from each gate metadata row's areas.
+///
+/// # Panics
+///
+/// Panics when an area declared in gate metadata is missing from `AREA_HELP`.
 #[must_use]
 pub fn subsets() -> Vec<Subset> {
     crate::gate_metadata::areas()

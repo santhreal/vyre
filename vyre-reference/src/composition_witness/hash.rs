@@ -481,6 +481,10 @@ pub fn multi_hash_witness(bytes: &[u8]) -> (u32, u32, u32) {
 }
 
 /// Sequential sparse FFT bin-hash witness.
+///
+/// # Panics
+///
+/// Panics if `b == 0`, if `b` or signal length exceed host bounds, or if allocation fails.
 #[must_use]
 pub fn sparse_fft_bin_hash_witness(signal: &[u32], a: u32, c: u32, b: u32) -> Vec<u32> {
     let mut bins = Vec::new();
@@ -491,6 +495,10 @@ pub fn sparse_fft_bin_hash_witness(signal: &[u32], a: u32, c: u32, b: u32) -> Ve
 }
 
 /// Sequential sparse FFT bin-hash witness into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `b == 0`, if `b` or signal length exceed host bounds, or if allocation fails.
 pub fn sparse_fft_bin_hash_into_witness(
     signal: &[u32],
     a: u32,
@@ -533,6 +541,10 @@ pub fn try_sparse_fft_bin_hash_into_witness(
 
 /// Sequential sparse FFT voting recovery witness: given `m` binnings under different (a, c) pairs,
 /// find the indices most consistently mapped to the same bin.
+///
+/// # Panics
+///
+/// Panics if `b == 0`, if `b` or `n` exceed host bounds, or if binning data is malformed.
 #[must_use]
 pub fn sparse_fft_voting_recovery_witness(
     binnings: &[(u32, u32, Vec<u32>)],
@@ -551,6 +563,10 @@ pub fn sparse_fft_voting_recovery_witness(
 }
 
 /// Sequential sparse FFT voting recovery witness using caller-owned vote scratch and output storage.
+///
+/// # Panics
+///
+/// Panics if `b == 0`, if `b` or `n` exceed host bounds, or if binning data is malformed.
 pub fn sparse_fft_voting_recovery_into_witness(
     binnings: &[(u32, u32, Vec<u32>)],
     threshold: u32,
@@ -734,6 +750,10 @@ pub fn try_count_sketch_query_into_witness(
 }
 
 /// Sequential hypervector XOR bind witness.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output storage.
 #[must_use]
 pub fn hypervector_xor_bind_witness(a: &[u32], b: &[u32]) -> Vec<u32> {
     let mut out = Vec::new();
@@ -744,6 +764,10 @@ pub fn hypervector_xor_bind_witness(a: &[u32], b: &[u32]) -> Vec<u32> {
 }
 
 /// Sequential hypervector XOR bind witness using caller-owned buffer.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output storage.
 pub fn hypervector_xor_bind_into_witness(a: &[u32], b: &[u32], out: &mut Vec<u32>) {
     if let Err(error) = try_hypervector_xor_bind_into_witness(a, b, out) {
         panic!("hypervector XOR bind witness failed: {error}");
@@ -765,6 +789,10 @@ pub fn try_hypervector_xor_bind_into_witness(
 }
 
 /// Sequential hypervector majority bundle witness.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output storage.
 #[must_use]
 pub fn hypervector_majority_bundle_witness(hvs: &[Vec<u32>]) -> Vec<u32> {
     let mut out = Vec::new();
@@ -775,6 +803,10 @@ pub fn hypervector_majority_bundle_witness(hvs: &[Vec<u32>]) -> Vec<u32> {
 }
 
 /// Sequential hypervector majority bundle witness using caller-owned buffer.
+///
+/// # Panics
+///
+/// Panics if memory allocation fails when reserving output storage.
 pub fn hypervector_majority_bundle_into_witness(hvs: &[Vec<u32>], out: &mut Vec<u32>) {
     if let Err(error) = try_hypervector_majority_bundle_into_witness(hvs, out) {
         panic!("hypervector majority bundle witness failed: {error}");

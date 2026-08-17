@@ -55,11 +55,19 @@ pub fn empty(directory: &Path) {
 
 /// Create the fixture directory, because a caller may name one that a
 /// temporary root does not hold yet.
+///
+/// # Panics
+///
+/// Panics when creating the fixture directory fails.
 fn create(directory: &Path) {
     std::fs::create_dir_all(directory).expect("Fix: create the fixture directory.");
 }
 
 /// Run one `git` invocation in `directory`, or fail naming it.
+///
+/// # Panics
+///
+/// Panics when spawning the `git` process fails or when the git command exits with failure.
 fn run(directory: &Path, arguments: &[&str]) {
     let status = Command::new("git")
         .args(arguments)

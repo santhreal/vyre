@@ -1456,6 +1456,10 @@ pub fn try_ddnnf_evaluate_witness(
 }
 
 /// Evaluate a valid topologically ordered d-DNNF circuit.
+///
+/// # Panics
+///
+/// Panics if the d-DNNF circuit structure, variable assignments, or topological order are invalid.
 #[must_use]
 pub fn ddnnf_evaluate_witness(
     nodes: &[(u32, u32, u32)],
@@ -1558,6 +1562,12 @@ pub fn backdoor_descendants_check_witness(
 }
 
 /// Expand one dense matroid-exchange BFS frontier into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `frontier` or `visited` lengths do not equal `element_count`,
+/// if `element_count * element_count` overflows `usize`, or if `exchange_adjacency`
+/// length does not match `element_count * element_count`.
 pub fn matroid_exchange_bfs_step_witness_into(
     frontier: &[u32],
     exchange_adjacency: &[u32],
@@ -1935,7 +1945,10 @@ pub fn try_tensor_flow_forward_witness_into(
     if edge_offsets.windows(2).any(|w| w[0] > w[1]) {
         return Err("non-monotonic CSR offsets".to_owned());
     }
-    if *edge_offsets.last().unwrap() as usize != edge_targets.len() {
+    let Some(&last_offset) = edge_offsets.last() else {
+        return Err("edge offsets must not be empty".to_owned());
+    };
+    if last_offset as usize != edge_targets.len() {
         return Err("edge offset bound does not match edge targets".to_owned());
     }
     if edge_targets.len() != edge_kind_mask.len() {
@@ -1954,8 +1967,11 @@ pub fn try_tensor_flow_forward_witness_into(
     if tensor_in.len() < words as usize {
         return Err("tensor input buffer shorter than required tensor words".to_owned());
     }
+    let words_len = words as usize;
+    out.try_reserve(words_len.saturating_sub(out.len()))
+        .map_err(|error| format!("failed to reserve tensor output buffer: {error}"))?;
     out.clear();
-    out.resize(words as usize, 0);
+    out.resize(words_len, 0);
 
     for src in 0..node_count {
         let start = edge_offsets[src as usize] as usize;
@@ -2016,6 +2032,10 @@ pub fn try_tensor_flow_forward_witness(
 }
 
 /// Sequential mathematical witness for 3D tensor flow propagation (panicking on invalid shapes).
+///
+/// # Panics
+///
+/// Panics if graph buffers, masks, or tensor dimensions are invalid or inconsistent.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn tensor_flow_forward_witness(

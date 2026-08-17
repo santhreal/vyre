@@ -58,6 +58,13 @@ impl GridShape {
         self.width() * self.height()
     }
 
+    /// Validate dimensions and overflow bounds.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `cols` or `rows` is 0, if `cell_width` or `cell_height` is 0,
+    /// or if any dimension multiplication (`cols * cell_width`, `rows * cell_height`,
+    /// surface pixels, or `cols * rows`) overflows `u32`.
     pub(super) fn validated(self) -> Self {
         assert!(
             self.cols > 0 && self.rows > 0,
@@ -108,6 +115,10 @@ pub(super) fn cell_lookup_nodes(shape: GridShape) -> Vec<Node> {
 ///
 /// `cells` is `[u32; cols * rows]` in row-major order, one packed RGBA colour
 /// per cell. `output` is `[u32; width * height]`, also row-major.
+///
+/// # Panics
+///
+/// Panics if `shape` fails validation or overflows `u32` bounds.
 #[must_use]
 pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
     let shape = shape.validated();

@@ -28,6 +28,16 @@ pub enum ExpertSchedulingError {
         /// Number of local experts.
         num_experts: u32,
     },
+    /// Configured expert has no corresponding scheduler queue.
+    #[error(
+        "expert {expert_id} has no local queue inside a scheduler configured for {num_experts} experts; rebuild the scheduler"
+    )]
+    ExpertQueueMissing {
+        /// Requested expert ID.
+        expert_id: u32,
+        /// Number of local experts.
+        num_experts: u32,
+    },
     /// Intra-device queue saturation (backpressure).
     #[error("expert {expert_id} work queue saturated: max capacity {capacity} reached")]
     QueueSaturated {
@@ -144,7 +154,12 @@ impl IntraDeviceExpertScheduler {
             });
         }
 
-        let queue = self.queues.get_mut(&item.expert_id).expect("queue");
+        let Some(queue) = self.queues.get_mut(&item.expert_id) else {
+            return Err(ExpertSchedulingError::ExpertQueueMissing {
+                expert_id: item.expert_id,
+                num_experts: self.limits.num_experts,
+            });
+        };
         if queue.len() >= self.limits.max_queued_per_expert {
             return Err(ExpertSchedulingError::QueueSaturated {
                 expert_id: item.expert_id,
@@ -328,6 +343,37 @@ mod tests {
         // Dequeue batch
         let batch = scheduler.dequeue_expert_work(0, 10);
         assert_eq!(batch.len(), 2);
+    }
+
+    /// WHY: a missing private queue is scheduler-state corruption, not an
+    /// out-of-bounds caller ID, and must remain a recoverable, truthful error.
+    #[test]
+    fn enqueue_reports_missing_configured_queue() {
+        let limits = IntraDeviceExpertQueueLimits {
+            max_queued_per_expert: 2,
+            max_starvation_ticks: 10,
+            num_experts: 2,
+        };
+        let mut scheduler = IntraDeviceExpertScheduler::new(limits);
+        scheduler.queues.remove(&1);
+        let error = scheduler
+            .enqueue(ExpertWorkItem {
+                ticket: 1,
+                request_id: 1,
+                token_idx: 0,
+                expert_id: 1,
+                routing_weight: 1.0,
+                payload: Vec::new(),
+                enqueue_tick: 0,
+            })
+            .expect_err("missing configured queue must fail");
+        assert_eq!(
+            error,
+            ExpertSchedulingError::ExpertQueueMissing {
+                expert_id: 1,
+                num_experts: 2,
+            }
+        );
     }
 
     #[test]

@@ -232,6 +232,10 @@ pub fn try_segment_reduce_sum_witness_into(
 }
 
 /// Sequential wrapping sum for each adjacent pair of segment offsets writing into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `offsets` has fewer than 2 elements or contains invalid segment bounds.
 pub fn segment_reduce_sum_witness_into(input: &[u32], offsets: &[u32], out: &mut Vec<u32>) {
     try_segment_reduce_sum_witness_into(input, offsets, out)
         .unwrap_or_else(|error| panic!("invalid segment reduce witness input: {error}"));

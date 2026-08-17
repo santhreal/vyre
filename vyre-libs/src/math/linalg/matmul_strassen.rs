@@ -55,6 +55,10 @@ const OP_ID: &str = "vyre-libs::math::linalg::matmul_strassen_2x2";
 /// matrices using the Strassen 7-mult formula. Inputs `a` and `b`
 /// are length-4 F32 buffers in row-major layout (`a[0..2]` is row 0,
 /// `a[2..4]` is row 1); `c` is the length-4 F32 output buffer.
+///
+/// # Panics
+///
+/// Panics if the Strassen 2x2 contraction program fails to build.
 #[must_use]
 pub fn matmul_strassen_2x2(a: &str, b: &str, c: &str) -> Program {
     let a_ref = TensorRef::f32_2d(a, 2, 2);

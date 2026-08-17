@@ -424,14 +424,21 @@ const EXPECTED_ONLINE_SOFTMAX_ATTENTION_OUTPUT_BYTES: [u8; 36] = [
     0x00, 0x00, 0x80, 0x40,
 ];
 
+/// Canonical registration fixture program for online softmax attention.
+///
+/// # Panics
+///
+/// Panics if the canonical online softmax attention witness plan cannot be built.
+fn canonical_online_softmax_attention_program() -> Program {
+    let plan = super::planner::plan_flash_attention_tiled(9, 1, 4)
+        .expect("Fix: the registered online-softmax witness must plan");
+    online_softmax_attention("q", "k", "v", "out", &plan)
+}
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
-        || {
-            let plan = super::planner::plan_flash_attention_tiled(9, 1, 4)
-                .expect("Fix: the registered online-softmax witness must plan");
-            online_softmax_attention("q", "k", "v", "out", &plan)
-        },
+        canonical_online_softmax_attention_program,
         // Zero Q and K make every key equally likely, so each row returns the
         // mean of V. The expectation is that arithmetic, written down, not a
         // second implementation of the kernel agreeing with itself.

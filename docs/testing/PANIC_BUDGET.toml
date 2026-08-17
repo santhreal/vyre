@@ -16,9 +16,9 @@
 # panic added to that crate instead of reporting it. So the numbers only move
 # down.
 #
-# A crate carrying such a panic with no row fails, and a row for a crate that
-# carries none fails as stale. Both halves come from the same scan, so neither
-# side can go quietly out of date.
+# A crate carrying such a panic with no row fails. A zero row remains as an
+# explicit ratchet; a positive row for a crate that carries none fails as stale.
+# Both halves come from the same scan, so neither side can go quietly out of date.
 #
 # Three ways to spend a number down, in the order to try them. Return a `Result`
 # and let the caller decide, which is right whenever the caller can do anything
@@ -29,27 +29,35 @@
 
 schema = 1
 
-# Measured 2026-08-15 by `cargo xtask hygiene-matrix`. `conform` reached zero in
-# the same change: the three sites were `expect` on a missing neutral builder in
-# a lens that already had a failure channel, and they now return that failure.
+# Measured 2026-08-17 by `cargo xtask hygiene-matrix`. Every recorded ceiling
+# reached zero after fallible paths propagated errors and intentional
+# infallible wrappers documented their panic contracts.
 
 [[crate_budget]]
 name = "vyre-driver"
-ceiling = 3
+ceiling = 0
 
 [[crate_budget]]
 name = "vyre-foundation"
-ceiling = 2
+ceiling = 0
 
 [[crate_budget]]
 name = "vyre-libs"
-ceiling = 5
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-lower"
+ceiling = 0
 
 [[crate_budget]]
 name = "vyre-primitives"
 # 1 -> 0 measured 2026-08-16 by hygiene-matrix: the crate carries no undocumented
 # panic outside the release surface since the composition domains moved to
 # vyre-libs and left only the hardware intrinsics, the catalog and the markers.
+ceiling = 0
+
+[[crate_budget]]
+name = "vyre-reference"
 ceiling = 0
 
 [[crate_budget]]
@@ -61,15 +69,17 @@ ceiling = 0
 
 [[crate_budget]]
 name = "xtask"
-# 12 -> 8 measured 2026-08-15 by hygiene-matrix: the four sites are in
-# `release/package_readiness/archive_contracts.rs`, a module
-# `release/package_readiness/mod.rs` declares under `#[cfg(test)]`, so no build
-# outside `cargo test` holds them.
-ceiling = 8
+# 8 -> 0 measured 2026-08-17 by hygiene-matrix: release-tooling invariants now
+# fail with explicit process errors or document the intentional fail-closed
+# contract.
+ceiling = 0
 
 [[crate_budget]]
 name = "xtask-evidence"
-# 8 -> 1 measured 2026-08-15 by hygiene-matrix: seven sites are in
-# `report_fixture.rs`, a module `lib.rs` declares under `#[cfg(test)]`, so no
-# build outside `cargo test` holds them.
-ceiling = 1
+# 1 -> 0 measured 2026-08-17 by hygiene-matrix: malformed benchmark evidence
+# now returns the producer's existing error instead of panicking.
+ceiling = 0
+
+[[crate_budget]]
+name = "xtask-registry"
+ceiling = 0

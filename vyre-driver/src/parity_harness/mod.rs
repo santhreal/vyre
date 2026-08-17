@@ -205,6 +205,12 @@ pub fn dispatch_single_output(
 ///
 /// The three-buffer `out[i] = build(a[i], b[i])` shape is what every binary
 /// `u32` parity gate needs, so it is spelled once here instead of once per gate.
+///
+/// # Panics
+///
+/// Panics when `pairs.len()` exceeds `u32::MAX`, when dispatch fails, when
+/// the backend returns anything other than one buffer, or when the output
+/// buffer length does not match `pairs.len() * 4`.
 #[must_use]
 pub fn u32_binop_parity(
     dispatch: ParityDispatch<'_>,

@@ -598,6 +598,10 @@ pub fn try_natural_gradient_autotune_step_witness_into(
 }
 
 /// Natural-gradient autotuner step into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if matrix dimension `n` overflows `usize` or if slice lengths do not match `n`.
 pub fn natural_gradient_autotune_step_witness_into(
     m_inv_sqrt: &[f64],
     grad: &[f64],
@@ -638,6 +642,10 @@ pub fn try_identity_matrix_witness_into(n: u32, out: &mut Vec<f64>) -> Result<()
 }
 
 /// Identity matrix into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if matrix dimension `n * n` overflows `usize`.
 pub fn identity_matrix_witness_into(n: u32, out: &mut Vec<f64>) {
     try_identity_matrix_witness_into(n, out).expect("identity_matrix_witness_into failed");
 }
@@ -688,6 +696,10 @@ pub fn try_tensor_train_contract_step_witness_into(
 }
 
 /// Infallible tensor-train contraction into caller storage.
+///
+/// # Panics
+///
+/// Panics if ranks are zero, do not fit `usize`, or if `previous_rank * next_rank` overflows `usize`.
 pub fn tensor_train_contract_step_witness_into(
     accumulator: &[f64],
     core: &[f64],
@@ -782,6 +794,10 @@ pub fn try_tensor_train_full_chain_witness_into(
 }
 
 /// Infallible full-chain contraction into caller-owned accumulators.
+///
+/// # Panics
+///
+/// Panics if rank arrays, mode dimensions, or core tensors are inconsistent or invalid.
 pub fn tensor_train_full_chain_witness_into(
     cores: &[Vec<f64>],
     ranks: &[u32],
@@ -854,6 +870,10 @@ pub fn try_tensor_train_fusion_pressure_witness_with_scratch(
 }
 
 /// Tensor-Train chain fusion pressure calculation using caller-owned scratch accumulators.
+///
+/// # Panics
+///
+/// Panics if intermediate tensor train core shapes overflow `usize`.
 pub fn tensor_train_fusion_pressure_witness_with_scratch(
     shared_buffer_ranks: &[u32],
     acc: &mut Vec<f64>,
@@ -958,6 +978,11 @@ pub fn stream_compact_witness(payloads: &[u32], flags: &[u32]) -> (Vec<u32>, u32
 }
 
 /// Monotone lineage-semiring matrix fixpoint witness into caller storage.
+///
+/// # Panics
+///
+/// Panics if `n * n * words_per_cell` overflows `usize` or if `state` or `join_rules`
+/// lengths do not match the expected word count.
 pub fn scallop_join_fixpoint_witness_into(
     state: &[u32],
     join_rules: &[u32],
@@ -1275,6 +1300,10 @@ pub fn try_amg_v_cycle_witness_with_scratch_into(
 }
 
 /// Two-level algebraic-multigrid V-cycle writing into caller storage with reusable scratch.
+///
+/// # Panics
+///
+/// Panics if matrix or vector buffer shapes do not match `fine_count` or `coarse_count`.
 #[allow(clippy::too_many_arguments)]
 pub fn amg_v_cycle_witness_with_scratch_into(
     fine_matrix: &[f64],
@@ -1336,6 +1365,10 @@ pub fn try_amg_v_cycle_witness_into(
 }
 
 /// Two-level algebraic-multigrid V-cycle writing into caller storage.
+///
+/// # Panics
+///
+/// Panics if matrix or vector buffer shapes do not match `fine_count` or `coarse_count`.
 #[allow(clippy::too_many_arguments)]
 pub fn amg_v_cycle_witness_into(
     fine_matrix: &[f64],
@@ -1513,6 +1546,10 @@ pub fn try_amg_solve_to_tolerance_witness_with_scratch_into(
 }
 
 /// Iterative AMG V-cycle solver to tolerance writing into caller-owned storage using reusable scratch.
+///
+/// # Panics
+///
+/// Panics if matrix or vector buffer shapes are invalid or if `tolerance` is non-positive or non-finite.
 #[allow(clippy::too_many_arguments)]
 pub fn amg_solve_to_tolerance_witness_with_scratch_into(
     fine_matrix: &[f64],
@@ -1589,6 +1626,10 @@ pub fn try_amg_solve_to_tolerance_witness_into(
 }
 
 /// Iterative AMG V-cycle solver to tolerance writing into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if matrix or vector buffer shapes are invalid or if `tolerance` is non-positive or non-finite.
 #[allow(clippy::too_many_arguments)]
 pub fn amg_solve_to_tolerance_witness_into(
     fine_matrix: &[f64],
@@ -1741,6 +1782,10 @@ pub fn try_jacobi_solve_to_tolerance_witness_into(
 }
 
 /// Iterative Jacobi solver to tolerance writing into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if matrix or vector buffer shapes are invalid or if `tolerance` is non-positive or non-finite.
 pub fn jacobi_solve_to_tolerance_witness_into(
     matrix: &[f64],
     rhs: &[f64],
@@ -2052,6 +2097,10 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_witness(
 }
 
 /// Sequential wrapping-integer Sinkhorn scaling iteration.
+///
+/// # Panics
+///
+/// Panics if matrix dimensions `m * n` overflow `usize` or if input buffer shapes do not match `m` and `n`.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_iterate_witness(
@@ -2498,6 +2547,10 @@ pub fn try_argmin_cost_witness(costs: &[f64]) -> Result<usize, String> {
 }
 
 /// Sequential argmin with total_cmp tie breaking.
+///
+/// # Panics
+///
+/// Panics if `costs` is empty.
 #[must_use]
 pub fn argmin_cost_witness(costs: &[f64]) -> usize {
     try_argmin_cost_witness(costs).expect("Fix: pick_best_config requires at least one candidate.")
@@ -2526,6 +2579,10 @@ pub fn try_differentiable_autotune_gradient_witness_into(
 }
 
 /// Differentiable autotune config score gradient into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `temperature` is non-positive or non-finite.
 pub fn differentiable_autotune_gradient_witness_into(
     costs: &[f64],
     temperature: f64,
@@ -2554,10 +2611,7 @@ pub fn try_differentiable_autotune_pick_config_witness_into(
     out: &mut Vec<f64>,
 ) -> Result<(), String> {
     if temperature <= 0.0 || !temperature.is_finite() {
-        neg_costs.clear();
-        scaled.clear();
-        out.clear();
-        return Ok(());
+        return Err("temperature must be positive".to_string());
     }
     if neg_costs.capacity() < costs.len() {
         neg_costs.reserve(costs.len().saturating_sub(neg_costs.len()));
@@ -2569,6 +2623,10 @@ pub fn try_differentiable_autotune_pick_config_witness_into(
 }
 
 /// Differentiable autotune configuration pick probabilities into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `temperature` is non-positive or non-finite.
 pub fn differentiable_autotune_pick_config_witness_into(
     costs: &[f64],
     temperature: f64,
@@ -2583,7 +2641,7 @@ pub fn differentiable_autotune_pick_config_witness_into(
         scaled,
         out,
     )
-    .expect("differentiable_autotune_pick_config_witness_into failed");
+    .expect("differentiable_autotune_pick_config_witness_into failed: invalid temperature");
 }
 
 /// Differentiable autotune configuration pick probabilities.
@@ -2759,6 +2817,10 @@ pub fn iht_top_k_witness(values: &[f64], k: usize) -> (Vec<f64>, f64) {
 }
 
 /// Sequential FMM particle-to-multipole zeroth-moment aggregation.
+///
+/// # Panics
+///
+/// Panics if `charges` and `cell_assignment` have different lengths or if cell IDs exceed host bounds.
 #[must_use]
 pub fn p2m_zeroth_moment_witness(charges: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
     let mut moments = Vec::new();
@@ -2837,6 +2899,10 @@ pub fn try_p2m_zeroth_moment_truncating_witness_into(
 }
 
 /// Sequential P2M aggregation with historical truncation of mismatched inputs into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if cell IDs exceed host bounds or if memory allocation fails.
 pub fn p2m_zeroth_moment_truncating_witness_into(
     charges: &[f64],
     cell_assignment: &[u32],
@@ -2861,6 +2927,10 @@ pub fn m2l_zeroth_translate_witness(source_moment: f64, distance: f64) -> f64 {
 }
 
 /// Sequential all-cell M2L zeroth-order translation.
+///
+/// # Panics
+///
+/// Panics if `cell_distances` is not a square matrix matching `cell_moments.len()` or if allocation fails.
 #[must_use]
 pub fn m2l_zeroth_all_witness(cell_moments: &[f64], cell_distances: &[f64]) -> Vec<f64> {
     let mut local = Vec::new();
@@ -2911,6 +2981,11 @@ pub const fn l2p_zeroth_eval_witness(local_moment: f64) -> f64 {
 }
 
 /// Sequential all-region L2P zeroth-order evaluation.
+///
+/// # Panics
+///
+/// Panics if `cell_assignment` length does not match `region_count`, if any assignment references
+/// an out-of-bounds cell, or if allocation fails.
 #[must_use]
 pub fn l2p_zeroth_all_witness(
     cell_local: &[f64],
@@ -3057,6 +3132,11 @@ pub fn try_cluster_projection_matrix_witness_into(
 }
 
 /// Cluster-projection matrix construction into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `assignments` length does not match `n`, if `n * n` overflows `usize`,
+/// or if cluster assignments are invalid.
 pub fn cluster_projection_matrix_witness_into(
     assignments: &[u32],
     n: u32,
@@ -3093,6 +3173,11 @@ pub fn try_mori_zwanzig_coarsen_via_clustering_witness_into(
 }
 
 /// Mori-Zwanzig coarsening via clustering into caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if `assignments` or `state` lengths do not match `n`, if `n * n` overflows `usize`,
+/// or if cluster assignments are invalid.
 pub fn mori_zwanzig_coarsen_via_clustering_witness_into(
     state: &[f64],
     assignments: &[u32],
@@ -3137,8 +3222,11 @@ pub fn mori_zwanzig_coarsen_via_clustering_witness(
     out
 }
 
-/// Sequential Frobenius block encoding with zero-padded short matrices.
-/// Sequential Frobenius block encoding writing into caller storage.
+/// Sequential Frobenius block encoding with zero-padded short matrices writing into caller storage.
+///
+/// # Panics
+///
+/// Panics if `dimension * dimension` overflows `usize`.
 pub fn qsvt_block_encode_witness_into(matrix: &[f64], dimension: u32, out: &mut Vec<f64>) -> f64 {
     let cells = (dimension as usize)
         .checked_mul(dimension as usize)
@@ -3154,6 +3242,10 @@ pub fn qsvt_block_encode_witness_into(matrix: &[f64], dimension: u32, out: &mut 
 }
 
 /// Sequential Frobenius block encoding with zero-padded short matrices.
+///
+/// # Panics
+///
+/// Panics if `dimension * dimension` overflows `usize`.
 #[must_use]
 pub fn qsvt_block_encode_witness(matrix: &[f64], dimension: u32) -> (Vec<f64>, f64) {
     let cells = (dimension as usize)
@@ -3632,6 +3724,10 @@ pub fn try_sinkhorn_iterate_f64_witness(
 }
 
 /// Sequential floating-point Sinkhorn scaling iteration.
+///
+/// # Panics
+///
+/// Panics if input vector lengths do not match matrix dimensions or if tolerance is non-positive or non-finite.
 #[must_use]
 pub fn sinkhorn_iterate_f64_witness(
     k: &[f64],
@@ -3791,6 +3887,10 @@ pub fn try_sinkhorn_iter_f64_in_place_witness_into(
 }
 
 /// Sequential one-step Sinkhorn iteration updating caller-owned `u` and `v` in place with scratch buffers.
+///
+/// # Panics
+///
+/// Panics if buffer shapes do not match `m` and `n` or if `m * n` overflows `usize`.
 #[allow(clippy::too_many_arguments)]
 pub fn sinkhorn_iter_f64_in_place_witness_into(
     k: &[f64],
@@ -3834,6 +3934,10 @@ pub fn try_grunwald_letnikov_kernel_witness(alpha: f64, n: u32) -> Result<Vec<f6
 }
 
 /// Sequential Grünwald-Letnikov kernel generator.
+///
+/// # Panics
+///
+/// Panics if generating the Grünwald-Letnikov kernel fails.
 #[must_use]
 pub fn grunwald_letnikov_kernel_witness(alpha: f64, n: u32) -> Vec<f64> {
     try_grunwald_letnikov_kernel_witness(alpha, n)
@@ -3887,6 +3991,10 @@ pub fn try_fractional_derivative_witness(
 }
 
 /// Sequential fractional derivative convolution witness.
+///
+/// # Panics
+///
+/// Panics if signal length exceeds `u32::MAX` or if kernel convolution fails.
 #[must_use]
 pub fn fractional_derivative_witness(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
     try_fractional_derivative_witness(f, alpha, step)
@@ -3916,6 +4024,10 @@ pub fn try_kernel_to_fixed_16_16_witness_into(
 }
 
 /// Convert a Grünwald-Letnikov kernel into 16.16 fixed point in caller-owned storage.
+///
+/// # Panics
+///
+/// Panics if converting the kernel to 16.16 fixed point fails.
 pub fn kernel_to_fixed_16_16_witness_into(
     kernel: &[f64],
     step: f64,

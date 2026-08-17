@@ -195,6 +195,10 @@ fn declared_layers(root: &Path, failures: &mut Vec<String>) -> BTreeMap<String, 
 }
 
 /// Package name a workspace member publishes, which is what a dependency names.
+///
+/// # Panics
+///
+/// Panics when the manifest table does not contain a `[package]` name.
 fn package_name(manifest: &Path, table: &Value) -> String {
     table
         .get("package")
@@ -322,6 +326,11 @@ fn cross_crate_promotion_contract_text_failures(crate_graph: &str, lego_rule: &s
     failures
 }
 
+/// Read a manifest file within bounded size.
+///
+/// # Panics
+///
+/// Panics when the manifest file cannot be read or exceeds `MAX_MANIFEST_BYTES`.
 fn read_bounded(path: &Path) -> String {
     crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "tier dependency manifest")
         .unwrap_or_else(|error| {
@@ -329,6 +338,11 @@ fn read_bounded(path: &Path) -> String {
         })
 }
 
+/// Parse a manifest TOML string into a Value table.
+///
+/// # Panics
+///
+/// Panics when `text` is not valid TOML.
 fn parse_toml(path: &Path, text: &str) -> Value {
     let table: toml::Table = toml::from_str(text).unwrap_or_else(|e| {
         panic!("Fix: parse {}: {e}", path.display());

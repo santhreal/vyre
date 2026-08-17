@@ -371,25 +371,39 @@ pub fn regex_scan_program(
 
 const EXPECTED_REGEX_SCAN_HITS_BYTES: [u8; 120_004] = [0; 120_004];
 
+/// Canonical registration fixture program for regex scan.
+///
+/// # Panics
+///
+/// Panics if the canonical regex scan fixture pattern fails to compile.
+fn canonical_regex_scan_program() -> Program {
+    regex_scan_program(&["[a-z]+"], "input", "hits", 64)
+        .expect("Fix: canonical fixture regex scan must compile")
+}
+
+/// Canonical registration fixture inputs for regex scan.
+///
+/// # Panics
+///
+/// Panics if the canonical regex scan fixture pattern fails to compile.
+fn canonical_regex_scan_inputs() -> Vec<Vec<Vec<u8>>> {
+    let compiled =
+        compile_regex_set(&["[a-z]+"]).expect("Fix: canonical fixture regex scan must compile");
+    vec![vec![
+        vec![0u8; 64],
+        vyre_primitives::wire::pack_u32_slice(&compiled.transition_table),
+        vyre_primitives::wire::pack_u32_slice(&compiled.epsilon_table),
+        EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec(),
+        vec![0u8; 4],
+        vec![0u8; 4],
+    ]]
+}
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         REGEX_SCAN_OP_ID,
-        || {
-            regex_scan_program(&["[a-z]+"], "input", "hits", 64)
-                .expect("Fix: canonical fixture regex scan must compile")
-        },
-        Some(|| {
-            let compiled = compile_regex_set(&["[a-z]+"])
-                .expect("Fix: canonical fixture regex scan must compile");
-            vec![vec![
-                vec![0u8; 64],
-                vyre_primitives::wire::pack_u32_slice(&compiled.transition_table),
-                vyre_primitives::wire::pack_u32_slice(&compiled.epsilon_table),
-                EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec(),
-                vec![0u8; 4],
-                vec![0u8; 4],
-            ]]
-        }),
+        canonical_regex_scan_program,
+        Some(canonical_regex_scan_inputs),
         Some(|| vec![vec![EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec()]]),
     )
 }

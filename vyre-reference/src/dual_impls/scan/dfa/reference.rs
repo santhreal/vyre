@@ -15,20 +15,35 @@ impl WireDfa {
         if &bytes[0..4] != b"VDFA" {
             return Err("DFA wire blob bad magic".into());
         }
-        let version = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let version = bytes
+            .get(4..8)
+            .and_then(|s| s.try_into().ok())
+            .map(u32::from_le_bytes)
+            .ok_or_else(|| "DFA wire blob too short for version".to_string())?;
         if version != 2 {
             return Err(format!("DFA wire version {version} != 2"));
         }
-        let state_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
-        let _max_pattern_len = u32::from_le_bytes(bytes[12..16].try_into().unwrap());
-
+        let state_count = bytes
+            .get(8..12)
+            .and_then(|s| s.try_into().ok())
+            .map(u32::from_le_bytes)
+            .ok_or_else(|| "DFA wire blob too short for state count".to_string())?;
+        let _max_pattern_len = bytes
+            .get(12..16)
+            .and_then(|s| s.try_into().ok())
+            .map(u32::from_le_bytes)
+            .ok_or_else(|| "DFA wire blob too short for max pattern length".to_string())?;
         let mut cursor = 16;
         let read_u32_slice = |cursor: &mut usize| -> Result<Vec<u32>, String> {
             if *cursor + 4 > bytes.len() {
                 return Err("truncated section length".into());
             }
-            let word_count =
-                u32::from_le_bytes(bytes[*cursor..*cursor + 4].try_into().unwrap()) as usize;
+            let word_count = bytes
+                .get(*cursor..*cursor + 4)
+                .and_then(|s| s.try_into().ok())
+                .map(u32::from_le_bytes)
+                .ok_or_else(|| "truncated section length".to_string())?
+                as usize;
             *cursor += 4;
             let byte_count = word_count * 4;
             if *cursor + byte_count > bytes.len() {
@@ -36,7 +51,11 @@ impl WireDfa {
             }
             let mut words = Vec::with_capacity(word_count);
             for chunk in bytes[*cursor..*cursor + byte_count].chunks_exact(4) {
-                words.push(u32::from_le_bytes(chunk.try_into().unwrap()));
+                let word = chunk
+                    .try_into()
+                    .map(u32::from_le_bytes)
+                    .map_err(|_| "invalid word chunk".to_string())?;
+                words.push(word);
             }
             *cursor += byte_count;
             Ok(words)

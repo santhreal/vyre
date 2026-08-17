@@ -124,11 +124,21 @@ pub fn cpu_pipeline(program: Program) -> Program {
 }
 
 /// Run the CPU oracle on a worker with a stack deep enough for every fixture.
+///
+/// # Panics
+///
+/// Panics when spawning the worker thread fails, when the worker thread panics,
+/// or when the CPU optimizer pipeline fails to converge.
 pub fn cpu_pipeline_on_oracle_stack(program: Program) -> Program {
     on_oracle_stack("cpu-oracle", move || cpu_pipeline(program))
 }
 
 /// Microseconds the CPU oracle takes, measured on the worker that runs it.
+///
+/// # Panics
+///
+/// Panics when spawning the worker thread fails, when the worker thread panics,
+/// or when the CPU optimizer pipeline fails to converge.
 pub fn timed_cpu_pipeline_on_oracle_stack(program: Program) -> u128 {
     on_oracle_stack("cpu-oracle-timer", move || {
         let started = Instant::now();
@@ -137,6 +147,11 @@ pub fn timed_cpu_pipeline_on_oracle_stack(program: Program) -> u128 {
     })
 }
 
+/// Run a closure on a dedicated worker thread with an expanded stack.
+///
+/// # Panics
+///
+/// Panics when the OS cannot spawn the worker thread or when the worker thread panics.
 fn on_oracle_stack<T: Send + 'static>(name: &str, work: impl FnOnce() -> T + Send + 'static) -> T {
     std::thread::Builder::new()
         .name(format!("self-optimizer-bench-{name}"))

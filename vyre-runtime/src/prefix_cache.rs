@@ -680,7 +680,9 @@ impl PrefixCacheManager {
             .map(|(&id, _)| id);
 
         if let Some(id) = evictable_id {
-            let page = self.pages.get_mut(&id).expect("page");
+            let Some(page) = self.pages.get_mut(&id) else {
+                return Err(PrefixCacheError::PageNotFound(id));
+            };
             page.allocated = true;
             page.generation = self.current_generation;
             page.ref_count = 1;

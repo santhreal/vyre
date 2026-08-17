@@ -278,6 +278,10 @@ impl ProofExpr {
     }
 
     /// Memory array select (load).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `array` does not have a [`ProofSort::Array`] sort.
     #[must_use]
     pub fn select(array: Self, index: Self) -> Self {
         let ProofSort::Array(_idx_bits, val_bits) = array.sort else {

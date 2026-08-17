@@ -272,10 +272,10 @@ pub(super) fn write_cpu_100x_proof(
         "cases": cases,
         "blockers": blockers,
     });
-    evidence
-        .as_object_mut()
-        .expect("Fix: the 100x proof evidence is a JSON object.")
-        .extend(minima.into_object());
+    let Some(evidence_obj) = evidence.as_object_mut() else {
+        return Err("Fix: the 100x proof evidence is a JSON object.".to_string());
+    };
+    evidence_obj.extend(minima.into_object());
     json_document::write(
         &workspace_root.join("release/evidence/benchmarks/cpu-only-100x-proof.json"),
         &evidence,

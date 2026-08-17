@@ -126,12 +126,10 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         static_input_key,
         program_cache,
     } = scratch;
-    let cached = program_cache.get_or_insert_with(plan.program_key(), || CachedForwardChangedProgram {
-        program: plan
-            .program()
-            .map_err(DispatchError::BadInputs)
-            .expect("Fix: validated csr_forward_or_changed launch plan must produce valid dispatch program"),
-    });
+    let cached = program_cache.try_get_or_insert_with(plan.program_key(), || {
+        let program = plan.program().map_err(DispatchError::BadInputs)?;
+        Ok(CachedForwardChangedProgram { program })
+    })?;
     let next_static_input_key = plan
         .static_input_key(graph.edge_offsets, graph.edge_targets, graph.edge_kind_mask)
         .map_err(DispatchError::BadInputs)?;

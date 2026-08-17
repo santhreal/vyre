@@ -197,6 +197,10 @@ pub fn try_match_post_process_witness_into(
 }
 
 /// Infallible canonical match post-processing witness.
+///
+/// # Panics
+///
+/// Panics if any match in `matches` contains an inverted range or exceeds `haystack` bounds.
 #[must_use]
 pub fn match_post_process_witness(
     matches: &[vyre_foundation::match_result::ByteRange],

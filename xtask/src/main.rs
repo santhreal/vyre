@@ -44,8 +44,10 @@ fn main() {
         print!("{}", gate::render(name, &gate::usage_report(&gate)));
         return;
     }
-    let descriptor = xtask::gate_metadata::descriptor(name)
-        .expect("a registry gate always carries an authoritative descriptor");
+    let Some(descriptor) = xtask::gate_metadata::descriptor(name) else {
+        eprintln!("Fix: gate `{name}` has no descriptor in GATE_METADATA");
+        process::exit(1);
+    };
     let declared_artifacts = descriptor.artifacts;
     let snapshot = xtask::artifact_gate::WorkspaceSnapshot::capture(&ctx.root);
     let result = gate.run(&ctx);

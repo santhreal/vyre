@@ -285,6 +285,10 @@ pub(in crate::pattern) fn ac_ranges_output_records_len(
 /// rejecting automaton and an all-zero candidate mask both admit nothing, so all
 /// of them fail closed here instead of returning something a caller would
 /// dispatch and trust.
+///
+/// # Panics
+///
+/// Panics if `built` is an `Err`, indicating the AC program build failed.
 pub(in crate::pattern) fn ac_ranges_program_or_fail_closed(
     built: Result<Program, String>,
     program: &str,

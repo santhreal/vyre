@@ -958,6 +958,32 @@ pub fn pack(haystack: &[u8]) -> Vec<u8> {
     );
 }
 
+/// Restricted visibility may contain spaces inside `pub(in path)`.
+///
+/// The panic-contract walk must parse that visibility without widening the
+/// function to `pub(crate)` merely to make its documented contract visible.
+#[test]
+fn documented_panic_contract_recognizes_restricted_visibility() {
+    let source = "\
+/// Build a pattern program.
+///
+/// # Panics
+/// Panics when the fallible builder rejects its input.
+pub(in crate::pattern) fn build() -> Program {
+    inner().expect(\"pattern program must build\")
+}
+";
+    let site = source
+        .lines()
+        .position(|line| line.contains(".expect("))
+        .expect("Fix: keep the expect site in the restricted-visibility fixture.");
+
+    assert!(
+        has_documented_panic_contract(source, site),
+        "Fix: `pub(in path)` must remain visible to the panic-contract scanner."
+    );
+}
+
 /// An undocumented production panic stays a release blocker.
 ///
 /// This is the whole point of reading the docs: if the contract is not written down,
