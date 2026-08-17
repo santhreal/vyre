@@ -246,20 +246,35 @@ fn quantified_condition_loops_program(records: u32) -> Program {
         [256, 1, 1],
         vec![
             Node::let_bind("idx", Expr::gid_x()),
+            Node::let_bind("in_bounds", Expr::lt(Expr::var("idx"), Expr::u32(records))),
+            Node::let_bind(
+                "safe_idx",
+                Expr::select(Expr::var("in_bounds"), Expr::var("idx"), Expr::u32(0)),
+            ),
+            Node::let_bind("any_word", Expr::load("any_mask", Expr::var("safe_idx"))),
+            Node::let_bind("all_word", Expr::load("all_mask", Expr::var("safe_idx"))),
+            Node::let_bind(
+                "threshold_word",
+                Expr::load("threshold_mask", Expr::var("safe_idx")),
+            ),
+            Node::let_bind(
+                "match_count",
+                Expr::select(
+                    Expr::and(Expr::var("in_bounds"), condition),
+                    Expr::u32(1),
+                    Expr::u32(0),
+                ),
+            ),
+            Node::let_bind("warp_matches", Expr::subgroup_add(Expr::var("match_count"))),
             Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(records)),
-                vec![
-                    Node::let_bind("any_word", load_u32("any_mask")),
-                    Node::let_bind("all_word", load_u32("all_mask")),
-                    Node::let_bind("threshold_word", load_u32("threshold_mask")),
-                    Node::if_then(
-                        condition,
-                        vec![Node::let_bind(
-                            "_slot",
-                            Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                        )],
-                    ),
-                ],
+                Expr::and(
+                    Expr::eq(Expr::subgroup_local_id(), Expr::u32(0)),
+                    Expr::gt(Expr::var("warp_matches"), Expr::u32(0)),
+                ),
+                vec![Node::let_bind(
+                    "_slot",
+                    Expr::atomic_add("out_count", Expr::u32(0), Expr::var("warp_matches")),
+                )],
             ),
         ],
     )
