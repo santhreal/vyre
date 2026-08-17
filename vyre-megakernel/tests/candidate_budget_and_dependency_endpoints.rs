@@ -10,7 +10,8 @@ use vyre_megakernel::{
 
 #[path = "graph_fixtures/mod.rs"]
 mod graph_fixtures;
-use graph_fixtures::{copy_program, producer_consumer_pair};
+use vyre_test_support::pass_programs::copy_program;
+use graph_fixtures::producer_consumer_pair;
 
 fn fixture_graph() -> ProgramGraph {
     producer_consumer_pair(

@@ -39,6 +39,7 @@ pub(crate) fn rank(
                     .workgroup_width
                     .cmp(&right.candidate.workgroup_width)
             })
+            .then_with(|| left.candidate.topology.cmp(&right.candidate.topology))
     });
     ranked
 }

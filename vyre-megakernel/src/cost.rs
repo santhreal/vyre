@@ -43,8 +43,10 @@ use serde::{Deserialize, Serialize};
 use vyre_foundation::ir::Ident;
 
 use crate::{
-    candidate::CandidatePlan, facts::PlanningFacts, DependencyEdge, DependencyEndpoint,
-    DependencyKind, DeviceFacts,
+    candidate::{CandidatePlan, ExecutionTopology},
+    dependency_order::group_stages,
+    facts::PlanningFacts,
+    DependencyEdge, DependencyEndpoint, DependencyKind, DeviceFacts, FusionGroupId,
 };
 
 /// Cost of one kernel launch on a device that reports no measured overhead.
@@ -115,7 +117,42 @@ pub(crate) fn evaluate(
         .iter()
         .copied()
         .fold(0_u64, u64::saturating_add);
-    let launches = u64::try_from(candidate.group_count()).unwrap_or(u64::MAX);
+    let group_count = candidate.group_count();
+    let node_groups: Vec<FusionGroupId> = candidate
+        .node_groups
+        .iter()
+        .copied()
+        .map(FusionGroupId)
+        .collect();
+    let stages = group_stages(group_count, dependencies, &node_groups)
+        .unwrap_or_else(|_| vec![0; group_count]);
+    let stage_count = stages.iter().copied().max().map_or(0, |s| s as usize + 1);
+    let mut stage_groups = vec![Vec::new(); stage_count];
+    for (group, &stage) in stages.iter().enumerate() {
+        stage_groups[stage as usize].push(group as u32);
+    }
+
+    let launches = match candidate.topology {
+        ExecutionTopology::Sequential => u64::try_from(group_count).unwrap_or(u64::MAX),
+        ExecutionTopology::ConcurrentQueue { queues } => {
+            let q = u64::from(queues.max(1));
+            let mut total_launches = 0_u64;
+            for groups in &stage_groups {
+                let count = u64::try_from(groups.len()).unwrap_or(1);
+                total_launches = total_launches.saturating_add(count.div_ceil(q));
+            }
+            total_launches.max(1)
+        }
+        ExecutionTopology::ResidentPartition { partitions, .. } => {
+            let p = u64::from(partitions.max(1));
+            let mut total_launches = 0_u64;
+            for groups in &stage_groups {
+                let count = u64::try_from(groups.len()).unwrap_or(1);
+                total_launches = total_launches.saturating_add(count.div_ceil(p));
+            }
+            total_launches.max(1)
+        }
+    };
     let crossing = dependencies.iter().filter(|edge| {
         if edge.kind != DependencyKind::Data {
             return false;
@@ -141,46 +178,97 @@ pub(crate) fn evaluate(
     let mut shared_scratch_bytes = 0_u64;
     let mut occupancy_passes_peak = 1_u64;
     let mut occupancy_bytes = 0_u64;
-    for group in 0..u32::try_from(candidate.group_count()).unwrap_or(u32::MAX) {
-        let mut group_live = 0_u64;
-        let mut group_tiles: Vec<(&Ident, u64)> = Vec::new();
-        let mut group_bytes = 0_u64;
-        for node in candidate.group_members(group) {
-            group_live =
-                group_live.saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
-            for (name, bytes) in facts
-                .node_workgroup_scratch
-                .get(node)
-                .map(Vec::as_slice)
-                .unwrap_or_default()
-            {
-                let held = group_tiles
-                    .iter()
-                    .position(|(name_held, _)| *name_held == name);
-                match held {
-                    // Fusion keeps one declaration per name and takes the
-                    // larger count, so the group holds the larger of the two.
-                    Some(index) => group_tiles[index].1 = group_tiles[index].1.max(*bytes),
-                    None => group_tiles.push((name, *bytes)),
+    match candidate.topology {
+        ExecutionTopology::Sequential | ExecutionTopology::ConcurrentQueue { .. } => {
+            for group in 0..u32::try_from(group_count).unwrap_or(u32::MAX) {
+                let mut group_live = 0_u64;
+                let mut group_tiles: Vec<(&Ident, u64)> = Vec::new();
+                let mut group_bytes = 0_u64;
+                for node in candidate.group_members(group) {
+                    group_live = group_live
+                        .saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
+                    for (name, bytes) in facts
+                        .node_workgroup_scratch
+                        .get(node)
+                        .map(Vec::as_slice)
+                        .unwrap_or_default()
+                    {
+                        let held = group_tiles
+                            .iter()
+                            .position(|(name_held, _)| *name_held == name);
+                        match held {
+                            Some(index) => group_tiles[index].1 = group_tiles[index].1.max(*bytes),
+                            None => group_tiles.push((name, *bytes)),
+                        }
+                    }
+                    group_bytes = group_bytes
+                        .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
                 }
+                let group_scratch = group_tiles
+                    .iter()
+                    .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
+                live_value_peak = live_value_peak.max(group_live);
+                shared_scratch_bytes = shared_scratch_bytes.max(group_scratch);
+                let passes = resident_passes(
+                    group_live,
+                    u64::from(device.registers_per_invocation()),
+                )
+                .max(resident_passes(
+                    group_scratch,
+                    u64::from(device.shared_scratch_bytes_per_workgroup()),
+                ));
+                occupancy_passes_peak = occupancy_passes_peak.max(passes);
+                occupancy_bytes = occupancy_bytes
+                    .saturating_add(group_bytes.saturating_mul(passes.saturating_sub(1)));
             }
-            group_bytes = group_bytes
-                .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
         }
-        let group_scratch = group_tiles
-            .iter()
-            .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
-        live_value_peak = live_value_peak.max(group_live);
-        shared_scratch_bytes = shared_scratch_bytes.max(group_scratch);
-        let passes = resident_passes(group_live, u64::from(device.registers_per_invocation())).max(
-            resident_passes(
-                group_scratch,
-                u64::from(device.shared_scratch_bytes_per_workgroup()),
-            ),
-        );
-        occupancy_passes_peak = occupancy_passes_peak.max(passes);
-        occupancy_bytes =
-            occupancy_bytes.saturating_add(group_bytes.saturating_mul(passes.saturating_sub(1)));
+        ExecutionTopology::ResidentPartition { .. } => {
+            for groups in &stage_groups {
+                let mut stage_live = 0_u64;
+                let mut stage_tiles: Vec<(&Ident, u64)> = Vec::new();
+                let mut stage_bytes = 0_u64;
+                for &group in groups {
+                    for node in candidate.group_members(group) {
+                        stage_live = stage_live
+                            .saturating_add(facts.node_live_values.get(node).copied().unwrap_or(0));
+                        for (name, bytes) in facts
+                            .node_workgroup_scratch
+                            .get(node)
+                            .map(Vec::as_slice)
+                            .unwrap_or_default()
+                        {
+                            let held = stage_tiles
+                                .iter()
+                                .position(|(name_held, _)| *name_held == name);
+                            match held {
+                                Some(index) => {
+                                    stage_tiles[index].1 = stage_tiles[index].1.max(*bytes);
+                                }
+                                None => stage_tiles.push((name, *bytes)),
+                            }
+                        }
+                        stage_bytes = stage_bytes
+                            .saturating_add(facts.node_touched_bytes.get(node).copied().unwrap_or(0));
+                    }
+                }
+                let stage_scratch = stage_tiles
+                    .iter()
+                    .fold(0_u64, |total, (_, bytes)| total.saturating_add(*bytes));
+                live_value_peak = live_value_peak.max(stage_live);
+                shared_scratch_bytes = shared_scratch_bytes.max(stage_scratch);
+                let passes = resident_passes(
+                    stage_live,
+                    u64::from(device.registers_per_invocation()),
+                )
+                .max(resident_passes(
+                    stage_scratch,
+                    u64::from(device.shared_scratch_bytes_per_workgroup()),
+                ));
+                occupancy_passes_peak = occupancy_passes_peak.max(passes);
+                occupancy_bytes = occupancy_bytes
+                    .saturating_add(stage_bytes.saturating_mul(passes.saturating_sub(1)));
+            }
+        }
     }
 
     let launch_ns = launches.saturating_mul(launch_cost_ns(device));

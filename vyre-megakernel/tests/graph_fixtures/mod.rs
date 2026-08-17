@@ -25,7 +25,6 @@ pub(crate) fn invocation_contract() -> ValueContract {
     }
 }
 
-pub(crate) use vyre_test_support::pass_programs::{add_program, copy_program};
 
 /// A producer and a consumer joined by one invocation-scoped value.
 ///

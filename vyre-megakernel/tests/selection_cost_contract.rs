@@ -25,7 +25,8 @@ use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::cost::CostBreakdown;
 use vyre_megakernel::{compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
-use graph_fixtures::{copy_program, producer_consumer_pair};
+use vyre_test_support::pass_programs::copy_program;
+use graph_fixtures::producer_consumer_pair;
 
 mod graph_fixtures;
 
