@@ -56,13 +56,7 @@ pub(in crate::scan) use regex_exact::regex_exact_ranges_program;
 /// yields: a direct element load for an unpacked haystack, or the masked byte
 /// [`ac_transition_step_nodes`] unpacks from a u32 word.
 pub(in crate::scan) fn ac_advance_state_node(transitions: &str, byte: Expr) -> Node {
-    Node::assign(
-        "state",
-        Expr::load(
-            transitions,
-            Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), byte),
-        ),
-    )
+    crate::builder::TableStateMachineComposer::new(transitions).advance_node(byte)
 }
 
 /// One byte of the walk over a PACKED haystack: unpack the byte at `idx` from

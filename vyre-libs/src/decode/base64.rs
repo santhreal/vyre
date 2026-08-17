@@ -251,7 +251,7 @@ fn clamp_lookup(name: &str, table: &str) -> Vec<Node> {
         // is what keeps this mask from being forgotten again.
         Node::let_bind(
             raw.as_str(),
-            vyre_primitives::ir_safe::byte_table_lookup(table, Expr::var(name)),
+            crate::builder::TableStateMachineComposer::byte_table_lookup(table, Expr::var(name)),
         ),
         Node::let_bind(
             value.as_str(),

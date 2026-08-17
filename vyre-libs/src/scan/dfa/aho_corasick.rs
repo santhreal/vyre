@@ -17,9 +17,8 @@
 //! [`aho_corasick_bounded`] directly.
 
 use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
-use crate::scan::classic_ac::ac_advance_state_node;
 
 /// Build a Program that scans `haystack` (u32 per byte) for any
 /// accepting state of a pre-built DFA. Buffers:
@@ -66,38 +65,12 @@ pub fn aho_corasick_bounded(
     state_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let start = Expr::select(
-        Expr::lt(i.clone(), Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
+    let body = crate::builder::TableStateMachineComposer::new(transitions).bounded_suffix_scan_body(
+        haystack,
+        accept,
+        matches,
+        max_pattern_len,
     );
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::buf_len(haystack)),
-            vec![
-                Node::let_bind("state", Expr::u32(0)),
-                Node::let_bind("scan_start", start),
-                Node::loop_for(
-                    "step",
-                    Expr::var("scan_start"),
-                    end,
-                    vec![ac_advance_state_node(
-                        transitions,
-                        Expr::load(haystack, Expr::var("step")),
-                    )],
-                ),
-                Node::Store {
-                    buffer: matches.into(),
-                    index: i,
-                    value: Expr::load(accept, Expr::var("state")),
-                },
-            ],
-        ),
-    ];
 
     Program::wrapped(
         vec![
@@ -152,6 +125,7 @@ mod tests {
     use super::*;
     use std::ops::ControlFlow;
     use vyre_foundation::ir::Node;
+    use vyre_foundation::ir::Expr;
     use vyre_foundation::visit::try_for_each_node;
 
     /// Bounds of the first `Loop` in emission order.

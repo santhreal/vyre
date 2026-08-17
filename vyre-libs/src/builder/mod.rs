@@ -28,6 +28,9 @@ pub(crate) mod elementwise;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
+/// Shared table-walking state machine / DFA composer.
+pub mod state_machine;
+pub use state_machine::TableStateMachineComposer;
 /// The two shared child regions registered as operations in their own right.
 ///
 /// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and

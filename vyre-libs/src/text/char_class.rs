@@ -155,10 +155,10 @@ fn char_class_body(source: &str, classified: &str, n: u32) -> Vec<Node> {
                 vec![Node::store(
                     classified,
                     Expr::var("idx"),
-                    // Canonical masked source-byte → 256-table lookup (ONE-PLACE:
-                    // vyre_primitives::ir_safe), widens the source byte to u32 and masks the
-                    // table index with `& 0xFF` so a >255 element can't read past it.
-                    vyre_primitives::ir_safe::source_byte_table_lookup(
+                    // Canonical masked source-byte → 256-table lookup via TableStateMachineComposer,
+                    // widens the source byte to u32 and masks the table index with `& 0xFF`
+                    // so a >255 element can't read past it.
+                    crate::builder::TableStateMachineComposer::source_byte_table_lookup(
                         "table",
                         source,
                         Expr::var("idx"),

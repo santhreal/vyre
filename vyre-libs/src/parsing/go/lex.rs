@@ -8,7 +8,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_spec::go_token::*;
 
 fn byte_load(buffer: &str, index: Expr) -> Expr {
-    Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))
+    crate::builder::TableStateMachineComposer::masked_byte_load(buffer, index)
 }
 
 fn byte_eq(expr: Expr, byte: u8) -> Expr {

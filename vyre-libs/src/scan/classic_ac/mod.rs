@@ -103,7 +103,7 @@ pub fn classic_ac_scan(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<(u32, u3
     let mut state = 0u32;
     let mut out = Vec::new();
     for (pos, &b) in haystack.iter().enumerate() {
-        state = dfa.transitions[(state as usize) * 256 + (b as usize)];
+        state = dfa.transitions[crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
         let begin = dfa.output_offsets[state as usize] as usize;
         let end = dfa.output_offsets[state as usize + 1] as usize;
         for &pattern_id in &dfa.output_records[begin..end] {
@@ -125,7 +125,7 @@ pub fn classic_ac_scan_counts(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<u
     let mut state = 0u32;
     let mut out = Vec::with_capacity(haystack.len());
     for &b in haystack {
-        state = dfa.transitions[(state as usize) * 256 + (b as usize)];
+        state = dfa.transitions[crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
         let begin = dfa.output_offsets[state as usize] as usize;
         let end = dfa.output_offsets[state as usize + 1] as usize;
         out.push((end - begin) as u32);

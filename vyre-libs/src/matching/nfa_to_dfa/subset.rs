@@ -193,7 +193,8 @@ pub fn nfa_to_dfa(
                 transitions.extend(std::iter::repeat_n(0u32, 256));
                 new_id
             };
-            transitions[(dfa_state_id) * 256 + byte as usize] = next_dfa_state;
+            let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(dfa_state_id as u32, byte as u8);
+            transitions[trans_idx] = next_dfa_state;
         }
     }
 

@@ -1,14 +1,11 @@
 //! Byte classification and sequence-structure rules emitted per lane.
 
-use vyre_foundation::ir::{DataType, Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::{UTF8_CONT, UTF8_LEAD_2, UTF8_LEAD_3, UTF8_LEAD_4};
 
 pub(super) fn byte_expr(source: &str, index: Expr) -> Expr {
-    Expr::bitand(
-        Expr::cast(DataType::U32, Expr::load(source, index)),
-        Expr::u32(0xFF),
-    )
+    crate::builder::TableStateMachineComposer::masked_byte_load(source, index)
 }
 
 pub(super) fn in_range(value: Expr, lo: u32, hi: u32) -> Expr {

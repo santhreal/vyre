@@ -47,6 +47,8 @@ pub(crate) mod builder;
 pub(crate) mod plumbing;
 
 pub use builder::range_ordering;
+pub use builder::state_machine;
+pub use builder::TableStateMachineComposer;
 pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};
 pub use plumbing::host::dispatch_buffers;
