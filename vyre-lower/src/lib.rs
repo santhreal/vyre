@@ -26,7 +26,8 @@ pub mod analyses;
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod artifact_golden;
 pub(crate) mod audit;
-mod canonicalize;
+pub(crate) mod canonicalize;
+pub mod rewrites;
 pub(crate) mod descriptor;
 /// Fixture builders for kernel descriptors. Every consumer is a test, so this
 /// is not part of the shipped surface: enable `test-fixtures` to reach it.
