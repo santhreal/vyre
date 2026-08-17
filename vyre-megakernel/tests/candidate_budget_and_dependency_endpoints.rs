@@ -123,10 +123,10 @@ fn compiled_graph_contains_all_dependency_endpoint_and_kind_variants() {
 
     let prog0 = Program::wrapped(
         vec![
-            BufferDecl::storage("in_buf", 0, BufferAccess::ReadOnly, DataType::F32),
-            BufferDecl::storage("state_buf", 1, BufferAccess::ReadWrite, DataType::F32),
-            BufferDecl::storage("temp_out", 2, BufferAccess::ReadWrite, DataType::F32),
-            BufferDecl::storage("state_next", 3, BufferAccess::ReadWrite, DataType::F32),
+            BufferDecl::storage("in_buf", 0, BufferAccess::ReadOnly, DataType::F32).with_count(16),
+            BufferDecl::storage("state_buf", 1, BufferAccess::ReadWrite, DataType::F32).with_count(16),
+            BufferDecl::storage("temp_out", 2, BufferAccess::ReadWrite, DataType::F32).with_count(16),
+            BufferDecl::storage("state_next", 3, BufferAccess::ReadWrite, DataType::F32).with_count(16),
         ],
         [16, 1, 1],
         vec![
@@ -181,9 +181,9 @@ fn compiled_graph_contains_all_dependency_endpoint_and_kind_variants() {
 
     let prog1 = Program::wrapped(
         vec![
-            BufferDecl::storage("temp_in", 0, BufferAccess::ReadOnly, DataType::F32),
-            BufferDecl::storage("state_in", 1, BufferAccess::ReadWrite, DataType::F32),
-            BufferDecl::output("final_out", 2, DataType::F32),
+            BufferDecl::storage("temp_in", 0, BufferAccess::ReadOnly, DataType::F32).with_count(16),
+            BufferDecl::storage("state_in", 1, BufferAccess::ReadWrite, DataType::F32).with_count(16),
+            BufferDecl::output("final_out", 2, DataType::F32).with_count(16),
         ],
         [16, 1, 1],
         vec![Node::store(
@@ -286,7 +286,11 @@ fn compiled_graph_contains_all_dependency_endpoint_and_kind_variants() {
     );
 
     assert!(
-        artifact.selected_plan().stages.len() >= 1,
+        !artifact.selected_plan().fusion.is_empty(),
         "stage derivation must complete without panicking on Value endpoints"
+    );
+    assert!(
+        artifact.selected_plan().fusion.iter().all(|f| f.stage <= 100),
+        "fusion records must record valid stage assignments"
     );
 }
