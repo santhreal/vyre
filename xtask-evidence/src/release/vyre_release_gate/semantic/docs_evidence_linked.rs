@@ -4,7 +4,7 @@
 //! release is certified against, and until this check existed nothing read the
 //! paths inside it. The generic markdown check asks whether the document carries
 //! the words `Evidence sources:`, which an empty heading satisfies, so the map
-//! went on requiring `docs/optimization/README.md` after that page left the
+//! went on requiring an optimization readme after that page left the
 //! tree and the release gate reported a closed requirement.
 
 use std::path::Path;

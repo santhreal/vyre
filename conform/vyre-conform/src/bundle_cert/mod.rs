@@ -26,7 +26,7 @@
 //! ## Design
 //!
 //! - **Input determinism**: the corpus is supplied as a list of
-//!   [`ConformanceCase`] records, each naming one dispatch. They're
+//!   [`vyre_conform_spec::ConformanceCase`] records, each naming one dispatch. They're
 //!   sorted by `name` before hashing so the same logical corpus
 //!   produces the same cert regardless of enumeration order.
 //! - **Output determinism**: outputs are captured as

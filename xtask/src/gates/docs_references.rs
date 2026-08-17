@@ -7,7 +7,7 @@
 //! workflows that were never files.
 //!
 //! A markdown link target is the same claim in another grammar: a reader clicks
-//! it. Reading only spans and commands left `[Architecture](docs/ARCHITECTURE.md)`
+//! it. Reading only spans and commands left an architecture document link
 //! in `CONTRIBUTING.md` held by nothing, so a deleted page broke every link to
 //! it in silence. A target inside a fence is an example, and a target inside a
 //! code span is already read as a span, so neither is read twice.

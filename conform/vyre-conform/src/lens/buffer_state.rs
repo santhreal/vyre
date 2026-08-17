@@ -31,7 +31,7 @@ pub fn index_of_buffer(program: &Program, name: &str) -> Option<usize> {
 /// Project a full convergence/fixpoint state vector down to just the
 /// program's declared output buffers (`ReadWrite`/`WriteOnly`), in
 /// `output_buffer_indices` order, the exact shape
-/// [`compare_output_buffers`] requires (it asserts the comparison vectors
+/// [`crate::lens::compare_output_buffers`] requires (it asserts the comparison vectors
 /// have one entry per declared output).
 ///
 /// The iterative lenses carry the FULL buffer state across iterations

@@ -373,12 +373,13 @@ fn render_baseline(rows: &[(&str, usize)]) -> String {
 /// The gates this invocation runs, and what to call the selection.
 fn selection(args: &[String]) -> Result<(Vec<crate::gate::RegisteredGate>, String), GateError> {
     let registry = subcommands::registry();
-    let Some(at) = args.iter().position(|argument| argument == "--subset") else {
+    let Some(at) = args.iter().position(|argument| argument == "--subset" || argument == "--area") else {
         return Ok((registry, "registry".to_string()));
     };
+    let flag = &args[at];
     let Some(name) = args.get(at + 1) else {
         return Err(GateError::new(
-            "`--subset` was passed without a name",
+            format!("`{flag}` was passed without a name"),
             "name one of the registered subsets, or drop the flag to run the whole registry",
         ));
     };
@@ -506,7 +507,7 @@ pub fn run(args: &[String]) {
             );
             process::exit(1);
         }
-        if args.iter().any(|argument| argument == "--subset") {
+        if args.iter().any(|argument| argument == "--subset" || argument == "--area") {
             eprintln!(
                 "Fix: a baseline covers the whole registry, so it cannot be written from a subset. Drop `--subset`."
             );
@@ -849,6 +850,12 @@ mod tests {
             .expect("a descriptor-derived subset");
         assert_eq!(what, format!("subset `{}`", subset.name));
         assert_eq!(selected.len(), subset.gates.len());
+        let (area_selected, area_what) = selection(&["--area".to_string(), subset.name.to_string()])
+            .expect("a descriptor-derived area");
+        assert_eq!(area_what, format!("subset `{}`", subset.name));
+        assert_eq!(area_selected.len(), subset.gates.len());
+        assert!(selection(&["--area".to_string()]).is_err());
+        assert!(selection(&["--area".to_string(), "nope".to_string()]).is_err());
         assert!(!selected.is_empty());
         assert!(selected.len() < subcommands::registry().len());
         assert!(selection(&["--subset".to_string()]).is_err());

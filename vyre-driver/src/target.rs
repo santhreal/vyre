@@ -6,11 +6,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Lookup target for a dialect op's lowering path.
 ///
-/// The in-tree variants map to the typed slots on
-/// [`vyre_foundation::dialect_lookup::LoweringTable`].
+/// The in-tree variants map to the typed slots on a dialect op's lowering table.
 /// Out-of-tree backends register by stable backend id via the table's
 /// `extensions` map and are looked up by `Target::Extension("backend-id")`.
-///
 /// The enum is `#[non_exhaustive]` so adding an in-tree variant does not
 /// break downstream matches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -31,9 +29,7 @@ pub enum Target {
     /// Portable reference backend. Always available.
     ReferenceBackend,
     /// Out-of-tree backend registered by stable id. Matches the
-    /// string a consumer wrote into
-    /// [`vyre_foundation::dialect_lookup::LoweringTable::with_extension`].
-    ///
+    /// string a consumer wrote into the lowering table extension map.
     /// Examples are backend-owned stable identifiers.
     Extension(&'static str),
 }

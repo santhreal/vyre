@@ -1,7 +1,7 @@
 //! The `crate-pages` gate: every crate states its boundary and its module map.
 //!
 //! A crate boundary lived in two places a reader had to already know about:
-//! `docs/architecture/crates.md` and `docs/CRATE_OWNERSHIP.toml`. Someone
+//! the crate boundaries chapter and `docs/CRATE_OWNERSHIP.toml`. Someone
 //! opening a crate directory saw a `README.md` that described what the crate
 //! does and nothing that said what it must never hold, which is the half of a
 //! boundary that decides where new code goes. Sixteen crates had no page of
