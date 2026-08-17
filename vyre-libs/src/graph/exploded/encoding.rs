@@ -49,14 +49,14 @@ pub fn decode_node(node_id: u32) -> (u32, u32, u32) {
 
 /// Whether a `(proc, block, fact)` triple fits in the packed
 /// 32-bit representation. Callers on the production path should
-/// verify this before calling [`encode_node`].
+/// verify this before calling `encode_node`.
 #[must_use]
 pub fn fits(proc_id: u32, block_id: u32, fact_id: u32) -> bool {
     proc_id <= MAX_PROC_ID && block_id <= MAX_BLOCK_ID && fact_id <= MAX_FACT_ID
 }
 /// Convert a dense `(proc, block, fact)` index  -  the space
 /// the `vyre-reference` IFDS witness operates in  -  into the packed
-/// [`encode_node`] form for reporting or cross-subsystem handoff.
+/// `encode_node` form for reporting or cross-subsystem handoff.
 #[cfg(test)]
 #[must_use]
 pub fn dense_to_encoded(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {

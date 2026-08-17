@@ -31,7 +31,7 @@ static CRC32_TABLE: std::sync::LazyLock<[u32; 256]> = std::sync::LazyLock::new(b
 /// Self-contained CRC-32 chunk summary for associative reductions.
 ///
 /// The `crc` field is the normal finalized CRC-32 value for the chunk. Adjacent
-/// chunks can be combined with [`crc32_combine_chunks`] without reading the
+/// chunks can be combined with `crc32_combine_chunks` without reading the
 /// original bytes, which is the algebra needed by GPU block scans and resident
 /// streaming pipelines.
 #[cfg(test)]
@@ -260,7 +260,7 @@ pub fn crc32_program(input: &str, out: &str, n: u32) -> Program {
 /// `gid.x * chunk_size`. Results are written as adjacent words in one ABI-legal
 /// output buffer: `out[chunk * 2] = finalized chunk CRC` and
 /// `out[chunk * 2 + 1] = chunk byte length`. The summaries can be reduced with
-/// [`crc32_combine_chunks`].
+/// `crc32_combine_chunks`.
 #[must_use]
 pub fn crc32_chunk_program(input: &str, out: &str, n: u32, chunk_size: NonZeroU32) -> Program {
     let chunk_size = chunk_size.get();

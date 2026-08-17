@@ -125,7 +125,7 @@ impl std::fmt::Display for PostProcessError {
 
 impl std::error::Error for PostProcessError {}
 
-/// Output of [`try_reference_post_process`]. Carries the deduped match and the
+/// Output of `try_reference_post_process`. Carries the deduped match and the
 /// two derived signals every downstream consumer reads.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PostProcessedMatch {

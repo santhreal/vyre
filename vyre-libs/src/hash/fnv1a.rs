@@ -148,7 +148,7 @@ pub const fn fnv1a32_mul_xor_word_state(hash: u32, word: u32) -> u32 {
     hash.wrapping_mul(FNV1A32_PRIME) ^ word
 }
 
-/// IR expression form of [`fnv1a32_mul_xor_word_state`].
+/// IR expression form of `fnv1a32_mul_xor_word_state`.
 #[must_use]
 pub fn fnv1a32_mul_xor_word_expr(hash: Expr, word: Expr) -> Expr {
     Expr::bitxor(Expr::mul(hash, Expr::u32(FNV1A32_PRIME)), word)

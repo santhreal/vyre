@@ -33,7 +33,7 @@
 //! No new GPU primitive ships. The Grünwald-Letnikov weights are a
 //! **kernel data table** that vyre-libs::math::conv1d already
 //! consumes. The single new function is the host-side
-//! [`crate::math::fractional::grunwald_letnikov_kernel`] that produces the weights.
+//! `crate::math::fractional::grunwald_letnikov_kernel` that produces the weights.
 
 /// Generate the Grünwald-Letnikov weight kernel of length `n` for
 /// fractional order `alpha`. Output `w[k]` such that

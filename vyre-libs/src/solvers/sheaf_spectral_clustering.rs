@@ -6,7 +6,7 @@
 //! about cluster structure: the dominant eigenvalue corresponds to
 //! the longest principal direction of the graph's heterophilic
 //! diffusion. Combined with the existing
-//! [`super::sheaf_heterophilic_dispatch::flag_fusion_incompatible`]
+//! `super::sheaf_heterophilic_dispatch::flag_fusion_incompatible`
 //! divergence flagging, this gives:
 //!
 //! - **Spectral gap**  -  eigenvalue magnitude indicates how cleanly

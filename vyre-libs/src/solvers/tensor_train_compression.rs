@@ -59,7 +59,7 @@ pub struct TensorTrainCompressionGpuScratch {
 ///
 /// This path chains [`tensor_train_decompose_step`] (a real per-mode truncated SVD in f32) once per
 /// non-final mode and stores the final remainder as the last core. It is the GPU-dispatchable
-/// production path, validated end-to-end via [`ReferenceEvalDispatcher`].
+/// production path, validated end-to-end via `ReferenceEvalDispatcher`.
 pub fn compress_cost_tensor_f32_via(
     dispatcher: &dyn ProgramDispatcher,
     tensor_f32: &[f32],
