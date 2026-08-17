@@ -17,15 +17,9 @@ use vyre_libs::graph::scc_decompose::cpu_ref as scc_cpu_ref;
 use vyre_libs::graph::toposort::{toposort, ToposortError};
 use vyre_reference::value::Value;
 
-#[path = "adversarial_graph_ops/backward_traverse_contracts.rs"]
 mod backward_traverse_contracts;
-#[path = "adversarial_graph_ops/forward_traverse_contracts.rs"]
 mod forward_traverse_contracts;
-#[path = "adversarial_graph_ops/frontier_queue_contracts.rs"]
 mod frontier_queue_contracts;
-#[path = "adversarial_graph_ops/path_reconstruct_contracts.rs"]
 mod path_reconstruct_contracts;
-#[path = "adversarial_graph_ops/scc_contracts.rs"]
 mod scc_contracts;
-#[path = "adversarial_graph_ops/toposort_contracts.rs"]
 mod toposort_contracts;

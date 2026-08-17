@@ -107,13 +107,8 @@ fn verify_certificate_signature(parsed: &Value) {
         .expect("Fix: certificate Ed25519 signature must verify over the canonical body");
 }
 
-#[path = "cert_artifact/gpu_certificate_contracts.rs"]
 mod gpu_certificate_contracts;
-#[path = "cert_artifact/merge_contracts.rs"]
 mod merge_contracts;
-#[path = "cert_artifact/prove_failure_contracts.rs"]
 mod prove_failure_contracts;
-#[path = "cert_artifact/release_script_contracts.rs"]
 mod release_script_contracts;
-#[path = "cert_artifact/shard_plan_contracts.rs"]
 mod shard_plan_contracts;

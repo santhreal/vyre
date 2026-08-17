@@ -28,9 +28,6 @@ fn free_pair(backend: &WgpuBackend, first: Resource, second: Resource) {
         .expect("second resident buffer must free cleanly");
 }
 
-#[path = "resident_buffer_contracts/lifecycle_range_contracts.rs"]
 mod lifecycle_range_contracts;
-#[path = "resident_buffer_contracts/ranged_batch_contracts.rs"]
 mod ranged_batch_contracts;
-#[path = "resident_buffer_contracts/validation_atomicity_contracts.rs"]
 mod validation_atomicity_contracts;

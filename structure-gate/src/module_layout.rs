@@ -57,9 +57,8 @@ pub struct CrateRoot {
 /// editor shows first and finds half of it. `foo/mod.rs` is the same module
 /// with the file and its children in one place.
 ///
-/// The rule reads `src/` only. An integration test binary is named by its own
-/// file, so `tests/foo.rs` beside `tests/foo/` is a binary next to its
-/// fixtures rather than one module in two places.
+/// Judged over every source tree a crate compiles (`src/`, `tests/`,
+/// `benches/`, `examples/`).
 #[must_use]
 pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
     let mut directories: BTreeSet<&str> = BTreeSet::new();
@@ -382,6 +381,19 @@ mod tests {
         assert!(failures.is_empty(), "{failures:?}");
     }
 
+    #[test]
+    fn a_test_module_file_beside_its_own_directory_is_rejected() {
+        let failures = sibling_module_failures(&paths(&[
+            "vyre-libs/tests/adversarial_graph_ops.rs",
+            "vyre-libs/tests/adversarial_graph_ops/toposort_contracts.rs",
+        ]));
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("vyre-libs/tests/adversarial_graph_ops/mod.rs"),
+            "{failures:?}"
+        );
+    }
     fn crate_roots(pairs: &[(&str, &str)]) -> Vec<CrateRoot> {
         pairs
             .iter()

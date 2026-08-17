@@ -3,16 +3,12 @@
 
 #![cfg(test)]
 
-#[path = "adaptive_traverse_vast_walk_gpu_parity/auto_selector_contracts.rs"]
 mod auto_selector_contracts;
-#[path = "adaptive_traverse_vast_walk_gpu_parity/dense_sparse_contracts.rs"]
 mod dense_sparse_contracts;
+#[path = "../harness/mod.rs"]
 mod harness;
-#[path = "adaptive_traverse_vast_walk_gpu_parity/resident_sparse_dense_contracts.rs"]
 mod resident_sparse_dense_contracts;
-#[path = "adaptive_traverse_vast_walk_gpu_parity/resident_sparse_queue_contracts.rs"]
 mod resident_sparse_queue_contracts;
-#[path = "adaptive_traverse_vast_walk_gpu_parity/vast_walk_contracts.rs"]
 mod vast_walk_contracts;
 
 use harness::{bytes_u32, live_dispatcher, pack_nodes, u32_bytes};

@@ -75,25 +75,16 @@ pub(crate) fn single_store_desc(id: &str) -> KernelDescriptor {
         .build()
 }
 
-#[path = "support/naga_probe.rs"]
+#[path = "../support/naga_probe.rs"]
 mod naga_probe;
 pub(crate) use naga_probe::{block_has_atomic, block_has_loop, entry_has_binary, entry_has_unary};
 
-#[path = "emit_contracts/atomics.rs"]
 mod atomics;
-#[path = "emit_contracts/binop.rs"]
 mod binop;
-#[path = "emit_contracts/byte_element_load.rs"]
 mod byte_element_load;
-#[path = "emit_contracts/cache_entry.rs"]
 mod cache_entry;
-#[path = "emit_contracts/descriptor_control.rs"]
 mod descriptor_control;
-#[path = "emit_contracts/pattern_audit.rs"]
 mod pattern_audit;
-#[path = "emit_contracts/pattern_pipeline_prewarm.rs"]
 mod pattern_pipeline_prewarm;
-#[path = "emit_contracts/pattern_vec_pack.rs"]
 mod pattern_vec_pack;
-#[path = "emit_contracts/subgroup.rs"]
 mod subgroup;

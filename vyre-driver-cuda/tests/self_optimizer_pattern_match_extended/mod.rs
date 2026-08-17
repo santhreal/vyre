@@ -9,6 +9,7 @@
 
 #![cfg(test)]
 
+#[path = "../harness/mod.rs"]
 mod harness;
 
 pub(crate) use harness::self_optimizer::{
@@ -19,17 +20,10 @@ pub(crate) use harness::self_optimizer::{
 pub(crate) use vyre::ir::UnOp;
 pub(crate) use vyre::ir::{BinOp, Expr};
 
-#[path = "self_optimizer_pattern_match_extended/arithmetic_cse_contracts.rs"]
 mod arithmetic_cse_contracts;
-#[path = "self_optimizer_pattern_match_extended/arithmetic_identity_contracts.rs"]
 mod arithmetic_identity_contracts;
-#[path = "self_optimizer_pattern_match_extended/bitwise_shift_contracts.rs"]
 mod bitwise_shift_contracts;
-#[path = "self_optimizer_pattern_match_extended/bitxor_chain_contracts.rs"]
 mod bitxor_chain_contracts;
-#[path = "self_optimizer_pattern_match_extended/boolean_comparison_contracts.rs"]
 mod boolean_comparison_contracts;
-#[path = "self_optimizer_pattern_match_extended/minmax_contracts.rs"]
 mod minmax_contracts;
-#[path = "self_optimizer_pattern_match_extended/self_cse_contracts.rs"]
 mod self_cse_contracts;

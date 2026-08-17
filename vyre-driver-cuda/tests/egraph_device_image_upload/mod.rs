@@ -1,14 +1,9 @@
 //! CUDA e-graph device-image upload planning tests.
 
-#[path = "egraph_device_image_upload/canonical_rewrite_contracts.rs"]
 mod canonical_rewrite_contracts;
-#[path = "egraph_device_image_upload/fixed_point_contracts.rs"]
 mod fixed_point_contracts;
-#[path = "egraph_device_image_upload/structural_equivalence_contracts.rs"]
 mod structural_equivalence_contracts;
-#[path = "egraph_device_image_upload/union_compaction_contracts.rs"]
 mod union_compaction_contracts;
-#[path = "egraph_device_image_upload/upload_layout_contracts.rs"]
 mod upload_layout_contracts;
 
 use vyre_driver_cuda::{

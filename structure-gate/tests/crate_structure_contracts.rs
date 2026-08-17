@@ -180,17 +180,16 @@ fn the_registry_submitter_scan_is_not_vacuous() {
     }
 }
 
-/// No `src/` module file sits beside a directory of its own name.
+/// No source file sits beside a directory of its own name.
 ///
 /// WHY: `foo.rs` next to `foo/` is one module written in two places, so a
 /// reader who opens either half sees a module that appears to be missing its
 /// other half, and a new child gets added to whichever half the author found.
-/// The workspace carried 110 such pairs at once. `tests/` is deliberately out
-/// of scope: an integration test binary is named by its own file, so a fixture
-/// directory beside it is not a second half of anything.
+/// The workspace carried 110 such pairs at once in `src/` and 32 in `tests/`.
+/// All source trees are held to this invariant.
 #[test]
 fn no_module_file_sits_beside_its_own_directory() {
-    let failures = sibling_module_failures(&workspace().module_files);
+    let failures = sibling_module_failures(&workspace().source_files);
 
     assert!(
         failures.is_empty(),

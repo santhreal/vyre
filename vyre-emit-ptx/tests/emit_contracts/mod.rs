@@ -101,23 +101,13 @@ fn atomic_kernel(
         .build()
 }
 
-#[path = "emit_contracts/async_ops.rs"]
 mod async_ops;
-#[path = "emit_contracts/atomics.rs"]
 mod atomics;
-#[path = "emit_contracts/barrier.rs"]
 mod barrier;
-#[path = "emit_contracts/control_flow.rs"]
 mod control_flow;
-#[path = "emit_contracts/data_tensor/mod.rs"]
 mod data_tensor;
-#[path = "emit_contracts/memory_vector/mod.rs"]
 mod memory_vector;
-#[path = "emit_contracts/preamble.rs"]
 mod preamble;
-#[path = "emit_contracts/scalar_ops.rs"]
 mod scalar_ops;
-#[path = "emit_contracts/subgroup.rs"]
 mod subgroup;
-#[path = "emit_contracts/types_registers.rs"]
 mod types_registers;

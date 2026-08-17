@@ -1,9 +1,8 @@
 //! Generated live CUDA-resident sequence/reference differential matrix.
 
-#[path = "generated_resident_sequence_cuda_reference_matrix/basic_sequence_contracts.rs"]
 mod basic_sequence_contracts;
+#[path = "../harness/mod.rs"]
 mod harness;
-#[path = "generated_resident_sequence_cuda_reference_matrix/repeated_sequence_contracts.rs"]
 mod repeated_sequence_contracts;
 
 use harness::{

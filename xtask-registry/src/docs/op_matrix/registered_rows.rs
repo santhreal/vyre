@@ -233,7 +233,7 @@ fn test_paths(id: &str, tier: OpTier) -> Result<Vec<String>, String> {
             ));
         }
     };
-    tests.push("conform/vyre-conform/tests/op_matrix_truth.rs".to_string());
+    tests.push("conform/vyre-conform/tests/op_matrix_truth/mod.rs".to_string());
     Ok(tests)
 }
 

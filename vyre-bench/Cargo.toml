@@ -95,3 +95,7 @@ harness = false
 
 [lints]
 workspace = true
+
+[[test]]
+name = "release_matrix_contracts"
+path = "tests/release_matrix_contracts/mod.rs"

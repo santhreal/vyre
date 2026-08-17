@@ -4,13 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use toml::Value;
 
-#[path = "op_matrix_truth/namespaces.rs"]
 mod namespaces;
-#[path = "op_matrix_truth/registry.rs"]
 mod registry;
-#[path = "op_matrix_truth/scan_constructs.rs"]
 mod scan_constructs;
-#[path = "op_matrix_truth/toml_rows.rs"]
 mod toml_rows;
 
 use registry::registered_ops;

@@ -15,11 +15,8 @@ use vyre_conform::{issue_bundle_cert, verify_bundle_against_reference, verify_ce
 use vyre_conform_spec::ConformanceCase;
 use vyre_reference::value::Value;
 
-#[path = "cert_regression_pin/bundles.rs"]
 mod bundles;
-#[path = "cert_regression_pin/pins.rs"]
 mod pins;
-#[path = "cert_regression_pin/test_operation.rs"]
 mod test_operation;
 
 use bundles::{

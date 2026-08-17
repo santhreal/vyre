@@ -45,3 +45,7 @@ toml = { workspace = true }
 # The descriptor literal contract judges the compact encoding the descriptor
 # dump and the metal descriptor hash use, so it needs that format itself.
 bincode = { workspace = true }
+
+[[test]]
+name = "lowering_contracts"
+path = "tests/lowering_contracts/mod.rs"

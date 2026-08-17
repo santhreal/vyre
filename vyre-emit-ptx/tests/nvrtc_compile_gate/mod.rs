@@ -9,7 +9,6 @@
 use vyre_foundation::ir::BinOp;
 use vyre_lower::KernelOpKind;
 
-#[path = "nvrtc_compile_gate/fixtures.rs"]
 mod fixtures;
 use fixtures::{
     ptx_for_dynamic_vector_load_fusion, ptx_for_dynamic_vector_store_fusion, ptx_for_op,
@@ -128,5 +127,4 @@ fn mock_gate_rejects_malformed_placeholder() {
 }
 
 #[cfg(feature = "nvrtc")]
-#[path = "nvrtc_compile_gate/cuda.rs"]
 mod nvrtc_real;

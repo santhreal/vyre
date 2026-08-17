@@ -193,8 +193,17 @@ impl crate::gate::GateBehavior for CudaParity {
 fn test_target(path: &Path, crate_dir: &str) -> Option<String> {
     let text = path.to_str()?;
     let rest = text.strip_prefix(crate_dir)?.strip_prefix("/tests/")?;
-    let name = rest.strip_suffix(".rs")?;
-    (!name.contains('/')).then(|| name.to_string())
+    if let Some(name) = rest.strip_suffix(".rs") {
+        if !name.contains('/') {
+            return Some(name.to_string());
+        }
+    }
+    if let Some(dir) = rest.strip_suffix("/mod.rs") {
+        if !dir.contains('/') && dir != "support" && dir != "harness" {
+            return Some(dir.to_string());
+        }
+    }
+    None
 }
 
 /// Every `[[test]]` target the manifest registers behind `feature`.
@@ -283,7 +292,7 @@ mod tests {
     fn a_support_module_is_not_a_test_target() {
         assert_eq!(
             test_target(
-                Path::new("vyre-driver-cuda/tests/int4_quantized_gpu_parity.rs"),
+                Path::new("vyre-driver-cuda/tests/int4_quantized_gpu_parity/mod.rs"),
                 "vyre-driver-cuda"
             ),
             Some("int4_quantized_gpu_parity".to_string())

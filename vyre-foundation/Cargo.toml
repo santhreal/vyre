@@ -67,3 +67,7 @@ path = "tests/sweep_validation_rejection_volume_oracle_matrix.rs"
 [[bench]]
 name = "optimizer_pipeline"
 harness = false
+
+[[test]]
+name = "memo_key_completeness"
+path = "tests/memo_key_completeness/mod.rs"

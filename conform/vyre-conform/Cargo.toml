@@ -23,12 +23,12 @@ path = "src/lib.rs"
 # any consumer, instead of compiling 606 lines down to an empty test binary.
 [[test]]
 name = "countless_readwrite_output_parity"
-path = "tests/countless_readwrite_output_parity.rs"
+path = "tests/countless_readwrite_output_parity/mod.rs"
 required-features = ["gpu"]
 
 [[test]]
 name = "reference_parity_classes"
-path = "tests/reference_parity_classes.rs"
+path = "tests/reference_parity_classes/mod.rs"
 required-features = ["gpu"]
 
 [features]
@@ -81,3 +81,19 @@ toml = { workspace = true }
 # The frozen-surface variant tables under `tests/support` are shared by source
 # with vyre-spec and vyre-foundation, so they name one crate for the run-time
 # checkout root and every including crate carries it.
+
+[[test]]
+name = "cert_artifact"
+path = "tests/cert_artifact/mod.rs"
+
+[[test]]
+name = "library_contracts"
+path = "tests/library_contracts/mod.rs"
+
+[[test]]
+name = "cert_regression_pin"
+path = "tests/cert_regression_pin/mod.rs"
+
+[[test]]
+name = "op_matrix_truth"
+path = "tests/op_matrix_truth/mod.rs"

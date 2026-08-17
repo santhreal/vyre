@@ -11,12 +11,10 @@
 //! 3. **Shape validation**  -  passing inputs of the wrong byte length
 //!    returns `BackendError::InvalidProgram` with a structured fix string.
 
+#[path = "../harness/mod.rs"]
 mod harness;
-#[path = "cuda_graph_dispatch_parity/latency_cache_contracts.rs"]
 mod latency_cache_contracts;
-#[path = "cuda_graph_dispatch_parity/replay_parity_contracts.rs"]
 mod replay_parity_contracts;
-#[path = "cuda_graph_dispatch_parity/telemetry_shape_contracts.rs"]
 mod telemetry_shape_contracts;
 
 use harness::{bool_bytes, bytes_u32, u32_bytes};

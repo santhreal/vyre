@@ -10,11 +10,7 @@
 //! what the classes were. Whether a kernel computes the right numbers is
 //! `prove` itself, and no assertion here substitutes for running it.
 
-#[path = "reference_parity_classes/literal_round_trip.rs"]
 mod literal_round_trip;
-#[path = "reference_parity_classes/output_binding_order.rs"]
 mod output_binding_order;
-#[path = "reference_parity_classes/transcendental_budget.rs"]
 mod transcendental_budget;
-#[path = "reference_parity_classes/workgroup_geometry.rs"]
 mod workgroup_geometry;

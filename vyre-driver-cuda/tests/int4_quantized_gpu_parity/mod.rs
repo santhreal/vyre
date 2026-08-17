@@ -248,11 +248,7 @@ fn f32_bits(values: &[f32]) -> Vec<u32> {
     values.iter().map(|value| value.to_bits()).collect()
 }
 
-#[path = "int4_quantized_gpu_parity/batched_matmul_contracts.rs"]
 mod batched_matmul_contracts;
-#[path = "int4_quantized_gpu_parity/dot_contracts.rs"]
 mod dot_contracts;
-#[path = "int4_quantized_gpu_parity/generated_sweep_contracts.rs"]
 mod generated_sweep_contracts;
-#[path = "int4_quantized_gpu_parity/matvec_contracts.rs"]
 mod matvec_contracts;

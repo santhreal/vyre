@@ -8,16 +8,12 @@
 //! for `elementwise_add`. The chunks and the two tests below are restored; the
 //! two `vyre::scan` tests are not, because the product they exercised is gone.
 
-#[path = "resident_dispatch_contracts/basic_resident_contracts.rs"]
 mod basic_resident_contracts;
+#[path = "../harness/mod.rs"]
 mod harness;
-#[path = "resident_dispatch_contracts/optimizer_combined_contracts.rs"]
 mod optimizer_combined_contracts;
-#[path = "resident_dispatch_contracts/repeated_sequence_contracts.rs"]
 mod repeated_sequence_contracts;
-#[path = "resident_dispatch_contracts/resident_lane_fixture.rs"]
 mod resident_lane_fixture;
-#[path = "resident_dispatch_contracts/sequence_readback_contracts.rs"]
 mod sequence_readback_contracts;
 
 use harness::{bytes_u32, u32_bytes};

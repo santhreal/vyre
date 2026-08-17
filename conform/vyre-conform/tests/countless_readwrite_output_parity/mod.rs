@@ -38,13 +38,9 @@
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-#[path = "countless_readwrite_output_parity/counted.rs"]
 mod counted;
-#[path = "countless_readwrite_output_parity/harness.rs"]
 mod harness;
-#[path = "countless_readwrite_output_parity/launch_grid.rs"]
 mod launch_grid;
-#[path = "countless_readwrite_output_parity/refusals.rs"]
 mod refusals;
 
 use self::harness::{

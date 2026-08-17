@@ -2,7 +2,6 @@
 
 use vyre_driver_cuda::CudaBackend;
 
-#[path = "resident_buffer_contracts/range_readback_contracts.rs"]
 mod range_readback_contracts;
 
 #[test]

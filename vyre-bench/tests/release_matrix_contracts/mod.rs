@@ -10,15 +10,10 @@ use serde_json::Value;
 use vyre_bench::api::case::{BaselineClass, WorkloadClass};
 use vyre_bench::report::json::{REQUIRED_BENCHMARK_CASE_FIELDS, REQUIRED_BENCHMARK_METRIC_FIELDS};
 
-#[path = "release_matrix_contracts/command_contracts.rs"]
 mod command_contracts;
-#[path = "release_matrix_contracts/family_exclusions.rs"]
 mod family_exclusions;
-#[path = "release_matrix_contracts/readme_contracts.rs"]
 mod readme_contracts;
-#[path = "release_matrix_contracts/suite_artifacts.rs"]
 mod suite_artifacts;
-#[path = "release_matrix_contracts/thesis_axes.rs"]
 mod thesis_axes;
 
 use vyre_bench::api::suite::SuiteKind;

@@ -208,13 +208,8 @@ fn packing_program(words: u32, extra: Vec<BufferDecl>, lanes: Vec<Node>) -> Prog
     Program::wrapped(buffers, [256, 1, 1], invocation_gated(words, lanes))
 }
 
-#[path = "buf_len_array_length/basic_len_contracts.rs"]
 mod basic_len_contracts;
-#[path = "buf_len_array_length/dynamic_pack_contracts.rs"]
 mod dynamic_pack_contracts;
-#[path = "buf_len_array_length/fnv_loop_contracts.rs"]
 mod fnv_loop_contracts;
-#[path = "buf_len_array_length/region_loop_contracts.rs"]
 mod region_loop_contracts;
-#[path = "buf_len_array_length/scatter_contracts.rs"]
 mod scatter_contracts;

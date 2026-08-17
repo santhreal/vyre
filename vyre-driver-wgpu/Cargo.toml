@@ -118,3 +118,15 @@ workspace = true
 name = "vyre-wgpu"
 path = "src/bin/vyre.rs"
 
+
+[[test]]
+name = "op_pairwise"
+path = "tests/op_pairwise/mod.rs"
+
+[[test]]
+name = "resident_buffer_contracts"
+path = "tests/resident_buffer_contracts/mod.rs"
+
+[[test]]
+name = "buf_len_array_length"
+path = "tests/buf_len_array_length/mod.rs"

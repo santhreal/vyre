@@ -251,7 +251,7 @@ pub fn violations(root: &Path) -> Vec<String> {
         &workspace.registry_submitters,
         &workspace.discarding_imports,
     ));
-    failures.extend(sibling_module_failures(&workspace.module_files));
+    failures.extend(sibling_module_failures(&workspace.source_files));
     failures.extend(generic_module_name_failures(
         &workspace.source_files,
         &workspace.crate_roots,

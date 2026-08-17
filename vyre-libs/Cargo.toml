@@ -882,12 +882,12 @@ required-features = ["cpu-parity", "math-kernels"]
 
 [[test]]
 name = "adversarial_graph_reachability_fixpoint"
-path = "tests/adversarial_graph_reachability_fixpoint.rs"
+path = "tests/adversarial_graph_reachability_fixpoint/mod.rs"
 required-features = ["cpu-parity", "fixpoint", "graph", "math-kernels"]
 
 [[test]]
 name = "adversarial_graph_csr_validation_contracts"
-path = "tests/adversarial_graph_csr_validation_contracts.rs"
+path = "tests/adversarial_graph_csr_validation_contracts/mod.rs"
 required-features = ["graph"]
 
 [[test]]
@@ -932,7 +932,7 @@ required-features = ["bitset", "cpu-parity"]
 
 [[test]]
 name = "adversarial_graph_ops"
-path = "tests/adversarial_graph_ops.rs"
+path = "tests/adversarial_graph_ops/mod.rs"
 required-features = ["cpu-parity", "graph"]
 
 [[test]]
@@ -1142,7 +1142,7 @@ required-features = ["hash"]
 
 [[test]]
 name = "persistent_fixpoint_grid_contracts"
-path = "tests/persistent_fixpoint_grid_contracts.rs"
+path = "tests/persistent_fixpoint_grid_contracts/mod.rs"
 required-features = ["cpu-parity", "fixpoint"]
 
 [[test]]

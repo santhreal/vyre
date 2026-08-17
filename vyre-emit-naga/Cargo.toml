@@ -44,3 +44,7 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # binary fails to compile (E0433: no `python` in `parsing`).
 vyre-libs = { path = "../vyre-libs", features = ["python-parser"] }
 proptest.workspace = true
+
+[[test]]
+name = "emit_contracts"
+path = "tests/emit_contracts/mod.rs"
