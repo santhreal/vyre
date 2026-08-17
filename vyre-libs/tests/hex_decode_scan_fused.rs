@@ -1,11 +1,11 @@
 //! FUSE-1 parity: hex_decode_then_aho_corasick vs (hex_decode → aho_corasick).
 
-#![cfg(feature = "matching-dfa")]
+#![cfg(feature = "pattern-dfa")]
 #![allow(deprecated)]
 mod wire_words;
 use vyre_libs::decode::hex::{hex_decode, hex_decode_table, hex_decode_then_aho_corasick};
-use vyre_libs::matching::dfa_compile;
-use vyre_libs::scan::aho_corasick;
+use vyre_libs::pattern::dfa_compile;
+use vyre_libs::pattern::aho_corasick;
 use vyre_reference::value::Value;
 use wire_words::{decode_u32_words, u32_bytes};
 
@@ -24,7 +24,7 @@ fn hex_digit(n: u8) -> u8 {
     }
 }
 
-fn run_fused(encoded: &[u8], dfa: &vyre_libs::matching::CompiledDfa) -> Vec<u32> {
+fn run_fused(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u32> {
     let input_len = encoded.len() as u32;
     let decoded_len = input_len / 2;
     let program = hex_decode_then_aho_corasick(
@@ -51,7 +51,7 @@ fn run_fused(encoded: &[u8], dfa: &vyre_libs::matching::CompiledDfa) -> Vec<u32>
     decode_u32_words(&outputs[1].to_bytes())
 }
 
-fn run_separate(encoded: &[u8], dfa: &vyre_libs::matching::CompiledDfa) -> Vec<u32> {
+fn run_separate(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u32> {
     let input_len = encoded.len() as u32;
     let decoded_len = input_len / 2;
 

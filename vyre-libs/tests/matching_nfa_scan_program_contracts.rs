@@ -1,8 +1,8 @@
 //! Contracts for the subgroup-NFA scan-program integrator.
 
-#![cfg(feature = "matching-nfa")]
+#![cfg(feature = "pattern-nfa")]
 #![allow(deprecated)]
-use vyre_libs::scan::nfa;
+use vyre_libs::pattern::nfa;
 
 #[test]
 fn nfa_compile_records_terminal_state_ids() {

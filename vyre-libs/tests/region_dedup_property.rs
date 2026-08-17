@@ -1,4 +1,4 @@
-//! Property tests for `vyre_libs::matching::region`.
+//! Property tests for `vyre_libs::pattern::region`.
 //!
 //! Locks three invariants that the unit tests sample only at hand-
 //! picked points:
@@ -12,10 +12,10 @@
 //! `start ∈ 0..=255`, `end = start + (0..=32)`. Bounded ranges keep
 //! shrinking fast and exercise both clusters and isolated spans.
 
-#![cfg(all(feature = "matching", feature = "cpu-parity"))]
+#![cfg(all(feature = "pattern", feature = "cpu-parity"))]
 
 use proptest::prelude::*;
-use vyre_libs::matching::{dedup_regions_inplace, RegionTriple};
+use vyre_libs::pattern::{dedup_regions_inplace, RegionTriple};
 
 fn dedup_regions_cpu(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
     let mut owned = input;

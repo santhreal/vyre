@@ -339,7 +339,7 @@ mod primitive_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::matching::CompiledDfa;
+    use crate::pattern::CompiledDfa;
     use vyre_reference::value::Value;
 
     fn run(input: &[u8]) -> Vec<u32> {

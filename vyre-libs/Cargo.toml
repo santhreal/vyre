@@ -18,13 +18,13 @@ exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL
 path = "src/lib.rs"
 
 [features]
-# Default: ML / linear-algebra / matching / decode core. Crypto and the heavy
+# Default: ML / linear-algebra / pattern / decode core. Crypto and the heavy
 # nn-attention surface ride opt-in. Keeps `cargo add vyre-libs` from compiling
 # blake3/fnv for consumers that only need matmul plus substring scanning.
 default = [
     "math-linalg", "math-scan", "math-broadcast",
     "nn-activation", "nn-linear", "nn-norm",
-    "matching-substring", "matching-dfa",
+    "pattern-substring", "pattern-dfa",
     "hash",
     "decode",
 ]
@@ -41,8 +41,8 @@ full = [
     "nn-activation", "nn-linear", "nn-linear-4bit", "nn-norm", "nn-attention", "nn-moe", "nn-inference",
     "nn-kernels",
     "llm",
-    "matching-substring", "matching-dfa", "matching-nfa",
-    "matching-kernels", "nfa",
+    "pattern-substring", "pattern-dfa", "pattern-nfa",
+    "pattern-kernels", "nfa",
     "hash",
     "decode",
     "crypto-blake3",
@@ -80,11 +80,11 @@ predicate = ["graph", "bitset", "label"]
 # `reduce::workgroup_tree::blelloch_inclusive_sum_nodes`.
 math-kernels = ["reduce"]
 nn-kernels = ["math-kernels"]
-# `matching-kernels` names `hash` because `matching/nfa_to_dfa.rs` imports
+# `pattern-kernels` names `hash` because `pattern/nfa_to_dfa.rs` imports
 # `hash::fnv1a` unconditionally.
-matching-kernels = ["hash"]
-parsing-kernels = ["text", "matching-kernels"]
-nfa = ["bitset", "matching-kernels"]
+pattern-kernels = ["hash"]
+parsing-kernels = ["text", "pattern-kernels"]
+nfa = ["bitset", "pattern-kernels"]
 geom = ["math-kernels"]
 opt = ["math-kernels"]
 topology = ["math-kernels", "graph"]
@@ -102,7 +102,7 @@ hash = []
 math-dialect = ["builder-ops", "reduce"]
 math = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
 nn = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
-matching = ["matching-substring", "matching-dfa"]
+pattern = ["pattern-substring", "pattern-dfa"]
 crypto = ["crypto-blake3"]
 # `decode` names `text` because `decode/encodex.rs` builds its classifier from
 # `text::byte_histogram_256_child` and `text::encoding_classify_child`.
@@ -110,7 +110,7 @@ crypto = ["crypto-blake3"]
 # It does not name `cpu-parity`. That edge put host reference oracles into
 # every default build of this crate and hid the domain edges the sweep exists
 # to find, because the oracle modules re-enabled whatever a domain forgot.
-decode = ["matching-kernels", "text"]
+decode = ["pattern-kernels", "text"]
 text = ["reduce"]
 # `representation` gates `src/representation`, which reaches nothing else in
 # the crate: the unpack kernel is built from bare IR.
@@ -135,7 +135,7 @@ solvers = ["device", "telemetry", "math-kernels", "topology"]
 # `matroid_exact_megakernel.rs` and `scallop_provenance.rs` reach
 # `math::matroid_intersection_full` and `math::scallop_join`, which are gated
 # on those two.
-encoding = ["device", "telemetry", "matching-kernels", "math-kernels", "nn-kernels", "parsing-kernels", "bitset", "graph", "fixpoint"]
+encoding = ["device", "telemetry", "pattern-kernels", "math-kernels", "nn-kernels", "parsing-kernels", "bitset", "graph", "fixpoint"]
 reasoning = ["analysis", "graph"]
 # `analysis` names `graph` because `analysis/cost_model.rs` dispatches
 # `graph::level_wave` and `graph::sum_product_circuit`.
@@ -184,15 +184,15 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph"]
 # It also names `builder-ops` because `llm/sampling.rs` builds `logit_adjust`
 # as a `build_indexed_map` skeleton.
 "llm" = ["builder-ops", "nn-moe"]
-# Neither matching domain names `cpu-parity`, for the same reason `decode` does
+# Neither pattern domain names `cpu-parity`, for the same reason `decode` does
 # not: it compiled the host oracles into every default build and masked the
 # edges the sweep is for.
-"matching-substring" = ["matching-dfa", "matching-kernels"]
-# `matching-dfa` names `text` because `scan/post_process.rs` folds
+"pattern-substring" = ["pattern-dfa", "pattern-kernels"]
+# `pattern-dfa` names `text` because `pattern/post_process.rs` folds
 # `text::reference_byte_histogram` into `shannon_entropy_bits_per_byte`.
-"matching-dfa" = ["matching-kernels", "text"]
-"matching-nfa" = ["matching-dfa", "nfa"]
-"matching-regex" = ["matching-nfa", "dep:regex-syntax"]
+"pattern-dfa" = ["pattern-kernels", "text"]
+"pattern-nfa" = ["pattern-dfa", "nfa"]
+"pattern-regex" = ["pattern-nfa", "dep:regex-syntax"]
 "intern" = ["hash"]
 "crypto-blake3" = ["hash"]
 "visual" = ["math-kernels"]
@@ -616,7 +616,7 @@ required-features = ["nn-activation"]
 [[test]]
 name = "integration"
 path = "tests/integration.rs"
-required-features = ["hash", "math", "matching", "nn-activation", "nn-linear"]
+required-features = ["hash", "math", "nn-activation", "nn-linear", "pattern"]
 
 [[test]]
 name = "kv_cache_append_contract"
@@ -748,7 +748,7 @@ required-features = ["security"]
 [[test]]
 name = "scan_ac_transition_walk_single_owner"
 path = "tests/scan_ac_transition_walk_single_owner.rs"
-required-features = ["matching-regex"]
+required-features = ["pattern-regex"]
 
 [[test]]
 name = "parsing_walker_clone_family"
@@ -758,22 +758,22 @@ required-features = ["parsing"]
 [[test]]
 name = "scan_hit_buffer_layout_contracts"
 path = "tests/scan_hit_buffer_layout_contracts.rs"
-required-features = ["matching-substring"]
+required-features = ["pattern-substring"]
 
 [[test]]
 name = "literal_set_presence_and_positions_reference"
 path = "tests/literal_set_presence_and_positions_reference.rs"
-required-features = ["cpu-parity", "matching-substring"]
+required-features = ["cpu-parity", "pattern-substring"]
 
 [[test]]
 name = "literal_set_presence_reference"
 path = "tests/literal_set_presence_reference.rs"
-required-features = ["cpu-parity", "matching-substring"]
+required-features = ["cpu-parity", "pattern-substring"]
 
 [[test]]
 name = "matching_post_process_contracts"
 path = "tests/matching_post_process_contracts.rs"
-required-features = ["cpu-parity", "matching"]
+required-features = ["cpu-parity", "pattern"]
 
 [[test]]
 name = "rule_condition_program_frame_contract"
@@ -948,7 +948,7 @@ required-features = ["bitset", "cpu-parity"]
 [[test]]
 name = "region_adversarial"
 path = "tests/region_adversarial.rs"
-required-features = ["matching-kernels"]
+required-features = ["pattern-kernels"]
 
 [[test]]
 name = "dominator_tree_pristine"

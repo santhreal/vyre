@@ -1,14 +1,14 @@
-//! Adversarial contract tests for `vyre_libs::matching::region`.
+//! Adversarial contract tests for `vyre_libs::pattern::region`.
 //!
 //! Exercises the span-dedup primitive at boundary conditions, degenerate
 //! inputs, cluster pathologies, sortedness violations, and scale limits.
 //! Every test targets both `dedup_regions_cpu` and `dedup_regions_inplace`
 //! to lock the bit-identical post-condition contract.
 
-#![cfg(all(feature = "matching", feature = "cpu-parity"))]
+#![cfg(all(feature = "pattern", feature = "cpu-parity"))]
 
 use std::time::Instant;
-use vyre_libs::matching::{dedup_regions_inplace, RegionTriple};
+use vyre_libs::pattern::{dedup_regions_inplace, RegionTriple};
 
 // ---------------------------------------------------------------------------
 // Helpers

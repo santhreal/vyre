@@ -723,8 +723,8 @@ mod tests {
     /// off. The absent case must still fail, or the rule covers nothing.
     #[test]
     fn a_lane_entry_may_name_a_directory_or_a_directory_glob() {
-        let listed = ["vyre-driver-cuda/src/lib.rs", "vyre-libs/src/scan/dfa.rs"];
-        for pattern in ["vyre-driver-*", "vyre-libs", "vyre-libs/src/scan/**"] {
+        let listed = ["vyre-driver-cuda/src/lib.rs", "vyre-libs/src/pattern/dfa.rs"];
+        for pattern in ["vyre-driver-*", "vyre-libs", "vyre-libs/src/pattern/**"] {
             let subtree = format!("{}/**", pattern.trim_end_matches('/'));
             assert!(
                 listed

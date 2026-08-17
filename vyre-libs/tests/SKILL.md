@@ -39,7 +39,7 @@ backend, and (d) matches the CPU reference output byte-for-byte.
 
 - `vyre_libs::math::matmul` throughput across 64/256/1024-dim
 - `vyre_libs::crypto::fnv1a32` bytes/sec across 1 KB / 64 KB / 1 MB
-- `vyre_libs::matching::substring_search` GB/s across needle lengths
+- `vyre_libs::pattern::substring_search` GB/s across needle lengths
 
 ## Fuzz targets
 
@@ -59,7 +59,7 @@ backend, and (d) matches the CPU reference output byte-for-byte.
 
 ## Decision tables  -  picking a matching primitive
 
-This is the lego-block reuse map for `vyre_libs::matching`. Pick the
+This is the lego-block reuse map for `vyre_libs::pattern`. Pick the
 top-most row whose constraints fit the workload  -  every later row is
 strictly more capable but carries dispatch overhead the earlier
 options avoid.
@@ -68,12 +68,12 @@ options avoid.
 
 | Engine                        | Pattern shape                | Behind feature flag | When to pick                                                |
 |-------------------------------|------------------------------|---------------------|-------------------------------------------------------------|
-| `substring_search`            | one literal needle           | `matching-substring`| <1 KB inputs or single-pattern hot path; no DFA build cost. |
-| `aho_corasick`                | many literals (no regex)     | `matching-dfa`      | Many literals, simple shared-prefix DFA, classic AC walk.   |
-| `cooperative_dfa_scan`        | many literals (subgroup-coop)| `matching-dfa`      | GPU dispatch where each subgroup advances one byte stream.  |
+| `substring_search`            | one literal needle           | `pattern-substring` | <1 KB inputs or single-pattern hot path; no DFA build cost. |
+| `aho_corasick`                | many literals (no regex)     | `pattern-dfa`       | Many literals, simple shared-prefix DFA, classic AC walk.   |
+| `cooperative_dfa_scan`        | many literals (subgroup-coop)| `pattern-dfa`       | GPU dispatch where each subgroup advances one byte stream.  |
 | `GpuLiteralSet`               | many literals + GPU + cache  | always-on           | The default secret-scanning path: precompiled DFA, wire-format cache.|
-| `ScanProgram`                   | literal NFA composition      | `matching-nfa`      | Build a neutral NFA program and its immutable tables.        |
-| `compile_regex_set`             | regex set → typed scan plan  | `matching-regex`    | Compile regex source strings into a bounded NFA plan.        |
+| `ScanProgram`                 | literal NFA composition      | `pattern-nfa`       | Build a neutral NFA program and its immutable tables.        |
+| `compile_regex_set`           | regex set → typed scan plan  | `pattern-regex`     | Compile regex source strings into a bounded NFA plan.        |
 
 ### Dispatch helpers
 

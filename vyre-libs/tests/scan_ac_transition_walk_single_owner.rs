@@ -21,14 +21,14 @@
 //! compare), a divergence living entirely in the per-record emission after the
 //! walk, and a walk written against differently named loop variables.
 
-#![cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+#![cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{BinOp, Expr, Node, Program};
 use vyre_foundation::visit::for_each_node;
-use vyre_libs::matching::CompiledDfa;
-use vyre_libs::scan::classic_ac::{
+use vyre_libs::pattern::CompiledDfa;
+use vyre_libs::pattern::classic_ac::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
     build_ac_bounded_count_suffix3_prefilter_program, build_ac_bounded_ranges_prefilter_program,
@@ -38,7 +38,7 @@ use vyre_libs::scan::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
-use vyre_libs::scan::{
+use vyre_libs::pattern::{
     aho_corasick, anchored_window_extract_program,
     build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce, fused_region_evidence_program,
     regex_admission_by_region_program, RegexReplayPolicy,

@@ -164,7 +164,7 @@ mod tests {
     /// Public facades remain visible to callers but do not represent private cross-dialect reach-through.
     #[test]
     fn public_visibility_is_preserved_for_architecture_audits() {
-        let file = syn::parse_file("pub use crate::scan::{Pipeline, ScanResult};")
+        let file = syn::parse_file("pub use crate::pattern::{Pipeline, ScanResult};")
             .expect("Fix: architecture audit fixture must parse");
         let paths = collect_use_paths(&file);
         assert_eq!(paths.len(), 2);

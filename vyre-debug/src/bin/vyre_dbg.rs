@@ -98,7 +98,7 @@ fn get_program(name: &str, num_tokens: Option<usize>) -> Result<Program, String>
             "tc",
             tokens as u32,
         )),
-        "bracket_match" => Ok(vyre_libs::matching::bracket_match(
+        "bracket_match" => Ok(vyre_libs::pattern::bracket_match(
             "k",
             "s",
             "mp",
