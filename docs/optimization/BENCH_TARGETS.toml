@@ -118,19 +118,6 @@ gpu_competitor = "none_recorded"
 notes = "Tracks resident count-only irregular literal scan with byte, suffix2, and hashed suffix3 replay filters plus four-byte cardinality readback."
 
 [[target]]
-id = "libs.scan.paged_corpus.multi_gpu"
-primitive = "weighted paged-corpus literal scan across distinct physical adapters"
-suite = "hardware-evidence"
-backend_focus = "wgpu"
-metric = "end_to_end_wall_ns_p50"
-timing_quality = "paired_host_wall_and_per_device_timestamps"
-baseline_class = "gpu_sota"
-min_speedup_over_fastest_single_gpu = 1.0
-gpu_baseline = "fastest same-host single physical adapter over the identical corpus"
-gpu_competitor = "throughput-weighted concurrent scan over every same-host physical adapter"
-notes = "Requires exact result parity, nonzero work on every device, raw paired samples, one-sided sign-test p<0.05, topology, transfer/host overhead, and per-shard byte balance."
-
-[[target]]
 id = "release.workload.offset_count_aggregation"
 bench_case_id = "release.offset_count_aggregation.1m"
 primitive = "count/offset/length aggregation"

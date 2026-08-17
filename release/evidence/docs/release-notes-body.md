@@ -4681,10 +4681,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The shared gate fixture checkout states the corrective action when a
   temporary directory or git is unavailable, and the recorded backend
   feature-marker matrix matches what the tree produces.
+- The registered FMA fixture now records the exact fused result for the
+  maximum-finite times one-half boundary case.
 - The frontier leaderboard reads a metric percentile through the same reader as
   every other artifact inspector. Its private copy accepted only an integer
   p50, so an artifact recording a float percentile was reported as missing the
   metric entirely.
+- The vyre-libs full feature now links the regex scan and regex DFA
+  registrations used by complete registry and conformance sweeps.
 - Materialized artifact execution preserves every mutable carrier across
   multi-segment dispatches and resolves fused-module resources by authenticated
   identity. Schema version 7 records canonical retained-predecessor lineage
@@ -5577,6 +5581,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The guarded release scripts now inherit Cargo parallelism from workspace
   configuration and regenerate launch-state and package-readiness evidence
   through each gate's canonical --write path.
+- The benchmark inventory no longer advertises or retains evidence for the
+  paged literal-set scanner archived with the removed scan product.
 - The `ci-required` gate resolves every workflow file name
   `.github/CI_REQUIRED.md` quotes, not only the ones under a blocking heading.
   The contexts under a heading were resolved against real workflows and a file

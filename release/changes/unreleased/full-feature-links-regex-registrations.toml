@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The vyre-libs full feature now links the regex scan and regex DFA registrations used by complete registry and conformance sweeps."

@@ -41,7 +41,7 @@ full = [
     "nn-activation", "nn-linear", "nn-linear-4bit", "nn-norm", "nn-attention", "nn-moe", "nn-inference",
     "nn-kernels",
     "llm",
-    "pattern-substring", "pattern-dfa", "pattern-nfa",
+    "pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex",
     "pattern-kernels", "nfa",
     "hash",
     "decode",
