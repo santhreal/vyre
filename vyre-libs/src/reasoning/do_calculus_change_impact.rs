@@ -17,7 +17,8 @@ use crate::graph::do_calculus::{
     do_rule3_subgraph,
 };
 use crate::prelude::reachability_closure_via_into;
-use vyre_foundation::ir::Program;
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Reusable matrix buffers for do-calculus impact queries.
@@ -666,6 +667,214 @@ pub fn predict_impact_observation_form_via_into(
         &mut scratch.impact_mask,
     )?;
     Ok(())
+}
+
+/// Canonical op id for projecting impacted rules and provenance closure to lineage cells.
+pub(crate) const PROJECT_LINEAGE_IMPACT_OP_ID: &str =
+    "vyre-libs::reasoning::do_project_impacted_lineage_entries";
+
+/// Emit a Program that projects an `impact_mask` and `closure` through `lineage_cells`
+/// into an `m`-element 0/1 invalidation mask on device.
+#[must_use]
+pub(crate) fn do_project_impacted_lineage_entries(
+    impact_mask: &str,
+    closure: &str,
+    lineage_cells: &str,
+    out: &str,
+    n: u32,
+    m: u32,
+) -> Program {
+    match try_do_project_impacted_lineage_entries(impact_mask, closure, lineage_cells, out, n, m) {
+        Ok(program) => program,
+        Err(error) => trap_program(
+            PROJECT_LINEAGE_IMPACT_OP_ID,
+            Some((out, DataType::U32)),
+            error,
+        ),
+    }
+}
+
+/// Emit an impacted-lineage projection Program with checked input shapes.
+///
+/// # Errors
+///
+/// Returns an error message if `m == 0` or nonzero `n * n` overflows `u32`.
+pub(crate) fn try_do_project_impacted_lineage_entries(
+    impact_mask: &str,
+    closure: &str,
+    lineage_cells: &str,
+    out: &str,
+    n: u32,
+    m: u32,
+) -> Result<Program, String> {
+    if m == 0 {
+        return Err(format!(
+            "Fix: {PROJECT_LINEAGE_IMPACT_OP_ID} requires m > 0."
+        ));
+    }
+    let impact_count = n.max(1);
+    let closure_count = if n == 0 {
+        1
+    } else {
+        crate::plumbing::operand::shape::square_matrix_cells(PROJECT_LINEAGE_IMPACT_OP_ID, n)?
+    };
+    let j = Expr::InvocationId { axis: 0 };
+    let body = vec![Node::if_then(
+        Expr::lt(j.clone(), Expr::u32(m)),
+        vec![
+            Node::let_bind("cell", Expr::load(lineage_cells, j.clone())),
+            Node::let_bind("is_impacted", Expr::u32(0)),
+            Node::if_then(
+                Expr::lt(Expr::var("cell"), Expr::u32(n)),
+                vec![
+                    Node::assign(
+                        "is_impacted",
+                        Expr::select(
+                            Expr::ne(Expr::load(impact_mask, Expr::var("cell")), Expr::u32(0)),
+                            Expr::u32(1),
+                            Expr::u32(0),
+                        ),
+                    ),
+                    Node::loop_for(
+                        "k",
+                        Expr::u32(0),
+                        Expr::u32(n),
+                        vec![
+                            Node::let_bind(
+                                "k_impacted",
+                                Expr::ne(Expr::load(impact_mask, Expr::var("k")), Expr::u32(0)),
+                            ),
+                            Node::let_bind(
+                                "reach",
+                                Expr::ne(
+                                    Expr::load(
+                                        closure,
+                                        Expr::add(
+                                            Expr::mul(Expr::var("cell"), Expr::u32(n)),
+                                            Expr::var("k"),
+                                        ),
+                                    ),
+                                    Expr::u32(0),
+                                ),
+                            ),
+                            Node::if_then(
+                                Expr::and(Expr::var("k_impacted"), Expr::var("reach")),
+                                vec![Node::assign("is_impacted", Expr::u32(1))],
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            Node::store(out, j, Expr::var("is_impacted")),
+        ],
+    )];
+
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(impact_mask, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(impact_count),
+            BufferDecl::storage(closure, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(closure_count),
+            BufferDecl::storage(lineage_cells, 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(m),
+            BufferDecl::output(out, 3, DataType::U32).with_count(m),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(PROJECT_LINEAGE_IMPACT_OP_ID, body)],
+    ))
+}
+
+/// Reusable scratch for impacted lineage projection dispatch.
+#[derive(Debug, Default)]
+pub struct ImpactedLineageProjectionScratch {
+    dispatch_inputs: Vec<Vec<u8>>,
+}
+
+/// Dispatch-backed projection of impacted rules and provenance closure through `lineage_cells`
+/// into an `m`-element 0/1 mask in caller-owned storage.
+///
+/// # Errors
+///
+/// Returns [`DispatchError`] when shapes are invalid, lane counts overflow, or the backend fails.
+pub fn project_impacted_lineage_entries_via_into(
+    dispatcher: &dyn ProgramDispatcher,
+    impact_mask: &[u32],
+    closure: &[u32],
+    n: u32,
+    lineage_cells: &[u32],
+    scratch: &mut ImpactedLineageProjectionScratch,
+    out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    if lineage_cells.is_empty() {
+        out.clear();
+        return Ok(());
+    }
+
+    if n == 0 {
+        if !impact_mask.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: project_impacted_lineage_entries requires impact_mask.len() == 0 for n=0, got len={}.",
+                impact_mask.len()
+            )));
+        }
+        if !closure.is_empty() {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: project_impacted_lineage_entries requires closure.len() == 0 for n=0, got len={}.",
+                closure.len()
+            )));
+        }
+    } else {
+        let cells = checked_square_cells(n, "project_impacted_lineage_entries")?;
+        if closure.len() != cells {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: project_impacted_lineage_entries requires closure.len() == n*n, got len={}, n={n}, n*n={cells}.",
+                closure.len()
+            )));
+        }
+        if impact_mask.len() != n as usize {
+            return Err(DispatchError::BadInputs(format!(
+                "Fix: project_impacted_lineage_entries requires impact_mask.len() == n, got len={}, n={n}.",
+                impact_mask.len()
+            )));
+        }
+    }
+    let m = u32::try_from(lineage_cells.len()).map_err(|_| {
+        DispatchError::BadInputs(format!(
+            "Fix: project_impacted_lineage_entries lineage_cells.len() {} overflows u32.",
+            lineage_cells.len()
+        ))
+    })?;
+    let program =
+        do_project_impacted_lineage_entries("impact_mask", "closure", "lineage_cells", "out", n, m);
+    ensure_input_slots(&mut scratch.dispatch_inputs, 3);
+    if n == 0 {
+        write_zero_bytes(&mut scratch.dispatch_inputs[0], std::mem::size_of::<u32>());
+        write_zero_bytes(&mut scratch.dispatch_inputs[1], std::mem::size_of::<u32>());
+    } else {
+        write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[0], impact_mask);
+        write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[1], closure);
+    }
+    write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[2], lineage_cells);
+    let outputs = dispatcher.dispatch(
+        &program,
+        &scratch.dispatch_inputs[..3],
+        Some([ceil_div_u32(m, 256), 1, 1]),
+    )?;
+    let [impact_out] = match outputs.as_slice() {
+        [impact_out] => [impact_out],
+        _ => {
+            return Err(DispatchError::BackendError(format!(
+                "Fix: project_impacted_lineage_entries expected exactly one output buffer, got {}.",
+                outputs.len()
+            )));
+        }
+    };
+    decode_u32_output_exact(
+        impact_out,
+        lineage_cells.len(),
+        "project_impacted_lineage_entries",
+        out,
+    )
 }
 
 #[cfg(test)]
@@ -1340,5 +1549,75 @@ mod tests {
         }
         let err = rule3_subgraph_via(&ExtraOutDispatcher, &[0, 1, 0, 0], &[1, 1], 2).unwrap_err();
         assert!(matches!(err, DispatchError::BackendError(_)));
+    }
+    #[test]
+    fn project_impacted_lineage_entries_handles_empty_lineage() {
+        struct PanicDispatcher;
+        impl ProgramDispatcher for PanicDispatcher {
+            fn dispatch(
+                &self,
+                _program: &Program,
+                _inputs: &[Vec<u8>],
+                _grid: Option<[u32; 3]>,
+            ) -> Result<Vec<Vec<u8>>, DispatchError> {
+                panic!("empty lineage cells must not dispatch");
+            }
+        }
+        let mut out = vec![99; 4];
+        let mut scratch = ImpactedLineageProjectionScratch::default();
+        project_impacted_lineage_entries_via_into(
+            &PanicDispatcher,
+            &[1, 0],
+            &[0; 4],
+            2,
+            &[],
+            &mut scratch,
+            &mut out,
+        )
+        .unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn project_impacted_lineage_entries_parity_via_reference() {
+        use vyre_driver_reference::ReferenceEvalDispatcher;
+        let dispatcher = ReferenceEvalDispatcher;
+        let impact_mask = vec![1, 0, 0];
+        let mut closure = vec![0u32; 9];
+        closure[2 * 3 + 0] = 1; // 2 -> 0
+        let lineage_cells = vec![0, 1, 2, 99];
+        let mut out = Vec::new();
+        let mut scratch = ImpactedLineageProjectionScratch::default();
+        project_impacted_lineage_entries_via_into(
+            &dispatcher,
+            &impact_mask,
+            &closure,
+            3,
+            &lineage_cells,
+            &mut scratch,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(out, vec![1, 0, 1, 0]);
+    }
+
+    #[test]
+    fn project_impacted_lineage_entries_zero_n_nonempty_lineage_dispatches_zeros() {
+        use vyre_driver_reference::ReferenceEvalDispatcher;
+        let dispatcher = ReferenceEvalDispatcher;
+        let lineage_cells = vec![0, 1, 99];
+        let mut out = Vec::new();
+        let mut scratch = ImpactedLineageProjectionScratch::default();
+        project_impacted_lineage_entries_via_into(
+            &dispatcher,
+            &[],
+            &[],
+            0,
+            &lineage_cells,
+            &mut scratch,
+            &mut out,
+        )
+        .unwrap();
+        assert_eq!(out, vec![0, 0, 0]);
     }
 }

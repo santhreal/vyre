@@ -8,12 +8,12 @@
 //! so this is the FIRST-EVER execution of the semiring-GEMM kernel through a dispatch boundary that
 //! models the real backend, for each semiring's distinct combine/accumulate lowering.
 //!
-//! `semiring_gemm` binds a RO(0) + b RO(1) + c plain-ReadWrite(2) = 3 input-consuming (no
-//! backend-allocated output → no over/under-feed; the consumer correctly passes a/b plus a zero-filled
-//! `c` slot and decodes the sole writable buffer at outputs[0]). The kernel is per-output-cell, lane
-//! `t` computes `c[t]` for `t < m*n`: so the consumer's `ceil_div(m*n, 256)` grid is the right lane
-//! count (unlike a per-row kernel). Every semiring op is exact integer/bitwise arithmetic, so the
-//! oracle here is BIT-EXACT (no tolerance).
+//! `semiring_gemm` binds `a` and `b` as read-only inputs and `c` as a
+//! backend-allocated output. The consumer passes exactly two inputs and decodes
+//! the sole writable buffer at `outputs[0]`. The kernel is per-output-cell, so
+//! lane `t` computes `c[t]` for `t < m*n`; the consumer's
+//! `ceil_div(m*n, 256)` grid is the exact lane count.
+//! Every semiring operation is exact integer or bitwise arithmetic, so the oracle is bit-exact.
 //!
 //! MinPlus note: the IR's finite-operand combine is `Expr::add` (u32 wrapping) with a MAX-guard, while
 //! the CPU oracle uses `saturating_add`; the two agree exactly as long as no finite `a+b` overflows
@@ -168,7 +168,6 @@ fn max_semirings_execute_their_declared_algebra() {
             &[
                 Value::from(pack_u32_slice(&[2, 5])),
                 Value::from(pack_u32_slice(&[3, 4])),
-                Value::from(pack_u32_slice(&[0])),
             ],
         )
         .expect("max semiring GEMM must evaluate");

@@ -10,7 +10,8 @@ use vyre_foundation::program_dispatch::{DispatchError as ProgramDispatchError, P
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
 #[cfg(feature = "libs-compositions")]
 use vyre_libs::reasoning::do_calculus_change_impact::{
-    predict_impact_via_into, DoCalculusImpactScratch,
+    predict_impact_via_into, project_impacted_lineage_entries_via_into, DoCalculusImpactScratch,
+    ImpactedLineageProjectionScratch,
 };
 
 /// Error raised by GPU-resident cache invalidation.
@@ -49,6 +50,8 @@ pub struct CacheInvalidationScratch {
     impact: DoCalculusImpactScratch,
     #[cfg(feature = "libs-compositions")]
     closure: Vec<u32>,
+    #[cfg(feature = "libs-compositions")]
+    projection: ImpactedLineageProjectionScratch,
 }
 
 /// Compute a 0/1 impact mask for cache entries.
@@ -68,10 +71,6 @@ pub fn impacted_entries_into(
     out: &mut Vec<u32>,
     _scratch: &mut CacheInvalidationScratch,
 ) -> Result<(), CacheInvalidationError> {
-    out.clear();
-    reserve_impact_mask(out, lineage_cells.len())?;
-    out.resize(lineage_cells.len(), 0);
-
     #[cfg(not(feature = "libs-compositions"))]
     {
         let _ = (
@@ -82,6 +81,7 @@ pub fn impacted_entries_into(
             n,
             max_iterations,
             lineage_cells,
+            out,
             _scratch,
         );
         Err(CacheInvalidationError::new(
@@ -91,6 +91,11 @@ pub fn impacted_entries_into(
 
     #[cfg(feature = "libs-compositions")]
     {
+        if lineage_cells.is_empty() {
+            out.clear();
+            return Ok(());
+        }
+
         let n_us = n as usize;
         let Some(matrix_len) = n_us.checked_mul(n_us) else {
             return Err(CacheInvalidationError::new(format!(
@@ -122,6 +127,8 @@ pub fn impacted_entries_into(
             )));
         }
 
+        reserve_impact_mask(out, lineage_cells.len())?;
+
         predict_impact_via_into(
             dispatcher,
             rule_adj,
@@ -129,7 +136,10 @@ pub fn impacted_entries_into(
             n,
             &mut _scratch.impact,
         )
-        .map_err(CacheInvalidationError::from)?;
+        .map_err(|err| {
+            out.clear();
+            CacheInvalidationError::from(err)
+        })?;
         provenance_closure_via_into(
             dispatcher,
             state,
@@ -138,41 +148,36 @@ pub fn impacted_entries_into(
             max_iterations,
             &mut _scratch.closure,
         )
-        .map_err(CacheInvalidationError::from)?;
+        .map_err(|err| {
+            out.clear();
+            CacheInvalidationError::from(err)
+        })?;
 
         let impacted_rules = _scratch.impact.impact_mask();
         let closure = &_scratch.closure;
-        if impacted_rules.len() < n_us || closure.len() < matrix_len {
+        if impacted_rules.len() != n_us || closure.len() != matrix_len {
+            out.clear();
             return Err(CacheInvalidationError::new(format!(
-                "Fix: cache invalidation GPU outputs were undersized: impact_mask={}, closure={}, required n={n_us}, matrix={matrix_len}.",
+                "Fix: cache invalidation GPU output dimensions mismatched: impact_mask={}, closure={}, required n={n_us}, matrix={matrix_len}.",
                 impacted_rules.len(),
                 closure.len()
             )));
         }
 
-        for (entry_idx, &cell) in lineage_cells.iter().enumerate() {
-            let cell = cell as usize;
-            if cell >= n_us {
-                continue;
-            }
-            let row_start = cell * n_us;
-            let row = &closure[row_start..row_start + n_us];
-            // A cell is impacted if any
-            // provenance edge from it lands on an impacted node OR
-            // if the cell itself is in the (transitively) impacted
-            // set. Without the second clause, intervention seeds and
-            // their direct rule-adjacency closure stay unmarked when
-            // they have no outgoing provenance edges.
-            let directly_impacted = impacted_rules.get(cell).is_some_and(|&v| v != 0);
-            if directly_impacted
-                || row
-                    .iter()
-                    .zip(impacted_rules.iter())
-                    .any(|(&bitset, &impacted)| bitset != 0 && impacted != 0)
-            {
-                out[entry_idx] = 1;
-            }
-        }
+        project_impacted_lineage_entries_via_into(
+            dispatcher,
+            impacted_rules,
+            closure,
+            n,
+            lineage_cells,
+            &mut _scratch.projection,
+            out,
+        )
+        .map_err(|err| {
+            out.clear();
+            CacheInvalidationError::from(err)
+        })?;
+
         Ok(())
     }
 }
@@ -224,24 +229,10 @@ fn reserved_impact_mask(len: usize) -> Result<Vec<u32>, CacheInvalidationError> 
 #[cfg(all(test, feature = "libs-compositions"))]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Program;
-
-    struct EchoStateDispatcher;
-
-    impl ProgramDispatcher for EchoStateDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            _grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, ProgramDispatchError> {
-            Ok(vec![inputs.first().cloned().unwrap_or_default()])
-        }
-    }
-
+    use vyre_driver_reference::ReferenceEvalDispatcher;
     #[test]
     fn impact_mask_marks_lineage_intersection() {
-        let dispatcher = EchoStateDispatcher;
+        let dispatcher = ReferenceEvalDispatcher;
         let n = 3;
         let mut rule_adj = vec![0u32; 9];
         rule_adj[0 * 3 + 1] = 1;
@@ -260,13 +251,13 @@ mod tests {
             16,
             &[1, 2],
         )
-        .expect("Fix: test dispatcher must return one state output");
+        .expect("reference dispatcher must execute GPU cache invalidation composition");
         assert_eq!(mask, vec![1, 0]);
     }
 
     #[test]
     fn malformed_dimensions_do_not_panic() {
-        let dispatcher = EchoStateDispatcher;
+        let dispatcher = ReferenceEvalDispatcher;
         let err = impacted_entries(&dispatcher, &[1], &[], &[], &[], 32, 16, &[0, 1])
             .expect_err("malformed dimensions must fail loudly");
         assert!(

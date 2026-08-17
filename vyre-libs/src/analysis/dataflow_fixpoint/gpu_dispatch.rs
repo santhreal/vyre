@@ -86,13 +86,6 @@ pub fn semiring_gemm_via_with_scratch_into(
         ))
     })?;
     let c_words = c_words_u32 as usize;
-    let c_bytes = c_words
-        .checked_mul(std::mem::size_of::<u32>())
-        .ok_or_else(|| {
-            DispatchError::BadInputs(format!(
-                "Fix: semiring_gemm_via output byte count overflows usize for {c_words} words."
-            ))
-        })?;
 
     if m == 0 || n == 0 || k == 0 {
         return Err(DispatchError::BadInputs(format!(
@@ -113,10 +106,9 @@ pub fn semiring_gemm_via_with_scratch_into(
     }
 
     let program = crate::math::semiring_gemm::semiring_gemm("a", "b", "c", m, n, k, semiring);
-    ensure_input_slots(&mut scratch.inputs, 3);
+    ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], a);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], b);
-    write_zero_bytes(&mut scratch.inputs[2], c_bytes);
     let grid_x = ceil_div_u32(c_words_u32, 256);
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
     let [c_out] = match outputs.as_slice() {

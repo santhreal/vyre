@@ -882,14 +882,15 @@ impl InstanceCore {
                 "target module {module_index} has no directional resource projection for binding `{name}`"
             ))
         })?;
+        if values.contains(&canonical) {
+            return Ok(canonical);
+        }
         values
             .iter()
             .find(|&&value| {
-                value == canonical
-                    || self
-                        .retained_predecessors
-                        .get(&canonical)
-                        .is_some_and(|priors| priors.contains(&value))
+                self.retained_predecessors
+                    .get(&canonical)
+                    .is_some_and(|priors| priors.contains(&value))
                     || self
                         .retained_predecessors
                         .get(&value)
@@ -3331,7 +3332,7 @@ mod tests {
         let prog = Program::wrapped(
             vec![
                 BufferDecl::storage("state_buf", 0, BufferAccess::ReadWrite, DataType::U32),
-                BufferDecl::output("out_buf", 1, DataType::U32),
+                BufferDecl::output("out_buf", 1, DataType::U32).with_count(32),
             ],
             [32, 1, 1],
             vec![Node::store(
