@@ -3,7 +3,9 @@ pub(crate) use crate::rewrites::canonicalize::canonicalize_for_emit;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BindingLayout, Dispatch, LiteralValue};
+    use crate::{
+        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
+    };
     use vyre_foundation::ir::BinOp;
 
     #[test]

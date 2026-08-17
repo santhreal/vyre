@@ -18,6 +18,7 @@ mod validate;
 mod registry;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/persistent_bfs/mod.rs"]
 mod tests;
 
 #[cfg(any(test, feature = "cpu-parity"))]

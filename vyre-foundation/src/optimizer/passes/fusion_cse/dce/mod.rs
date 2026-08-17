@@ -61,4 +61,5 @@ pub use program_pass::DcePass;
 
 /// DCE adversarial test suite.
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/fusion_cse/dce/mod.rs"]
 mod tests;

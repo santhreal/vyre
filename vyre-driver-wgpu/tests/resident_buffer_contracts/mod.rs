@@ -10,11 +10,12 @@ fn backend() -> WgpuBackend {
 }
 
 fn alloc_pair(backend: &WgpuBackend, bytes: u64) -> (Resource, Resource) {
+    let size = usize::try_from(bytes).expect("test size fits usize");
     let first = backend
-        .allocate_resident(bytes)
+        .allocate_resident(size)
         .expect("WGPU backend must allocate first resident buffer");
     let second = backend
-        .allocate_resident(bytes)
+        .allocate_resident(size)
         .expect("WGPU backend must allocate second resident buffer");
     (first, second)
 }

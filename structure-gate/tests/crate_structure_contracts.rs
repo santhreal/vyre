@@ -18,7 +18,7 @@
 
 use structure_gate::module_layout::{
     directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
-    sibling_module_failures,
+    sibling_module_failures, source_test_directory_failures,
 };
 use structure_gate::{
     category_home_failures, frontend_owner_failures, geometry_constant_failures,
@@ -195,6 +195,21 @@ fn no_module_file_sits_beside_its_own_directory() {
         failures.is_empty(),
         "{}",
         report("sibling-module", &failures)
+    );
+}
+
+/// No crate keeps tests inside `src/**/tests/`.
+///
+/// WHY: behavioral tests live in top-level `tests/` directories per the workspace
+/// external-test contract.
+#[test]
+fn no_source_test_directory_exists_under_src() {
+    let failures = source_test_directory_failures(&workspace().module_files);
+
+    assert!(
+        failures.is_empty(),
+        "{}",
+        report("source-test-directory", &failures)
     );
 }
 

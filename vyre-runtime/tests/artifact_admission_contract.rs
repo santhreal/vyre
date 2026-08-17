@@ -12,8 +12,8 @@ use vyre_driver::{
 };
 use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
+    ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts,

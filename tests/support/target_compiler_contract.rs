@@ -21,6 +21,9 @@
 
 #![allow(dead_code)]
 
+#[path = "artifact_fixtures.rs"]
+mod artifact_fixtures;
+
 use std::collections::BTreeMap;
 
 use vyre_driver::BackendRegistration;
@@ -29,10 +32,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{
-    Artifact, ArtifactValueId, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
-    TargetModuleBundle, TargetPayload,
-};
+use vyre_megakernel::{Artifact, ArtifactValueId, TargetModuleBundle, TargetPayload};
 
 /// Value the fixture program stores into lane zero.
 ///
@@ -88,7 +88,7 @@ pub(crate) fn single_lane_artifact(access: BufferAccess, facts_seed: u8) -> Arti
             vec![store_one_output(access)],
         )
         .expect("single-lane fixture graph must accept its one node");
-    super::artifact_fixtures::compile_graph(graph, facts_seed)
+    artifact_fixtures::compile_graph(graph, facts_seed)
 }
 
 /// Program that reads one U32 lane and writes it to another buffer.
@@ -155,7 +155,7 @@ pub(crate) fn two_stage_artifact(access: BufferAccess) -> Artifact {
             vec![store_one_output(access)],
         )
         .expect("two-stage fixture graph must accept its consumer");
-    super::artifact_fixtures::compile_graph(graph, 0)
+    artifact_fixtures::compile_graph(graph, 0)
 }
 
 /// The registration a backend publishes, proven reachable by both registry routes.

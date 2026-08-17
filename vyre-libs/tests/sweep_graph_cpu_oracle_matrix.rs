@@ -12,7 +12,7 @@
 
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::graph::csr_backward_or_changed;
-use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_closure_inputs::CsrClosureInputs;
 use vyre_libs::graph::csr_forward_or_changed;
 use vyre_libs::graph::dispatch::csr_bidirectional::reference_bidirectional_step;
 use vyre_libs::graph::dispatch::csr_forward_or_changed::reference_forward_step_with_change_flag;

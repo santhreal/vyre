@@ -10,6 +10,7 @@ mod resident;
 mod u32_outputs;
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/dispatch_bridge/mod.rs"]
 mod tests;
 
 pub(crate) use crate::plumbing::host::program_cache::ProgramCache;

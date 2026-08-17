@@ -287,4 +287,5 @@ fn emit_scalar_row_cpu(
 }
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/csr_queue_split/mod.rs"]
 mod tests;

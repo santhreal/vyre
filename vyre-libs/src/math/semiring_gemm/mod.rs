@@ -353,4 +353,5 @@ inventory::submit! {
 }
 
 #[cfg(test)]
+#[path = "../../../tests/internal/math/semiring_gemm/mod.rs"]
 mod tests;

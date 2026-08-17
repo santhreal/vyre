@@ -16,6 +16,7 @@ mod validate;
 mod registry;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/csr_forward_or_changed/mod.rs"]
 mod tests;
 
 pub use body::{

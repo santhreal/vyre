@@ -12,6 +12,7 @@ mod resident;
 mod resident_scratch;
 mod resident_steps;
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/adaptive_traverse/mod.rs"]
 mod tests;
 mod upload;
 

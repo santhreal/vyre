@@ -90,4 +90,5 @@ pub use walk::{
 };
 
 #[cfg(test)]
+#[path = "../../tests/internal/visit/mod.rs"]
 mod tests;

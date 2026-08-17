@@ -92,7 +92,7 @@ pub fn evaluate_differential(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node};
 
     #[test]
     fn exact_integer_differential_matches() {

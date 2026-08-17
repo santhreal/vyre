@@ -21,6 +21,7 @@ mod reference;
 mod sequence_rules;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/text/utf8_validate/mod.rs"]
 mod tests;
 
 pub use program::{utf8_validate, utf8_validate_u8};

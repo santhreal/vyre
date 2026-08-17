@@ -73,4 +73,5 @@ impl Signature {
 }
 
 #[cfg(test)]
+#[path = "../../tests/internal/dialect_lookup/mod.rs"]
 mod tests;

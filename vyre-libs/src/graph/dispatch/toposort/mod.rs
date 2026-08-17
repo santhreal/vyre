@@ -10,6 +10,7 @@ mod dispatch;
 #[cfg(test)]
 mod reference;
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/toposort/mod.rs"]
 mod tests;
 
 use crate::graph::dispatch::dispatch_bridge::{CachedProgram, ProgramCache};

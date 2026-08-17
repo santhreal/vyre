@@ -55,4 +55,5 @@ impl PathReconstructGpuScratch {
 }
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/path_reconstruct/mod.rs"]
 mod tests;

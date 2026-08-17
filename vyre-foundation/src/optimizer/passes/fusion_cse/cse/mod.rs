@@ -55,4 +55,5 @@ pub use program_pass::CsePass;
 /// CSE test suites  -  adversarial cases for literal aliasing and non-literal
 /// subexpression merging.
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/fusion_cse/cse/mod.rs"]
 mod tests;

@@ -1004,4 +1004,5 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
 }
 
 #[cfg(test)]
+#[path = "../../../tests/internal/validate/rule_pipeline/mod.rs"]
 mod tests;

@@ -303,7 +303,10 @@ fn dfa_compile_inner_capped(
             let mut s = state;
             loop {
                 let child = trie[s][fb];
-                let idx = crate::builder::TableStateMachineComposer::flat_byte_index(state as u32, b as u8);
+                let idx = crate::builder::TableStateMachineComposer::flat_byte_index(
+                    state as u32,
+                    b as u8,
+                );
                 if child != NO_TRANSITION {
                     transitions[idx] = child;
                     break;

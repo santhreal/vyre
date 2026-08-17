@@ -39,6 +39,7 @@ mod state_set;
 mod subset;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/matching/nfa_to_dfa/mod.rs"]
 mod tests;
 
 pub use dedup::{

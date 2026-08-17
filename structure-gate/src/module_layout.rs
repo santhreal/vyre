@@ -87,6 +87,30 @@ pub fn sibling_module_failures(module_files: &[String]) -> Vec<String> {
     failures
 }
 
+/// Reject any source-test directory under `src/`.
+///
+/// WHY: behavioral tests live in top-level `tests/` directories per the workspace
+/// external-test contract. Keeping a `tests/` directory under `src/` hides tests
+/// from the top-level test runner, creates internal module sprawl, and mixes
+/// production sources with test artifacts.
+#[must_use]
+pub fn source_test_directory_failures(module_files: &[String]) -> Vec<String> {
+    let mut failures: Vec<String> = module_files
+        .iter()
+        .filter_map(|file| {
+            let is_in_tests_dir = file.split('/').any(|segment| segment == "tests");
+            is_in_tests_dir.then(|| {
+                format!(
+                    "`{file}` lives in a `src/**/tests/` directory; behavioral tests must live in the crate's top-level `tests/` directory"
+                )
+            })
+        })
+        .collect();
+    failures.sort();
+    failures.dedup();
+    failures
+}
+
 /// Reject a file, module or binary whose name states no contract.
 ///
 /// Judged over every source tree a crate compiles, not `src/` alone. The
@@ -394,6 +418,31 @@ mod tests {
             "{failures:?}"
         );
     }
+
+    #[test]
+    fn a_source_test_directory_under_src_is_rejected() {
+        let failures = source_test_directory_failures(&paths(&[
+            "vyre-libs/src/graph/persistent_bfs/tests/validation.rs",
+            "vyre-libs/src/graph/persistent_bfs/mod.rs",
+        ]));
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("vyre-libs/src/graph/persistent_bfs/tests/validation.rs"),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn a_top_level_test_or_clean_source_is_accepted_by_source_test_directory_rule() {
+        let failures = source_test_directory_failures(&paths(&[
+            "vyre-libs/src/graph/persistent_bfs/mod.rs",
+            "vyre-libs/src/lib.rs",
+        ]));
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
     fn crate_roots(pairs: &[(&str, &str)]) -> Vec<CrateRoot> {
         pairs
             .iter()

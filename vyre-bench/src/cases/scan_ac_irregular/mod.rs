@@ -17,6 +17,7 @@ mod metrics;
 mod sample;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/cases/scan_ac_irregular/mod.rs"]
 mod tests;
 
 pub use literals::ScanAcIrregularLiterals;

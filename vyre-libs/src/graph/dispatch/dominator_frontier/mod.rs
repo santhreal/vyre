@@ -26,6 +26,7 @@ mod dispatch;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod reference;
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/dominator_frontier/mod.rs"]
 mod tests;
 
 use crate::graph::dominator_frontier::{

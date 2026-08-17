@@ -3415,16 +3415,9 @@ mod tests {
             .expect("output binding must resolve");
         assert_eq!(out_val, ArtifactValueId(out_final.0));
 
-        let missing_binding = crate::binding::Binding {
-            name: "unmapped_buffer".into(),
-            binding_role: crate::BindingRole::Storage,
-            role: crate::BindingRole::Storage,
-            group: 0,
-            slot: 99,
-            buffer_index: 0,
-            input_index: None,
-            output_index: None,
-        };
+        let mut missing_binding = plan.bindings[0].clone();
+        missing_binding.name = "unmapped_buffer".into();
+        missing_binding.binding = 99;
         assert!(
             core.value_for_module_binding(&core.module_inputs, 0, &missing_binding)
                 .is_err(),

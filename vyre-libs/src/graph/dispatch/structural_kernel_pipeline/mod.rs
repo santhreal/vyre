@@ -15,4 +15,5 @@
 //! `crate::graph` directly.
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/structural_kernel_pipeline/mod.rs"]
 mod tests;

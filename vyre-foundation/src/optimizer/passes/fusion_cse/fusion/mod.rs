@@ -734,4 +734,5 @@ fn collect_expr_buffer_refs(expr: &Expr, sets: &mut BufferSets) {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/fusion_cse/fusion/mod.rs"]
 mod tests;

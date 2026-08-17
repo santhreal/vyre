@@ -21,8 +21,6 @@
 //! - `glyph_grid`  -  composes `cell_grid`'s lookup with alpha blending
 //! - `glass`  -  composes blur + filter_chain (hero composition)
 
-use vyre_foundation::ir::Expr;
-
 /// Two-pass separable Gaussian blur (composes `math::conv1d`).
 pub(crate) mod blur;
 /// Character-cell grid expansion for terminal and text surfaces.

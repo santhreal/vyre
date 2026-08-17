@@ -70,4 +70,5 @@ mod edge_buffer_copy_tests {
 }
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/csr_bidirectional/mod.rs"]
 mod tests;

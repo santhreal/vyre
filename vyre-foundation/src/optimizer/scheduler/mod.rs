@@ -657,4 +657,5 @@ mod research_trace_contract_tests {
 }
 
 #[cfg(test)]
+#[path = "../../../tests/internal/optimizer/scheduler/mod.rs"]
 mod tests;

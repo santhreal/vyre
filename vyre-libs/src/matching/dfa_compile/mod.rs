@@ -20,6 +20,7 @@ use std::{error::Error, fmt};
 
 mod compile;
 #[cfg(test)]
+#[path = "../../../tests/internal/matching/dfa_compile/mod.rs"]
 mod tests;
 mod wire;
 

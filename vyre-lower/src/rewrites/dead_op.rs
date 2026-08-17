@@ -200,7 +200,7 @@ mod tests {
                     lit(0, 0), // parent result 0 (used in child)
                     lit(0, 1), // parent result 1 (dead in parent)
                     KernelOp {
-                        kind: KernelOpKind::StructuredIfElse,
+                        kind: KernelOpKind::StructuredIfThenElse,
                         operands: vec![0, 0, 1], // cond 0, then 0, else 1
                         result: None,
                     },
@@ -220,13 +220,11 @@ mod tests {
                         child_bodies: vec![],
                     },
                     KernelBody {
-                        ops: vec![
-                            KernelOp {
-                                kind: KernelOpKind::StoreGlobal,
-                                operands: vec![0, 0, 0],
-                                result: None,
-                            },
-                        ],
+                        ops: vec![KernelOp {
+                            kind: KernelOpKind::StoreGlobal,
+                            operands: vec![0, 0, 0],
+                            result: None,
+                        }],
                         literals: vec![],
                         child_bodies: vec![],
                     },

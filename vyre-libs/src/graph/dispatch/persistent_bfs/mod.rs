@@ -12,6 +12,7 @@ mod reference;
 mod resident;
 mod resident_scratch;
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/persistent_bfs/mod.rs"]
 mod tests;
 
 pub use dispatch::*;

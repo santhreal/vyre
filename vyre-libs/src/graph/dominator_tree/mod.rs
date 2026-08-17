@@ -46,6 +46,7 @@ mod cpu_ref;
 mod registry;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/graph/dominator_tree/mod.rs"]
 mod tests;
 
 pub use depth::{

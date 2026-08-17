@@ -30,6 +30,7 @@ mod divergence;
 mod fuse;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/execution_plan/fusion/mod.rs"]
 mod tests;
 
 pub use fuse::{fuse_programs, fuse_programs_vec, merge_programs_shared};

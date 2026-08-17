@@ -9,6 +9,7 @@ mod cpu;
 mod i4_expressions;
 mod programs;
 #[cfg(test)]
+#[path = "../../../tests/internal/math/quantized/mod.rs"]
 mod tests;
 
 #[cfg(any(test, feature = "cpu-parity"))]

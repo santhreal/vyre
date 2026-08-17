@@ -11,6 +11,7 @@ mod reference_f64;
 #[cfg(test)]
 mod f64_tests;
 #[cfg(test)]
+#[path = "../../../tests/internal/math/sinkhorn_iterate/mod.rs"]
 mod tests;
 
 pub use program::sinkhorn_iterate;

@@ -2,7 +2,7 @@
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
-use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use vyre_libs::graph::csr_closure_inputs::CsrClosureInputs;
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 mod graph_sweep_fixtures;

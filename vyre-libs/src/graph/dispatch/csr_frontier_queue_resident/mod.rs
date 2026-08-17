@@ -8,6 +8,7 @@ mod query;
 mod upload;
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/csr_frontier_queue_resident/mod.rs"]
 mod tests;
 
 pub use query::resident_csr_queue_query_into;

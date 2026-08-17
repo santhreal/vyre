@@ -13,6 +13,7 @@ mod dispatch;
 mod reference;
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/exploded/mod.rs"]
 mod tests;
 
 pub use dispatch::{

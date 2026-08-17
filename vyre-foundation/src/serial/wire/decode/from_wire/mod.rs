@@ -493,4 +493,5 @@ impl LebReader for Reader<'_> {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/serial/wire/decode/from_wire/mod.rs"]
 mod tests;

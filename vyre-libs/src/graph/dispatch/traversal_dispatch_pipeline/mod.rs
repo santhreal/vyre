@@ -16,4 +16,5 @@
 //! keep in step. Callers name `crate::graph` directly.
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/traversal_dispatch_pipeline/mod.rs"]
 mod tests;

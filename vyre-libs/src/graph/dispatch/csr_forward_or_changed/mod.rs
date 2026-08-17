@@ -12,6 +12,7 @@ mod dispatch;
 mod reference;
 
 #[cfg(test)]
+#[path = "../../../../tests/internal/graph/dispatch/csr_forward_or_changed/mod.rs"]
 mod tests;
 
 pub use dispatch::{

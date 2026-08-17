@@ -131,6 +131,7 @@ pub mod rewrite_proof;
 pub mod rewrite_proof_registry;
 mod scheduler;
 #[cfg(test)]
+#[path = "../../tests/internal/optimizer/mod.rs"]
 mod tests;
 
 pub use ctx::{scheduling_error_to_diagnostic, AdapterCaps, AnalysisCache, PassCtx};
