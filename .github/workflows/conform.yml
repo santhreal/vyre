@@ -61,6 +61,9 @@ jobs:
         run: >-
           ./cargo_full run --bin xtask -- conformance-matrix --write
 
+      - name: Verify conformance matrix evidence is current
+        run: git diff --exit-code -- release/evidence/conformance/conformance-matrix.json
+
   conform-release-gate:
     name: Conform release gate
     needs:

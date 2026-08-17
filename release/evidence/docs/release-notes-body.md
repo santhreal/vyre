@@ -4295,6 +4295,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   declines the fusion instead of guessing at it. The test that should have
   caught this compared two inline copies of the walk against each other and
   never called the production one.
+- The conformance CI lane now rejects a generated conformance matrix that
+  differs from the committed release evidence.
 - The megakernel launch floor and traffic rate are derived from the recorded
   benchmark files at run time, so a weight that drifts from the recording it
   cites fails the suite.
