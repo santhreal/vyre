@@ -126,7 +126,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/matrix/backend-matrix.json"],
+        artifacts: &["release/evidence/backends/backend-matrix.json"],
         prerequisites: &[],
         proof: "xtask_evidence::release::backend_matrix::feature_marker_tests::no_feature_marker_names_a_test_file",
     },
