@@ -20,7 +20,7 @@
 //!
 //! Both paths produce the same IR.
 
-use crate::builder::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
+use crate::builder::reduction::{ReductionComposer, ReductionPhase};
 use crate::builder::{
     check_same_shape, check_tensors, checked_element_count, strided_accumulate_child,
     strided_writeback_child, BuildOptions,
@@ -129,7 +129,7 @@ fn softmax_tiled_program(
 ) -> Program {
     let tile = workgroup[0].max(1);
     let chunks = n.div_ceil(tile);
-    let max_pass = ReducePhase {
+    let max_pass = ReductionPhase {
         accumulate: strided_accumulate_child(
             OP_ID,
             tile,
@@ -165,7 +165,7 @@ fn softmax_tiled_program(
     };
     // The sum pass reuses `softmax_scratch`, so it publishes nothing: the
     // writeback reads the reduced sum straight out of scratch slot zero.
-    let sum_pass = ReducePhase {
+    let sum_pass = ReductionPhase {
         accumulate: strided_accumulate_child(
             OP_ID,
             tile,
@@ -196,17 +196,18 @@ fn softmax_tiled_program(
         )],
         publish: Vec::new(),
     };
-    tiled_reduce_program(TiledReduceProgram {
+    ReductionComposer::new(
         generator,
-        buffers: vec![
+        vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("softmax_scratch", tile, DataType::F32),
             BufferDecl::workgroup("softmax_max", 1, DataType::F32),
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         workgroup,
-        phases: vec![max_pass, sum_pass],
-        writeback: Some(strided_writeback_child(
+    )
+    .with_phases([max_pass, sum_pass])
+    .with_writeback(strided_writeback_child(
             OP_ID,
             tile,
             chunks,
@@ -228,8 +229,9 @@ fn softmax_tiled_program(
                 }),
                 right: Box::new(Expr::var("sum_val")),
             },
-        )),
-    })
+        )
+    )
+    .build()
 }
 
 fn softmax_reference_program(

@@ -32,6 +32,7 @@ pub(crate) mod elementwise;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
+pub(crate) mod reduction;
 /// Shared table-walking state machine / DFA composer.
 pub mod state_machine;
 pub use state_machine::TableStateMachineComposer;
@@ -43,7 +44,6 @@ pub use state_machine::TableStateMachineComposer;
 /// composes them without asking for their registrations.
 #[cfg(feature = "builder-ops")]
 mod registrations;
-pub(crate) mod tiled_reduce;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
