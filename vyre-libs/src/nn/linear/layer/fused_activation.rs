@@ -1,7 +1,10 @@
 //! Shared fused linear + activation builder.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use std::sync::Arc;
+use vyre_foundation::ir::{Expr, Program};
+
+use crate::builder::gemm::{ContractionComposer, ContractionEpilogue};
+use crate::plumbing::operand::tensor_ref::TensorRef;
 
 pub(super) fn linear_fused_activation<F>(
     op_name: &'static str,
@@ -15,7 +18,7 @@ pub(super) fn linear_fused_activation<F>(
     activation: F,
 ) -> Result<Program, String>
 where
-    F: FnOnce(Expr) -> Expr,
+    F: Fn(Expr) -> Expr + Send + Sync + 'static,
 {
     if in_dim == 0 {
         return Err(format!(
@@ -25,57 +28,26 @@ where
     if out_dim == 0 {
         return Err(format!("Fix: {op_name} out_dim=0 is invalid: empty output"));
     }
-    let weight_count = in_dim.checked_mul(out_dim).ok_or_else(|| {
+    in_dim.checked_mul(out_dim).ok_or_else(|| {
         format!("Fix: {op_name} in_dim*out_dim overflows u32; reduce dimensions.")
     })?;
-    let i = Expr::var("i");
-    let activated_acc = activation(Expr::var("acc"));
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(out_dim)),
-            vec![
-                Node::let_bind("acc", Expr::load(b, i.clone())),
-                Node::loop_for(
-                    "k",
-                    Expr::u32(0),
-                    Expr::u32(in_dim),
-                    vec![Node::assign(
-                        "acc",
-                        Expr::add(
-                            Expr::var("acc"),
-                            Expr::mul(
-                                Expr::load(x, Expr::var("k")),
-                                Expr::load(
-                                    w,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("k"), Expr::u32(out_dim)),
-                                        i.clone(),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    )],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index: i,
-                    value: activated_acc,
-                },
-            ],
-        ),
-    ];
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::F32).with_count(in_dim),
-            BufferDecl::storage(w, 1, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(weight_count),
-            BufferDecl::storage(b, 2, BufferAccess::ReadOnly, DataType::F32).with_count(out_dim),
-            BufferDecl::output(out, 3, DataType::F32).with_count(out_dim),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(op_id, body)],
-    ))
+
+    let x_ref = TensorRef::f32_2d(x, 1, in_dim);
+    let w_ref = TensorRef::f32_2d(w, in_dim, out_dim);
+    let bias_ref = TensorRef::f32_1d(b, out_dim);
+    let out_ref = TensorRef::f32_2d(out, 1, out_dim);
+
+    let mut composer =
+        ContractionComposer::matmul_2d(op_id, x_ref, w_ref, out_ref, 1, in_dim, out_dim)
+            .with_epilogue(ContractionEpilogue::Activation {
+                bias: Some(b.to_string()),
+                activation: Arc::new(activation),
+            })
+            .with_workgroup_size([64, 1, 1]);
+    composer.bias = Some(bias_ref);
+    composer
+        .build()
+        .map_err(|e| format!("Fix: {op_name} build failed: {e}"))
 }
 
 #[cfg(test)]

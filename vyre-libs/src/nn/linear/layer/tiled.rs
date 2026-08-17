@@ -1,10 +1,10 @@
 //! Tiled linear-layer constructors (`linear_tiled`, `linear_tiled_reference`).
 
-use vyre_foundation::composition::{tag_program, trap_program, wrap_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::composition::{tag_program, trap_program};
+use vyre_foundation::ir::Program;
 
+use crate::builder::gemm::{ContractionComposer, ContractionTiling};
 use crate::plumbing::operand::tensor_ref::TensorRef;
-use crate::prelude::MatmulBiasTiled;
 
 use super::builder::linear;
 
@@ -38,11 +38,19 @@ pub fn linear_tiled(
     in_dim.checked_mul(out_dim).ok_or_else(|| {
         "Fix: linear_tiled in_dim*out_dim overflows u32; reduce dimensions.".to_string()
     })?;
-    let program = MatmulBiasTiled::new(
-        TensorRef::u32_2d(x, 1, in_dim),
-        TensorRef::u32_2d(w, in_dim, out_dim),
-        TensorRef::u32_1d(b, out_dim),
-        TensorRef::u32_2d(out, 1, out_dim),
+    let x_ref = TensorRef::u32_2d(x, 1, in_dim);
+    let w_ref = TensorRef::u32_2d(w, in_dim, out_dim);
+    let b_ref = TensorRef::u32_1d(b, out_dim);
+    let out_ref = TensorRef::u32_2d(out, 1, out_dim);
+    let program = ContractionComposer::tiled_2d(
+        LINEAR_TILED_OP_ID,
+        x_ref,
+        w_ref,
+        Some(b_ref),
+        out_ref,
+        1,
+        in_dim,
+        out_dim,
         tile,
     )
     .build()
@@ -73,78 +81,27 @@ pub fn linear_tiled_reference(
             "Fix: linear_tiled_reference tile=0 is invalid: tile width must be > 0".to_string(),
         );
     }
-    let weight_count = in_dim.checked_mul(out_dim).ok_or_else(|| {
+    in_dim.checked_mul(out_dim).ok_or_else(|| {
         "Fix: linear_tiled_reference in_dim*out_dim overflows u32; reduce dimensions.".to_string()
     })?;
-    let tile_count = in_dim.div_ceil(tile);
-    let lane = Expr::var("lane");
-    let kk = Expr::var("kk");
-    let body = vec![
-        Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(lane.clone(), Expr::u32(out_dim)),
-            vec![
-                Node::let_bind("acc", Expr::load(b, lane.clone())),
-                Node::loop_for(
-                    "tile_idx",
-                    Expr::u32(0),
-                    Expr::u32(tile_count),
-                    vec![
-                        Node::let_bind(
-                            "tile_base",
-                            Expr::mul(Expr::var("tile_idx"), Expr::u32(tile)),
-                        ),
-                        Node::loop_for(
-                            "tile_k",
-                            Expr::u32(0),
-                            Expr::u32(tile),
-                            vec![
-                                Node::let_bind(
-                                    "kk",
-                                    Expr::add(Expr::var("tile_base"), Expr::var("tile_k")),
-                                ),
-                                Node::if_then(
-                                    Expr::lt(kk.clone(), Expr::u32(in_dim)),
-                                    vec![Node::assign(
-                                        "acc",
-                                        Expr::add(
-                                            Expr::var("acc"),
-                                            Expr::mul(
-                                                Expr::load(x, kk.clone()),
-                                                Expr::load(
-                                                    w,
-                                                    Expr::add(
-                                                        Expr::mul(kk.clone(), Expr::u32(out_dim)),
-                                                        lane.clone(),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    )],
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-                Node::Store {
-                    buffer: out.into(),
-                    index: lane,
-                    value: Expr::var("acc"),
-                },
-            ],
-        ),
-    ];
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::U32).with_count(in_dim),
-            BufferDecl::storage(w, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(weight_count),
-            BufferDecl::storage(b, 2, BufferAccess::ReadOnly, DataType::U32).with_count(out_dim),
-            BufferDecl::output(out, 3, DataType::U32).with_count(out_dim),
-        ],
-        [256, 1, 1],
-        vec![wrap_region(LINEAR_TILED_REFERENCE_OP_ID, body, None)],
-    ))
+    let x_ref = TensorRef::u32_2d(x, 1, in_dim);
+    let w_ref = TensorRef::u32_2d(w, in_dim, out_dim);
+    let b_ref = TensorRef::u32_1d(b, out_dim);
+    let out_ref = TensorRef::u32_2d(out, 1, out_dim);
+    let mut composer = ContractionComposer::matmul_bias_2d(
+        LINEAR_TILED_REFERENCE_OP_ID,
+        x_ref,
+        w_ref,
+        b_ref,
+        out_ref,
+        1,
+        in_dim,
+        out_dim,
+    );
+    composer.tiling = ContractionTiling::Block1D { tile };
+    composer
+        .build()
+        .map_err(|error| format!("Fix: linear_tiled_reference build failed: {error}"))
 }
 
 inventory::submit! {

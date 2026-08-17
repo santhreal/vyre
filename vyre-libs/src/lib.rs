@@ -48,6 +48,11 @@ pub(crate) mod plumbing;
 
 #[cfg(feature = "graph")]
 pub use builder::csr;
+pub use builder::gemm;
+pub use builder::{
+    ContractionComposer, ContractionEpilogue, ContractionGeometry, ContractionSemiring,
+    ContractionTiling,
+};
 pub use builder::range_ordering;
 pub use builder::state_machine;
 pub use builder::stencil;
@@ -248,11 +253,7 @@ pub mod matching;
 #[cfg(feature = "nfa")]
 pub mod nfa;
 
-#[cfg(any(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "math-broadcast"
-))]
+#[cfg(feature = "nn-norm")]
 pub(crate) use builder::elementwise::{f32_elementwise_mul, F32MulRhs};
 #[cfg(feature = "nn-linear-4bit")]
 pub(crate) use math::linalg::{

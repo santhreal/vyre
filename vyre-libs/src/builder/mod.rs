@@ -29,6 +29,12 @@ pub mod csr;
 #[cfg(feature = "graph")]
 pub use csr::CsrTraversalComposer;
 pub(crate) mod elementwise;
+/// Canonical matrix multiplication and contraction IR composer.
+pub mod gemm;
+pub use gemm::{
+    ContractionComposer, ContractionEpilogue, ContractionGeometry, ContractionSemiring,
+    ContractionTiling,
+};
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
