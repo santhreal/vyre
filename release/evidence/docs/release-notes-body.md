@@ -4147,6 +4147,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   global-typedef fast pass also read its forward neighbour with no out-of-range
   fallback while every sibling and the CPU oracle substituted the sentinel;
   both reads now come from the shared owner.
+- Cache invalidation now projects impacted rules and provenance through lineage
+  cells in a final GPU composition instead of post-processing dispatched
+  results on the host.
 - Release operations now use one runbook and one generated checklist derived
   from release-train versions, repositories, package groups, tags, approval
   actions, and validated changelog fragments. The guarded launcher pushes
@@ -4479,6 +4482,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant
   missing from the catalog a compile error. The previous markdown table, and
   the seven-variant list that checked it against a nine-variant enum, are gone.
+- The driver error-code catalog now has a registered `error-codes --write`
+  producer backed directly by the exhaustive runtime inventory.
 - The test guides for `vyre-driver` and `vyre-driver-wgpu` describe what the
   crates contain. Both previously pointed at a category contract file that does
   not exist, listed bench and fuzz targets for directories neither crate has,
@@ -4604,6 +4609,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   generating them until the evidence goes stale. The measured-evidence job also
   stopped forcing `CARGO_BUILD_JOBS=1`; parallelism is declared in
   `.cargo/config.toml`.
+- Target binding resolution now prefers the exact resource identity over a
+  retained-lineage alias when both appear in one directional projection.
 - Command-line documentation now inventories and executes all 12 workspace
   binaries and 84 subcommands, publishes exact help, exit-code, environment,
   configuration, hardware, and failure contracts in crate READMEs, and gates
@@ -4678,6 +4685,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The feature-msrv gate writes only the advertised toolchain version on stdout
   when invoked with --print-toolchain, returning cleanly without printing notes
   or finding counts.
+- The unsafe-surface budget follows the relocated scheduler fixture, and the
+  named adversarial suite now executes a real overflow-boundary contract
+  instead of a vacuous smoke assertion.
 - The shared gate fixture checkout states the corrective action when a
   temporary directory or git is unavailable, and the recorded backend
   feature-marker matrix matches what the tree produces.
@@ -4816,6 +4826,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   enclosing Santh workspace without duplicating the Vyre path.
 - The registered byte-histogram operation now places its non-ASCII counts in
   the exact 0xA9 and 0xC3 bins supplied by the canonical fixture.
+- The host-oracle elimination gate now covers driver sources, cross-file
+  dispatch helpers, strict little-endian decoder boundaries, and post-dispatch
+  semantic dataflow.
 - The hot-path roster names the three modules the columnar fact view split
   into, and the lowering boundary budget drops to the zero it measures now that
   its two format calls are gone.
@@ -4834,6 +4847,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `abstraction-gate` from 32 to 23.
 - The hygiene matrix gate now declares all eight release-evidence artifacts
   that its canonical writer produces.
+- The hygiene matrix now records every source-only structural contract,
+  including oracle-elimination mutations, without misclassifying descriptive
+  build-wrapper text as an executable command.
 - Call inlining expands a call in every operand position. The caller side and
   the callee side each enumerated `Node` themselves and had diverged: the
   caller copied the `AsyncLoad` and `AsyncStore` offset and size and the `Trap`
@@ -5507,6 +5523,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   feature instead of a list kept by hand, and the regenerated documents are
   byte-identical, which is the proof that the documents were right and the edge
   was wrong.
+- Release evidence now tracks CUDA and WGPU benchmark invocations as distinct
+  required producers with disjoint, exact artifact ownership.
 - The release macro benchmarks no longer time a CPU baseline that rebuilds its
   own input. `synthetic_cpu_count` regenerated every record from its index
   inside the timed region, twelve to twenty-four rotate-multiply rounds per
@@ -5673,6 +5691,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   of its own exhaustive `match node`. A node variant that carries a body would
   have had to be added to both lists, and the scan's copy is the one a reader
   would not think to check when adding one.
+- Semiring GEMM dispatch now passes only its two read-only matrices because the
+  result buffer is backend allocated.
 - Restored public Target export in vyre-driver, scan database wire header and
   budget types in vyre-foundation, lower and WORKGROUP_SLOT_BASE in vyre-lower,
   and public submodule paths in vyre-spec to maintain SemVer compatibility with
@@ -5895,6 +5915,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   refused with `unsupported u32 binary operation` instead of evaluated. Four
   generated per-width sweeps covered the same operation table and none of them
   swept the pair, so the gap was invisible to all four.
+- Undocumented production panic ceilings are now zero after fallible paths
+  propagate errors and intentional infallible wrappers declare their panic
+  contracts.
 - `release/changes/unreleased.toml` parses again. Two fragments had been
   appended without their `[[fragments]]` header, so the second `id` key
   overwrote the first and every release-docs command failed at the TOML parser
