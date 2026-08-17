@@ -355,7 +355,7 @@ xtask::artifact_gate! {
        reference one, and that the host met the release GPU floor. The probe is only as \
        current as the run that recorded it; --write re-probes this host and rewrites the \
        artifact.",
-    inspect: |ctx| inspect(&ctx.root, ctx.write),
+    inspect: |ctx| inspect(&ctx.root),
 }
 
 /// The artifact this gate owns, relative to the workspace root.
@@ -396,7 +396,7 @@ fn scan_backend_sources(workspace_root: &Path) -> SourceScan {
     }
 }
 
-fn inspect(workspace_root: &Path, write: bool) -> Inspection {
+fn inspect(workspace_root: &Path) -> Inspection {
     let mut inspection = Inspection::new();
     let scan = scan_backend_sources(workspace_root);
     for blocker in &scan.blockers {
@@ -407,120 +407,18 @@ fn inspect(workspace_root: &Path, write: bool) -> Inspection {
              true on every host and no re-probe clears it.",
         );
     }
-    if write {
-        let (matrix, device_blockers) = probe_backend_matrix(scan);
-        for blocker in &device_blockers {
-            inspection.blocked(
-                ARTIFACT,
-                blocker.clone(),
-                "Repair the driver, the registry precedence or the device the sentence names, \
-                 then rerun with --write.",
-            );
-        }
-        inspection.generates(ARTIFACT, &matrix);
-    } else {
-        audit_recorded_matrix(workspace_root, &scan, &mut inspection);
+    let (matrix, device_blockers) = probe_backend_matrix(scan);
+    for blocker in &device_blockers {
+        inspection.blocked(
+            ARTIFACT,
+            blocker.clone(),
+            "Repair the driver, the registry precedence or the device the sentence names, \
+             then rerun with --write.",
+        );
     }
+    inspection.generates(ARTIFACT, &matrix);
     inspection
 }
-
-/// Judge the committed backend matrix without touching a device.
-///
-/// The device side is taken as recorded. The source side is regenerated and
-/// compared, because a committed artifact that still lists yesterday's feature
-/// markers reads as coverage of today's tree.
-fn audit_recorded_matrix(workspace_root: &Path, scan: &SourceScan, inspection: &mut Inspection) {
-    let text = match read_text_bounded(&workspace_root.join(ARTIFACT)) {
-        Ok(text) => text,
-        Err(error) => {
-            inspection.blocked(
-                ARTIFACT,
-                format!("the backend matrix could not be read: {error}"),
-                "Run `./cargo_full run --bin xtask -- backend-matrix --write` on a release host \
-                 and commit the artifact.",
-            );
-            return;
-        }
-    };
-    let recorded: serde_json::Value = match serde_json::from_str(&text) {
-        Ok(value) => value,
-        Err(error) => {
-            inspection.blocked(
-                ARTIFACT,
-                format!("the backend matrix is not readable as JSON: {error}"),
-                "Regenerate it with --write.",
-            );
-            return;
-        }
-    };
-    for blocker in recorded
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(serde_json::Value::as_str)
-    {
-        inspection.blocked(
-            ARTIFACT,
-            format!("the recorded backend probe was blocked: {blocker}"),
-            "Resolve the blocker on a release host and rerun with --write so the artifact \
-             records a clean probe.",
-        );
-    }
-    compare_recorded_field(
-        &recorded,
-        "cuda_feature_markers",
-        &scan.cuda_feature_markers,
-        inspection,
-    );
-    compare_recorded_field(
-        &recorded,
-        "wgpu_feature_markers",
-        &scan.wgpu_feature_markers,
-        inspection,
-    );
-    compare_recorded_field(
-        &recorded,
-        "hidden_fallback_findings",
-        &scan.hidden_fallback_findings,
-        inspection,
-    );
-    compare_recorded_field(
-        &recorded,
-        "hidden_fallback_scan_errors",
-        &scan.hidden_fallback_scan_errors,
-        inspection,
-    );
-}
-
-/// Report `field` when the committed artifact and the current tree disagree.
-fn compare_recorded_field(
-    recorded: &serde_json::Value,
-    field: &str,
-    derived: &impl Serialize,
-    inspection: &mut Inspection,
-) {
-    let derived = match serde_json::to_value(derived) {
-        Ok(value) => value,
-        Err(error) => {
-            inspection.blocked(
-                ARTIFACT,
-                format!("`{field}` could not be rendered for comparison: {error}"),
-                "Correct the field type so serde can represent it.",
-            );
-            return;
-        }
-    };
-    if recorded.get(field) != Some(&derived) {
-        inspection.blocked(
-            ARTIFACT,
-            format!("`{field}` in the artifact is not what the current tree produces"),
-            "Run `./cargo_full run --bin xtask -- backend-matrix --write` and commit the artifact. \
-             This field is read from source, so it is stale rather than host-specific.",
-        );
-    }
-}
-
 /// Probe this host's backend registry and devices, folding in the source scan.
 ///
 /// The registry lookups used to panic. A gate that panics reports nothing at

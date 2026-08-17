@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:6ce42901b6aecd3228a4a139f61d7f3c2abb49c8:dirty=true:worktree=04b5df5779e4679968d17f9d5ba1225cebf149e9b8a9e4d2998ea93134824960",
+  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=false",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -86,7 +86,7 @@
       "path": "vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17590,
+      "source_bytes": 17725,
       "implementation_tokens": [
         "vector-load gap",
         "find_latency_filler_avoiding_results"
@@ -100,7 +100,7 @@
       "path": "vyre-emit-ptx/src/emitter/schedule.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3883,
+      "source_bytes": 4059,
       "implementation_tokens": [
         "KernelOpKind::Fma",
         "KernelOpKind::MatrixMma",
@@ -293,7 +293,7 @@
       "path": "vyre-runtime/src/artifact_admission.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 43260,
+      "source_bytes": 43394,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"

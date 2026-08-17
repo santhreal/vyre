@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:6cbb924091db8af320478a53ab1f5b6218729c2f:dirty=false",
+  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=false",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -176,13 +176,13 @@
       "default_feature_members": [],
       "features": [
         "default",
-        "matching-dfa",
-        "matching-nfa",
-        "matching-substring",
         "math-linalg",
         "math-scan",
         "nn-attention",
         "parity-testing",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-substring",
         "wgpu"
       ],
       "malformed_features": [],
@@ -275,7 +275,7 @@
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 64,
+      "feature_count": 63,
       "has_default_feature": true,
       "default_feature_members": [
         "math-linalg",
@@ -284,8 +284,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "matching-substring",
-        "matching-dfa",
+        "pattern-substring",
+        "pattern-dfa",
         "hash",
         "decode"
       ],
@@ -294,7 +294,6 @@
         "bitset",
         "builder-ops",
         "cat-a-builder-options",
-        "cpu-parity",
         "crypto",
         "crypto-blake3",
         "decode",
@@ -312,12 +311,6 @@
         "label",
         "llm",
         "logical",
-        "matching",
-        "matching-dfa",
-        "matching-kernels",
-        "matching-nfa",
-        "matching-regex",
-        "matching-substring",
         "math",
         "math-algebra",
         "math-broadcast",
@@ -339,6 +332,12 @@
         "opt",
         "parsing",
         "parsing-kernels",
+        "pattern",
+        "pattern-dfa",
+        "pattern-kernels",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-substring",
         "predicate",
         "python-parser",
         "reasoning",
@@ -409,14 +408,13 @@
     {
       "name": "vyre-pass-engine",
       "manifest": "vyre-pass-engine/Cargo.toml",
-      "feature_count": 4,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
         "optimizer"
       ],
       "features": [
         "all-solvers",
-        "cpu-parity",
         "default",
         "optimizer"
       ],
