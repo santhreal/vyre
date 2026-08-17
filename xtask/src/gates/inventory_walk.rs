@@ -62,7 +62,7 @@ impl crate::gate::GateBehavior for InventoryWalk {
                 )
             }));
         }
-        let mut report = Report::with_findings(findings);
+        report.findings = findings;
         report.notes.push(format!(
             "{walks} registry walk(s) in {} production file(s)",
             files.len()
