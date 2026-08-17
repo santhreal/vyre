@@ -347,7 +347,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "cross-target",
-        help: "Check that the workspace compiles cleanly for every non-host release target (aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc) using cargo check --target; reports the first error per target",
+        help: "Check that the workspace compiles cleanly for every non-host release target (aarch64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc) through the workspace build wrapper; reports the first error per target",
         package: "xtask-registry",
         areas: &["prepublish"],
         subject: "registered system invariants",

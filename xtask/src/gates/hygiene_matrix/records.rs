@@ -199,7 +199,7 @@ pub(crate) const THRESHOLD_POLICY_SCHEMA_VERSION: u32 = 1;
 pub(crate) const THRESHOLD_POLICY_SOURCE: &str = "docs/optimization/THRESHOLD_POLICY.toml";
 pub(crate) const THRESHOLD_POLICY_ARTIFACT: &str = "release/evidence/hygiene/threshold-policy.json";
 pub(crate) const THRESHOLD_POLICY_OWNER_LANE: &str = "testing_evidence";
-pub(crate) const STRUCTURAL_GATE_SCHEMA_VERSION: u32 = 1;
+pub(crate) const STRUCTURAL_GATE_SCHEMA_VERSION: u32 = 2;
 pub(crate) const STRUCTURAL_GATE_SOURCE: &str = "docs/testing/STRUCTURAL_GATES.toml";
 pub(crate) const PANIC_BUDGET_SCHEMA_VERSION: u32 = 1;
 pub(crate) const PANIC_BUDGET_SOURCE: &str = "docs/testing/PANIC_BUDGET.toml";
@@ -255,7 +255,7 @@ pub(crate) struct StructuralGateDocument {
 #[derive(Debug, Deserialize)]
 pub(crate) struct StructuralGateTomlRow {
     pub(crate) file: String,
-    pub(crate) test: String,
+    pub(crate) tests: Vec<String>,
     pub(crate) reason: String,
 }
 

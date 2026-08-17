@@ -11,10 +11,10 @@
 # that a table covers every variant of an enum. Rust has no reflection, so the
 # only witness for those is the source.
 #
-# A row here reclassifies one gate from `release_blocker` to `informational`.
-# It is not a suppression list: adding a gate still costs a reviewed line
+# A listed test is reclassified from `release_blocker` to `informational`.
+# This is not a suppression list: adding a gate still costs a reviewed entry
 # naming the file, the test, and the property, and both halves are checked
-# against the tree at run time. A row whose test no longer exists, or whose
+# against the tree at run time. An entry whose test no longer exists, or whose
 # file no longer contains a source-inspecting test, fails the same gate, since
 # a stale registry is worth exactly as much as no registry.
 #
@@ -22,11 +22,11 @@
 # what it does? If yes, write that test instead. The rows below are the cases
 # where the answer is no.
 
-schema = 1
+schema = 2
 
 [[gate]]
 file = "vyre-spec/tests/token_ids_have_one_owner.rs"
-test = "no_file_outside_the_owner_declares_a_token_id"
+tests = ["no_file_outside_the_owner_declares_a_token_id"]
 reason = """
 Asserts that no file outside vyre-spec declares a `TOK_`-prefixed constant. A
 second numbering table in a crate vyre-spec does not depend on is not linked
@@ -36,7 +36,7 @@ duplicate only shows up as a wrong parse on the GPU much later.
 
 [[gate]]
 file = "vyre-spec/tests/token_ids_have_one_owner.rs"
-test = "the_walk_actually_reaches_the_owner"
+tests = ["the_walk_actually_reaches_the_owner"]
 reason = """
 Floor check for the walk the gate above depends on. Its subject is the file set
 that walk produced, which exists only inside the source scan.
@@ -44,7 +44,7 @@ that walk produced, which exists only inside the source scan.
 
 [[gate]]
 file = "xtask/tests/tree_contracts/ci_workflow_references.rs"
-test = "every_target_a_workflow_names_exists_in_the_package_it_addresses"
+tests = ["every_target_a_workflow_names_exists_in_the_package_it_addresses"]
 reason = """
 Resolves every `--test`/`--bin` name a CI workflow step passes against the
 cargo targets that package declares or auto-discovers. A workflow step is text
@@ -54,7 +54,7 @@ process running locally.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-test = "no_dispatch_grid_function_hand_rolls_the_ceiling_division"
+tests = ["no_dispatch_grid_function_hand_rolls_the_ceiling_division"]
 reason = """
 Asserts that exactly one implementation of the ceiling division exists. A
 behavioural parity sweep catches a copy that rounds differently and passes a
@@ -64,7 +64,7 @@ defect this closes: the copies it replaced agreed until the zero case.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-test = "every_domain_with_a_dispatch_grid_can_reach_the_owner"
+tests = ["every_domain_with_a_dispatch_grid_can_reach_the_owner"]
 reason = """
 Asserts that the owner of the dispatch-grid helper is declared unconditionally
 in the crate that holds it and that every crate with a dispatch-grid function
@@ -75,7 +75,7 @@ this test does not run.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-test = "no_binding_record_spells_its_full_name_set_twice"
+tests = ["no_binding_record_spells_its_full_name_set_twice"]
 reason = """
 Asserts that no file in the workspace respells a binding record's full name set
 instead of naming the record's canonical constant. Two spellings that agree
@@ -85,7 +85,7 @@ unnoticed; only the source distinguishes them.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-test = "every_buffer_binding_record_publishes_canonical_names"
+tests = ["every_buffer_binding_record_publishes_canonical_names"]
 reason = """
 Asserts that every declared `*Buffers` record publishes canonical names. The
 subject is the set of declared types, which a running program cannot enumerate
@@ -94,7 +94,7 @@ without reflection.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-test = "every_routed_convergence_op_registers_with_the_routing_contract"
+tests = ["every_routed_convergence_op_registers_with_the_routing_contract"]
 reason = """
 Asserts that every op calling `routed_persistent_fixpoint` also registers with
 the shared routing contract. An op that never registers runs correctly on the
@@ -104,7 +104,7 @@ spans more than one workgroup in production.
 
 [[gate]]
 file = "vyre-libs/tests/shared_owner_closure.rs"
-test = "no_op_re_asserts_the_routing_obligations_privately"
+tests = ["no_op_re_asserts_the_routing_obligations_privately"]
 reason = """
 Asserts that no file outside the routing owner observes both halves of the
 routing obligation itself. A private copy of an assertion passes, which is the
@@ -113,7 +113,7 @@ whole reason a copy survives; only the source shows there are two.
 
 [[gate]]
 file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
-test = "every_submitted_registration_is_reachable_from_this_walker"
+tests = ["every_submitted_registration_is_reachable_from_this_walker"]
 reason = """
 Asserts that no operation registration is gated behind a Cargo feature this
 crate's dependency edge leaves off. An invisible registration is
@@ -123,7 +123,7 @@ registry and every document generated from it agrees.
 
 [[gate]]
 file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
-test = "each_source_aggregate_covers_every_feature_that_gates_a_registration"
+tests = ["each_source_aggregate_covers_every_feature_that_gates_a_registration"]
 reason = """
 Asserts that each source crate's widest aggregate feature turns on every
 feature that gates a registration. The subject is that crate's feature table,
@@ -131,8 +131,8 @@ which is consumed by cargo before any code runs.
 """
 
 [[gate]]
-file = "vyre-libs/src/graph/dispatch/adaptive_traverse/tests/sparse_queue_materializer_contracts.rs"
-test = "every_resident_queue_materializer_variant_has_a_step_sequence_case"
+file = "vyre-libs/tests/internal/graph/dispatch/adaptive_traverse/sparse_queue_materializer_contracts.rs"
+tests = ["every_resident_queue_materializer_variant_has_a_step_sequence_case"]
 reason = """
 Derives the published ResidentCsrQueueMaterializer variant set from the source
 that declares it, so a variant added without a step-sequence case is red on its
@@ -142,7 +142,7 @@ being asserted is the absence of a case, which no execution can observe.
 
 [[gate]]
 file = "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs"
-test = "every_published_quantized_entry_point_has_a_readback_contract_row"
+tests = ["every_published_quantized_entry_point_has_a_readback_contract_row"]
 reason = """
 Derives the published quantized dispatch entry points from the `pub use
 ..._via` re-exports that declare them, so an entry point shipped without a
@@ -152,7 +152,7 @@ export list, which no run of the covered entry points can report on.
 
 [[gate]]
 file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
-test = "no_production_crate_outside_the_oracle_ships_a_host_dispatcher"
+tests = ["no_production_crate_outside_the_oracle_ships_a_host_dispatcher"]
 reason = """
 Asserts that no crate except the parity oracle ships a `ProgramDispatcher` a
 default build can construct. The subject is the absence of a type in crates this
@@ -163,7 +163,7 @@ later.
 
 [[gate]]
 file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
-test = "the_walk_actually_reaches_the_dispatchers_it_judges"
+tests = ["the_walk_actually_reaches_the_dispatchers_it_judges"]
 reason = """
 Floor check for the walk the gate above depends on. Its subject is the file set
 that walk produced, which exists only inside the source scan.
@@ -171,7 +171,7 @@ that walk produced, which exists only inside the source scan.
 
 [[gate]]
 file = "vyre-foundation/tests/expr_type_single_owner.rs"
-test = "owner_answers_every_expr_variant"
+tests = ["owner_answers_every_expr_variant"]
 reason = """
 Requires a recorded type answer for every declared `Expr` variant, with the
 variant roster read from the source of the enum. Rust has no reflection, so a
@@ -182,11 +182,174 @@ expression returns.
 
 [[gate]]
 file = "xtask/tests/tree_contracts/subcommand_dispatch.rs"
-test = "no_other_build_task_source_resolves_its_own_binary"
+tests = ["no_other_build_task_source_resolves_its_own_binary"]
 reason = """
 Asserts that no build-task source except the dispatcher resolves the running
 binary for itself. The wrong answer is only wrong in a binary that is not the
 dispatcher, where the subcommand it would run does not exist, so a passing run
 of the dispatcher witnesses nothing. The subject is a call another crate did not
 make, which no execution observes.
+"""
+
+[[gate]]
+file = "xtask/src/gates/host_oracle_elimination.rs"
+tests = [
+  "analyze_files",
+  "canonical_program_dispatcher_exact_path_derives_execution_methods",
+  "cfg_test_cpu_ref_is_permitted_and_not_flagged",
+  "cfg_test_impl_block_is_scoped_as_test",
+  "cfg_test_item_level_function_body_vyre_reference_is_not_misclassified",
+  "cfg_test_trait_block_is_scoped_as_test",
+  "clean_dispatcher_allows_inter_dispatch_staging_loop",
+  "clean_dispatcher_with_dispatch_map_unpack_passes",
+  "clean_dispatcher_with_gpu_reduction_chain_passes",
+  "clean_dispatcher_with_pre_validation_and_typed_unpacking_passes",
+  "clean_operation_registration_allows_literal_and_const_byte_array",
+  "clean_production_code_produces_no_findings",
+  "compiler_planner_reachable_from_builder_is_permitted",
+  "control_bogus_local_operation_registration_does_not_false_positive",
+  "expected_output_with_wire_pack_and_literal_helper_is_convicted",
+  "gpu_dispatcher_boundary_and_validation_functions_are_permitted",
+  "mutation_catches_adversarial_numeric_iterator_twin_with_same_shape",
+  "mutation_catches_crate_bogus_program_masquerade",
+  "mutation_catches_dispatch_error_and_resident_read_range_param_masquerade",
+  "mutation_catches_dispatcher_err_fallback_branch_oracle",
+  "mutation_catches_dispatcher_map_closure_post_dispatch_reduction",
+  "mutation_catches_dispatcher_match_ok_post_dispatch_iter_any",
+  "mutation_catches_dispatcher_post_dispatch_filter_count_reduction",
+  "mutation_catches_dispatcher_post_dispatch_iter_any_reduction",
+  "mutation_catches_dispatcher_post_dispatch_loop_accumulation",
+  "mutation_catches_dispatcher_unwrap_or_else_fallback_oracle",
+  "mutation_catches_expected_output_target_also_called_by_builder",
+  "mutation_catches_fake_dispatch_error_without_canonical_dispatcher",
+  "mutation_catches_generic_masquerade_with_similar_ident",
+  "mutation_catches_generic_program_dispatcher_bound_host_reduction",
+  "mutation_catches_glob_import_program_masquerade",
+  "mutation_catches_imported_alias_transitive_post_dispatch_derivation",
+  "mutation_catches_local_dummy_dispatcher_masquerade",
+  "mutation_catches_local_dummy_program_masquerade",
+  "mutation_catches_local_type_masquerading_as_operation_metadata",
+  "mutation_catches_metadata_only_dispatcher_call_not_establishing_execution",
+  "mutation_catches_mixed_tuple_data_type_masquerade",
+  "mutation_catches_name_collision_uncalled_oracle",
+  "mutation_catches_non_dispatching_helper_not_establishing_execution",
+  "mutation_catches_oracle_under_cfg_any_test_and_cpu_parity",
+  "mutation_catches_owned_vec_input_oracle",
+  "mutation_catches_parse_ambiguity_fails_closed",
+  "mutation_catches_post_dispatch_count_ones_reduction",
+  "mutation_catches_post_dispatch_decoded_value_comparison",
+  "mutation_catches_post_dispatch_decoder_loop_with_accumulation",
+  "mutation_catches_post_dispatch_float_arithmetic_derivation",
+  "mutation_catches_post_dispatch_integer_addition_derivation",
+  "mutation_catches_post_dispatch_integer_division_derivation",
+  "mutation_catches_post_dispatch_output_base_arithmetic_derivation",
+  "mutation_catches_post_dispatch_reconstruction_loop_with_scalar_math",
+  "mutation_catches_pre_dispatch_host_math_helper_in_gpu_dispatch_fn",
+  "mutation_catches_renamed_oracle_in_wire_path",
+  "mutation_catches_renamed_oracle_with_parse_witness_report_name",
+  "mutation_catches_resident_staging_values_not_uploaded_before_dispatch",
+  "mutation_catches_result_vec_with_fusion_error_masquerade",
+  "mutation_catches_same_basename_in_different_modules_rejected",
+  "mutation_catches_semantic_scalar_named_index_or_idx",
+  "mutation_catches_sibling_imported_fake_dispatcher_trait_masquerade",
+  "mutation_catches_sibling_imported_fake_program_masquerade",
+  "mutation_catches_staging_consumed_only_by_fake_local_dispatcher_masquerade",
+  "mutation_catches_staging_type_with_pub_fields_without_call_path",
+  "mutation_catches_staging_with_ignored_metadata_parameter_rejected",
+  "mutation_catches_static_facade_referenced_by_expected_output",
+  "mutation_catches_struct_literal_operation_registration_dynamic_expected_output",
+  "mutation_catches_table_like_name_oracle",
+  "mutation_catches_terminal_post_dispatch_math",
+  "mutation_catches_two_function_cycle_evasion",
+  "mutation_catches_ungated_tests_module",
+  "mutation_catches_unnamed_computed_const_referenced_by_expected_output",
+  "mutation_catches_unreachable_generic_cfg_alternative_definition",
+  "mutation_catches_unreached_binary_search_or_partition_oracle",
+  "mutation_catches_unreached_semantic_popcount_reduction",
+  "mutation_catches_unrelated_field_receiver_masquerading_as_dispatch",
+  "mutation_catches_unrelated_semantic_side_effect_between_dispatches",
+  "mutation_catches_unrelated_sum_between_dispatches_returned_afterward",
+  "mutation_catches_unrelated_upload_only_host_math_not_consumed_by_dispatch",
+  "mutation_catches_unused_alternative_producer_rejected",
+  "mutation_catches_validator_like_result_bool_oracle",
+  "mutation_catches_wire_codec_with_semantic_data_math",
+  "mutation_catches_zero_arg_oracle_behind_facade",
+  "mutation_distinguishes_same_named_methods_in_different_impl_blocks",
+  "mutation_operation_registration_aliased_as_or_catches_expected_output_oracle",
+  "mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle",
+  "mutation_operation_registration_catches_helper_function_in_expected_output",
+  "mutation_operation_registration_catches_inline_closure_loop_and_math",
+  "mutation_operation_registration_catches_local_closure_alias_in_expected_output",
+  "mutation_operation_registration_catches_wire_pack_in_expected_output",
+  "mutation_operation_registration_struct_literal_catches_expected_output_oracle",
+  "mutation_oracle_detection_catches_branch_classifier_returning_custom_enum",
+  "mutation_oracle_detection_catches_dynamic_expected_output_oracle_invocation",
+  "mutation_oracle_detection_catches_generic_named_host_twin_encode_payload",
+  "mutation_oracle_detection_catches_numeric_methods_clamp_abs",
+  "mutation_oracle_detection_catches_production_cpu_ref_fn",
+  "mutation_oracle_detection_catches_production_vyre_reference_usage",
+  "mutation_oracle_detection_catches_scalar_bitwise_transform",
+  "mutation_oracle_detection_catches_scalar_square_semantic_twin",
+  "mutation_permits_arbitrary_index_names_in_inter_dispatch_staging",
+  "mutation_permits_display_debug_error_impl_formatters",
+  "mutation_permits_genuine_resident_staging_consumed_by_canonical_dispatch",
+  "mutation_permits_genuine_resident_staging_separate_apis_unique_producer",
+  "mutation_permits_genuine_resident_staging_transitive_helper_dispatch",
+  "mutation_permits_gpu_result_transform_feeding_later_dispatch",
+  "mutation_permits_inter_dispatch_staging_buffer_operations",
+  "mutation_permits_ir_inspector_returning_bool_or_analysis_plan",
+  "mutation_permits_legitimate_transpose_input_staging",
+  "mutation_permits_operation_metadata_iterator_with_arbitrary_name",
+  "mutation_permits_post_dispatch_byte_unpacking_and_indexing",
+  "mutation_permits_post_dispatch_non_data_diagnostic_telemetry_methods",
+  "mutation_permits_pure_validator_returning_result_unit",
+  "mutation_permits_side_effect_telemetry_unit_function",
+  "mutation_permits_transitive_dispatch_helper_execution",
+  "mutation_permits_turbofish_generic_calls_and_cfg_alternative_definitions",
+  "mutation_permits_wire_byte_codec_without_arithmetic",
+  "mutation_recognizes_dispatcher_in_wrapper_struct_and_catches_post_dispatch_math",
+  "production_compiler_analysis_with_callers_is_classified_as_reachable",
+  "production_trait_default_method_uncalled_oracle_is_flagged",
+]
+reason = """
+Each fixture exercises a source-derived oracle-elimination rule while loading
+the exact canonical dispatcher trait. Dormant host semantic twins, source-level
+dataflow, and qualified type ownership have no run-time witness, so only
+structural analysis can prove their absence.
+"""
+
+[[gate]]
+file = "vyre-runtime/src/resident_work_queue/builder/mod.rs"
+tests = ["every_exported_program_builder_is_covered"]
+reason = """
+Derives exported Program builders from Rust items and compares them with the
+coverage table. Rust provides no run-time enumeration of exports, so only the
+source can expose a newly exported builder without a coverage decision.
+"""
+
+[[gate]]
+file = "xtask/tests/tree_contracts/cargo_invocation_resolution.rs"
+tests = ["every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary"]
+reason = """
+Resolves literal workflow and script invocations against Cargo target
+declarations. The complete command census and target roster exist only as
+source and manifest text.
+"""
+
+[[gate]]
+file = "xtask-registry/src/gates/lego_audit/semantic_organization.rs"
+tests = ["duplicate_block_skeleton_fails_closure"]
+reason = """
+Exercises the structural duplicate-block classifier against source fixtures.
+Two implementations with the same skeleton can behave identically, so only
+source structure exposes the duplicate ownership.
+"""
+
+[[gate]]
+file = "xtask-registry/src/gates/lego_audit/cross_dialect.rs"
+tests = ["undeclared_domain_directory_is_flagged_by_cross_dialect_gate"]
+reason = """
+Exercises the cross-dialect ownership classifier against source fixtures. A
+domain directory omitted from the declaration table has no run-time witness
+until code from the undeclared owner is linked.
 """
