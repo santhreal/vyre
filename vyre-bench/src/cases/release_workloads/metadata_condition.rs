@@ -84,43 +84,7 @@ impl BenchCase for MetadataConditionBatch {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
-                BufferDecl::storage("filesize", 1, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(METADATA_RECORDS),
-                BufferDecl::storage("header", 2, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(METADATA_RECORDS),
-                BufferDecl::storage("entropy_x1000", 3, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(METADATA_RECORDS),
-            ],
-            [256, 1, 1],
-            vec![
-                Node::let_bind("idx", Expr::gid_x()),
-                Node::if_then(
-                    Expr::and(
-                        Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS)),
-                        Expr::and(
-                            Expr::gt(Expr::load("filesize", Expr::var("idx")), Expr::u32(4096)),
-                            Expr::and(
-                                Expr::eq(
-                                    Expr::load("header", Expr::var("idx")),
-                                    Expr::u32(0x0000_4550),
-                                ),
-                                Expr::gt(
-                                    Expr::load("entropy_x1000", Expr::var("idx")),
-                                    Expr::u32(7200),
-                                ),
-                            ),
-                        ),
-                    ),
-                    vec![Node::let_bind(
-                        "_slot",
-                        Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
-                    )],
-                ),
-            ],
-        );
+        let program = metadata_condition_program();
         let mut filesize = Vec::with_capacity(METADATA_RECORDS as usize);
         let mut header = Vec::with_capacity(METADATA_RECORDS as usize);
         let mut entropy = Vec::with_capacity(METADATA_RECORDS as usize);
@@ -286,4 +250,60 @@ fn dispatch_single_metadata_resident(
         resident_used: dispatch.resident_used,
         reset_bytes,
     })
+}
+
+#[must_use]
+pub(super) fn metadata_condition_program() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
+            BufferDecl::storage("filesize", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(METADATA_RECORDS),
+            BufferDecl::storage("header", 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(METADATA_RECORDS),
+            BufferDecl::storage("entropy_x1000", 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(METADATA_RECORDS),
+        ],
+        [256, 1, 1],
+        vec![
+            Node::let_bind("idx", Expr::gid_x()),
+            Node::let_bind(
+                "is_match",
+                Expr::and(
+                    Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS)),
+                    Expr::and(
+                        Expr::gt(Expr::load("filesize", Expr::var("idx")), Expr::u32(4096)),
+                        Expr::and(
+                            Expr::eq(
+                                Expr::load("header", Expr::var("idx")),
+                                Expr::u32(0x0000_4550),
+                            ),
+                            Expr::gt(
+                                Expr::load("entropy_x1000", Expr::var("idx")),
+                                Expr::u32(7200),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            Node::let_bind(
+                "match_count",
+                Expr::select(Expr::var("is_match"), Expr::u32(1), Expr::u32(0)),
+            ),
+            Node::let_bind(
+                "warp_matches",
+                Expr::subgroup_add(Expr::var("match_count")),
+            ),
+            Node::if_then(
+                Expr::and(
+                    Expr::eq(Expr::subgroup_local_id(), Expr::u32(0)),
+                    Expr::gt(Expr::var("warp_matches"), Expr::u32(0)),
+                ),
+                vec![Node::let_bind(
+                    "_slot",
+                    Expr::atomic_add("out_count", Expr::u32(0), Expr::var("warp_matches")),
+                )],
+            ),
+        ],
+    )
 }
