@@ -1491,3 +1491,24 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod artifact_ownership_tests {
+    use super::*;
+
+    /// WHY: The authoritative descriptor and backend producer must agree on
+    /// the exact output path so comparison is immutable and write mutations
+    /// are never undeclared.
+    #[test]
+    fn authoritative_descriptor_declares_exact_backend_matrix_artifact() {
+        let descriptor = xtask::gate_metadata::descriptor_by_name("backend-matrix");
+        let mut expected: Vec<&str> = vec![ARTIFACT];
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "Fix: backend-matrix gate descriptor must declare exactly the canonical backend evidence artifact (`{ARTIFACT}`)"
+        );
+    }
+}
