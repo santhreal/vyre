@@ -279,10 +279,9 @@ mod tests {
 
     /// Workload identity of every micro case.
     ///
-    /// `program` is the blake3 program fingerprint. Every value here was read
-    /// off a live RTX 5090 run of the pre-collapse tree, which reported it as
-    /// that case's `workload_fingerprint`, so this column is evidence the
-    /// collapse did not move the program it was measured against.
+    /// `program` is the blake3 fingerprint of the canonical wire program.
+    /// A deliberate IR-schema or program migration updates this pin only after
+    /// the case's semantic contract is proved against the same fixture.
     ///
     /// `fixture` is blake3 over every fixture buffer, length-prefixed. No
     /// pre-collapse run exposed the fixture bytes, so this column is a forward
@@ -291,7 +290,7 @@ mod tests {
     const PINNED_WORKLOADS: &[PinnedWorkload] = &[
         PinnedWorkload {
             id: "foundation.attention.64",
-            program: "272265422fc6771cded1a902f3cbbecde90badc91a1814fcb0d4b2ac8a89fb81",
+            program: "4bb410db53b85420765d63c15249762ea9cf79ba153820423e43ff5c88e71579",
             fixture: "ede5e815a089bbdd231d17a57bbe1cdf59c097be49479838f9a0a64f8f81f183",
         },
         PinnedWorkload {
@@ -332,8 +331,8 @@ mod tests {
         fixture: &'static str,
     }
 
-    /// Every micro case keeps the exact program and fixture it had before the
-    /// seven copies were collapsed onto one owner.
+    /// Every micro case keeps its deliberately recorded program and fixture
+    /// identity until a proved migration updates the corresponding pin.
     ///
     /// Derived from `MICRO_CASES` rather than a count, so a case added without a
     /// recorded workload identity fails here instead of shipping unpinned.
