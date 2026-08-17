@@ -4077,6 +4077,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and stays where it is. `case_declaration_contracts` derives its coverage from
   the case registry and a walk of the crate source, so a new case or a
   reintroduced narrowing fails by name rather than going uncovered.
+- The bench-release gate now rejects the unsupported --write flag and describes
+  its comparison-only contract; release-benchmarks remains the sole owner of
+  measured artifacts.
 - The timed CPU reference in `vyre-bench` has one owner,
   `vyre-bench/src/cases/reference_sample.rs`, and it saturates. Eleven cases
   hand-rolled the same timer and seven of them cast `Duration::as_nanos()`
@@ -4957,6 +4960,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Loop guard elision, range folding, software pipelining and unrolling rewrite
   every nested body the IR node declares, taking the slots from the shared
   owner instead of a per-pass list.
+- The measured release-evidence workflow now runs conformance and release
+  benchmarks on the self-hosted RTX 5090 lane instead of a GPU-less hosted
+  runner.
 - The six byte counts that decide a megakernel wave's device-memory plan travel
   as one value, `vyre_driver::megakernel_execution::MegakernelByteLayout`,
   instead of a positional list of six `u64` arguments restated at every hop

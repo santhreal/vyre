@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The measured release-evidence workflow now runs conformance and release benchmarks on the self-hosted RTX 5090 lane instead of a GPU-less hosted runner."

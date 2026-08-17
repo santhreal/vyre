@@ -44,7 +44,8 @@ jobs:
 
   measured-evidence:
     name: Generate measured evidence
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gpu-5090]
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -55,7 +56,7 @@ jobs:
       - name: Release benchmark artifacts
         run: |
           ./cargo_full run -p xtask -- release-benchmarks --write
-          ./cargo_full run -p xtask -- bench-release --write
+          ./cargo_full run -p xtask -- bench-release
 
   prepublish:
     name: Composite pre-publish runners

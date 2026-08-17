@@ -122,7 +122,6 @@ fn evidence_dir(ctx: &GateCtx) -> Result<PathBuf, String> {
     let mut index = 0;
     while index < ctx.args.len() {
         match ctx.args[index].as_str() {
-            "--write" => index += 1,
             "--evidence-dir" => {
                 let value = ctx.args.get(index + 1).ok_or_else(|| {
                     "Fix: --evidence-dir requires a path to release benchmark artifacts."
@@ -250,6 +249,15 @@ mod tests {
     use std::fs;
 
     use super::*;
+
+    /// A comparison gate must not accept mutation authority it cannot use.
+    #[test]
+    fn write_mode_is_rejected() {
+        let context = GateCtx::new(PathBuf::from("."), vec!["--write".to_string()]);
+        let error = evidence_dir(&context)
+            .expect_err("Fix: bench-release must reject the producer-only --write flag");
+        assert!(error.contains("unknown bench-release argument `--write`"));
+    }
 
     /// The axes, when the fixture is coherent.
     ///

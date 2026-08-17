@@ -162,7 +162,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "bench-release",
-        help: "Enforce the release benchmark gate across CUDA, WGPU, and CPU reference baselines. \\        Proves all 42 required release benchmark cases exist, pass on this host, and achieve \\        measured throughput and latency at or above the release floor. Proves zero failed cases, \\        zero unexplained regressions from the baseline, and that the run reached the required \\        sample count. The probe is measured live against this host's device; host requirements \\        apply. Run with --write to refresh release/evidence/benchmarks/release-benchmarks.json.",
+        help: "Judge the recorded release benchmark evidence across CUDA, WGPU, and CPU reference baselines. \\        Proves all 42 required release benchmark cases exist, passed on the recorded release host, \\        and achieved measured throughput and latency at or above the release floor. Proves zero \\        failed cases, zero unexplained regressions from the baseline, and that the recorded run \\        reached the required sample count. It measures nothing; regenerate the owned artifacts \\        with release-benchmarks before running this comparison gate.",
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
