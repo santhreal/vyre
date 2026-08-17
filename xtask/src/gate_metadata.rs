@@ -446,6 +446,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::evidence_paths::tests::a_citation_that_does_not_resolve_is_reported",
     },
     GateDescriptor {
+        name: "error-codes",
+        help: "Hold docs/generated/driver-error-codes.toml to the live driver error-code inventory; --write regenerates it",
+        package: "xtask-registry",
+        areas: &["prepublish"],
+        subject: "driver error codes",
+        artifacts: &["docs/generated/driver-error-codes.toml"],
+        prerequisites: &[],
+        proof: "xtask_registry::docs::error_codes::tests::driver_error_catalog_uses_canonical_renderer",
+    },
+    GateDescriptor {
         name: "example-capability",
         help: "Enforce example-capability contracts",
         package: "xtask",
@@ -1432,7 +1442,11 @@ pub fn descriptor(gate_name: &str) -> Option<&'static GateDescriptor> {
     GATE_METADATA.iter().find(|d| d.name == gate_name)
 }
 
-/// Authoritative descriptor for `gate_name`. Panics when `gate_name` is not in `GATE_METADATA`.
+/// Authoritative descriptor for `gate_name`.
+///
+/// # Panics
+///
+/// Panics when `gate_name` is not in `GATE_METADATA`.
 #[must_use]
 pub fn descriptor_by_name(gate_name: &str) -> &'static GateDescriptor {
     descriptor(gate_name).unwrap_or_else(|| panic!("gate `{gate_name}` is not in GATE_METADATA"))

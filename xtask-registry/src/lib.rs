@@ -25,6 +25,7 @@ use xtask::gate::GateBehavior;
 pub static GATES: &[(&'static str, &'static dyn GateBehavior)] = &[
     ("compile", &compile::Compile),
     ("catalog", &docs::catalog::Catalog),
+    ("error-codes", &docs::error_codes::ErrorCodes),
     ("list-ops", &docs::list_ops::ListOps),
     ("op-matrix", &docs::op_matrix::OpMatrixGate),
     (

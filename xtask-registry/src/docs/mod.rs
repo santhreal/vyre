@@ -6,6 +6,7 @@
 //! reads only files and stays in `xtask::docs`.
 
 pub mod catalog;
+pub mod error_codes;
 pub mod list_ops;
 pub mod op_matrix;
 pub mod operation_schema;

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The driver error-code catalog now has a registered `error-codes --write` producer backed directly by the exhaustive runtime inventory."

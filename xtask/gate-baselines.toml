@@ -132,6 +132,10 @@ name = "evidence-paths"
 findings = 0
 
 [[gate]]
+name = "error-codes"
+findings = 0
+
+[[gate]]
 name = "example-capability"
 findings = 0
 
