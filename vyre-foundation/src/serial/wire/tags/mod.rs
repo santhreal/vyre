@@ -68,34 +68,34 @@ pub(crate) use un_op_tag::un_op_tag;
 ///
 /// See [`mod@access_tag`] for the inverse mapping. Tag stability is part of the
 /// wire-format contract; new variants require a format revision.
-pub mod access_from_tag;
+pub(crate) mod access_from_tag;
 /// Encode a `BufferAccess` into its VIR0 wire tag.
 ///
 /// See [`mod@access_from_tag`] for the inverse mapping.
-pub mod access_tag;
+pub(crate) mod access_tag;
 /// Decode an `AtomicOp` from its VIR0 wire tag.
 ///
 /// See [`mod@atomic_op_tag`] for the inverse mapping.
-pub mod atomic_op_from_tag;
+pub(crate) mod atomic_op_from_tag;
 /// Encode an `AtomicOp` into its VIR0 wire tag.
 ///
 /// See [`mod@atomic_op_from_tag`] for the inverse mapping.
-pub mod atomic_op_tag;
+pub(crate) mod atomic_op_tag;
 /// Decode a `BinOp` from its VIR0 wire tag.
 ///
 /// See [`mod@bin_op_tag`] for the inverse mapping. Covers audit L.1.27 / I4.
-pub mod bin_op_from_tag {
+pub(crate) mod bin_op_from_tag {
     pub(crate) use super::op_tag_decode::bin_op_from_tag;
 }
 /// Encode a `BinOp` into its VIR0 wire tag.
 ///
 /// See [`mod@bin_op_from_tag`] for the inverse mapping. Covers audit L.1.27 / I4.
-pub mod bin_op_tag;
+pub(crate) mod bin_op_tag;
 /// Decode a `DataType` from its VIR0 wire tag.
 ///
 /// See [`mod@data_type_tag`] for the inverse mapping. `Array` is handled at the
 /// reader level because it carries an extra `element_size` payload.
-pub mod data_type_from_tag;
+pub(crate) mod data_type_from_tag;
 /// Encode a `DataType` into its VIR0 wire tag and optional payload.
 ///
 /// See [`mod@data_type_from_tag`] for the inverse mapping.
@@ -103,10 +103,10 @@ pub(crate) mod data_type_tag;
 /// Decode a `UnOp` from its VIR0 wire tag.
 ///
 /// See [`mod@un_op_tag`] for the inverse mapping. Covers audit L.1.27 / I4.
-pub mod un_op_from_tag {
+pub(crate) mod un_op_from_tag {
     pub(crate) use super::op_tag_decode::un_op_from_tag;
 }
 /// Encode a `UnOp` into its VIR0 wire tag.
 ///
 /// See [`mod@un_op_from_tag`] for the inverse mapping. Covers audit L.1.27 / I4.
-pub mod un_op_tag;
+pub(crate) mod un_op_tag;
