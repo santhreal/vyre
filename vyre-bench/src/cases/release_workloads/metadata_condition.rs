@@ -263,42 +263,75 @@ pub(super) fn metadata_condition_program() -> Program {
                 .with_count(METADATA_RECORDS),
             BufferDecl::storage("entropy_x1000", 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(METADATA_RECORDS),
+            BufferDecl::workgroup("warp_scratch", 64, DataType::U32),
         ],
-        [256, 1, 1],
+        [512, 1, 1],
         vec![
             Node::let_bind("idx", Expr::gid_x()),
+            Node::let_bind("lid", Expr::local_x()),
+            Node::let_bind("subgroup_sz", Expr::subgroup_size()),
+            Node::let_bind("lane_id", Expr::subgroup_local_id()),
             Node::let_bind(
-                "is_match",
-                Expr::and(
-                    Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS)),
-                    Expr::and(
-                        Expr::gt(Expr::load("filesize", Expr::var("idx")), Expr::u32(4096)),
-                        Expr::and(
-                            Expr::eq(
-                                Expr::load("header", Expr::var("idx")),
-                                Expr::u32(0x0000_4550),
-                            ),
-                            Expr::gt(
-                                Expr::load("entropy_x1000", Expr::var("idx")),
-                                Expr::u32(7200),
-                            ),
-                        ),
-                    ),
-                ),
+                "warp_id",
+                Expr::div(Expr::var("lid"), Expr::var("subgroup_sz")),
             ),
             Node::let_bind(
-                "match_count",
-                Expr::select(Expr::var("is_match"), Expr::u32(1), Expr::u32(0)),
+                "num_warps",
+                Expr::div(Expr::u32(512), Expr::var("subgroup_sz")),
             ),
-            Node::let_bind("warp_matches", Expr::subgroup_add(Expr::var("match_count"))),
+            Node::let_bind("is_match", Expr::bool(false)),
             Node::if_then(
                 Expr::and(
-                    Expr::eq(Expr::subgroup_local_id(), Expr::u32(0)),
-                    Expr::gt(Expr::var("warp_matches"), Expr::u32(0)),
+                    Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS)),
+                    Expr::gt(
+                        Expr::load("entropy_x1000", Expr::var("idx")),
+                        Expr::u32(7200),
+                    ),
+                ),
+                vec![Node::assign(
+                    "is_match",
+                    Expr::and(
+                        Expr::gt(Expr::load("filesize", Expr::var("idx")), Expr::u32(4096)),
+                        Expr::eq(
+                            Expr::load("header", Expr::var("idx")),
+                            Expr::u32(0x0000_4550),
+                        ),
+                    ),
+                )],
+            ),
+            Node::let_bind(
+                "warp_matches",
+                Expr::popcount(Expr::subgroup_ballot(Expr::var("is_match"))),
+            ),
+            Node::if_then(
+                Expr::eq(Expr::var("lane_id"), Expr::u32(0)),
+                vec![Node::store(
+                    "warp_scratch",
+                    Expr::var("warp_id"),
+                    Expr::var("warp_matches"),
+                )],
+            ),
+            Node::barrier(),
+            Node::let_bind(
+                "warp_partial",
+                Expr::select(
+                    Expr::and(
+                        Expr::eq(Expr::var("warp_id"), Expr::u32(0)),
+                        Expr::lt(Expr::var("lane_id"), Expr::var("num_warps")),
+                    ),
+                    Expr::load("warp_scratch", Expr::var("lane_id")),
+                    Expr::u32(0),
+                ),
+            ),
+            Node::let_bind("wg_total", Expr::subgroup_add(Expr::var("warp_partial"))),
+            Node::if_then(
+                Expr::and(
+                    Expr::eq(Expr::var("lid"), Expr::u32(0)),
+                    Expr::gt(Expr::var("wg_total"), Expr::u32(0)),
                 ),
                 vec![Node::let_bind(
                     "_slot",
-                    Expr::atomic_add("out_count", Expr::u32(0), Expr::var("warp_matches")),
+                    Expr::atomic_add("out_count", Expr::u32(0), Expr::var("wg_total")),
                 )],
             ),
         ],
