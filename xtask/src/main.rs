@@ -62,12 +62,14 @@ fn main() {
             process::exit(1);
         }
         Ok(report) => {
-            let contract_failures = report.contract_failures(descriptor);
-            if !contract_failures.is_empty() {
-                for failure in contract_failures {
-                    eprintln!("Fix: gate `{name}` {failure}");
+            if !gate::help_requested(&ctx.args) {
+                let contract_failures = report.contract_failures(descriptor);
+                if !contract_failures.is_empty() {
+                    for failure in contract_failures {
+                        eprintln!("Fix: gate `{name}` {failure}");
+                    }
+                    process::exit(1);
                 }
-                process::exit(1);
             }
             if ctx.has("--print-toolchain") && report.findings.is_empty() {
                 return;
