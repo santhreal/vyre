@@ -231,6 +231,22 @@ fn entropy_window_program(records: u32) -> Program {
 }
 
 fn quantified_condition_loops_program(records: u32) -> Program {
+    let lane_mask = Expr::u32((1u32 << QUANTIFIED_LANES) - 1);
+    let any_hit = Expr::ne(
+        Expr::bitand(Expr::var("any_word"), lane_mask.clone()),
+        Expr::u32(0),
+    );
+    let all_hit = Expr::eq(
+        Expr::bitand(Expr::var("all_word"), lane_mask.clone()),
+        lane_mask.clone(),
+    );
+    let threshold_hits = Expr::popcount(Expr::bitand(
+        Expr::var("threshold_word"),
+        lane_mask,
+    ));
+    let threshold_hit = Expr::ge(threshold_hits, Expr::u32(QUANTIFIED_THRESHOLD));
+    let condition = Expr::and(any_hit, Expr::and(all_hit, threshold_hit));
+
     Program::wrapped(
         vec![
             BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
@@ -250,60 +266,8 @@ fn quantified_condition_loops_program(records: u32) -> Program {
                     Node::let_bind("any_word", load_u32("any_mask")),
                     Node::let_bind("all_word", load_u32("all_mask")),
                     Node::let_bind("threshold_word", load_u32("threshold_mask")),
-                    Node::let_bind("any_seen", Expr::u32(0)),
-                    Node::let_bind("all_seen", Expr::u32(1)),
-                    Node::let_bind("threshold_hits", Expr::u32(0)),
-                    Node::loop_for(
-                        "q",
-                        Expr::u32(0),
-                        Expr::u32(QUANTIFIED_LANES),
-                        vec![
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("any_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("q")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                vec![Node::assign("any_seen", Expr::u32(1))],
-                            ),
-                            Node::if_then(
-                                Expr::eq(
-                                    Expr::bitand(
-                                        Expr::var("all_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("q")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                vec![Node::assign("all_seen", Expr::u32(0))],
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("threshold_word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("q")),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                vec![Node::assign(
-                                    "threshold_hits",
-                                    Expr::add(Expr::var("threshold_hits"), Expr::u32(1)),
-                                )],
-                            ),
-                        ],
-                    ),
                     Node::if_then(
-                        Expr::and(
-                            Expr::ne(Expr::var("any_seen"), Expr::u32(0)),
-                            Expr::and(
-                                Expr::ne(Expr::var("all_seen"), Expr::u32(0)),
-                                Expr::ge(
-                                    Expr::var("threshold_hits"),
-                                    Expr::u32(QUANTIFIED_THRESHOLD),
-                                ),
-                            ),
-                        ),
+                        condition,
                         vec![Node::let_bind(
                             "_slot",
                             Expr::atomic_add("out_count", Expr::u32(0), Expr::u32(1)),
