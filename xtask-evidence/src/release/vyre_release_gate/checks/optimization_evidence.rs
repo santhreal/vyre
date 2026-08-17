@@ -291,7 +291,7 @@ pub(crate) fn check_named_cuda_benchmark_report(
     let path = requirement
         .evidence
         .iter()
-        .find(|evidence| evidence.ends_with(suffix))
+        .find(|evidence| evidence.as_str() == suffix || evidence.ends_with(&format!("/{suffix}")))
         .map(|evidence| resolve_manifest_path(base_dir, evidence))
         .unwrap_or_else(|| base_dir.join(suffix));
     check_single_benchmark_report(requirement, base_dir, &path, &report, true, None, failures);

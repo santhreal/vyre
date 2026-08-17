@@ -204,6 +204,7 @@ evidence = [
   "../docs/DOCS.toml",
   "../docs/SUMMARY.md",
   "../docs/INDEX.md",
+  "evidence/docs/docs-evidence-map.md",
   "evidence/docs/vyre-readme-contracts.json",
   "evidence/docs/vyre-readme-proof.md",
   "evidence/docs/benchmark-doc-proof.md",

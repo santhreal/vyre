@@ -39,6 +39,13 @@ pub(crate) struct BenchReleaseGate;
 impl xtask::gate::GateBehavior for BenchReleaseGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
+        if ctx.write {
+            report.find(Finding::new(
+                "bench-release is comparison-only and rejects --write",
+                "Run `./cargo_full run --bin xtask -- release-benchmarks --backend cuda --measured-samples 30 --write` on a release host to record measured benchmark artifacts.",
+            ));
+            return Ok(report);
+        }
         let tree = Tree::open(&ctx.root)?;
         report.cover_complete("benchmark evidence directories", tree.members()?.len());
         let evidence_dir = match evidence_dir(ctx) {
@@ -248,6 +255,7 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 mod tests {
     use std::fs;
 
+    use xtask::gate::GateBehavior;
     use super::*;
 
     /// A comparison gate must not accept mutation authority it cannot use.
@@ -257,6 +265,17 @@ mod tests {
         let error = evidence_dir(&context)
             .expect_err("Fix: bench-release must reject the producer-only --write flag");
         assert!(error.contains("unknown bench-release argument `--write`"));
+    }
+
+    #[test]
+    fn gate_behavior_rejects_write_flag() {
+        let mut context = GateCtx::new(PathBuf::from("."), vec![]);
+        context.write = true;
+        let report = BenchReleaseGate.run(&context).expect("gate runs cleanly to report findings");
+        assert!(
+            report.findings.iter().any(|f| f.message.contains("bench-release is comparison-only and rejects --write")),
+            "Fix: bench-release must reject write mode when passed in GateCtx"
+        );
     }
 
     /// The axes, when the fixture is coherent.
