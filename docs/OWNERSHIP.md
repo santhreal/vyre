@@ -74,7 +74,7 @@ Own reproducible workload benchmarks against the best available native baseline 
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
 | `vyre-emit-ptx` | primary binary backend text emission | `private` | `primary-binary-emitter` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
-| `vyre-libs` | product operation builders, and the host oracles the device path is measured against | `private` | `product-libraries` |
+| `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
 | `vyre-reference` | independent semantic oracle execution | `private` | `reference-semantics` |
@@ -412,12 +412,11 @@ The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a b
 - Path: `vyre-reference`
 - Owner: `reference-semantics`
 - Layer: `semantics`
-- Internal production dependencies: `vyre-foundation`, `vyre-libs`, `vyre-primitives`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`, `vyre-primitives`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-libs` | host-side helpers the oracle shares with the composition it checks: the FNV-1a state functions and the DFA compiler | `public` | `product-libraries` |
 | `vyre-primitives` | the wire format, the marker types, and guarded IR construction | `public` | `primitive-library` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `public` | `specification` |
 

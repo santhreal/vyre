@@ -32,7 +32,7 @@ This crate declares no Cargo features.
 | `test` | `emit_contracts` | `vyre-emit-spirv/tests/emit_contracts.rs` | None | `./cargo_full test -p vyre-emit-spirv --test emit_contracts` |
 | `test` | `emitted_artifact_byte_stability` | `vyre-emit-spirv/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-spirv --test emitted_artifact_byte_stability` |
 | `test` | `generated_emit_descriptor_matrix` | `vyre-emit-spirv/tests/generated_emit_descriptor_matrix.rs` | None | `./cargo_full test -p vyre-emit-spirv --test generated_emit_descriptor_matrix` |
-| `test` | `pattern_analysis_contracts` | `vyre-emit-spirv/tests/pattern_analysis_contracts.rs` | None | `./cargo_full test -p vyre-emit-spirv --test pattern_analysis_contracts` |
+| `test` | `pattern_analysis_contracts` | `vyre-emit-spirv/tests/pattern_analysis_contracts/mod.rs` | None | `./cargo_full test -p vyre-emit-spirv --test pattern_analysis_contracts` |
 | `test` | `target_capabilities` | `vyre-emit-spirv/tests/target_capabilities.rs` | None | `./cargo_full test -p vyre-emit-spirv --test target_capabilities` |
 
 ## Test classes

@@ -997,6 +997,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   relaxation of `vyre_libs::math::bellman_shortest_path`: what it owes is the
   routing assertion it already carries, that its composition emits the
   primitive program unchanged.
+- Shared composer types have one public path under `vyre-libs`: CSR types under
+  `csr`, elementwise types under `elementwise`, contraction types under `gemm`,
+  state-machine types under `state_machine`, and grid types under `stencil`.
+  The duplicate crate-root and semiring-module re-exports are removed.
 - Eighteen composition domains moved out of vyre-primitives into vyre-libs:
   bitset, decode, fixpoint, geom, graph, hash, label, math, matching, nfa, nn,
   opt, parsing, predicate, reduce, text, topology and visual. vyre-primitives
@@ -1008,6 +1012,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   operation ids are unchanged, so built IR and the operation catalog keep the
   same names. Each moved domain has a feature of its own in vyre-libs that
   names only the domains its own source reaches.
+- Sequential composition witnesses now live only in
+  `vyre-reference::composition_witness`. `vyre-libs`, `vyre-primitives`, parity
+  suites, and release benchmark adapters no longer retain independent host
+  implementations; test and benchmark callers delegate to neutral
+  reference-owned witnesses, while production compilation and dispatch remain
+  GPU-only.
 - `vyre-conform` depends on `vyre-libs` with `features = ["full"]` rather than
   restating ten of the aggregate's members by hand. A hand-kept list of
   aggregate members drifts silently against the aggregate, which is how the
@@ -1325,7 +1335,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   that read launch geometry inside one read as not reading it.
   `visit::any_expr_in` is public, as the composition of the node, operand, and
   expression owners that a scan over both namespaces needs.
-- Eleven duplication pins now sit at what the merged tree measures rather than
+- Twelve duplication pins now sit at what the merged tree measures rather than
   at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31,
   vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to
   4017, vyre-foundation 5125 to 5117, vyre-libs 11759 to 11539, vyre-megakernel
@@ -4491,8 +4501,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   which defaults to 300 seconds.
 - Every intra-doc link in the workspace resolves, so `cargo doc` builds with
   `broken_intra_doc_links` denied. The regex DFA module pointed readers at
-  `crate::scan::RegionEvidencePipeline`, a type that exists nowhere in the
-  tree; it now names `crate::scan::regex_anchored_window`, the module that
+  `crate::pattern::RegionEvidencePipeline`, a type that exists nowhere in the
+  tree; it now names `crate::pattern::regex_anchored_window`, the module that
   actually consumes candidate origins from a prefilter, and disambiguates
   `nfa_to_dfa()` from the module of the same name. A module header comment
   resolves its links in the scope of the parent that declares the module, so
@@ -4733,6 +4743,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Testing guides are now generated for all 36 workspace members from Cargo
   features and targets plus maintained hardware, evidence, skip, and failure
   metadata. The documentation gate rejects missing, orphaned, or stale guides.
+- The `graph-dispatch` feature now enables the `encoding` domain that owns its
+  GPU reduction-metric dispatchers. A production `vyre-driver-cuda` build no
+  longer fails when motif existence and participation adapters import reduction
+  metrics without the owning module.
 - `vyre-primitives` feature `graph` enables `fixpoint`.
   `graph::persistent_bfs::program` reads
   `fixpoint::persistent_fixpoint::grid_sync_barrier`, the single owner of the

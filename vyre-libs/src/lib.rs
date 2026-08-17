@@ -53,17 +53,8 @@ pub use builder::gemm;
 pub use builder::range_ordering;
 pub use builder::state_machine;
 pub use builder::stencil;
-#[cfg(feature = "graph")]
-pub use builder::CsrTraversalComposer;
-pub use builder::ElementwiseComposer;
-pub use builder::TableStateMachineComposer;
 pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};
-pub use builder::{
-    ContractionComposer, ContractionEpilogue, ContractionGeometry, ContractionSemiring,
-    ContractionTiling,
-};
-pub use builder::{Grid2DComposer, Grid2DShape};
 pub use plumbing::host::dispatch_buffers;
 pub use plumbing::operand::buffer_names;
 pub use plumbing::operand::tensor_ref::{

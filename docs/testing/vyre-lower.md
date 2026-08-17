@@ -37,7 +37,7 @@ The crate lives at `vyre-lower`. The `lowering` owner maintains its
 | `test` | `analysis_representation_boundary` | `vyre-lower/tests/analysis_representation_boundary.rs` | None | `./cargo_full test -p vyre-lower --test analysis_representation_boundary` |
 | `test` | `bank_conflict_strategy_contracts` | `vyre-lower/tests/bank_conflict_strategy_contracts.rs` | None | `./cargo_full test -p vyre-lower --test bank_conflict_strategy_contracts` |
 | `test` | `lower_visibility_contract` | `vyre-lower/tests/lower_visibility_contract.rs` | None | `./cargo_full test -p vyre-lower --test lower_visibility_contract` |
-| `test` | `lowering_contracts` | `vyre-lower/tests/lowering_contracts.rs` | None | `./cargo_full test -p vyre-lower --test lowering_contracts` |
+| `test` | `lowering_contracts` | `vyre-lower/tests/lowering_contracts/mod.rs` | None | `./cargo_full test -p vyre-lower --test lowering_contracts` |
 | `test` | `resource_bounds_contracts` | `vyre-lower/tests/resource_bounds_contracts.rs` | None | `./cargo_full test -p vyre-lower --test resource_bounds_contracts` |
 | `test` | `rewrite_layer_contract` | `vyre-lower/tests/rewrite_layer_contract.rs` | None | `./cargo_full test -p vyre-lower --test rewrite_layer_contract` |
 | `test` | `shared_store_race_legality` | `vyre-lower/tests/shared_store_race_legality.rs` | None | `./cargo_full test -p vyre-lower --test shared_store_race_legality` |

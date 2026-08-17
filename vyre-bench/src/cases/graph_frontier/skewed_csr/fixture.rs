@@ -7,7 +7,7 @@ use crate::cases::queue_closure_oracle::{
 use crate::cases::skewed_graph::{
     skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
 };
-use vyre_libs::bitset::frontier::materialize_frontier_queue_exact_count_into;
+use vyre_reference::composition_witness::frontier_to_queue_witness_into;
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
 pub(super) const CSR_ALLOW_MASK: u32 = 0b0111;
@@ -185,19 +185,13 @@ pub(super) fn materialize_skewed_csr_active_queue(
         ))
     })?;
     let mut active_queue = Vec::new();
-    let seen = materialize_frontier_queue_exact_count_into(
-        fixture.stats.node_count,
+    let seen = frontier_to_queue_witness_into(
         &fixture.frontier_in,
-        expected,
+        fixture.stats.node_count,
         queue_capacity,
         &mut active_queue,
-    )
-    .map_err(|error| {
-        BenchError::EnvironmentInvalid(format!(
-            "{context} could not materialize sparse graph frontier queue: {error} Fix: rebuild queue capacity from active source stats."
-        ))
-    })?;
-    if u64::from(seen) != fixture.stats.active_sources {
+    );
+    if seen != expected {
         return Err(BenchError::EnvironmentInvalid(format!(
             "{context} counted {seen} active sources but fixture stats recorded {}. Fix: rebuild frontier stats from the same bitset.",
             fixture.stats.active_sources

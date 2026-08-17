@@ -28,7 +28,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `matching-dfa`, `matching-nfa`, `matching-substring`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `wgpu`
+- Available manifest features: `default`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `pattern-dfa`, `pattern-nfa`, `pattern-substring`, `wgpu`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -49,7 +49,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `binop_parity_fixtures` | `vyre-driver-wgpu/tests/binop_parity_fixtures.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binop_parity_fixtures` |
 | `test` | `bitset_zero_gpu_parity` | `vyre-driver-wgpu/tests/bitset_zero_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test bitset_zero_gpu_parity` |
 | `test` | `blake3_compress_gpu_parity` | `vyre-driver-wgpu/tests/blake3_compress_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test blake3_compress_gpu_parity` |
-| `test` | `buf_len_array_length` | `vyre-driver-wgpu/tests/buf_len_array_length.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test buf_len_array_length` |
+| `test` | `buf_len_array_length` | `vyre-driver-wgpu/tests/buf_len_array_length/mod.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test buf_len_array_length` |
 | `test` | `capability_contract` | `vyre-driver-wgpu/tests/capability_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test capability_contract` |
 | `test` | `capability_drift` | `vyre-driver-wgpu/tests/capability_drift.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test capability_drift` |
 | `test` | `cat_a_conform` | `vyre-driver-wgpu/tests/cat_a_conform.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test cat_a_conform` |
@@ -90,13 +90,13 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `newton_schulz_ir_shape` | `vyre-driver-wgpu/tests/newton_schulz_ir_shape.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test newton_schulz_ir_shape` |
 | `test` | `no_cpu_fallback` | `vyre-driver-wgpu/tests/no_cpu_fallback.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test no_cpu_fallback` |
 | `test` | `nvme_gpu_ingest_e2e` | `vyre-driver-wgpu/tests/nvme_gpu_ingest_e2e.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test nvme_gpu_ingest_e2e` |
-| `test` | `op_pairwise` | `vyre-driver-wgpu/tests/op_pairwise.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test op_pairwise` |
+| `test` | `op_pairwise` | `vyre-driver-wgpu/tests/op_pairwise/mod.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test op_pairwise` |
 | `test` | `oversized_workgroup_fails_loudly` | `vyre-driver-wgpu/tests/oversized_workgroup_fails_loudly.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test oversized_workgroup_fails_loudly` |
 | `test` | `pipeline_cache_contract` | `vyre-driver-wgpu/tests/pipeline_cache_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test pipeline_cache_contract` |
 | `test` | `pipeline_cache_persistence` | `vyre-driver-wgpu/tests/pipeline_cache_persistence.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test pipeline_cache_persistence` |
 | `test` | `preferred_dispatch_backend` | `vyre-driver-wgpu/tests/preferred_dispatch_backend.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test preferred_dispatch_backend` |
 | `test` | `readback_ring_liveness_contracts` | `vyre-driver-wgpu/tests/readback_ring_liveness_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test readback_ring_liveness_contracts` |
-| `test` | `resident_buffer_contracts` | `vyre-driver-wgpu/tests/resident_buffer_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_buffer_contracts` |
+| `test` | `resident_buffer_contracts` | `vyre-driver-wgpu/tests/resident_buffer_contracts/mod.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_buffer_contracts` |
 | `test` | `resident_grid_sync_contracts` | `vyre-driver-wgpu/tests/resident_grid_sync_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_grid_sync_contracts` |
 | `test` | `resident_output_contracts` | `vyre-driver-wgpu/tests/resident_output_contracts.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_output_contracts` |
 | `test` | `resident_timed_outputs` | `vyre-driver-wgpu/tests/resident_timed_outputs.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test resident_timed_outputs` |

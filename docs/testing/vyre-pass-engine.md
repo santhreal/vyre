@@ -24,7 +24,7 @@ The crate lives at `vyre-pass-engine`. The `pass-engine` owner maintains its
 ## Feature sets
 
 - Default feature members: `optimizer`
-- Available manifest features: `all-solvers`, `cpu-parity`, `default`, `optimizer`
+- Available manifest features: `all-solvers`, `default`, `optimizer`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -44,7 +44,7 @@ The crate lives at `vyre-pass-engine`. The `pass-engine` owner maintains its
 | `test` | `encoded_rewrite_walk_contract` | `vyre-pass-engine/tests/encoded_rewrite_walk_contract.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test encoded_rewrite_walk_contract` |
 | `test` | `feature_boundaries` | `vyre-pass-engine/tests/feature_boundaries.rs` | None | `./cargo_full test -p vyre-pass-engine --test feature_boundaries` |
 | `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | None | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
-| `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | `cpu-parity` | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
+| `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | `all-solvers` | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
 
 ## Test classes
 

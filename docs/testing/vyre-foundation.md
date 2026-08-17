@@ -98,7 +98,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `loop_strip_mine_fresh_ident_scope` | `vyre-foundation/tests/loop_strip_mine_fresh_ident_scope.rs` | None | `./cargo_full test -p vyre-foundation --test loop_strip_mine_fresh_ident_scope` |
 | `test` | `loop_unroll_local_scope` | `vyre-foundation/tests/loop_unroll_local_scope.rs` | None | `./cargo_full test -p vyre-foundation --test loop_unroll_local_scope` |
 | `test` | `loop_var_range_fold_scope` | `vyre-foundation/tests/loop_var_range_fold_scope.rs` | None | `./cargo_full test -p vyre-foundation --test loop_var_range_fold_scope` |
-| `test` | `memo_key_completeness` | `vyre-foundation/tests/memo_key_completeness.rs` | None | `./cargo_full test -p vyre-foundation --test memo_key_completeness` |
+| `test` | `memo_key_completeness` | `vyre-foundation/tests/memo_key_completeness/mod.rs` | None | `./cargo_full test -p vyre-foundation --test memo_key_completeness` |
 | `test` | `memory_ordering` | `vyre-foundation/tests/memory_ordering.rs` | None | `./cargo_full test -p vyre-foundation --test memory_ordering` |
 | `test` | `memory_ordering_adversarial` | `vyre-foundation/tests/memory_ordering_adversarial.rs` | None | `./cargo_full test -p vyre-foundation --test memory_ordering_adversarial` |
 | `test` | `memory_pass_alias_owner` | `vyre-foundation/tests/memory_pass_alias_owner.rs` | None | `./cargo_full test -p vyre-foundation --test memory_pass_alias_owner` |

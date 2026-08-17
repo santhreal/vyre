@@ -64,7 +64,6 @@ impl vyre_driver_cuda::CudaWarpWordAutomataLayoutRequest
 impl vyre_driver_cuda::CudaWarpWordInstructionClass
 impl vyre_driver_cuda::occupancy::OccupancyEstimate
 impl vyre_driver_cuda::profiler::CudaProfilerRange
-impl vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample for vyre_driver_cuda::CudaMegakernelScheduleSample
 impl<'a> core::ops::drop::Drop for vyre_driver_cuda::CudaProgramDispatcher<'a>
 impl<'a> vyre_driver_cuda::CudaEGraphDeviceBorrowedUploadPlan<'a>
 impl<'a> vyre_driver_cuda::CudaProgramDispatcher<'a>
@@ -366,10 +365,7 @@ pub fn vyre_driver_cuda::CudaMegakernelPlanCache::new() -> Self
 pub fn vyre_driver_cuda::CudaMegakernelPlanCache::stats(&self) -> vyre_driver_cuda::CudaMegakernelPlanCacheStats
 pub fn vyre_driver_cuda::CudaMegakernelPlanCache::with_max_entries(max_entries: usize) -> Self
 pub fn vyre_driver_cuda::CudaMegakernelPlanCacheKey::new(graph_layout_hash: u64, analysis_kind: vyre_driver_cuda::CudaMegakernelAnalysisKind, device: vyre_driver_cuda::CudaMegakernelDeviceKey, frontier_density: f64, memory_pressure_bps: u32, readback_bytes: u64, launch_pressure_bps: u32, fusion_pressure: f64) -> Self
-pub fn vyre_driver_cuda::CudaMegakernelScheduleSample::dispatch_cost_ns(&self) -> f64
 pub fn vyre_driver_cuda::CudaMegakernelScheduleSample::from_telemetry_snapshot(snapshot: vyre_driver_cuda::CudaTelemetrySnapshot, dispatch_cost_ns: f64) -> Self
-pub fn vyre_driver_cuda::CudaMegakernelScheduleSample::frontier_density(&self) -> f64
-pub fn vyre_driver_cuda::CudaMegakernelScheduleSample::readback_bytes(&self) -> u64
 pub fn vyre_driver_cuda::CudaMegakernelSpeedupGateError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::acquire_resident_static_uploads(&self, cache_domain: u64, payloads: &[&[u8]]) -> core::result::Result<vyre_foundation::program_dispatch::ResidentStaticBufferSet, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_driver_cuda::CudaProgramDispatcher<'a>::alloc_resident(&self, byte_len: usize) -> core::result::Result<u64, vyre_foundation::program_dispatch::DispatchError>
@@ -467,8 +463,6 @@ pub fn vyre_driver_cuda::profiler::cuda_profiler_range(label: &'static [u8]) -> 
 pub fn vyre_driver_cuda::profiler::cuda_profiler_ranges_enabled() -> bool
 pub fn vyre_driver_cuda::registered_backend_id() -> core::option::Option<&'static str>
 pub fn vyre_driver_cuda::resident_graph_session_speedup_sample(evidence: vyre_driver_cuda::CudaResidentGraphSessionEvidence) -> core::result::Result<vyre_driver_cuda::CudaMegakernelSpeedupSample, vyre_driver_cuda::CudaResidentGraphSessionError>
-pub fn vyre_driver_cuda::schedule_megakernel_from_cuda_samples(samples: &[vyre_driver_cuda::CudaMegakernelScheduleSample], launch_overhead_ns: f64, n_steps: u32, dt: f64) -> core::result::Result<alloc::vec::Vec<f64>, vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError>
-pub fn vyre_driver_cuda::schedule_megakernel_from_cuda_samples_into(samples: &[vyre_driver_cuda::CudaMegakernelScheduleSample], launch_overhead_ns: f64, n_steps: u32, dt: f64, out: &mut alloc::vec::Vec<f64>) -> core::result::Result<(), vyre_libs::scheduling::megakernel_schedule::MegakernelScheduleError>
 pub fn vyre_driver_cuda::select_cuda_megakernel_topology(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
 pub fn vyre_driver_cuda::select_cuda_megakernel_topology_stable(sample: vyre_driver_cuda::CudaMegakernelScheduleSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
 pub fn vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope(total_memory: u64) -> vyre_driver_cuda::CudaDeviceCaps

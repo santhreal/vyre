@@ -149,7 +149,6 @@ graph TD
   C24 --> C17
   C24 --> C29
   C25 --> C17
-  C25 --> C18
   C25 --> C24
   C25 --> C29
   C26 --> C7
@@ -212,9 +211,9 @@ graph TD
 | `vyre-bench` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `false` | `true` | `private` | `portable-driver` |
 | `vyre-bench` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
 | `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-bench` | `vyre-libs` | product operation builders, and the host oracles the device path is measured against | `bitset`, `cpu-parity`, `graph`, `nn-linear-4bit`, `predicate` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
+| `vyre-bench` | `vyre-libs` | product operation builders | `bitset`, `graph`, `nn-linear-4bit`, `predicate` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-bench` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `cpu-parity`, `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
+| `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `vyre-bench` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `vyre-bench` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
@@ -297,7 +296,6 @@ graph TD
 | `vyre-primitives` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
 | `vyre-primitives` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-reference` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-reference` | `vyre-libs` | host-side helpers the oracle shares with the composition it checks: the FNV-1a state functions and the DFA compiler | `matching-dfa` | `always` | `normal` | `false` | `false` | `public` | `product-libraries` |
 | `vyre-reference` | `vyre-primitives` | the wire format, the marker types, and guarded IR construction | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `vyre-reference` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-registry-link` | `vyre-driver` | backend registry contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
@@ -328,7 +326,7 @@ graph TD
 | `xtask-registry` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
 | `xtask-registry` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
 | `xtask-registry` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `xtask-registry` | `vyre-libs` | product operation builders | `full`, `matching-regex` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
+| `xtask-registry` | `vyre-libs` | product operation builders | `full`, `pattern-regex` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `xtask-registry` | `vyre-megakernel` | neutral artifact compilation and target payload contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `xtask-registry` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |

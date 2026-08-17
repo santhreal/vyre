@@ -41,7 +41,11 @@ The crate lives at `vyre-reference`. The `reference-semantics` owner maintains i
 | `test` | `atomic_property_contracts` | `vyre-reference/tests/atomic_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test atomic_property_contracts` |
 | `test` | `byte_prefix_property_contracts` | `vyre-reference/tests/byte_prefix_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test byte_prefix_property_contracts` |
 | `test` | `composition_witness_contracts` | `vyre-reference/tests/composition_witness_contracts.rs` | None | `./cargo_full test -p vyre-reference --test composition_witness_contracts` |
-| `test` | `core_contracts` | `vyre-reference/tests/core_contracts.rs` | None | `./cargo_full test -p vyre-reference --test core_contracts` |
+| `test` | `composition_witness_geometry_contracts` | `vyre-reference/tests/composition_witness_geometry_contracts.rs` | None | `./cargo_full test -p vyre-reference --test composition_witness_geometry_contracts` |
+| `test` | `composition_witness_parsing_contracts` | `vyre-reference/tests/composition_witness_parsing_contracts.rs` | None | `./cargo_full test -p vyre-reference --test composition_witness_parsing_contracts` |
+| `test` | `composition_witness_reasoning_contracts` | `vyre-reference/tests/composition_witness_reasoning_contracts.rs` | None | `./cargo_full test -p vyre-reference --test composition_witness_reasoning_contracts` |
+| `test` | `composition_witness_scheduling_contracts` | `vyre-reference/tests/composition_witness_scheduling_contracts.rs` | None | `./cargo_full test -p vyre-reference --test composition_witness_scheduling_contracts` |
+| `test` | `core_contracts` | `vyre-reference/tests/core_contracts/mod.rs` | None | `./cargo_full test -p vyre-reference --test core_contracts` |
 | `test` | `dual_arith_reference_contracts` | `vyre-reference/tests/dual_arith_reference_contracts.rs` | None | `./cargo_full test -p vyre-reference --test dual_arith_reference_contracts` |
 | `test` | `dual_reference_parity` | `vyre-reference/tests/dual_reference_parity.rs` | None | `./cargo_full test -p vyre-reference --test dual_reference_parity` |
 | `test` | `dual_reference_property_contracts` | `vyre-reference/tests/dual_reference_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test dual_reference_property_contracts` |
@@ -56,7 +60,6 @@ The crate lives at `vyre-reference`. The `reference-semantics` owner maintains i
 | `test` | `hashmap_async_and_indirect_contracts` | `vyre-reference/tests/hashmap_async_and_indirect_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_async_and_indirect_contracts` |
 | `test` | `hashmap_buffer_size_contracts` | `vyre-reference/tests/hashmap_buffer_size_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_buffer_size_contracts` |
 | `test` | `hashmap_invocation_size_contracts` | `vyre-reference/tests/hashmap_invocation_size_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_invocation_size_contracts` |
-| `test` | `host_oracle_migration` | `vyre-reference/tests/host_oracle_migration.rs` | None | `./cargo_full test -p vyre-reference --test host_oracle_migration` |
 | `test` | `oracle_program_edges` | `vyre-reference/tests/oracle_program_edges.rs` | None | `./cargo_full test -p vyre-reference --test oracle_program_edges` |
 | `test` | `quantized_buffer_contract` | `vyre-reference/tests/quantized_buffer_contract.rs` | None | `./cargo_full test -p vyre-reference --test quantized_buffer_contract` |
 | `test` | `reference_abi_predicates` | `vyre-reference/tests/reference_abi_predicates.rs` | None | `./cargo_full test -p vyre-reference --test reference_abi_predicates` |

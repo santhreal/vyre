@@ -4,8 +4,8 @@ use crate::cases::queue_closure_oracle::{
     queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
 };
 use crate::cases::skewed_graph::{skewed_degree as shared_skewed_degree, skewed_target};
-use vyre_libs::bitset::frontier::materialize_frontier_queue_exact_count_into;
 use vyre_libs::predicate::edge_kind;
+use vyre_reference::composition_witness::frontier_to_queue_witness_into;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
 pub(super) const FRONTIER_WORDS: usize = NODE_COUNT.div_ceil(32) as usize;
@@ -207,19 +207,13 @@ pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
             fixture.stats.active_sources
         ))
     })?;
-    let seen = materialize_frontier_queue_exact_count_into(
-        fixture.stats.nodes,
+    let seen = frontier_to_queue_witness_into(
         &fixture.frontier_in,
-        expected,
+        fixture.stats.nodes,
         queue_capacity,
         &mut active_queue,
-    )
-    .map_err(|error| {
-        BenchError::EnvironmentInvalid(format!(
-            "{context} could not materialize the sparse frontier queue: {error} Fix: size the queue from the active frontier and rebuild stale fixture stats."
-        ))
-    })?;
-    if u64::from(seen) != fixture.stats.active_sources {
+    );
+    if seen != expected {
         return Err(BenchError::EnvironmentInvalid(format!(
             "{context} counted {seen} active sources but stats recorded {}. Fix: rebuild the fixture active frontier stats from the same bitset.",
             fixture.stats.active_sources

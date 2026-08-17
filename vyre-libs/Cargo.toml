@@ -127,7 +127,7 @@ rule = ["dep:regex"]
 # crate. Each gates one module tree; `all-solvers` turns on the set.
 telemetry = []
 device = []
-graph-dispatch = ["device", "telemetry", "math-kernels", "graph"]
+graph-dispatch = ["device", "telemetry", "math-kernels", "graph", "encoding"]
 solvers = ["device", "telemetry", "math-kernels", "topology"]
 # `encoding` names `bitset` because `encoding/bitset_mask_algebra.rs` composes
 # eight `bitset::` builders, and `graph` plus `fixpoint` because

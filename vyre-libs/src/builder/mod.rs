@@ -26,26 +26,17 @@
 pub(crate) mod cooperative;
 #[cfg(feature = "graph")]
 pub mod csr;
-#[cfg(feature = "graph")]
-pub use csr::CsrTraversalComposer;
 pub mod elementwise;
-pub use elementwise::ElementwiseComposer;
+use elementwise::ElementwiseComposer;
 /// Canonical matrix multiplication and contraction IR composer.
 pub mod gemm;
-pub use gemm::{
-    ContractionComposer, ContractionEpilogue, ContractionGeometry, ContractionSemiring,
-    ContractionTiling,
-};
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;
 pub(crate) mod reduction;
 /// Shared table-walking state machine / DFA composer.
 pub mod state_machine;
-pub use state_machine::TableStateMachineComposer;
-/// Canonical 2D grid, coordinate decomposition, stencil, and pixel composer.
-pub mod stencil;
-pub use stencil::{Grid2DComposer, Grid2DShape};
+pub(crate) use state_machine::TableStateMachineComposer;
 /// The two shared child regions registered as operations in their own right.
 ///
 /// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and
@@ -54,6 +45,8 @@ pub use stencil::{Grid2DComposer, Grid2DShape};
 /// composes them without asking for their registrations.
 #[cfg(feature = "builder-ops")]
 mod registrations;
+/// Canonical 2D grid, coordinate decomposition, stencil, and pixel composer.
+pub mod stencil;
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;

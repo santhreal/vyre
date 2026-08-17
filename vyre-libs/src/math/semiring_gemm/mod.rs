@@ -46,9 +46,7 @@ use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 pub use vyre_spec::Semiring;
 
-pub use crate::builder::gemm::{
-    semiring_accumulate_expr, semiring_combine_expr, ContractionComposer,
-};
+use crate::builder::gemm::ContractionComposer;
 use crate::plumbing::operand::tensor_ref::TensorRef;
 
 /// Canonical op id.
