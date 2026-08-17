@@ -510,7 +510,11 @@ fn names_a_generator(line: &str, tree: &Tree) -> bool {
         .skip(1)
         .step_by(2)
         .flat_map(str::split_whitespace)
-        .any(|token| tree.has(token))
+        .any(|token| {
+            tree.has(token)
+                || tree.absolute(token).exists()
+                || crate::subcommands::find(token).is_some()
+        })
 }
 
 /// Byte offsets in `lowered` where a sentence begins.

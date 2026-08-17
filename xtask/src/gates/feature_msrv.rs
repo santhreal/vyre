@@ -7,7 +7,7 @@
 //! workspace on the version it names, and the claim held only because nobody
 //! tried it.
 //!
-//! The axis is [`feature_isolation::derive_pairs`], the same one the isolation
+//! The axis is [`crate::gates::feature_isolation::derive_pairs`], the same one the isolation
 //! gate judges, so a new member or feature joins this sweep on the commit that
 //! declares it. Two rosters over the same manifests would disagree the first
 //! time one of them was edited.

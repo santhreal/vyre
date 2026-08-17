@@ -280,7 +280,7 @@ impl MaterializerDevice {
     ///
     /// # Errors
     ///
-    /// Returns [`compile_error`] naming `spec.backend` when the extension and
+    /// Returns [`fn@compile_error`] naming `spec.backend` when the extension and
     /// version do not form a payload format, and whatever
     /// [`ResidentOwner::new`] rejects when no generation can be minted.
     pub fn acquire(spec: DeviceSpec<'_>) -> Result<Self, BackendError> {
@@ -1460,7 +1460,7 @@ pub fn override_grid(config: &mut DispatchConfig, grid: Option<[u32; 3]>) {
 /// calls: gather the module's inputs and launch it once per module of the
 /// selected plan, then complete the accumulated state. Only the launch is
 /// target-specific, so only the launch is required here. The identity methods
-/// of [`crate::ArtifactInstance`] come from [`artifact_instance_identity`] and
+/// of [`crate::ArtifactInstance`] come from [`macro@crate::artifact_instance_identity`] and
 /// `submit` routes through [`Self::submit_host_only`] or
 /// [`ResidentInstance::submit_routed`], which leaves a backend the launch, its
 /// rejection text, and nothing else.

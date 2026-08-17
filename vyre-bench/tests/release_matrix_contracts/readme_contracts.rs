@@ -3,7 +3,7 @@ use super::*;
 /// Performance documentation names the manifest and the generated evidence rather
 /// than restating either.
 ///
-/// WHY: this asserted `docs/PERF.md`, which the mdbook deletion removed, so the test
+/// WHY: this asserted the old performance document, which the mdbook deletion removed, so the test
 /// failed on a missing file instead of judging a claim. The surviving surface is the
 /// crate README plus the machine-readable contract data under docs/.
 #[test]

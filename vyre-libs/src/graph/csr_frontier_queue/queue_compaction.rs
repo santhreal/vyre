@@ -36,7 +36,7 @@ pub fn frontier_queue_len_init(queue_len: &str) -> Program {
 ///
 /// This is a single-workgroup cooperative scan: lane 0 clears `queue_len`, a
 /// workgroup barrier orders that clear, then the lanes of that one workgroup
-/// walk `node_count` in [`FRONTIER_TO_QUEUE_WORKGROUP_LANES`]-wide strides.
+/// walk `node_count` in workgroup-wide strides.
 /// Sparse queue traversal is selected only for low-density frontiers, so
 /// avoiding a separate queue-length init launch is more valuable than spreading
 /// this scan across every SM. Use [`frontier_to_queue_parallel`] when the

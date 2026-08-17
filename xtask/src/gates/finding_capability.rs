@@ -340,25 +340,58 @@ fn gate_run_bodies_registered(
 /// Map an implementation type to the descriptor name that registers it.
 fn behavior_registrations(text: &str) -> Vec<(String, String)> {
     let mut registrations = Vec::new();
-    for line in text.lines() {
-        let line = line.trim();
-        let Some(rest) = line.strip_prefix("(\"") else {
-            continue;
-        };
-        let Some((name, behavior)) = rest.split_once("\",") else {
-            continue;
-        };
-        let Some(path) = behavior
-            .trim()
-            .strip_prefix('&')
-            .and_then(|path| path.strip_suffix("),"))
-        else {
-            continue;
-        };
-        let Some(type_name) = path.rsplit("::").next() else {
-            continue;
-        };
-        registrations.push((type_name.to_string(), name.to_string()));
+    let Some(gates_start) = text.find("GATES") else {
+        return registrations;
+    };
+    let text = &text[gates_start..];
+    let Some(slice_open) = text.find("&[") else {
+        return registrations;
+    };
+    let Some(slice_close) = text[slice_open..].find("];") else {
+        return registrations;
+    };
+    let text = &text[slice_open..slice_open + slice_close];
+    let mut from = 0;
+    while let Some(at) = text[from..].find('(') {
+        let start = from + at + 1;
+        let rest = &text[start..];
+        let trimmed = rest.trim_start();
+        if let Some(after_quote) = trimmed.strip_prefix('"') {
+            if let Some(quote_end) = after_quote.find('"') {
+                let name = &after_quote[..quote_end];
+                let after_name = &after_quote[quote_end + 1..];
+                if let Some(comma) = after_name.find(',') {
+                    let after_comma = &after_name[comma + 1..];
+                    if let Some(close) = after_comma.find(')') {
+                        let behavior = after_comma[..close].trim();
+                        let Some(behavior) = behavior.strip_prefix('&') else {
+                            from = start;
+                            continue;
+                        };
+                        let behavior = behavior.trim();
+                        if behavior.is_empty()
+                            || behavior.contains('(')
+                            || behavior.contains(')')
+                            || behavior.contains(' ')
+                            || behavior.contains('"')
+                            || !behavior.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':')
+                        {
+                            from = start;
+                            continue;
+                        }
+                        if let Some(type_name) = behavior.rsplit("::").next() {
+                            let type_name = type_name.trim_end_matches(',').trim();
+                            if !type_name.is_empty() && !name.is_empty() {
+                                registrations.push((type_name.to_string(), name.to_string()));
+                            }
+                        }
+                        from = start + (rest.len() - after_comma.len()) + close + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+        from = start;
     }
     registrations
 }
@@ -699,7 +732,15 @@ fn without_test_modules(text: &str) -> String {
     while let Some(at) = rest.find("#[cfg(test)]") {
         let (before, tail) = rest.split_at(at);
         out.push_str(before);
-        let Some(open) = tail.find('{') else {
+        let semicolon = tail.find(';');
+        let block_open = tail.find('{');
+        if let Some(semicolon) = semicolon {
+            if block_open.map_or(true, |block_open| semicolon < block_open) {
+                rest = &tail[semicolon + 1..];
+                continue;
+            }
+        }
+        let Some(open) = block_open else {
             return out;
         };
         let block = balanced(tail, open);
@@ -875,6 +916,17 @@ mod tests {
             .map(|(gate, run)| (gate, emits(&run, &functions, 0)))
             .collect();
         assert_eq!(verdicts, vec![("reports".to_string(), false)]);
+    }
+
+    /// WHY: an out-of-line test module ends at a semicolon. Treating the next
+    /// production block as its body hides the gate that follows it.
+    #[test]
+    fn an_out_of_line_test_module_does_not_hide_following_production() {
+        let source = "#[cfg(test)]\nmod tests;\nfn production() { Finding::new(\"wrong\", \"fix it\"); }\n";
+        let production = without_test_modules(source);
+        assert!(!production.contains("mod tests"));
+        assert!(production.contains("fn production()"));
+        assert!(production.contains("Finding::new("));
     }
 
     /// WHY: a brace inside a string literal or a comment is the standard way a
