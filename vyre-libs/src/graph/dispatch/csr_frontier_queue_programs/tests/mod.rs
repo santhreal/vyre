@@ -210,56 +210,51 @@ fn entry_points() -> Vec<(String, Program)> {
     out
 }
 
-/// Canonical wire fingerprints captured from the tree before the resident
-/// Program builders were rehomed onto one owner. Regenerate ONLY when a shape
-/// change is the intended product of the change under review.
+/// Canonical wire fingerprints for resident CSR programs.
 ///
-/// Six rows moved once since capture. `frontier_word_counts_scan_pass_a` and
-/// `frontier_word_block_offsets_single_workgroup` swept a Hillis-Steele tree
-/// and now sweep a Blelloch tree, which writes O(n) elements over the sweep
-/// instead of writing every lane on every round. The three sites read those
-/// two builders, so `materialize.word_counts` and `materialize.block_offsets`
-/// moved at each of them.
-const PRE_MERGE_FINGERPRINTS: &str = "\
-resident.traverse.row_serial 768fa8a83852a0efeb13259bbfec7a3d2e578578ec3db1ed5aee00abbeb580ee
-resident.traverse.row_strided c1ecb077c7f03ce568070562b0327e3ca5d3505cbeb726275ebc667ab1e9100f
-resident.traverse.mixed_split_high c0690c885eb98c883ac62873361d602ac92b44732d036b587415df64175aeec4
-resident.split_low b9191307c246dd9949b08b859cbd706af31e7f882254ea64ae9ee7de2129f122
-resident.queue_len_init 448b389f3a30fa3e1998d837f219d5e25cf791b61cce84060eb98a3cb4b09604
-resident.high_len_init d961c35f055e5e7f87e30007be4570bdd9cb2c3c995bfb7104615ed4ef700d5c
-resident.materialize.atomic_word_scan 1b2148f8e6df60adf345dd66b01896e32488544d591265c09ad2171227e80b0d
-resident.materialize.clear_frontier_out daac7cd6ed7b19bf8f9a2a0aae6036d6765c6614a6faa14bc4a40f642647dc9f
-resident.materialize.word_counts 3282efa4797486f76aac2541da8b6a72130f3f13fc85dc55e98b389a6b9d9fdb
-resident.materialize.block_offsets eef97ba97ecb13c5182d1dca23fb63cc9d7a5477ed67b5e63991616ff9e650b5
-resident.materialize.block_offsets_queue 3c44dfe044c89db30a01ce0d2c922b383083a1744db51d478e77c888bf5c5f1a
-resident.materialize.word_prefix_queue 27b514873870b708be9e8001641da82fff6b15a5f367fc36194cdc994815e12b
-batch.traverse.row_serial 768fa8a83852a0efeb13259bbfec7a3d2e578578ec3db1ed5aee00abbeb580ee
-batch.traverse.row_strided c1ecb077c7f03ce568070562b0327e3ca5d3505cbeb726275ebc667ab1e9100f
-batch.traverse.mixed_split_high c0690c885eb98c883ac62873361d602ac92b44732d036b587415df64175aeec4
-batch.split_low b9191307c246dd9949b08b859cbd706af31e7f882254ea64ae9ee7de2129f122
-batch.queue_len_init 448b389f3a30fa3e1998d837f219d5e25cf791b61cce84060eb98a3cb4b09604
-batch.high_len_init d961c35f055e5e7f87e30007be4570bdd9cb2c3c995bfb7104615ed4ef700d5c
-batch.materialize.atomic_word_scan 1b2148f8e6df60adf345dd66b01896e32488544d591265c09ad2171227e80b0d
-batch.materialize.clear_frontier_out daac7cd6ed7b19bf8f9a2a0aae6036d6765c6614a6faa14bc4a40f642647dc9f
-batch.materialize.word_counts 3282efa4797486f76aac2541da8b6a72130f3f13fc85dc55e98b389a6b9d9fdb
-batch.materialize.block_offsets eef97ba97ecb13c5182d1dca23fb63cc9d7a5477ed67b5e63991616ff9e650b5
-batch.materialize.block_offsets_queue 3c44dfe044c89db30a01ce0d2c922b383083a1744db51d478e77c888bf5c5f1a
-batch.materialize.word_prefix_queue 27b514873870b708be9e8001641da82fff6b15a5f367fc36194cdc994815e12b
-adaptive.traverse.row_serial 768fa8a83852a0efeb13259bbfec7a3d2e578578ec3db1ed5aee00abbeb580ee
-adaptive.traverse.row_strided c1ecb077c7f03ce568070562b0327e3ca5d3505cbeb726275ebc667ab1e9100f
-adaptive.traverse.mixed_split_high c0690c885eb98c883ac62873361d602ac92b44732d036b587415df64175aeec4
-adaptive.split_low b9191307c246dd9949b08b859cbd706af31e7f882254ea64ae9ee7de2129f122
-adaptive.queue_len_init 448b389f3a30fa3e1998d837f219d5e25cf791b61cce84060eb98a3cb4b09604
-adaptive.high_len_init d961c35f055e5e7f87e30007be4570bdd9cb2c3c995bfb7104615ed4ef700d5c
-adaptive.materialize.atomic_word_scan 57c07f2d9f7aec5e3268da98a7b7695b0941896cc6e0dc1ca04fe334644d121d
-adaptive.materialize.clear_frontier_out daac7cd6ed7b19bf8f9a2a0aae6036d6765c6614a6faa14bc4a40f642647dc9f
-adaptive.materialize.word_counts 1ffc1ce926cd4fcb9b640bbe89fb708515d6e489bb3ff8afc5e56b7d687f105a
-adaptive.materialize.block_offsets eef97ba97ecb13c5182d1dca23fb63cc9d7a5477ed67b5e63991616ff9e650b5
-adaptive.materialize.block_offsets_queue adb70fbfc597839088e023f2624ecfa3d019dc7564315533ba101f5c4d9d4a0b
-adaptive.materialize.word_prefix_queue c2fa99828b92fe95addfd5c3ac58ca5559f67396f27feb59b2f3cfa83bd93926
-csr_bidirectional 61707f4fd384664b1ea64df86b567826f4b46902fab0b7b20e4f67ec4a04e97c
-csr_forward_or_changed.history 9837ba05daabd3f15f9a54fb4ba19b7bcf1195a1363c8226127980c12d4e58c3
-csr_forward_or_changed.single_slot 148d72fd265a482a788c6b2346142361ab2741de4705259b5f0b37c95e719cb6\n";
+/// WHY: Commit a76b36c579a8bf8b507e54dbbec90162f976785a intentionally changed wire bytes
+/// through canonical operation and anonymous-region ownership normalization, while semantic
+/// parity remains separately tested across the conform and parity suites.
+const CANONICAL_FINGERPRINTS: &str = "\
+resident.traverse.row_serial 4dbb798e496bf1634363da0c6df2d8832878ccb8dc735c63ed4b9a4094b85c1a
+resident.traverse.row_strided 35c3d152002cc44c6a5c69378325aa40cc97488731032dfc37007e4a6d535d17
+resident.traverse.mixed_split_high 0407543cf1e40ca040dfd728399f535baeaa43d5c006f0dd2be2575967e57ec8
+resident.split_low 0972a44d61416bba58d11c11d2688c73a75512369f74f93b904ef190d8269d4d
+resident.queue_len_init 8fee19ed6fe2d9806d8bd224f535d950a947eb343c388382ac7d2b953fd1eaf7
+resident.high_len_init 5ae35e326c1f44d34ae20cf508bc2826dc1e1273ee505978ce54969b70953e0f
+resident.materialize.atomic_word_scan 544ba46a645cdec6c3703103ae8ab81749b65bb4df34a401822f711765436d6b
+resident.materialize.clear_frontier_out 8ca8528949e9aba7c2d337bf6f38c838a6ba8e9aad53733208ea7f056acf6e2e
+resident.materialize.word_counts 9717126b1a74acdae7f47810099d33cd60441bf9e798042c51a5a5c9d6cc1b9a
+resident.materialize.block_offsets ef076ff341a2d7b6ab097f0206832a345674f466d62d4836b6d2557cbb23e48f
+resident.materialize.block_offsets_queue 37d9548362ca2791eefa3efba57a5b439d3a82ceb111c0c1da6b64539b18e831
+resident.materialize.word_prefix_queue c1951363dd04b0f883413e0345026357c9d9bedf9d9d76e4c9c3b3fe55f232c1
+batch.traverse.row_serial 4dbb798e496bf1634363da0c6df2d8832878ccb8dc735c63ed4b9a4094b85c1a
+batch.traverse.row_strided 35c3d152002cc44c6a5c69378325aa40cc97488731032dfc37007e4a6d535d17
+batch.traverse.mixed_split_high 0407543cf1e40ca040dfd728399f535baeaa43d5c006f0dd2be2575967e57ec8
+batch.split_low 0972a44d61416bba58d11c11d2688c73a75512369f74f93b904ef190d8269d4d
+batch.queue_len_init 8fee19ed6fe2d9806d8bd224f535d950a947eb343c388382ac7d2b953fd1eaf7
+batch.high_len_init 5ae35e326c1f44d34ae20cf508bc2826dc1e1273ee505978ce54969b70953e0f
+batch.materialize.atomic_word_scan 544ba46a645cdec6c3703103ae8ab81749b65bb4df34a401822f711765436d6b
+batch.materialize.clear_frontier_out 8ca8528949e9aba7c2d337bf6f38c838a6ba8e9aad53733208ea7f056acf6e2e
+batch.materialize.word_counts 9717126b1a74acdae7f47810099d33cd60441bf9e798042c51a5a5c9d6cc1b9a
+batch.materialize.block_offsets ef076ff341a2d7b6ab097f0206832a345674f466d62d4836b6d2557cbb23e48f
+batch.materialize.block_offsets_queue 37d9548362ca2791eefa3efba57a5b439d3a82ceb111c0c1da6b64539b18e831
+batch.materialize.word_prefix_queue c1951363dd04b0f883413e0345026357c9d9bedf9d9d76e4c9c3b3fe55f232c1
+adaptive.traverse.row_serial 4dbb798e496bf1634363da0c6df2d8832878ccb8dc735c63ed4b9a4094b85c1a
+adaptive.traverse.row_strided 35c3d152002cc44c6a5c69378325aa40cc97488731032dfc37007e4a6d535d17
+adaptive.traverse.mixed_split_high 0407543cf1e40ca040dfd728399f535baeaa43d5c006f0dd2be2575967e57ec8
+adaptive.split_low 0972a44d61416bba58d11c11d2688c73a75512369f74f93b904ef190d8269d4d
+adaptive.queue_len_init 8fee19ed6fe2d9806d8bd224f535d950a947eb343c388382ac7d2b953fd1eaf7
+adaptive.high_len_init 5ae35e326c1f44d34ae20cf508bc2826dc1e1273ee505978ce54969b70953e0f
+adaptive.materialize.atomic_word_scan 1c7548d86cdb34291733306c2f79611ad822af02be5d218cab125682363ecb39
+adaptive.materialize.clear_frontier_out 8ca8528949e9aba7c2d337bf6f38c838a6ba8e9aad53733208ea7f056acf6e2e
+adaptive.materialize.word_counts 8a1eb7788f1e3a58f8f7fb0d574ec5c2b05d9544abcbfe181d6c70f2749fda6d
+adaptive.materialize.block_offsets ef076ff341a2d7b6ab097f0206832a345674f466d62d4836b6d2557cbb23e48f
+adaptive.materialize.block_offsets_queue 5576ec9de498bbe9141f5bcb39e73a0f299030c774d0026318030ddf53229a63
+adaptive.materialize.word_prefix_queue aec3cf5bbd73c1a01f60d5f6f44e63f8e6be49911e2b8cfde0ad6f0e058ab1f3
+csr_bidirectional 23c2a6672e816aa6c4d0dfc72f623060c3cbd05a4f65fbd54479102ede3765ef
+csr_forward_or_changed.history 194181fdcb2704952dee79a246d0b05a51714ed471b797093f269afc9dd8c1ca
+csr_forward_or_changed.single_slot 71eba50b12b2833574ccbadfc44e3cea4247cd2b143de74054beb11a716eb352\n";
 
 fn hex32(bytes: [u8; 32]) -> String {
     let mut out = String::with_capacity(64);
@@ -283,13 +278,13 @@ fn resident_family_ir_fingerprints_are_byte_identical() {
             .into_iter()
             .map(|(name, program)| (name, hex32(program.fingerprint()))),
     );
-    if actual == PRE_MERGE_FINGERPRINTS.trim_end() {
+    if actual == CANONICAL_FINGERPRINTS.trim_end() {
         return;
     }
     // Two thirty-row tables compared as one string report the whole blob and
     // truncate it, which names no builder. Pair the rows so the failure says
     // which Program moved.
-    let expected: Vec<&str> = PRE_MERGE_FINGERPRINTS.trim_end().lines().collect();
+    let expected: Vec<&str> = CANONICAL_FINGERPRINTS.trim_end().lines().collect();
     let observed: Vec<&str> = actual.lines().collect();
     let mut moved = Vec::new();
     for row in 0..expected.len().max(observed.len()) {
@@ -305,7 +300,7 @@ fn resident_family_ir_fingerprints_are_byte_identical() {
     panic!(
         "Fix: a resident CSR Program changed its generated IR. Dedup must be a pure rehome; if a \
          shape change is intended, record why in the commit body and replace \
-         PRE_MERGE_FINGERPRINTS with the observed table.\n{}\n\nObserved table:\n{actual}",
+         CANONICAL_FINGERPRINTS with the observed table.\n{}\n\nObserved table:\n{actual}",
         moved.join("\n")
     );
 }

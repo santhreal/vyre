@@ -34,18 +34,10 @@ fn committed_catalog_matches_the_rendered_one() {
     let rendered = render_catalog_toml();
     let path = catalog_path();
 
-    if std::env::var_os("VYRE_WRITE_ERROR_CATALOG").is_some() {
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).expect("create docs/generated");
-        }
-        fs::write(&path, &rendered).expect("write catalog");
-        return;
-    }
-
     let committed = fs::read_to_string(&path).unwrap_or_else(|err| {
         panic!(
             "code catalog: cannot read {}: {err}. Regenerate with \
-             VYRE_WRITE_ERROR_CATALOG=1 ./cargo_full test -p vyre-driver",
+             `./cargo_full run -p xtask --bin xtask -- error-codes --write`",
             path.display()
         )
     });
@@ -79,7 +71,7 @@ fn committed_catalog_matches_the_rendered_one() {
 
     panic!(
         "code catalog: {} divergent rows.\n{}\nRegenerate with \
-         VYRE_WRITE_ERROR_CATALOG=1 ./cargo_full test -p vyre-driver",
+         `./cargo_full run -p xtask --bin xtask -- error-codes --write`",
         findings.len(),
         findings.join("\n")
     );
