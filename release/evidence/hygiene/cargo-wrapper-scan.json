@@ -1,60 +1,8 @@
 {
-  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
+  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=true:worktree=30531da37e53670e7b8d915514805ee8e31745f7767d0bad7a7b409954b15df9",
   "schema_version": 1,
   "scan": "cargo-wrapper",
-  "findings": [
-    {
-      "path": "xtask/src/gates/wire_determinism.rs",
-      "line": 159,
-      "pattern": "raw_workspace_cargo",
-      "text": "format!(\"`cargo test --test {suite}` could not be started: {error}\"),"
-    },
-    {
-      "path": "xtask/src/gates/backend_parity.rs",
-      "line": 269,
-      "pattern": "raw_workspace_cargo",
-      "text": "format!(\"cannot run cargo test for `{package}`: {error}\"),"
-    },
-    {
-      "path": "xtask/src/gates/oracle_sweeps.rs",
-      "line": 325,
-      "pattern": "raw_workspace_cargo",
-      "text": "format!(\"cannot run cargo test for `{crate_dir}`: {error}\"),"
-    }
-  ],
-  "release_blocking_findings": [
-    {
-      "path": "xtask/src/gates/wire_determinism.rs",
-      "line": 159,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "xtask/src/gates/backend_parity.rs",
-      "line": 269,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "xtask/src/gates/oracle_sweeps.rs",
-      "line": 325,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    }
-  ],
-  "blockers": [
-    "3 release-blocking `cargo-wrapper` finding(s) remain"
-  ]
+  "findings": [],
+  "release_blocking_findings": [],
+  "blockers": []
 }

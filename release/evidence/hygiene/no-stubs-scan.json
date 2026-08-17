@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
+  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=true:worktree=30531da37e53670e7b8d915514805ee8e31745f7767d0bad7a7b409954b15df9",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -17,7 +17,7 @@
     },
     {
       "path": "vyre-bench/src/cases/scan_ac_irregular/mod.rs",
-      "line": 51,
+      "line": 52,
       "pattern": "TODO",
       "text": "b\"TODO:\","
     },
@@ -53,19 +53,19 @@
     },
     {
       "path": "vyre-reference/src/execution/mod.rs",
-      "line": 62,
+      "line": 63,
       "pattern": "placeholder_text",
       "text": "// lowering table's placeholder, which cleared the output buffer instead"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 284,
+      "line": 285,
       "pattern": "placeholder_text",
       "text": "// the placeholder to the range it will actually read back."
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 435,
+      "line": 436,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },
@@ -74,6 +74,12 @@
       "line": 165,
       "pattern": "placeholder_text",
       "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
+    },
+    {
+      "path": "xtask/src/gate_metadata.rs",
+      "line": 155,
+      "pattern": "placeholder_text",
+      "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison \\\\        matrices. Proves every measured cell records positive speedup, is strictly reproducible \\\\        from its source probe, cites no placeholder, and is traceable back to its host, commit, \\\\        GPU model, driver version, and measurement timestamp. Proves nothing about benchmark \\\\        methodology: this gate reads the produced matrices and their source artifacts, never \\\\        starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
@@ -89,63 +95,93 @@
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 191,
+      "line": 184,
       "pattern": "placeholder_text",
       "text": "/// One template: every placeholder known, and the rendered crate passing."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 207,
+      "line": 200,
       "pattern": "placeholder_text",
       "text": "format!(\"`{path}` uses the placeholder `{unknown}`, which this gate cannot render\"),"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 365,
+      "line": 367,
       "pattern": "placeholder_text",
       "text": "/// Substitute every known placeholder."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 368,
+      "line": 370,
       "pattern": "placeholder_text",
       "text": "for (placeholder, value) in PLACEHOLDERS {"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 369,
+      "line": 371,
       "pattern": "placeholder_text",
       "text": "rendered = rendered.replace(placeholder, value);"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 383,
+      "line": 385,
       "pattern": "placeholder_text",
       "text": "let placeholder = &after[..close + 2];"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 384,
+      "line": 386,
       "pattern": "placeholder_text",
       "text": "if !PLACEHOLDERS.iter().any(|(known, _)| *known == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 385,
+      "line": 387,
       "pattern": "placeholder_text",
       "text": "&& !unknown.iter().any(|found| found == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 387,
+      "line": 389,
       "pattern": "placeholder_text",
       "text": "unknown.push(placeholder.to_string());"
     },
     {
       "path": "xtask/src/gates/crate_readmes.rs",
-      "line": 346,
+      "line": 355,
       "pattern": "placeholder_text",
       "text": "/// Every version the release train declares, keyed as a template placeholder."
+    },
+    {
+      "path": "xtask/src/gates/crate_pages.rs",
+      "line": 103,
+      "pattern": "placeholder_text",
+      "text": "format!(\"`{name}` records a placeholder where its exclusion belongs\"),"
+    },
+    {
+      "path": "xtask/src/gates/crate_pages.rs",
+      "line": 122,
+      "pattern": "placeholder_text",
+      "text": "/// Whether a section body records a placeholder instead of a statement."
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/rules.rs",
+      "line": 199,
+      "pattern": "stub_text",
+      "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/classification.rs",
+      "line": 350,
+      "pattern": "TODO",
+      "text": "if matches!(pattern, \"TODO\" | \"FIXME\" | \"placeholder_text\" | \"stub_text\") {"
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/classification.rs",
+      "line": 350,
+      "pattern": "FIXME",
+      "text": "if matches!(pattern, \"TODO\" | \"FIXME\" | \"placeholder_text\" | \"stub_text\") {"
     },
     {
       "path": "xtask-evidence/src/report_fixture.rs",
@@ -155,13 +191,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 247,
+      "line": 253,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 250,
+      "line": 256,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     }

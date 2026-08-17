@@ -1,17 +1,17 @@
 {
-  "source_fingerprint": "git:32d1052b3d20c3c0176078c796b634f76362f9ad:dirty=true:worktree=473ae3caa1dc63ec120da25fa68a40d517d71bba74d8e3d8e2082d6135321736",
+  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=true:worktree=30531da37e53670e7b8d915514805ee8e31745f7767d0bad7a7b409954b15df9",
   "schema_version": 1,
   "scan": "resource-bound",
   "findings": [
     {
       "path": "vyre-driver-cuda/src/stream.rs",
-      "line": 163,
+      "line": 164,
       "pattern": "std_thread_sleep",
       "text": "std::thread::sleep(sleep.min(deadline - waited));"
     },
     {
       "path": "vyre-driver-cuda/src/stream.rs",
-      "line": 163,
+      "line": 164,
       "pattern": "thread_sleep",
       "text": "std::thread::sleep(sleep.min(deadline - waited));"
     },
