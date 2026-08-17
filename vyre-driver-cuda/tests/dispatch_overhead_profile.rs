@@ -6,17 +6,12 @@
 //! instead of guessing. A no-op program isolates the fixed per-dispatch cost:
 //! the GPU work is ~nothing, so whatever remains is overhead we can cut.
 
+mod harness;
+use harness::no_op_program;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-fn no_op_program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(0))],
-    )
-}
 
 #[test]
 fn cuda_steady_state_phase_attribution() {

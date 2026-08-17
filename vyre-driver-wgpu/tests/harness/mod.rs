@@ -29,6 +29,22 @@ pub(crate) fn shared_live_backend() -> WgpuBackend {
         .clone()
 }
 
+/// Resolve the underlying live WGPU adapter for the active backend.
+pub(crate) fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
+    vyre_driver_wgpu::runtime::adapter_for_info(backend.adapter_info()).expect(
+        "Fix: selected wgpu backend adapter must remain enumerable for live capability probing",
+    )
+}
+
+/// Map IEEE-754 binary32 bit-patterns to ordered integer keys for ULP comparison.
+pub(crate) fn f32_to_ordered(bits: u32) -> u32 {
+    if (bits & 0x8000_0000) != 0 {
+        !bits
+    } else {
+        bits | 0x8000_0000
+    }
+}
+
 /// Pack little-endian `u32` lanes into backend dispatch bytes.
 pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
 

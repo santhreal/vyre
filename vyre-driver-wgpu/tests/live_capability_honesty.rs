@@ -9,18 +9,13 @@
 #![allow(clippy::assertions_on_constants)]
 
 mod harness;
-use harness::{add_one_program, shared_live_backend as live_backend};
+use harness::{add_one_program, selected_adapter, shared_live_backend as live_backend};
 
 use std::time::Instant;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
-fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::adapter_for_info(backend.adapter_info()).expect(
-        "Fix: selected wgpu backend adapter must still be enumerable for live capability probing",
-    )
-}
 
 // ------------------------------------------------------------------
 // 1. subgroup_ops must match enabled_features/live BackendValidationCapabilities

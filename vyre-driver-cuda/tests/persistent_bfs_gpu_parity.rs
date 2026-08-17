@@ -11,12 +11,34 @@ use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 mod harness;
 
 use harness::{with_live_backend, CudaProgramDispatcher};
-use vyre_driver_cuda::CudaProgramDispatcher as CudaResidentProgramDispatcher;
 use vyre_libs::graph::dispatch::persistent_bfs::{
-    bfs_expand as reference_bfs_expand, bfs_expand_resident_graph_batch_with_scratch_into,
-    bfs_expand_resident_graph_with_scratch_into, bfs_expand_via, try_bfs_expand_converged,
+    bfs_expand_resident_graph_batch_with_scratch_into,
+    bfs_expand_resident_graph_with_scratch_into, bfs_expand_via,
     upload_resident_bfs_graph, PersistentBfsPlanCacheSnapshot, PersistentBfsResidentScratch,
 };
+use vyre_reference::composition_witness::{
+    csr_persistent_closure_detailed_witness, CsrPersistentClosureWitness,
+};
+
+fn reference_bfs_expand_detailed(
+    inputs: CsrClosureInputs<'_>,
+    seed: &[u32],
+) -> CsrPersistentClosureWitness {
+    csr_persistent_closure_detailed_witness(
+        inputs.graph.node_count,
+        inputs.graph.edge_offsets,
+        inputs.graph.edge_targets,
+        inputs.graph.edge_kind_mask,
+        seed,
+        inputs.allow_mask,
+        inputs.max_iters,
+    )
+}
+
+fn reference_bfs_expand(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> (Vec<u32>, u32) {
+    let detailed = reference_bfs_expand_detailed(inputs, seed);
+    (detailed.frontier, detailed.changed)
+}
 
 fn linear_chain(n: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> ... -> n-1
@@ -39,7 +61,7 @@ fn linear_chain(n: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
 #[test]
 fn cuda_bfs_expand_via_matches_reference_chain() {
     with_live_backend("cuda_bfs_expand_via_matches_reference_chain", |backend| {
-        let dispatcher = CudaProgramDispatcher { backend };
+        let dispatcher = CudaProgramDispatcher::new(backend);
         let (n, off, tgt, msk) = linear_chain(8);
         let seed = vec![0b0000_0001u32]; // node 0 only
         let (gpu_out, gpu_changed, gpu_converged) = bfs_expand_via(
@@ -56,7 +78,7 @@ fn cuda_bfs_expand_via_matches_reference_chain() {
             &seed,
         )
         .expect("GPU bfs_expand_via dispatch");
-        let (reference_out, reference) = try_bfs_expand_converged(
+        let reference = reference_bfs_expand_detailed(
             CsrClosureInputs::allow_all(
                 CsrGraphView {
                     node_count: n,
@@ -67,11 +89,11 @@ fn cuda_bfs_expand_via_matches_reference_chain() {
                 n,
             ),
             &seed,
-        )
-        .expect("reference persistent BFS convergence");
+        );
         assert_eq!(
-            gpu_out, reference_out,
-            "frontier_out diverged on chain n={n}; gpu={gpu_out:?} reference={reference_out:?}"
+            gpu_out, reference.frontier,
+            "frontier_out diverged on chain n={n}; gpu={gpu_out:?} reference={:?}",
+            reference.frontier
         );
         assert_eq!(
             gpu_changed, reference.changed,
@@ -90,7 +112,7 @@ fn cuda_bfs_expand_via_respects_allow_mask() {
     // A graph with mixed edge kinds. allow_mask filters which edges
     // to follow.
     with_live_backend("cuda_bfs_expand_via_respects_allow_mask", |backend| {
-        let dispatcher = CudaProgramDispatcher { backend };
+        let dispatcher = CudaProgramDispatcher::new(backend);
         // 0 -[k=1]-> 1, 0 -[k=2]-> 2, 1 -[k=1]-> 3
         let n = 4;
         let off = vec![0u32, 2, 3, 3, 3];
@@ -198,7 +220,7 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
     with_live_backend(
         "cuda_bfs_expand_via_saturated_seed_reports_no_change",
         |backend| {
-            let dispatcher = CudaProgramDispatcher { backend };
+            let dispatcher = CudaProgramDispatcher::new(backend);
             let (n, off, tgt, msk) = linear_chain(4);
             // Seed = full chain already.
             let seed = vec![0b1111u32];
@@ -216,7 +238,7 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
                 &seed,
             )
             .expect("dispatch");
-            let (_reference_out, reference) = try_bfs_expand_converged(
+            let reference = reference_bfs_expand_detailed(
                 CsrClosureInputs::allow_all(
                     CsrGraphView {
                         node_count: n,
@@ -227,8 +249,7 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
                     n,
                 ),
                 &seed,
-            )
-            .expect("reference persistent BFS convergence");
+            );
             assert_eq!(gpu_changed, reference.changed);
             assert_eq!(gpu_changed, 0);
             assert_eq!(gpu_converged, u32::from(reference.converged));
@@ -245,7 +266,7 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
     with_live_backend(
         "cuda_resident_bfs_graph_matches_reference_across_repeated_queries",
         |backend| {
-            let dispatcher = CudaResidentProgramDispatcher::new(backend);
+            let dispatcher = CudaProgramDispatcher::new(backend);
             let (n, off, tgt, msk) = linear_chain(8);
             let graph = upload_resident_bfs_graph(&dispatcher, n, &off, &tgt, &msk)
                 .expect("resident graph upload");
@@ -265,7 +286,7 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
                     &mut frontier,
                 )
                 .expect("resident graph BFS query");
-                let (reference_out, reference) = try_bfs_expand_converged(
+                let reference = reference_bfs_expand_detailed(
                     CsrClosureInputs::allow_all(
                         CsrGraphView {
                             node_count: n,
@@ -276,9 +297,8 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
                         n,
                     ),
                     &seed_words,
-                )
-                .expect("reference persistent BFS convergence");
-                assert_eq!(frontier, reference_out);
+                );
+                assert_eq!(frontier, reference.frontier);
                 assert_eq!(changed, reference.changed);
                 assert_eq!(converged, u32::from(reference.converged));
                 assert_eq!(
@@ -308,7 +328,7 @@ fn cuda_resident_bfs_graph_batch_matches_reference() {
     with_live_backend(
         "cuda_resident_bfs_graph_batch_matches_reference",
         |backend| {
-            let dispatcher = CudaResidentProgramDispatcher::new(backend);
+            let dispatcher = CudaProgramDispatcher::new(backend);
             let (n, off, tgt, msk) = linear_chain(8);
             let graph = upload_resident_bfs_graph(&dispatcher, n, &off, &tgt, &msk)
                 .expect("resident graph upload");

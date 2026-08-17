@@ -20,30 +20,13 @@
 //! which is a tuning question and not an accounting one.
 
 mod harness;
-use harness::u32_bytes;
+use harness::{add_one_program, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// Repeated dispatches measured after the cache is warm.
 const LAUNCHES: u64 = 4;
 
-/// One region, one module, so the module-cache charge per launch is one lookup
-/// and the assertion below can be an equality.
-fn add_one_program() -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(8),
-            BufferDecl::output("out", 1, DataType::U32).with_count(8),
-        ],
-        [128, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(1)),
-        )],
-    )
-}
 
 #[test]
 fn a_warm_launch_charges_the_module_cache_exactly_once() {

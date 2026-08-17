@@ -1,18 +1,13 @@
 //! Capability contract tests for the live wgpu backend.
 
 mod harness;
-use harness::shared_live_backend as live_backend;
+use harness::{selected_adapter, shared_live_backend as live_backend};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::{BackendValidationCapabilities, ValidationOptions};
 
-fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::adapter_for_info(backend.adapter_info()).expect(
-        "Fix: selected wgpu backend adapter must remain enumerable for live capability probing",
-    )
-}
 
 fn subgroup_pipeline_compiles(backend: &WgpuBackend) -> bool {
     let wgsl = r#"

@@ -29,8 +29,8 @@
 mod harness;
 
 use harness::{
-    cross_block_grid_sync_expected, cross_block_grid_sync_inputs, cross_block_grid_sync_program,
-    CROSS_BLOCK_GRID_SYNC_WORKGROUP,
+    bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
+    cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
 use vyre_driver::resolve_launch_workgroup;
 use vyre_driver::validation::LaunchGeometryLimits;
@@ -148,12 +148,6 @@ fn backend() -> CudaBackend {
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.")
 }
 
-fn bytes_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-        .collect()
-}
 
 /// Launch limits for this device, so a test can resolve the workgroup the driver
 /// will actually plan.

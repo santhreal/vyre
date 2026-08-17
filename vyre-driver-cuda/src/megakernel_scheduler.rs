@@ -6,8 +6,6 @@ use vyre_driver::megakernel_execution::{
     MegakernelExecutionSample, MegakernelExecutionTopology, MegakernelGraphShape,
     MegakernelMemoryBudget, MegakernelMemoryError, MegakernelTopologyDecision,
 };
-#[cfg(test)]
-use vyre_libs::scheduling::megakernel_schedule::MegakernelScaleSample;
 
 use crate::backend::CudaTelemetrySnapshot;
 
@@ -117,20 +115,6 @@ pub fn plan_cuda_megakernel_execution(
     )
 }
 
-#[cfg(test)]
-impl MegakernelScaleSample for CudaMegakernelScheduleSample {
-    fn dispatch_cost_ns(&self) -> f64 {
-        self.dispatch_cost_ns
-    }
-
-    fn frontier_density(&self) -> f64 {
-        self.frontier_density
-    }
-
-    fn readback_bytes(&self) -> u64 {
-        self.readback_bytes
-    }
-}
 
 // Inline: covers `dispatch_cost_ns`, `frontier_density`, `readback_bytes`, which no integration
 // test can name.
@@ -138,35 +122,31 @@ impl MegakernelScaleSample for CudaMegakernelScheduleSample {
 mod tests {
     use super::*;
     use crate::backend::CudaTelemetrySnapshot;
-    use vyre_libs::scheduling::megakernel_schedule::{
-        try_schedule_via_scale_aware_samples_into, MegakernelScheduleError,
-    };
-
-    fn schedule_megakernel_from_cuda_samples(
-        samples: &[CudaMegakernelScheduleSample],
-        launch_overhead_ns: f64,
-        n_steps: u32,
-        dt: f64,
-    ) -> Result<Vec<f64>, MegakernelScheduleError> {
-        let mut out = Vec::new();
-        schedule_megakernel_from_cuda_samples_into(
-            samples,
-            launch_overhead_ns,
-            n_steps,
-            dt,
-            &mut out,
-        )?;
-        Ok(out)
-    }
-
-    fn schedule_megakernel_from_cuda_samples_into(
-        samples: &[CudaMegakernelScheduleSample],
-        launch_overhead_ns: f64,
-        n_steps: u32,
-        dt: f64,
-        out: &mut Vec<f64>,
-    ) -> Result<(), MegakernelScheduleError> {
-        try_schedule_via_scale_aware_samples_into(samples, launch_overhead_ns, n_steps, dt, out)
+    #[test]
+    fn select_cuda_megakernel_topology_selects_expected_decision() {
+        let sample = CudaMegakernelScheduleSample {
+            dispatch_cost_ns: 100.0,
+            frontier_density: 0.8,
+            readback_bytes: 1024,
+        };
+        let graph = MegakernelGraphShape {
+            node_count: 100,
+            edge_count: 200,
+        };
+        let memory = MegakernelMemoryBudget {
+            required_bytes: 1024,
+            budget_bytes: 1024 * 1024,
+        };
+        let decision = select_cuda_megakernel_topology(sample, graph, memory, 10.0, 1.0);
+        assert_eq!(
+            decision,
+            MegakernelTopologyDecision {
+                topology: MegakernelExecutionTopology::DenseFrontier,
+                memory_pressure_bps: 9,
+                average_degree_bps: 20_000,
+                launch_pressure_bps: 1_000,
+            }
+        );
     }
     #[test]
     fn telemetry_snapshot_maps_onto_a_scheduler_sample() {
@@ -189,45 +169,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn scheduling_reuses_caller_owned_output_capacity() {
-        let samples = [
-            CudaMegakernelScheduleSample {
-                dispatch_cost_ns: 10.0,
-                frontier_density: 0.0,
-                readback_bytes: 0,
-            },
-            CudaMegakernelScheduleSample {
-                dispatch_cost_ns: 20.0,
-                frontier_density: 1.0,
-                readback_bytes: 4096,
-            },
-        ];
-        let mut out = Vec::with_capacity(4);
-        let ptr = out.as_ptr();
-
-        schedule_megakernel_from_cuda_samples_into(&samples, 5.0, 8, 0.25, &mut out)
-            .expect("Fix: valid CUDA scheduler samples must schedule");
-
-        assert_eq!(out.len(), 2);
-        assert_eq!(out.as_ptr(), ptr);
-        assert!(out[1] > out[0]);
-    }
-
-    #[test]
-    fn scheduling_preserves_sample_validation_errors() {
-        let samples = [CudaMegakernelScheduleSample {
-            dispatch_cost_ns: 10.0,
-            frontier_density: 1.5,
-            readback_bytes: 0,
-        }];
-
-        let error = schedule_megakernel_from_cuda_samples(&samples, 0.0, 8, 0.25)
-            .expect_err("invalid frontier density must be rejected");
-
-        assert!(matches!(
-            error,
-            MegakernelScheduleError::InvalidFrontierDensity { index: 0, .. }
-        ));
-    }
 }

@@ -1,4 +1,5 @@
 use super::all_entries_vec::*;
+use super::harness::f32_to_ordered;
 use proptest::prelude::*;
 use std::sync::LazyLock;
 use vyre::ir::DataType;
@@ -467,13 +468,6 @@ fn run_gpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String
         .map_err(|e| format!("GPU dispatch error: {e}"))
 }
 
-fn f32_to_ordered(bits: u32) -> u32 {
-    if (bits & 0x8000_0000) != 0 {
-        !bits
-    } else {
-        bits | 0x8000_0000
-    }
-}
 
 fn f32_matches_with_tolerance(cpu_bits: u32, gpu_bits: u32, tolerance: u32) -> bool {
     let cpu = f32::from_bits(cpu_bits);

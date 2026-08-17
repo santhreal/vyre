@@ -501,15 +501,13 @@ fn empty_device_work_queue_plan() -> DeviceWorkQueuePlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frontier_typed_ir_adapter::{
-        adapt_frontier_typed_ir_to_cuda, plan_frontier_typed_ir,
-    };
+    use crate::frontier_typed_ir_adapter::adapt_frontier_typed_ir_to_cuda;
     use vyre_libs::device::device_resident_token_fact_graph::{
         plan_device_resident_token_fact_graph, plan_device_resident_token_fact_graph_layout,
         TokenFactEdge, TokenFactEdgeKind, TokenFactNode, TokenFactNodeKind,
     };
     use vyre_libs::scheduling::frontier_typed_ir::{
-        FrontierDependency, FrontierDomain, FrontierNode,
+        FrontierDomain, FrontierTypedPlan, FrontierWave,
     };
 
     #[test]
@@ -529,24 +527,28 @@ mod tests {
         .expect("Fix: token/fact graph should pack");
         let graph_layout = plan_device_resident_token_fact_graph_layout(&graph, 32, 16)
             .expect("Fix: token/fact graph should adapt");
-        let frontier_plan = plan_frontier_typed_ir(
-            &[
-                frontier_node(10, FrontierDomain::Parser, 4),
-                frontier_node(20, FrontierDomain::Semantic, 4),
-                frontier_node(30, FrontierDomain::Dataflow, 4),
-            ],
-            &[
-                FrontierDependency {
-                    before: 10,
-                    after: 20,
+        let frontier_plan = FrontierTypedPlan {
+            waves: vec![
+                FrontierWave {
+                    index: 0,
+                    domains: vec![FrontierDomain::Parser],
+                    node_ids: vec![10],
+                    active_items: 4,
                 },
-                FrontierDependency {
-                    before: 20,
-                    after: 30,
+                FrontierWave {
+                    index: 1,
+                    domains: vec![FrontierDomain::Semantic],
+                    node_ids: vec![20],
+                    active_items: 4,
+                },
+                FrontierWave {
+                    index: 2,
+                    domains: vec![FrontierDomain::Dataflow],
+                    node_ids: vec![30],
+                    active_items: 4,
                 },
             ],
-        )
-        .expect("Fix: frontier plan should build");
+        };
         let frontier_input = adapt_frontier_typed_ir_to_cuda(&frontier_plan, 8, 16, 8)
             .expect("Fix: frontier plan should adapt");
         let mut cache = CudaMegakernelPlanCache::new();
@@ -1264,13 +1266,6 @@ mod tests {
         edges
     }
 
-    fn frontier_node(id: u32, domain: FrontierDomain, active_items: u32) -> FrontierNode {
-        FrontierNode {
-            id,
-            domain,
-            active_items,
-        }
-    }
 
     fn device() -> CudaMegakernelDeviceKey {
         CudaMegakernelDeviceKey {

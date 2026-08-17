@@ -154,7 +154,7 @@ fn dispatch_timed(
 #[test]
 fn dce_single_dispatch_reaches_full_closure_on_live_cuda() {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 2000_u32;
     let program = build_dce_bfs_program(
         ProgramGraphShape::new(node_count, node_count - 1),
@@ -222,7 +222,7 @@ fn seed(node_count: u32) -> Vec<u32> {
 #[test]
 fn one_workgroup_computes_the_complete_closure_by_itself() {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 2000_u32;
     let (offsets, targets) = chain(node_count);
     let program = build_dce_bfs_program(
@@ -285,7 +285,7 @@ fn one_workgroup_computes_the_complete_closure_by_itself() {
 #[test]
 fn the_persistent_loop_exits_at_the_fixpoint_rather_than_burning_its_budget() {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let node_count = 2000_u32;
     let (offsets, targets) = star(node_count);
     let shape = ProgramGraphShape::new(node_count, node_count - 1);
