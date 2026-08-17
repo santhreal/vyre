@@ -243,6 +243,7 @@ tests = [
   "mutation_catches_metadata_only_dispatcher_call_not_establishing_execution",
   "mutation_catches_mixed_tuple_data_type_masquerade",
   "mutation_catches_name_collision_uncalled_oracle",
+  "mutation_catches_native_endian_decoder_loop",
   "mutation_catches_non_codec_indexing_in_decoder_loop",
   "mutation_catches_non_dispatching_helper_not_establishing_execution",
   "mutation_catches_oracle_under_cfg_any_test_and_cpu_parity",
