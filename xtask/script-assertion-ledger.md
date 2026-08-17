@@ -17,7 +17,7 @@ The counts below are generated from the rows and from the tracked files by the
 
 ## Totals
 
-- Rows: 36. Assertions: 140. Findings: 33.
+- Rows: 36. Assertions: 140. Findings: 28.
 - Tracked files: 9: 8 shell and 1 Python.
 - Rows whose script has left the tree: 27.
 - Tracked files nothing invokes: 2.

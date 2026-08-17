@@ -125,6 +125,12 @@ fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
             }
             for evidence in &requirement.evidence {
                 if is_manifest_command_evidence(evidence) {
+                    if uses_caller_selected_output(evidence) {
+                        failures.push(format!(
+                            "requirement `{}` command `{evidence}` selects an evidence output path",
+                            requirement.id
+                        ));
+                    }
                     continue;
                 }
                 if escapes_repository(evidence) {
@@ -279,6 +285,14 @@ pub(super) fn is_manifest_command_evidence(evidence: &str) -> bool {
     evidence.starts_with("cargo_full ")
 }
 
+/// Whether a command bypasses the artifact path declared by its owning gate.
+fn uses_caller_selected_output(evidence: &str) -> bool {
+    is_manifest_command_evidence(evidence)
+        && evidence
+            .split_whitespace()
+            .any(|word| word == "--output" || word.starts_with("--output="))
+}
+
 /// The xtask subcommand a command-form evidence line runs.
 ///
 /// The manifest spells a producer as the wrapper invocation that runs it, so the
@@ -374,6 +388,23 @@ mod tests {
         );
     }
 
+    /// Evidence producers own fixed paths; the release manifest cannot select one per invocation.
+    #[test]
+    fn caller_selected_evidence_output_is_rejected() {
+        assert!(uses_caller_selected_output(
+            "cargo_full run --bin xtask -- version-matrix --output custom.json"
+        ));
+        assert!(uses_caller_selected_output(
+            "cargo_full run --bin xtask -- version-matrix --output=custom.json"
+        ));
+        assert!(!uses_caller_selected_output(
+            "cargo_full run --bin xtask -- version-matrix --write"
+        ));
+        assert!(!uses_caller_selected_output(
+            "release/evidence/version/version-matrix.json"
+        ));
+    }
+
     /// A requirement that lists every artifact its own producer writes has
     /// nothing unlisted, whether the path is spelled with the `release/` prefix
     /// or relative to the manifest.
@@ -449,15 +480,14 @@ mod tests {
     }
 
     /// Every closed requirement in the shipped manifest lists every artifact its
-    /// own producers write.
+    /// own producers write and lets those producers select their fixed paths.
     ///
-    /// The relation is derived from the producer map at run time, so a generator
-    /// that grows an artifact turns this red until the requirements running it
-    /// list the new file. The manifest is found by walking up from the working
-    /// directory, because a shared target directory can hand this test a binary
-    /// another checkout compiled.
+    /// Both relations are derived from the manifest at run time. A generator
+    /// that grows an artifact turns this red until the requirement lists the new
+    /// file, and a caller-selected output path turns it red before a release
+    /// command can bypass the descriptor-owned artifact.
     #[test]
-    fn the_shipped_manifest_lists_what_its_producers_write() {
+    fn the_shipped_manifest_lists_producer_artifacts_and_uses_owned_paths() {
         let mut directory =
             std::env::current_dir().expect("Fix: working directory must be readable");
         let manifest_path = loop {
@@ -474,6 +504,7 @@ mod tests {
         let manifest: EvidenceManifest =
             toml::from_str(&text).expect("Fix: manifest must be valid TOML");
         let mut unlisted = Vec::new();
+        let mut caller_selected_outputs = Vec::new();
         for requirement in &manifest.requirements {
             if requirement.status != "closed" {
                 continue;
@@ -481,10 +512,20 @@ mod tests {
             for (command, artifact) in unlisted_produced_artifacts(requirement) {
                 unlisted.push(format!("{}: {command} writes {artifact}", requirement.id));
             }
+            for evidence in &requirement.evidence {
+                if uses_caller_selected_output(evidence) {
+                    caller_selected_outputs.push(format!("{}: {evidence}", requirement.id));
+                }
+            }
         }
         assert!(
             unlisted.is_empty(),
             "Fix: list every produced artifact as evidence: {unlisted:?}"
+        );
+        assert!(
+            caller_selected_outputs.is_empty(),
+            "Fix: replace caller-selected evidence paths with each producer's --write mode: \
+             {caller_selected_outputs:?}"
         );
     }
 

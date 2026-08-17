@@ -16,7 +16,7 @@ id = "version-story"
 title = "Manifest, tag, docs, and release-note version story is resolved"
 status = "closed"
 evidence = [
-  "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json",
+  "cargo_full run --bin xtask -- version-matrix --write",
   "evidence/version/version-matrix.json",
   "evidence/version/release-tag-plan.json",
   "evidence/docs/release-notes-version-story.md",
@@ -173,9 +173,9 @@ id = "crate-metadata"
 title = "Every release crate has coherent metadata, features, docs, readme, license, and version policy"
 status = "closed"
 evidence = [
-  "cargo_full run --bin xtask -- metadata-matrix --output release/evidence/metadata/metadata-matrix.json",
-  "cargo_full run --bin xtask -- feature-matrix --output release/evidence/metadata/feature-matrix.json",
-  "cargo_full run --bin xtask -- package-readiness --output release/evidence/package/publish-readiness.json",
+  "cargo_full run --bin xtask -- metadata-matrix --write",
+  "cargo_full run --bin xtask -- feature-matrix --write",
+  "cargo_full run --bin xtask -- package-readiness --write",
   "cargo_full run --bin xtask -- dep-drift",
   "evidence/metadata/metadata-matrix.json",
   "evidence/version/version-matrix.json",
@@ -214,7 +214,7 @@ evidence = [
   "cargo_full run --bin xtask -- release-evidence",
   "cargo_full run --bin xtask -- vyre-release-gate",
   "cargo_full run --bin xtask -- vyre-release-gate --launch-complete",
-  "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
+  "cargo_full run --bin xtask -- launch-state --write",
   "evidence/final/release-evidence-run.json",
   "evidence/final/expected-artifacts.json",
   "evidence/final/public-launch-state.json",

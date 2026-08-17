@@ -1,4 +1,4 @@
-pub(crate) use crate::rewrites::canonicalize::canonicalize_for_emit;
+pub(crate) use crate::rewrites::canonicalize_for_emit;
 // Inline: covers the crate-private `canonicalize_for_emit`, which no integration test can reach.
 #[cfg(test)]
 mod tests {

@@ -66,6 +66,7 @@ impl vyre_lower::analyses::vec_pack::VecPackReport
 impl vyre_lower::descriptor_builder::KernelBodyBuilder
 impl vyre_lower::descriptor_builder::KernelDescriptorBuilder
 impl vyre_lower::descriptor_builder::SlotCount for vyre_lower::BindingSlot
+impl vyre_lower::rewrites::LoweringRewriteRule
 impl<'a> core::iter::traits::iterator::Iterator for vyre_lower::KernelOpsIter<'a>
 impl<Candidate> vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>
 pub const fn vyre_lower::DescriptorIntent::new(kind: vyre_lower::DescriptorIntentKind, section_digest: u64) -> Self
@@ -97,6 +98,7 @@ pub const vyre_lower::pattern_audit::PatternAudit::FINDING_NOUN: &'static str
 pub const vyre_lower::pattern_audit::UNNAMED_KERNEL: &str
 pub const vyre_lower::program_stability_corpus::LANES: u32
 pub const vyre_lower::program_stability_corpus::WORKGROUP_SIZE_X: u32
+pub const vyre_lower::rewrites::ALL_REWRITE_RULES: &[vyre_lower::rewrites::LoweringRewriteRule]
 pub enum vyre_lower::BindingVisibility
 pub enum vyre_lower::DescriptorIntentError
 pub enum vyre_lower::DescriptorIntentKind
@@ -131,6 +133,8 @@ pub enum vyre_lower::analyses::structured_walk::BranchForm
 pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
 pub enum vyre_lower::emit_adversarial_corpus::EmitOutcome
 pub enum vyre_lower::operand_class::OperandClass
+pub enum vyre_lower::rewrites::LoweringRewriteRule
+pub enum vyre_lower::rewrites::RewriteOwnership
 pub fn vyre_lower::BindingSlot::with_count(self, count: u32) -> Self
 pub fn vyre_lower::BindingVisibility::is_readable(self) -> bool
 pub fn vyre_lower::BindingVisibility::is_writable(self) -> bool
@@ -304,6 +308,7 @@ pub fn vyre_lower::descriptor_builder::body() -> vyre_lower::descriptor_builder:
 pub fn vyre_lower::descriptor_builder::descriptor(id: &str) -> vyre_lower::descriptor_builder::KernelDescriptorBuilder
 pub fn vyre_lower::descriptor_builder::effect(kind: vyre_lower::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::emission_target(workgroup: vyre_lower::WorkgroupLimits, subgroup: vyre_lower::SubgroupCapabilities) -> vyre_lower::EmissionTargetCapabilities
+pub fn vyre_lower::descriptor_builder::extract_lane(vector_id: u32, lane: u8, result: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::for_loop(loop_var: &str, lo: u32, hi: u32, loop_body: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::global_ro(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::global_rw(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::BindingSlot
@@ -319,6 +324,8 @@ pub fn vyre_lower::descriptor_builder::shared_rw(index: u32, element_type: vyre_
 pub fn vyre_lower::descriptor_builder::slot(index: u32, element_type: vyre_spec::data_type::DataType, memory_class: vyre_lower::MemoryClass, visibility: vyre_lower::BindingVisibility, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::store_global(slot: u32, index: u32, value: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::target_without_subgroups() -> vyre_lower::EmissionTargetCapabilities
+pub fn vyre_lower::descriptor_builder::vector_load_global(slot: u32, index: u32, width: u8, result: u32) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::vector_store_global(slot: u32, index: u32, width: u8, values: &[u32]) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::workgroup_limits(max_size: [u32; 3], max_invocations: u32) -> vyre_lower::WorkgroupLimits
 pub fn vyre_lower::descriptor_trap_tags(body: &vyre_lower::KernelBody) -> core::result::Result<alloc::vec::Vec<vyre_lower::DescriptorTrapTag>, vyre_lower::LowerError>
 pub fn vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
@@ -343,6 +350,20 @@ pub fn vyre_lower::pattern_audit::PatternAudit::write_target_tag(&self, out: &mu
 pub fn vyre_lower::pattern_audit::display_kernel_id(kernel_id: &str) -> &str
 pub fn vyre_lower::program_stability_corpus::cases() -> alloc::vec::Vec<vyre_lower::program_stability_corpus::StabilityCase>
 pub fn vyre_lower::required_subgroup_capabilities(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::SubgroupCapabilities
+pub fn vyre_lower::rewrites::LoweringRewriteRule::contract(self) -> vyre_lower::rewrites::RewriteApplicabilityContract
+pub fn vyre_lower::rewrites::LoweringRewriteRule::id(self) -> &'static str
+pub fn vyre_lower::rewrites::LoweringRewriteRule::is_lowering_owned(self) -> bool
+pub fn vyre_lower::rewrites::LoweringRewriteRule::ownership(self) -> vyre_lower::rewrites::RewriteOwnership
+pub fn vyre_lower::rewrites::all_registered_contracts() -> alloc::vec::Vec<vyre_lower::rewrites::RewriteApplicabilityContract>
+pub fn vyre_lower::rewrites::apply_lowering_rewrites(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::rewrites::canonicalize_for_emit(descriptor: &vyre_lower::KernelDescriptor) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::rewrites::classify_rule(rule: vyre_lower::rewrites::LoweringRewriteRule) -> vyre_lower::rewrites::RewriteApplicabilityContract
+pub fn vyre_lower::rewrites::lowering_owned_rules() -> alloc::vec::Vec<vyre_lower::rewrites::LoweringRewriteRule>
+pub fn vyre_lower::rewrites::rewrite_const_buffer_promote(descriptor: &vyre_lower::KernelDescriptor) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::rewrites::rewrite_const_buffer_promote_with_budget(descriptor: &vyre_lower::KernelDescriptor, budget_bytes: u32) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::rewrites::rewrite_dead_ops(descriptor: &vyre_lower::KernelDescriptor) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::rewrites::rewrite_vector_memory(descriptor: &vyre_lower::KernelDescriptor) -> vyre_lower::KernelDescriptor
+pub fn vyre_lower::rewrites::rewrite_vector_memory_with_alias_facts(descriptor: &vyre_lower::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::KernelDescriptor
 pub fn vyre_lower::scan_construct_intent_mapping(construct_id: &str) -> core::option::Option<&'static vyre_lower::ScanConstructIntentMapping>
 pub fn vyre_lower::validate_workgroup_size(workgroup_size: [u32; 3], limits: vyre_lower::WorkgroupLimits) -> alloc::vec::Vec<vyre_lower::WorkgroupLimitViolation>
 pub fn vyre_lower::verify(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::VerifyResult
@@ -359,6 +380,7 @@ pub mod vyre_lower::emit_adversarial_corpus
 pub mod vyre_lower::operand_class
 pub mod vyre_lower::pattern_audit
 pub mod vyre_lower::program_stability_corpus
+pub mod vyre_lower::rewrites
 pub struct vyre_lower::BindingLayout
 pub struct vyre_lower::BindingSlot
 pub struct vyre_lower::DescriptorIntent
@@ -435,6 +457,7 @@ pub struct vyre_lower::descriptor_builder::KernelBodyBuilder
 pub struct vyre_lower::descriptor_builder::KernelDescriptorBuilder
 pub struct vyre_lower::emit_adversarial_corpus::EmitAdversarialCase
 pub struct vyre_lower::program_stability_corpus::StabilityCase
+pub struct vyre_lower::rewrites::RewriteApplicabilityContract
 pub trait vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
 pub trait vyre_lower::descriptor_builder::SlotCount
 pub trait vyre_lower::pattern_audit::PatternAudit
@@ -540,6 +563,8 @@ pub vyre_lower::KernelOpKind::Call::op_id: vyre_lower::Name
 pub vyre_lower::KernelOpKind::Cast
 pub vyre_lower::KernelOpKind::Cast::target: vyre_spec::data_type::DataType
 pub vyre_lower::KernelOpKind::Copy
+pub vyre_lower::KernelOpKind::ExtractLane
+pub vyre_lower::KernelOpKind::ExtractLane::lane: u8
 pub vyre_lower::KernelOpKind::Fma
 pub vyre_lower::KernelOpKind::GlobalInvocationId
 pub vyre_lower::KernelOpKind::IndirectDispatch
@@ -589,6 +614,10 @@ pub vyre_lower::KernelOpKind::SubgroupSize
 pub vyre_lower::KernelOpKind::Trap
 pub vyre_lower::KernelOpKind::Trap::tag: vyre_lower::Name
 pub vyre_lower::KernelOpKind::UnOpKind(vyre_spec::un_op::UnOp)
+pub vyre_lower::KernelOpKind::VectorLoadGlobal
+pub vyre_lower::KernelOpKind::VectorLoadGlobal::width: u8
+pub vyre_lower::KernelOpKind::VectorStoreGlobal
+pub vyre_lower::KernelOpKind::VectorStoreGlobal::width: u8
 pub vyre_lower::KernelOpKind::WorkgroupId
 pub vyre_lower::LiteralValue::Bool(bool)
 pub vyre_lower::LiteralValue::F32(f32)
@@ -961,3 +990,27 @@ pub vyre_lower::operand_class::OperandClass::ResultRef
 pub vyre_lower::program_stability_corpus::StabilityCase::id: &'static str
 pub vyre_lower::program_stability_corpus::StabilityCase::inputs: alloc::vec::Vec<alloc::vec::Vec<u8>>
 pub vyre_lower::program_stability_corpus::StabilityCase::program: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_lower::rewrites::LoweringRewriteRule::CommonSubexpressionElim
+pub vyre_lower::rewrites::LoweringRewriteRule::ConstBufferPromote
+pub vyre_lower::rewrites::LoweringRewriteRule::DeadOpElimination
+pub vyre_lower::rewrites::LoweringRewriteRule::LayoutAosToSoa
+pub vyre_lower::rewrites::LoweringRewriteRule::LoopLicmLoadHoist
+pub vyre_lower::rewrites::LoweringRewriteRule::RepresentationCanonicalize
+pub vyre_lower::rewrites::LoweringRewriteRule::SharedMemPromote
+pub vyre_lower::rewrites::LoweringRewriteRule::TexturePromote
+pub vyre_lower::rewrites::LoweringRewriteRule::VectorLoadFusion
+pub vyre_lower::rewrites::RewriteApplicabilityContract::consumed_analysis: core::option::Option<&'static str>
+pub vyre_lower::rewrites::RewriteApplicabilityContract::id: &'static str
+pub vyre_lower::rewrites::RewriteApplicabilityContract::ownership: vyre_lower::rewrites::RewriteOwnership
+pub vyre_lower::rewrites::RewriteApplicabilityContract::preconditions: &'static [&'static str]
+pub vyre_lower::rewrites::RewriteApplicabilityContract::preserves_program_semantics: bool
+pub vyre_lower::rewrites::RewriteApplicabilityContract::rationale: &'static str
+pub vyre_lower::rewrites::RewriteApplicabilityContract::rule: vyre_lower::rewrites::LoweringRewriteRule
+pub vyre_lower::rewrites::RewriteApplicabilityContract::target_structure: &'static str
+pub vyre_lower::rewrites::RewriteOwnership::EmitterOwned
+pub vyre_lower::rewrites::RewriteOwnership::EmitterOwned::emitter_role: &'static str
+pub vyre_lower::rewrites::RewriteOwnership::FoundationOptimizerOwned
+pub vyre_lower::rewrites::RewriteOwnership::FoundationOptimizerOwned::pass_name: &'static str
+pub vyre_lower::rewrites::RewriteOwnership::HostDispatchOwned
+pub vyre_lower::rewrites::RewriteOwnership::HostDispatchOwned::role: &'static str
+pub vyre_lower::rewrites::RewriteOwnership::LoweringOwned

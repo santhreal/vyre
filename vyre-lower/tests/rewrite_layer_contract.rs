@@ -439,7 +439,7 @@ fn vector_memory_rewrite_rejects_aliasing_hazards() {
     );
 
     // Intervening write to different slot with unproven alias
-    let mut alias_facts = AliasFactSet::default();
+    let alias_facts = AliasFactSet::default();
     // Do not insert no-alias fact
     let rewritten_alias = rewrite_vector_memory_with_alias_facts(&desc, &alias_facts);
     assert_eq!(rewritten_alias, desc);

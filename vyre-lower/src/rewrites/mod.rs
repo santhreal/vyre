@@ -7,11 +7,11 @@
 //! Non-goals: Layer-1 semantic IR transformations belong in `vyre-foundation::optimizer`;
 //! concrete backend emission strategies belong in `vyre-emit-*`.
 
-pub mod canonicalize;
-pub mod const_buffer_promote;
-pub mod dead_op;
-pub mod registry;
-pub mod vector_memory;
+mod canonicalize;
+mod const_buffer_promote;
+mod dead_op;
+mod registry;
+mod vector_memory;
 
 pub use canonicalize::canonicalize_for_emit;
 pub use const_buffer_promote::{

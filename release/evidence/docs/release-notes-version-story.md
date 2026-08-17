@@ -27,7 +27,7 @@ meaningful after the release has shipped.
 
 Required pre-tag gates:
 
-- `cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json`
+- `cargo_full run --bin xtask -- version-matrix --write`
 - `cargo_full run --bin xtask -- vyre-release-gate`
 - `scripts/apply-branch-protection.sh main`
 

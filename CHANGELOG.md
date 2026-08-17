@@ -1735,6 +1735,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   collapse onto `vyre-lower/src/lower/loop_site.rs`, and `fixture_builders.rs`,
   whose module was never imported and whose constructors were a second copy of
   the descriptor builder's, is deleted.
+- Lowering rewrite rules, contracts, and functions now have one public path
+  through vyre_lower::rewrites; implementation modules remain private.
 - Target-payload admission has one owner for the last five clusters the four
   driver copies still shared. `MaterializerDevice::admit_modules` runs the
   admit-size-decode loop and each backend supplies only its dialect decode;
@@ -5516,6 +5518,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   outside the clock. Re-measured on the shipping path,
   release.condition_eval.1m reports 165.708x with a 4422427 ns baseline p50,
   and no speedup pin had to move.
+- The release and CI evidence contracts now invoke version, metadata, feature,
+  package-readiness, conformance, and launch-state producers through their
+  fixed --write paths instead of obsolete caller-selected output paths.
 - Four release surfaces named documents the book deletion removed, and each
   failed open. `release_contract_path` pointed at `docs/RELEASE.md` and now
   names `release-train.toml`, the surviving authority for versions, tags,

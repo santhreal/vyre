@@ -59,8 +59,7 @@ jobs:
 
       - name: Generate conformance matrix evidence
         run: >-
-          ./cargo_full run --bin xtask -- conformance-matrix
-          --output release/evidence/conformance/conformance-matrix.json
+          ./cargo_full run --bin xtask -- conformance-matrix --write
 
   conform-release-gate:
     name: Conform release gate

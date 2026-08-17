@@ -155,6 +155,8 @@ operations = [
   "vyre-libs::matching::compact_hits",
   "vyre-libs::matching::cooperative_dfa",
   "vyre-libs::matching::emit_hit",
+  "vyre-libs::matching::regex_dfa",
+  "vyre-libs::matching::regex_scan",
 ]
 
 [[subsystem]]
@@ -230,7 +232,6 @@ operations = [
   "vyre-libs::math::sheaf_laplacian_eigenvalue",
   "vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase",
   "vyre-libs::math::sinkhorn_iterate",
-  "vyre-libs::math::sinkhorn_scale",
   "vyre-libs::math::softmax_step",
   "vyre-libs::math::square",
   "vyre-libs::math::succinct::rank1_query",

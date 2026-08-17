@@ -26,6 +26,8 @@ pub const fn vyre_megakernel::ArtifactEnvelope::neutral(&self) -> &vyre_megakern
 pub const fn vyre_megakernel::CompileRequest::new(graph: vyre_foundation::ir_inner::model::program_graph::ProgramGraph, facts: vyre_megakernel::ExternalFacts, device: vyre_megakernel::DeviceFacts, search_budget: vyre_megakernel::SearchBudget, max_artifact_bytes: u64) -> Self
 pub const fn vyre_megakernel::DeviceFacts::calibrated_materialization_throughput_bytes_per_ns(&self) -> u64
 pub const fn vyre_megakernel::DeviceFacts::capabilities(&self) -> vyre_foundation::validate::options::BackendCapabilities
+pub const fn vyre_megakernel::DeviceFacts::compute_units(&self) -> u32
+pub const fn vyre_megakernel::DeviceFacts::concurrent_queues(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::max_invocations_per_workgroup(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::new(capabilities: vyre_foundation::validate::options::BackendCapabilities, max_invocations_per_workgroup: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::peak_bandwidth_bytes_per_ns(&self) -> u64
@@ -36,12 +38,16 @@ pub const fn vyre_megakernel::DeviceFacts::shared_scratch_bytes_per_workgroup(&s
 pub const fn vyre_megakernel::DeviceFacts::subgroup_size(&self) -> u32
 pub const fn vyre_megakernel::DeviceFacts::supports_cooperative_launch(&self) -> bool
 pub const fn vyre_megakernel::DeviceFacts::supports_device_timestamps(&self) -> bool
+pub const fn vyre_megakernel::DeviceFacts::supports_spatial_partitioning(&self) -> bool
 pub const fn vyre_megakernel::DeviceFacts::unknown() -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_bandwidth_facts(self, peak_bandwidth_bytes_per_ns: u64, calibrated_materialization_throughput_bytes_per_ns: u64) -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_compute_units(self, compute_units: u32) -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_concurrent_queues(self, concurrent_queues: u32) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_cooperative_launch(self, supported: bool) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_device_timestamps(self, supported: bool) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_launch_costs(self, per_launch_overhead_ns: u64, persistent_setup_overhead_ns: u64) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_occupancy(self, registers_per_invocation: u32, shared_scratch_bytes_per_workgroup: u32) -> Self
+pub const fn vyre_megakernel::DeviceFacts::with_spatial_partitioning(self, supported: bool) -> Self
 pub const fn vyre_megakernel::DeviceFacts::with_subgroup_size(self, subgroup_size: u32) -> Self
 pub const fn vyre_megakernel::Digest::as_bytes(&self) -> &[u8; 32]
 pub const fn vyre_megakernel::SearchBudget::new(max_candidates: u32, max_cpu_work: u64, max_target_compilations: u32, max_measurements: u32, max_elapsed_ns: u64) -> Self
