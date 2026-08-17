@@ -905,9 +905,9 @@ mod tests {
             }
         }
     }
-    /// WHY: release.quantified_condition_loops.1m uses uniform warp aggregation reduction
-    /// over FOR-ANY, FOR-ALL, and FOR-N popcount predicates; reference evaluation must produce
-    /// byte-exact agreement with the CPU oracle count across scalar, boundary, and multi-warp scales.
+    /// WHY: release.quantified_condition_loops.1m uses one ballot per subgroup and one atomic
+    /// count per workgroup over FOR-ANY, FOR-ALL, and FOR-N predicates; reference evaluation
+    /// must produce byte-exact agreement across scalar, boundary, and multi-warp scales.
     #[test]
     fn quantified_condition_loops_reference_eval_matches_cpu_oracle() {
         for records in [1, 17, 31, 32, 33, 64, 127, 256, 1024] {

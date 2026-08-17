@@ -2363,6 +2363,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   `HEADER_BYTES`, `LOG_MAGIC`, `LOG_VERSION`, `MAX_REPLAY_RECORDS` and
   `RECORD_BYTES` are public, so a consumer sizing a replay log reads the same
   numbers the writer uses.
+- The quantified-condition release kernel now ballots matches per subgroup and
+  performs one global atomic count per workgroup. On the RTX 5090 release host
+  this reduced median device time from 29,056 ns to 10,112 ns and raised the
+  measured CPU-baseline speedup from 93.0x to 266.5x for
+  `release.quantified_condition_loops.1m`.
 - The GPU queue bench families in `vyre-bench` have one owner per concern. The
   skewed-CSR and IFDS cases each carried their own copy of the
   queue-materialize dispatch sequence, the queue-driven traversal plan, the
