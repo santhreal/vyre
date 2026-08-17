@@ -145,6 +145,95 @@ impl BodyBuilder<'_> {
                     .push(Statement::Store { pointer, value }, Span::UNDEFINED);
                 Ok(())
             }
+            OpDispatchRoute::VectorLoad => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::VectorLoadGlobal { width } => {
+                    let slot = *op.operands.first().ok_or_else(|| {
+                        EmitError::InvalidDescriptor(missing_binding_slot_message(&op.kind))
+                    })?;
+                    let base_index = self.value_operand(op, 1)?;
+                    let ty = *self
+                        .binding_types
+                        .get(&slot)
+                        .ok_or_else(|| EmitError::InvalidBinding {
+                            slot,
+                            reason: "no scalar type was recorded for this slot".into(),
+                        })?;
+                    let mut lane_exprs = Vec::with_capacity(*width as usize);
+                    for i in 0..*width {
+                        let offset_expr = if i == 0 {
+                            base_index
+                        } else {
+                            let i_lit = self.literal_u32(i as u32);
+                            self.append_expr(Expression::Binary {
+                                op: BinaryOperator::Add,
+                                left: base_index,
+                                right: i_lit,
+                            })
+                        };
+                        let pointer = self.binding_element_pointer_by_slot(slot, offset_expr)?;
+                        let val = self.append_expr(Expression::Load { pointer });
+                        lane_exprs.push(val);
+                    }
+                    if let Some(res) = op.result {
+                        self.vector_lanes.insert(res, (lane_exprs, ty));
+                    }
+                    Ok(())
+                }
+            ),
+            OpDispatchRoute::VectorStore => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::VectorStoreGlobal { width: _ } => {
+                    let slot = self.slot_operand(op, 0)?;
+                    let base_index = self.value_operand(op, 1)?;
+                    let binding_ty = self.binding_types.get(&slot).copied();
+                    for i in 0..(op.operands.len().saturating_sub(2)) {
+                        let offset_expr = if i == 0 {
+                            base_index
+                        } else {
+                            let i_lit = self.literal_u32(i as u32);
+                            self.append_expr(Expression::Binary {
+                                op: BinaryOperator::Add,
+                                left: base_index,
+                                right: i_lit,
+                            })
+                        };
+                        let pointer = self.binding_element_pointer_by_slot(slot, offset_expr)?;
+                        let raw_value = self.value_operand(op, 2 + i)?;
+                        let value = match binding_ty {
+                            Some(ty) => self.coerce_value_to_type(raw_value, ty),
+                            None => raw_value,
+                        };
+                        self.function
+                            .body
+                            .push(Statement::Store { pointer, value }, Span::UNDEFINED);
+                    }
+                    Ok(())
+                }
+            ),
+            OpDispatchRoute::ExtractLane => with_route_kind!(
+                op,
+                route,
+                KernelOpKind::ExtractLane { lane } => {
+                    let vec_id = *op.operands.first().ok_or_else(|| {
+                        EmitError::InvalidDescriptor("ExtractLane missing vector operand".into())
+                    })?;
+                    let (lanes, ty) = self.vector_lanes.get(&vec_id).ok_or_else(|| {
+                        EmitError::InvalidDescriptor(format!(
+                            "ExtractLane: vector value {vec_id} has no recorded vector lanes"
+                        ))
+                    })?;
+                    let val = *lanes.get(*lane as usize).ok_or_else(|| {
+                        EmitError::InvalidDescriptor(format!(
+                            "ExtractLane: lane index {lane} out of bounds for vector {vec_id}"
+                        ))
+                    })?;
+                    let ty = *ty;
+                    self.bind_result_typed(op, val, ty)
+                }
+            ),
             OpDispatchRoute::Copy => {
                 let value = self.value_operand(op, 0)?;
                 let ty = self.value_type_operand(op, 0)?;

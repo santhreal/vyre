@@ -371,7 +371,10 @@ impl BodyCtx<'_> {
                     LiteralValue::Bool(_) => Some(PtxType::Bool),
                 }
             }
-            KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
+            KernelOpKind::LoadGlobal
+            | KernelOpKind::LoadShared
+            | KernelOpKind::LoadConstant
+            | KernelOpKind::VectorLoadGlobal { .. } => {
                 let binding_slot = *producer.operands.first()?;
                 let binding = self.binding_for_slot(binding_slot).ok()?;
                 PtxType::from_dtype(&binding.element_type).ok()
@@ -384,7 +387,9 @@ impl BodyCtx<'_> {
             | KernelOpKind::SubgroupLocalId
             | KernelOpKind::SubgroupSize
             | KernelOpKind::SubgroupBallot => Some(PtxType::U32),
-            KernelOpKind::Copy | KernelOpKind::SubgroupReduce { .. } => {
+            KernelOpKind::Copy
+            | KernelOpKind::SubgroupReduce { .. }
+            | KernelOpKind::ExtractLane { .. } => {
                 self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
             }
             KernelOpKind::Cast { target } => PtxType::from_dtype(target).ok(),

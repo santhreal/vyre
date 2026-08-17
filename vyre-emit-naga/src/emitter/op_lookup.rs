@@ -172,7 +172,11 @@ fn barrier_body_spaces(body: &KernelBody) -> (bool, bool) {
     let mut workgroup = false;
     for op in &body.ops {
         match op.kind {
-            KernelOpKind::LoadGlobal | KernelOpKind::StoreGlobal | KernelOpKind::Atomic { .. } => {
+            KernelOpKind::LoadGlobal
+            | KernelOpKind::StoreGlobal
+            | KernelOpKind::VectorLoadGlobal { .. }
+            | KernelOpKind::VectorStoreGlobal { .. }
+            | KernelOpKind::Atomic { .. } => {
                 storage = true
             }
             KernelOpKind::LoadShared | KernelOpKind::StoreShared => workgroup = true,

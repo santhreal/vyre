@@ -375,6 +375,25 @@ pub enum KernelOpKind {
     StoreGlobal,
     /// `store(buf, index, value)` for a workgroup-shared binding.
     StoreShared,
+    /// `load_vec<width>(buf, index)`. Operands: [binding_slot, index_op_id].
+    /// Result is the loaded vector value of width 2 or 4.
+    VectorLoadGlobal {
+        /// Vector width (2 or 4).
+        width: u8,
+    },
+    /// `store_vec<width>(buf, index, v0, v1, ...)`.
+    /// Operands: [binding_slot, index_op_id, val0_id, val1_id, ...] (width values).
+    /// Result: None.
+    VectorStoreGlobal {
+        /// Vector width (2 or 4).
+        width: u8,
+    },
+    /// Extract a scalar lane from a vector value. Operands: [vector_op_id].
+    /// Result is the scalar value at `lane` (0..width).
+    ExtractLane {
+        /// Lane index (0..width).
+        lane: u8,
+    },
 
     // ---------- Arithmetic / logic ----------
     /// Binary op. Operands: [left_op_id, right_op_id]. Result has the

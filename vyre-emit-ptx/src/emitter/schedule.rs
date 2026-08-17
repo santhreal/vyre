@@ -3,7 +3,10 @@ use vyre_lower::{KernelOp, KernelOpKind};
 pub(super) fn is_latency_load(op: &KernelOp) -> bool {
     matches!(
         op.kind,
-        KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant
+        KernelOpKind::LoadGlobal
+            | KernelOpKind::LoadShared
+            | KernelOpKind::LoadConstant
+            | KernelOpKind::VectorLoadGlobal { .. }
     ) && op.result.is_some()
 }
 
@@ -12,6 +15,7 @@ pub(crate) fn is_scheduling_fence(op: &KernelOp) -> bool {
         op.kind,
         KernelOpKind::StoreGlobal
             | KernelOpKind::StoreShared
+            | KernelOpKind::VectorStoreGlobal { .. }
             | KernelOpKind::Atomic { .. }
             | KernelOpKind::Barrier { .. }
             | KernelOpKind::Return
@@ -47,6 +51,7 @@ pub(crate) fn is_schedulable_pure_op(op: &KernelOp) -> bool {
             | KernelOpKind::SubgroupShuffle
             | KernelOpKind::SubgroupBroadcast
             | KernelOpKind::SubgroupReduce { .. }
+            | KernelOpKind::ExtractLane { .. }
     ) && op.result.is_some()
 }
 

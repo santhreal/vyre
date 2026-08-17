@@ -26,6 +26,9 @@ pub(super) enum OpDispatchRoute {
     BufferLength,
     Load,
     Store,
+    VectorLoad,
+    VectorStore,
+    ExtractLane,
     Copy,
     BinOpKind,
     UnOpKind,
@@ -104,6 +107,9 @@ pub(super) fn classify_op_dispatch_route(kind: &KernelOpKind) -> OpDispatchRoute
             OpDispatchRoute::Load
         }
         KernelOpKind::StoreGlobal | KernelOpKind::StoreShared => OpDispatchRoute::Store,
+        KernelOpKind::VectorLoadGlobal { .. } => OpDispatchRoute::VectorLoad,
+        KernelOpKind::VectorStoreGlobal { .. } => OpDispatchRoute::VectorStore,
+        KernelOpKind::ExtractLane { .. } => OpDispatchRoute::ExtractLane,
         KernelOpKind::Copy => OpDispatchRoute::Copy,
         KernelOpKind::BinOpKind(_) => OpDispatchRoute::BinOpKind,
         KernelOpKind::UnOpKind(_) => OpDispatchRoute::UnOpKind,

@@ -115,6 +115,12 @@ impl std::hash::Hash for KernelOpKind {
                 data.extension_kind.hash(state);
                 data.payload.hash(state);
             }
+            Self::VectorLoadGlobal { width } | Self::VectorStoreGlobal { width } => {
+                width.hash(state);
+            }
+            Self::ExtractLane { lane } => {
+                lane.hash(state);
+            }
             _ => {}
         }
     }

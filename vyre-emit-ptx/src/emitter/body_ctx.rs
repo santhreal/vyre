@@ -28,6 +28,8 @@ pub(super) struct BodyCtx<'a> {
     pub(super) next_label: u32,
     /// Map from descriptor operand id → PTX register holding its value.
     pub(super) operand_to_reg: FxHashMap<u32, Reg>,
+    /// Map from descriptor vector result id → tuple of PTX registers.
+    pub(super) vector_regs: FxHashMap<u32, smallvec::SmallVec<[Reg; 4]>>,
     /// Descriptor result ids known to be literal u32 values. Used to
     /// fold constant buffer indices into immediate address offsets.
     pub(super) u32_literals: FxHashMap<u32, u32>,

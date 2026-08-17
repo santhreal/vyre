@@ -102,6 +102,27 @@ pub fn load_global(slot: u32, index: u32, result: u32) -> KernelOp {
 pub fn store_global(slot: u32, index: u32, value: u32) -> KernelOp {
     effect(KernelOpKind::StoreGlobal, [slot, index, value])
 }
+/// A vector load of `slot` at element `index` of width `width`.
+#[must_use]
+pub fn vector_load_global(slot: u32, index: u32, width: u8, result: u32) -> KernelOp {
+    op(KernelOpKind::VectorLoadGlobal { width }, [slot, index], result)
+}
+
+/// A vector store of `values` into `slot` at element `index`.
+#[must_use]
+pub fn vector_store_global(slot: u32, index: u32, width: u8, values: &[u32]) -> KernelOp {
+    let mut operands = Vec::with_capacity(2 + values.len());
+    operands.push(slot);
+    operands.push(index);
+    operands.extend_from_slice(values);
+    effect(KernelOpKind::VectorStoreGlobal { width }, operands)
+}
+
+/// Extract a scalar lane `lane` from vector `vector_id`.
+#[must_use]
+pub fn extract_lane(vector_id: u32, lane: u8, result: u32) -> KernelOp {
+    op(KernelOpKind::ExtractLane { lane }, [vector_id], result)
+}
 
 /// A [`KernelOpKind::StructuredIfThen`] op guarding child body `then_body` on
 /// `cond`.
