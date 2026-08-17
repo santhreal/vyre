@@ -60,7 +60,7 @@ use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
 /// Target roots that must contain zero production host oracles.
-const TARGET_ROOTS: &[&str] = &["vyre-libs/src", "vyre-primitives/src"];
+const TARGET_ROOTS: &[&str] = &["vyre-libs/src", "vyre-primitives/src", "vyre-driver/src"];
 
 /// Exact canonical qualified IR builder and operation types representing AST/IR owners.
 const EXACT_CANONICAL_IR_BUILDER_PATHS: &[&str] = &[
@@ -193,6 +193,21 @@ fn base_module_path(path: &Path) -> Vec<String> {
         mod_path.push(seg.to_string());
     }
     mod_path
+}
+fn normalize_qualified_path(path: &str) -> String {
+    let path = path.trim();
+    if let Some(rest) = path.strip_prefix("crate::") {
+        rest.to_string()
+    } else if let Some(idx) = path.find("::") {
+        let first = &path[..idx];
+        if first.starts_with("vyre_") {
+            path[idx + 2..].to_string()
+        } else {
+            path.to_string()
+        }
+    } else {
+        path.to_string()
+    }
 }
 
 /// Whether an attribute puts its item strictly in the test harness and nowhere else.
@@ -544,6 +559,95 @@ impl AstAnalysisVisitor {
         res.extend(self.current_module.clone());
         res.extend(segments);
         Some(res.join("::"))
+    }
+    fn resolve_qualified_fn_path(&self, path: &syn::Path) -> Option<String> {
+        let segments: Vec<String> = path.segments.iter().map(|s| s.ident.to_string()).collect();
+        if segments.is_empty() {
+            return None;
+        }
+
+        if segments[0] == "crate" {
+            return Some(segments.join("::"));
+        }
+
+        if segments[0] == "super" {
+            let mut mod_parts = self.current_module.clone();
+            let mut skip = 0;
+            while skip < segments.len() && segments[skip] == "super" {
+                mod_parts.pop();
+                skip += 1;
+            }
+            let mut res = vec!["crate".to_string()];
+            res.extend(mod_parts);
+            res.extend(segments[skip..].to_vec());
+            return Some(res.join("::"));
+        }
+
+        if segments[0] == "self" {
+            let mut res = vec!["crate".to_string()];
+            res.extend(self.current_module.clone());
+            res.extend(segments[1..].to_vec());
+            return Some(res.join("::"));
+        }
+
+        if segments.len() == 1 {
+            let ident = &segments[0];
+            for scope in self.scope_imports.iter().rev() {
+                if let Some(imported) = scope.get(ident) {
+                    if imported.starts_with("crate::") || imported.starts_with("vyre_") {
+                        return Some(imported.clone());
+                    } else if imported.starts_with("super::") {
+                        let mut mod_parts = self.current_module.clone();
+                        let sub_segs: Vec<&str> = imported.split("::").collect();
+                        let mut skip = 0;
+                        while skip < sub_segs.len() && sub_segs[skip] == "super" {
+                            mod_parts.pop();
+                            skip += 1;
+                        }
+                        let mut res = vec!["crate".to_string()];
+                        res.extend(mod_parts);
+                        res.extend(sub_segs[skip..].iter().map(|s| s.to_string()));
+                        return Some(res.join("::"));
+                    } else {
+                        return Some(format!("crate::{imported}"));
+                    }
+                }
+            }
+            let mut res = vec!["crate".to_string()];
+            res.extend(self.current_module.clone());
+            res.push(ident.clone());
+            return Some(res.join("::"));
+        }
+
+        let first = &segments[0];
+        for scope in self.scope_imports.iter().rev() {
+            if let Some(imported_prefix) = scope.get(first) {
+                let rest = segments[1..].join("::");
+                if imported_prefix.starts_with("crate::") || imported_prefix.starts_with("vyre_") {
+                    return Some(format!("{imported_prefix}::{rest}"));
+                } else {
+                    return Some(format!("crate::{imported_prefix}::{rest}"));
+                }
+            }
+        }
+
+        let mut res = vec!["crate".to_string()];
+        res.extend(self.current_module.clone());
+        res.extend(segments);
+        Some(res.join("::"))
+    }
+
+    fn is_known_dispatch_fn_identifier(&self, callee_name: &str) -> bool {
+        if self.known_dispatch_exec_fns.contains(callee_name)
+            || self.is_canonical_dispatch_exec_method(callee_name)
+        {
+            return true;
+        }
+        let normalized = normalize_qualified_path(callee_name);
+        if self.known_dispatch_exec_fns.contains(&normalized) {
+            return true;
+        }
+        false
     }
 
     fn extract_qualified_custom_types(&self, ty: &syn::Type, out: &mut BTreeSet<String>) {
@@ -911,8 +1015,8 @@ impl AstAnalysisVisitor {
                 false
             }
             syn::Expr::Call(c) => {
-                let callee_name = if let syn::Expr::Path(p) = &*c.func {
-                    p.path.segments.last().map(|s| s.ident.to_string())
+                let resolved_callee = if let syn::Expr::Path(p) = &*c.func {
+                    self.resolve_qualified_fn_path(&p.path)
                 } else {
                     None
                 };
@@ -923,10 +1027,8 @@ impl AstAnalysisVisitor {
                         .iter()
                         .any(|id| self.dispatcher_params.contains(id))
                     {
-                        if let Some(name) = &callee_name {
-                            if self.known_dispatch_exec_fns.contains(name)
-                                || self.is_canonical_dispatch_exec_method(name)
-                            {
+                        if let Some(name) = &resolved_callee {
+                            if self.is_known_dispatch_fn_identifier(name) {
                                 return true;
                             }
                         }
@@ -1133,6 +1235,10 @@ impl AstAnalysisVisitor {
         );
         temp_visitor.dispatcher_params = dispatcher_params;
         temp_visitor.known_dispatch_exec_fns = self.known_dispatch_exec_fns.clone();
+        temp_visitor.scope_imports = self.scope_imports.clone();
+        temp_visitor.current_module = self.current_module.clone();
+        temp_visitor.local_declared_types = self.local_declared_types.clone();
+        temp_visitor.struct_types_with_dispatcher = self.struct_types_with_dispatcher.clone();
         block
             .stmts
             .iter()
@@ -1191,12 +1297,17 @@ impl AstAnalysisVisitor {
                 .iter()
                 .any(|&dispatch_idx| dispatch_idx > idx);
 
+            let has_semantic_op = stmt_contains_semantic_operation(stmt, self);
+
             let semantic_output_feeds_dispatch = if has_prior_dispatch
                 && has_subsequent_dispatch
                 && !is_dispatch_exec
-                && stmt_contains_semantic_operation(stmt, self)
+                && has_semantic_op
             {
                 let mut tainted = extract_mutated_storage_from_stmt(stmt);
+                if let syn::Stmt::Local(l) = stmt {
+                    extract_pat_bindings(&l.pat, &mut tainted);
+                }
                 let mut feeds_dispatch = false;
                 if !tainted.is_empty() {
                     for later_stmt in &stmts[idx + 1..] {
@@ -1210,6 +1321,9 @@ impl AstAnalysisVisitor {
                         }
                         if reads.iter().any(|name| tainted.contains(name)) {
                             tainted.extend(extract_mutated_storage_from_stmt(later_stmt));
+                            if let syn::Stmt::Local(l) = later_stmt {
+                                extract_pat_bindings(&l.pat, &mut tainted);
+                            }
                         }
                     }
                 }
@@ -1225,6 +1339,9 @@ impl AstAnalysisVisitor {
             if is_dispatch_exec {
                 self.dispatched_data_vars
                     .extend(extract_mutated_storage_from_stmt(stmt));
+                if let syn::Stmt::Local(l) = stmt {
+                    extract_pat_bindings(&l.pat, &mut self.dispatched_data_vars);
+                }
             } else if has_prior_dispatch {
                 let reads = extract_read_idents_from_stmt(stmt);
                 if reads
@@ -1233,6 +1350,12 @@ impl AstAnalysisVisitor {
                 {
                     self.dispatched_data_vars
                         .extend(extract_mutated_storage_from_stmt(stmt));
+                    if let syn::Stmt::Local(l) = stmt {
+                        extract_pat_bindings(&l.pat, &mut self.dispatched_data_vars);
+                    }
+                    if let syn::Stmt::Expr(syn::Expr::ForLoop(f), _) = stmt {
+                        extract_pat_bindings(&f.pat, &mut self.dispatched_data_vars);
+                    }
                 }
             }
 
@@ -1437,6 +1560,9 @@ fn extract_root_ident_from_expr(expr: &syn::Expr, out: &mut BTreeSet<String>) {
             let field_str = quote::quote!(#expr).to_string().replace(' ', "");
             out.insert(field_str);
         }
+        syn::Expr::MethodCall(mc) => {
+            extract_root_ident_from_expr(&mc.receiver, out);
+        }
         syn::Expr::Index(idx) => {
             extract_root_ident_from_expr(&idx.expr, out);
         }
@@ -1448,6 +1574,9 @@ fn extract_root_ident_from_expr(expr: &syn::Expr, out: &mut BTreeSet<String>) {
         }
         syn::Expr::Unary(u) => {
             extract_root_ident_from_expr(&u.expr, out);
+        }
+        syn::Expr::Try(t) => {
+            extract_root_ident_from_expr(&t.expr, out);
         }
         _ => {}
     }
@@ -1529,6 +1658,13 @@ impl<'ast> syn::visit::Visit<'ast> for MutatedStorageCollector {
     }
 
     fn visit_expr_method_call(&mut self, expr: &'ast syn::ExprMethodCall) {
+        let mname = expr.method.to_string();
+        if matches!(
+            mname.as_str(),
+            "push" | "extend" | "extend_from_slice" | "insert" | "append" | "clear"
+        ) {
+            extract_root_ident_from_expr(&expr.receiver, &mut self.mutated);
+        }
         for arg in &expr.args {
             if let syn::Expr::Reference(r) = arg {
                 if r.mutability.is_some() {
@@ -1594,6 +1730,236 @@ fn is_reduction_or_arithmetic_method(method_name: &str) -> bool {
             | "checked_div"
     )
 }
+
+fn is_matching_width_type(type_ident: &str, chunk_len: u32) -> bool {
+    match chunk_len {
+        1 => matches!(type_ident, "u8" | "i8"),
+        2 => matches!(type_ident, "u16" | "i16"),
+        4 => matches!(type_ident, "u32" | "i32" | "f32"),
+        8 => matches!(type_ident, "u64" | "i64" | "f64"),
+        16 => matches!(type_ident, "u128" | "i128"),
+        _ => false,
+    }
+}
+
+fn is_exact_chunk_receiver(expr: &syn::Expr, chunk_ident: &str) -> bool {
+    match expr {
+        syn::Expr::Path(p) => p.path.get_ident().is_some_and(|id| id == chunk_ident),
+        syn::Expr::Reference(r) => is_exact_chunk_receiver(&r.expr, chunk_ident),
+        syn::Expr::Paren(p) => is_exact_chunk_receiver(&p.expr, chunk_ident),
+        _ => false,
+    }
+}
+
+fn is_exact_chunk_to_array(expr: &syn::Expr, chunk_ident: &str) -> bool {
+    match expr {
+        syn::Expr::MethodCall(mc) => {
+            let mname = mc.method.to_string();
+            if mname == "unwrap" || mname == "expect" {
+                if let syn::Expr::MethodCall(inner_mc) = &*mc.receiver {
+                    if inner_mc.method == "try_into" && inner_mc.args.is_empty() {
+                        return is_exact_chunk_receiver(&inner_mc.receiver, chunk_ident);
+                    }
+                }
+                false
+            } else if mname == "try_into" && mc.args.is_empty() {
+                is_exact_chunk_receiver(&mc.receiver, chunk_ident)
+            } else {
+                false
+            }
+        }
+        syn::Expr::Try(t) => {
+            if let syn::Expr::MethodCall(mc) = &*t.expr {
+                if mc.method == "try_into" && mc.args.is_empty() {
+                    return is_exact_chunk_receiver(&mc.receiver, chunk_ident);
+                }
+            }
+            false
+        }
+        syn::Expr::Path(p) => p.path.get_ident().is_some_and(|id| id == chunk_ident),
+        syn::Expr::Reference(r) => is_exact_chunk_to_array(&r.expr, chunk_ident),
+        syn::Expr::Paren(p) => is_exact_chunk_to_array(&p.expr, chunk_ident),
+        _ => false,
+    }
+}
+
+fn is_exact_from_le_bytes_expr(expr: &syn::Expr, chunk_ident: &str, chunk_len: u32) -> bool {
+    match expr {
+        syn::Expr::Call(c) => {
+            if let syn::Expr::Path(p) = &*c.func {
+                let segs: Vec<String> = p
+                    .path
+                    .segments
+                    .iter()
+                    .map(|s| s.ident.to_string())
+                    .collect();
+                let is_valid_builtin_path = if segs.len() == 2 {
+                    segs[1] == "from_le_bytes" && is_matching_width_type(&segs[0], chunk_len)
+                } else if segs.len() == 4 {
+                    (segs[0] == "core" || segs[0] == "std")
+                        && segs[1] == "primitive"
+                        && segs[3] == "from_le_bytes"
+                        && is_matching_width_type(&segs[2], chunk_len)
+                } else {
+                    false
+                };
+                if is_valid_builtin_path && c.args.len() == 1 {
+                    return is_exact_chunk_to_array(&c.args[0], chunk_ident);
+                }
+            }
+            false
+        }
+        syn::Expr::Paren(p) => is_exact_from_le_bytes_expr(&p.expr, chunk_ident, chunk_len),
+        _ => false,
+    }
+}
+
+fn is_pure_decoder_loop(expr: &syn::ExprForLoop) -> bool {
+    let chunk_len = match &*expr.expr {
+        syn::Expr::MethodCall(mc) => {
+            if mc.method != "chunks_exact" || mc.args.len() != 1 {
+                return false;
+            }
+            match mc.args.first() {
+                Some(syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Int(li),
+                    ..
+                })) => {
+                    let val = li.base10_parse::<u32>().unwrap_or(0);
+                    if val == 1 || val == 2 || val == 4 || val == 8 || val == 16 {
+                        val
+                    } else {
+                        return false;
+                    }
+                }
+                Some(syn::Expr::Reference(r)) => {
+                    if let syn::Expr::Lit(syn::ExprLit {
+                        lit: syn::Lit::Int(li),
+                        ..
+                    }) = &*r.expr
+                    {
+                        let val = li.base10_parse::<u32>().unwrap_or(0);
+                        if val == 1 || val == 2 || val == 4 || val == 8 || val == 16 {
+                            val
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+                _ => return false,
+            }
+        }
+        _ => return false,
+    };
+
+    let chunk_ident = match &*expr.pat {
+        syn::Pat::Ident(pi) => pi.ident.to_string(),
+        syn::Pat::Reference(pr) => {
+            if let syn::Pat::Ident(pi) = &*pr.pat {
+                pi.ident.to_string()
+            } else {
+                return false;
+            }
+        }
+        _ => return false,
+    };
+
+    let mut decoded_local_ident: Option<String> = None;
+    let mut semantic_write_count = 0usize;
+
+    for stmt in &expr.body.stmts {
+        match stmt {
+            syn::Stmt::Local(local) => {
+                if decoded_local_ident.is_some() {
+                    return false;
+                }
+                let mut bound_idents = BTreeSet::new();
+                extract_pat_bindings(&local.pat, &mut bound_idents);
+                if bound_idents.len() != 1 {
+                    return false;
+                }
+                let Some(var_name) = bound_idents.into_iter().next() else {
+                    return false;
+                };
+                let Some(init) = &local.init else {
+                    return false;
+                };
+                if !is_exact_from_le_bytes_expr(&init.expr, &chunk_ident, chunk_len) {
+                    return false;
+                }
+                decoded_local_ident = Some(var_name);
+            }
+            syn::Stmt::Expr(expr, _) => match expr {
+                syn::Expr::MethodCall(mc) => {
+                    let mname = mc.method.to_string();
+                    if mname == "reserve" || mname == "reserve_exact" {
+                        continue;
+                    }
+                    if mname == "push" {
+                        if mc.args.len() != 1 {
+                            return false;
+                        }
+                        let arg = &mc.args[0];
+                        let is_valid_arg = if let Some(local_id) = &decoded_local_ident {
+                            match arg {
+                                syn::Expr::Path(p) => {
+                                    p.path.get_ident().is_some_and(|id| id == local_id)
+                                }
+                                _ => is_exact_from_le_bytes_expr(arg, &chunk_ident, chunk_len),
+                            }
+                        } else {
+                            is_exact_from_le_bytes_expr(arg, &chunk_ident, chunk_len)
+                        };
+                        if !is_valid_arg {
+                            return false;
+                        }
+                        semantic_write_count += 1;
+                    } else if mname == "extend" || mname == "extend_from_slice" {
+                        if mc.args.len() != 1 {
+                            return false;
+                        }
+                        let arg = &mc.args[0];
+                        let is_valid_arg = match arg {
+                            syn::Expr::Array(arr) => {
+                                arr.elems.len() == 1 && {
+                                    let elem = &arr.elems[0];
+                                    if let Some(local_id) = &decoded_local_ident {
+                                        match elem {
+                                            syn::Expr::Path(p) => {
+                                                p.path.get_ident().is_some_and(|id| id == local_id)
+                                            }
+                                            _ => is_exact_from_le_bytes_expr(
+                                                elem,
+                                                &chunk_ident,
+                                                chunk_len,
+                                            ),
+                                        }
+                                    } else {
+                                        is_exact_from_le_bytes_expr(elem, &chunk_ident, chunk_len)
+                                    }
+                                }
+                            }
+                            _ => false,
+                        };
+                        if !is_valid_arg {
+                            return false;
+                        }
+                        semantic_write_count += 1;
+                    } else {
+                        return false;
+                    }
+                }
+                _ => return false,
+            },
+            _ => return false,
+        }
+    }
+
+    semantic_write_count == 1
+}
+
 struct SemanticOperationScanner<'a> {
     visitor: &'a AstAnalysisVisitor,
     has_semantic_op: bool,
@@ -1639,7 +2005,7 @@ impl<'ast, 'a> syn::visit::Visit<'ast> for SemanticOperationScanner<'a> {
                 .stmts
                 .iter()
                 .any(|s| self.visitor.is_dispatch_execution_stmt(s));
-        if !contains_dispatch {
+        if !contains_dispatch && !is_pure_decoder_loop(expr) {
             self.has_semantic_op = true;
         }
         syn::visit::visit_expr_for_loop(self, expr);
@@ -1946,11 +2312,8 @@ impl<'ast, 'a> Visit<'ast> for BlockDispatchScanner<'a> {
     }
 
     fn visit_expr_call(&mut self, call: &'ast syn::ExprCall) {
-        let callee_name = if let syn::Expr::Path(path) = &*call.func {
-            path.path
-                .segments
-                .last()
-                .map(|segment| segment.ident.to_string())
+        let resolved_callee = if let syn::Expr::Path(path) = &*call.func {
+            self.visitor.resolve_qualified_fn_path(&path.path)
         } else {
             None
         };
@@ -1960,7 +2323,7 @@ impl<'ast, 'a> Visit<'ast> for BlockDispatchScanner<'a> {
                 .iter()
                 .any(|ident| self.dispatcher_params.contains(ident))
             {
-                if let Some(name) = &callee_name {
+                if let Some(name) = &resolved_callee {
                     self.dispatcher_callees.push(name.clone());
                 }
             }
@@ -1986,8 +2349,9 @@ fn scan_item_for_dispatch(
             if !dispatcher_params.is_empty() {
                 let mut scanner = BlockDispatchScanner::new(visitor, dispatcher_params);
                 scanner.visit_block(&item_fn.block);
+                let qualified = visitor.qualified_local_type_name(&item_fn.sig.ident);
                 scans.push(FnDispatchScan {
-                    name: item_fn.sig.ident.to_string(),
+                    name: qualified,
                     has_direct_dispatch: scanner.has_direct_dispatch,
                     dispatcher_callees: scanner.dispatcher_callees,
                 });
@@ -2004,8 +2368,16 @@ fn scan_item_for_dispatch(
                     if !dispatcher_params.is_empty() {
                         let mut scanner = BlockDispatchScanner::new(visitor, dispatcher_params);
                         scanner.visit_block(&impl_fn.block);
+                        let type_prefix = if let syn::Type::Path(tp) = &*item_impl.self_ty {
+                            visitor
+                                .resolve_qualified_type_path(&tp.path)
+                                .unwrap_or_else(|| quote::quote!(#tp).to_string())
+                        } else {
+                            "Self".to_string()
+                        };
+                        let qualified = format!("{type_prefix}::{}", impl_fn.sig.ident);
                         scans.push(FnDispatchScan {
-                            name: impl_fn.sig.ident.to_string(),
+                            name: qualified,
                             has_direct_dispatch: scanner.has_direct_dispatch,
                             dispatcher_callees: scanner.dispatcher_callees,
                         });
@@ -2036,57 +2408,92 @@ fn scan_item_for_dispatch(
     }
 }
 
-fn compute_known_dispatch_exec_fns(
-    file: &syn::File,
-    visitor: &mut AstAnalysisVisitor,
-) -> BTreeSet<String> {
-    fn collect_wrapper_structs(items: &[syn::Item], visitor: &mut AstAnalysisVisitor) {
-        for item in items {
-            match item {
-                syn::Item::Struct(item_struct) => {
-                    if visitor.struct_contains_canonical_dispatcher(item_struct) {
-                        let qualified = visitor.qualified_local_type_name(&item_struct.ident);
-                        visitor.struct_types_with_dispatcher.insert(qualified);
-                    }
-                }
-                syn::Item::Mod(item_mod) => {
-                    if let Some((_, inner_items)) = &item_mod.content {
-                        visitor.current_module.push(item_mod.ident.to_string());
-                        visitor.scope_imports.push(BTreeMap::new());
-                        if let Some(inner_scope) = visitor.scope_imports.last_mut() {
-                            for inner_item in inner_items {
-                                if let syn::Item::Use(item_use) = inner_item {
-                                    extract_use_tree("", &item_use.tree, inner_scope);
-                                }
-                            }
+fn collect_wrapper_structs_item(item: &syn::Item, visitor: &mut AstAnalysisVisitor) {
+    match item {
+        syn::Item::Struct(item_struct) => {
+            if visitor.struct_contains_canonical_dispatcher(item_struct) {
+                let qualified = visitor.qualified_local_type_name(&item_struct.ident);
+                visitor.struct_types_with_dispatcher.insert(qualified);
+            }
+        }
+        syn::Item::Mod(item_mod) => {
+            if let Some((_, inner_items)) = &item_mod.content {
+                visitor.current_module.push(item_mod.ident.to_string());
+                visitor.scope_imports.push(BTreeMap::new());
+                if let Some(inner_scope) = visitor.scope_imports.last_mut() {
+                    for inner_item in inner_items {
+                        if let syn::Item::Use(item_use) = inner_item {
+                            extract_use_tree("", &item_use.tree, inner_scope);
                         }
-                        collect_wrapper_structs(inner_items, visitor);
-                        visitor.scope_imports.pop();
-                        visitor.current_module.pop();
                     }
                 }
-                _ => {}
+                for inner_item in inner_items {
+                    collect_wrapper_structs_item(inner_item, visitor);
+                }
+                visitor.scope_imports.pop();
+                visitor.current_module.pop();
+            }
+        }
+        _ => {}
+    }
+}
+
+fn compute_known_dispatch_exec_fns_multi(
+    files: &[(&Path, &syn::File)],
+    canonical_dispatch_methods: &BTreeSet<String>,
+    canonical_resident_upload_methods: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    let mut temp_visitor = AstAnalysisVisitor::new(
+        PathBuf::from("<multi>"),
+        false,
+        0,
+        canonical_dispatch_methods.clone(),
+        canonical_resident_upload_methods.clone(),
+    );
+
+    for (file_path, file) in files {
+        temp_visitor.file = (*file_path).to_path_buf();
+        temp_visitor.current_module = base_module_path(file_path);
+        temp_visitor.scope_imports = vec![BTreeMap::new()];
+
+        let mut collector = FileImportCollector {
+            scope_imports: &mut temp_visitor.scope_imports,
+        };
+        collector.visit_file(file);
+
+        loop {
+            let previous_count = temp_visitor.struct_types_with_dispatcher.len();
+            for item in &file.items {
+                collect_wrapper_structs_item(item, &mut temp_visitor);
+            }
+            if temp_visitor.struct_types_with_dispatcher.len() == previous_count {
+                break;
             }
         }
     }
 
-    loop {
-        let previous_count = visitor.struct_types_with_dispatcher.len();
-        collect_wrapper_structs(&file.items, visitor);
-        if visitor.struct_types_with_dispatcher.len() == previous_count {
-            break;
-        }
-    }
-
     let mut scans = Vec::new();
-    for item in &file.items {
-        scan_item_for_dispatch(item, visitor, &mut scans);
+    for (file_path, file) in files {
+        temp_visitor.file = (*file_path).to_path_buf();
+        temp_visitor.current_module = base_module_path(file_path);
+        temp_visitor.scope_imports = vec![BTreeMap::new()];
+
+        let mut collector = FileImportCollector {
+            scope_imports: &mut temp_visitor.scope_imports,
+        };
+        collector.visit_file(file);
+
+        for item in &file.items {
+            scan_item_for_dispatch(item, &mut temp_visitor, &mut scans);
+        }
     }
 
     let mut exec_set = BTreeSet::new();
     for scan in &scans {
         if scan.has_direct_dispatch {
             exec_set.insert(scan.name.clone());
+            let norm = normalize_qualified_path(&scan.name);
+            exec_set.insert(norm);
         }
     }
     let mut changed = true;
@@ -2095,15 +2502,31 @@ fn compute_known_dispatch_exec_fns(
         for scan in &scans {
             if !exec_set.contains(&scan.name)
                 && scan.dispatcher_callees.iter().any(|callee| {
-                    exec_set.contains(callee) || visitor.is_canonical_dispatch_exec_method(callee)
+                    exec_set.contains(callee)
+                        || exec_set.contains(&normalize_qualified_path(callee))
+                        || temp_visitor.is_canonical_dispatch_exec_method(callee)
                 })
             {
                 exec_set.insert(scan.name.clone());
+                let norm = normalize_qualified_path(&scan.name);
+                exec_set.insert(norm);
                 changed = true;
             }
         }
     }
     exec_set
+}
+
+fn compute_known_dispatch_exec_fns(
+    file: &syn::File,
+    visitor: &mut AstAnalysisVisitor,
+) -> BTreeSet<String> {
+    let file_tuple = [(visitor.file.as_path(), file)];
+    compute_known_dispatch_exec_fns_multi(
+        &file_tuple,
+        &visitor.derived_trait_dispatch_exec_methods,
+        &visitor.derived_trait_resident_upload_methods,
+    )
 }
 fn extract_expr_param_deps(
     expr: &syn::Expr,
@@ -2666,7 +3089,8 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             scope_imports: &mut self.scope_imports,
         };
         collector.visit_file(file);
-        self.known_dispatch_exec_fns = compute_known_dispatch_exec_fns(file, self);
+        let local_known = compute_known_dispatch_exec_fns(file, self);
+        self.known_dispatch_exec_fns.extend(local_known);
         syn::visit::visit_file(self, file);
     }
     fn visit_item_use(&mut self, item: &'ast syn::ItemUse) {
@@ -3504,6 +3928,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         if self.in_gpu_dispatch_root
             && self.post_dispatch_phase
             && !contains_dispatch
+            && !is_pure_decoder_loop(expr)
             && !self.in_test()
         {
             let line = expr.span().start().line as u32;
@@ -3931,12 +4356,7 @@ fn analyze_sources(
             "ensure ProgramDispatcher trait defines canonical execution methods (e.g. `dispatch`, `dispatch_resident`) taking Program/ResidentDispatchStep parameters and returning Result",
         ));
     }
-
-    let mut all_functions = Vec::new();
-    let mut all_calls = Vec::new();
-    let mut all_static_consts = Vec::new();
-    let mut all_findings = Vec::new();
-    let mut all_types_with_public_fields = BTreeSet::new();
+    let mut parsed_sources = Vec::new();
     for path in sources {
         let text = tree.read(path)?;
         let file_ast = syn::parse_file(&text).map_err(|err| {
@@ -3945,16 +4365,35 @@ fn analyze_sources(
                 "fix syntax defect so the file parses as valid Rust",
             )
         })?;
-
         let is_test_scoped = test_scoped_files.contains(path);
+        parsed_sources.push((path.clone(), file_ast, is_test_scoped));
+    }
+
+    let file_asts: Vec<(&Path, &syn::File)> = parsed_sources
+        .iter()
+        .map(|(p, ast, _)| (p.as_path(), ast))
+        .collect();
+    let global_known_dispatch_exec_fns = compute_known_dispatch_exec_fns_multi(
+        &file_asts,
+        &canonical_trait_methods,
+        &canonical_resident_upload_methods,
+    );
+
+    let mut all_functions = Vec::new();
+    let mut all_calls = Vec::new();
+    let mut all_static_consts = Vec::new();
+    let mut all_findings = Vec::new();
+    let mut all_types_with_public_fields = BTreeSet::new();
+    for (path, file_ast, is_test_scoped) in &parsed_sources {
         let fn_offset = all_functions.len();
         let mut visitor = AstAnalysisVisitor::new(
             path.clone(),
-            is_test_scoped,
+            *is_test_scoped,
             fn_offset,
             canonical_trait_methods.clone(),
             canonical_resident_upload_methods.clone(),
         );
+        visitor.known_dispatch_exec_fns = global_known_dispatch_exec_fns.clone();
         // Pre-discover all types declared locally in this file
         for item in &file_ast.items {
             match item {
@@ -3977,7 +4416,7 @@ fn analyze_sources(
             }
         }
 
-        visitor.visit_file(&file_ast);
+        visitor.visit_file(file_ast);
 
         all_functions.extend(visitor.functions);
         all_calls.extend(visitor.calls);
@@ -3992,6 +4431,7 @@ fn analyze_sources(
         &all_static_consts,
         &all_types_with_public_fields,
     );
+    all_findings.extend(evaluated);
 
     // Deduplicate findings by (file, line, message)
     let mut deduped_findings = Vec::new();
@@ -5140,21 +5580,37 @@ mod tests {
             "canonical ProgramDispatcher must yield non-empty resident upload methods"
         );
 
+        let mut parsed_files = Vec::new();
+        for &(path, code) in files {
+            let parsed = syn::parse_file(code).expect("test code must parse as Rust");
+            parsed_files.push((path, parsed));
+        }
+
+        let file_asts: Vec<(&Path, &syn::File)> = parsed_files
+            .iter()
+            .map(|(p, ast)| (Path::new(*p), ast))
+            .collect();
+        let global_known_dispatch_exec_fns = compute_known_dispatch_exec_fns_multi(
+            &file_asts,
+            &canonical_trait_methods,
+            &canonical_resident_upload_methods,
+        );
+
         let mut all_functions = Vec::new();
         let mut all_calls = Vec::new();
         let mut all_static_consts = Vec::new();
         let mut all_findings = Vec::new();
         let mut all_types_with_public_fields = BTreeSet::new();
-        for &(path, code) in files {
-            let parsed = syn::parse_file(code).expect("test code must parse as Rust");
+        for (path, parsed) in &parsed_files {
             let fn_offset = all_functions.len();
             let mut visitor = AstAnalysisVisitor::new(
-                PathBuf::from(path),
+                PathBuf::from(*path),
                 false,
                 fn_offset,
                 canonical_trait_methods.clone(),
                 canonical_resident_upload_methods.clone(),
             );
+            visitor.known_dispatch_exec_fns = global_known_dispatch_exec_fns.clone();
 
             for item in &parsed.items {
                 match item {
@@ -5177,7 +5633,7 @@ mod tests {
                 }
             }
 
-            visitor.visit_file(&parsed);
+            visitor.visit_file(parsed);
             all_functions.extend(visitor.functions);
             all_calls.extend(visitor.calls);
             all_static_consts.extend(visitor.static_consts);
@@ -6267,7 +6723,514 @@ pub fn multi_stage_dispatch_via(dispatcher: &dyn ProgramDispatcher, input: &[u32
             "inter-dispatch staging loop preceding subsequent dispatch must be permitted: {findings:?}"
         );
     }
+    #[test]
+    fn mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
+pub fn impacted_entries_into(
+    dispatcher: &dyn ProgramDispatcher,
+    lineage_cells: &[u32],
+    n: u32,
+    out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    let mut impact_raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut impact_raw)?;
+
+    let mut closure_raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut closure_raw)?;
+
+    let mut impact_mask = Vec::new();
+    for chunk in impact_raw.chunks_exact(4) {
+        impact_mask.push(u32::from_le_bytes(chunk.try_into().unwrap()));
+    }
+
+    let mut closure = Vec::new();
+    for chunk in closure_raw.chunks_exact(4) {
+        closure.push(u32::from_le_bytes(chunk.try_into().unwrap()));
+    }
+
+    let n_us = n as usize;
+    for &cell in lineage_cells {
+        let v = (cell % n) as usize;
+        let mut impacted = 0u32;
+        for r in 0..n_us {
+            if impact_mask[r] != 0 && closure[r * n_us + v] != 0 {
+                impacted = 1;
+                break;
+            }
+        }
+        out.push(impacted);
+    }
+    Ok(())
+}
+"#;
+        let findings = analyze_files(&[("vyre-driver/src/cache_invalidation.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "post-dispatch host projection loop combining comparisons and constructing final output must be flagged"
+        );
+        assert!(
+            findings.iter().any(|f| f
+                .message
+                .contains("contains post-dispatch host loop/accumulation")
+                || f.message
+                    .contains("executes post-dispatch host arithmetic / semantic derivation")),
+            "finding message must identify post-dispatch host derivation, got: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn clean_dispatcher_allows_strict_fixed_width_decoder_only_return() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_raw_outputs(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        decoded.push(u32::from_le_bytes(chunk.try_into().unwrap()));
+    }
+    Ok(decoded)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/decoder_only.rs", code)]);
+        assert!(
+            findings.is_empty(),
+            "strict fixed-width little-endian decoder loop must be allowed with zero findings, got: {findings:?}"
+        );
+    }
+    #[test]
+    fn clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_with_local_and_reserve(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut out = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        out.reserve(1);
+        let word = u32::from_le_bytes(chunk.try_into().unwrap());
+        out.push(word);
+    }
+    Ok(out)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/clean_local_decoder.rs", code)]);
+        assert!(
+            findings.is_empty(),
+            "decoder loop with optional local binding and capacity reservation must be permitted with zero findings, got: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_decoder_loop_independent_constant_append() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_constant(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut out = Vec::new();
+    for _chunk in raw.chunks_exact(4) {
+        out.reserve(1);
+        out.push(7);
+    }
+    Ok(out)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/constant_append.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "decoder loop pushing independent constant must be convicted: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_decoder_loop_subsliced_width_mismatch() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_subsliced(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u16>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut out = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        out.push(u16::from_le_bytes(chunk[..2].try_into().unwrap()));
+    }
+    Ok(out)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/subsliced_decoder.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "decoder loop with sub-slicing and width mismatch must be convicted: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_decoder_loop_bitshift_transform() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_shifted(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut out = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        let word = u32::from_le_bytes(chunk.try_into().unwrap());
+        out.push(word << 1);
+    }
+    Ok(out)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/shifted_decoder.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "decoder loop performing bitshift semantic transformation must be convicted: {findings:?}"
+        );
+    }
+    #[test]
+    fn mutation_catches_unqualified_or_custom_from_le_bytes_helper() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+fn from_le_bytes(chunk: &[u8]) -> u32 {
+    (chunk[0] as u32) + 42
+}
+
+pub fn decode_with_custom_helper(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut out = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        let word = from_le_bytes(chunk);
+        out.push(word);
+    }
+    Ok(out)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/custom_helper.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "unqualified or custom from_le_bytes helper must be convicted: {findings:?}"
+        );
+    }
+    #[test]
+    fn mutation_catches_spoofed_module_from_le_bytes_helper() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+mod evil {
+    pub struct u32;
+    impl u32 {
+        pub fn from_le_bytes(chunk: &[u8]) -> u32 {
+            7
+        }
+    }
+}
+
+pub fn decode_with_spoofed_path(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut out = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        let word = evil::u32::from_le_bytes(chunk);
+        out.push(word);
+    }
+    Ok(out)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/spoofed_helper.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "spoofed evil::u32::from_le_bytes helper must be convicted: {findings:?}"
+        );
+    }
+    #[test]
+    fn mutation_catches_big_endian_decoder_loop() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_be_outputs(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        decoded.push(u32::from_be_bytes(chunk.try_into().unwrap()));
+    }
+    Ok(decoded)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/be_decoder.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "big-endian decoder loop must be convicted as non-canonical host oracle: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_native_endian_decoder_loop() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_ne_outputs(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        decoded.push(u32::from_ne_bytes(chunk.try_into().unwrap()));
+    }
+    Ok(decoded)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/ne_decoder.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "native-endian decoder loop must be convicted as non-canonical host oracle: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_dynamic_chunk_width_decoder_loop() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_dynamic_width(
+    dispatcher: &dyn ProgramDispatcher,
+    chunk_size: usize,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(chunk_size) {
+        decoded.push(u32::from_le_bytes(chunk.try_into().unwrap()));
+    }
+    Ok(decoded)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/dynamic_decoder.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "dynamic chunk width loop must be convicted as non-canonical host oracle: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_decoder_unwrap_or_fallback() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_with_fallback(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        let fallback = [0u8; 4];
+        let bytes = chunk.try_into().unwrap_or(fallback);
+        decoded.push(u32::from_le_bytes(bytes));
+    }
+    Ok(decoded)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/unwrap_or_decoder.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "decoder loop with unwrap_or fallback must be convicted: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_decoder_unwrap_or_default_fallback() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_with_default_fallback(
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        let bytes: [u8; 4] = chunk.try_into().unwrap_or_default();
+        decoded.push(u32::from_le_bytes(bytes));
+    }
+    Ok(decoded)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/unwrap_or_default_decoder.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "decoder loop with unwrap_or_default fallback must be convicted: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_non_codec_indexing_in_decoder_loop() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn decode_with_table_lookup(
+    dispatcher: &dyn ProgramDispatcher,
+    lookup_table: &[u32],
+) -> Result<Vec<u32>, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        let word = u32::from_le_bytes(chunk.try_into().unwrap());
+        let mapped = lookup_table[word as usize];
+        decoded.push(mapped);
+    }
+    Ok(decoded)
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/non_codec_indexing.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "decoder loop with non-codec indexing lookup must be convicted: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn unrelated_same_basename_helper_without_dispatch_does_not_create_fake_dispatch_root() {
+        let module_a_code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn predict_impact(dispatcher: &dyn ProgramDispatcher, out: &mut [u8]) -> Result<(), DispatchError> {
+    dispatcher.dispatch_resident(&[], out)
+}
+"#;
+        let module_b_code = r#"
+use vyre_foundation::program_dispatch::ProgramDispatcher;
+
+pub fn predict_impact(dispatcher: &dyn ProgramDispatcher) -> usize {
+    // Unrelated helper in module_b with the same base name, but doing NO GPU dispatch
+    0
+}
+
+pub fn validate_before_run(
+    dispatcher: &dyn ProgramDispatcher,
+) -> bool {
+    let n = predict_impact(dispatcher);
+    n == 0
+}
+"#;
+        let module_c_code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use crate::module_a::predict_impact;
+
+pub fn execute_and_filter(
+    dispatcher: &dyn ProgramDispatcher,
+    out: &mut [u8],
+) -> Result<bool, DispatchError> {
+    predict_impact(dispatcher, out)?;
+    Ok(out[0] != 0)
+}
+"#;
+        let findings = analyze_files(&[
+            ("vyre-libs/src/module_a.rs", module_a_code),
+            ("vyre-driver/src/module_b.rs", module_b_code),
+            ("vyre-driver/src/module_c.rs", module_c_code),
+        ]);
+        assert!(
+            findings.iter().all(|f| f.file.as_deref() != Some(Path::new("vyre-driver/src/module_b.rs"))),
+            "unrelated same-basename helper without dispatch must NOT create a fake dispatch root in module_b: {findings:?}"
+        );
+        assert!(
+            findings.iter().any(|f| f.file.as_deref() == Some(Path::new("vyre-driver/src/module_c.rs"))),
+            "module_c importing module_a::predict_impact with post-dispatch check must be convicted: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_post_dispatch_computation_on_borrowed_references_and_slices() {
+        let code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn project_with_borrows(
+    dispatcher: &dyn ProgramDispatcher,
+    cell: u32,
+) -> Result<u32, DispatchError> {
+    let mut raw = vec![0u8; 16];
+    dispatcher.dispatch_resident(&[], &mut raw)?;
+    let mut decoded = Vec::new();
+    for chunk in raw.chunks_exact(4) {
+        decoded.push(u32::from_le_bytes(chunk.try_into().unwrap()));
+    }
+    let slice = &decoded[..];
+    let mask = &decoded;
+    if slice[0] != 0 && mask[1] > cell {
+        Ok(1)
+    } else {
+        Ok(0)
+    }
+}
+"#;
+        let findings = analyze_files(&[("vyre-libs/src/borrowed_dispatch.rs", code)]);
+        assert!(
+            !findings.is_empty(),
+            "post-dispatch arithmetic/comparisons on borrowed references and slices must be convicted as host oracle"
+        );
+    }
+
+    #[test]
+    fn mutation_catches_cross_file_dispatch_helper_post_dispatch_projection() {
+        let helper_code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+
+pub fn execute_gpu_step(dispatcher: &dyn ProgramDispatcher, out: &mut [u8]) -> Result<(), DispatchError> {
+    dispatcher.dispatch_resident(&[], out)
+}
+"#;
+        let driver_code = r#"
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
+use crate::helper::execute_gpu_step;
+
+pub fn run_pipeline_with_host_filter(
+    dispatcher: &dyn ProgramDispatcher,
+    target: u32,
+) -> Result<bool, DispatchError> {
+    let mut buffer = vec![0u8; 8];
+    execute_gpu_step(dispatcher, &mut buffer)?;
+    let val0 = u32::from_le_bytes(buffer[0..4].try_into().unwrap());
+    let val1 = u32::from_le_bytes(buffer[4..8].try_into().unwrap());
+    Ok(val0 + val1 == target)
+}
+"#;
+        let findings = analyze_files(&[
+            ("vyre-libs/src/helper.rs", helper_code),
+            ("vyre-driver/src/driver.rs", driver_code),
+        ]);
+        assert!(
+            !findings.is_empty(),
+            "cross-file dispatch helper post-dispatch arithmetic and comparison must be convicted"
+        );
+    }
+
+    #[test]
     fn clean_dispatcher_with_pre_validation_and_typed_unpacking_passes() {
         let code = r#"
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
