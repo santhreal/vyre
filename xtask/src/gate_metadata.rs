@@ -156,7 +156,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/matrix/speedup-crossback.md"],
+        artifacts: &["release/evidence/benchmarks/cross-backend-comparison.md"],
         prerequisites: &[],
         proof: "xtask_evidence::bench::bench_crossback::tests::a_measurement_missing_any_provenance_field_is_a_finding",
     },

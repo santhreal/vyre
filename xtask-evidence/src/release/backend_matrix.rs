@@ -726,7 +726,7 @@ fn collect_feature_markers(
         }
         markers.push(BackendFeatureMarker {
             id: requirement.id,
-            path: path.display().to_string(),
+            path: requirement.relative.to_string(),
             exists,
             read_error,
             source_bytes: text.len(),

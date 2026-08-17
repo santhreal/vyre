@@ -178,6 +178,7 @@ fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")
         || path.starts_with(b"xtask/")
+        || path.starts_with(b"xtask-")
         || source_tree_path_is_operator_internal(path)
         || source_tree_path_is_test_evidence(path)
 }
