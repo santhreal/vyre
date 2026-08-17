@@ -31,7 +31,7 @@ use super::{
     resident_csr_queue_traverse_program, resident_csr_queue_word_counts_program,
     resident_csr_queue_word_prefix_queue_program,
 };
-use crate::graph::dispatch::csr_frontier_queue_scratch::{
+use crate::graph::csr_frontier_queue::scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
 };
 

@@ -1,6 +1,6 @@
 use crate::api::case::BenchError;
 use vyre_foundation::match_result::ByteRange;
-use vyre_libs::scan::classic_ac::{classic_ac_bounded_ranges_scan, ClassicAcAutomaton};
+use vyre_libs::pattern::classic_ac::{classic_ac_bounded_ranges_scan, ClassicAcAutomaton};
 
 pub(super) fn cpu_bounded_range_matches(
     ac: &ClassicAcAutomaton,

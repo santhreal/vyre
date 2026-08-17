@@ -32,6 +32,7 @@
 //!   position, output bit = 1 iff > k/2 input bits are 1. Ties
 //!   (k even, exactly k/2) round to 0 (callers typically use odd k).
 
+use crate::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -60,26 +61,14 @@ pub fn hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> Prog
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(dim_words)),
-        vec![Node::store(
-            out,
-            t.clone(),
-            Expr::bitxor(Expr::load(a, t.clone()), Expr::load(b, t)),
-        )],
-    )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(a, 0, BufferAccess::ReadOnly, DataType::U32).with_count(dim_words),
-            BufferDecl::storage(b, 1, BufferAccess::ReadOnly, DataType::U32).with_count(dim_words),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(dim_words),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(BIND_OP_ID, body)],
-    )
+    ElementwiseComposer::new(BIND_OP_ID, dim_words)
+        .with_workgroup_size([256, 1, 1])
+        .add_input_storage(a, BufferAccess::ReadOnly, DataType::U32, dim_words)
+        .add_input_storage(b, BufferAccess::ReadOnly, DataType::U32, dim_words)
+        .add_output_storage(out, BufferAccess::ReadWrite, DataType::U32, dim_words)
+        .build_pointwise(out, |i| {
+            Expr::bitxor(Expr::load(a, i.clone()), Expr::load(b, i))
+        })
 }
 
 /// Emit per-bit majority vote over `k` hypervectors stacked row-major

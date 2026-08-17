@@ -177,15 +177,15 @@ feature = "(none)"
 
 [[pair]]
 member = "vyre-driver-wgpu"
-feature = "matching-dfa"
+feature = "pattern-dfa"
 
 [[pair]]
 member = "vyre-driver-wgpu"
-feature = "matching-nfa"
+feature = "pattern-nfa"
 
 [[pair]]
 member = "vyre-driver-wgpu"
-feature = "matching-substring"
+feature = "pattern-substring"
 
 [[pair]]
 member = "vyre-driver-wgpu"
@@ -273,7 +273,7 @@ feature = "(default),bitset,cpu-parity,graph,nn-linear-4bit,predicate"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),cpu-parity,crypto-blake3,hash,matching,nn-attention,parsing"
+feature = "(default),cpu-parity,crypto-blake3,hash,nn-attention,parsing,pattern"
 
 [[pair]]
 member = "vyre-libs"
@@ -289,7 +289,7 @@ feature = "(default),full"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),full,matching-regex"
+feature = "(default),full,pattern-regex"
 
 [[pair]]
 member = "vyre-libs"
@@ -389,27 +389,27 @@ feature = "logical"
 
 [[pair]]
 member = "vyre-libs"
-feature = "matching"
+feature = "pattern"
 
 [[pair]]
 member = "vyre-libs"
-feature = "matching-dfa"
+feature = "pattern-dfa"
 
 [[pair]]
 member = "vyre-libs"
-feature = "matching-kernels"
+feature = "pattern-kernels"
 
 [[pair]]
 member = "vyre-libs"
-feature = "matching-nfa"
+feature = "pattern-nfa"
 
 [[pair]]
 member = "vyre-libs"
-feature = "matching-regex"
+feature = "pattern-regex"
 
 [[pair]]
 member = "vyre-libs"
-feature = "matching-substring"
+feature = "pattern-substring"
 
 [[pair]]
 member = "vyre-libs"

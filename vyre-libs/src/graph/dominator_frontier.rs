@@ -632,6 +632,11 @@ pub fn try_cpu_ref(
     Ok(frontier)
 }
 
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use cpu_ref as dominance_frontier;
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use try_cpu_ref as try_dominance_frontier;
+
 /// CPU oracle into caller-owned output storage.
 ///
 /// `dom_offsets` / `dom_targets` encode the dominance closure by dominator:

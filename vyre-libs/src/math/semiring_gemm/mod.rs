@@ -43,57 +43,19 @@
 //! semirings.
 
 use vyre_foundation::composition::trap_program;
-use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_foundation::ir::{DataType, Program};
 pub use vyre_spec::Semiring;
 
-use crate::math::fixed_u32_matmul::u32_matmul_program;
+pub use crate::builder::gemm::{
+    semiring_accumulate_expr, semiring_combine_expr, ContractionComposer,
+};
+use crate::plumbing::operand::tensor_ref::TensorRef;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::math::semiring_gemm";
 
 mod wide;
 pub use wide::{semiring_gemm_wide, SEMIRING_GEMM_WIDE_WORKGROUP_SIZE};
-
-fn semiring_combine_expr(semiring: Semiring, a: Expr, b: Expr) -> Expr {
-    match semiring {
-        Semiring::Real | Semiring::MaxTimes => Expr::mul(a, b),
-        Semiring::MinPlus => {
-            // saturating add: if either operand is MAX, result is MAX,
-            // otherwise a + b. Keeps MAX absorbing under min-plus.
-            let max_const = Expr::u32(u32::MAX);
-            let either_inf = Expr::or(
-                Expr::eq(a.clone(), max_const.clone()),
-                Expr::eq(b.clone(), max_const.clone()),
-            );
-            Expr::select(either_inf, max_const, Expr::add(a, b))
-        }
-        Semiring::MaxPlus => Expr::add(a, b),
-        Semiring::BoolOr | Semiring::Gf2 => Expr::bitand(a, b),
-        Semiring::BoolAnd => Expr::bitor(a, b),
-        Semiring::Lineage => {
-            // Zero-absorbing OR: if either operand is 0 (no edge),
-            // the join is 0. Otherwise OR the fact bitsets along
-            // the path step. Distinguishes "no edge" from
-            // "edge with empty fact-set"  -  single-u32 lineage.
-            let either_zero = Expr::or(
-                Expr::eq(a.clone(), Expr::u32(0)),
-                Expr::eq(b.clone(), Expr::u32(0)),
-            );
-            Expr::select(either_zero, Expr::u32(0), Expr::bitor(a, b))
-        }
-    }
-}
-
-fn semiring_accumulate_expr(semiring: Semiring, acc: Expr, val: Expr) -> Expr {
-    match semiring {
-        Semiring::Real | Semiring::MaxPlus => Expr::add(acc, val),
-        Semiring::MinPlus => Expr::min(acc, val),
-        Semiring::MaxTimes => Expr::max(acc, val),
-        Semiring::BoolOr | Semiring::Lineage => Expr::bitor(acc, val),
-        Semiring::BoolAnd => Expr::bitand(acc, val),
-        Semiring::Gf2 => Expr::bitxor(acc, val),
-    }
-}
 
 /// Emit a generic-semiring `M × K · K × N → M × N` matmul Program.
 ///
@@ -138,42 +100,36 @@ pub fn semiring_gemm(
         );
     }
 
-    let Some(cell_count) = m.checked_mul(n) else {
+    if m.checked_mul(n).is_none() {
         return trap_program(
             OP_ID,
             Some((c, DataType::U32)),
             format!("Fix: semiring_gemm output cells overflow u32: m={m}, n={n}."),
         );
-    };
-    let Some(a_count) = m.checked_mul(k) else {
+    }
+    if m.checked_mul(k).is_none() {
         return trap_program(
             OP_ID,
             Some((c, DataType::U32)),
             format!("Fix: semiring_gemm A buffer cells overflow u32: m={m}, k={k}."),
         );
-    };
-    let Some(b_count) = k.checked_mul(n) else {
+    }
+    if k.checked_mul(n).is_none() {
         return trap_program(
             OP_ID,
             Some((c, DataType::U32)),
             format!("Fix: semiring_gemm B buffer cells overflow u32: k={k}, n={n}."),
         );
-    };
-    u32_matmul_program(
-        OP_ID,
-        a,
-        b,
-        c,
-        m,
-        k,
-        n,
-        a_count,
-        b_count,
-        cell_count,
-        semiring.identity(),
-        |lhs, rhs| semiring_combine_expr(semiring, lhs, rhs),
-        |acc, value| semiring_accumulate_expr(semiring, acc, value),
-    )
+    }
+
+    let a_ref = TensorRef::u32_2d(a, m, k);
+    let b_ref = TensorRef::u32_2d(b, k, n);
+    let c_ref = TensorRef::u32_2d(c, m, n);
+
+    ContractionComposer::semiring_2d(OP_ID, a_ref, b_ref, c_ref, m, k, n, semiring)
+        .with_region_generator(OP_ID)
+        .build()
+        .unwrap_or_else(|err| trap_program(OP_ID, Some((c, DataType::U32)), format!("Fix: {err}")))
 }
 
 /// CPU reference  -  exact byte-for-byte target the GPU dispatch must hit.

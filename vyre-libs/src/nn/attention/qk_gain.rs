@@ -4,8 +4,9 @@
 //!
 //! Category A  -  broadcast mul. Recipe uses gain_init=5.25.
 
+use crate::builder::elementwise::ElementwiseComposer;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Program};
 
 const OP_ID: &str = "vyre-libs::nn::qk_gain";
 
@@ -51,39 +52,20 @@ pub fn qk_gain(
         }
     };
 
-    let i = Expr::var("i");
-    // head_idx = i / (seq_len * head_dim)
-    let head_idx = Expr::BinOp {
-        op: BinOp::Div,
-        left: Box::new(i.clone()),
-        right: Box::new(Expr::u32(per_head)),
-    };
-    let q_val = Expr::load(q_in, i.clone());
-    let gain_val = Expr::load(gain, head_idx);
-    let scaled = Expr::mul(q_val, gain_val);
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(total)),
-            vec![Node::Store {
-                buffer: q_out.into(),
-                index: i,
-                value: scaled,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(q_in, 0, BufferAccess::ReadOnly, DataType::F32).with_count(total),
-            BufferDecl::output(q_out, 1, DataType::F32).with_count(total),
-            BufferDecl::storage(gain, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(num_heads),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    ElementwiseComposer::new(OP_ID, total)
+        .add_input(q_in, DataType::F32, total)
+        .add_output(q_out, DataType::F32, total)
+        .add_input_storage(gain, BufferAccess::ReadOnly, DataType::F32, num_heads)
+        .build_pointwise(q_out, |i| {
+            let head_idx = Expr::BinOp {
+                op: BinOp::Div,
+                left: Box::new(i.clone()),
+                right: Box::new(Expr::u32(per_head)),
+            };
+            let q_val = Expr::load(q_in, i);
+            let gain_val = Expr::load(gain, head_idx);
+            Expr::mul(q_val, gain_val)
+        })
 }
 
 inventory::submit! {

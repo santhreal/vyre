@@ -1,4 +1,7 @@
 use super::*;
+use crate::graph::exploded::{
+    reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
+};
 use vyre_foundation::ir::Program;
 
 pub(super) fn canonical_expected(

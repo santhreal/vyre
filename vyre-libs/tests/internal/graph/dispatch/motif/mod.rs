@@ -2,8 +2,9 @@ use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::graph::motif::{
     cpu_ref as reference_motif, cpu_ref_matches as reference_motif_matches,
-    cpu_ref_participation_count as reference_motif_participation_count, plan_motif_launch,
-    MotifEdge,
+    cpu_ref_participation_count as reference_motif_participation_count, match_motif, motif_matches,
+    motif_participation_count, plan_motif_launch, try_match_motif, try_motif_matches,
+    try_motif_participation_count, MotifEdge,
 };
 use crate::test_parity_oracles::StaticOutputs;
 use vyre_foundation::program_dispatch::DispatchError;

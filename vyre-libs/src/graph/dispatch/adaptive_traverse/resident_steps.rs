@@ -13,13 +13,13 @@ use crate::graph::adaptive_traverse::{
     plan_adaptive_resident_sparse_queue_step, AdaptiveResidentFrontierPlan,
     AdaptiveTraversalPlanCacheKey,
 };
-use crate::graph::dispatch::csr_frontier_queue_programs::{
+use crate::graph::csr_frontier_queue::resident_programs::{
     resident_csr_queue_atomic_word_scan_program, resident_csr_queue_block_offsets_program,
     resident_csr_queue_clear_frontier_out_program, resident_csr_queue_len_init_program,
     resident_csr_queue_split_low_program, resident_csr_queue_traverse_program,
     resident_csr_queue_word_counts_program, resident_csr_queue_word_prefix_queue_program,
 };
-use crate::graph::dispatch::csr_frontier_queue_scratch::{
+use crate::graph::csr_frontier_queue::scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer_for_stats,
     resident_csr_queue_split_low_grid, resident_csr_queue_traverse_grid,

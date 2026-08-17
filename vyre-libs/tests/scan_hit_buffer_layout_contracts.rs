@@ -18,7 +18,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::scan::{
+use vyre_libs::pattern::{
     compact_hits, compact_hits_with_layout, emit_hit, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
     HIT_BUFFER_OVERFLOW_COUNT,
 };

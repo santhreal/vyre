@@ -9,20 +9,12 @@
 
 mod dispatch;
 
-#[cfg(any(test, feature = "cpu-parity"))]
-mod reference;
-
 #[cfg(test)]
 #[path = "../../../../tests/internal/graph/dispatch/exploded/mod.rs"]
 mod tests;
 
 pub use dispatch::{
     build_ifds_csr_via, build_ifds_csr_via_into, build_ifds_csr_via_with_scratch_into,
-};
-
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use reference::{
-    reference_build_ifds_csr, reference_canonicalize_csr_within_rows, try_reference_build_ifds_csr,
 };
 
 use crate::graph::exploded::{

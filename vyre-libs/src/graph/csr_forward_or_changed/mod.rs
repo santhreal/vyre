@@ -25,7 +25,10 @@ pub use body::{
 };
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use cpu_ref::{
-    cpu_ref, cpu_ref_closure, cpu_ref_closure_into, cpu_ref_closure_into_with_step_hook,
+    cpu_ref, cpu_ref as reference_forward_step_with_change_flag, cpu_ref_closure,
+    cpu_ref_closure as reference_forward_closure_via_change_flag, cpu_ref_closure_into,
+    cpu_ref_closure_into as reference_forward_closure_via_change_flag_into,
+    cpu_ref_closure_into_with_step_hook,
 };
 pub use launch_plan::CsrForwardOrChangedLaunchPlan;
 pub use layout::{

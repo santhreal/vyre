@@ -1073,8 +1073,8 @@ fn every_test_cfg_spelling_is_non_release() {
     for attribute in [
         "#[cfg(test)]",
         "#[cfg(any(test, feature = \"cpu-parity\"))]",
-        "#[cfg(all(test, feature = \"matching-regex\", feature = \"matching-dfa\"))]",
-        "#[cfg(all(feature = \"matching-regex\", test))]",
+        "#[cfg(all(test, feature = \"pattern-regex\", feature = \"pattern-dfa\"))]",
+        "#[cfg(all(feature = \"pattern-regex\", test))]",
     ] {
         assert!(
             is_non_release_cfg_attr(attribute),

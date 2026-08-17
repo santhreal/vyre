@@ -1,5 +1,10 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
+use crate::graph::csr_bidirectional::{
+    cpu_ref as reference_csr_bidir, cpu_ref_closure as reference_csr_bidir_closure,
+    reference_bidirectional_closure, reference_bidirectional_closure_into,
+    reference_bidirectional_step,
+};
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::test_parity_oracles::{NeverDispatches, StaticOutputs};
 use vyre_foundation::ir::Program;

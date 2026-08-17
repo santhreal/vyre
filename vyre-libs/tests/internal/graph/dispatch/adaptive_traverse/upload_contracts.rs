@@ -1,6 +1,6 @@
 use super::super::*;
 use super::recording_dispatcher::RecordingResidentDispatcher;
-use crate::graph::dispatch::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
+use crate::graph::csr_frontier_queue::scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 
 #[test]
 fn sparse_queue_graph_upload_skips_dense_adjacency_rows() {

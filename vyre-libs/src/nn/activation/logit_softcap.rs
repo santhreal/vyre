@@ -3,8 +3,8 @@
 //! Category A composition  -  element-wise. Used in the Parameter Golf
 //! recipe to bound logits before cross-entropy loss (default cap=30.0).
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{Expr, Program, UnOp};
 
 use crate::nn::f32_stability::flush_tiny;
 
@@ -13,39 +13,15 @@ const OP_ID: &str = "vyre-libs::nn::logit_softcap";
 /// Build a Program that applies `tanh(x / cap) * cap` element-wise.
 #[must_use]
 pub fn logit_softcap(input: &str, output: &str, n: u32, cap: f32) -> Program {
-    let i = Expr::var("i");
-    let x = Expr::load(input, i.clone());
-
-    // tanh(x / cap) * cap
-    let scaled = Expr::div(x, Expr::f32(cap));
-    let tanh_val = Expr::UnOp {
-        op: UnOp::Tanh,
-        operand: Box::new(scaled),
-    };
-    let result = Expr::mul(tanh_val, Expr::f32(cap));
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::buf_len(input)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: flush_tiny(result),
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 1, DataType::F32)
-                .with_count(n.max(1))
-                .with_output_byte_range(0..(n as usize).saturating_mul(4)),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    ElementwiseComposer::f32_unary(OP_ID, input, output, n, |x| {
+        let scaled = Expr::div(x, Expr::f32(cap));
+        let tanh_val = Expr::UnOp {
+            op: UnOp::Tanh,
+            operand: Box::new(scaled),
+        };
+        let result = Expr::mul(tanh_val, Expr::f32(cap));
+        flush_tiny(result)
+    })
 }
 
 inventory::submit! {

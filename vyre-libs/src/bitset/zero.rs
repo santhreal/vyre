@@ -3,9 +3,8 @@
 //! Resident graph pipelines use this to clear scratch/output bitsets on device
 //! instead of uploading zero-filled host buffers every iteration.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::bitset::zero";
@@ -13,21 +12,10 @@ pub const OP_ID: &str = "vyre-libs::bitset::zero";
 /// Build a Program: `target[w] = 0` for `w` in `0..words`.
 #[must_use]
 pub fn bitset_zero(target: &str, words: u32) -> Program {
-    let w = Expr::InvocationId { axis: 0 };
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(target, 0, BufferAccess::WriteOnly, DataType::U32)
-                .with_count(words),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![Node::if_then(
-                Expr::lt(w.clone(), Expr::u32(words)),
-                vec![Node::store(target, w, Expr::u32(0))],
-            )],
-        )],
-    )
+    ElementwiseComposer::new(OP_ID, words)
+        .with_workgroup_size([256, 1, 1])
+        .add_output_storage(target, BufferAccess::WriteOnly, DataType::U32, words)
+        .build_pointwise(target, |_| Expr::u32(0))
 }
 
 /// CPU reference. Clears every target word.

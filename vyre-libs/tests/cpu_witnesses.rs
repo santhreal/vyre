@@ -4,7 +4,7 @@
 #![cfg(all(
     feature = "nn-attention",
     feature = "nn-norm",
-    feature = "matching-dfa",
+    feature = "pattern-dfa",
     feature = "crypto-blake3"
 ))]
 

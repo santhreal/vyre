@@ -9,9 +9,9 @@
 //! an approximate root x of `f(x) ≡ 0 (mod p^k)` and the formal
 //! derivative `f'(x)`, return a refined root accurate `mod p^{2k}`.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::composition::trap_program;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-libs::math::hensel_lift_step";
@@ -28,31 +28,21 @@ pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32
         );
     }
 
-    let t = Expr::InvocationId { axis: 0 };
-    let value = Expr::sub(
-        Expr::load(x, t.clone()),
-        crate::math::fixed::fixed_mul_16_16_expr(
-            Expr::load(f_x, t.clone()),
-            Expr::load(inv_f_prime, t.clone()),
-        ),
-    );
-
-    let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(n)),
-        vec![Node::store(out, t, value)],
-    )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(f_x, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(inv_f_prime, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(n),
-            BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::U32).with_count(n),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
-    )
+    ElementwiseComposer::new(OP_ID, n)
+        .with_workgroup_size([256, 1, 1])
+        .add_input_storage(x, BufferAccess::ReadOnly, DataType::U32, n)
+        .add_input_storage(f_x, BufferAccess::ReadOnly, DataType::U32, n)
+        .add_input_storage(inv_f_prime, BufferAccess::ReadOnly, DataType::U32, n)
+        .add_output_storage(out, BufferAccess::ReadWrite, DataType::U32, n)
+        .build_pointwise(out, |i| {
+            Expr::sub(
+                Expr::load(x, i.clone()),
+                crate::math::fixed::fixed_mul_16_16_expr(
+                    Expr::load(f_x, i.clone()),
+                    Expr::load(inv_f_prime, i),
+                ),
+            )
+        })
 }
 
 /// CPU reference (f64)  -  Hensel iteration single step.

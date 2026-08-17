@@ -8,12 +8,12 @@ no host dispatch orchestration, and no CPU reference oracles.
 
 ### `decode/`
 GPU-resident decoders: base64, hex, urlencoded, gzip-fragment,
-zstd-block. Composes `match::dfa` + `bitset` + `scatter`.
+zstd-block. Composes `pattern::dfa` + `bitset` + `scatter`.
 
-### `matching/`
-Pattern-matching primitives: `aho_corasick`, `dfa_compile`,
-`dfa_compile_with_budget`, `substring_search`. Downstream pattern
-pre-passes use these.
+### `pattern/`
+Pattern-matching and scanning primitives: `aho_corasick`, `dfa_compile`,
+`dfa_compile_with_budget`, `substring_search`, `bracket_match`, regex DFAs.
+Downstream pattern pre-passes use these.
 
 ### `math/`
 Arithmetic primitives, atomic-style ops, fixed-point, hash-
@@ -77,7 +77,7 @@ registrations that publish them.
 - **`security::*`**  -  downstream analyzers consume these: `flows_to`,
   `sanitized_by`, `bounded_by_comparison`, `dominator_tree`,
   `label_by_family`, `path_reconstruct`, `aliases_dataflow`.
-- **`matching::CompiledDfa`**  -  DFA build result.
+- **`pattern::CompiledDfa`**  -  DFA build result.
 - Per-domain types are documented in their respective module
   rustdoc.
 

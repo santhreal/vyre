@@ -9,9 +9,9 @@
 //! let program = dot("x", "y", "result", 128)?;
 //! ```
 //!
-//! Product dialects include `math`, `nn`, `scan`, `hash`, `decode`, `parsing`,
+//! Product dialects include `math`, `nn`, `pattern`, `hash`, `decode`, `parsing`,
 //! `security`, `visual`, `logical`, and `rule`. `hash` replaced `crypto`.
-//! `scan` replaced `matching`. Compiler-internal domains (`device`,
+//! `pattern` replaced `matching` and `scan`. Compiler-internal domains (`device`,
 //! `solvers`, `encoding`, `analysis`, `scheduling`, `reasoning`,
 //! `graph-dispatch`, `telemetry`) are compositions too. They are feature-gated
 //! and are not in `full` because they submit no `OperationRegistration`.
@@ -27,8 +27,8 @@
 //! optimizer treats regions as atomic until an explicit inline pass unrolls
 //! them.
 //!
-//! Defaults enable a math / linear / matching / decode core. `crypto` and
-//! `matching-regex` are opt-in. Turn defaults off with
+//! Defaults enable a math / linear / pattern / decode core. `crypto` and
+//! `pattern-regex` are opt-in. Turn defaults off with
 //! `default-features = false` and enable the dialect you need.
 
 // Semantic catalog entries are immutable values over static identifiers and
@@ -48,11 +48,18 @@ pub(crate) mod plumbing;
 
 #[cfg(feature = "graph")]
 pub use builder::csr;
+pub use builder::elementwise;
+pub use builder::gemm;
+pub use builder::{
+    ContractionComposer, ContractionEpilogue, ContractionGeometry, ContractionSemiring,
+    ContractionTiling,
+};
 pub use builder::range_ordering;
 pub use builder::state_machine;
 pub use builder::stencil;
 #[cfg(feature = "graph")]
 pub use builder::CsrTraversalComposer;
+pub use builder::ElementwiseComposer;
 pub use builder::TableStateMachineComposer;
 pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};
@@ -124,17 +131,19 @@ pub mod nn;
 #[cfg(feature = "llm")]
 pub mod llm;
 
-/// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
-/// program builders plus immutable compilation artifacts.
+/// Pattern analysis, matching, and scanning domain: neutral substring, DFA, NFA,
+/// and regex program builders, bracket matching, and compilation artifacts.
 #[cfg(any(
-    feature = "matching-substring",
-    feature = "matching-dfa",
-    feature = "matching-nfa"
+    feature = "pattern-substring",
+    feature = "pattern-dfa",
+    feature = "pattern-nfa",
+    feature = "pattern-regex",
+    feature = "pattern-kernels",
 ))]
-pub mod scan;
+pub mod pattern;
 
 /// Decode / decompression compositions  -  base64, hex, DEFLATE (stored),
-/// more coming. Pairs with `vyre-libs::matching::dfa` in the fused
+/// more coming. Pairs with `vyre-libs::pattern::dfa` in the fused
 /// decode→scan pipeline (Innovation I.1).
 #[cfg(feature = "decode")]
 pub mod decode;
@@ -239,20 +248,11 @@ pub mod opt;
 #[cfg(feature = "topology")]
 pub mod topology;
 
-/// Pattern-matching kernels. Distinct from `scan`, which is the neutral
-/// program-builder dialect over them.
-#[cfg(feature = "matching-kernels")]
-pub mod matching;
-
 /// NFA kernels: subgroup-cooperative simulator.
 #[cfg(feature = "nfa")]
 pub mod nfa;
 
-#[cfg(any(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "math-broadcast"
-))]
+#[cfg(feature = "nn-norm")]
 pub(crate) use builder::elementwise::{f32_elementwise_mul, F32MulRhs};
 #[cfg(feature = "nn-linear-4bit")]
 pub(crate) use math::linalg::{

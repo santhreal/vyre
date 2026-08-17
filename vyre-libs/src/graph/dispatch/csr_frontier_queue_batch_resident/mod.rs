@@ -13,8 +13,8 @@ mod tests;
 
 pub use dispatch::{resident_csr_queue_batch_budgeted_into, resident_csr_queue_batch_into};
 
-use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueuePrograms;
-use crate::graph::dispatch::csr_frontier_queue_scratch::{
+use crate::graph::csr_frontier_queue::resident_programs::ResidentCsrQueuePrograms;
+use crate::graph::csr_frontier_queue::scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlots,
 };
 use crate::graph::dispatch::resident_handles::free_unique_resident_handles;

@@ -27,15 +27,15 @@
 //! match counter, and nothing about the count-only prefilter family, which binds
 //! a different ABI entirely.
 
-#![cfg(feature = "matching-dfa")]
+#![cfg(feature = "pattern-dfa")]
 
 use std::collections::BTreeSet;
 use std::fs;
 
 use vyre_foundation::ir::{BufferAccess, Node, Program};
 use vyre_foundation::visit::referenced_buffers;
-use vyre_libs::matching::CompiledDfa;
-use vyre_libs::scan::classic_ac::{
+use vyre_libs::pattern::CompiledDfa;
+use vyre_libs::pattern::classic_ac::{
     build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce, classic_ac_compile,

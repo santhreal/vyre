@@ -2,8 +2,8 @@
 //!
 //! `clip_threshold = k * std(row)`  -  int6 uses k=12.85, int8 uses k=20.0.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 use crate::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
 
@@ -23,37 +23,24 @@ fn clamp_f32(value: Expr, lo: f32, hi: f32) -> Expr {
 /// GPTQ rounding: `q = clamp(round(x / scale), 0, max_val)` (F32→F32).
 #[must_use]
 pub fn gptq_round(input: &str, scale: &str, output: &str, n: u32, max_val: f32) -> Program {
-    let i = Expr::var("i");
-    let x = finite_or(Expr::load(input, i.clone()), Expr::f32(0.0));
-    let s = positive_scale(Expr::load(scale, i.clone()));
-
-    let divided = Expr::select(
-        Expr::eq(x.clone(), s.clone()),
-        Expr::f32(1.0),
-        Expr::div(x, s),
-    );
-    let clamped = clamp_f32(divided, 0.0, max_val);
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: clamped,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(scale, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 2, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(ROUND_OP_ID, body)],
+    ElementwiseComposer::binary(
+        ROUND_OP_ID,
+        input,
+        scale,
+        DataType::F32,
+        output,
+        DataType::F32,
+        n,
+        |raw_x, raw_s| {
+            let x = finite_or(raw_x, Expr::f32(0.0));
+            let s = positive_scale(raw_s);
+            let divided = Expr::select(
+                Expr::eq(x.clone(), s.clone()),
+                Expr::f32(1.0),
+                Expr::div(x, s),
+            );
+            clamp_f32(divided, 0.0, max_val)
+        },
     )
 }
 
@@ -63,30 +50,10 @@ pub fn gptq_round(input: &str, scale: &str, output: &str, n: u32, max_val: f32) 
 /// This per-element clamp is a correct first-pass.
 #[must_use]
 pub fn gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> Program {
-    let i = Expr::var("i");
-    let x = finite_or(Expr::load(input, i.clone()), Expr::f32(0.0));
-    let clamped = clamp_f32(x, -k, k);
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: clamped,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(SDCLIP_OP_ID, body)],
-    )
+    ElementwiseComposer::f32_unary(SDCLIP_OP_ID, input, output, n, |raw_x| {
+        let x = finite_or(raw_x, Expr::f32(0.0));
+        clamp_f32(x, -k, k)
+    })
 }
 
 inventory::submit! {

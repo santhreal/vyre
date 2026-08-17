@@ -1,6 +1,6 @@
 use super::super::*;
 use super::recording_dispatcher::RecordingResidentDispatcher;
-use crate::graph::dispatch::csr_frontier_queue_scratch::ResidentCsrQueueMaterializer;
+use crate::graph::csr_frontier_queue::scratch::ResidentCsrQueueMaterializer;
 
 #[test]
 fn large_single_word_resident_query_uses_atomic_word_materializer() {

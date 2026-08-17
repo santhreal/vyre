@@ -119,7 +119,7 @@ pub fn evaluate_condition<C: RuleEvaluationContext + ?Sized>(
         RuleCondition::RegexMatch { field, pattern } => {
             // AUDIT_2026-05-23: was compile-on-every-eval (regex::Regex::new).
             // Added lazy cache. Long-term: replace with vyre AC kernel
-            // (vyre_libs::scan::aho_corasick) or Opaque pre-compiled condition.
+            // (vyre_libs::pattern::aho_corasick) or Opaque pre-compiled condition.
             let Some(value) = ctx.field_value(field.as_ref()) else {
                 return false;
             };

@@ -276,7 +276,7 @@ fn diff_fnv1a64_primitive_regression() {
 /// GPU-vs-CPU byte-identity of the matches buffer so the validator crash
 /// cannot silently return. Asserts real bytes (matches buffer equality) via
 /// `run_entry_diff` -> `assert_diff`, not a shape check.
-#[cfg(feature = "matching-substring")]
+#[cfg(feature = "pattern-substring")]
 #[test]
 fn diff_substring_search_gpu_regression() {
     run_entry_diff(&entry_by_id("vyre-libs::scan::substring_search"));

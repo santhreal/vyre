@@ -14,8 +14,8 @@ mod tests;
 pub use query::resident_csr_queue_query_into;
 pub use upload::upload_resident_csr_queue_graph;
 
-use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueuePrograms;
-use crate::graph::dispatch::csr_frontier_queue_scratch::{
+use crate::graph::csr_frontier_queue::resident_programs::ResidentCsrQueuePrograms;
+use crate::graph::csr_frontier_queue::scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlots,
 };
 use crate::graph::dispatch::resident_handles::free_unique_resident_handles;

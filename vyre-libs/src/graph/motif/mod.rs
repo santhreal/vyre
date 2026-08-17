@@ -40,3 +40,118 @@ pub const MOTIF_WITNESS_OUT_BUFFER: u32 = BINDING_PRIMITIVE_START + 1;
 pub const MOTIF_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 /// Canonical motif dispatch grid.
 pub const MOTIF_DISPATCH_GRID: [u32; 3] = [1, 1, 1];
+
+/// Match motif pattern against graph and return per-node participation vector.
+#[cfg(any(test, feature = "cpu-parity"))]
+#[must_use]
+pub(crate) fn match_motif(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif_edges: &[MotifEdge],
+) -> Vec<u32> {
+    cpu_ref(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        motif_edges,
+    )
+}
+
+/// Fallible match motif pattern returning per-node participation vector.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn try_match_motif(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif_edges: &[MotifEdge],
+) -> Result<Vec<u32>, String> {
+    let mut out = Vec::new();
+    try_cpu_ref_into(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        motif_edges,
+        &mut out,
+    )?;
+    Ok(out)
+}
+
+/// Return true if the graph contains any match for the motif pattern.
+#[cfg(any(test, feature = "cpu-parity"))]
+#[must_use]
+pub(crate) fn motif_matches(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif_edges: &[MotifEdge],
+) -> bool {
+    cpu_ref_matches(
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        motif_edges,
+    )
+}
+
+/// Fallible check whether the graph contains any match for the motif pattern.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn try_motif_matches(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif_edges: &[MotifEdge],
+) -> Result<bool, String> {
+    let hits = try_match_motif(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        motif_edges,
+    )?;
+    Ok(hits.iter().any(|&x| x != 0))
+}
+
+/// Count nodes participating in a match for the motif pattern.
+#[cfg(any(test, feature = "cpu-parity"))]
+#[must_use]
+pub(crate) fn motif_participation_count(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif_edges: &[MotifEdge],
+) -> u32 {
+    cpu_ref_participation_count(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        motif_edges,
+    )
+}
+
+/// Fallible count of nodes participating in a match for the motif pattern.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn try_motif_participation_count(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif_edges: &[MotifEdge],
+) -> Result<u32, String> {
+    let hits = try_match_motif(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        motif_edges,
+    )?;
+    Ok(hits.iter().filter(|&&x| x != 0).count() as u32)
+}

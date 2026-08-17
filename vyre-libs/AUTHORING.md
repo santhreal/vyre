@@ -193,8 +193,8 @@ round-trip, optimization, conformance, and generated catalog checks.
 | NN linear layers | `src/nn/linear/mod.rs` | `nn-linear` |
 | NN normalization | `src/nn/norm/mod.rs` | `nn-norm` |
 | NN attention | `src/nn/attention/mod.rs` | `nn-attention` |
-| Substring search | `src/scan/substring/mod.rs` | `matching-substring` |
-| DFA / Aho-Corasick | `src/scan/dfa/mod.rs`, `src/scan/classic_ac/mod.rs` | `matching-dfa` |
+| Substring search | `src/pattern/substring/mod.rs` | `pattern-substring` |
+| DFA / Aho-Corasick | `src/pattern/dfa/mod.rs`, `src/pattern/classic_ac/mod.rs` | `pattern-dfa` |
 | BLAKE3 compression | `src/hash/blake3_compress.rs` | `crypto-blake3` |
 
 Add a new dialect by creating `src/<dialect>/mod.rs` + registering a
