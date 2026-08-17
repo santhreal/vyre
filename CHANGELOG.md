@@ -5565,6 +5565,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   composite became the `prepublish` subset, so one entry in its list scanned
   nothing while reading as coverage. It reads `lockfile`, the gate that
   inherited the lockfile step.
+- The guarded release scripts now inherit Cargo parallelism from workspace
+  configuration and regenerate launch-state and package-readiness evidence
+  through each gate's canonical --write path.
 - The `ci-required` gate resolves every workflow file name
   `.github/CI_REQUIRED.md` quotes, not only the ones under a blocking heading.
   The contexts under a heading were resolved against real workflows and a file

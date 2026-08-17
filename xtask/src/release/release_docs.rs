@@ -34,6 +34,11 @@ const NOTES: &str = "release/evidence/docs/release-notes-body.md";
 pub const GENERATED_RELEASE_DOCUMENTS: [&str; 2] = [CHANGELOG, NOTES];
 /// The script that performs the launch steps in order.
 const LAUNCH: &str = "scripts/final-launch.sh";
+/// The script that validates and publishes the audited package set.
+const PUBLISH: &str = "scripts/publish-release.sh";
+/// The package evidence command the publish script must run before reading it.
+const PACKAGE_READINESS_STEP: &str =
+    "./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- package-readiness --write";
 /// Keep-a-changelog categories, in the order a section renders them.
 const CATEGORIES: [&str; 6] = [
     "Added",
@@ -56,14 +61,14 @@ const MAX_DOCUMENT_BYTES: u64 = 8_388_608;
 const LAUNCH_STEPS: [&str; 10] = [
     "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\"",
     "git push origin \"$VYRE_RELEASE_TAG_VYRE_RC\"",
-    "-- vyre-release-gate\n",
+    "./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n",
     "VYRE_RELEASE_APPROVED=\"$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN\" bash scripts/publish-release.sh",
     "git tag -a \"$VYRE_RELEASE_TAG_VYRE\"",
     "git push origin \"$VYRE_RELEASE_TAG_VYRE\"",
     "gh release create \"$VYRE_RELEASE_TAG_VYRE\"",
     "> release/evidence/final/public-launch-completion.json",
-    "-- launch-state --output",
-    "-- vyre-release-gate --launch-complete\n",
+    "./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --write\n",
+    "./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --launch-complete\n",
 ];
 
 /// The changelog and release notes state what the fragments and the train say.
@@ -509,6 +514,23 @@ fn notes_body(train: &toml::Table, section: &str) -> Result<String, GateError> {
 /// Findings against the order the launch script performs its steps in.
 fn launch_order_findings(root: &Path, report: &mut Report) -> Result<(), GateError> {
     let launch = read_text(root, LAUNCH)?;
+    let publish = read_text(root, PUBLISH)?;
+    for (path, script) in [(LAUNCH, launch.as_str()), (PUBLISH, publish.as_str())] {
+        if script.contains("./cargo_full run -j") || script.contains("./cargo_full run --jobs") {
+            report.find(Finding::in_file(
+                path,
+                "a release command overrides Cargo build parallelism",
+                "delete the per-command job flag; .cargo/config.toml owns build parallelism",
+            ));
+        }
+    }
+    if !publish.contains(PACKAGE_READINESS_STEP) {
+        report.find(Finding::in_file(
+            PUBLISH,
+            "the publish script does not regenerate package readiness through its owned --write path",
+            "run package-readiness --write before reading the fixed readiness artifact",
+        ));
+    }
     let mut positions = Vec::with_capacity(LAUNCH_STEPS.len());
     for step in LAUNCH_STEPS {
         match launch.find(step) {

@@ -52,6 +52,11 @@ fn write_fixture(root: &Path, actions: usize, duplicate_package: bool) {
         root.join("scripts/final-launch.sh"),
     )
     .expect("Fix: fixture must copy the guarded launch implementation");
+    fs::copy(
+        workspace_root().join("scripts/publish-release.sh"),
+        root.join("scripts/publish-release.sh"),
+    )
+    .expect("Fix: fixture must copy the guarded publish implementation");
     let duplicate_group = if duplicate_package {
         r#"
 
@@ -330,7 +335,7 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     // nothing about ordering.
     let candidate = "git tag -a \"$VYRE_RELEASE_TAG_VYRE_RC\" -m \"$VYRE_RELEASE_TAG_VYRE_RC\"\n";
     let prepublish =
-        "./cargo_full run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
+        "./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate\n";
     let reordered = launch
         .replace(candidate, "__VYRE_RELEASE_ORDER_SWAP__")
         .replace(prepublish, candidate)
@@ -341,6 +346,38 @@ fn guarded_launch_order_fails_closed_when_candidate_tags_are_reordered() {
     let output = run_gate(temp.path(), "--check");
     assert!(!output.status.success());
     assert!(reported(&output).contains("are out of order"));
+}
+
+/// Per-command build settings and ad hoc artifact paths make the guarded release irreproducible.
+#[test]
+fn guarded_release_commands_reject_local_build_and_output_overrides() {
+    for (relative, current, forbidden, expected_finding) in [
+        (
+            "scripts/final-launch.sh",
+            "./cargo_full run --manifest-path",
+            "./cargo_full run -j1 --manifest-path",
+            "overrides Cargo build parallelism",
+        ),
+        (
+            "scripts/publish-release.sh",
+            "package-readiness --write",
+            "package-readiness --output release/evidence/package/publish-readiness.json",
+            "does not regenerate package readiness through its owned --write path",
+        ),
+    ] {
+        let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+        write_fixture(temp.path(), 3, false);
+        assert!(run_gate(temp.path(), "--write").status.success());
+        let path = temp.path().join(relative);
+        let script =
+            fs::read_to_string(&path).expect("Fix: release script fixture must be readable");
+        fs::write(&path, script.replace(current, forbidden))
+            .expect("Fix: modified release script fixture must be writable");
+
+        let output = run_gate(temp.path(), "--check");
+        assert!(!output.status.success());
+        assert!(reported(&output).contains(expected_finding));
+    }
 }
 
 /// Runs `git` in `dir` and returns its stdout, refusing to continue on failure.

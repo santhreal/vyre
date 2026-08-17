@@ -552,11 +552,11 @@ Exits nonzero on:
 - empty conformance evidence
 - release gate failure
 
-Findings:
+Resolved:
 
-- `gh release create --notes-file docs/release/v<version>.md` names a path that no longer exists, so the launch chain fails at the release-creation step after it has already published to crates.io and pushed two tags. That is the worst possible place for a dead path and no gate covers it. The ported gate asserts the notes file for the configured version exists before any of it starts.
-- It passes `-j1` to three cargo invocations, a build-affecting flag outside .cargo/config.toml.
-- It calls `launch-state --output release/evidence/final/public-launch-state.json`; under the evidence lane's contract that becomes `launch-state --write` against the fixed path.
+- Release creation reads `release/evidence/docs/release-notes-body.md`, which `release-docs` generates and owns.
+- Cargo invocations inherit build parallelism from `.cargo/config.toml`.
+- `launch-state --write` regenerates the fixed public launch-state artifact before the launch-complete gate.
 
 ### scripts/install_wire_precommit_hook.sh
 
@@ -838,10 +838,10 @@ Exits nonzero on:
 - a publish failure
 - index wait timeout
 
-Findings:
+Resolved:
 
-- It passes `-j1` to cargo run.
-- `package-readiness --output <path>` becomes `package-readiness --write` under the evidence lane's contract, reading the fixed path release/evidence/package/publish-readiness.json.
+- Cargo invocations inherit build parallelism from `.cargo/config.toml`.
+- `package-readiness --write` regenerates `release/evidence/package/publish-readiness.json` before the script reads it.
 
 ### scripts/run_sweep_oracle_matrix.sh
 
