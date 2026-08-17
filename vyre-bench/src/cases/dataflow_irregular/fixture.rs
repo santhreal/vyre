@@ -219,6 +219,11 @@ pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
             fixture.stats.active_sources
         )));
     }
+    if active_queue.len() < expected as usize {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "{context} queue_capacity {queue_capacity} cannot hold {expected} active sources. Fix: increase queue capacity.",
+        )));
+    }
     Ok(active_queue)
 }
 
