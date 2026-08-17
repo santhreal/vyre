@@ -48,7 +48,7 @@ approximation_policy = "exact"
 verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "native", wgpu = "native", metal = "native", hyperscan = "native", vectorscan = "native", rust_regex = "native", dpu = "unsupported", fpga = "unsupported" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth/mod.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 
 [[scan_construct]]
 id = "unsupported_backtracking_constructs"
@@ -61,7 +61,7 @@ approximation_policy = "none"
 verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "unsupported", fpga = "unsupported" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth/mod.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 
 [[scan_construct]]
 id = "lookaround_prefilter_constructs"
@@ -74,7 +74,7 @@ approximation_policy = "broader-prefilter-plus-verifier"
 verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "host-reference", cuda = "prefilter", wgpu = "prefilter", metal = "prefilter", hyperscan = "prefilter", vectorscan = "prefilter", rust_regex = "unsupported", dpu = "unsupported", fpga = "prefilter" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth/mod.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 
 [[scan_construct]]
 id = "hardware_rule_database_constructs"
@@ -87,7 +87,7 @@ approximation_policy = "hardware-rule-database"
 verifier_required = false
 accelerator_only = true
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "external-accelerator", fpga = "external-accelerator" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth/mod.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 
 [[scan_construct]]
 id = "capture_extraction_constructs"
@@ -100,7 +100,7 @@ approximation_policy = "whole-match-accelerator-plus-capture-verifier"
 verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "verifier", wgpu = "verifier", metal = "verifier", hyperscan = "verifier", vectorscan = "verifier", rust_regex = "native", dpu = "unsupported", fpga = "verifier" }
-proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth/mod.rs", "xtask-registry/src/release/conformance_matrix/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::bit_reverse_u32"
@@ -114,7 +114,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::fma_f32"
@@ -128,7 +128,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::inverse_sqrt_f32"
@@ -142,7 +142,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::popcount_u32"
@@ -156,7 +156,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::storage_barrier"
@@ -170,7 +170,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::subgroup_add"
@@ -184,7 +184,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::subgroup_ballot"
@@ -198,7 +198,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::subgroup_shuffle"
@@ -212,7 +212,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-primitives::hardware::workgroup_barrier"
@@ -226,7 +226,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from the Category C operation catalog; a hardware-intrinsic id stays in its owning crate's namespace and passes hardware_conform."
-tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::and"
@@ -240,7 +240,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::and_into"
@@ -254,7 +254,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::and_not"
@@ -268,7 +268,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::and_not_into"
@@ -282,7 +282,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::any"
@@ -296,7 +296,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::clear_bit"
@@ -310,7 +310,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::contains"
@@ -324,7 +324,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::copy"
@@ -338,7 +338,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::equal"
@@ -352,7 +352,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::four_russians_apply_byte_lut"
@@ -366,7 +366,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::four_russians_dense_matvec_byte_lut"
@@ -380,7 +380,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::not"
@@ -394,7 +394,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::or"
@@ -408,7 +408,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::or_into"
@@ -422,7 +422,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::popcount"
@@ -436,7 +436,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::select1_query"
@@ -450,7 +450,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::set_bit"
@@ -464,7 +464,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::stochastic_and_mul"
@@ -478,7 +478,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::subset_of"
@@ -492,7 +492,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::test_bit"
@@ -506,7 +506,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::xor"
@@ -520,7 +520,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::xor_into"
@@ -534,7 +534,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::bitset::zero"
@@ -548,7 +548,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::builder::indexed_map"
@@ -562,7 +562,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::builder::strided_accumulate"
@@ -576,7 +576,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::decode::base64"
@@ -590,7 +590,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::decode::encodex"
@@ -604,7 +604,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::decode::hex"
@@ -618,7 +618,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::decode::inflate_stored_block"
@@ -632,7 +632,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::decode::rle_segment_lengths"
@@ -646,7 +646,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::decode::ziftsieve_literal_copy"
@@ -660,7 +660,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::fixpoint::bitset_fixpoint"
@@ -674,7 +674,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::fixpoint::persistent_fixpoint"
@@ -688,7 +688,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::geom::clifford2_geometric_product"
@@ -702,7 +702,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::geom::tfn_scalar_mix"
@@ -716,7 +716,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::ast_walk_postorder"
@@ -730,7 +730,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::ast_walk_preorder"
@@ -744,7 +744,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::csr_backward_or_changed"
@@ -758,7 +758,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::csr_backward_traverse"
@@ -772,7 +772,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::csr_forward_or_changed"
@@ -786,7 +786,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::csr_forward_traverse"
@@ -800,7 +800,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::csr_forward_traverse_excluding"
@@ -814,7 +814,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::csr_frontier_degree_sum"
@@ -828,7 +828,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::csr_queue_strided_forward_traverse"
@@ -842,7 +842,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::dominator_frontier"
@@ -856,7 +856,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::dominator_tree"
@@ -870,7 +870,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::dominator_tree_depth"
@@ -884,7 +884,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::dominator_tree_intersect_step"
@@ -898,7 +898,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::functor_apply"
@@ -912,7 +912,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::level_wave"
@@ -926,7 +926,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::monoidal_compose"
@@ -940,7 +940,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::motif"
@@ -954,7 +954,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::path_reconstruct"
@@ -968,7 +968,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::persistent_bfs"
@@ -982,7 +982,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::persistent_bfs_step"
@@ -996,7 +996,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::scc_decompose"
@@ -1010,7 +1010,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::sheaf_diffusion_step"
@@ -1024,7 +1024,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::sum_product_evaluate"
@@ -1038,7 +1038,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::sum_product_evaluate_leveled"
@@ -1052,7 +1052,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::tensor_flow_forward"
@@ -1066,7 +1066,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::union_find"
@@ -1080,7 +1080,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::vast_walk_postorder"
@@ -1094,7 +1094,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::graph::vast_walk_preorder"
@@ -1108,7 +1108,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::adler32"
@@ -1122,7 +1122,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::blake3_compress"
@@ -1136,7 +1136,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::blake3_g"
@@ -1150,7 +1150,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::blake3_round"
@@ -1164,7 +1164,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::crc32"
@@ -1178,7 +1178,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::fnv1a32"
@@ -1192,7 +1192,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::fnv1a64"
@@ -1206,7 +1206,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::multi_hash"
@@ -1220,7 +1220,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::ntt_butterfly_stage"
@@ -1234,7 +1234,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::hash::sparse_fft_bin_hash"
@@ -1248,7 +1248,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::label::resolve_family"
@@ -1262,7 +1262,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::llm::logit_adjust"
@@ -1276,7 +1276,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::llm::nucleus_select"
@@ -1290,7 +1290,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::llm::paged_kv_append"
@@ -1304,7 +1304,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::llm::paged_kv_gather"
@@ -1318,7 +1318,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::llm::sample_token"
@@ -1332,7 +1332,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::logical::nand"
@@ -1346,7 +1346,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::logical::nor"
@@ -1360,12 +1360,12 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::matching::aho_corasick"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/pattern"]
 ops = ["vyre-libs::matching::aho_corasick"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -1374,12 +1374,12 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::matching::bracket_match"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/pattern"]
 ops = ["vyre-libs::matching::bracket_match"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -1388,12 +1388,12 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::matching::compact_hits"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/pattern"]
 ops = ["vyre-libs::matching::compact_hits"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -1402,12 +1402,12 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::matching::cooperative_dfa"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/pattern"]
 ops = ["vyre-libs::matching::cooperative_dfa"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -1416,12 +1416,12 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::matching::emit_hit"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/pattern"]
 ops = ["vyre-libs::matching::emit_hit"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -1430,7 +1430,35 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
+family = "vyre-libs::matching::regex_dfa"
+tier = "libs"
+owners = ["vyre-libs/src/pattern"]
+ops = ["vyre-libs::matching::regex_dfa"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
+family = "vyre-libs::matching::regex_scan"
+tier = "libs"
+owners = ["vyre-libs/src/pattern"]
+ops = ["vyre-libs::matching::regex_scan"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::algebra::bool_semiring_matmul"
@@ -1444,7 +1472,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::algebra::join"
@@ -1458,7 +1486,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::algebra::meet"
@@ -1472,7 +1500,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::algebra::minplus_mul"
@@ -1486,7 +1514,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::algebra::sketch_mix"
@@ -1500,7 +1528,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::amg_jacobi_step"
@@ -1514,7 +1542,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::amg_v_cycle"
@@ -1528,7 +1556,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::amg_v_cycle::v_cycle_phase"
@@ -1542,7 +1570,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_add_u32"
@@ -1556,7 +1584,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_and_u32"
@@ -1570,7 +1598,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_compare_exchange_u32"
@@ -1584,7 +1612,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_exchange_u32"
@@ -1598,7 +1626,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_max_u32"
@@ -1612,7 +1640,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_min_u32"
@@ -1626,7 +1654,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_or_u32"
@@ -1640,7 +1668,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::atomic_xor_u32"
@@ -1654,7 +1682,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::atomic::lru_update_u32"
@@ -1668,7 +1696,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::avg_floor"
@@ -1682,7 +1710,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::bellman_shortest_path"
@@ -1696,7 +1724,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::bhattacharyya_coefficient"
@@ -1710,7 +1738,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::bigint_add_carry"
@@ -1724,7 +1752,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::broadcast"
@@ -1738,7 +1766,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::clamp_u32"
@@ -1752,7 +1780,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::conformal_threshold"
@@ -1766,7 +1794,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::conv1d"
@@ -1780,7 +1808,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::conv::conv2d_3x3_direct"
@@ -1794,7 +1822,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::conv::im2col_3x3"
@@ -1808,7 +1836,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::dot"
@@ -1822,7 +1850,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::dot_partial"
@@ -1836,7 +1864,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::eigenvector_column_sign"
@@ -1850,7 +1878,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::fft::fft4_complex"
@@ -1864,7 +1892,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::fft::fft_convolve_circular_complex"
@@ -1878,7 +1906,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::fft::fft_radix2"
@@ -1892,7 +1920,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::fft::pointwise_complex_multiply_conjugate"
@@ -1906,7 +1934,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::fft::scale_conjugate_inverse"
@@ -1920,7 +1948,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::gaussian_rdp_step"
@@ -1934,7 +1962,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::givens_rotate_pair"
@@ -1948,7 +1976,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::hensel_lift_step"
@@ -1962,7 +1990,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::iht_threshold"
@@ -1976,7 +2004,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::interval_merge"
@@ -1990,7 +2018,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::jacobi_apply_rotation"
@@ -2004,7 +2032,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::linalg::matmul_strassen_2x2"
@@ -2018,7 +2046,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::lzcnt_u32"
@@ -2032,7 +2060,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::matmul"
@@ -2046,7 +2074,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::matmul_bias"
@@ -2060,7 +2088,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::matmul_bias::scalar"
@@ -2074,7 +2102,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::matmul_bias_tiled"
@@ -2088,7 +2116,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::matmul_tiled"
@@ -2102,7 +2130,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::matrix_diagonal_extract"
@@ -2116,7 +2144,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::matrix_identity_fill"
@@ -2130,7 +2158,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::mori_zwanzig_project_step"
@@ -2144,7 +2172,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::mp_edge_clip"
@@ -2158,7 +2186,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::newton_schulz_poly5_f32"
@@ -2172,7 +2200,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::qsvt_block_encode"
@@ -2186,7 +2214,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled"
@@ -2200,7 +2228,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled"
@@ -2214,7 +2242,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled"
@@ -2228,7 +2256,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::quantized::i4x8_dot_f32_scaled"
@@ -2242,7 +2270,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::quantized::i4x8_dot_i32"
@@ -2256,7 +2284,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::quantized::i4x8_matvec_f32_scaled"
@@ -2270,7 +2298,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::quantized::unpack_i4x8"
@@ -2284,7 +2312,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::randomized_projection_step"
@@ -2298,7 +2326,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::reduce_mean"
@@ -2312,7 +2340,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::reduce_variance"
@@ -2326,7 +2354,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::scallop_join"
@@ -2340,7 +2368,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::scan_prefix_sum"
@@ -2354,7 +2382,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::semiring_gemm"
@@ -2368,7 +2396,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::sheaf_laplacian_eigenvalue"
@@ -2382,7 +2410,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase"
@@ -2396,7 +2424,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::sinkhorn_iterate"
@@ -2410,21 +2438,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-
-[[op]]
-family = "vyre-libs::math::sinkhorn_scale"
-tier = "libs"
-owners = ["vyre-libs/src/math"]
-ops = ["vyre-libs::math::sinkhorn_scale"]
-registry_sources = ["vyre-foundation::operation"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::softmax_step"
@@ -2438,7 +2452,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::square"
@@ -2452,7 +2466,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::succinct::rank1_query"
@@ -2466,7 +2480,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::succinct::rank1_superblocks"
@@ -2480,7 +2494,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::symmetric_eigen_jacobi"
@@ -2494,7 +2508,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::tensor_network_pair_contract"
@@ -2508,7 +2522,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::tensor_train_decompose"
@@ -2522,7 +2536,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::tzcnt_u32"
@@ -2536,7 +2550,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::weighted_sum_fma_f32"
@@ -2550,7 +2564,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::math::wrapping_neg"
@@ -2564,7 +2578,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention"
@@ -2578,7 +2592,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention::online_softmax"
@@ -2592,7 +2606,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention::quest_paging"
@@ -2606,7 +2620,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention::turboquant"
@@ -2620,7 +2634,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention_max_pass"
@@ -2634,7 +2648,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention_reference"
@@ -2648,7 +2662,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention_sum_pass"
@@ -2662,7 +2676,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::attention_write_pass"
@@ -2676,7 +2690,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::cross_entropy"
@@ -2690,7 +2704,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::embedding"
@@ -2704,7 +2718,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::flash_attention"
@@ -2718,7 +2732,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::gelu"
@@ -2732,7 +2746,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::gqa_attention"
@@ -2746,7 +2760,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::layer_norm"
@@ -2760,7 +2774,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::layerwise_ln_scale"
@@ -2774,7 +2788,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::leaky_relu_sq"
@@ -2788,7 +2802,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::leaky_relu_sq_backward"
@@ -2802,7 +2816,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::linear"
@@ -2816,7 +2830,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::linear_4bit"
@@ -2830,7 +2844,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::linear_4bit_affine_grouped"
@@ -2844,7 +2858,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::linear_relu"
@@ -2858,7 +2872,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::linear_silu"
@@ -2872,7 +2886,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::linear_tiled"
@@ -2886,7 +2900,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::ln_scale_backward"
@@ -2900,7 +2914,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::logit_softcap"
@@ -2914,7 +2928,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::logit_softcap_backward"
@@ -2928,7 +2942,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::mlp_4x_leaky_sq"
@@ -2942,7 +2956,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection"
@@ -2956,7 +2970,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::mlp_4x_leaky_sq::output_projection"
@@ -2970,7 +2984,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::mlp_backward"
@@ -2984,7 +2998,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::moe_gate"
@@ -2998,7 +3012,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::moe_gate::softmax_stats"
@@ -3012,7 +3026,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::moe_gate::weight_write"
@@ -3026,7 +3040,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::parallel_residual_block"
@@ -3040,7 +3054,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::partial_rope"
@@ -3054,7 +3068,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::partial_rope_backward"
@@ -3068,7 +3082,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::qk_gain"
@@ -3082,7 +3096,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::qk_gain_backward"
@@ -3096,7 +3110,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::quest_score_pages"
@@ -3110,7 +3124,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::quest_select_top_k"
@@ -3124,7 +3138,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::quest_zero_fill"
@@ -3138,7 +3152,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::relu"
@@ -3152,7 +3166,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::residual_add"
@@ -3166,7 +3180,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::residual_block_backward"
@@ -3180,7 +3194,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::rms_norm"
@@ -3194,7 +3208,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::rms_norm_linear"
@@ -3208,7 +3222,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::sigmoid_gate"
@@ -3222,7 +3236,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::silu"
@@ -3236,7 +3250,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::skip_gate"
@@ -3250,7 +3264,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::skip_gate_backward"
@@ -3264,7 +3278,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::softmax"
@@ -3278,7 +3292,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::softmax_top_k"
@@ -3292,7 +3306,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::swiglu"
@@ -3306,7 +3320,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::nn::top_k"
@@ -3320,7 +3334,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::opt::homotopy_euler_predictor"
@@ -3334,7 +3348,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::optim::adamw_step"
@@ -3348,7 +3362,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::optim::ema_apply"
@@ -3362,7 +3376,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::optim::muon_update"
@@ -3376,7 +3390,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::optim::muoneq_r"
@@ -3390,7 +3404,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::optim::newton_schulz_5step"
@@ -3404,7 +3418,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::ast_binding_strength"
@@ -3418,7 +3432,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::ast_cfg_blocks"
@@ -3432,7 +3446,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::ast_cse_structural_hash"
@@ -3446,7 +3460,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::ast_shunting_yard"
@@ -3460,7 +3474,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::core_delimiter_match"
@@ -3474,7 +3488,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::line_splice_classify"
@@ -3488,7 +3502,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::planar_rewrite_schedule"
@@ -3502,7 +3516,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_calls"
@@ -3516,7 +3530,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_decorators"
@@ -3530,7 +3544,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_imports"
@@ -3544,7 +3558,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_structure"
@@ -3558,7 +3572,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::python312_extract_with_blocks"
@@ -3572,7 +3586,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::python312_lexer"
@@ -3586,7 +3600,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::ssa_dominance_scan"
@@ -3600,7 +3614,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::parsing::whitespace_classify_word"
@@ -3614,7 +3628,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::arg_of"
@@ -3628,7 +3642,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::call_to"
@@ -3642,7 +3656,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::edge"
@@ -3656,7 +3670,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::in_file"
@@ -3670,7 +3684,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::in_function"
@@ -3684,7 +3698,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::in_package"
@@ -3698,7 +3712,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::literal_of"
@@ -3712,7 +3726,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::node_kind_eq"
@@ -3726,7 +3740,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::return_value_of"
@@ -3740,7 +3754,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::predicate::size_argument_of"
@@ -3754,7 +3768,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::byte_shuffle"
@@ -3768,7 +3782,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::gptq_round"
@@ -3782,7 +3796,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::gptq_sdclip"
@@ -3796,7 +3810,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int4_batched_matmul_f32_scaled"
@@ -3810,7 +3824,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int4_batched_matmul_top1_f32_scaled"
@@ -3824,7 +3838,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int4_batched_matvec_f32_scaled"
@@ -3838,7 +3852,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int4_dot_f32_scaled"
@@ -3852,7 +3866,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int4_dot_i32"
@@ -3866,7 +3880,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int4_matvec_f32_scaled"
@@ -3880,7 +3894,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int6_pack"
@@ -3894,7 +3908,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int6_unpack"
@@ -3908,7 +3922,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int8_pack"
@@ -3922,7 +3936,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::quant::int8_unpack"
@@ -3936,7 +3950,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::all"
@@ -3950,7 +3964,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::any"
@@ -3964,7 +3978,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::count"
@@ -3978,7 +3992,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::count_non_zero"
@@ -3992,7 +4006,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::gather"
@@ -4006,7 +4020,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::histogram"
@@ -4020,7 +4034,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::max"
@@ -4034,7 +4048,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::min"
@@ -4048,7 +4062,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum"
@@ -4062,7 +4076,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::radix_sort"
@@ -4076,7 +4090,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::range_counts_u32"
@@ -4090,7 +4104,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::scatter"
@@ -4104,7 +4118,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::segment_reduce_sum"
@@ -4118,7 +4132,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::sum"
@@ -4132,7 +4146,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::workgroup_any_u32"
@@ -4146,7 +4160,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::workgroup_max_f32"
@@ -4160,7 +4174,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::workgroup_max_u32"
@@ -4174,7 +4188,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::workgroup_min_f32"
@@ -4188,7 +4202,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::workgroup_min_u32"
@@ -4202,7 +4216,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::workgroup_sum_f32"
@@ -4216,7 +4230,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::reduce::workgroup_sum_u32"
@@ -4230,7 +4244,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::representation::unpack_4bit_f32"
@@ -4244,12 +4258,12 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::scan::substring_search"
 tier = "libs"
-owners = ["vyre-libs/src/scan"]
+owners = ["vyre-libs/src/pattern"]
 ops = ["vyre-libs::scan::substring_search"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
@@ -4258,7 +4272,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::aliases_dataflow"
@@ -4272,7 +4286,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::auth_check_dominates"
@@ -4286,7 +4300,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::bounded_by_comparison"
@@ -4300,7 +4314,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::buffer_size_check"
@@ -4314,7 +4328,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::dominance_predecessors"
@@ -4328,7 +4342,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::flows_to"
@@ -4342,7 +4356,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::flows_to_to_sink"
@@ -4356,7 +4370,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::flows_to_with_sanitizer"
@@ -4370,7 +4384,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::format_string_check"
@@ -4384,7 +4398,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::integer_overflow_arith"
@@ -4398,7 +4412,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::label_by_family"
@@ -4412,7 +4426,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::lock_dominates"
@@ -4426,7 +4440,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::path_canonical"
@@ -4440,7 +4454,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::sanitized_by"
@@ -4454,7 +4468,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::sanitizer_dominates"
@@ -4468,7 +4482,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::sink_intersection"
@@ -4482,7 +4496,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::sql_param_bound"
@@ -4496,7 +4510,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::taint_flow"
@@ -4510,7 +4524,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::taint_kill"
@@ -4524,7 +4538,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::taint_pollution"
@@ -4538,7 +4552,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::unchecked_return"
@@ -4552,7 +4566,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::security::xss_escape"
@@ -4566,7 +4580,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::text::byte_histogram_256"
@@ -4580,7 +4594,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::text::char_class"
@@ -4594,7 +4608,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::text::encoding_classify"
@@ -4608,7 +4622,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::text::line_index"
@@ -4622,7 +4636,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::text::utf8_shape_counts"
@@ -4636,7 +4650,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::text::utf8_validate"
@@ -4650,7 +4664,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::vfs::resolve"
@@ -4664,7 +4678,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::blur"
@@ -4678,7 +4692,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::box_shadow"
@@ -4692,7 +4706,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::cell_grid"
@@ -4706,7 +4720,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::composite"
@@ -4720,7 +4734,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::downsample"
@@ -4734,7 +4748,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::filter_chain"
@@ -4748,7 +4762,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::glass"
@@ -4762,7 +4776,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::glyph_grid"
@@ -4776,7 +4790,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::gradient"
@@ -4790,7 +4804,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::packed_rgba_map"
@@ -4804,7 +4818,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
 family = "vyre-libs::visual::upsample"
@@ -4818,5 +4832,5 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 

@@ -369,6 +369,8 @@ pub fn regex_scan_program(
     build_scan_program_from_regex(patterns, input_buf, hit_buf, input_len).map(|s| s.program)
 }
 
+const EXPECTED_REGEX_SCAN_HITS_BYTES: [u8; 120_004] = [0; 120_004];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         REGEX_SCAN_OP_ID,
@@ -383,11 +385,12 @@ inventory::submit! {
                 vec![0u8; 64],
                 vyre_primitives::wire::pack_u32_slice(&compiled.transition_table),
                 vyre_primitives::wire::pack_u32_slice(&compiled.epsilon_table),
+                EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec(),
                 vec![0u8; 4],
                 vec![0u8; 4],
             ]]
         }),
-        None,
+        Some(|| vec![vec![EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec()]]),
     )
 }
 
@@ -395,6 +398,39 @@ inventory::submit! {
 mod tests {
     use super::{regex_construct_diagnostic_code, RegexConstruct};
     use std::collections::BTreeSet;
+
+    /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex
+    /// scan fixture must equal an independent reference execution rather than merely be present.
+    #[test]
+    fn registered_regex_scan_expected_bytes_match_reference_execution() {
+        let compiled = super::compile_regex_set(&["[a-z]+"])
+            .expect("Fix: canonical fixture regex scan must compile");
+        let program = super::regex_scan_program(&["[a-z]+"], "input", "hits", 64)
+            .expect("Fix: canonical fixture regex scan must compile");
+        let inputs = vec![
+            vec![0u8; 64],
+            vyre_primitives::wire::pack_u32_slice(&compiled.transition_table),
+            vyre_primitives::wire::pack_u32_slice(&compiled.epsilon_table),
+            super::EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec(),
+            vec![0u8; 4],
+            vec![0u8; 4],
+        ];
+        let values = inputs
+            .iter()
+            .map(|bytes| vyre_reference::value::Value::Bytes(bytes.as_slice().into()))
+            .collect::<Vec<_>>();
+        let actual = vyre_reference::reference_eval(&program, &values)
+            .expect("Fix: canonical regex scan fixture must execute in the reference interpreter")
+            .into_iter()
+            .map(|value| value.to_bytes())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            actual,
+            vec![super::EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec()],
+            "Fix: registered regex scan expected bytes must equal the reference result"
+        );
+    }
 
     /// `RegexConstruct::ALL` is what a consumer outside this crate enumerates,
     /// and `#[non_exhaustive]` means such a consumer cannot notice a variant the

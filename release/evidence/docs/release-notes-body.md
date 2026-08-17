@@ -5402,6 +5402,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   instead of treating their minimum as a maximum. Whole-buffer variable-length
   matches derive exact starts from candidate origins, and region evidence
   returns one longest extent per pattern and origin.
+- The registered regex NFA and DFA operations now carry exact byte-output
+  fixtures for their canonical zero-input cases, restoring positive reference,
+  CUDA, and WGPU conformance coverage.
 - Both validator walks agree that `Node::Region` scopes its body. The legacy
   multi-walk arm recorded no scope log for a region body, so a `let` inside a
   region was never undone and stayed live past the region, past an enclosing

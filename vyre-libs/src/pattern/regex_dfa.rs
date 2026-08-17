@@ -405,6 +405,9 @@ pub fn regex_dfa_unanchored_sharded_programs(
         .collect())
 }
 
+const EXPECTED_REGEX_DFA_MATCH_COUNT_BYTES: [u8; 4] = [0; 4];
+const EXPECTED_REGEX_DFA_MATCHES_BYTES: [u8; 768] = [0; 768];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         REGEX_DFA_OP_ID,
@@ -422,9 +425,13 @@ inventory::submit! {
                 vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_records),
                 vyre_primitives::wire::pack_u32_slice(&pipeline.pattern_lengths),
                 vec![0u8; 4],
+                vec![0u8; 4],
             ]]
         }),
-        None,
+        Some(|| vec![vec![
+            EXPECTED_REGEX_DFA_MATCH_COUNT_BYTES.to_vec(),
+            EXPECTED_REGEX_DFA_MATCHES_BYTES.to_vec(),
+        ]]),
     )
 }
 
@@ -615,6 +622,41 @@ fn reserve_regex_vec<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex
+    /// DFA fixture must equal an independent reference execution rather than merely be present.
+    #[test]
+    fn registered_regex_dfa_expected_bytes_match_reference_execution() {
+        let pipeline = build_regex_dfa_pipeline(&["[a-z]+"], 64, 256)
+            .expect("Fix: canonical fixture regex DFA must compile");
+        let inputs = vec![
+            vec![0u8; 64],
+            vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.transitions),
+            vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_offsets),
+            vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_records),
+            vyre_primitives::wire::pack_u32_slice(&pipeline.pattern_lengths),
+            vec![0u8; 4],
+            vec![0u8; 4],
+        ];
+        let values = inputs
+            .iter()
+            .map(|bytes| vyre_reference::value::Value::Bytes(bytes.as_slice().into()))
+            .collect::<Vec<_>>();
+        let actual = vyre_reference::reference_eval(&pipeline.program, &values)
+            .expect("Fix: canonical regex DFA fixture must execute in the reference interpreter")
+            .into_iter()
+            .map(|value| value.to_bytes())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            actual,
+            vec![
+                EXPECTED_REGEX_DFA_MATCH_COUNT_BYTES.to_vec(),
+                EXPECTED_REGEX_DFA_MATCHES_BYTES.to_vec(),
+            ],
+            "Fix: registered regex DFA expected bytes must equal the reference result"
+        );
+    }
 
     /// Single-pass DFA replay from the start state, the exact semantics the
     /// megakernel batch dispatcher uses (one pass per file, no per-position
