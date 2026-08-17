@@ -471,6 +471,11 @@ fn certificate_strength_controls_witnessed_law_detection() {
 // I16  -  Registry linkage and feature boundary discipline
 // =======================================================================
 
+/// WHY: `vyre-conform --no-default-features` provides portable, dependency-light
+/// verification without requiring concrete GPU drivers or toolchains. If
+/// `vyre-registry-link` defaults are not explicitly disabled, Cargo resolves
+/// its default features (`cuda`, `metal`, `spirv`, `wgpu`) and pulls concrete
+/// drivers into no-default builds.
 #[test]
 fn conform_manifest_disables_registry_link_default_features() {
     let manifest_content = include_str!("../Cargo.toml");
@@ -486,8 +491,48 @@ fn conform_manifest_disables_registry_link_default_features() {
         Some(false),
         "vyre-registry-link dependency in vyre-conform must explicitly declare default-features = false so --no-default-features does not link unwanted GPU drivers"
     );
+
+    let features = reg_link
+        .get("features")
+        .and_then(toml::Value::as_array)
+        .expect("vyre-registry-link features must be declared as an array");
+    let feature_strs: Vec<&str> = features.iter().filter_map(toml::Value::as_str).collect();
+    assert!(
+        feature_strs.contains(&"operations"),
+        "vyre-registry-link dependency must enable operations feature in baseline dependencies"
+    );
+    assert!(
+        feature_strs.contains(&"reference"),
+        "vyre-registry-link dependency must enable reference feature in baseline dependencies"
+    );
+
+    let gpu_feature = manifest
+        .get("features")
+        .and_then(|f| f.get("gpu"))
+        .and_then(toml::Value::as_array)
+        .expect("vyre-conform must declare a gpu feature array");
+    let gpu_feature_strs: Vec<&str> = gpu_feature
+        .iter()
+        .filter_map(toml::Value::as_str)
+        .collect();
+    assert!(
+        gpu_feature_strs.contains(&"vyre-registry-link/cuda"),
+        "vyre-conform gpu feature must enable vyre-registry-link/cuda"
+    );
+    assert!(
+        gpu_feature_strs.contains(&"vyre-registry-link/metal"),
+        "vyre-conform gpu feature must enable vyre-registry-link/metal"
+    );
+    assert!(
+        gpu_feature_strs.contains(&"vyre-registry-link/wgpu"),
+        "vyre-conform gpu feature must enable vyre-registry-link/wgpu"
+    );
 }
 
+/// WHY: Derives the linked driver subset at run time from
+/// `vyre_registry_link::backend::DECLARED_SOURCES`. In portable (`not(feature = "gpu")`)
+/// builds, only the reference CPU driver may be linked; every other declared concrete
+/// GPU driver must be absent. In `gpu` builds, the expected GPU drivers must be present.
 #[test]
 fn linked_backend_sources_honor_feature_boundary() {
     let sources = vyre_registry_link::backend::linked_backend_source_names();
@@ -498,21 +543,58 @@ fn linked_backend_sources_honor_feature_boundary() {
 
     #[cfg(not(feature = "gpu"))]
     {
+        for &declared in vyre_registry_link::backend::DECLARED_SOURCES {
+            if declared == "vyre-driver-reference" {
+                assert!(
+                    sources.contains(&declared),
+                    "reference backend {declared} must be linked in portable/no-default build"
+                );
+            } else {
+                assert!(
+                    !sources.contains(&declared),
+                    "vyre-conform without gpu feature must not link concrete driver {declared}"
+                );
+            }
+        }
+    }
+
+    #[cfg(feature = "gpu")]
+    {
         assert!(
-            !sources.contains(&"vyre-driver-cuda"),
-            "vyre-conform without gpu feature must not link cuda backend"
+            sources.contains(&"vyre-driver-cuda"),
+            "vyre-conform with gpu feature must link cuda driver"
         );
         assert!(
-            !sources.contains(&"vyre-driver-metal"),
-            "vyre-conform without gpu feature must not link metal backend"
+            sources.contains(&"vyre-driver-metal"),
+            "vyre-conform with gpu feature must link metal driver"
+        );
+        assert!(
+            sources.contains(&"vyre-driver-wgpu"),
+            "vyre-conform with gpu feature must link wgpu driver"
         );
         assert!(
             !sources.contains(&"vyre-driver-spirv"),
-            "vyre-conform without gpu feature must not link spirv backend"
-        );
-        assert!(
-            !sources.contains(&"vyre-driver-wgpu"),
-            "vyre-conform without gpu feature must not link wgpu backend"
+            "vyre-conform gpu feature does not link spirv driver"
         );
     }
+}
+
+/// WHY: Operations and reference backend must remain accessible and functional
+/// under all feature selections, including `--no-default-features`.
+#[test]
+fn operations_and_reference_available_in_all_configurations() {
+    let ops = vyre_registry_link::operation::live_operation_registry();
+    assert!(
+        ops.iter().len() > 0,
+        "operations feature on vyre-registry-link must supply non-empty operation registry"
+    );
+
+    let backends = vyre_registry_link::backend::live_backend_registry()
+        .expect("backend registry must initialize in all feature configurations");
+    assert!(
+        backends
+            .iter()
+            .any(|reg| reg.id == "cpu-ref" || reg.reference_oracle),
+        "reference backend (cpu-ref) must be present in live_backend_registry in all configurations"
+    );
 }
