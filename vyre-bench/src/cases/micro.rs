@@ -295,32 +295,32 @@ mod tests {
         },
         PinnedWorkload {
             id: "foundation.dfa_match.256k",
-            program: "859a41f1108f8b89e7bddd0bf9d5367555c2fe50a7f5610858e19be509ffd576",
+            program: "f8ca079d44eb6d76653592ea00ce804d29280afda9f765c2fe2b742d4218f0c6",
             fixture: "0a747a3ac1a8d7831a36f7120a33ece13c9d34dfecda5493bc98ef825c05a435",
         },
         PinnedWorkload {
             id: "foundation.gather.u32.1m",
-            program: "fb4d840bf5761203638d82ed1b163cb919fcbf48a34f1dbe078fbfdcd6ca4581",
+            program: "5981d9747958156ebcddeff90b2c42c5c75b3d1254f07f7224ee538880cb7ce2",
             fixture: "556f2bccabd62d6d434e97f155a78b1a5dbca9a4e1a8ab9993dc7a19d2aa1217",
         },
         PinnedWorkload {
             id: "foundation.histogram.u32_256.1m",
-            program: "9ea0006edd469c9f189a8e1f45f236ded5c998cf7fc62d118ce0f78f8ddf03f6",
+            program: "0850ea4e7fc544831614e83b9f1eafb9f2cb607ffb5c9254bc56972c76f23634",
             fixture: "b09c20e4f186708fcb827e0949aac9c60a49340870ee3eb25f8404d56cec641b",
         },
         PinnedWorkload {
             id: "foundation.matmul.256",
-            program: "b47558ecc1de3f74f9493e4401df07f2923198c7838e69d33fd5db2879c95913",
+            program: "cd3fddca15b38f5c2e83fe9f2407bb0551344841e45525cd0244453c1efddac2",
             fixture: "9d8d7b3b1340fb8ebe3f170166045fa644674ffea70713121e35c58af9453831",
         },
         PinnedWorkload {
             id: "foundation.stencil3.u32.1m",
-            program: "6253da7932aee0ef8cbf5c103f635ee098eab27fae32821cf0de8b2da0e47b21",
+            program: "ff478d9f4dd2073f00401c89727d2f3fdbf910d14d0bed1e0a4277970827d0ea",
             fixture: "183866c61def7900b8ad927a5fb4d5b9847ac4274951dacb9334afb64fddb29e",
         },
         PinnedWorkload {
             id: "foundation.transpose.512",
-            program: "4891fb16026428d757df8521c865a48a68c3053d4327121674f6a4ec6f7641a2",
+            program: "54e503db9feec0ff93b6d61a86a83be44dd8e62cd145db9f79a7beb1ff18c0fa",
             fixture: "a9d0dfc6e815cbbae4077e4d2d200c67452c8db5d0e3f950bfc786dc1c459e0c",
         },
     ];

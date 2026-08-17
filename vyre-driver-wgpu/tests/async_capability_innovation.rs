@@ -9,7 +9,9 @@
 //! - Backend max_workgroup_size is nonzero on any real GPU
 
 mod harness;
-use harness::{add_one_program, shared_live_backend as live_backend};
+use harness::{
+    add_one_expected, add_one_input, add_one_program, shared_live_backend as live_backend,
+};
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

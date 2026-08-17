@@ -197,6 +197,11 @@ pub(super) fn materialize_skewed_csr_active_queue(
             fixture.stats.active_sources
         )));
     }
+    if active_queue.len() < expected as usize {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "{context} queue_capacity {queue_capacity} cannot hold {expected} active sources. Fix: increase queue capacity.",
+        )));
+    }
     Ok(active_queue)
 }
 
