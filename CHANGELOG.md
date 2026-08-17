@@ -5984,6 +5984,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   against the `WGPU pipeline` label and directs the caller to split the
   dispatch batch before readback, plus the grow, hold, shrink and empty
   boundaries of the resize itself.
+- The WGPU release suite now completes on the portable target limits it
+  records. The metadata workload uses a 256-lane workgroup, the grouped INT4
+  workload keeps its one-dimensional dispatch below 65,535 workgroups without
+  changing its per-item mathematics or release threshold, and
+  `release-benchmarks` declares ownership of the WGPU suite and all seventeen
+  WGPU workload artifacts.
 - The framing module doc in vyre-foundation named the envelope tag VIR0 in two
   places while the constant beside it is VYRE, so a reader inspecting a blob
   byte by byte compared against a tag no encoder has written.

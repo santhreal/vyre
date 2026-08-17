@@ -38,7 +38,7 @@ struct MetadataConditionPrepared {
 
 pub(super) const METADATA_RECORDS: u32 = 1_048_576;
 
-pub(super) const METADATA_WORKGROUP_SIZE: u32 = 512;
+pub(super) const METADATA_WORKGROUP_SIZE: u32 = 256;
 
 pub(super) const METADATA_OUTPUT_RESET_BYTES: u64 = 4;
 impl BenchCase for MetadataConditionBatch {

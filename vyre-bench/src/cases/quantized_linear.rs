@@ -35,7 +35,8 @@ const SIDECAR_WORDS: u32 = GROUP_COUNT * OUT_DIM;
 const MAC_COUNT: u64 = (IN_DIM as u64) * (OUT_DIM as u64);
 const CPU_BASELINE_SAMPLES: usize = 9;
 const RESIDENT_SAMPLE_SETS: usize = 8;
-const INFERENCE_BATCH_SIZE: u32 = 256;
+// Fifteen eight-row tiles keep the 4,096-output dispatch below the portable 65,535-axis limit.
+const INFERENCE_BATCH_SIZE: u32 = 120;
 
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Release,

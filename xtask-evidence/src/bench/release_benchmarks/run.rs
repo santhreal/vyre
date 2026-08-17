@@ -1068,12 +1068,23 @@ mod tests {
                 "Fix: newly registered release workload `{artifact}` must be declared in RELEASE_BENCHMARKS_ARTIFACTS"
             );
         }
+        let derived_wgpu_artifacts: std::collections::BTreeSet<String> = derived_workload_artifacts
+            .iter()
+            .map(|artifact| prefixed_benchmark_artifact(artifact, "wgpu"))
+            .collect();
+        for artifact in &derived_wgpu_artifacts {
+            assert!(
+                xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS.contains(&artifact.as_str()),
+                "Fix: WGPU comparison artifact `{artifact}` must be declared in RELEASE_BENCHMARKS_ARTIFACTS"
+            );
+        }
 
         let auxiliary_artifacts = [
             "release/evidence/benchmarks/bench-release-axes.json",
             "release/evidence/benchmarks/cpu-only-100x-proof.json",
             "release/evidence/benchmarks/cuda-ptx-patterns.json",
             "release/evidence/benchmarks/cuda-release-suite.json",
+            "release/evidence/benchmarks/wgpu-fallback-suite.json",
             "release/evidence/benchmarks/dataflow-analysis-release.json",
             xtask::artifact_paths::FRONTIER_LEADERBOARD_ARTIFACT,
             "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
@@ -1087,6 +1098,7 @@ mod tests {
             .map(|artifact| (*artifact).to_string())
             .collect();
         expected_full_set.extend(derived_workload_artifacts);
+        expected_full_set.extend(derived_wgpu_artifacts);
 
         let declared_set: std::collections::BTreeSet<String> =
             xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS
