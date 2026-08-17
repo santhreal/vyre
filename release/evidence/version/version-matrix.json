@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:6cbb924091db8af320478a53ab1f5b6218729c2f:dirty=false",
+  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=false",
   "schema_version": 2,
   "requested_vyre_release": "0.7.2",
   "tag_story": {
@@ -444,13 +444,6 @@
     },
     {
       "manifest": "vyre-pass-engine/Cargo.toml",
-      "dependency": "vyre-libs",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "vyre-reference/Cargo.toml",
       "dependency": "vyre-libs",
       "version": "0.7.2",
       "expected": "0.7.2",
