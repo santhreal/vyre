@@ -74,9 +74,9 @@ pub(super) const DIVISORS: [u32; 15] = [
 ];
 
 #[test]
-fn mod_by_seven_lowers_to_division_back_multiply() {
-    // Shape contract: x % 7 → x - (x / 7) * 7.
-    let reduced = reduce_expr(&rem_u32(7)).expect("Fix: x % 7 must strength-reduce");
+fn mod_by_non_fixup_constant_lowers_to_division_back_multiply() {
+    // Shape contract: x % 3 → x - (x / 3) * 3 (non-fixup divisor).
+    let reduced = reduce_expr(&rem_u32(3)).expect("Fix: x % 3 must strength-reduce");
     match &reduced {
         Expr::BinOp {
             op: BinOp::Sub,
@@ -93,22 +93,52 @@ fn mod_by_seven_lowers_to_division_back_multiply() {
                     right: divisor,
                     ..
                 } => assert!(
-                    matches!(divisor.as_ref(), Expr::LitU32(7)),
-                    "subtrahend must back-multiply by the divisor 7: {divisor:?}"
+                    matches!(divisor.as_ref(), Expr::LitU32(3)),
+                    "subtrahend must back-multiply by the divisor 3: {divisor:?}"
                 ),
-                other => panic!("expected (quotient * 7), got {other:?}"),
+                other => panic!("expected (quotient * 3), got {other:?}"),
             }
         }
-        other => panic!("expected x - (x / 7) * 7, got {other:?}"),
+        other => panic!("expected x - (x / 3) * 3, got {other:?}"),
+    }
+}
+
+#[test]
+fn mod_by_fixup_divisor_is_deliberately_untransformed_to_prevent_duplication() {
+    // Fixup remainder evaluates the dividend 1 + 3 = 4 times.
+    // That exceeds MAX_DUPLICATED_NODES (2) even for a leaf variable, so
+    // fixup modulo is deliberately not rewritten into a 4-copy tree.
+    let fixup_divisors: Vec<u32> = DIVISORS
+        .iter()
+        .copied()
+        .filter(|&d| super::arithmetic::compute_div_magic(d).needs_fixup)
+        .collect();
+    assert!(
+        !fixup_divisors.is_empty(),
+        "DIVISORS must contain at least one fixup divisor"
+    );
+    for d in fixup_divisors {
+        assert!(
+            reduce_expr(&rem_u32(d)).is_none(),
+            "x % {d} must not be rewritten because 4 dividend copies exceed duplication budget"
+        );
     }
 }
 
 #[test]
 fn mod_by_constant_is_exact_under_wrapping() {
-    // Differential truth: the rewritten tree evaluates to the same value as
-    // the real `%` operator for every (divisor, input) pair, including the
+    // Differential truth: for non-fixup divisors whose duplication cost stays
+    // within budget, the rewritten tree evaluates to the same value as the
+    // real `%` operator for every (divisor, input) pair, including the
     // divisor-boundary values where floor(x/d) ticks over.
     for &d in &DIVISORS {
+        if super::arithmetic::compute_div_magic(d).needs_fixup {
+            assert!(
+                reduce_expr(&rem_u32(d)).is_none(),
+                "d={d} with fixup must not strength-reduce modulo (exceeds duplication limit)"
+            );
+            continue;
+        }
         let reduced =
             reduce_expr(&rem_u32(d)).unwrap_or_else(|| panic!("Fix: x % {d} must strength-reduce"));
         for &x in &FUZZ_INPUTS {

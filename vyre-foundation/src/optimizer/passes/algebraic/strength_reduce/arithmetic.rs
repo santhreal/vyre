@@ -526,8 +526,8 @@ pub(super) fn div_operand_copies(d: u32) -> u32 {
 /// Emit the Granlund-Montgomery sequence for `dividend / d`.
 ///
 /// Returns `None` if `d` is 0, 1, or a power of two (handled elsewhere), or if
-/// the fixup form would have to evaluate `dividend` twice and that is not safe.
-///
+/// evaluating `dividend` (three times for the fixup form, once for non-fixup)
+/// exceeds the duplication budget or is not safe.
 /// For non-fixup: `mulhi(n, M) >> s`  -  2 instructions, ~5 GPU cycles.
 /// For fixup:     `t = mulhi(n, M); (t + ((n - t) >> 1)) >> (s - 1)`
 ///                 -  5 instructions, ~9 GPU cycles.
@@ -670,7 +670,7 @@ mod tests {
 
     #[test]
     fn granlund_montgomery_duplication_budget_enforcement() {
-        // Fixup divisors (e.g. 7, 14, 25, 27) vs non-fixup divisors (e.g. 3, 5, 6, 9)
+        // Fixup divisors (e.g. 7, 14) vs non-fixup divisors (e.g. 3, 5, 6, 9)
         assert!(compute_div_magic(7).needs_fixup);
         assert!(compute_div_magic(14).needs_fixup);
         assert!(!compute_div_magic(3).needs_fixup);
@@ -717,5 +717,41 @@ mod tests {
             granlund_montgomery_div(&three_node_dividend, 7).is_none(),
             "fixup division of 3-node expr must be rejected"
         );
+    }
+
+    fn count_var_in_expr(expr: &Expr, name: &str) -> u32 {
+        let mut count = 0;
+        crate::visit::for_each_subexpr(expr, &mut |candidate| {
+            if let Expr::Var(v) = candidate {
+                if v.as_str() == name {
+                    count += 1;
+                }
+            }
+        });
+        count
+    }
+
+    #[test]
+    fn div_operand_copies_matches_emitted_ast_occurrences() {
+        for d in 2u32..=1000 {
+            if d.is_power_of_two() {
+                continue;
+            }
+            let copies = div_operand_copies(d);
+            let magic = compute_div_magic(d);
+            if magic.needs_fixup {
+                assert_eq!(copies, 3, "d={d} needs fixup so copies must be 3");
+            } else {
+                assert_eq!(copies, 1, "d={d} does not need fixup so copies must be 1");
+            }
+            let emitted = granlund_montgomery_div(&Expr::var("dividend_leaf"), d)
+                .expect("leaf dividend must strength-reduce");
+            let actual_ast_count = count_var_in_expr(&emitted, "dividend_leaf");
+            assert_eq!(
+                actual_ast_count, copies,
+                "d={d} (fixup={}): AST occurrences ({actual_ast_count}) must match div_operand_copies ({copies})",
+                magic.needs_fixup
+            );
+        }
     }
 }

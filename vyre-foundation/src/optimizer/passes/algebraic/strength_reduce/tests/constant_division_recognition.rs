@@ -338,25 +338,45 @@ fn lower_to_fixpoint(expr: &Expr) -> Expr {
 fn recognition_emits_fewer_operations_than_lowering_the_remainder() {
     // The measurement the divisibility rewrite exists for: the general
     // remainder lowering builds a multiply-high, a shift, a fixup on some
-    // divisors, a multiply, a subtract and a compare, and reads the operand
-    // twice. Lemire's test is a multiply, a rotate and a compare.
-    for divisor in [3u32, 5, 7, 10, 100, 1_000, 1_000_000_007] {
+    // divisors, a multiply, a subtract and a compare. Lemire's direct test
+    // is a multiply, a rotate and a compare (<= 3 operations in its initial
+    // recognized IR shape before fixpoint strength-reduction expands the multiply).
+    //
+    // Every supported divisor satisfies optimized_recognized <= lowered and its
+    // direct recognized IR stays within <= 3 operations.
+    for divisor in [3u32, 5, 6, 7, 9, 10, 11, 12, 100, 1_000, 65_535, 1_000_000_007] {
         let source = remainder_compared_to_zero(divisor, BinOp::Eq);
+        let recognized_source =
+            recognize_source_shape(&source).expect("divisibility test must fire");
+        let direct_recognized = operation_count(&recognized_source);
+        let optimized_recognized = operation_count(&lower_to_fixpoint(&recognized_source));
         let lowered = operation_count(&lower_to_fixpoint(&source));
-        let recognized = operation_count(&lower_to_fixpoint(
-            &recognize_source_shape(&source).expect("divisibility test must fire"),
-        ));
+
         assert!(
-            recognized < lowered,
-            "d={divisor}: recognition emits {recognized} operations, lowering emits {lowered}"
+            direct_recognized <= 3,
+            "d={divisor}: Lemire's direct recognized IR must stay within three operations, got {direct_recognized}"
         );
+        assert!(
+            optimized_recognized <= lowered,
+            "d={divisor}: optimized recognition ({optimized_recognized} ops) must not exceed lowering ({lowered} ops)"
+        );
+    }
+
+    // Explicitly verify the measured baseline on standard expanding divisors.
+    for divisor in [3u32, 5, 6, 9, 10, 11, 12] {
+        let source = remainder_compared_to_zero(divisor, BinOp::Eq);
+        let recognized_source =
+            recognize_source_shape(&source).expect("divisibility test must fire");
+        let optimized_recognized = operation_count(&lower_to_fixpoint(&recognized_source));
+        let lowered = operation_count(&lower_to_fixpoint(&source));
+
         assert!(
             lowered >= 5,
-            "d={divisor}: the remainder lowering shrank to {lowered} operations;              the measured baseline for this claim was five"
+            "d={divisor}: expanding remainder lowering must emit >= 5 operations, got {lowered}"
         );
         assert!(
-            recognized <= 3,
-            "d={divisor}: Lemire's test must stay within three operations, got {recognized}"
+            optimized_recognized < lowered,
+            "d={divisor}: recognition must strictly improve expanding lowering ({optimized_recognized} < {lowered})"
         );
     }
 }

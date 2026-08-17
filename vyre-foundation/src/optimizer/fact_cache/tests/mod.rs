@@ -320,6 +320,114 @@ fn derive_type_facts_assign_unknown_evicts_stale_facts() {
 }
 
 #[test]
+fn derive_type_facts_let_shadowing_unknown_evicts_stale_facts() {
+    // Sibling case to Assign unknown:
+    // 1. Let binding with valid type establishes var_types entry.
+    // 2. Subsequent Let binding with unknown type evicts stale var_types entry.
+    // 3. Dependent variable reference after unknown Let binding cannot resolve stale type.
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("x", Expr::f32(1.0)),
+            Node::let_bind("x", Expr::var("unbound_unknown_ident")),
+            Node::let_bind("dep_on_unknown", Expr::var("x")),
+            Node::let_bind("y", Expr::f32(1.0)),
+            Node::let_bind("y", Expr::u32(100)),
+            Node::let_bind("dep_on_y", Expr::var("y")),
+        ],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().unwrap();
+
+    assert_eq!(
+        types.var_types.get(&Ident::from("x")),
+        None,
+        "shadowing let with unknown expression must evict stale type fact"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("dep_on_unknown")),
+        None,
+        "variable bound to evicted variable cannot resolve stale type"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("y")),
+        Some(&DataType::U32),
+        "shadowing let with known expression updates type fact"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("dep_on_y")),
+        Some(&DataType::U32),
+        "variable bound to updated variable resolves new type"
+    );
+}
+
+#[test]
+fn derive_type_facts_loop_induction_shadowing_same_name_restoration() {
+    // Tests:
+    // 1. Outer induction variable 'i' is U32 in outer loop body.
+    // 2. Inner nested loop shadows 'i' with same induction variable name 'i'.
+    // 3. After inner loop exits, 'i' is still U32 in outer loop.
+    // 4. After outer loop exits, 'i' is restored to pre-outer-loop state (F32 if shadowed, None if fresh).
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("i", Expr::f32(3.14)),
+            Node::Loop {
+                var: Ident::from("i"),
+                from: Expr::u32(0),
+                to: Expr::u32(10),
+                body: vec![
+                    Node::let_bind("outer_dep", Expr::add(Expr::var("i"), Expr::u32(1))),
+                    Node::Loop {
+                        var: Ident::from("i"),
+                        from: Expr::u32(0),
+                        to: Expr::u32(5),
+                        body: vec![Node::let_bind(
+                            "inner_dep",
+                            Expr::add(Expr::var("i"), Expr::u32(2)),
+                        )],
+                    },
+                    Node::let_bind("post_inner_dep", Expr::add(Expr::var("i"), Expr::u32(3))),
+                ],
+            },
+            Node::let_bind("post_outer_dep", Expr::add(Expr::var("i"), Expr::f32(1.0))),
+        ],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().unwrap();
+
+    assert_eq!(
+        types.var_types.get(&Ident::from("outer_dep")),
+        Some(&DataType::U32),
+        "outer loop induction variable must type as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("inner_dep")),
+        Some(&DataType::U32),
+        "shadowed inner loop induction variable must type as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("post_inner_dep")),
+        Some(&DataType::U32),
+        "outer induction variable must remain U32 after inner loop exit"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("i")),
+        Some(&DataType::F32),
+        "original variable type must be restored after outer loop completes"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("post_outer_dep")),
+        Some(&DataType::F32),
+        "post-loop expression must use restored F32 type"
+    );
+}
+
+#[test]
 fn invalidate_clears_all() {
     let program = Program::wrapped(
         vec![BufferDecl::read_write("out", 0, DataType::U32)],

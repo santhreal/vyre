@@ -50,11 +50,14 @@ impl TypeFactCtx {
     fn infer_nodes_types(&mut self, nodes: &[Node]) {
         for node in nodes {
             match node {
-                Node::Let { name, value } => {
-                    if let Some(ty) = expr_type(value, self) {
+                Node::Let { name, value } => match expr_type(value, self) {
+                    Some(ty) => {
                         self.facts.var_types.insert(name.clone(), ty);
                     }
-                }
+                    None => {
+                        self.facts.var_types.remove(name);
+                    }
+                },
                 Node::Assign { name, value } => match expr_type(value, self) {
                     Some(ty) => {
                         self.facts.var_types.insert(name.clone(), ty);
