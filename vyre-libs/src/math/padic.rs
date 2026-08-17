@@ -55,7 +55,7 @@ inventory::submit! {
         || hensel_lift_step("x", "f_x", "inv_f_prime", "out", 4),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            let to_fixed = |v: f64| (v * 65536.0).round() as u32;
+            let to_fixed = |v: f64| (v * 65536.0).round() as i32 as u32;
             vec![vec![
                 to_bytes(&[to_fixed(2.0), to_fixed(3.0), to_fixed(5.0), to_fixed(7.0)]),
                 to_bytes(&[to_fixed(0.1), to_fixed(0.2), to_fixed(-0.1), to_fixed(0.0)]),
@@ -64,32 +64,12 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![
-                vec![
-                    0x00, 0x00, 0x02, 0x00, // 2.0
-                    0x00, 0x00, 0x03, 0x00, // 3.0
-                    0x00, 0x00, 0x05, 0x00, // 5.0
-                    0x00, 0x00, 0x07, 0x00, // 7.0
-                ],
-                vec![
-                    0x9a, 0x19, 0x00, 0x00, // 0.1
-                    0x33, 0x33, 0x00, 0x00, // 0.2
-                    0x00, 0x00, 0x00, 0x00, // -0.1
-                    0x00, 0x00, 0x00, 0x00, // 0.0
-                ],
-                vec![
-                    0x00, 0x00, 0x01, 0x00, // 1.0
-                    0x00, 0x80, 0x00, 0x00, // 0.5
-                    0x00, 0x00, 0x02, 0x00, // 2.0
-                    0x00, 0x00, 0x01, 0x00, // 1.0
-                ],
-                vec![
-                    0x66, 0xe6, 0x01, 0x00, // 1.9
-                    0x66, 0xe6, 0x02, 0x00, // 2.9
-                    0x33, 0x33, 0x05, 0x00, // 5.2
-                    0x00, 0x00, 0x07, 0x00, // 7.0
-                ],
-            ]]
+            vec![vec![vec![
+                0x66, 0xe6, 0x01, 0x00, // 1.9
+                0x67, 0xe6, 0x02, 0x00, // 2.9
+                0x34, 0x33, 0x05, 0x00, // 5.2
+                0x00, 0x00, 0x07, 0x00, // 7.0
+            ]]]
         }),
     )
 }

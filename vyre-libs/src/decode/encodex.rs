@@ -136,7 +136,7 @@ const EXPECTED_ENCODEX_HIST_0: [u8; 1024] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-const EXPECTED_ENCODEX_ENC_0: [u8; 4] = [1, 0, 0, 0];
+const EXPECTED_ENCODEX_ENC_0: [u8; 4] = [0, 0, 0, 0];
 const EXPECTED_ENCODEX_HIST_1: [u8; 1024] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -171,7 +171,7 @@ const EXPECTED_ENCODEX_HIST_1: [u8; 1024] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-const EXPECTED_ENCODEX_ENC_1: [u8; 4] = [2, 0, 0, 0];
+const EXPECTED_ENCODEX_ENC_1: [u8; 4] = [1, 0, 0, 0];
 const EXPECTED_ENCODEX_HIST_2: [u8; 1024] = [
     3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -206,7 +206,7 @@ const EXPECTED_ENCODEX_HIST_2: [u8; 1024] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-const EXPECTED_ENCODEX_ENC_2: [u8; 4] = [3, 0, 0, 0];
+const EXPECTED_ENCODEX_ENC_2: [u8; 4] = [2, 0, 0, 0];
 const EXPECTED_ENCODEX_HIST_3: [u8; 1024] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -298,6 +298,21 @@ mod tests {
             &histogram,
             input.len() as u32,
         )
+    }
+
+    /// WHY: registration literals must stay synchronized with independent IR execution.
+    #[test]
+    fn registration_outputs_match_reference_execution() {
+        let expected_encodings = [
+            EXPECTED_ENCODEX_ENC_0,
+            EXPECTED_ENCODEX_ENC_1,
+            EXPECTED_ENCODEX_ENC_2,
+            EXPECTED_ENCODEX_ENC_3,
+        ];
+        for (input, expected) in FIXTURE_INPUTS.iter().zip(expected_encodings) {
+            let (_, actual) = run(input);
+            assert_eq!(actual.to_le_bytes(), expected);
+        }
     }
 
     #[test]

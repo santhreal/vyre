@@ -307,10 +307,10 @@ pub(crate) fn dominance_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_nodes
         vec![0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0], // pg_edge_offsets
         vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // pg_edge_targets
-        vec![8, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0], // pg_edge_kind_mask (DOMINANCE=8)
-        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // pg_node_tags
-        vec![8, 0, 0, 0],                                     // frontier_in = {3} (0b1000)
-        vec![8, 0, 0, 0],                                     // frontier_out accumulator seed
+        vec![16, 0, 0, 0, 16, 0, 0, 0, 16, 0, 0, 0, 16, 0, 0, 0], // pg_edge_kind_mask (DOMINANCE=16)
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],     // pg_node_tags
+        vec![8, 0, 0, 0],                                         // frontier_in = {3} (0b1000)
+        vec![8, 0, 0, 0],                                         // frontier_out accumulator seed
     ]]
 }
 
@@ -540,6 +540,12 @@ mod tests {
 
     #[test]
     fn registration_fixtures_match_exact_byte_constants() {
+        let dominance_inputs = dominance_fixture_inputs();
+        let dominance_masks = dominance_inputs[0][3]
+            .chunks_exact(4)
+            .map(|bytes| u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+            .collect::<Vec<_>>();
+        assert_eq!(dominance_masks, vec![edge_kind::DOMINANCE; 4]);
         assert_eq!(
             forward_reach_fixture_expected(),
             vec![vec![vec![0x03, 0x00, 0x00, 0x00]]]

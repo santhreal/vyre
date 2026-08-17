@@ -4469,6 +4469,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   architecture, migration, release, operation, and testing documents are
   explicitly archived or superseded, generated views identify their source, and
   crate-local paths remain reproducible in a clean checkout.
+- The bounded-by-comparison registration fixture now uses the canonical
+  dominance edge bit, restoring the documented backward ancestor step instead
+  of returning only its seed frontier.
 - The backend error-code catalog is generated from the enum that emits it.
   `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant
   missing from the catalog a compile error. The previous markdown table, and
@@ -4497,6 +4500,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The GPU e-graph mirror is split into the refusals, the columnar snapshot, the
   device image, the row signature, the merge and the measured bridge, and its
   suite moved to an integration test.
+- The registered encodex operation now records the exact ASCII, UTF-8,
+  UTF-16LE, and ISO-8859-1 classifier identifiers produced by its canonical
+  fixtures.
 - The async rule roster derives its covered set from the validation catalog and
   the suite sources at run time, which closed a gap where the empty-tag rule
   V128 had no test case in the tree.
@@ -4796,8 +4802,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   and weighted-write primitives with explicit KV-head bases. Overflowing row or
   element counts fail with a sharding error before buffer declarations are
   built.
+- The registered Hensel lift operation now supplies one exact output buffer,
+  preserves signed fixed-point fixture inputs, and matches the kernel's
+  truncation semantics.
 - `xtask heuristic-audit` now resolves both standalone Vyre checkouts and the
   enclosing Santh workspace without duplicating the Vyre path.
+- The registered byte-histogram operation now places its non-ASCII counts in
+  the exact 0xA9 and 0xC3 bins supplied by the canonical fixture.
 - The hot-path roster names the three modules the columnar fact view split
   into, and the lowering boundary budget drops to the zero it measures now that
   its two format calls are gone.
@@ -5384,6 +5395,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   permits publication, including CUDA and every emitter/runtime library. The
   manifest-derived gate rejects both missing snapshots and stale snapshots for
   packages that no longer publish.
+- The registered Python 3.12 lexer now records the current keyword, identifier,
+  delimiter, newline, and comment token identifiers for its canonical source
+  fixture.
 - Empty QK-gain tensor shapes now declare a zero-byte output range instead of
   an unknown-size backend allocation, while overflowing positive shapes fail
   closed with an actionable trap program instead of wrapping their element
@@ -5660,6 +5674,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   masks each count, folds to zero once the sum reaches the width, and fuses
   otherwise, checked against an evaluation of the chain it replaces for every
   count pair up to 40.
+- The registered shunting-yard operation now records the identifier node kind
+  and four-word next offset produced by its canonical one-token statement
+  fixture.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
 - The `vyre-primitives::hardware::subgroup_add` intrinsic performed no subgroup

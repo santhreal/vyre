@@ -15,7 +15,7 @@ use super::{ast_shunting_yard_with_capacity, MAX_TOK_SCAN, OP_ID};
 const AST_NODES_BYTE_LEN: usize = (MAX_TOK_SCAN as usize) * 16;
 static EXPECTED_SHUNTING_AST_NODES_BYTES: [u8; AST_NODES_BYTE_LEN] = {
     let mut arr = [0u8; AST_NODES_BYTE_LEN];
-    arr[0] = 1;
+    arr[0] = 2;
     arr[4] = 255;
     arr[5] = 255;
     arr[6] = 255;
