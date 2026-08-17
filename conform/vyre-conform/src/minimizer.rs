@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
 use vyre_foundation::validate::validate;
+use vyre_foundation::visit::child_bodies;
 
 /// Budget parameters for IR minimization.
 #[derive(Debug, Clone, Copy)]
@@ -189,26 +190,8 @@ impl CounterexampleMinimizer {
 fn count_nodes(nodes: &[Node]) -> usize {
     let mut total = nodes.len();
     for node in nodes {
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                total += count_nodes(then);
-                total += count_nodes(otherwise);
-            }
-            Node::Loop { body, .. } => {
-                total += count_nodes(body);
-            }
-            Node::Block(inner) => {
-                total += count_nodes(inner);
-            }
-            Node::Region { body, .. } => {
-                total += count_nodes(body);
-            }
-            Node::TileElementwise { body, .. } => {
-                total += count_nodes(body);
-            }
-            _ => {}
+        for body in child_bodies(node) {
+            total += count_nodes(body);
         }
     }
     total

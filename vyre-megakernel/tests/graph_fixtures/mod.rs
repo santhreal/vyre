@@ -11,8 +11,8 @@
 #![allow(dead_code)]
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
+    ValueContract, ValueLifetime,
 };
 
 /// A `u32` value of symbolic length that lives for one invocation.
