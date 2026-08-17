@@ -42,11 +42,11 @@ const FIX: &str = "remove the upward dependency, or move the crate to the layer 
 const LAYER_ORDER: &[&str] = &[
     "standalone-tooling",
     "foundation",
-    "test-tooling",
     "primitives",
     "lowering",
     "libraries",
     "semantics",
+    "test-tooling",
     "pass-engine",
     "compiler-boundary",
     "emitter",

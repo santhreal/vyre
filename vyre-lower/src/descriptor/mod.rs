@@ -388,7 +388,7 @@ pub enum KernelOpKind {
         /// Vector width (2 or 4).
         width: u8,
     },
-    /// Extract a scalar lane from a vector value. Operands: [vector_op_id].
+    /// Extract a scalar lane from a vector value. Operands: `[vector_op_id]`.
     /// Result is the scalar value at `lane` (0..width).
     ExtractLane {
         /// Lane index (0..width).

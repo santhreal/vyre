@@ -24,7 +24,7 @@
 //! DFA accepts starts at `i`, so its presence bit is OR'd into the row of the
 //! region that owns `i`. The result is bit-for-bit the literal-presence bitmap's
 //! regex counterpart, and its CPU oracle simply attributes
-//! [`AnchoredWindowValidator`] extractions to regions, one source of truth for
+//! `AnchoredWindowValidator` extractions to regions, one source of truth for
 //! the walk semantics.
 
 use vyre_foundation::composition::wrap_anonymous_region;
@@ -61,7 +61,7 @@ pub(crate) fn region_of(pos: u32, region_starts: &[u32]) -> usize {
 /// Returns a `region_starts.len() * regex_admission_presence_words(pattern_count)`
 /// word bitmap: bit `p & 31` of word `region * words + (p >> 5)` is set iff
 /// pattern `p` starts a match within that region. Reuses
-/// [`AnchoredWindowValidator`] for the walk (ONE source of truth) and attributes
+/// `AnchoredWindowValidator` for the walk (ONE source of truth) and attributes
 /// each extracted match's `start` to its region.
 #[cfg(test)]
 #[must_use]

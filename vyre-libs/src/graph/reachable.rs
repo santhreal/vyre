@@ -28,7 +28,7 @@ use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMIT
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::reachable_program";
 
-/// Error returned by [`reachable`] when the edge list contains a
+/// Error returned by `reachable` when the edge list contains a
 /// node index outside `0..node_count`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UnknownNode {
@@ -54,7 +54,7 @@ impl std::fmt::Display for UnknownNode {
 
 impl std::error::Error for UnknownNode {}
 
-/// Error returned by [`try_reachable`] for malformed graph input or allocation
+/// Error returned by `try_reachable` for malformed graph input or allocation
 /// failure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReachableError {

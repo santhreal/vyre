@@ -368,7 +368,7 @@ fn behavior_registrations(text: &str) -> Vec<(String, String)> {
                             from = start;
                             continue;
                         };
-                        let behavior = behavior.trim();
+                        let behavior = behavior.trim().trim_end_matches(',').trim();
                         if behavior.is_empty()
                             || behavior.contains('(')
                             || behavior.contains(')')
@@ -382,7 +382,7 @@ fn behavior_registrations(text: &str) -> Vec<(String, String)> {
                             continue;
                         }
                         if let Some(type_name) = behavior.rsplit("::").next() {
-                            let type_name = type_name.trim_end_matches(',').trim();
+                            let type_name = type_name.trim();
                             if !type_name.is_empty() && !name.is_empty() {
                                 registrations.push((type_name.to_string(), name.to_string()));
                             }
@@ -847,6 +847,44 @@ impl xtask::gate::GateBehavior for DependencyBehavior {
             BTreeSet::from(["dependency-name".to_string(), "imported-name".to_string()])
         );
     }
+
+    /// WHY: rustfmt formats long registration tuples across multiple lines with
+    /// a trailing comma after the behavior path. If the parser does not strip the
+    /// trailing comma, multi-line entries fail validation and are dropped.
+    #[test]
+    fn multiline_behavior_registration_with_trailing_comma_is_parsed() {
+        let source = r#"
+pub static GATES: &[(&'static str, &'static dyn GateBehavior)] = &[
+    (
+        "bench-crossback",
+        &bench::bench_crossback::BenchCrossbackGate,
+    ),
+    (
+        "operation-schema",
+        &docs::operation_schema::OperationSchemaGate,
+    ),
+];
+impl xtask::gate::GateBehavior for BenchCrossbackGate {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(Report::with_findings(vec![Finding::new("wrong", "fix it")]))
+    }
+}
+impl xtask::gate::GateBehavior for OperationSchemaGate {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        Ok(Report::with_findings(vec![Finding::new("wrong", "fix it")]))
+    }
+}
+"#;
+        let registrations: BTreeMap<String, String> =
+            behavior_registrations(source).into_iter().collect();
+        let sites = gate_run_bodies_registered(source, &registrations);
+        let names: BTreeSet<String> = sites.into_iter().map(|(name, _)| name).collect();
+        assert_eq!(
+            names,
+            BTreeSet::from(["bench-crossback".to_string(), "operation-schema".to_string()])
+        );
+    }
+
 
     /// WHY: a rule one call away from its finding is the common shape, and the
     /// walk has to follow it or every ratchet gate reads as unfailable. A helper

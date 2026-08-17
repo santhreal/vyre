@@ -63,7 +63,7 @@ pub struct FusedRegionEvidence {
 }
 
 /// CPU reference for the fused launch, the GPU parity oracle. Reuses
-/// [`AnchoredWindowValidator`] for the walk (ONE source of truth) and routes each
+/// `AnchoredWindowValidator` for the walk (ONE source of truth) and routes each
 /// extracted match into the three families by region and by role mask.
 #[cfg(test)]
 #[must_use]

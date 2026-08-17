@@ -284,7 +284,7 @@ pub const ANCHORED_WINDOW_MATCHES_BINDING: u32 = 8;
 /// `i < candidate_count`) loads `origin = candidates[i]`, seeds the DFA at state
 /// 0, and replays FORWARD over `[origin, min(origin + max_pattern_len,
 /// haystack_len))`, appending every `(pattern_id, origin, end)` the DFA accepts
-/// along the way, the GPU counterpart of [`AnchoredWindowValidator`], which is
+/// along the way, the GPU counterpart of `AnchoredWindowValidator`, which is
 /// its parity oracle. Emits the same `(id, start, end)` triple contract as the
 /// literal-AC dispatch (`match_count` + `matches[max_matches * 3]`), so a
 /// consumer reuses the existing hit-buffer readback.
