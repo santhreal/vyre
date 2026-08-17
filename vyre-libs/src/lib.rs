@@ -48,11 +48,13 @@ pub(crate) mod plumbing;
 
 #[cfg(feature = "graph")]
 pub use builder::csr;
+pub use builder::elementwise;
 pub use builder::range_ordering;
 pub use builder::state_machine;
 pub use builder::stencil;
 #[cfg(feature = "graph")]
 pub use builder::CsrTraversalComposer;
+pub use builder::ElementwiseComposer;
 pub use builder::TableStateMachineComposer;
 pub use builder::{check_same_shape, checked_element_count};
 pub use builder::{check_tensors, BuildOptions};

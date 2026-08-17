@@ -1,8 +1,7 @@
 //! Shared per-word unary bitset kernel builder.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program, UnOp};
 
 pub(crate) fn bitset_unary_word_program(
     op_id: &'static str,
@@ -11,27 +10,14 @@ pub(crate) fn bitset_unary_word_program(
     words: u32,
     op: UnOp,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
-    let body = vec![Node::store(
-        output,
-        t.clone(),
-        Expr::UnOp {
+    ElementwiseComposer::new(op_id, words)
+        .with_workgroup_size([256, 1, 1])
+        .add_input_storage(input, BufferAccess::ReadOnly, DataType::U32, words)
+        .add_output_storage(output, BufferAccess::ReadWrite, DataType::U32, words)
+        .build_pointwise(output, |i| Expr::UnOp {
             op,
-            operand: Box::new(Expr::load(input, t.clone())),
-        },
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(words),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(Expr::lt(t.clone(), Expr::u32(words)), body)],
-        )],
-    )
+            operand: Box::new(Expr::load(input, i)),
+        })
 }
 
 #[cfg(test)]

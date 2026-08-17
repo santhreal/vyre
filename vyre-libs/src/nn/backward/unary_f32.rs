@@ -1,7 +1,7 @@
 //! Shared F32 unary backward kernel builder.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::builder::elementwise::ElementwiseComposer;
+use vyre_foundation::ir::{DataType, Expr, Program};
 
 pub(super) fn unary_f32_backward_program<F>(
     op_id: &'static str,
@@ -14,31 +14,15 @@ pub(super) fn unary_f32_backward_program<F>(
 where
     F: FnOnce(Expr) -> Expr,
 {
-    let i = Expr::var("i");
-    let x = Expr::load(input, i.clone());
-    let dy = Expr::load(grad_out, i.clone());
-    let grad = Expr::mul(dy, local_grad(x));
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: grad_in.into(),
-                index: i,
-                value: grad,
-            }],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(grad_out, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(grad_in, 2, DataType::F32).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous_region(op_id, body)],
-    )
+    ElementwiseComposer::new(op_id, n)
+        .add_input(input, DataType::F32, n)
+        .add_input(grad_out, DataType::F32, n)
+        .add_output(grad_in, DataType::F32, n)
+        .build_pointwise(grad_in, |i| {
+            let x = Expr::load(input, i.clone());
+            let dy = Expr::load(grad_out, i);
+            Expr::mul(dy, local_grad(x))
+        })
 }
 
 #[cfg(test)]
