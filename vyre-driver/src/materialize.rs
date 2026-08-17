@@ -218,10 +218,18 @@ pub fn project_resources(artifact: &Artifact) -> ResourceProjection {
         outputs: BTreeSet::new(),
         retained: BTreeSet::new(),
     };
+    if let Ok(by_name) = artifact.canonical_value_by_name() {
+        for (name, value) in by_name {
+            projection.values.insert(name.to_string(), value);
+        }
+    } else {
+        for resource in artifact.resources() {
+            projection
+                .values
+                .insert(resource.name.clone(), resource.value);
+        }
+    }
     for resource in artifact.resources() {
-        projection
-            .values
-            .insert(resource.name.clone(), resource.value);
         match resource.lifetime {
             ResourceLifetime::Output => {
                 projection.outputs.insert(resource.value);
@@ -616,8 +624,10 @@ impl InstanceCore {
         messages: InstanceMessages,
         module_buffer_slots: Vec<BTreeMap<String, (u32, u32)>>,
     ) -> Result<Self, BackendError> {
+        artifact.canonical_value_by_name().map_err(|collision| {
+            invalid_module(&format!("resource name collision: {collision}"))
+        })?;
         let resources = project_resources(artifact);
-
         let mut direct_predecessors: BTreeMap<ArtifactValueId, ArtifactValueId> = BTreeMap::new();
         for resource in artifact.resources() {
             if let Some(pred) = resource.retained_predecessor {
