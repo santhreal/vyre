@@ -38,13 +38,9 @@
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn betti_persistence_cpu(mask: &[u32], n: u32) -> (u32, u32, u32) {
-    match try_betti_persistence_cpu(mask, n) {
-        Ok(result) => result,
-        // A parity oracle that returns zeros on failure makes the GPU-vs-CPU
-        // assertion pass on (0,0,0)==(0,0,0), silently masking a divergence
-        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
-        Err(error) => panic!("vyre-primitives betti_persistence CPU reference failed: {error}"),
-    }
+    let mut parent = Vec::new();
+    let mut rank = Vec::new();
+    betti_persistence_into(mask, n, &mut parent, &mut rank)
 }
 
 /// Fallible CPU reference for [`betti_persistence_cpu`].
@@ -53,7 +49,42 @@ pub fn betti_persistence_cpu(mask: &[u32], n: u32) -> (u32, u32, u32) {
 /// edges, and reserves all working memory before running union-find.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_betti_persistence_cpu(mask: &[u32], n: u32) -> Result<(u32, u32, u32), String> {
+    let mut parent = Vec::new();
+    let mut rank = Vec::new();
+    try_betti_persistence_into(mask, n, &mut parent, &mut rank)
+}
+
+/// Compute (b0, b1, edge_count) for the 1-skeleton using caller-supplied parent and rank working buffers.
+///
+/// Reuses allocations in `parent` and `rank` without heap re-allocation.
+#[must_use]
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn betti_persistence_into(
+    mask: &[u32],
+    n: u32,
+    parent: &mut Vec<u32>,
+    rank: &mut Vec<u32>,
+) -> (u32, u32, u32) {
+    match try_betti_persistence_into(mask, n, parent, rank) {
+        Ok(result) => result,
+        // A parity oracle that returns zeros on failure makes the GPU-vs-CPU
+        // assertion pass on (0,0,0)==(0,0,0), silently masking a divergence
+        // (Law 10 / Law 6). Fail loud; callers use the try_ variant.
+        Err(error) => panic!("vyre-libs betti_persistence CPU reference failed: {error}"),
+    }
+}
+
+/// Fallible CPU reference using caller-supplied working buffers.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub(crate) fn try_betti_persistence_into(
+    mask: &[u32],
+    n: u32,
+    parent: &mut Vec<u32>,
+    rank: &mut Vec<u32>,
+) -> Result<(u32, u32, u32), String> {
     if n == 0 {
+        parent.clear();
+        rank.clear();
         return Ok((0, 0, 0));
     }
 
@@ -68,14 +99,11 @@ pub fn try_betti_persistence_cpu(mask: &[u32], n: u32) -> Result<(u32, u32, u32)
         ));
     }
 
-    let mut parent: Vec<u32> = Vec::new();
-    parent
-        .try_reserve_exact(n_us)
+    vyre_foundation::allocation::reserve_exact_cleared(parent, n_us)
         .map_err(|err| format!("failed to reserve union-find parent buffer: {err}"))?;
     parent.extend(0..n);
 
-    let mut rank: Vec<u32> = Vec::new();
-    rank.try_reserve_exact(n_us)
+    vyre_foundation::allocation::reserve_exact_cleared(rank, n_us)
         .map_err(|err| format!("failed to reserve union-find rank buffer: {err}"))?;
     rank.resize(n_us, 0);
 
@@ -126,7 +154,7 @@ pub fn try_betti_persistence_cpu(mask: &[u32], n: u32) -> Result<(u32, u32, u32)
             edges = edges
                 .checked_add(1)
                 .ok_or_else(|| "edge count exceeds u32::MAX".to_string())?;
-            if union(&mut parent, &mut rank, i as u32, j as u32) {
+            if union(parent, rank, i as u32, j as u32) {
                 tree_edges = tree_edges
                     .checked_add(1)
                     .ok_or_else(|| "tree edge count exceeds u32::MAX".to_string())?;
@@ -135,15 +163,9 @@ pub fn try_betti_persistence_cpu(mask: &[u32], n: u32) -> Result<(u32, u32, u32)
     }
 
     // After all unions, count distinct roots = b0.
-    let mut seen = Vec::new();
-    seen.try_reserve_exact(n_us)
-        .map_err(|err| format!("failed to reserve root bitmap: {err}"))?;
-    seen.resize(n_us, false);
     let mut b0 = 0_u32;
     for v in 0..n {
-        let root = find(&mut parent, v) as usize;
-        if !seen[root] {
-            seen[root] = true;
+        if find(parent, v) == v {
             b0 = b0
                 .checked_add(1)
                 .ok_or_else(|| "component count exceeds u32::MAX".to_string())?;
@@ -359,5 +381,40 @@ mod tests {
         assert_eq!(b0, 1);
         assert_eq!(b1, 3);
         assert_eq!(e, 12);
+    }
+    #[test]
+    fn betti_persistence_into_matches_cpu_and_reuses_scratch() {
+        let mut parent = Vec::with_capacity(16);
+        let mut rank = Vec::with_capacity(16);
+
+        // Graph 1: K4 (n=4, 6 edges, b0=1, b1=3, edges=6)
+        let mut mask4 = empty_mask(4);
+        for i in 0..4 {
+            for j in (i + 1)..4 {
+                add_edge(&mut mask4, 4, i, j);
+            }
+        }
+        let res4 = betti_persistence_into(&mask4, 4, &mut parent, &mut rank);
+        assert_eq!(res4, betti_persistence_cpu(&mask4, 4));
+        assert_eq!(res4, (1, 3, 6));
+        let cap_parent = parent.capacity();
+        let cap_rank = rank.capacity();
+
+        // Graph 2: Triangle (n=3, 3 edges, b0=1, b1=1, edges=3) - scratch reuse with smaller n
+        let mut mask3 = empty_mask(3);
+        add_edge(&mut mask3, 3, 0, 1);
+        add_edge(&mut mask3, 3, 1, 2);
+        add_edge(&mut mask3, 3, 0, 2);
+        let res3 = betti_persistence_into(&mask3, 3, &mut parent, &mut rank);
+        assert_eq!(res3, betti_persistence_cpu(&mask3, 3));
+        assert_eq!(res3, (1, 1, 3));
+        assert_eq!(parent.capacity(), cap_parent);
+        assert_eq!(rank.capacity(), cap_rank);
+
+        // Graph 3: n=0 - scratch reuse with zero n clears buffers
+        let res0 = try_betti_persistence_into(&[], 0, &mut parent, &mut rank).unwrap();
+        assert_eq!(res0, (0, 0, 0));
+        assert!(parent.is_empty());
+        assert!(rank.is_empty());
     }
 }
