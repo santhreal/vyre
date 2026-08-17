@@ -33,6 +33,8 @@
 //! crash on substring, blake3 unsupported node).
 
 #![allow(deprecated)]
+mod harness;
+use harness::f32_to_ordered;
 use std::sync::OnceLock;
 
 use vyre::ir::BufferAccess;
@@ -103,13 +105,6 @@ fn dispatch_config_for(program: &Program) -> DispatchConfig {
 /// same input buffer set. `inputs_cpu` mirrors `inputs_gpu` (both are
 /// the same bytes in the same declaration order)  -  they're separated
 /// only because CPU wants `Value` and GPU wants `Vec<u8>`.
-fn f32_to_ordered(bits: u32) -> u32 {
-    if (bits & 0x8000_0000) != 0 {
-        !bits
-    } else {
-        bits | 0x8000_0000
-    }
-}
 
 fn assert_buffer_within_tolerance(
     op: &str,

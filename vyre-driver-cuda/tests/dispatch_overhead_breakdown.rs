@@ -17,21 +17,12 @@
 
 use std::time::Instant;
 
+mod harness;
+use harness::no_op_program;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// The smallest possible Program: one thread, one store of a constant. This
-/// minimizes every per-dispatch cost EXCEPT the host-side overhead, so the
-/// measurement attributes overhead correctly. A larger Program would dilute
-/// the host-side overhead with kernel-execute time.
-fn no_op_program() -> Program {
-    Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(0))],
-    )
-}
 
 fn assert_noop_output(outputs: &[Vec<u8>], phase: &str) {
     let expected = 0u32.to_le_bytes();

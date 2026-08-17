@@ -5,14 +5,11 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Barrier};
 
+mod harness;
+use harness::selected_adapter;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
-fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::adapter_for_info(backend.adapter_info()).expect(
-        "Fix: selected wgpu backend adapter must remain enumerable for live capability probing",
-    )
-}
 
 #[test]
 fn shared_backend_reuses_single_backend_instance() {

@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
+mod harness;
+use harness::f32_to_ordered;
 use std::collections::BTreeMap;
 use tempfile::TempDir;
 use vyre_driver::{DispatchConfig, VyreBackend};
@@ -65,13 +67,6 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
     (compile_time, output)
 }
 
-fn f32_to_ordered(bits: u32) -> u32 {
-    if (bits & 0x8000_0000) != 0 {
-        !bits
-    } else {
-        bits | 0x8000_0000
-    }
-}
 
 fn assert_outputs_within_tolerance(
     op_id: &str,

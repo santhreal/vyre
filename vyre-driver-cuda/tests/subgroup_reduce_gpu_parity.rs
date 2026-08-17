@@ -16,25 +16,12 @@
 
 mod harness;
 
-use harness::with_live_backend;
+use harness::{bytes_f32, bytes_u32, with_live_backend};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
 
 const LANES: u32 = 32;
 
-fn bytes_f32(bytes: &[u8]) -> Vec<f32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| f32::from_le_bytes(chunk.try_into().unwrap()))
-        .collect()
-}
-
-fn bytes_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
-        .collect()
-}
 
 /// `out[gid] = subgroup_reduce(op, in[gid])` over a single 32-lane subgroup.
 /// `in` is read-only (NOT a result), so `out` is `outputs[0]`.

@@ -6,9 +6,9 @@ pub(crate) mod self_optimizer;
 
 use std::sync::Arc;
 
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
+pub(crate) use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 use vyre_reference::value::Value;
@@ -28,26 +28,6 @@ pub(crate) fn pack_nodes(nodes: &[u32], node_count: u32) -> Vec<u32> {
     words
 }
 
-/// CUDA-backed optimizer dispatcher used by parity and self-optimizer tests.
-pub(crate) struct CudaProgramDispatcher<'a> {
-    /// Live CUDA backend borrowed for the duration of one test.
-    pub(crate) backend: &'a CudaBackend,
-}
-
-impl<'a> ProgramDispatcher for CudaProgramDispatcher<'a> {
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        grid_override: Option<[u32; 3]>,
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut config = DispatchConfig::default();
-        config.grid_override = grid_override;
-        self.backend
-            .dispatch(program, inputs, &config)
-            .map_err(|err| DispatchError::BackendError(err.to_string()))
-    }
-}
 
 /// Acquire the live CUDA backend required by release-path GPU tests.
 pub(crate) fn live_dispatcher() -> CudaBackend {
@@ -77,7 +57,7 @@ pub(crate) fn with_cuda_optimizer_dispatcher<R>(
     run: impl FnOnce(&CudaProgramDispatcher<'_>) -> R,
 ) -> R {
     let backend = live_dispatcher();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     run(&dispatcher)
 }
 
@@ -983,4 +963,28 @@ pub(crate) fn cross_block_grid_sync_expected(n: u32) -> Vec<u32> {
     let blocks = n / CROSS_BLOCK_GRID_SYNC_WORKGROUP;
     let last_slot = (n - 1) + (blocks - 1) * CROSS_BLOCK_GRID_SYNC_DELAY_PER_BLOCK;
     (0..n).map(|gid| last_slot + gid).collect()
+}
+/// Simple program: out[i] = in[i] + 1 for 8 lanes.
+pub(crate) fn add_one_program() -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(8),
+            BufferDecl::output("out", 1, DataType::U32).with_count(8),
+        ],
+        [128, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(1)),
+        )],
+    )
+}
+
+/// A minimal fixed-shape Program: one thread storing a constant.
+pub(crate) fn no_op_program() -> Program {
+    Program::wrapped(
+        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(0))],
+    )
 }

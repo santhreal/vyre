@@ -8,9 +8,7 @@ use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_libs::scheduling::frontier_typed_ir::FrontierTypedPlan;
 #[cfg(test)]
-use vyre_libs::scheduling::frontier_typed_ir::{
-    FrontierDependency, FrontierDomain, FrontierNode, FrontierWave,
-};
+use vyre_libs::scheduling::frontier_typed_ir::{FrontierDomain, FrontierWave};
 
 /// CUDA-ready frontier wave input derived from a frontier-typed IR plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -186,60 +184,6 @@ const fn dependency_capacity(wave_count: usize) -> usize {
     }
 }
 
-#[cfg(test)]
-pub(crate) fn plan_frontier_typed_ir(
-    nodes: &[FrontierNode],
-    dependencies: &[FrontierDependency],
-) -> Result<FrontierTypedPlan, String> {
-    use vyre_reference::composition_witness::{
-        plan_frontier_typed_ir_witness, FrontierDependencyWitness, FrontierDomainWitness,
-        FrontierNodeWitness,
-    };
-
-    let witness_nodes = nodes
-        .iter()
-        .map(|node| FrontierNodeWitness {
-            id: node.id,
-            domain: match node.domain {
-                FrontierDomain::Parser => FrontierDomainWitness::Parser,
-                FrontierDomain::Semantic => FrontierDomainWitness::Semantic,
-                FrontierDomain::Dataflow => FrontierDomainWitness::Dataflow,
-                FrontierDomain::Diagnostic => FrontierDomainWitness::Diagnostic,
-            },
-            active_items: node.active_items,
-        })
-        .collect::<Vec<_>>();
-    let witness_dependencies = dependencies
-        .iter()
-        .map(|dependency| FrontierDependencyWitness {
-            before: dependency.before,
-            after: dependency.after,
-        })
-        .collect::<Vec<_>>();
-    let witness_plan = plan_frontier_typed_ir_witness(&witness_nodes, &witness_dependencies)
-        .map_err(|error| format!("{error:?}"))?;
-    Ok(FrontierTypedPlan {
-        waves: witness_plan
-            .waves
-            .into_iter()
-            .map(|wave| FrontierWave {
-                index: wave.index,
-                domains: wave
-                    .domains
-                    .into_iter()
-                    .map(|domain| match domain {
-                        FrontierDomainWitness::Parser => FrontierDomain::Parser,
-                        FrontierDomainWitness::Semantic => FrontierDomain::Semantic,
-                        FrontierDomainWitness::Dataflow => FrontierDomain::Dataflow,
-                        FrontierDomainWitness::Diagnostic => FrontierDomain::Diagnostic,
-                    })
-                    .collect(),
-                node_ids: wave.node_ids,
-                active_items: wave.active_items,
-            })
-            .collect(),
-    })
-}
 
 // Inline: `vyre_driver_cuda::frontier_typed_ir_adapter` is `pub(crate)`, so no integration test can
 // reach what this suite exercises.
@@ -247,31 +191,25 @@ pub(crate) fn plan_frontier_typed_ir(
 mod tests {
     use super::*;
     use vyre_driver::megakernel_barrier::plan_megakernel_barriers;
-    use vyre_libs::scheduling::frontier_typed_ir::{
-        FrontierDependency, FrontierDomain, FrontierNode,
-    };
 
     #[test]
     fn adapter_converts_frontier_waves_to_cuda_byte_envelopes() {
-        let plan = plan_frontier_typed_ir(
-            &[
-                FrontierNode {
-                    id: 0,
-                    domain: FrontierDomain::Parser,
+        let plan = FrontierTypedPlan {
+            waves: vec![
+                FrontierWave {
+                    index: 0,
+                    domains: vec![FrontierDomain::Parser],
+                    node_ids: vec![0],
                     active_items: 4,
                 },
-                FrontierNode {
-                    id: 1,
-                    domain: FrontierDomain::Semantic,
+                FrontierWave {
+                    index: 1,
+                    domains: vec![FrontierDomain::Semantic],
+                    node_ids: vec![1],
                     active_items: 6,
                 },
             ],
-            &[FrontierDependency {
-                before: 0,
-                after: 1,
-            }],
-        )
-        .expect("Fix: frontier plan should build");
+        };
 
         let cuda = adapt_frontier_typed_ir_to_cuda(&plan, 8, 16, 32)
             .expect("Fix: frontier plan should adapt to CUDA");
@@ -364,25 +302,22 @@ mod tests {
         let initial_wave_capacity = out.waves.capacity();
         let initial_active_capacity = out.active_items.capacity();
         let initial_dependency_capacity = out.dependencies.capacity();
-        let plan = plan_frontier_typed_ir(
-            &[
-                FrontierNode {
-                    id: 0,
-                    domain: FrontierDomain::Parser,
+        let plan = FrontierTypedPlan {
+            waves: vec![
+                FrontierWave {
+                    index: 0,
+                    domains: vec![FrontierDomain::Parser],
+                    node_ids: vec![0],
                     active_items: 4,
                 },
-                FrontierNode {
-                    id: 1,
-                    domain: FrontierDomain::Semantic,
+                FrontierWave {
+                    index: 1,
+                    domains: vec![FrontierDomain::Semantic],
+                    node_ids: vec![1],
                     active_items: 6,
                 },
             ],
-            &[FrontierDependency {
-                before: 0,
-                after: 1,
-            }],
-        )
-        .expect("Fix: frontier plan should build");
+        };
 
         adapt_frontier_typed_ir_to_cuda_into(&plan, 8, 16, 32, &mut out)
             .expect("Fix: frontier plan should adapt into reused CUDA storage");

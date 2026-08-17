@@ -871,22 +871,6 @@ impl<'a> ProgramDispatcher for CudaProgramDispatcher<'a> {
             .map_err(|e| DispatchError::BackendError(e.to_string()))
     }
 
-    fn upload_resident_many_sequence_read_ranges(
-        &self,
-        uploads: &[(u64, &[u8])],
-        steps: &[ResidentDispatchStep<'_>],
-        read_ranges: &[ResidentReadRange],
-    ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        let mut outputs = Vec::new();
-        reserve_resident_vec(&mut outputs, read_ranges.len(), "optimizer range output")?;
-        self.upload_resident_many_sequence_read_ranges_into(
-            uploads,
-            steps,
-            read_ranges,
-            &mut outputs,
-        )?;
-        Ok(outputs)
-    }
 
     fn upload_resident_many_sequence_read_many_into(
         &self,

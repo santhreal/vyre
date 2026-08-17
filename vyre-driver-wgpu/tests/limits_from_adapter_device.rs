@@ -9,16 +9,11 @@
 //! - `device_limits()` is the actual `wgpu::Limits` of the created device
 
 mod harness;
-use harness::shared_live_backend as live_backend;
+use harness::{selected_adapter, shared_live_backend as live_backend};
 
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
-fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {
-    vyre_driver_wgpu::runtime::adapter_for_info(backend.adapter_info()).expect(
-        "Fix: selected wgpu backend adapter must remain enumerable for live capability probing",
-    )
-}
 
 // ------------------------------------------------------------------
 // 1. max_workgroup_size must come from adapter limits
