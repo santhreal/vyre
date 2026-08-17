@@ -5,9 +5,17 @@
 //! the rule is proved once for every backend that reads a binding order off a
 //! plan.
 
-use vyre_driver::materialize::resident_buffer_names;
+use std::collections::BTreeMap;
+
+use vyre_driver::materialize::{project_resources, resident_buffer_names};
 use vyre_driver::BindingPlan;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ShapeDim, ValueContract, ValueLifetime,
+};
+use vyre_megakernel::{
+    compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
+};
 
 /// WHY: workgroup scratch is module-internal memory, not an artifact value. A
 /// resident launch must bind every host-visible role and no shared scratch, or
@@ -75,4 +83,90 @@ fn resident_buffer_names_with_reordered_declarations() {
 
     let names = resident_buffer_names(&plan, &program).collect::<Vec<_>>();
     assert_eq!(names, ["buf_a", "buf_b", "buf_c"]);
+}
+
+/// WHY: `project_resources` must derive resource values from `Artifact::canonical_value_by_name`,
+/// ensuring the consumer calls the owner rather than implementing divergent name resolution.
+#[test]
+fn project_resources_derives_values_from_canonical_values_by_name() {
+    let mut graph = ProgramGraph::new();
+    let input = graph
+        .add_external_value(
+            "input",
+            ValueContract {
+                dtype: DataType::U32,
+                shape: vec![ShapeDim::Known(16)],
+                access: BufferAccess::ReadOnly,
+                lifetime: ValueLifetime::Invocation,
+            },
+        )
+        .expect("adding external input value must succeed");
+    graph
+        .add_node(
+            "test_node",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(16),
+                    BufferDecl::output("output", 1, DataType::U32).with_count(16),
+                ],
+                [16, 1, 1],
+                vec![Node::store(
+                    "output",
+                    Expr::u32(0),
+                    Expr::load("input", Expr::u32(0)),
+                )],
+            ),
+            vec![GraphInput {
+                buffer: "input".into(),
+                value: input,
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![GraphOutput {
+                buffer: "output".into(),
+                name: "output".into(),
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("adding test node must succeed");
+
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0xA5; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(1, 100_000, 1, 0, 100_000_000),
+        1_000_000,
+    )
+    .validate()
+    .expect("compile request must validate");
+
+    let artifact = compile(&request).expect("artifact compilation must succeed");
+    let canonical = artifact
+        .canonical_value_by_name()
+        .expect("canonical_value_by_name must succeed");
+    let projection = project_resources(&artifact);
+
+    assert!(!canonical.is_empty(), "canonical values must not be empty");
+    for (name, val) in canonical {
+        assert_eq!(
+            projection.values.get(name).copied(),
+            Some(val),
+            "projected value for {name} must match canonical owner"
+        );
+    }
+    assert!(
+        !projection.outputs.is_empty(),
+        "projected outputs must not be empty"
+    );
 }
