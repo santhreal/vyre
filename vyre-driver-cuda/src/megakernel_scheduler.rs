@@ -138,15 +138,15 @@ mod tests {
             budget_bytes: 1024 * 1024,
         };
         let decision = select_cuda_megakernel_topology(sample, graph, memory, 10.0, 1.0);
-        assert!(matches!(
-            decision.topology,
-            MegakernelExecutionTopology::DenseFrontier
-                | MegakernelExecutionTopology::BlockDenseFrontier
-                | MegakernelExecutionTopology::SparseFrontier
-                | MegakernelExecutionTopology::HybridFrontier
-                | MegakernelExecutionTopology::WarpSparseFrontier
-                | MegakernelExecutionTopology::FusedWave
-        ));
+        assert_eq!(
+            decision,
+            MegakernelTopologyDecision {
+                topology: MegakernelExecutionTopology::DenseFrontier,
+                memory_pressure_bps: 9,
+                average_degree_bps: 20_000,
+                launch_pressure_bps: 1_000,
+            }
+        );
     }
     #[test]
     fn telemetry_snapshot_maps_onto_a_scheduler_sample() {

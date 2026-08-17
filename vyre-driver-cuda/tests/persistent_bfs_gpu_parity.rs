@@ -20,24 +20,11 @@ use vyre_reference::composition_witness::{
     csr_persistent_closure_detailed_witness, CsrPersistentClosureWitness,
 };
 
-fn reference_bfs_expand(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> (Vec<u32>, u32) {
-    let detailed = csr_persistent_closure_detailed_witness(
-        inputs.graph.node_count,
-        inputs.graph.edge_offsets,
-        inputs.graph.edge_targets,
-        inputs.graph.edge_kind_mask,
-        seed,
-        inputs.allow_mask,
-        inputs.max_iters,
-    );
-    (detailed.frontier, detailed.changed)
-}
-
-fn try_bfs_expand_converged(
+fn reference_bfs_expand_detailed(
     inputs: CsrClosureInputs<'_>,
     seed: &[u32],
-) -> Result<(Vec<u32>, CsrPersistentClosureWitness), String> {
-    let detailed = csr_persistent_closure_detailed_witness(
+) -> CsrPersistentClosureWitness {
+    csr_persistent_closure_detailed_witness(
         inputs.graph.node_count,
         inputs.graph.edge_offsets,
         inputs.graph.edge_targets,
@@ -45,8 +32,12 @@ fn try_bfs_expand_converged(
         seed,
         inputs.allow_mask,
         inputs.max_iters,
-    );
-    Ok((detailed.frontier.clone(), detailed))
+    )
+}
+
+fn reference_bfs_expand(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> (Vec<u32>, u32) {
+    let detailed = reference_bfs_expand_detailed(inputs, seed);
+    (detailed.frontier, detailed.changed)
 }
 
 fn linear_chain(n: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
@@ -87,7 +78,7 @@ fn cuda_bfs_expand_via_matches_reference_chain() {
             &seed,
         )
         .expect("GPU bfs_expand_via dispatch");
-        let (reference_out, reference) = try_bfs_expand_converged(
+        let reference = reference_bfs_expand_detailed(
             CsrClosureInputs::allow_all(
                 CsrGraphView {
                     node_count: n,
@@ -98,11 +89,11 @@ fn cuda_bfs_expand_via_matches_reference_chain() {
                 n,
             ),
             &seed,
-        )
-        .expect("reference persistent BFS convergence");
+        );
         assert_eq!(
-            gpu_out, reference_out,
-            "frontier_out diverged on chain n={n}; gpu={gpu_out:?} reference={reference_out:?}"
+            gpu_out, reference.frontier,
+            "frontier_out diverged on chain n={n}; gpu={gpu_out:?} reference={:?}",
+            reference.frontier
         );
         assert_eq!(
             gpu_changed, reference.changed,
@@ -247,7 +238,7 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
                 &seed,
             )
             .expect("dispatch");
-            let (_reference_out, reference) = try_bfs_expand_converged(
+            let reference = reference_bfs_expand_detailed(
                 CsrClosureInputs::allow_all(
                     CsrGraphView {
                         node_count: n,
@@ -258,8 +249,7 @@ fn cuda_bfs_expand_via_saturated_seed_reports_no_change() {
                     n,
                 ),
                 &seed,
-            )
-            .expect("reference persistent BFS convergence");
+            );
             assert_eq!(gpu_changed, reference.changed);
             assert_eq!(gpu_changed, 0);
             assert_eq!(gpu_converged, u32::from(reference.converged));
@@ -296,7 +286,7 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
                     &mut frontier,
                 )
                 .expect("resident graph BFS query");
-                let (reference_out, reference) = try_bfs_expand_converged(
+                let reference = reference_bfs_expand_detailed(
                     CsrClosureInputs::allow_all(
                         CsrGraphView {
                             node_count: n,
@@ -307,9 +297,8 @@ fn cuda_resident_bfs_graph_matches_reference_across_repeated_queries() {
                         n,
                     ),
                     &seed_words,
-                )
-                .expect("reference persistent BFS convergence");
-                assert_eq!(frontier, reference_out);
+                );
+                assert_eq!(frontier, reference.frontier);
                 assert_eq!(changed, reference.changed);
                 assert_eq!(converged, u32::from(reference.converged));
                 assert_eq!(
