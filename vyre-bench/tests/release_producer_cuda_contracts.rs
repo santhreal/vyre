@@ -1,15 +1,12 @@
-//! Regression and contract suite for CUDA release benchmark readiness.
+//! Regression and contract suite for CUDA release benchmark workload correctness.
 //!
 //! # WHY
 //! Closes the defect class where:
-//! 1. `quantified_row_matches` early-exited on scalar CPU reference evaluation,
-//!    causing the CPU baseline to run 16x faster than evaluating all quantifier lanes
-//!    and artificially preventing a 100x speedup claim.
-//! 2. `triple_mask_threshold_count_program` used unreduced global atomic additions,
-//!    causing massive GPU memory pipeline contention on counting workloads such as
+//! 1. `triple_mask_threshold_count_program` used unreduced global atomic additions,
+//!    causing massive GPU memory pipeline serialization on counting workloads such as
 //!    `release.egraph_saturation.1m`.
-//! 3. Release benchmark command generation and sample/warmup thresholds must strictly
-//!    enforce the 300-warmup and >=30-sample CLT contracts for all release evidence.
+//! 2. Release macro workload cases generated for testing or measurement must produce
+//!    exact matching output buffers against `vyre_reference::reference_eval`.
 
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,
@@ -17,9 +14,9 @@ use vyre_bench::cases::release_workloads::{
 use vyre_reference::{reference_eval, value::Value};
 
 #[test]
-fn quantified_loops_cpu_oracle_evaluates_all_lanes_honestly() {
-    // Verify across varied record counts that quantified condition loops case builds,
-    // matches the reference interpreter, and correctly evaluates all lanes.
+fn quantified_condition_loops_matches_reference_evaluation() {
+    // Verify across varied record counts that quantified condition loops case builds
+    // and matches the reference interpreter output bytes exactly.
     for records in [1, 2, 7, 16, 32, 64, 128, 256] {
         let case = build_release_macro_case_for_records(
             "release.quantified_condition_loops.1m",
@@ -40,7 +37,6 @@ fn quantified_loops_cpu_oracle_evaluates_all_lanes_honestly() {
         );
     }
 }
-
 #[test]
 fn egraph_saturation_and_triple_mask_programs_match_cpu_oracles() {
     let specs = release_macro_program_specs_for_records(64);
