@@ -165,8 +165,7 @@ jobs:
       - name: Install spirv-val
         run: |
           sudo apt-get update
-          sudo apt-get install -y spirv-tools
-
+          sudo apt-get install -y spirv-tools libvulkan1 mesa-vulkan-drivers
       # The target is registered behind `spirv-val`, so ci.yml's default
       # --workspace run skips it and this job is the only thing that runs it. The
       # gate fails closed when the validator is missing rather than falling back
