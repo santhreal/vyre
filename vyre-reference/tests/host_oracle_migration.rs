@@ -8,11 +8,9 @@ use vyre_reference::host_oracle_migration::{
 
 #[test]
 fn host_oracle_inventory_derives_and_exceeds_floor() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("workspace root exists");
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
 
-    let inventory = derive_host_function_inventory(root)
+    let inventory = derive_host_function_inventory(&root)
         .expect("host function inventory derivation must succeed");
 
     assert!(
@@ -32,9 +30,7 @@ fn host_oracle_inventory_derives_and_exceeds_floor() {
 
 #[test]
 fn host_oracle_migration_assert_passes() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("workspace root exists");
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
 
-    assert_host_oracle_migration_complete(root);
+    assert_host_oracle_migration_complete(&root);
 }
