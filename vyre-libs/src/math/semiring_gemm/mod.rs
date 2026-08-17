@@ -218,7 +218,6 @@ inventory::submit! {
         Some(|| vec![vec![
             fixture_u32(&[1, 2, 3, 4]),
             fixture_u32(&[5, 6, 7, 8]),
-            fixture_u32(&[0, 0, 0, 0]),
         ]]),
         Some(|| {
             vec![vec![vec![

@@ -220,7 +220,7 @@ inventory::submit! {
         Some(|| {
             let scores: [f32; 8] = [0.5, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             let scores_bytes = vyre_primitives::wire::pack_f32_slice(&scores);
-            vec![vec![scores_bytes, vec![0u8; 4 * 2], vec![0u8; 4 * 2]]]
+            vec![vec![scores_bytes, vec![0u8; 4 * 2]]]
         }),
         Some(|| {
             vec![vec![
@@ -307,7 +307,6 @@ inventory::submit! {
                 f32_fixture(&scores),
                 u32_fixture(&[5, 3]),
                 f32_fixture(&[max_score, sum_exp]),
-                f32_fixture(&[0.0; 2]),
             ]]
         }),
         Some(|| {

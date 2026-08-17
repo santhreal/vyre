@@ -144,7 +144,6 @@ macro_rules! define_bitwise_binary_op {
                     vec![vec![
                         vec![$($inventory_lhs_bytes),*],
                         vec![$($inventory_rhs_bytes),*],
-                        vec![0u8; ($inventory_words as usize) * 4],
                     ]]
                 }),
                 Some(|| {

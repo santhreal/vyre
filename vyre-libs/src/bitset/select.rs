@@ -119,7 +119,7 @@ inventory::submit! {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let queries = [1u32, 2, 3, 4, 5];
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&bits), to_bytes(&queries), vec![0u8; 5 * 4]]]
+            vec![vec![to_bytes(&bits), to_bytes(&queries)]]
         }),
         Some(|| {
             vec![vec![EXPECTED_SELECT1_QUERY_OUTPUT_BYTES.to_vec()]]

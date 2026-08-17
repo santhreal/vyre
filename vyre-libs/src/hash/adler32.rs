@@ -192,7 +192,7 @@ inventory::submit! {
         || adler32_program("input", "out", 3),
         Some(|| {
             let bytes = vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc");
-            vec![vec![bytes, vec![0u8; 4]]]
+            vec![vec![bytes]]
         }),
         Some(|| vec![vec![EXPECTED_ADLER32_OUTPUT_BYTES.to_vec()]]),
     )

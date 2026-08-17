@@ -89,7 +89,6 @@ inventory::submit! {
         || workgroup_any_u32("values", "out", 4),
         Some(|| vec![vec![
             vyre_primitives::wire::pack_u32_slice(&[0u32, 0, 7, 0]),
-            vec![0; 4],
         ]]),
         Some(|| vec![vec![vec![0x07, 0x00, 0x00, 0x00]]]),
     )

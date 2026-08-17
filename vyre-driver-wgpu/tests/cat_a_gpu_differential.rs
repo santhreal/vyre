@@ -68,11 +68,80 @@ fn lower_for_gpu(program: &Program) -> Program {
         .expect("registered optimizer must converge")
 }
 
-fn run_gpu(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    let lowered = lower_for_gpu(program);
-    let config = dispatch_config_for(&lowered);
+/// Maps canonical logical inputs from the original program to the lowered program ABI by exact binding slot.
+///
+/// WHY: Every caller supplies canonical logical inputs (non-workgroup, non-backend-allocated buffers).
+/// When `lower_for_gpu` eliminates dead buffers and intermediate pipeline-live-out buffers, surviving
+/// input buffers retain their original binding slots (in group 0). We index original inputs by the
+/// original program's logical input binding slots, validate exact counts, ensure every required lowered
+/// input binding is present, and fail closed on any mismatch.
+fn map_inputs_for_lowered(
+    original_program: &Program,
+    original_inputs: &[Vec<u8>],
+    lowered: &Program,
+) -> Vec<Vec<u8>> {
+    let logical_buffers: Vec<_> = original_program
+        .buffers()
+        .iter()
+        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .collect();
+
+    assert_eq!(
+        original_inputs.len(),
+        logical_buffers.len(),
+        "input count ({}) must match canonical logical buffer count ({}) for program `{}`",
+        original_inputs.len(),
+        logical_buffers.len(),
+        original_program.entry_op_id().unwrap_or("unknown")
+    );
+
+    let original_input_buffers = logical_buffers;
+    let mut binding_to_input: std::collections::HashMap<u32, &Vec<u8>> =
+        std::collections::HashMap::new();
+
+    for (buf, bytes) in original_input_buffers.iter().zip(original_inputs.iter()) {
+        let binding = buf.binding();
+        assert!(
+            binding_to_input.insert(binding, bytes).is_none(),
+            "duplicate binding slot {binding} in original program `{}`",
+            original_program.entry_op_id().unwrap_or("unknown")
+        );
+    }
+
+    let lowered_input_buffers: Vec<_> = lowered
+        .buffers()
+        .iter()
+        .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
+        .collect();
+
+    let mut lowered_inputs = Vec::with_capacity(lowered_input_buffers.len());
+    for buf in &lowered_input_buffers {
+        let binding = buf.binding();
+        let bytes = binding_to_input.get(&binding).unwrap_or_else(|| {
+            panic!(
+                "missing input for lowered buffer `{}` at binding slot {binding} in program `{}`",
+                buf.name(),
+                lowered.entry_op_id().unwrap_or("unknown")
+            );
+        });
+        lowered_inputs.push((*bytes).clone());
+    }
+
+    assert_eq!(
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        "lowered input count ({}) must match lowered input buffer count ({}) for program `{}`",
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        lowered.entry_op_id().unwrap_or("unknown")
+    );
+
+    lowered_inputs
+}
+fn run_gpu(lowered: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let config = dispatch_config_for(lowered);
     backend()
-        .dispatch(&lowered, &inputs, &config)
+        .dispatch(lowered, &inputs, &config)
         .expect("5090 must execute Cat-A op")
 }
 
@@ -154,7 +223,9 @@ fn assert_buffer_within_tolerance(
 fn assert_diff(op: &'static str, tolerance: u32, program: &Program, inputs: Vec<Vec<u8>>) {
     let cpu_inputs: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
     let cpu = run_cpu(program, cpu_inputs);
-    let gpu = run_gpu(program, inputs);
+    let lowered = lower_for_gpu(program);
+    let lowered_inputs = map_inputs_for_lowered(program, &inputs, &lowered);
+    let gpu = run_gpu(&lowered, lowered_inputs);
     assert_eq!(
         cpu.len(),
         gpu.len(),

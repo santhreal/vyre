@@ -155,7 +155,7 @@ inventory::submit! {
         Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             let input: Vec<u32> = (1..=SCAN_FIXTURE_LEN).collect();
-            vec![vec![to_bytes(&input), to_bytes(&vec![0u32; SCAN_FIXTURE_LEN as usize])]]
+            vec![vec![to_bytes(&input)]]
         }),
         Some(|| vec![vec![EXPECTED_PREFIX_SCAN_OUTPUT_BYTES.to_vec()]]),
     )

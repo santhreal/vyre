@@ -630,7 +630,6 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&q),
                 vyre_primitives::wire::pack_f32_slice(&k),
                 vyre_primitives::wire::pack_f32_slice(&v),
-                vec![0u8; 512 * core::mem::size_of::<f32>()],
             ]]
         }),
         Some(|| vec![
@@ -658,7 +657,6 @@ inventory::submit! {
                 pack(&[0.0; 4]),
                 pack(&[0.0; 4]),
                 pack(&[2.0, 4.0, 6.0, 8.0]),
-                vec![0u8; 4 * core::mem::size_of::<f32>()],
             ]]
         }),
         Some(|| {

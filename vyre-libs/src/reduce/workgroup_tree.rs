@@ -401,7 +401,6 @@ inventory::submit! {
         || workgroup_sum_f32("values", "out", 4, 4),
         Some(|| vec![vec![
             fixture_f32(&[1.25, -2.0, 5.5, 3.25]),
-            fixture_f32(&[0.0]),
         ]]),
         Some(|| vec![vec![vec![0x00, 0x00, 0x00, 0x41]]]), // 8.0f32
     )
@@ -413,7 +412,6 @@ inventory::submit! {
         || workgroup_sum_u32("values", "out", 4, 4),
         Some(|| vec![vec![
             fixture_u32(&[1, 2, 3, 4]),
-            fixture_u32(&[0]),
         ]]),
         Some(|| vec![vec![vec![0x0a, 0x00, 0x00, 0x00]]]), // 10u32
     )
@@ -425,7 +423,6 @@ inventory::submit! {
         || workgroup_max_f32("values", "out", 4, 4),
         Some(|| vec![vec![
             fixture_f32(&[-3.0, 9.5, 4.0, 1.25]),
-            fixture_f32(&[0.0]),
         ]]),
         Some(|| vec![vec![vec![0x00, 0x00, 0x18, 0x41]]]), // 9.5f32
     )
@@ -436,7 +433,6 @@ inventory::submit! {
         || workgroup_max_u32("values", "out", 4, 4),
         Some(|| vec![vec![
             fixture_u32(&[1, 9, 4, 2]),
-            fixture_u32(&[0]),
         ]]),
         Some(|| vec![vec![vec![0x09, 0x00, 0x00, 0x00]]]), // 9u32
     )
@@ -448,7 +444,6 @@ inventory::submit! {
         || workgroup_min_f32("values", "out", 4, 4),
         Some(|| vec![vec![
             fixture_f32(&[-3.0, 9.5, 4.0, 1.25]),
-            fixture_f32(&[0.0]),
         ]]),
         Some(|| vec![vec![vec![0x00, 0x00, 0x40, 0xc0]]]), // -3.0f32
     )
@@ -460,7 +455,6 @@ inventory::submit! {
         || workgroup_min_u32("values", "out", 4, 4),
         Some(|| vec![vec![
             fixture_u32(&[3, 9, 4, 2]),
-            fixture_u32(&[0]),
         ]]),
         Some(|| vec![vec![vec![0x02, 0x00, 0x00, 0x00]]]), // 2u32
     )

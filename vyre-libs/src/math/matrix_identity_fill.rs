@@ -79,8 +79,7 @@ inventory::submit! {
         OP_ID,
         || matrix_identity_fill("m", 3),
         Some(|| {
-            let to_bytes = |vals: &[f32]| vyre_primitives::wire::pack_f32_slice(vals);
-            vec![vec![to_bytes(&[0.0; 9])]]
+            vec![vec![]]
         }),
         Some(|| {
             vec![vec![vec![

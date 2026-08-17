@@ -24,8 +24,7 @@ inventory::submit! {
         OP_ID,
         || bitset_zero("target", 3),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[1, 0xDEAD_BEEF, u32::MAX])]]
+            vec![vec![]]
         }),
         Some(|| {
             vec![vec![EXPECTED_BITSET_ZERO_OUTPUT_BYTES.to_vec()]]

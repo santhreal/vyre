@@ -124,7 +124,6 @@ inventory::submit! {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xF0F0_F0F0, 0xAAAA_AAAA]),
                 vyre_primitives::wire::pack_u32_slice(&[0xFF00_00FF, 0x5555_FFFF]),
-                vyre_primitives::wire::pack_u32_slice(&[0, 0]),
             ]]
         }),
         Some(|| {
