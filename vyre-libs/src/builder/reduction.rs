@@ -19,7 +19,7 @@
 use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-#[cfg(feature = "reduce")]
+#[cfg(all(feature = "reduce", feature = "builder-ops"))]
 use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 /// One reduction pass over the input.
@@ -861,7 +861,7 @@ impl ReductionComposer {
     }
 
     /// Build a prefix scan program.
-    #[cfg(feature = "reduce")]
+    #[cfg(feature = "math-kernels")]
     #[must_use]
     pub(crate) fn prefix_scan(
         op_id: &'static str,
@@ -1045,7 +1045,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "reduce")]
+    #[cfg(feature = "math-kernels")]
     fn prefix_scan_structure() {
         use crate::math::prefix_scan::ScanKind;
         let p_inc = ReductionComposer::prefix_scan("test::scan_inc", "in", "out", 64, ScanKind::InclusiveSum);
