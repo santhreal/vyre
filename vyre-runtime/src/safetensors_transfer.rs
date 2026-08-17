@@ -149,7 +149,9 @@ pub enum TransferState {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, thiserror::Error)]
 pub enum TransferError {
     /// Read returned fewer bytes than requested.
-    #[error("short read on tensor `{tensor_name}`: expected {expected} bytes, read {actual} bytes")]
+    #[error(
+        "short read on tensor `{tensor_name}`: expected {expected} bytes, read {actual} bytes"
+    )]
     ShortRead {
         /// Target tensor name.
         tensor_name: String,
@@ -197,7 +199,9 @@ pub enum TransferError {
         tensor_name: String,
     },
     /// In-flight transfer queue depth exceeded maximum capacity.
-    #[error("transfer queue backpressure: {queue_depth} in-flight transfers exceed max {max_depth}")]
+    #[error(
+        "transfer queue backpressure: {queue_depth} in-flight transfers exceed max {max_depth}"
+    )]
     QueueBackpressure {
         /// Current in-flight transfer count.
         queue_depth: usize,
@@ -234,11 +238,21 @@ impl TransferLifecycleEngine {
     }
 
     /// Register and initiate a new tensor transfer.
-    pub fn initiate_transfer(&mut self, descriptor: TransferDescriptor) -> Result<(), TransferError> {
+    pub fn initiate_transfer(
+        &mut self,
+        descriptor: TransferDescriptor,
+    ) -> Result<(), TransferError> {
         let in_flight_count = self
             .transfers
             .values()
-            .filter(|(_, state)| matches!(state, TransferState::Initiated | TransferState::Validating | TransferState::InProgress { .. }))
+            .filter(|(_, state)| {
+                matches!(
+                    state,
+                    TransferState::Initiated
+                        | TransferState::Validating
+                        | TransferState::InProgress { .. }
+                )
+            })
             .count();
 
         if in_flight_count >= self.caps.max_transfer_queue_depth {
@@ -257,20 +271,25 @@ impl TransferLifecycleEngine {
         }
 
         let name = descriptor.tensor_name.clone();
-        self.transfers.insert(name, (descriptor, TransferState::Initiated));
+        self.transfers
+            .insert(name, (descriptor, TransferState::Initiated));
         Ok(())
     }
 
     /// Update progress for an in-flight transfer.
-    pub fn progress_transfer(&mut self, tensor_name: &str, bytes: u64) -> Result<(), TransferError> {
-        let (desc, state) = self
-            .transfers
-            .get_mut(tensor_name)
-            .ok_or_else(|| TransferError::ShortRead {
-                tensor_name: tensor_name.to_string(),
-                expected: 0,
-                actual: 0,
-            })?;
+    pub fn progress_transfer(
+        &mut self,
+        tensor_name: &str,
+        bytes: u64,
+    ) -> Result<(), TransferError> {
+        let (desc, state) =
+            self.transfers
+                .get_mut(tensor_name)
+                .ok_or_else(|| TransferError::ShortRead {
+                    tensor_name: tensor_name.to_string(),
+                    expected: 0,
+                    actual: 0,
+                })?;
 
         if desc.device_generation != self.device_generation {
             let err = TransferError::DeviceLoss {
@@ -295,14 +314,14 @@ impl TransferLifecycleEngine {
         completion_event: u64,
         actual_digest: [u8; 32],
     ) -> Result<(), TransferError> {
-        let (desc, state) = self
-            .transfers
-            .get_mut(tensor_name)
-            .ok_or_else(|| TransferError::ShortRead {
-                tensor_name: tensor_name.to_string(),
-                expected: 0,
-                actual: 0,
-            })?;
+        let (desc, state) =
+            self.transfers
+                .get_mut(tensor_name)
+                .ok_or_else(|| TransferError::ShortRead {
+                    tensor_name: tensor_name.to_string(),
+                    expected: 0,
+                    actual: 0,
+                })?;
 
         if desc.device_generation != self.device_generation {
             let err = TransferError::DeviceLoss {

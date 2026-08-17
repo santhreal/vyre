@@ -7,13 +7,11 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_driver::{
-    PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource,
-};
+use vyre_driver::{PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource};
 use vyre_foundation::ir::DataType;
 use vyre_runtime::expert_scheduling::{
-    ExpertWorkItem, IntraDeviceExpertQueueLimits, IntraDeviceExpertScheduler,
-    InterDeviceAllToAllExchange, InterDeviceToken,
+    ExpertWorkItem, InterDeviceAllToAllExchange, InterDeviceToken, IntraDeviceExpertQueueLimits,
+    IntraDeviceExpertScheduler,
 };
 use vyre_runtime::mtp::{MtpConfig, MtpCoordinator, MtpStorageCandidate};
 use vyre_runtime::paged_residency::{
@@ -62,7 +60,9 @@ fn proof_191_2_prefix_cache_radix_lifecycle_and_cow() {
 
     // Request 1: Prompt [1, 2, 3, 4, 5, 6, 7, 8]
     let prompt1 = vec![1, 2, 3, 4, 5, 6, 7, 8];
-    let p1_pages = cache.insert_or_extend(&key_tenant_a, &prompt1, &[]).expect("insert 1");
+    let p1_pages = cache
+        .insert_or_extend(&key_tenant_a, &prompt1, &[])
+        .expect("insert 1");
     assert_eq!(p1_pages.len(), 1);
 
     // Request 2 (Same tenant, shared prefix [1..8] + suffix [9, 10])
@@ -72,7 +72,9 @@ fn proof_191_2_prefix_cache_radix_lifecycle_and_cow() {
     assert_eq!(match2.page_ids, p1_pages);
 
     // Extend prompt2
-    let p2_pages = cache.insert_or_extend(&key_tenant_a, &prompt2, &match2.page_ids).expect("extend 2");
+    let p2_pages = cache
+        .insert_or_extend(&key_tenant_a, &prompt2, &match2.page_ids)
+        .expect("extend 2");
     assert_eq!(p2_pages.len(), 1); // 10 tokens still fits in 16-token page
 
     let metrics = cache.metrics().expect("metrics");
@@ -104,17 +106,24 @@ fn proof_191_8_prefix_cache_adversarial_limits_and_isolation() {
 
     // Tenant B cannot access Tenant A's pages without explicit trust domain
     let err_iso = cache.lookup(&key_b, &prompt).unwrap_err();
-    assert!(matches!(err_iso, PrefixCacheError::IsolationViolation { .. }));
+    assert!(matches!(
+        err_iso,
+        PrefixCacheError::IsolationViolation { .. }
+    ));
 
     // Pin Page A
     cache.pin(&p_a).expect("pin");
 
     // Allocate Page B
-    let p_b = cache.insert_or_extend(&key_b, &[400, 500], &[]).expect("p_b");
+    let p_b = cache
+        .insert_or_extend(&key_b, &[400, 500], &[])
+        .expect("p_b");
     cache.mark_in_flight(&p_b).expect("in_flight");
 
     // Page 3 allocation fails because p_a is pinned and p_b is in-flight
-    let err_cap = cache.insert_or_extend(&key_a, &[600, 700], &[]).unwrap_err();
+    let err_cap = cache
+        .insert_or_extend(&key_a, &[600, 700], &[])
+        .unwrap_err();
     assert!(matches!(err_cap, PrefixCacheError::CapacityExceeded { .. }));
 
     // Duplicate release fails closed
@@ -125,7 +134,10 @@ fn proof_191_8_prefix_cache_adversarial_limits_and_isolation() {
     // Stale generation rejection
     let stale_key = test_prefix_key("tenant_A", None, 999);
     let err_stale = cache.lookup(&stale_key, &prompt).unwrap_err();
-    assert!(matches!(err_stale, PrefixCacheError::StaleDeviceGeneration { .. }));
+    assert!(matches!(
+        err_stale,
+        PrefixCacheError::StaleDeviceGeneration { .. }
+    ));
 }
 
 // -----------------------------------------------------------------------------
@@ -277,7 +289,9 @@ fn proof_191_6_mtp_speculative_verification_and_rollback() {
 
     // Verification: Draft tokens 10 and 20 match, but 30 was wrong -> ground truth produced 35
     let ground_truth = vec![10, 20, 35];
-    let result = coordinator.verify_and_commit(staged, &ground_truth).expect("verify");
+    let result = coordinator
+        .verify_and_commit(staged, &ground_truth)
+        .expect("verify");
 
     assert_eq!(result.accepted_draft_count, 2);
     assert_eq!(result.rolled_back_count, 1);

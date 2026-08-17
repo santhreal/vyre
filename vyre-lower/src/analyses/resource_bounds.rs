@@ -5,8 +5,8 @@
 //! shared-memory limits, unsupported instructions, and pressure-induced spill.
 //! Unswizzled, synchronous, and unfused candidates are retained as fallbacks.
 
-use serde::{Deserialize, Serialize};
 use crate::KernelDescriptor;
+use serde::{Deserialize, Serialize};
 
 /// Hardware resource capacity limits for a target device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -157,7 +157,8 @@ pub fn verify_candidate_legality(
         violations.push("synchronization barrier placed inside divergent control flow".to_string());
     }
     if !legality.instructions_supported {
-        violations.push("candidate uses instructions unsupported on target architecture".to_string());
+        violations
+            .push("candidate uses instructions unsupported on target architecture".to_string());
     }
 
     let shared_mem_exceeded = shared_memory_bytes > limits.max_shared_memory_bytes;
@@ -170,7 +171,9 @@ pub fn verify_candidate_legality(
 
     let registers_exceeded = registers_per_thread > limits.max_registers_per_thread;
     let spill_bytes = if registers_exceeded {
-        (registers_per_thread - limits.max_registers_per_thread) * 4 * limits.max_threads_per_workgroup
+        (registers_per_thread - limits.max_registers_per_thread)
+            * 4
+            * limits.max_threads_per_workgroup
     } else {
         0
     };

@@ -39,8 +39,7 @@ pub fn reserve_vec_additional<T>(
 }
 
 pub use vyre_foundation::allocation::{
-    try_reserve_hash_map_to_capacity, try_reserve_hash_set_to_capacity,
-    try_reserve_vec_to_capacity,
+    try_reserve_hash_map_to_capacity, try_reserve_hash_set_to_capacity, try_reserve_vec_to_capacity,
 };
 
 /// Ensure a [`Vec`] can hold `target_capacity` items without changing length.
@@ -101,7 +100,6 @@ where
     vyre_foundation::allocation::try_reserve_smallvec_to_capacity(vec, target_capacity)
         .map_err(|source| reserve_error(context, target_capacity, item, source, fix))
 }
-
 
 /// Ensure a [`HashMap`] can hold `target_capacity` entries without changing
 /// length.

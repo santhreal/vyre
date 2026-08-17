@@ -5,8 +5,8 @@
 //! during descriptor analysis, preserving bounds, alias, element-size, and
 //! alignment evidence through lowering without assuming compile-time Rust generic dimensions.
 
-use std::fmt;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Dimension extent representation for static, symbolic, and dynamic shapes.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -93,7 +93,11 @@ impl SliceSpec {
     /// Build a forward slice with unit step.
     #[must_use]
     pub const fn forward(start: i64, stop: i64) -> Self {
-        Self { start, stop, step: 1 }
+        Self {
+            start,
+            stop,
+            step: 1,
+        }
     }
 
     /// Number of elements produced by this slice.
@@ -200,23 +204,38 @@ impl fmt::Display for AffineMapError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::RankMismatch { expected, actual } => {
-                write!(f, "affine access-map rank mismatch: expected {expected}, got {actual}")
+                write!(
+                    f,
+                    "affine access-map rank mismatch: expected {expected}, got {actual}"
+                )
             }
             Self::DimensionOutOfBounds { dim, rank } => {
-                write!(f, "dimension {dim} out of bounds for access-map of rank {rank}")
+                write!(
+                    f,
+                    "dimension {dim} out of bounds for access-map of rank {rank}"
+                )
             }
             Self::InvalidPermutation { rank } => {
-                write!(f, "invalid transposition permutation for access-map of rank {rank}")
+                write!(
+                    f,
+                    "invalid transposition permutation for access-map of rank {rank}"
+                )
             }
             Self::ZeroStep => write!(f, "slice step cannot be zero"),
             Self::InvalidSliceRange { start, stop, step } => {
                 write!(f, "invalid slice range [{start}..{stop} step {step}]")
             }
             Self::OriginOutOfBounds { dim, origin } => {
-                write!(f, "subview origin {origin} out of bounds for dimension {dim}")
+                write!(
+                    f,
+                    "subview origin {origin} out of bounds for dimension {dim}"
+                )
             }
             Self::AlignmentViolation { actual, required } => {
-                write!(f, "alignment violation: actual {actual} bytes, required {required} bytes")
+                write!(
+                    f,
+                    "alignment violation: actual {actual} bytes, required {required} bytes"
+                )
             }
         }
     }
@@ -334,7 +353,8 @@ impl AffineAccessMap {
         if self.alignment_bytes < consumer_abi.required_alignment_bytes {
             return false;
         }
-        let offset_aligned = (self.offset_bytes % (consumer_abi.required_alignment_bytes as i64)) == 0;
+        let offset_aligned =
+            (self.offset_bytes % (consumer_abi.required_alignment_bytes as i64)) == 0;
         if !offset_aligned {
             return false;
         }

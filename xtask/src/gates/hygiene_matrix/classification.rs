@@ -2,13 +2,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
-use super::rules::is_hidden_fallback_pattern;
-use super::structural_gates::is_declared_structural_gate;
-use super::threshold_policy::relative_to_vyre;
 use super::records::{
     HygieneClassificationSummary, HygieneFinding, HygieneFindingClass, HygieneFindingSummary,
     HygieneIntakeSummary, StructuralGateArtifact,
 };
+use super::rules::is_hidden_fallback_pattern;
+use super::structural_gates::is_declared_structural_gate;
+use super::threshold_policy::relative_to_vyre;
 
 pub(crate) fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFindingSummary> {
     let mut counts = std::collections::BTreeMap::<String, usize>::new();

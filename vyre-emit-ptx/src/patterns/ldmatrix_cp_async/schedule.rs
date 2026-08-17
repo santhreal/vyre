@@ -4,10 +4,10 @@
 //! accumulator liveness tracking, wait-group depth control, and epilogue overlap.
 //! Keeps register layout and instruction scheduling strictly concrete inside PTX emitter.
 
-use serde::{Deserialize, Serialize};
-use vyre_lower::KernelDescriptor;
 use super::AsyncCopyPlan;
 use crate::ComputeCapability;
+use serde::{Deserialize, Serialize};
+use vyre_lower::KernelDescriptor;
 
 /// Double-buffer / multi-stage pipeline configuration for PTX async copies.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -184,14 +184,24 @@ impl std::fmt::Display for ScheduleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnsupportedTarget { target, reason } => {
-                write!(f, "PTX target sm_{}{} does not support async copy: {reason}", target.major, target.minor)
+                write!(
+                    f,
+                    "PTX target sm_{}{} does not support async copy: {reason}",
+                    target.major, target.minor
+                )
             }
             Self::NoEligibleCandidates => write!(f, "no eligible load/store pairs for async copy"),
             Self::InsufficientBufferSlots { required, actual } => {
-                write!(f, "insufficient buffer slots: required {required}, available {actual}")
+                write!(
+                    f,
+                    "insufficient buffer slots: required {required}, available {actual}"
+                )
             }
             Self::ExcessiveRegisterPressure { required, limit } => {
-                write!(f, "register pressure ({required} registers) exceeds limit ({limit})")
+                write!(
+                    f,
+                    "register pressure ({required} registers) exceeds limit ({limit})"
+                )
             }
         }
     }

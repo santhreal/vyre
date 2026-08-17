@@ -43,9 +43,9 @@ fn cpu_ref_rejects_cooperative_dispatch() {
     );
     let mut config = vyre_driver::DispatchConfig::default();
     config.cooperative = true;
-    let error = backend
-        .dispatch(&program, &[], &config)
-        .expect_err("Fix: cpu-ref backend must reject cooperative dispatch with UnsupportedFeature");
+    let error = backend.dispatch(&program, &[], &config).expect_err(
+        "Fix: cpu-ref backend must reject cooperative dispatch with UnsupportedFeature",
+    );
     match error {
         vyre_driver::BackendError::UnsupportedFeature { name, backend } => {
             assert!(name.contains("cooperative"), "got {name}");

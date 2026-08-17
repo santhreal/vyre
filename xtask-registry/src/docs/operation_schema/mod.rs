@@ -83,7 +83,9 @@ impl xtask::gate::GateBehavior for OperationSchemaGate {
                 );
                 report.cover_complete(
                     "registered operations",
-                    vyre_registry_link::operation::live_operation_registry().iter().count(),
+                    vyre_registry_link::operation::live_operation_registry()
+                        .iter()
+                        .count(),
                 );
                 report.produced(DEFAULT_OUTPUT);
                 return Ok(report);

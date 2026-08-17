@@ -125,16 +125,12 @@ impl RequiredCapabilities {
         self.local_single_rank_collectives = self
             .local_single_rank_collectives
             .max(other.local_single_rank_collectives);
-        self.transport_collectives = self
-            .transport_collectives
-            .max(other.transport_collectives);
+        self.transport_collectives = self.transport_collectives.max(other.transport_collectives);
         for axis in 0..3 {
             self.max_workgroup_size[axis] =
                 self.max_workgroup_size[axis].max(other.max_workgroup_size[axis]);
         }
-        self.static_storage_bytes = self
-            .static_storage_bytes
-            .max(other.static_storage_bytes);
+        self.static_storage_bytes = self.static_storage_bytes.max(other.static_storage_bytes);
         self
     }
 

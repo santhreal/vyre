@@ -722,7 +722,9 @@ fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
     let Some(arr) = ws.get(key).and_then(Value::as_array) else {
         return Vec::new();
     };
-    arr.iter().filter_map(|e| e.as_str().map(str::to_string)).collect()
+    arr.iter()
+        .filter_map(|e| e.as_str().map(str::to_string))
+        .collect()
 }
 
 /// This crate's own sources. Its tests carry example registrations that name

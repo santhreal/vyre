@@ -81,7 +81,8 @@ fn walk_body_with_guards<'a>(
                 if arms == ArmDescent::Enter {
                     let cond_op = op.operands.first().copied().unwrap_or(0);
                     let child_body_idx = op.operands.get(1).copied().unwrap_or(0);
-                    let guard = in_single_invocation_guard || is_single_invocation_cond(body, &producers, cond_op);
+                    let guard = in_single_invocation_guard
+                        || is_single_invocation_cond(body, &producers, cond_op);
                     if let Some(child) = body.child_bodies.get(child_body_idx as usize) {
                         walk_body_with_guards(child, arms, collector, guard);
                     }
@@ -92,7 +93,8 @@ fn walk_body_with_guards<'a>(
                     let cond_op = op.operands.first().copied().unwrap_or(0);
                     let then_idx = op.operands.get(1).copied().unwrap_or(0);
                     let else_idx = op.operands.get(2).copied().unwrap_or(0);
-                    let guard_then = in_single_invocation_guard || is_single_invocation_cond(body, &producers, cond_op);
+                    let guard_then = in_single_invocation_guard
+                        || is_single_invocation_cond(body, &producers, cond_op);
                     if let Some(child) = body.child_bodies.get(then_idx as usize) {
                         walk_body_with_guards(child, arms, collector, guard_then);
                     }
@@ -126,7 +128,11 @@ fn is_literal_zero(body: &KernelBody, op: &KernelOp) -> bool {
         _ => false,
     }
 }
-fn is_single_invocation_cond(body: &KernelBody, producers: &ProducerMap<'_>, cond_op_id: u32) -> bool {
+fn is_single_invocation_cond(
+    body: &KernelBody,
+    producers: &ProducerMap<'_>,
+    cond_op_id: u32,
+) -> bool {
     let Some(producer) = producers.get(&cond_op_id).copied() else {
         return false;
     };
@@ -158,11 +164,14 @@ fn is_thread_varying_index(
         return false;
     };
     match &producer.kind {
-        KernelOpKind::LocalInvocationId | KernelOpKind::GlobalInvocationId | KernelOpKind::SubgroupLocalId => true,
+        KernelOpKind::LocalInvocationId
+        | KernelOpKind::GlobalInvocationId
+        | KernelOpKind::SubgroupLocalId => true,
         KernelOpKind::Literal => false,
-        KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd | BinOp::Mul) => {
-            producer.operands.iter().any(|&operand| is_thread_varying_index(body, producers, operand))
-        }
+        KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd | BinOp::Mul) => producer
+            .operands
+            .iter()
+            .any(|&operand| is_thread_varying_index(body, producers, operand)),
         _ => false,
     }
 }

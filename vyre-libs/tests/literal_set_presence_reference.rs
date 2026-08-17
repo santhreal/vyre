@@ -23,7 +23,6 @@ use vyre_libs::scan::classic_ac::{
 use vyre_libs::scan::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
 
-
 /// Small alphabet so literals collide and the DFA / prefilter actually exercise
 /// shared prefixes, suffix2/suffix3 candidate gating, and overlapping matches.
 const ALPHABET: &[u8] = b"abcAB_0/-";

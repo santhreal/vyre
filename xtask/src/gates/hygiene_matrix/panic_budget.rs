@@ -2,11 +2,11 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use super::threshold_policy::relative_to_vyre;
 use super::records::{
     HygieneFindingClass, PanicBudgetArtifact, PanicBudgetDocument, PanicBudgetRow,
     PANIC_BUDGET_SCHEMA_VERSION, PANIC_BUDGET_SOURCE,
 };
+use super::threshold_policy::relative_to_vyre;
 
 /// Whether a classified finding is a panic that nothing else answers for.
 ///

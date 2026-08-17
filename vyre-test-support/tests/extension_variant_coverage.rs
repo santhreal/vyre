@@ -11,6 +11,9 @@ fn extension_registrations_are_complete() {
     let expr_exts = registered_expr_extension_kinds();
     let node_exts = registered_node_extension_kinds();
     // At least WideLiteralExpr extensions are registered in vyre-foundation
-    assert!(!expr_exts.is_empty(), "expr extensions should be registered");
+    assert!(
+        !expr_exts.is_empty(),
+        "expr extensions should be registered"
+    );
     let _ = node_exts;
 }

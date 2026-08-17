@@ -7,15 +7,17 @@
 //! - 189.4: Ground host latency limits in comparable evidence.
 //! - 189.5: Reject stale and incomparable benchmark records.
 
+use serde_json::json;
 use std::collections::BTreeSet;
 use std::path::Path;
 use toml::Value as TomlValue;
-use serde_json::json;
 
 const BENCH_TARGETS_RAW: &str = include_str!("../../docs/optimization/BENCH_TARGETS.toml");
-const STATISTICAL_GATES_RAW: &str = include_str!("../../docs/optimization/STATISTICAL_REGRESSION_GATES.toml");
+const STATISTICAL_GATES_RAW: &str =
+    include_str!("../../docs/optimization/STATISTICAL_REGRESSION_GATES.toml");
 const ROOFLINE_RAW: &str = include_str!("../../docs/optimization/ROOFLINE_COUNTER_EVIDENCE.toml");
-const METHODOLOGY_RAW: &str = include_str!("../../docs/optimization/BENCHMARK_METHODOLOGY_CONTRACTS.toml");
+const METHODOLOGY_RAW: &str =
+    include_str!("../../docs/optimization/BENCHMARK_METHODOLOGY_CONTRACTS.toml");
 
 // ---------------------------------------------------------------------------
 // 189.1: Run on an isolated or fully recorded device
@@ -31,7 +33,10 @@ fn test_189_1_environment_recording_contract() {
     );
     let env = env_res.unwrap();
     assert!(!env.os.is_empty(), "Fix: OS must be recorded");
-    assert!(!env.architecture.is_empty(), "Fix: architecture must be recorded");
+    assert!(
+        !env.architecture.is_empty(),
+        "Fix: architecture must be recorded"
+    );
     assert!(env.cpu_cores > 0, "Fix: CPU cores must be > 0");
 
     let build_profile = vyre_bench::probes::build_profile();
@@ -81,26 +86,39 @@ fn test_189_1_environment_recording_contract() {
 
 #[test]
 fn test_189_2_statistical_policy_per_benchmark_target() {
-    let targets: TomlValue = toml::from_str(BENCH_TARGETS_RAW)
-        .expect("Fix: BENCH_TARGETS.toml must be valid TOML");
+    let targets: TomlValue =
+        toml::from_str(BENCH_TARGETS_RAW).expect("Fix: BENCH_TARGETS.toml must be valid TOML");
     let target_list = targets
         .get("target")
         .and_then(TomlValue::as_array)
         .expect("Fix: BENCH_TARGETS.toml must contain [[target]] list");
-    assert!(target_list.len() >= 10, "Fix: BENCH_TARGETS.toml must contain all canonical targets");
+    assert!(
+        target_list.len() >= 10,
+        "Fix: BENCH_TARGETS.toml must contain all canonical targets"
+    );
 
     let baseline_classes = targets
         .get("baseline_class_values")
         .and_then(TomlValue::as_array)
-        .map(|arr| arr.iter().filter_map(TomlValue::as_str).collect::<BTreeSet<_>>())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(TomlValue::as_str)
+                .collect::<BTreeSet<_>>()
+        })
         .expect("Fix: baseline_class_values must exist");
     assert!(baseline_classes.contains("cpu_sota"));
     assert!(baseline_classes.contains("gpu_sota"));
     assert!(baseline_classes.contains("reference_correctness"));
 
     for t in target_list {
-        let id = t.get("id").and_then(TomlValue::as_str).expect("target must have id");
-        let metric = t.get("metric").and_then(TomlValue::as_str).expect("target must have metric");
+        let id = t
+            .get("id")
+            .and_then(TomlValue::as_str)
+            .expect("target must have id");
+        let metric = t
+            .get("metric")
+            .and_then(TomlValue::as_str)
+            .expect("target must have metric");
         assert!(!metric.is_empty(), "target {id} must have non-empty metric");
 
         let cpu_base = t.get("cpu_baseline").and_then(TomlValue::as_str);
@@ -121,12 +139,30 @@ fn test_189_2_statistical_policy_per_benchmark_target() {
     assert!(!gate_list.is_empty());
 
     for g in gate_list {
-        let gate_id = g.get("gate_id").and_then(TomlValue::as_str).expect("gate_id required");
-        let effect_size = g.get("effect_size").and_then(TomlValue::as_str).expect("effect_size required");
-        let conf = g.get("confidence_level").and_then(TomlValue::as_str).expect("confidence_level required");
-        let thresh = g.get("regression_threshold").and_then(TomlValue::as_str).expect("regression_threshold required");
-        let noise = g.get("noise_floor").and_then(TomlValue::as_str).expect("noise_floor required");
-        let decision = g.get("decision").and_then(TomlValue::as_str).expect("decision required");
+        let gate_id = g
+            .get("gate_id")
+            .and_then(TomlValue::as_str)
+            .expect("gate_id required");
+        let effect_size = g
+            .get("effect_size")
+            .and_then(TomlValue::as_str)
+            .expect("effect_size required");
+        let conf = g
+            .get("confidence_level")
+            .and_then(TomlValue::as_str)
+            .expect("confidence_level required");
+        let thresh = g
+            .get("regression_threshold")
+            .and_then(TomlValue::as_str)
+            .expect("regression_threshold required");
+        let noise = g
+            .get("noise_floor")
+            .and_then(TomlValue::as_str)
+            .expect("noise_floor required");
+        let decision = g
+            .get("decision")
+            .and_then(TomlValue::as_str)
+            .expect("decision required");
 
         assert!(!effect_size.is_empty(), "gate {gate_id} effect_size");
         assert!(!conf.is_empty(), "gate {gate_id} confidence_level");
@@ -154,20 +190,47 @@ fn test_189_3_workload_specific_pmu_expectations() {
     assert!(!kernels.is_empty());
 
     for k in kernels {
-        let kernel_id = k.get("kernel_id").and_then(TomlValue::as_str).expect("kernel_id");
-        let backend = k.get("backend").and_then(TomlValue::as_str).expect("backend");
-        let intensity = k.get("arithmetic_intensity").and_then(TomlValue::as_str).expect("arithmetic_intensity");
-        let bound = k.get("roofline_bound").and_then(TomlValue::as_str).expect("roofline_bound");
-        let resource = k.get("limiting_resource").and_then(TomlValue::as_str).expect("limiting_resource");
-        let counters = k.get("counter_sources").and_then(TomlValue::as_array).expect("counter_sources");
-        let explanation = k.get("route_explanation").and_then(TomlValue::as_str).expect("route_explanation");
+        let kernel_id = k
+            .get("kernel_id")
+            .and_then(TomlValue::as_str)
+            .expect("kernel_id");
+        let backend = k
+            .get("backend")
+            .and_then(TomlValue::as_str)
+            .expect("backend");
+        let intensity = k
+            .get("arithmetic_intensity")
+            .and_then(TomlValue::as_str)
+            .expect("arithmetic_intensity");
+        let bound = k
+            .get("roofline_bound")
+            .and_then(TomlValue::as_str)
+            .expect("roofline_bound");
+        let resource = k
+            .get("limiting_resource")
+            .and_then(TomlValue::as_str)
+            .expect("limiting_resource");
+        let counters = k
+            .get("counter_sources")
+            .and_then(TomlValue::as_array)
+            .expect("counter_sources");
+        let explanation = k
+            .get("route_explanation")
+            .and_then(TomlValue::as_str)
+            .expect("route_explanation");
 
         assert!(!backend.is_empty(), "kernel {kernel_id} backend");
         assert!(!intensity.is_empty(), "kernel {kernel_id} intensity");
         assert!(!bound.is_empty(), "kernel {kernel_id} bound");
         assert!(!resource.is_empty(), "kernel {kernel_id} limiting_resource");
-        assert!(!counters.is_empty(), "kernel {kernel_id} counter_sources must not be empty");
-        assert!(!explanation.is_empty(), "kernel {kernel_id} route_explanation");
+        assert!(
+            !counters.is_empty(),
+            "kernel {kernel_id} counter_sources must not be empty"
+        );
+        assert!(
+            !explanation.is_empty(),
+            "kernel {kernel_id} route_explanation"
+        );
     }
 }
 
@@ -185,10 +248,19 @@ fn test_189_4_ground_host_latency_limits() {
 
     for t in target_list {
         let id = t.get("id").and_then(TomlValue::as_str).unwrap_or("");
-        let timing_quality = t.get("timing_quality").and_then(TomlValue::as_str).unwrap_or("");
-        let transfer_pressure = t.get("transfer_pressure").and_then(TomlValue::as_str).unwrap_or("");
+        let timing_quality = t
+            .get("timing_quality")
+            .and_then(TomlValue::as_str)
+            .unwrap_or("");
+        let transfer_pressure = t
+            .get("transfer_pressure")
+            .and_then(TomlValue::as_str)
+            .unwrap_or("");
 
-        if transfer_pressure.contains("resident") || id.contains("megakernel") || id.contains("resident") {
+        if transfer_pressure.contains("resident")
+            || id.contains("megakernel")
+            || id.contains("resident")
+        {
             has_resident = true;
         }
         if transfer_pressure.contains("readback") || id.contains("smoke") || id.contains("micro") {
@@ -204,8 +276,14 @@ fn test_189_4_ground_host_latency_limits() {
         }
     }
 
-    assert!(has_resident, "Fix: BENCH_TARGETS must contain resident-path benchmark targets");
-    assert!(has_oneshot, "Fix: BENCH_TARGETS must contain one-shot / readback benchmark targets");
+    assert!(
+        has_resident,
+        "Fix: BENCH_TARGETS must contain resident-path benchmark targets"
+    );
+    assert!(
+        has_oneshot,
+        "Fix: BENCH_TARGETS must contain one-shot / readback benchmark targets"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -223,7 +301,9 @@ fn test_189_5_reject_stale_and_incomparable_benchmark_records() {
     });
     assert!(
         missing_profile.get("environment").is_none()
-            || missing_profile["environment"].get("build_profile").is_none(),
+            || missing_profile["environment"]
+                .get("build_profile")
+                .is_none(),
         "Missing environment/build_profile must be observable"
     );
 

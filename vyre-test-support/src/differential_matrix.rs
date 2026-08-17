@@ -102,13 +102,9 @@ mod tests {
             vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
         );
 
-        let decision = evaluate_differential(
-            &program,
-            "test_op",
-            &[],
-            &[42u32.to_le_bytes().to_vec()],
-        )
-        .expect("differential evaluation must succeed");
+        let decision =
+            evaluate_differential(&program, "test_op", &[], &[42u32.to_le_bytes().to_vec()])
+                .expect("differential evaluation must succeed");
 
         assert_eq!(decision, DifferentialDecision::ExactByteMatch);
     }

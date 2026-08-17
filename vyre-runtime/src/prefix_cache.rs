@@ -592,7 +592,10 @@ impl PrefixCacheManager {
 
         // Increment ref count on existing pages to acquire lease for this extension
         for &id in existing_pages {
-            let page = self.pages.get_mut(&id).ok_or(PrefixCacheError::PageNotFound(id))?;
+            let page = self
+                .pages
+                .get_mut(&id)
+                .ok_or(PrefixCacheError::PageNotFound(id))?;
             page.ref_count += 1;
             page.last_accessed_tick = self.tick;
         }
@@ -604,7 +607,8 @@ impl PrefixCacheManager {
         for i in 0..new_pages_needed {
             let page_id = self.allocate_physical_page(key)?;
             let token_start = ((existing_page_count + i) * block_tokens) as u32;
-            let token_end = std::cmp::min((existing_page_count + i + 1) * block_tokens, tokens.len()) as u32;
+            let token_end =
+                std::cmp::min((existing_page_count + i + 1) * block_tokens, tokens.len()) as u32;
 
             if let Some(page) = self.pages.get_mut(&page_id) {
                 page.initialized_token_range = Some((token_start, token_end));
@@ -617,14 +621,10 @@ impl PrefixCacheManager {
 
         // Insert into radix trie
         let model_fp = key.model_fingerprint();
-        let root = self.roots.entry(model_fp).or_insert_with(|| {
-            RadixNode::new(
-                Vec::new(),
-                Vec::new(),
-                key.clone(),
-                tick,
-            )
-        });
+        let root = self
+            .roots
+            .entry(model_fp)
+            .or_insert_with(|| RadixNode::new(Vec::new(), Vec::new(), key.clone(), tick));
 
         let first_token = tokens[0];
         if let Some(child) = root.children.get_mut(&first_token) {
@@ -746,12 +746,8 @@ impl PrefixCacheManager {
                         metrics,
                     );
                 } else {
-                    let child = RadixNode::new(
-                        rem_tokens.to_vec(),
-                        rem_pages.to_vec(),
-                        key.clone(),
-                        tick,
-                    );
+                    let child =
+                        RadixNode::new(rem_tokens.to_vec(), rem_pages.to_vec(), key.clone(), tick);
                     node.children.insert(next_token, child);
                 }
             }
@@ -790,12 +786,8 @@ impl PrefixCacheManager {
                     &[]
                 };
                 let next_token = rem_tokens[0];
-                let new_child = RadixNode::new(
-                    rem_tokens.to_vec(),
-                    rem_pages.to_vec(),
-                    key.clone(),
-                    tick,
-                );
+                let new_child =
+                    RadixNode::new(rem_tokens.to_vec(), rem_pages.to_vec(), key.clone(), tick);
                 node.children.insert(next_token, new_child);
             }
         }
@@ -804,7 +796,10 @@ impl PrefixCacheManager {
     /// Pin pages so they cannot be evicted during compilation or resident preparation.
     pub fn pin_pages(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
         for &id in page_ids {
-            let page = self.pages.get_mut(&id).ok_or(PrefixCacheError::PageNotFound(id))?;
+            let page = self
+                .pages
+                .get_mut(&id)
+                .ok_or(PrefixCacheError::PageNotFound(id))?;
             page.pinned = true;
         }
         self.metrics.pinned_pages = self.pages.values().filter(|p| p.pinned).count();
@@ -814,7 +809,10 @@ impl PrefixCacheManager {
     /// Unpin pages after compilation / submission completes.
     pub fn unpin_pages(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
         for &id in page_ids {
-            let page = self.pages.get_mut(&id).ok_or(PrefixCacheError::PageNotFound(id))?;
+            let page = self
+                .pages
+                .get_mut(&id)
+                .ok_or(PrefixCacheError::PageNotFound(id))?;
             page.pinned = false;
         }
         self.metrics.pinned_pages = self.pages.values().filter(|p| p.pinned).count();
@@ -824,7 +822,10 @@ impl PrefixCacheManager {
     /// Mark pages as in-flight during kernel execution.
     pub fn mark_in_flight(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
         for &id in page_ids {
-            let page = self.pages.get_mut(&id).ok_or(PrefixCacheError::PageNotFound(id))?;
+            let page = self
+                .pages
+                .get_mut(&id)
+                .ok_or(PrefixCacheError::PageNotFound(id))?;
             page.in_flight = true;
         }
         self.metrics.in_flight_pages = self.pages.values().filter(|p| p.in_flight).count();
@@ -834,7 +835,10 @@ impl PrefixCacheManager {
     /// Clear in-flight status after kernel completion.
     pub fn clear_in_flight(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
         for &id in page_ids {
-            let page = self.pages.get_mut(&id).ok_or(PrefixCacheError::PageNotFound(id))?;
+            let page = self
+                .pages
+                .get_mut(&id)
+                .ok_or(PrefixCacheError::PageNotFound(id))?;
             page.in_flight = false;
         }
         self.metrics.in_flight_pages = self.pages.values().filter(|p| p.in_flight).count();
@@ -848,7 +852,10 @@ impl PrefixCacheManager {
     /// Returns [`PrefixCacheError::DuplicateRelease`] on double release / underflow.
     pub fn release_pages(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
         for &id in page_ids {
-            let page = self.pages.get_mut(&id).ok_or(PrefixCacheError::PageNotFound(id))?;
+            let page = self
+                .pages
+                .get_mut(&id)
+                .ok_or(PrefixCacheError::PageNotFound(id))?;
             if page.ref_count == 0 {
                 return Err(PrefixCacheError::DuplicateRelease(id));
             }
@@ -875,12 +882,17 @@ impl PrefixCache {
     #[must_use]
     pub fn new(limits: PrefixCacheLimits, initial_generation: u64) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(PrefixCacheManager::new(limits, initial_generation))),
+            inner: Arc::new(Mutex::new(PrefixCacheManager::new(
+                limits,
+                initial_generation,
+            ))),
         }
     }
 
     fn lock(&self) -> Result<MutexGuard<'_, PrefixCacheManager>, PrefixCacheError> {
-        self.inner.lock().map_err(|_| PrefixCacheError::LockPoisoned)
+        self.inner
+            .lock()
+            .map_err(|_| PrefixCacheError::LockPoisoned)
     }
 
     /// Look up a token sequence in the prefix cache.
@@ -899,7 +911,8 @@ impl PrefixCache {
         tokens: &[u32],
         existing_pages: &[u32],
     ) -> Result<Vec<u32>, PrefixCacheError> {
-        self.lock()?.insert_or_extend_prefix(key, tokens, existing_pages)
+        self.lock()?
+            .insert_or_extend_prefix(key, tokens, existing_pages)
     }
 
     /// Pin pages.
@@ -1001,7 +1014,9 @@ mod tests {
         let key_b = test_key("tenant_b", None, 1); // Different tenant, no shared trust domain
 
         let prompt = vec![10, 20, 30, 40];
-        let pages_a = cache.insert_or_extend(&key_a, &prompt, &[]).expect("insert");
+        let pages_a = cache
+            .insert_or_extend(&key_a, &prompt, &[])
+            .expect("insert");
 
         // Tenant B attempts to look up Tenant A's prefix -> isolation violation
         let err = cache.lookup(&key_b, &prompt).unwrap_err();
@@ -1017,7 +1032,9 @@ mod tests {
         let key_b = test_key("tenant_b", Some("common_trust_group"), 1);
 
         let prompt = vec![10, 20, 30, 40];
-        let pages_a = cache.insert_or_extend(&key_a, &prompt, &[]).expect("insert");
+        let pages_a = cache
+            .insert_or_extend(&key_a, &prompt, &[])
+            .expect("insert");
 
         // Shared trust domain allows physical sharing across distinct tenants
         let hit = cache.lookup(&key_b, &prompt).expect("lookup");
@@ -1035,7 +1052,10 @@ mod tests {
 
         let prompt = vec![1, 2, 3];
         let err = cache.lookup(&key_stale, &prompt).unwrap_err();
-        assert!(matches!(err, PrefixCacheError::StaleDeviceGeneration { .. }));
+        assert!(matches!(
+            err,
+            PrefixCacheError::StaleDeviceGeneration { .. }
+        ));
     }
 
     #[test]
@@ -1075,7 +1095,9 @@ mod tests {
         let cache = PrefixCache::new(PrefixCacheLimits::default(), 1);
         let key = test_key("tenant_a", None, 1);
 
-        let pages = cache.insert_or_extend(&key, &[1, 2, 3], &[]).expect("insert");
+        let pages = cache
+            .insert_or_extend(&key, &[1, 2, 3], &[])
+            .expect("insert");
         cache.release(&pages).expect("first release");
 
         // Duplicate release must fail with DuplicateRelease error

@@ -466,7 +466,6 @@ inventory::submit! {
     )
 }
 
-
 /// Index of the lane `stride` positions before `lane`.
 ///
 /// One owner for "previous lane" addressing. The two spellings this replaces

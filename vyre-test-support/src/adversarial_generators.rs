@@ -33,11 +33,16 @@ pub fn generate_adversarial_suite() -> Vec<AdversarialTestCase> {
             name: "extreme_1d_single_invocation",
             program: Program::wrapped(
                 vec![
-                    BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+                    BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(1),
                     BufferDecl::output("out", 1, DataType::U32).with_count(1),
                 ],
                 [1, 1, 1],
-                vec![Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(0)))],
+                vec![Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::load("in", Expr::u32(0)),
+                )],
             ),
             inputs: vec![vec![42, 0, 0, 0]],
             is_valid: true,
@@ -48,7 +53,8 @@ pub fn generate_adversarial_suite() -> Vec<AdversarialTestCase> {
             name: "extreme_2d_grid_dimensions",
             program: Program::wrapped(
                 vec![
-                    BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32).with_count(64),
+                    BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(64),
                     BufferDecl::output("out", 1, DataType::U32).with_count(64),
                 ],
                 [8, 8, 1],
@@ -66,9 +72,7 @@ pub fn generate_adversarial_suite() -> Vec<AdversarialTestCase> {
         AdversarialTestCase {
             name: "invalid_zero_dimension_geometry",
             program: Program::wrapped(
-                vec![
-                    BufferDecl::output("out", 0, DataType::U32).with_count(1),
-                ],
+                vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
                 [0, 1, 1],
                 vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
             ),
@@ -80,21 +84,17 @@ pub fn generate_adversarial_suite() -> Vec<AdversarialTestCase> {
         AdversarialTestCase {
             name: "nested_control_flow_depth",
             program: Program::wrapped(
-                vec![
-                    BufferDecl::output("out", 0, DataType::U32).with_count(1),
-                ],
+                vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
                 [1, 1, 1],
-                vec![
-                    Node::if_then_else(
+                vec![Node::if_then_else(
+                    Expr::bool(true),
+                    vec![Node::if_then_else(
                         Expr::bool(true),
-                        vec![Node::if_then_else(
-                            Expr::bool(true),
-                            vec![Node::store("out", Expr::u32(0), Expr::u32(100))],
-                            vec![Node::store("out", Expr::u32(0), Expr::u32(200))],
-                        )],
-                        vec![Node::store("out", Expr::u32(0), Expr::u32(300))],
-                    ),
-                ],
+                        vec![Node::store("out", Expr::u32(0), Expr::u32(100))],
+                        vec![Node::store("out", Expr::u32(0), Expr::u32(200))],
+                    )],
+                    vec![Node::store("out", Expr::u32(0), Expr::u32(300))],
+                )],
             ),
             inputs: vec![],
             is_valid: true,
@@ -105,7 +105,8 @@ pub fn generate_adversarial_suite() -> Vec<AdversarialTestCase> {
             name: "quantized_f8e4m3_edge_payload",
             program: Program::wrapped(
                 vec![
-                    BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::F8E4M3).with_count(4),
+                    BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::F8E4M3)
+                        .with_count(4),
                     BufferDecl::output("out", 1, DataType::F8E4M3).with_count(4),
                 ],
                 [1, 1, 1],

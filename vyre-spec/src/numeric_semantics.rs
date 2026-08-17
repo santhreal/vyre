@@ -193,9 +193,7 @@ pub const FP4_DECODE_TABLE: [f32; 16] = [
 
 /// Canonical 16-element I4 decode table.
 /// Range: [-8, 7]
-pub const I4_DECODE_TABLE: [i32; 16] = [
-    0, 1, 2, 3, 4, 5, 6, 7, -8, -7, -6, -5, -4, -3, -2, -1,
-];
+pub const I4_DECODE_TABLE: [i32; 16] = [0, 1, 2, 3, 4, 5, 6, 7, -8, -7, -6, -5, -4, -3, -2, -1];
 
 /// Decode one 8-bit F8E4M3 float value to f32.
 /// E4M3: 1 sign, 4 exponent (bias 7), 3 mantissa.
@@ -215,7 +213,11 @@ pub fn f8e4m3_to_f32(byte: u8) -> f32 {
 
     if exp == 0 {
         if mant == 0 {
-            if sign { -0.0 } else { 0.0 }
+            if sign {
+                -0.0
+            } else {
+                0.0
+            }
         } else {
             sign_mult * (2.0f32.powi(-6)) * (mant as f32 / 8.0)
         }
@@ -231,7 +233,11 @@ pub fn f32_to_f8e4m3(val: f32) -> u8 {
     if val.is_nan() {
         return 0x7F;
     }
-    let sign_bit = if val.is_sign_negative() { 0x80u8 } else { 0x00u8 };
+    let sign_bit = if val.is_sign_negative() {
+        0x80u8
+    } else {
+        0x00u8
+    };
     let abs_val = val.abs();
 
     if abs_val == 0.0 {
@@ -276,14 +282,22 @@ pub fn f8e5m2_to_f32(byte: u8) -> f32 {
 
     if exp == 0x1F {
         if mant == 0 {
-            return if sign { f32::NEG_INFINITY } else { f32::INFINITY };
+            return if sign {
+                f32::NEG_INFINITY
+            } else {
+                f32::INFINITY
+            };
         }
         return f32::NAN;
     }
 
     if exp == 0 {
         if mant == 0 {
-            if sign { -0.0 } else { 0.0 }
+            if sign {
+                -0.0
+            } else {
+                0.0
+            }
         } else {
             sign_mult * (2.0f32.powi(-14)) * (mant as f32 / 4.0)
         }
@@ -323,7 +337,11 @@ pub fn f32_to_f8e5m2(val: f32) -> u8 {
     if val.is_nan() {
         return 0x7E;
     }
-    let sign_bit = if val.is_sign_negative() { 0x80u8 } else { 0x00u8 };
+    let sign_bit = if val.is_sign_negative() {
+        0x80u8
+    } else {
+        0x00u8
+    };
     if val.is_infinite() {
         return sign_bit | 0x7C;
     }
@@ -387,7 +405,11 @@ pub fn nf4_to_f32(nibble: u8) -> f32 {
 /// Encode one f32 value to 4-bit NF4 nibble (0..15) via nearest quantile.
 #[must_use]
 pub fn f32_to_nf4(val: f32) -> u8 {
-    let clamped = if val.is_nan() { 0.0 } else { val.clamp(-1.0, 1.0) };
+    let clamped = if val.is_nan() {
+        0.0
+    } else {
+        val.clamp(-1.0, 1.0)
+    };
     let mut best_idx = 0u8;
     let mut best_diff = f32::INFINITY;
 
@@ -442,28 +464,48 @@ pub fn dequantize_grouped_f32(
     for i in 0..element_count {
         let group_idx = i / group_size;
         let scale = *scales.get(group_idx).unwrap_or(&1.0);
-        let zp = zero_points.and_then(|z| z.get(group_idx).copied()).unwrap_or(0.0);
+        let zp = zero_points
+            .and_then(|z| z.get(group_idx).copied())
+            .unwrap_or(0.0);
 
         let unscaled = match storage_type {
             DataType::I4 => {
                 let byte_idx = i / 2;
                 let is_high = (i % 2) != 0;
-                let byte = *storage_bytes.get(byte_idx).ok_or("storage_bytes truncated")?;
-                let nibble = if is_high { (byte >> 4) & 0x0F } else { byte & 0x0F };
+                let byte = *storage_bytes
+                    .get(byte_idx)
+                    .ok_or("storage_bytes truncated")?;
+                let nibble = if is_high {
+                    (byte >> 4) & 0x0F
+                } else {
+                    byte & 0x0F
+                };
                 i4_to_i32(nibble) as f32
             }
             DataType::FP4 => {
                 let byte_idx = i / 2;
                 let is_high = (i % 2) != 0;
-                let byte = *storage_bytes.get(byte_idx).ok_or("storage_bytes truncated")?;
-                let nibble = if is_high { (byte >> 4) & 0x0F } else { byte & 0x0F };
+                let byte = *storage_bytes
+                    .get(byte_idx)
+                    .ok_or("storage_bytes truncated")?;
+                let nibble = if is_high {
+                    (byte >> 4) & 0x0F
+                } else {
+                    byte & 0x0F
+                };
                 fp4_to_f32(nibble)
             }
             DataType::NF4 => {
                 let byte_idx = i / 2;
                 let is_high = (i % 2) != 0;
-                let byte = *storage_bytes.get(byte_idx).ok_or("storage_bytes truncated")?;
-                let nibble = if is_high { (byte >> 4) & 0x0F } else { byte & 0x0F };
+                let byte = *storage_bytes
+                    .get(byte_idx)
+                    .ok_or("storage_bytes truncated")?;
+                let nibble = if is_high {
+                    (byte >> 4) & 0x0F
+                } else {
+                    byte & 0x0F
+                };
                 nf4_to_f32(nibble)
             }
             DataType::F8E4M3 => {

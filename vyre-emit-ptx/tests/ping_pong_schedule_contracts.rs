@@ -69,28 +69,34 @@ fn ping_pong_schedule_generates_prologue_loop_and_epilogue() {
     assert!(plan.schedule.epilogue_overlap.overlap_with_next_tile);
 
     // Verify Prologue issues async copy into stage 0
-    assert!(plan.prologue.iter().any(|op| matches!(
-        op,
-        PipelineStageOp::AsyncCopyIssue { stage: 0, .. }
-    )));
-    assert!(plan.prologue.iter().any(|op| matches!(op, PipelineStageOp::CommitGroup)));
+    assert!(plan
+        .prologue
+        .iter()
+        .any(|op| matches!(op, PipelineStageOp::AsyncCopyIssue { stage: 0, .. })));
+    assert!(plan
+        .prologue
+        .iter()
+        .any(|op| matches!(op, PipelineStageOp::CommitGroup)));
 
     // Verify Steady state issues stage 1 and waits on group 1
-    assert!(plan.steady_state.iter().any(|op| matches!(
-        op,
-        PipelineStageOp::AsyncCopyIssue { stage: 1, .. }
-    )));
-    assert!(plan.steady_state.iter().any(|op| matches!(
-        op,
-        PipelineStageOp::WaitGroup { depth: 1 }
-    )));
-    assert!(plan.steady_state.iter().any(|op| matches!(op, PipelineStageOp::RotateStage)));
+    assert!(plan
+        .steady_state
+        .iter()
+        .any(|op| matches!(op, PipelineStageOp::AsyncCopyIssue { stage: 1, .. })));
+    assert!(plan
+        .steady_state
+        .iter()
+        .any(|op| matches!(op, PipelineStageOp::WaitGroup { depth: 1 })));
+    assert!(plan
+        .steady_state
+        .iter()
+        .any(|op| matches!(op, PipelineStageOp::RotateStage)));
 
     // Verify Epilogue drains all groups (depth 0)
-    assert!(plan.epilogue.iter().any(|op| matches!(
-        op,
-        PipelineStageOp::WaitGroup { depth: 0 }
-    )));
+    assert!(plan
+        .epilogue
+        .iter()
+        .any(|op| matches!(op, PipelineStageOp::WaitGroup { depth: 0 })));
 }
 
 #[test]
@@ -101,10 +107,16 @@ fn ping_pong_schedule_verifies_buffer_slots_and_register_budget() {
     // Insufficient buffer slots (< 2) is rejected
     let err_slots = plan_double_buffer_schedule(&desc, hopper, &plan, &[0], 128)
         .expect_err("Fix: single buffer slot cannot double-buffer");
-    assert!(matches!(err_slots, ScheduleError::InsufficientBufferSlots { .. }));
+    assert!(matches!(
+        err_slots,
+        ScheduleError::InsufficientBufferSlots { .. }
+    ));
 
     // Insufficient register budget (< 48) is rejected
     let err_regs = plan_double_buffer_schedule(&desc, hopper, &plan, &[0, 1], 16)
         .expect_err("Fix: low register budget must be rejected");
-    assert!(matches!(err_regs, ScheduleError::ExcessiveRegisterPressure { .. }));
+    assert!(matches!(
+        err_regs,
+        ScheduleError::ExcessiveRegisterPressure { .. }
+    ));
 }

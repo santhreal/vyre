@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
+use super::records::{HygieneFinding, BLOCKED_PATTERNS};
 use super::rules::{
     has_documented_panic_contract, is_hidden_fallback_guard_source, is_non_release_cfg_attr,
     line_contains_blocked_pattern, line_contains_heredoc, line_contains_invalid_cargo_full_xtask,
@@ -11,7 +12,6 @@ use super::rules::{
     read_text_bounded, BraceDepthState,
 };
 use super::syntax::scan_source_inspection_tests;
-use super::records::{HygieneFinding, BLOCKED_PATTERNS};
 use super::{CARGO_WRAPPER_PATTERNS, HIDDEN_FALLBACK_PATTERNS, RESOURCE_BOUND_PATTERNS};
 
 pub(crate) const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[

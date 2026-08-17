@@ -11,7 +11,9 @@ use std::fmt::Write as _;
 use std::sync::Arc;
 
 /// Proof domain classifying the semantic rules and solver theory.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum ProofDomain {
     /// Quantifier-free bit-vector arithmetic.
     IntegerBitVector,

@@ -29,10 +29,7 @@ pub fn memory_ordering_variant_samples() -> Vec<MemoryOrdering> {
 /// Panics if a declared variant is missing or an undeclared variant is present.
 pub fn assert_covers_every_memory_ordering(samples: &[MemoryOrdering]) {
     let declared = declared_memory_ordering_variants();
-    let covered: BTreeSet<String> = samples
-        .iter()
-        .map(|s| format!("{s:?}"))
-        .collect();
+    let covered: BTreeSet<String> = samples.iter().map(|s| format!("{s:?}")).collect();
 
     let missing: BTreeSet<_> = declared.difference(&covered).cloned().collect();
     assert!(

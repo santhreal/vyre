@@ -1,6 +1,3 @@
-mod wire_words;
-use wire_words::{alternating, lcg_u32 as lcg, ramp};
-
 //! Shared adversarial bitset/reduce matrix.
 //!
 //! This replaces generated clone files with one deterministic matrix that
@@ -8,6 +5,9 @@ use wire_words::{alternating, lcg_u32 as lcg, ramp};
 //! through the same hostile length/value corpus.
 
 #![cfg(feature = "cpu-parity")]
+
+mod wire_words;
+use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
 type UnaryScalar = fn(&[u32]) -> u32;
 type UnaryVector = fn(&[u32]) -> Vec<u32>;
@@ -244,6 +244,3 @@ fn binary_cases() -> Vec<(Vec<u32>, Vec<u32>)> {
 
     cases
 }
-
-
-

@@ -1,7 +1,9 @@
 //! Independent known-answer tests for composition witnesses.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::composition_witness::{csr_bfs_witness, prefix_scan_witness, semiring_gemm_witness};
+use vyre_reference::composition_witness::{
+    csr_bfs_witness, prefix_scan_witness, semiring_gemm_witness,
+};
 use vyre_reference::{reference_eval, value::Value};
 use vyre_spec::Semiring;
 
@@ -82,8 +84,14 @@ fn interpreter_matches_independent_witness_on_matrix_vector() {
                 "out",
                 Expr::u32(0),
                 Expr::add(
-                    Expr::mul(Expr::load("mat", Expr::u32(0)), Expr::load("vec", Expr::u32(0))),
-                    Expr::mul(Expr::load("mat", Expr::u32(1)), Expr::load("vec", Expr::u32(1))),
+                    Expr::mul(
+                        Expr::load("mat", Expr::u32(0)),
+                        Expr::load("vec", Expr::u32(0)),
+                    ),
+                    Expr::mul(
+                        Expr::load("mat", Expr::u32(1)),
+                        Expr::load("vec", Expr::u32(1)),
+                    ),
                 ),
             ),
             // out[1] = mat[2]*vec[0] + mat[3]*vec[1]
@@ -91,8 +99,14 @@ fn interpreter_matches_independent_witness_on_matrix_vector() {
                 "out",
                 Expr::u32(1),
                 Expr::add(
-                    Expr::mul(Expr::load("mat", Expr::u32(2)), Expr::load("vec", Expr::u32(0))),
-                    Expr::mul(Expr::load("mat", Expr::u32(3)), Expr::load("vec", Expr::u32(1))),
+                    Expr::mul(
+                        Expr::load("mat", Expr::u32(2)),
+                        Expr::load("vec", Expr::u32(0)),
+                    ),
+                    Expr::mul(
+                        Expr::load("mat", Expr::u32(3)),
+                        Expr::load("vec", Expr::u32(1)),
+                    ),
                 ),
             ),
         ],

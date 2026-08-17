@@ -64,7 +64,8 @@ fn async_transfer_without_wait_is_rejected() {
     let error = run(&program, vec![1_u32.to_le_bytes().to_vec(), vec![0; 4]])
         .expect_err("pending async transfer must not be silently dropped");
     assert!(
-        (error.contains("still pending") || error.contains("in flight")) && error.contains("AsyncWait"),
+        (error.contains("still pending") || error.contains("in flight"))
+            && error.contains("AsyncWait"),
         "missing wait error must be actionable, got: {error}"
     );
 }

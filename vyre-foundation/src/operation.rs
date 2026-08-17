@@ -80,8 +80,10 @@ impl SemanticOperation {
     /// Direct (local) memory and synchronization effects without call-graph transitive propagation.
     #[must_use]
     pub fn direct_effects(self) -> Option<OperationEffects> {
-        self.explicit_effects
-            .or_else(|| self.program().map(|program| OperationEffects::from_program(&program)))
+        self.explicit_effects.or_else(|| {
+            self.program()
+                .map(|program| OperationEffects::from_program(&program))
+        })
     }
 
     /// Direct callees invoked by this operation via `Expr::Call`.
@@ -555,8 +557,10 @@ impl OperationRegistration {
     /// Direct (local) memory and synchronization effects without call-graph transitive propagation.
     #[must_use]
     pub fn direct_effects(&self) -> Option<OperationEffects> {
-        self.explicit_effects
-            .or_else(|| self.program().map(|program| OperationEffects::from_program(&program)))
+        self.explicit_effects.or_else(|| {
+            self.program()
+                .map(|program| OperationEffects::from_program(&program))
+        })
     }
 
     /// Derive target-neutral capability requirements from the canonical program.
@@ -695,10 +699,8 @@ impl CallGraphClosure {
     where
         I: IntoIterator<Item = &'a OperationRegistration>,
     {
-        let reg_map: BTreeMap<&'static str, &OperationRegistration> = registrations
-            .into_iter()
-            .map(|reg| (reg.id, reg))
-            .collect();
+        let reg_map: BTreeMap<&'static str, &OperationRegistration> =
+            registrations.into_iter().map(|reg| (reg.id, reg)).collect();
 
         let mut direct_callees: BTreeMap<&'static str, Vec<&'static str>> = BTreeMap::new();
         let mut direct_effects: BTreeMap<&'static str, OperationEffects> = BTreeMap::new();
@@ -722,7 +724,8 @@ impl CallGraphClosure {
                     if let Some((&matched_id, _)) = reg_map.get_key_value(raw_callee.as_ref()) {
                         callees.push(matched_id);
                     } else {
-                        let leaked: &'static str = Box::leak(raw_callee.to_string().into_boxed_str());
+                        let leaked: &'static str =
+                            Box::leak(raw_callee.to_string().into_boxed_str());
                         callees.push(leaked);
                     }
                 }
@@ -738,7 +741,8 @@ impl CallGraphClosure {
                     direct_effects.insert(id, eff);
                     direct_capabilities.insert(id, caps);
                 } else {
-                    direct_effects.insert(id, reg.explicit_effects.unwrap_or(OperationEffects::ALL));
+                    direct_effects
+                        .insert(id, reg.explicit_effects.unwrap_or(OperationEffects::ALL));
                     direct_capabilities.insert(
                         id,
                         reg.explicit_capabilities
@@ -790,9 +794,8 @@ impl CallGraphClosure {
         // Ensure all unclosed/cyclic nodes default to strongest effects and capabilities.
         for &node in &unclosed_or_cyclic {
             let reg = reg_map.get(node);
-            let has_contract = reg.is_some_and(|r| {
-                r.explicit_effects.is_some() && r.explicit_capabilities.is_some()
-            });
+            let has_contract = reg
+                .is_some_and(|r| r.explicit_effects.is_some() && r.explicit_capabilities.is_some());
             if !has_contract {
                 direct_effects.insert(node, OperationEffects::ALL);
                 direct_capabilities.insert(node, RequiredCapabilities::all());

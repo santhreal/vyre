@@ -1,6 +1,3 @@
-mod wire_words;
-use wire_words::{alternating, lcg_u32 as lcg, ramp};
-
 //! Handwritten oracle matrix for `reduce::radix_sort`.
 //!
 //! Compares production radix sort against an independent stable masked-key
@@ -8,6 +5,9 @@ use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
 #![forbid(unsafe_code)]
 #![cfg(feature = "cpu-parity")]
+
+mod wire_words;
+use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
 type RadixSort = fn(&[u32], u32) -> Vec<u32>;
 type RadixSortInto = fn(&[u32], u32, &mut Vec<u32>, &mut Vec<u32>);
@@ -131,6 +131,3 @@ fn high_low_byte_pattern(len: usize) -> Vec<u32> {
         })
         .collect()
 }
-
-
-

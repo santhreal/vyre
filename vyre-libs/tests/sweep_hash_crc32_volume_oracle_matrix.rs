@@ -1,13 +1,12 @@
-mod wire_words;
-use wire_words::hostile_bytes;
-
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
 
-use vyre_libs::hash::crc32;
+mod wire_words;
+use wire_words::hostile_bytes;
 
+use vyre_libs::hash::crc32;
 
 fn oracle_crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;

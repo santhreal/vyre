@@ -604,11 +604,22 @@ mod tests {
     fn unknown_device_evidence_omits_traffic_cost_terms() {
         let facts = two_node_facts(64, 4 * 1024 * 1024);
         let dependencies = dependencies();
-        let unmeasured_device = DeviceFacts::new(BackendCapabilities::default(), 256)
-            .with_occupancy(128, 0);
-        assert_eq!(unmeasured_device.calibrated_materialization_throughput_bytes_per_ns(), 0);
-        let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, unmeasured_device);
-        assert_eq!(unfused.materialization_ns, 0, "unmeasured bandwidth omits materialization term");
+        let unmeasured_device =
+            DeviceFacts::new(BackendCapabilities::default(), 256).with_occupancy(128, 0);
+        assert_eq!(
+            unmeasured_device.calibrated_materialization_throughput_bytes_per_ns(),
+            0
+        );
+        let unfused = evaluate(
+            &CandidatePlan::baseline(2),
+            &facts,
+            &dependencies,
+            unmeasured_device,
+        );
+        assert_eq!(
+            unfused.materialization_ns, 0,
+            "unmeasured bandwidth omits materialization term"
+        );
         assert_eq!(unfused.occupancy_ns, 0);
     }
 
@@ -619,7 +630,12 @@ mod tests {
         let fast_bandwidth_device = DeviceFacts::new(BackendCapabilities::default(), 256)
             .with_occupancy(128, 0)
             .with_bandwidth_facts(1000, 1000);
-        let unfused = evaluate(&CandidatePlan::baseline(2), &facts, &dependencies, fast_bandwidth_device);
+        let unfused = evaluate(
+            &CandidatePlan::baseline(2),
+            &facts,
+            &dependencies,
+            fast_bandwidth_device,
+        );
         assert_eq!(
             unfused.materialization_ns, 1,
             "50 bytes with 1000 B/ns throughput must round up to 1 ns via ceiling division"
@@ -643,7 +659,10 @@ mod tests {
             .with_occupancy(128, 0);
         let fused_a = evaluate(&fused_plan, &facts, &dependencies, device_a);
         let unfused_a = evaluate(&unfused_plan, &facts, &dependencies, device_a);
-        assert!(fused_a.total < unfused_a.total, "fused must win on device with high launch cost");
+        assert!(
+            fused_a.total < unfused_a.total,
+            "fused must win on device with high launch cost"
+        );
 
         // Device B: Low launch cost (100 ns), very low bandwidth (10 B/ns).
         // If fused group incurs extra occupancy pass on 128 live values:
@@ -656,6 +675,9 @@ mod tests {
             .with_occupancy(128, 0);
         let fused_b = evaluate(&fused_occ, &occupancy_facts, &dependencies, device_b);
         let unfused_b = evaluate(&unfused_occ, &occupancy_facts, &dependencies, device_b);
-        assert!(unfused_b.total < fused_b.total, "unfused must win when occupancy cliff on slow memory exceeds low launch cost");
+        assert!(
+            unfused_b.total < fused_b.total,
+            "unfused must win when occupancy cliff on slow memory exceeds low launch cost"
+        );
     }
 }

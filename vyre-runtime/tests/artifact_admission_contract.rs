@@ -1250,7 +1250,6 @@ fn fixed_contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContrac
     }
 }
 
-
 /// Three nodes over three caller-supplied values, producing an invocation
 /// intermediate, a retained successor, and one graph output.
 ///

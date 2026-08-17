@@ -78,10 +78,14 @@ fn unguarded_partial_tiles_are_flagged_illegal() {
         instructions_supported: true,
     };
 
-    let report = verify_candidate_legality(&desc, "unguarded_tail", legality, 8 * 1024, 32, &limits);
+    let report =
+        verify_candidate_legality(&desc, "unguarded_tail", legality, 8 * 1024, 32, &limits);
 
     assert!(!report.is_legal);
-    assert!(report.violations.iter().any(|v| v.contains("partial tiles lack dynamic bounds")));
+    assert!(report
+        .violations
+        .iter()
+        .any(|v| v.contains("partial tiles lack dynamic bounds")));
 }
 
 #[test]
@@ -116,20 +120,20 @@ fn shared_memory_limit_and_spill_bounds_are_enforced() {
     );
     assert!(!smem_overflow_report.is_legal);
     assert!(!smem_overflow_report.resource_bounds.is_within_limits);
-    assert!(smem_overflow_report.violations.iter().any(|v| v.contains("shared memory 49152 bytes exceeds")));
+    assert!(smem_overflow_report
+        .violations
+        .iter()
+        .any(|v| v.contains("shared memory 49152 bytes exceeds")));
 
     // Register pressure overflow (80 regs > 64 regs limit) inducing spill
-    let reg_overflow_report = verify_candidate_legality(
-        &desc,
-        "deep_unroll",
-        legality,
-        16 * 1024,
-        80,
-        &limits,
-    );
+    let reg_overflow_report =
+        verify_candidate_legality(&desc, "deep_unroll", legality, 16 * 1024, 80, &limits);
     assert!(!reg_overflow_report.is_legal);
     assert!(reg_overflow_report.resource_bounds.spill_bytes > 0);
-    assert!(reg_overflow_report.violations.iter().any(|v| v.contains("local memory spill")));
+    assert!(reg_overflow_report
+        .violations
+        .iter()
+        .any(|v| v.contains("local memory spill")));
 }
 
 #[test]
@@ -147,9 +151,22 @@ fn divergent_barrier_and_unsupported_instruction_violations() {
         instructions_supported: false, // Unsupported instruction violation
     };
 
-    let report = verify_candidate_legality(&desc, "divergent_candidate", legality, 8 * 1024, 32, &limits);
+    let report = verify_candidate_legality(
+        &desc,
+        "divergent_candidate",
+        legality,
+        8 * 1024,
+        32,
+        &limits,
+    );
 
     assert!(!report.is_legal);
-    assert!(report.violations.iter().any(|v| v.contains("divergent control flow")));
-    assert!(report.violations.iter().any(|v| v.contains("unsupported on target")));
+    assert!(report
+        .violations
+        .iter()
+        .any(|v| v.contains("divergent control flow")));
+    assert!(report
+        .violations
+        .iter()
+        .any(|v| v.contains("unsupported on target")));
 }

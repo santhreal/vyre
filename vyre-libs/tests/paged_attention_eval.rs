@@ -60,21 +60,21 @@ fn paged_gqa_attention_broadcasts_kv_heads() {
     // q: 4 heads * 2 dim = 8 elements
     let q_data = vec![
         1.0f32, 0.0, // Q head 0 -> maps to KV head 0
-        0.0, 1.0,    // Q head 1 -> maps to KV head 0
-        1.0, 0.0,    // Q head 2 -> maps to KV head 1
-        0.0, 1.0,    // Q head 3 -> maps to KV head 1
+        0.0, 1.0, // Q head 1 -> maps to KV head 0
+        1.0, 0.0, // Q head 2 -> maps to KV head 1
+        0.0, 1.0, // Q head 3 -> maps to KV head 1
     ];
 
     // KV Cache: [1 block, 2 kv_heads, 2 tokens, 2 dim] = 8 elements
     // KV Head 0: tok0=[1.0, 0.0], tok1=[0.0, 1.0]
     // KV Head 1: tok0=[0.5, 0.5], tok1=[0.5, -0.5]
     let k_data = vec![
-        1.0f32, 0.0,  0.0, 1.0, // KV Head 0
-        0.5, 0.5,     0.5, -0.5, // KV Head 1
+        1.0f32, 0.0, 0.0, 1.0, // KV Head 0
+        0.5, 0.5, 0.5, -0.5, // KV Head 1
     ];
     let v_data = vec![
-        10.0f32, 20.0,  30.0, 40.0, // KV Head 0
-        100.0, 200.0,   300.0, 400.0, // KV Head 1
+        10.0f32, 20.0, 30.0, 40.0, // KV Head 0
+        100.0, 200.0, 300.0, 400.0, // KV Head 1
     ];
 
     let table_data = vec![0u32];
@@ -129,11 +129,9 @@ fn paged_attention_partial_page_boundary() {
 
     let q_data = vec![1.0f32, 1.0];
     let k_data = vec![
-        1.0f32, 0.0,  0.0, 1.0,  1.0, 1.0,  999.0, 999.0, // token 3 is uninitialized/garbage
+        1.0f32, 0.0, 0.0, 1.0, 1.0, 1.0, 999.0, 999.0, // token 3 is uninitialized/garbage
     ];
-    let v_data = vec![
-        10.0f32, 10.0,  20.0, 20.0,  30.0, 30.0,  9999.0, 9999.0,
-    ];
+    let v_data = vec![10.0f32, 10.0, 20.0, 20.0, 30.0, 30.0, 9999.0, 9999.0];
     let table_data = vec![0u32];
     let out_init = vec![0.0f32; 2];
 

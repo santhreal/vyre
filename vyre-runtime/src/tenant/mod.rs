@@ -467,7 +467,11 @@ mod tests {
         // Register again reclaims the recycled ID and increments generation
         let h2 = reg.register("second").unwrap();
         assert_eq!(h2.id(), id1, "recycled ID must match unregistered ID");
-        assert_eq!(h2.generation(), gen1 + 1, "generation must advance on slot recycling (ABA prevention)");
+        assert_eq!(
+            h2.generation(),
+            gen1 + 1,
+            "generation must advance on slot recycling (ABA prevention)"
+        );
 
         // Old handle is revoked and cannot publish
         let mut ring = vec![0u8; 1024];

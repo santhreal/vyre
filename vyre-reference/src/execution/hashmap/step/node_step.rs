@@ -271,8 +271,11 @@ pub(crate) fn step_nodes_frame<'a>(
                 origin_coords.push(coord);
             }
             let target = buffer_mut(memory, buffer.as_str())?;
-            let elements = crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout);
-            invocation.locals.bind(tile.as_str(), Value::Array(elements))?;
+            let elements =
+                crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout);
+            invocation
+                .locals
+                .bind(tile.as_str(), Value::Array(elements))?;
         }
         Node::TileStore {
             buffer,
@@ -304,18 +307,25 @@ pub(crate) fn step_nodes_frame<'a>(
             crate::execution::tile::store_elements(target, &origin_coords, &elements);
         }
         Node::TileMatmul { acc, a, b } => {
-            let acc_val = invocation.locals.local(acc.as_str()).unwrap_or(Value::Array(Vec::new()));
-            let a_val = invocation.locals.local(a.as_str()).ok_or_else(|| {
-                ReferenceError::new(format!("tile `{a}` not found for matmul"))
-            })?;
-            let b_val = invocation.locals.local(b.as_str()).ok_or_else(|| {
-                ReferenceError::new(format!("tile `{b}` not found for matmul"))
-            })?;
+            let acc_val = invocation
+                .locals
+                .local(acc.as_str())
+                .unwrap_or(Value::Array(Vec::new()));
+            let a_val = invocation
+                .locals
+                .local(a.as_str())
+                .ok_or_else(|| ReferenceError::new(format!("tile `{a}` not found for matmul")))?;
+            let b_val = invocation
+                .locals
+                .local(b.as_str())
+                .ok_or_else(|| ReferenceError::new(format!("tile `{b}` not found for matmul")))?;
             let a_elems = crate::execution::tile::to_elements(&a_val);
             let b_elems = crate::execution::tile::to_elements(&b_val);
             let mut acc_elems = crate::execution::tile::to_elements(&acc_val);
             crate::execution::tile::matmul(&mut acc_elems, &a_elems, &b_elems);
-            invocation.locals.assign(acc.as_str(), Value::Array(acc_elems))?;
+            invocation
+                .locals
+                .assign(acc.as_str(), Value::Array(acc_elems))?;
         }
         Node::TileReduce {
             out,
@@ -331,7 +341,9 @@ pub(crate) fn step_nodes_frame<'a>(
                 s => vec![s],
             };
             let out_vec = crate::execution::tile::reduce(&elements, *op, *axis);
-            invocation.locals.bind(out.as_str(), Value::Array(out_vec))?;
+            invocation
+                .locals
+                .bind(out.as_str(), Value::Array(out_vec))?;
         }
         Node::TileElementwise { out, inputs, body } => {
             let mut input_arrays = Vec::with_capacity(inputs.len());

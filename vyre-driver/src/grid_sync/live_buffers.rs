@@ -285,31 +285,58 @@ mod tests {
     fn exact_accumulator_state_comparison_covers_adversarial_cases() {
         let mut inputs_a = HashMap::new();
         inputs_a.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4]));
-        inputs_a.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01])); // Specific NaN payload
+        inputs_a.insert(
+            Ident::from("buf2"),
+            GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01]),
+        ); // Specific NaN payload
         inputs_a.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
 
         let snapshot = snapshot_owned_accumulators(&inputs_a);
-        assert!(owned_accumulators_equal(&snapshot, &inputs_a), "identical map must be equal");
+        assert!(
+            owned_accumulators_equal(&snapshot, &inputs_a),
+            "identical map must be equal"
+        );
 
         // Reordered map insertion with identical bytes
         let mut inputs_reordered = HashMap::new();
         inputs_reordered.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
-        inputs_reordered.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01]));
+        inputs_reordered.insert(
+            Ident::from("buf2"),
+            GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01]),
+        );
         inputs_reordered.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4]));
-        assert!(owned_accumulators_equal(&snapshot, &inputs_reordered), "reordered map with identical contents must be equal");
+        assert!(
+            owned_accumulators_equal(&snapshot, &inputs_reordered),
+            "reordered map with identical contents must be equal"
+        );
 
         // Single bit change in NaN payload
         let mut inputs_nan_drift = HashMap::new();
         inputs_nan_drift.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4]));
-        inputs_nan_drift.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x02])); // 1 bit drift
+        inputs_nan_drift.insert(
+            Ident::from("buf2"),
+            GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x02]),
+        ); // 1 bit drift
         inputs_nan_drift.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
-        assert!(!owned_accumulators_equal(&snapshot, &inputs_nan_drift), "NaN payload drift must be detected by exact comparison");
+        assert!(
+            !owned_accumulators_equal(&snapshot, &inputs_nan_drift),
+            "NaN payload drift must be detected by exact comparison"
+        );
 
         // Buffer length drift
         let mut inputs_len_drift = HashMap::new();
-        inputs_len_drift.insert(Ident::from("buf1"), GridSyncInput::Owned(vec![1, 2, 3, 4, 5]));
-        inputs_len_drift.insert(Ident::from("buf2"), GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01]));
+        inputs_len_drift.insert(
+            Ident::from("buf1"),
+            GridSyncInput::Owned(vec![1, 2, 3, 4, 5]),
+        );
+        inputs_len_drift.insert(
+            Ident::from("buf2"),
+            GridSyncInput::Owned(vec![0x7F, 0xC0, 0x00, 0x01]),
+        );
         inputs_len_drift.insert(Ident::from("zero_buf"), GridSyncInput::Owned(Vec::new()));
-        assert!(!owned_accumulators_equal(&snapshot, &inputs_len_drift), "length drift must be detected");
+        assert!(
+            !owned_accumulators_equal(&snapshot, &inputs_len_drift),
+            "length drift must be detected"
+        );
     }
 }

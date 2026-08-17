@@ -68,7 +68,8 @@ fn diagnostic_render_human_and_json_snapshot() {
     assert!(rendered.contains("--> op `math.fma` operand[1] at kernel.vyre:42..58"));
     assert!(rendered.contains("= help: cast operand 1 from i32 to f32 using Expr::cast"));
     assert!(rendered.contains("= cause[typecheck]: operand 1 type mismatch in FMA"));
-    assert!(rendered.contains("= note: FMA requires all three float operands to share the same scalar type"));
+    assert!(rendered
+        .contains("= note: FMA requires all three float operands to share the same scalar type"));
 
     let json = diagnostic.to_json();
     assert!(json.contains("\"code\":\"V028\""));
@@ -92,7 +93,10 @@ fn diagnostic_from_validation_error_covers_invalid_program_and_type_errors() {
         )],
     );
     let type_errors = validate(&type_prog);
-    assert!(!type_errors.is_empty(), "type mismatch in FMA must yield validation error");
+    assert!(
+        !type_errors.is_empty(),
+        "type mismatch in FMA must yield validation error"
+    );
     let type_diag = type_errors[0].diagnostic();
     assert_eq!(type_diag.severity, Severity::Error);
     assert_eq!(type_diag.stage, DiagnosticStage::Validate);
@@ -101,16 +105,30 @@ fn diagnostic_from_validation_error_covers_invalid_program_and_type_errors() {
 
     // Illegal memory order error program
     let mem_prog = Program::wrapped(
-        vec![BufferDecl::storage("buf", 0, vyre_foundation::ir::BufferAccess::ReadWrite, DataType::U32).with_count(1)],
+        vec![BufferDecl::storage(
+            "buf",
+            0,
+            vyre_foundation::ir::BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(1)],
         [1, 1, 1],
         vec![Node::store(
             "buf",
             Expr::u32(0),
-            Expr::atomic_add_ordered("buf", Expr::u32(0), Expr::u32(1), vyre_foundation::ir::MemoryOrdering::GridSync),
+            Expr::atomic_add_ordered(
+                "buf",
+                Expr::u32(0),
+                Expr::u32(1),
+                vyre_foundation::ir::MemoryOrdering::GridSync,
+            ),
         )],
     );
     let mem_errors = validate(&mem_prog);
-    assert!(!mem_errors.is_empty(), "illegal memory ordering in atomic RMW must yield validation error");
+    assert!(
+        !mem_errors.is_empty(),
+        "illegal memory ordering in atomic RMW must yield validation error"
+    );
     let mem_diag = mem_errors[0].diagnostic();
     assert_eq!(mem_diag.stage, DiagnosticStage::Validate);
     assert!(!mem_diag.code.as_str().is_empty());
@@ -131,17 +149,28 @@ fn diagnostic_from_ir_error_covers_wire_and_inlining_errors() {
     assert!(wire_diag.suggested_fix.is_some());
 
     // Wire version mismatch
-    let ver_err = IrError::VersionMismatch { expected: 7, found: 4 };
+    let ver_err = IrError::VersionMismatch {
+        expected: 7,
+        found: 4,
+    };
     let ver_diag: Diagnostic = ver_err.diagnostic();
     assert_eq!(ver_diag.code.as_str(), "WIRE002_VERSION_MISMATCH");
     assert_eq!(ver_diag.stage, DiagnosticStage::Admit);
-    assert!(ver_diag.suggested_fix.unwrap().contains("re-encode with a matching vyre version"));
+    assert!(ver_diag
+        .suggested_fix
+        .unwrap()
+        .contains("re-encode with a matching vyre version"));
 
     // Inlining cycle
-    let cycle_err = IrError::InlineCycle { op_id: "math.recursive_fib".to_string() };
+    let cycle_err = IrError::InlineCycle {
+        op_id: "math.recursive_fib".to_string(),
+    };
     let cycle_diag: Diagnostic = cycle_err.diagnostic();
     assert_eq!(cycle_diag.code.as_str(), "IRC001_INLINE_CYCLE");
     assert_eq!(cycle_diag.stage, DiagnosticStage::Optimize);
     assert_eq!(cycle_diag.location.unwrap().op_id, "math.recursive_fib");
-    assert!(cycle_diag.suggested_fix.unwrap().contains("remove the recursive Expr::Call chain"));
+    assert!(cycle_diag
+        .suggested_fix
+        .unwrap()
+        .contains("remove the recursive Expr::Call chain"));
 }

@@ -108,7 +108,10 @@ fn scan_file_functions(
 ) {
     for line in content.lines() {
         let trimmed = line.trim();
-        if !trimmed.starts_with("pub fn ") && !trimmed.starts_with("fn ") && !trimmed.starts_with("pub(crate) fn ") {
+        if !trimmed.starts_with("pub fn ")
+            && !trimmed.starts_with("fn ")
+            && !trimmed.starts_with("pub(crate) fn ")
+        {
             continue;
         }
 
@@ -167,7 +170,10 @@ fn classify_function(
     }
 
     // Scratch and allocation utilities
-    if name.contains("reserve_") || name.contains("scratch") || name.contains("into") && !name.contains("ref") {
+    if name.contains("reserve_")
+        || name.contains("scratch")
+        || name.contains("into") && !name.contains("ref")
+    {
         return (
             HostFunctionClassification::NonExecutionUtility,
             "scratch memory allocation or conversion helper",
@@ -207,10 +213,7 @@ pub fn assert_host_oracle_migration_complete(workspace_root: &Path) {
         }
     }
 
-    assert!(
-        !oracles.is_empty(),
-        "discovered oracles must be non-empty"
-    );
+    assert!(!oracles.is_empty(), "discovered oracles must be non-empty");
 
     // Verify all oracles are accounted for in the reference execution model
     for oracle in oracles {

@@ -741,9 +741,7 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        is_bare_release_tag_command, release_note_version_issues, MATRIX, TAG_PLAN,
-    };
+    use super::{is_bare_release_tag_command, release_note_version_issues, MATRIX, TAG_PLAN};
 
     /// The tag gate rejects every supported command form for the active bare final tag.
     #[test]

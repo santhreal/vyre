@@ -14,8 +14,8 @@ pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;
 pub mod sequential;
-pub(crate) mod typed_ops;
 pub(crate) mod tile;
+pub(crate) mod typed_ops;
 
 use std::borrow::Cow;
 

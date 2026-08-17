@@ -121,7 +121,11 @@ pub fn expr_operand_slot_samples(marker: &Expr) -> Vec<ExprSample> {
             Some("false_val"),
             Expr::select(Expr::bool(true), Expr::u32(1), marker.clone()),
         ),
-        sample("Cast", Some("value"), Expr::cast(DataType::U32, marker.clone())),
+        sample(
+            "Cast",
+            Some("value"),
+            Expr::cast(DataType::U32, marker.clone()),
+        ),
         sample(
             "Fma",
             Some("a"),
@@ -214,11 +218,7 @@ fn inert_samples() -> Vec<ExprSample> {
                 operand: Box::new(Expr::i32(0)),
             },
         ),
-        sample(
-            "Call",
-            None,
-            Expr::call("vyre.test", vec![Expr::u32(0)]),
-        ),
+        sample("Call", None, Expr::call("vyre.test", vec![Expr::u32(0)])),
         sample(
             "Select",
             None,
@@ -266,10 +266,7 @@ fn inert_samples() -> Vec<ExprSample> {
 /// The variant names declared for `Expr`, read from the authoritative catalog.
 #[must_use]
 pub fn declared_expr_variants() -> BTreeSet<String> {
-    EXPR_VARIANT_NAMES
-        .iter()
-        .map(|&s| s.to_string())
-        .collect()
+    EXPR_VARIANT_NAMES.iter().map(|&s| s.to_string()).collect()
 }
 
 /// Panic unless `samples` covers every declared `Expr` variant.

@@ -42,7 +42,6 @@ fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     }
 }
 
-
 fn retained_program(input: &str, retained: &str) -> Program {
     Program::wrapped(
         vec![

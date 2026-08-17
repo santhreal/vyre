@@ -290,10 +290,7 @@ pub(super) fn metadata_condition_program() -> Program {
                 "match_count",
                 Expr::select(Expr::var("is_match"), Expr::u32(1), Expr::u32(0)),
             ),
-            Node::let_bind(
-                "warp_matches",
-                Expr::subgroup_add(Expr::var("match_count")),
-            ),
+            Node::let_bind("warp_matches", Expr::subgroup_add(Expr::var("match_count"))),
             Node::if_then(
                 Expr::and(
                     Expr::eq(Expr::subgroup_local_id(), Expr::u32(0)),

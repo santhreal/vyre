@@ -25,7 +25,9 @@ fn differential_matrix_evaluates_exact_and_approximate() {
     let decision = evaluate_differential(
         &program,
         "test_add",
-        &[vyre_reference::value::Value::Bytes(input_bytes[0].clone().into())],
+        &[vyre_reference::value::Value::Bytes(
+            input_bytes[0].clone().into(),
+        )],
         &backend_output,
     )
     .expect("evaluation must succeed");

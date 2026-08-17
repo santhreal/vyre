@@ -17,7 +17,6 @@
 //! - **Intermediate Hidden-State Residency**: Compatible intermediate states are kept
 //!   resident across heads (via register forwarding, shared memory, or global resident buffers).
 
-
 use thiserror::Error;
 
 use crate::prefix_cache::{PrefixCache, PrefixCacheError, PrefixCacheKey};
@@ -168,11 +167,9 @@ impl MtpCoordinator {
         for (i, &(token_id, confidence)) in draft_proposals.iter().enumerate() {
             full_sequence.push(token_id);
             // Reserve provisional page in cache
-            let provisional_pages = self.prefix_cache.insert_or_extend(
-                cache_key,
-                &full_sequence,
-                &[],
-            )?;
+            let provisional_pages =
+                self.prefix_cache
+                    .insert_or_extend(cache_key, &full_sequence, &[])?;
 
             draft_tokens.push(MtpDraftToken {
                 depth: i + 1,
@@ -210,7 +207,10 @@ impl MtpCoordinator {
         let mut mismatch_occurred = false;
 
         for (i, draft) in provisional.draft_tokens.iter().enumerate() {
-            if !mismatch_occurred && i < verified_ground_truth.len() && draft.token_id == verified_ground_truth[i] {
+            if !mismatch_occurred
+                && i < verified_ground_truth.len()
+                && draft.token_id == verified_ground_truth[i]
+            {
                 // Draft token accepted
                 accepted_tokens.push(draft.token_id);
                 accepted_draft_count += 1;
@@ -248,10 +248,7 @@ impl MtpCoordinator {
     /// # Errors
     ///
     /// Returns [`MtpError`] on cache release failure.
-    pub fn rollback_all(
-        &self,
-        provisional: MtpProvisionalState,
-    ) -> Result<(), MtpError> {
+    pub fn rollback_all(&self, provisional: MtpProvisionalState) -> Result<(), MtpError> {
         let mut all_pages = Vec::new();
         for draft in provisional.draft_tokens {
             all_pages.extend_from_slice(&draft.provisional_page_ids);
@@ -311,7 +308,9 @@ mod tests {
         // Ground truth verification: token 30 is accepted, but second token is 45 (not 40).
         let ground_truth = vec![30, 45];
 
-        let result = coordinator.verify_and_commit(staged, &ground_truth).expect("verify");
+        let result = coordinator
+            .verify_and_commit(staged, &ground_truth)
+            .expect("verify");
 
         // Token 30 accepted, token 40 and 50 rejected
         assert_eq!(result.accepted_draft_count, 1);

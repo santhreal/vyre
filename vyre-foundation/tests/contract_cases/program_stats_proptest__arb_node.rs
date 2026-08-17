@@ -22,9 +22,16 @@ fn mark_datatype_bits(ty: &DataType, bits: &mut u32) {
 }
 
 fn is_subgroup_intrinsic_id(op_id: &str) -> bool {
-    ["subgroup_", "::subgroup", "wave_", "::wave", "warp_", "::warp"]
-        .into_iter()
-        .any(|pattern| op_id.contains(pattern))
+    [
+        "subgroup_",
+        "::subgroup",
+        "wave_",
+        "::wave",
+        "warp_",
+        "::warp",
+    ]
+    .into_iter()
+    .any(|pattern| op_id.contains(pattern))
 }
 
 #[allow(clippy::only_used_in_recursion)]

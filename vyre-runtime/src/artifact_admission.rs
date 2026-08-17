@@ -464,15 +464,16 @@ impl ArtifactSession {
             }
             .into());
         }
-        let canonical_by_name = state
-            .admitted
-            .neutral()
-            .canonical_value_by_name()
-            .map_err(|collision| {
-                ArtifactSessionError::from(BackendError::InvalidProgram {
-                    fix: collision.to_string(),
-                })
-            })?;
+        let canonical_by_name =
+            state
+                .admitted
+                .neutral()
+                .canonical_value_by_name()
+                .map_err(|collision| {
+                    ArtifactSessionError::from(BackendError::InvalidProgram {
+                        fix: collision.to_string(),
+                    })
+                })?;
         let mut typed = BindingSet::new(state.admitted.neutral().digest());
         for (buffer_decl, resource) in non_shared_buffers.into_iter().zip(resources) {
             let value_id = canonical_by_name
@@ -539,20 +540,23 @@ impl ArtifactSession {
             }
             .into());
         }
-        let canonical_by_name = state
-            .admitted
-            .neutral()
-            .canonical_value_by_name()
-            .map_err(|collision| {
-                ArtifactSessionError::from(BackendError::InvalidProgram {
-                    fix: collision.to_string(),
-                })
-            })?;
+        let canonical_by_name =
+            state
+                .admitted
+                .neutral()
+                .canonical_value_by_name()
+                .map_err(|collision| {
+                    ArtifactSessionError::from(BackendError::InvalidProgram {
+                        fix: collision.to_string(),
+                    })
+                })?;
         let mut typed = BindingSet::new(state.admitted.neutral().digest());
         for (name, resource) in resources {
             let value_id = canonical_by_name.get(name).copied().ok_or_else(|| {
                 ArtifactSessionError::from(BackendError::InvalidProgram {
-                    fix: format!("Fix: artifact resources do not carry a canonical value named `{name}`."),
+                    fix: format!(
+                        "Fix: artifact resources do not carry a canonical value named `{name}`."
+                    ),
                 })
             })?;
             let bound = BoundResource::Resident(resource.clone());

@@ -22,9 +22,9 @@
 
 use std::collections::BTreeSet;
 
+use vyre_foundation::composition::is_anonymous_generator;
 use vyre_foundation::ir::{Node, Program};
 use vyre_foundation::operation::OperationRegistry;
-use vyre_foundation::composition::is_anonymous_generator;
 use vyre_foundation::visit::any_descendant;
 use vyre_libs::operation_catalog;
 

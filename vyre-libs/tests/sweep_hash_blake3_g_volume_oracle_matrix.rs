@@ -1,15 +1,14 @@
-mod wire_words;
-use wire_words::oracle_blake3_g;
-
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "hash", feature = "cpu-parity"))]
 
+mod wire_words;
+use wire_words::oracle_blake3_g;
+
 use vyre_libs::hash::blake3::{cpu_blake3_g, MSG_SCHEDULE};
 
 const CASES: usize = 16384;
-
 
 #[test]
 fn sweep_hash_blake3_g_volume_oracle_matrix() {

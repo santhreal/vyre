@@ -1,9 +1,7 @@
 //! Tests for shared store race legality analysis.
 
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering};
-use vyre_lower::analyses::{
-    analyze_shared_store_race, SharedStoreLegality,
-};
+use vyre_lower::analyses::{analyze_shared_store_race, SharedStoreLegality};
 use vyre_lower::descriptor_builder::{
     binop, body, descriptor, effect, if_then, lit, op, shared_rw,
 };

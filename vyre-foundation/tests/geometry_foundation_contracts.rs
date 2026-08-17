@@ -6,11 +6,11 @@
 
 use std::sync::Arc;
 
+use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 use vyre_foundation::{
     CooperativeWidth, ElementPolicy, GeometryLoweringError, GeometryRequirements, LaunchGeometry,
     Uniformity,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 #[test]
 fn geometry_requirements_defaults_are_agnostic() {
     let req = GeometryRequirements::default();

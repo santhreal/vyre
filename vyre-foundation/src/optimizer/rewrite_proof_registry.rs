@@ -166,20 +166,14 @@ pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
             vec![ProofExpr::not_(ProofExpr::eq(bv_var("i"), bv_var("j")))],
             ProofExpr::select(
                 ProofExpr::store(
-                    ProofExpr::var(
-                        "mem",
-                        ProofSort::Array(BV_WIDTH, BV_WIDTH),
-                    ),
+                    ProofExpr::var("mem", ProofSort::Array(BV_WIDTH, BV_WIDTH)),
                     bv_var("i"),
                     bv_var("v"),
                 ),
                 bv_var("j"),
             ),
             ProofExpr::select(
-                ProofExpr::var(
-                    "mem",
-                    ProofSort::Array(BV_WIDTH, BV_WIDTH),
-                ),
+                ProofExpr::var("mem", ProofSort::Array(BV_WIDTH, BV_WIDTH)),
                 bv_var("j"),
             ),
         )

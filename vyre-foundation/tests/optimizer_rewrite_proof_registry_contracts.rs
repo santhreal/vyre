@@ -79,7 +79,10 @@ fn every_registered_arithmetic_rewrite_has_a_solver_artifact() {
         .collect::<BTreeSet<_>>();
     let shipped_bv = shipped_obligations()
         .into_iter()
-        .filter(|obligation| obligation.domain == vyre_foundation::optimizer::rewrite_proof::ProofDomain::IntegerBitVector)
+        .filter(|obligation| {
+            obligation.domain
+                == vyre_foundation::optimizer::rewrite_proof::ProofDomain::IntegerBitVector
+        })
         .map(|obligation| obligation.rewrite.to_string())
         .collect::<BTreeSet<_>>();
     assert_eq!(

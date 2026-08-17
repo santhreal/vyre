@@ -130,9 +130,16 @@ pub fn child_body_operands<'a>(
 
 // Re-exports for the common case: a one-call combined audit.
 pub use access_kind::AccessKind;
+pub use affine_access_map::{
+    AffineAccessMap, AffineMapError, ConsumerAbiRequirement, DimExtent, SliceSpec, StrideExpr,
+};
 pub use bank_conflict::{analyze as analyze_bank_conflict, BankConflictReport};
 pub use bank_conflict::{
     analyze_with_bank_count, BankAccessSite, BankConflictKind, ConflictSeverity, DEFAULT_BANK_COUNT,
+};
+pub use bank_conflict::{
+    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase, AccessPhaseProfile,
+    BankConflictMitigation, MitigationEvaluation, PhaseConflictReport, TargetBankGeometry,
 };
 pub use coalesce::{analyze as analyze_coalesce, CoalescenceReport};
 pub use coalesce::{AccessPattern, AccessSite};
@@ -152,27 +159,20 @@ pub use layout_aos_to_soa::{analyze as analyze_layout_aos_to_soa, LayoutTransfor
 pub use op_histogram::{analyze as analyze_op_histogram, OpHistogram};
 pub use reaching_def_facts::import_descriptor_reaching_defs;
 pub use reaching_def_facts::{resolve_copy_alias, ReachingDefFactSet};
+pub use resource_bounds::{
+    verify_candidate_legality, CandidateLegalityReport, LegalityCheck, ResourceBounds,
+    RetainedFallbacks, TailHandling, TargetResourceLimits,
+};
 pub use shared_mem_promote::{analyze as analyze_shared_mem_promote, PromotionPlan};
 pub use shared_mem_promote::{PromotionCandidate, DEFAULT_SHARED_BUDGET_BYTES};
-pub use shared_store_race::{analyze as analyze_shared_store_race, SharedStoreLegality, SharedStoreRaceReport, SharedStoreRaceSite};
+pub use shared_store_race::{
+    analyze as analyze_shared_store_race, SharedStoreLegality, SharedStoreRaceReport,
+    SharedStoreRaceSite,
+};
+pub use target_metrics::{rank_measured_candidates, CandidateRanking, TargetEmittedMetrics};
 pub use texture_promote::TextureCandidate;
 pub use texture_promote::{analyze as analyze_texture_promote, TexturePromotionPlan};
 pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport};
 pub use workgroup_uniform::{analyze as analyze_workgroup_uniform, WorkgroupUniformReport};
 pub use workgroup_uniform::{BranchEmitHint, BranchHint};
 pub use workgroup_uniform::{BranchSite, BranchUniformity};
-pub use affine_access_map::{
-    AffineAccessMap, AffineMapError, ConsumerAbiRequirement, DimExtent, SliceSpec, StrideExpr,
-};
-pub use bank_conflict::{
-    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase,
-    AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation, PhaseConflictReport,
-    TargetBankGeometry,
-};
-pub use resource_bounds::{
-    verify_candidate_legality, CandidateLegalityReport, LegalityCheck, ResourceBounds,
-    RetainedFallbacks, TailHandling, TargetResourceLimits,
-};
-pub use target_metrics::{
-    rank_measured_candidates, CandidateRanking, TargetEmittedMetrics,
-};

@@ -7,17 +7,19 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 fn replay_capsule_round_trip_and_wire_reproduction() {
     let prog = Program::wrapped(
         vec![
-            BufferDecl::storage("in_buf", 0, vyre_foundation::ir::BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(
+                "in_buf",
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                DataType::U32,
+            ),
             BufferDecl::output("out_buf", 1, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![Node::Store {
             buffer: "out_buf".into(),
             index: Expr::u32(0),
-            value: Expr::wrapping_add(
-                Expr::load("in_buf", Expr::u32(0)),
-                Expr::u32(100),
-            ),
+            value: Expr::wrapping_add(Expr::load("in_buf", Expr::u32(0)), Expr::u32(100)),
         }],
     );
 
@@ -37,7 +39,8 @@ fn replay_capsule_round_trip_and_wire_reproduction() {
 
     // Serialization round-trip
     let json = serde_json::to_string(&capsule).expect("capsule must serialize");
-    let deserialized: ReplayCapsule = serde_json::from_str(&json).expect("capsule must deserialize");
+    let deserialized: ReplayCapsule =
+        serde_json::from_str(&json).expect("capsule must deserialize");
     assert_eq!(deserialized.wire_bytes, capsule.wire_bytes);
     assert_eq!(deserialized.inputs, capsule.inputs);
     assert_eq!(

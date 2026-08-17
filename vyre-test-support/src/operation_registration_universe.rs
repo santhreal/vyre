@@ -10,10 +10,7 @@ pub const OPERATION_REGISTRATION_FLOOR: usize = 40;
 #[must_use]
 pub fn registered_operation_ids() -> BTreeSet<String> {
     let registry = OperationRegistry::global();
-    registry
-        .iter()
-        .map(|entry| entry.id.to_string())
-        .collect()
+    registry.iter().map(|entry| entry.id.to_string()).collect()
 }
 
 /// Assert that the global operation registry is well-formed and complete.
@@ -31,10 +28,7 @@ pub fn assert_operation_registry_complete() {
     );
 
     for entry in registry.iter() {
-        assert!(
-            !entry.id.is_empty(),
-            "registered operation has empty ID"
-        );
+        assert!(!entry.id.is_empty(), "registered operation has empty ID");
         assert!(
             entry.semantic_version > 0,
             "operation `{}` has semantic_version == 0",

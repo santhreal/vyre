@@ -1,6 +1,3 @@
-mod wire_words;
-use wire_words::{lcg_u32 as lcg, ramp};
-
 //! Handwritten oracle matrix for `reduce::segment_reduce` (per-segment sum).
 //!
 //! Compares production `cpu_ref` / `cpu_ref_into` against an independent
@@ -8,6 +5,9 @@ use wire_words::{lcg_u32 as lcg, ramp};
 
 #![forbid(unsafe_code)]
 #![cfg(feature = "cpu-parity")]
+
+mod wire_words;
+use wire_words::{lcg_u32 as lcg, ramp};
 
 type SegmentReduce = fn(&[u32], &[u32]) -> Vec<u32>;
 type SegmentReduceInto = fn(&[u32], &[u32], &mut Vec<u32>);
@@ -155,5 +155,3 @@ fn random_valid_offsets(seed: u64, len: usize, seg_count: usize) -> Vec<u32> {
     }
     cuts.into_iter().map(|v| v as u32).collect()
 }
-
-

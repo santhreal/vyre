@@ -7,18 +7,19 @@ use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
 
 mod classification;
 mod panic_budget;
+mod records;
 mod rules;
 mod scanner;
 mod structural_gates;
 mod syntax;
 mod threshold_policy;
-mod records;
 
 #[cfg(test)]
 mod tests;
 
 use classification::*;
 use panic_budget::*;
+use records::*;
 #[cfg(test)]
 use rules::*;
 use scanner::*;
@@ -26,7 +27,6 @@ use structural_gates::*;
 #[cfg(test)]
 use syntax::*;
 use threshold_policy::*;
-use records::*;
 
 /// Hidden-fallback pattern names the hygiene scan emits.
 ///

@@ -9,8 +9,8 @@
 
 use vyre_debug::{
     carrier_summary, diff_descriptors, dump_descriptor, find_dangling_refs,
-    neutral_debug_capabilities, source_assignments, DebugCapabilityKind,
-    DescriptorDumpOptions, DEBUG_CAPABILITIES,
+    neutral_debug_capabilities, source_assignments, DebugCapabilityKind, DescriptorDumpOptions,
+    DEBUG_CAPABILITIES,
 };
 use vyre_lower::{BindingLayout, KernelBody, KernelDescriptor};
 

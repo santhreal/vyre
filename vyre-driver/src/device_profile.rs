@@ -5,11 +5,11 @@
 //! strategy code consume projections of this profile instead of carrying
 //! independent capability records that can drift.
 
+use vyre_foundation::optimizer::AdapterCaps;
+use vyre_foundation::validate;
 use vyre_foundation::{
     CooperativeWidth, ElementPolicy, GeometryRequirements, GeometryStrategy, LaunchGeometry,
 };
-use vyre_foundation::optimizer::AdapterCaps;
-use vyre_foundation::validate;
 
 /// Quality class for backend timing data exposed through [`DeviceProfile`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

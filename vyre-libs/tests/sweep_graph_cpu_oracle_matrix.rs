@@ -333,12 +333,7 @@ fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
         );
         let actual_bfs = persistent_bfs::cpu_ref(
             CsrClosureInputs::new(
-                node_count,
-                &offsets,
-                &targets,
-                &masks,
-                allow_mask,
-                max_iters,
+                node_count, &offsets, &targets, &masks, allow_mask, max_iters,
             ),
             &frontier,
         );
@@ -362,12 +357,7 @@ fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
         //    set is unique regardless of pass order.
         let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
             CsrClosureInputs::new(
-                node_count,
-                &offsets,
-                &targets,
-                &masks,
-                allow_mask,
-                max_iters,
+                node_count, &offsets, &targets, &masks, allow_mask, max_iters,
             ),
             &frontier,
         );
@@ -545,12 +535,7 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
         );
         let actual = bfs_expand(
             CsrClosureInputs::new(
-                node_count,
-                &offsets,
-                &targets,
-                &masks,
-                allow_mask,
-                max_iters,
+                node_count, &offsets, &targets, &masks, allow_mask, max_iters,
             ),
             &frontier,
         );

@@ -72,13 +72,12 @@ pub struct CandidateRanking {
 /// NOTE: Resulting rankings represent empirical PMU observations for the measured
 /// workload and device, not portable cross-architecture guarantees.
 #[must_use]
-pub fn rank_measured_candidates(
-    mut candidates: Vec<CandidateRanking>,
-) -> Vec<CandidateRanking> {
+pub fn rank_measured_candidates(mut candidates: Vec<CandidateRanking>) -> Vec<CandidateRanking> {
     for candidate in &mut candidates {
         if !candidate.metrics.output_parity_verified {
             candidate.is_disqualified = true;
-            candidate.disqualification_reason = Some("output parity verification failed".to_string());
+            candidate.disqualification_reason =
+                Some("output parity verification failed".to_string());
             candidate.score = f64::INFINITY;
             continue;
         }
@@ -96,7 +95,9 @@ pub fn rank_measured_candidates(
 
     // Sort valid candidates by score ascending, disqualified candidates to the end
     candidates.sort_by(|a, b| {
-        a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal)
+        a.score
+            .partial_cmp(&b.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     for (index, candidate) in candidates.iter_mut().enumerate() {

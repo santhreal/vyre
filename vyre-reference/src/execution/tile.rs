@@ -87,11 +87,7 @@ pub(crate) fn load_elements(
 }
 
 /// Store tile elements sequentially into a backing buffer starting at `origin_coords`.
-pub(crate) fn store_elements(
-    target: &mut Buffer,
-    origin_coords: &[u32],
-    elements: &[Value],
-) {
+pub(crate) fn store_elements(target: &mut Buffer, origin_coords: &[u32], elements: &[Value]) {
     let base = origin_coords.first().copied().unwrap_or(0);
     for (i, elem) in elements.iter().enumerate() {
         let global_idx = base + (i as u32);
@@ -125,12 +121,21 @@ pub(crate) fn matmul(acc_elems: &mut Vec<Value>, a_elems: &[Value], b_elems: &[V
             for p in 0..k {
                 let a_idx = i * k + p;
                 let b_idx = p * n + j;
-                let a_num = a_elems.get(a_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
-                let b_num = b_elems.get(b_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
+                let a_num = a_elems
+                    .get(a_idx)
+                    .and_then(|v| v.try_as_f64())
+                    .unwrap_or(0.0);
+                let b_num = b_elems
+                    .get(b_idx)
+                    .and_then(|v| v.try_as_f64())
+                    .unwrap_or(0.0);
                 sum += a_num * b_num;
             }
             let acc_idx = i * n + j;
-            let prev = acc_elems.get(acc_idx).and_then(|v| v.try_as_f64()).unwrap_or(0.0);
+            let prev = acc_elems
+                .get(acc_idx)
+                .and_then(|v| v.try_as_f64())
+                .unwrap_or(0.0);
             if acc_idx < acc_elems.len() {
                 acc_elems[acc_idx] = Value::Float(prev + sum);
             }

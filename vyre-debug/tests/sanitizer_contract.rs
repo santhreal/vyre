@@ -29,7 +29,10 @@ fn out_of_bounds_sanitizer_maps_to_actionable_diagnostic() {
 
     let diag = failure.diagnostic();
     assert_eq!(diag.code.as_str(), "SAN004_OUT_OF_BOUNDS");
-    assert!(diag.suggested_fix.unwrap().contains("clamp index expressions"));
+    assert!(diag
+        .suggested_fix
+        .unwrap()
+        .contains("clamp index expressions"));
 }
 
 #[test]

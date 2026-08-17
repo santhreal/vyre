@@ -122,7 +122,8 @@ fn shrink_program_removes_dead_nodes_and_unused_buffers() {
     let prog = Program::wrapped(
         vec![
             BufferDecl::storage("in_buf", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("unused_buf", 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("unused_buf", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
             BufferDecl::output("out_buf", 2, DataType::U32).with_count(1),
         ],
         [64, 1, 1],
@@ -132,10 +133,7 @@ fn shrink_program_removes_dead_nodes_and_unused_buffers() {
             Node::Store {
                 buffer: "out_buf".into(),
                 index: Expr::u32(0),
-                value: Expr::wrapping_add(
-                    Expr::load("in_buf", Expr::u32(0)),
-                    Expr::u32(42),
-                ),
+                value: Expr::wrapping_add(Expr::load("in_buf", Expr::u32(0)), Expr::u32(42)),
             },
             Node::let_bind("dead3", Expr::u32(12345)),
         ],
@@ -144,14 +142,16 @@ fn shrink_program_removes_dead_nodes_and_unused_buffers() {
     assert!(validate(&prog).is_empty(), "initial program must be valid");
 
     // Predicate: requires a store to "out_buf" referencing "in_buf"
-    let predicate = |p: &Program| {
-        format!("{p:?}").contains("out_buf") && format!("{p:?}").contains("in_buf")
-    };
+    let predicate =
+        |p: &Program| format!("{p:?}").contains("out_buf") && format!("{p:?}").contains("in_buf");
 
     let minimized = CounterexampleMinimizer::shrink_program(&prog, predicate);
 
     // Validated at the end
-    assert!(validate(&minimized).is_empty(), "minimized program must remain valid");
+    assert!(
+        validate(&minimized).is_empty(),
+        "minimized program must remain valid"
+    );
     // Unused buffer removed
     assert!(!minimized.buffers().iter().any(|b| b.name() == "unused_buf"));
     // Workgroup size reduced
@@ -176,9 +176,7 @@ fn shrink_program_is_deterministic() {
         ],
     );
 
-    let predicate = |p: &Program| {
-        format!("{p:?}").contains("out")
-    };
+    let predicate = |p: &Program| format!("{p:?}").contains("out");
 
     let run1 = CounterexampleMinimizer::shrink_program(&prog, predicate);
     let run2 = CounterexampleMinimizer::shrink_program(&prog, predicate);

@@ -13,9 +13,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{
-    compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
-};
+use vyre_megakernel::{compile, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};
 
 /// WHY: workgroup scratch is module-internal memory, not an artifact value. A
 /// resident launch must bind every host-visible role and no shared scratch, or

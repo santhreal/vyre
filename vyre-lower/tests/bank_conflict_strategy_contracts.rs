@@ -7,8 +7,8 @@
 //! - Non-promising of universal zero conflicts (honestly reporting remaining conflicts).
 
 use vyre_lower::analyses::{
-    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase,
-    AccessPhaseProfile, BankConflictMitigation, ConflictSeverity, TargetBankGeometry,
+    evaluate_mitigation_candidate, select_bank_conflict_strategy, AccessPhase, AccessPhaseProfile,
+    BankConflictMitigation, ConflictSeverity, TargetBankGeometry,
 };
 
 #[test]
@@ -22,14 +22,12 @@ fn default_target_geometry_has_32_banks() {
 #[test]
 fn padding_mitigates_power_of_two_column_stride_conflicts() {
     let geom = TargetBankGeometry::default();
-    let phases = vec![
-        AccessPhaseProfile {
-            phase: AccessPhase::ComputeRead,
-            stride_elements: 32, // Stride 32 on 32 banks causes critical 32-way conflict
-            active_threads: 32,
-            access_weight: 10,
-        },
-    ];
+    let phases = vec![AccessPhaseProfile {
+        phase: AccessPhase::ComputeRead,
+        stride_elements: 32, // Stride 32 on 32 banks causes critical 32-way conflict
+        active_threads: 32,
+        access_weight: 10,
+    }];
 
     let baseline = evaluate_mitigation_candidate(
         &phases,
@@ -43,7 +41,9 @@ fn padding_mitigates_power_of_two_column_stride_conflicts() {
     let padded = evaluate_mitigation_candidate(
         &phases,
         &geom,
-        BankConflictMitigation::PadLines { pad_elements_per_row: 1 },
+        BankConflictMitigation::PadLines {
+            pad_elements_per_row: 1,
+        },
         ConflictSeverity::Critical,
     );
     assert_eq!(padded.worst_severity, ConflictSeverity::None);
@@ -54,19 +54,20 @@ fn padding_mitigates_power_of_two_column_stride_conflicts() {
 #[test]
 fn xor_swizzling_reduces_conflict_penalty() {
     let geom = TargetBankGeometry::default();
-    let phases = vec![
-        AccessPhaseProfile {
-            phase: AccessPhase::ComputeRead,
-            stride_elements: 16, // Stride 16 causes 16-way critical conflict
-            active_threads: 32,
-            access_weight: 5,
-        },
-    ];
+    let phases = vec![AccessPhaseProfile {
+        phase: AccessPhase::ComputeRead,
+        stride_elements: 16, // Stride 16 causes 16-way critical conflict
+        active_threads: 32,
+        access_weight: 5,
+    }];
 
     let swizzled = evaluate_mitigation_candidate(
         &phases,
         &geom,
-        BankConflictMitigation::XorSwizzle { swizzle_bits: 2, stride_shift: 3 },
+        BankConflictMitigation::XorSwizzle {
+            swizzle_bits: 2,
+            stride_shift: 3,
+        },
         ConflictSeverity::Critical,
     );
     assert!(swizzled.accepted);

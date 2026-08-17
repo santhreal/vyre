@@ -46,11 +46,19 @@ impl SanitizerKind {
     #[must_use]
     pub const fn suggested_fix(self) -> &'static str {
         match self {
-            Self::ComputeSanitizer => "run with compute-sanitizer --tool memcheck and inspect buffer bounds",
-            Self::VulkanValidation => "inspect Vulkan descriptor set layouts and buffer usage flags",
-            Self::DataRace => "insert Barrier { ordering: SeqCst } or use atomic operations with valid ordering",
+            Self::ComputeSanitizer => {
+                "run with compute-sanitizer --tool memcheck and inspect buffer bounds"
+            }
+            Self::VulkanValidation => {
+                "inspect Vulkan descriptor set layouts and buffer usage flags"
+            }
+            Self::DataRace => {
+                "insert Barrier { ordering: SeqCst } or use atomic operations with valid ordering"
+            }
             Self::OutOfBoundsMemory => "clamp index expressions or increase declared buffer count",
-            Self::IllegalInstruction => "verify backend capability matrix and target ISA profile before dispatch",
+            Self::IllegalInstruction => {
+                "verify backend capability matrix and target ISA profile before dispatch"
+            }
         }
     }
 }
@@ -145,16 +153,22 @@ impl SanitizerFailure {
         };
 
         if let Some(addr) = self.device_address {
-            diag.notes.push(Cow::Owned(format!("faulting device address: 0x{addr:016x}")));
+            diag.notes.push(Cow::Owned(format!(
+                "faulting device address: 0x{addr:016x}"
+            )));
         }
         if let Some([x, y, z]) = self.invocation_coords {
-            diag.notes.push(Cow::Owned(format!("faulting invocation ID: [{x}, {y}, {z}]")));
+            diag.notes.push(Cow::Owned(format!(
+                "faulting invocation ID: [{x}, {y}, {z}]"
+            )));
         }
         if let Some(offset) = self.instruction_offset {
-            diag.notes.push(Cow::Owned(format!("instruction offset: +0x{offset:04x}")));
+            diag.notes
+                .push(Cow::Owned(format!("instruction offset: +0x{offset:04x}")));
         }
         if let Some(raw) = &self.raw_tool_output {
-            diag.notes.push(Cow::Owned(format!("tool raw output: {raw}")));
+            diag.notes
+                .push(Cow::Owned(format!("tool raw output: {raw}")));
         }
 
         diag
@@ -275,16 +289,25 @@ impl std::fmt::Display for PmuWarning {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::SpillExceeded { observed, allowed } => {
-                write!(f, "register spill of {observed} bytes exceeds expectation of {allowed} bytes")
+                write!(
+                    f,
+                    "register spill of {observed} bytes exceeds expectation of {allowed} bytes"
+                )
             }
             Self::BankConflictExceeded { observed, allowed } => {
-                write!(f, "shared memory bank conflicts {observed} exceed expectation of {allowed}")
+                write!(
+                    f,
+                    "shared memory bank conflicts {observed} exceed expectation of {allowed}"
+                )
             }
             Self::UncoalescedTrafficOnDenseWorkload { observed } => {
                 write!(f, "uncoalesced memory transactions ({observed}) observed on dense workload where coalesced access is required")
             }
             Self::LowOccupancy { observed, expected } => {
-                write!(f, "measured occupancy {observed:.1}% is below expected threshold {expected:.1}%")
+                write!(
+                    f,
+                    "measured occupancy {observed:.1}% is below expected threshold {expected:.1}%"
+                )
             }
         }
     }

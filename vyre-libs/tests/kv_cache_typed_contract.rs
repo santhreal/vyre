@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod wire_words;
-use wire_words::{u16_bytes as bytes, u16_words_of as words, kv_cache_append_test_spec as spec};
+use wire_words::{kv_cache_append_test_spec as spec, u16_bytes as bytes, u16_words_of as words};
 
 use vyre::ir::DataType;
 use vyre_libs::nn::attention::{kv_cache_append, KvCacheAppendError};

@@ -191,10 +191,7 @@ fn f16_programs_are_rejected_by_capability_gate_before_lowering() {
 fn cooperative_dispatch_is_rejected_until_grid_sync_is_supported() {
     let backend = live_backend();
     let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
+        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::Return],
     );

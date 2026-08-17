@@ -1,3 +1,14 @@
+//! Wire helpers every `vyre-libs` contract test packs its oracle buffers with.
+//!
+//! `vyre_primitives::wire` already owns the little-endian packers and decoders,
+//! so a test that writes its own `flat_map(to_le_bytes)` loop is a second copy
+//! of a shipped primitive. The BF16 rounding has no production owner because
+//! only the typed contracts need it, so it is owned here.
+#![allow(unused_imports, unused_macros)]
+
+use vyre_primitives::wire::decode_u16_le_bytes_all;
+use vyre_reference::value::Value;
+
 /// Minimal linear congruential generator for tests.
 pub(crate) struct Lcg(pub(crate) u64);
 
@@ -22,17 +33,6 @@ impl Lcg {
         }
     }
 }
-
-//! Wire helpers every `vyre-libs` contract test packs its oracle buffers with.
-//!
-//! `vyre_primitives::wire` already owns the little-endian packers and decoders,
-//! so a test that writes its own `flat_map(to_le_bytes)` loop is a second copy
-//! of a shipped primitive. The BF16 rounding has no production owner because
-//! only the typed contracts need it, so it is owned here.
-#![allow(unused_imports, unused_macros)]
-
-use vyre_primitives::wire::decode_u16_le_bytes_all;
-use vyre_reference::value::Value;
 
 pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
 
@@ -72,7 +72,6 @@ pub(crate) fn bf16_word(value: f32) -> u16 {
 pub(crate) fn bf16_bytes(values: &[f32]) -> Vec<u8> {
     u16_bytes(&values.iter().copied().map(bf16_word).collect::<Vec<_>>())
 }
-
 
 /// Reference implementation of the Blake3 quarter-round G mixing function.
 pub(crate) fn oracle_blake3_g(

@@ -1,10 +1,10 @@
-mod wire_words;
-use wire_words::hostile_bytes;
-
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
+
+mod wire_words;
+use wire_words::hostile_bytes;
 
 use vyre_libs::hash::adler32;
 
@@ -20,7 +20,6 @@ fn oracle_adler32(bytes: &[u8]) -> u32 {
     }
     (b << 16) | a
 }
-
 
 #[test]
 fn sweep_hash_adler32_volume_oracle_matrix() {

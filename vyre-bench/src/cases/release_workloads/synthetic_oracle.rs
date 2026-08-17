@@ -890,7 +890,9 @@ mod tests {
                     .map(vyre_reference::value::Value::from)
                     .collect::<Vec<_>>();
                 let outputs = vyre_reference::reference_eval(&program, &values)
-                    .unwrap_or_else(|err| panic!("pattern {pattern:?} records {records} failed reference eval: {err}"))
+                    .unwrap_or_else(|err| {
+                        panic!("pattern {pattern:?} records {records} failed reference eval: {err}")
+                    })
                     .into_iter()
                     .map(|value| value.to_bytes())
                     .collect::<Vec<_>>();

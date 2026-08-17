@@ -4,13 +4,13 @@ use std::path::{Path, PathBuf};
 
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
-use super::rules::read_text_bounded;
 use super::records::{
     ObservedThresholdConst, ThresholdPolicyArtifact, ThresholdPolicyDocument,
     ThresholdPolicyEvidenceRow, ThresholdPolicyFinding, ThresholdPolicyTomlRow,
     THRESHOLD_POLICY_ARTIFACT, THRESHOLD_POLICY_OWNER_LANE, THRESHOLD_POLICY_SCHEMA_VERSION,
     THRESHOLD_POLICY_SOURCE, THRESHOLD_SUFFIXES,
 };
+use super::rules::read_text_bounded;
 
 pub(crate) fn collect_threshold_policy(vyre_root: &Path) -> ThresholdPolicyArtifact {
     let observed = scan_threshold_constants(vyre_root);

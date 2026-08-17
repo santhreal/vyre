@@ -19,9 +19,7 @@
 
 use thiserror::Error;
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program,
-};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use crate::nn::attention_stability::{bounded_score, positive_denominator};
 
@@ -40,7 +38,9 @@ pub const PAGED_CACHE_APPEND_OP_ID: &str = "vyre-libs::nn::paged_cache_append";
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum PagedAttentionError {
     /// A dimension is zero.
-    #[error("paged attention requires non-zero sequences, heads, tokens, block tokens, and head_dim")]
+    #[error(
+        "paged attention requires non-zero sequences, heads, tokens, block tokens, and head_dim"
+    )]
     EmptyShape,
     /// Query heads is not a multiple of KV heads.
     #[error("query heads ({q_heads}) must be a multiple of KV heads ({kv_heads})")]
@@ -143,10 +143,7 @@ impl PagedAttentionSpec<'_> {
         {
             return Err(PagedAttentionError::EmptyShape);
         }
-        if !matches!(
-            self.dtype,
-            DataType::F16 | DataType::BF16 | DataType::F32
-        ) {
+        if !matches!(self.dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
             return Err(PagedAttentionError::UnsupportedDtype {
                 dtype: self.dtype.clone(),
             });
@@ -192,8 +189,14 @@ impl PagedAttentionSpec<'_> {
             })
         };
 
-        let q_count = checked(&[self.sequences, self.q_heads, self.query_tokens, self.head_dim])?;
-        let kv_cache_count = checked(&[self.blocks, self.kv_heads, self.block_tokens, self.head_dim])?;
+        let q_count = checked(&[
+            self.sequences,
+            self.q_heads,
+            self.query_tokens,
+            self.head_dim,
+        ])?;
+        let kv_cache_count =
+            checked(&[self.blocks, self.kv_heads, self.block_tokens, self.head_dim])?;
         let block_table_count = checked(&[self.sequences, self.blocks_per_sequence])?;
         let out_count = q_count;
 
@@ -236,10 +239,7 @@ fn paged_cache_element_expr(
             Expr::mul(physical_block, Expr::u32(block_stride)),
             Expr::mul(kv_head_expr, Expr::u32(head_stride)),
         ),
-        Expr::add(
-            Expr::mul(slot_in_block, Expr::u32(slot_stride)),
-            dk_expr,
-        ),
+        Expr::add(Expr::mul(slot_in_block, Expr::u32(slot_stride)), dk_expr),
     )
 }
 
@@ -327,251 +327,227 @@ pub fn paged_attention(spec: &PagedAttentionSpec<'_>) -> Result<Program, PagedAt
     };
 
     // --- Pass 1: Max Score Pass ---
-    let max_pass_body = vec![
-        Node::loop_for(
-            "j",
-            Expr::u32(0),
-            key_limit.clone(),
-            vec![
-                Node::let_bind("dot_val", Expr::f32(0.0)),
-                Node::loop_for(
-                    "dk",
-                    Expr::u32(0),
-                    Expr::u32(spec.head_dim),
-                    vec![
-                        Node::let_bind(
-                            "q_elem",
-                            to_f32(
-                                Expr::load(
-                                    spec.q,
-                                    Expr::add(query_base.clone(), Expr::var("dk")),
-                                ),
-                                &spec.dtype,
-                            ),
+    let max_pass_body = vec![Node::loop_for(
+        "j",
+        Expr::u32(0),
+        key_limit.clone(),
+        vec![
+            Node::let_bind("dot_val", Expr::f32(0.0)),
+            Node::loop_for(
+                "dk",
+                Expr::u32(0),
+                Expr::u32(spec.head_dim),
+                vec![
+                    Node::let_bind(
+                        "q_elem",
+                        to_f32(
+                            Expr::load(spec.q, Expr::add(query_base.clone(), Expr::var("dk"))),
+                            &spec.dtype,
                         ),
-                        Node::let_bind(
-                            "k_addr",
-                            paged_cache_element_expr(
-                                spec.block_table,
-                                spec.blocks_per_sequence,
-                                spec.kv_heads,
-                                spec.block_tokens,
-                                spec.head_dim,
-                                seq_idx.clone(),
-                                kv_head_idx.clone(),
-                                Expr::var("j"),
-                                Expr::var("dk"),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "k_elem",
-                            to_f32(
-                                Expr::load(spec.k_cache, Expr::var("k_addr")),
-                                &spec.dtype,
-                            ),
-                        ),
-                        Node::assign(
-                            "dot_val",
-                            Expr::add(
-                                Expr::var("dot_val"),
-                                Expr::mul(Expr::var("q_elem"), Expr::var("k_elem")),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::let_bind(
-                    "score",
-                    bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr.clone())),
-                ),
-                Node::assign(
-                    "max_val",
-                    Expr::select(
-                        Expr::gt(Expr::var("score"), Expr::var("max_val")),
-                        Expr::var("score"),
-                        Expr::var("max_val"),
                     ),
+                    Node::let_bind(
+                        "k_addr",
+                        paged_cache_element_expr(
+                            spec.block_table,
+                            spec.blocks_per_sequence,
+                            spec.kv_heads,
+                            spec.block_tokens,
+                            spec.head_dim,
+                            seq_idx.clone(),
+                            kv_head_idx.clone(),
+                            Expr::var("j"),
+                            Expr::var("dk"),
+                        ),
+                    ),
+                    Node::let_bind(
+                        "k_elem",
+                        to_f32(Expr::load(spec.k_cache, Expr::var("k_addr")), &spec.dtype),
+                    ),
+                    Node::assign(
+                        "dot_val",
+                        Expr::add(
+                            Expr::var("dot_val"),
+                            Expr::mul(Expr::var("q_elem"), Expr::var("k_elem")),
+                        ),
+                    ),
+                ],
+            ),
+            Node::let_bind(
+                "score",
+                bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr.clone())),
+            ),
+            Node::assign(
+                "max_val",
+                Expr::select(
+                    Expr::gt(Expr::var("score"), Expr::var("max_val")),
+                    Expr::var("score"),
+                    Expr::var("max_val"),
                 ),
-            ],
-        ),
-    ];
+            ),
+        ],
+    )];
 
     // --- Pass 2: Sum Normalization Pass ---
-    let sum_pass_body = vec![
-        Node::loop_for(
-            "j",
-            Expr::u32(0),
-            key_limit.clone(),
-            vec![
-                Node::let_bind("dot_val", Expr::f32(0.0)),
-                Node::loop_for(
-                    "dk",
-                    Expr::u32(0),
-                    Expr::u32(spec.head_dim),
-                    vec![
-                        Node::let_bind(
-                            "q_elem",
-                            to_f32(
-                                Expr::load(
-                                    spec.q,
-                                    Expr::add(query_base.clone(), Expr::var("dk")),
-                                ),
-                                &spec.dtype,
-                            ),
+    let sum_pass_body = vec![Node::loop_for(
+        "j",
+        Expr::u32(0),
+        key_limit.clone(),
+        vec![
+            Node::let_bind("dot_val", Expr::f32(0.0)),
+            Node::loop_for(
+                "dk",
+                Expr::u32(0),
+                Expr::u32(spec.head_dim),
+                vec![
+                    Node::let_bind(
+                        "q_elem",
+                        to_f32(
+                            Expr::load(spec.q, Expr::add(query_base.clone(), Expr::var("dk"))),
+                            &spec.dtype,
                         ),
-                        Node::let_bind(
-                            "k_addr",
-                            paged_cache_element_expr(
-                                spec.block_table,
-                                spec.blocks_per_sequence,
-                                spec.kv_heads,
-                                spec.block_tokens,
-                                spec.head_dim,
-                                seq_idx.clone(),
-                                kv_head_idx.clone(),
-                                Expr::var("j"),
-                                Expr::var("dk"),
-                            ),
+                    ),
+                    Node::let_bind(
+                        "k_addr",
+                        paged_cache_element_expr(
+                            spec.block_table,
+                            spec.blocks_per_sequence,
+                            spec.kv_heads,
+                            spec.block_tokens,
+                            spec.head_dim,
+                            seq_idx.clone(),
+                            kv_head_idx.clone(),
+                            Expr::var("j"),
+                            Expr::var("dk"),
                         ),
-                        Node::let_bind(
-                            "k_elem",
-                            to_f32(
-                                Expr::load(spec.k_cache, Expr::var("k_addr")),
-                                &spec.dtype,
-                            ),
+                    ),
+                    Node::let_bind(
+                        "k_elem",
+                        to_f32(Expr::load(spec.k_cache, Expr::var("k_addr")), &spec.dtype),
+                    ),
+                    Node::assign(
+                        "dot_val",
+                        Expr::add(
+                            Expr::var("dot_val"),
+                            Expr::mul(Expr::var("q_elem"), Expr::var("k_elem")),
                         ),
-                        Node::assign(
-                            "dot_val",
-                            Expr::add(
-                                Expr::var("dot_val"),
-                                Expr::mul(Expr::var("q_elem"), Expr::var("k_elem")),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::let_bind(
-                    "score",
-                    bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr.clone())),
-                ),
-                Node::let_bind(
-                    "exp_val",
-                    Expr::exp(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
-                ),
-                Node::assign(
-                    "sum_val",
-                    Expr::add(Expr::var("sum_val"), Expr::var("exp_val")),
-                ),
-            ],
-        ),
-    ];
+                    ),
+                ],
+            ),
+            Node::let_bind(
+                "score",
+                bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr.clone())),
+            ),
+            Node::let_bind(
+                "exp_val",
+                Expr::exp(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
+            ),
+            Node::assign(
+                "sum_val",
+                Expr::add(Expr::var("sum_val"), Expr::var("exp_val")),
+            ),
+        ],
+    )];
 
     // --- Pass 3: Weighted Values Write Pass ---
-    let write_pass_body = vec![
-        Node::loop_for(
-            "dk",
-            Expr::u32(0),
-            Expr::u32(spec.head_dim),
-            vec![
-                Node::let_bind("weighted_sum", Expr::f32(0.0)),
-                Node::loop_for(
-                    "j",
-                    Expr::u32(0),
-                    key_limit,
-                    vec![
-                        Node::let_bind("dot_val", Expr::f32(0.0)),
-                        Node::loop_for(
-                            "inner_dk",
-                            Expr::u32(0),
-                            Expr::u32(spec.head_dim),
-                            vec![
-                                Node::let_bind(
-                                    "q_elem",
-                                    to_f32(
-                                        Expr::load(
-                                            spec.q,
-                                            Expr::add(query_base.clone(), Expr::var("inner_dk")),
-                                        ),
-                                        &spec.dtype,
+    let write_pass_body = vec![Node::loop_for(
+        "dk",
+        Expr::u32(0),
+        Expr::u32(spec.head_dim),
+        vec![
+            Node::let_bind("weighted_sum", Expr::f32(0.0)),
+            Node::loop_for(
+                "j",
+                Expr::u32(0),
+                key_limit,
+                vec![
+                    Node::let_bind("dot_val", Expr::f32(0.0)),
+                    Node::loop_for(
+                        "inner_dk",
+                        Expr::u32(0),
+                        Expr::u32(spec.head_dim),
+                        vec![
+                            Node::let_bind(
+                                "q_elem",
+                                to_f32(
+                                    Expr::load(
+                                        spec.q,
+                                        Expr::add(query_base.clone(), Expr::var("inner_dk")),
                                     ),
+                                    &spec.dtype,
                                 ),
-                                Node::let_bind(
-                                    "k_addr",
-                                    paged_cache_element_expr(
-                                        spec.block_table,
-                                        spec.blocks_per_sequence,
-                                        spec.kv_heads,
-                                        spec.block_tokens,
-                                        spec.head_dim,
-                                        seq_idx.clone(),
-                                        kv_head_idx.clone(),
-                                        Expr::var("j"),
-                                        Expr::var("inner_dk"),
-                                    ),
+                            ),
+                            Node::let_bind(
+                                "k_addr",
+                                paged_cache_element_expr(
+                                    spec.block_table,
+                                    spec.blocks_per_sequence,
+                                    spec.kv_heads,
+                                    spec.block_tokens,
+                                    spec.head_dim,
+                                    seq_idx.clone(),
+                                    kv_head_idx.clone(),
+                                    Expr::var("j"),
+                                    Expr::var("inner_dk"),
                                 ),
-                                Node::let_bind(
-                                    "k_elem",
-                                    to_f32(
-                                        Expr::load(spec.k_cache, Expr::var("k_addr")),
-                                        &spec.dtype,
-                                    ),
+                            ),
+                            Node::let_bind(
+                                "k_elem",
+                                to_f32(Expr::load(spec.k_cache, Expr::var("k_addr")), &spec.dtype),
+                            ),
+                            Node::assign(
+                                "dot_val",
+                                Expr::add(
+                                    Expr::var("dot_val"),
+                                    Expr::mul(Expr::var("q_elem"), Expr::var("k_elem")),
                                 ),
-                                Node::assign(
-                                    "dot_val",
-                                    Expr::add(
-                                        Expr::var("dot_val"),
-                                        Expr::mul(Expr::var("q_elem"), Expr::var("k_elem")),
-                                    ),
-                                ),
-                            ],
-                        ),
-                        Node::let_bind(
-                            "score",
-                            bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr.clone())),
-                        ),
-                        Node::let_bind(
-                            "p_weight",
-                            Expr::div(
-                                Expr::exp(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
-                                Expr::var("denom"),
                             ),
+                        ],
+                    ),
+                    Node::let_bind(
+                        "score",
+                        bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr.clone())),
+                    ),
+                    Node::let_bind(
+                        "p_weight",
+                        Expr::div(
+                            Expr::exp(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
+                            Expr::var("denom"),
                         ),
-                        Node::let_bind(
-                            "v_addr",
-                            paged_cache_element_expr(
-                                spec.block_table,
-                                spec.blocks_per_sequence,
-                                spec.kv_heads,
-                                spec.block_tokens,
-                                spec.head_dim,
-                                seq_idx.clone(),
-                                kv_head_idx.clone(),
-                                Expr::var("j"),
-                                Expr::var("dk"),
-                            ),
+                    ),
+                    Node::let_bind(
+                        "v_addr",
+                        paged_cache_element_expr(
+                            spec.block_table,
+                            spec.blocks_per_sequence,
+                            spec.kv_heads,
+                            spec.block_tokens,
+                            spec.head_dim,
+                            seq_idx.clone(),
+                            kv_head_idx.clone(),
+                            Expr::var("j"),
+                            Expr::var("dk"),
                         ),
-                        Node::let_bind(
-                            "v_elem",
-                            to_f32(
-                                Expr::load(spec.v_cache, Expr::var("v_addr")),
-                                &spec.dtype,
-                            ),
+                    ),
+                    Node::let_bind(
+                        "v_elem",
+                        to_f32(Expr::load(spec.v_cache, Expr::var("v_addr")), &spec.dtype),
+                    ),
+                    Node::assign(
+                        "weighted_sum",
+                        Expr::add(
+                            Expr::var("weighted_sum"),
+                            Expr::mul(Expr::var("p_weight"), Expr::var("v_elem")),
                         ),
-                        Node::assign(
-                            "weighted_sum",
-                            Expr::add(
-                                Expr::var("weighted_sum"),
-                                Expr::mul(Expr::var("p_weight"), Expr::var("v_elem")),
-                            ),
-                        ),
-                    ],
-                ),
-                Node::Store {
-                    buffer: spec.output.into(),
-                    index: Expr::add(query_base.clone(), Expr::var("dk")),
-                    value: from_f32(Expr::var("weighted_sum"), &spec.dtype),
-                },
-            ],
-        ),
-    ];
+                    ),
+                ],
+            ),
+            Node::Store {
+                buffer: spec.output.into(),
+                index: Expr::add(query_base.clone(), Expr::var("dk")),
+                value: from_f32(Expr::var("weighted_sum"), &spec.dtype),
+            },
+        ],
+    )];
 
     let parent = Ident::from(PAGED_ATTENTION_OP_ID);
 
@@ -593,11 +569,7 @@ pub fn paged_attention(spec: &PagedAttentionSpec<'_>) -> Result<Program, PagedAt
                     sum_pass_body,
                 ),
                 Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
-                wrap_child_region(
-                    PAGED_ATTENTION_WRITE_PASS_OP_ID,
-                    parent,
-                    write_pass_body,
-                ),
+                wrap_child_region(PAGED_ATTENTION_WRITE_PASS_OP_ID, parent, write_pass_body),
             ],
         ),
     ];
@@ -692,10 +664,7 @@ impl PagedCacheAppendSpec<'_> {
         {
             return Err(PagedCacheAppendError::EmptyShape);
         }
-        if !matches!(
-            self.dtype,
-            DataType::F16 | DataType::BF16 | DataType::F32
-        ) {
+        if !matches!(self.dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
             return Err(PagedCacheAppendError::UnsupportedDtype {
                 dtype: self.dtype.clone(),
             });
@@ -727,7 +696,12 @@ impl PagedCacheAppendSpec<'_> {
             })
         };
 
-        let chunk_count = checked(&[self.sequences, self.kv_heads, self.chunk_tokens, self.head_dim])?;
+        let chunk_count = checked(&[
+            self.sequences,
+            self.kv_heads,
+            self.chunk_tokens,
+            self.head_dim,
+        ])?;
         let cache_count = checked(&[self.blocks, self.kv_heads, self.block_tokens, self.head_dim])?;
         let table_count = checked(&[self.sequences, self.blocks_per_sequence])?;
 
@@ -779,10 +753,7 @@ pub fn paged_cache_append(
         Node::if_then(
             Expr::lt(flat_idx.clone(), Expr::u32(chunk_count)),
             vec![
-                Node::let_bind(
-                    "val",
-                    Expr::load(spec.chunk, flat_idx),
-                ),
+                Node::let_bind("val", Expr::load(spec.chunk, flat_idx)),
                 Node::Store {
                     buffer: spec.cache.into(),
                     index: dst_addr,
@@ -911,7 +882,10 @@ mod tests {
             scale: None,
         };
         let err = paged_attention(&spec).unwrap_err();
-        assert!(matches!(err, PagedAttentionError::BlockTableCapacity { .. }));
+        assert!(matches!(
+            err,
+            PagedAttentionError::BlockTableCapacity { .. }
+        ));
     }
 
     #[test]
@@ -947,12 +921,12 @@ mod tests {
         // block 1: tokens 2, 3 -> K=[[1.0, 0.0], [0.0, 1.0]], V=[[50.0, 60.0], [70.0, 80.0]]
         // physical layout: [blocks(2), kv_heads(1), block_tokens(2), head_dim(2)]
         let k_data = vec![
-            1.0f32, 0.0,  0.0, 1.0,  // block 0
-            1.0, 0.0,     0.0, 1.0,  // block 1
+            1.0f32, 0.0, 0.0, 1.0, // block 0
+            1.0, 0.0, 0.0, 1.0, // block 1
         ];
         let v_data = vec![
-            10.0f32, 20.0,  30.0, 40.0, // block 0
-            50.0, 60.0,     70.0, 80.0, // block 1
+            10.0f32, 20.0, 30.0, 40.0, // block 0
+            50.0, 60.0, 70.0, 80.0, // block 1
         ];
         // block_table: [1 seq, 2 blocks] -> maps logical block 0 to physical 0, logical 1 to physical 1
         let table_data = vec![0u32, 1];
@@ -981,8 +955,18 @@ mod tests {
         let expected_out_0 = w0 * 10.0 + w1 * 30.0 + w2 * 50.0 + w3 * 70.0;
         let expected_out_1 = w0 * 20.0 + w1 * 40.0 + w2 * 60.0 + w3 * 80.0;
 
-        assert!((result[0] - expected_out_0).abs() < 1e-4, "got {}, expected {}", result[0], expected_out_0);
-        assert!((result[1] - expected_out_1).abs() < 1e-4, "got {}, expected {}", result[1], expected_out_1);
+        assert!(
+            (result[0] - expected_out_0).abs() < 1e-4,
+            "got {}, expected {}",
+            result[0],
+            expected_out_0
+        );
+        assert!(
+            (result[1] - expected_out_1).abs() < 1e-4,
+            "got {}, expected {}",
+            result[1],
+            expected_out_1
+        );
     }
 
     #[test]

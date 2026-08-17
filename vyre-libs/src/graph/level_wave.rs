@@ -380,7 +380,9 @@ mod tests {
             .expect("level_wave must be registered in inventory");
 
         let test_inputs = (entry.test_inputs.expect("test_inputs must be declared"))();
-        let expected_output = (entry.expected_output.expect("expected_output must be declared"))();
+        let expected_output = (entry
+            .expected_output
+            .expect("expected_output must be declared"))();
 
         assert_eq!(
             test_inputs.len(),
@@ -397,9 +399,14 @@ mod tests {
         assert_eq!(program.buffers().len(), 2);
         assert_eq!(program.buffers()[0].name(), "depths");
         assert_eq!(program.buffers()[1].name(), "out");
-        for (case_idx, (inputs, expected)) in test_inputs.iter().zip(expected_output.iter()).enumerate() {
-            let mut val_inputs: Vec<vyre_reference::value::Value> =
-                inputs.iter().cloned().map(vyre_reference::value::Value::from).collect();
+        for (case_idx, (inputs, expected)) in
+            test_inputs.iter().zip(expected_output.iter()).enumerate()
+        {
+            let mut val_inputs: Vec<vyre_reference::value::Value> = inputs
+                .iter()
+                .cloned()
+                .map(vyre_reference::value::Value::from)
+                .collect();
             // out buffer is 4 * u32 (16 bytes) ReadWrite buffer
             if val_inputs.len() < program.buffers().len() {
                 val_inputs.push(vyre_reference::value::Value::from(vec![0u8; 16]));

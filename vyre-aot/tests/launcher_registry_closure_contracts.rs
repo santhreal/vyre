@@ -10,7 +10,9 @@ mod fixture_target;
 
 use std::collections::{BTreeMap, HashSet};
 use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, TargetId};
-use vyre_driver::{registered_aot_launcher_emitters, AotLauncherEmitter, AotLauncherRequest, AotLauncherFiles};
+use vyre_driver::{
+    registered_aot_launcher_emitters, AotLauncherEmitter, AotLauncherFiles, AotLauncherRequest,
+};
 
 #[test]
 fn launcher_registry_has_unique_owner_per_target() {
@@ -69,7 +71,10 @@ fn launcher_end_to_end_package_generation_and_dispatch_simulation() {
         let mut files = BTreeMap::new();
         files.insert(
             std::path::PathBuf::from("src/main.rs"),
-            format!("// Generated launcher for {}\nfn main() {{ println!(\"ok\"); }}", req.crate_name),
+            format!(
+                "// Generated launcher for {}\nfn main() {{ println!(\"ok\"); }}",
+                req.crate_name
+            ),
         );
         Ok(AotLauncherFiles {
             dependencies: vec![],
@@ -103,6 +108,8 @@ fn launcher_end_to_end_package_generation_and_dispatch_simulation() {
     let cargo_toml = files.get(&std::path::PathBuf::from("Cargo.toml")).unwrap();
     assert!(cargo_toml.contains("name = \"test-model-launcher\""));
 
-    let artifact_loader = files.get(&std::path::PathBuf::from("src/artifact.rs")).unwrap();
+    let artifact_loader = files
+        .get(&std::path::PathBuf::from("src/artifact.rs"))
+        .unwrap();
     assert!(artifact_loader.contains("ArtifactEnvelope"));
 }

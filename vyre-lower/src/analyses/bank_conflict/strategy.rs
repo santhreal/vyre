@@ -7,8 +7,8 @@
 //! A candidate is rejected when a transformation merely moves an unacceptable
 //! conflict to another phase. Universal zero conflicts is not promised.
 
-use serde::{Deserialize, Serialize};
 use super::report::{BankConflictKind, ConflictSeverity};
+use serde::{Deserialize, Serialize};
 
 /// Physical and execution geometry for target shared-memory banks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -124,9 +124,9 @@ pub fn evaluate_mitigation_candidate(
     for phase in phases {
         let effective_stride = match candidate {
             BankConflictMitigation::NoRewrite => phase.stride_elements,
-            BankConflictMitigation::PadLines { pad_elements_per_row } => {
-                phase.stride_elements.saturating_add(pad_elements_per_row)
-            }
+            BankConflictMitigation::PadLines {
+                pad_elements_per_row,
+            } => phase.stride_elements.saturating_add(pad_elements_per_row),
             BankConflictMitigation::XorSwizzle { swizzle_bits, .. } => {
                 // Swizzling reduces effective stride collision by spreading across 2^swizzle_bits banks
                 let divisor = 1_u32 << swizzle_bits.min(5);
@@ -134,7 +134,8 @@ pub fn evaluate_mitigation_candidate(
             }
         };
 
-        let conflict = classify_phase_conflict(effective_stride, geometry.bank_count, phase.active_threads);
+        let conflict =
+            classify_phase_conflict(effective_stride, geometry.bank_count, phase.active_threads);
         let severity = conflict.severity();
         let penalty_factor = match conflict {
             BankConflictKind::NoConflict | BankConflictKind::BroadcastSafe => 1,
@@ -162,8 +163,10 @@ pub fn evaluate_mitigation_candidate(
         _ => {
             // If candidate introduced a Severe or Critical conflict in any phase that wasn't already Critical
             let has_unacceptable_moved_conflict = phase_reports.iter().any(|r| {
-                matches!(r.severity, ConflictSeverity::Critical | ConflictSeverity::Severe)
-                    && severity_rank(r.severity) > severity_rank(baseline_worst)
+                matches!(
+                    r.severity,
+                    ConflictSeverity::Critical | ConflictSeverity::Severe
+                ) && severity_rank(r.severity) > severity_rank(baseline_worst)
             });
             has_unacceptable_moved_conflict
         }
@@ -213,11 +216,23 @@ pub fn select_bank_conflict_strategy(
 
     let candidates = [
         BankConflictMitigation::NoRewrite,
-        BankConflictMitigation::PadLines { pad_elements_per_row: 1 },
-        BankConflictMitigation::PadLines { pad_elements_per_row: 2 },
-        BankConflictMitigation::PadLines { pad_elements_per_row: 4 },
-        BankConflictMitigation::XorSwizzle { swizzle_bits: 2, stride_shift: 3 },
-        BankConflictMitigation::XorSwizzle { swizzle_bits: 3, stride_shift: 4 },
+        BankConflictMitigation::PadLines {
+            pad_elements_per_row: 1,
+        },
+        BankConflictMitigation::PadLines {
+            pad_elements_per_row: 2,
+        },
+        BankConflictMitigation::PadLines {
+            pad_elements_per_row: 4,
+        },
+        BankConflictMitigation::XorSwizzle {
+            swizzle_bits: 2,
+            stride_shift: 3,
+        },
+        BankConflictMitigation::XorSwizzle {
+            swizzle_bits: 3,
+            stride_shift: 4,
+        },
     ];
 
     let mut best = baseline;

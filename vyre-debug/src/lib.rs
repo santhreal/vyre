@@ -19,14 +19,17 @@ pub mod fixtures;
 pub(crate) mod naga_dump;
 /// Naga validation and binding failure traces.
 pub(crate) mod naga_trace;
+/// Sanitizer correctness failures and PMU performance expectations.
+pub(crate) mod sanitizer;
 /// Source-level assignment traversal.
 pub mod source_assignments;
 /// WGSL emission and source-line mapping.
 pub(crate) mod wgsl;
-/// Sanitizer correctness failures and PMU performance expectations.
-pub(crate) mod sanitizer;
 
 pub use artifact_report::{ArtifactReport, TargetPayloadReport};
+pub use capability::{
+    neutral_debug_capabilities, DebugCapabilityInfo, DebugCapabilityKind, DEBUG_CAPABILITIES,
+};
 pub use carriers::{carrier_summary, find_uncarriered_assigns, CarrierSummary, UncarrieredAssign};
 pub use dangling::{find_dangling_refs, DanglingRef};
 pub use descriptor_diff::{diff_descriptors, DescriptorDiff};
@@ -39,6 +42,3 @@ pub use sanitizer::{
     PmuExpectation, PmuMeasurement, PmuWarning, PmuWorkloadClass, SanitizerFailure, SanitizerKind,
 };
 pub use wgsl::{dump_wgsl, dump_wgsl_with_lines, WgslDump};
-pub use capability::{
-    neutral_debug_capabilities, DebugCapabilityInfo, DebugCapabilityKind, DEBUG_CAPABILITIES,
-};

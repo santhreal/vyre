@@ -15,8 +15,7 @@ fn transform_mod_contains_classifications_for_every_transform_file() {
         "vyre-foundation/src/transform/mod.rs must define FOUNDATION_TRANSFORM_CLASSIFICATIONS"
     );
 
-    let entries = std::fs::read_dir(&transform_dir)
-        .expect("transform directory must be readable");
+    let entries = std::fs::read_dir(&transform_dir).expect("transform directory must be readable");
 
     for entry in entries.flatten() {
         let path = entry.path();

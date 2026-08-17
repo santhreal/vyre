@@ -30,8 +30,13 @@ fn transposition_updates_strides_and_preserves_evidence() {
     let map = AffineAccessMap::standard_row_major(&[4, 8], 4, 16);
     assert!(map.is_contiguous());
 
-    let transposed = map.transpose(&[1, 0]).expect("Fix: 2D transpose must succeed");
-    assert_eq!(transposed.shape, vec![DimExtent::Static(8), DimExtent::Static(4)]);
+    let transposed = map
+        .transpose(&[1, 0])
+        .expect("Fix: 2D transpose must succeed");
+    assert_eq!(
+        transposed.shape,
+        vec![DimExtent::Static(8), DimExtent::Static(4)]
+    );
     assert_eq!(
         transposed.strides,
         vec![StrideExpr::Static(1), StrideExpr::Static(8)]
@@ -71,7 +76,11 @@ fn slicing_creates_valid_strided_subviews() {
     assert_eq!(subview.strides[0], StrideExpr::Static(40));
 
     // Zero step is rejected
-    let zero_step_slice = SliceSpec { start: 0, stop: 5, step: 0 };
+    let zero_step_slice = SliceSpec {
+        start: 0,
+        stop: 5,
+        step: 0,
+    };
     assert!(matches!(
         map.slice(0, zero_step_slice),
         Err(AffineMapError::ZeroStep)
@@ -129,7 +138,10 @@ fn zero_copy_admission_checks_consumer_abi_requirements() {
 #[test]
 fn symbolic_and_dynamic_dimensions_preserve_bounds() {
     let symbolic_dim = DimExtent::Symbolic("batch_size".to_string());
-    let dynamic_dim = DimExtent::Dynamic { min: 1, max: Some(1024) };
+    let dynamic_dim = DimExtent::Dynamic {
+        min: 1,
+        max: Some(1024),
+    };
 
     assert!(!symbolic_dim.is_static());
     assert!(symbolic_dim.is_non_empty());
@@ -138,7 +150,10 @@ fn symbolic_and_dynamic_dimensions_preserve_bounds() {
 
     let map = AffineAccessMap::new(
         vec![symbolic_dim, dynamic_dim],
-        vec![StrideExpr::Symbolic("stride_b".to_string()), StrideExpr::Static(1)],
+        vec![
+            StrideExpr::Symbolic("stride_b".to_string()),
+            StrideExpr::Static(1),
+        ],
         0,
         4,
         16,

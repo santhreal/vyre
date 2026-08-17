@@ -1,15 +1,14 @@
-mod wire_words;
-use wire_words::hostile_bytes;
-
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
 
+mod wire_words;
+use wire_words::hostile_bytes;
+
 use vyre_libs::hash::{adler32, crc32, fnv1a, multi_hash};
 
 const CASES: usize = 16384;
-
 
 fn oracle_multi(bytes: &[u8]) -> (u32, u32, u32) {
     (

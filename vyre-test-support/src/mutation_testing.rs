@@ -61,7 +61,8 @@ pub fn representative_mutations() -> Vec<MutationDescriptor> {
             description: "Concurrent read-after-write to workgroup memory without synchronization",
             mutated_program: Program::wrapped(
                 vec![
-                    vyre_foundation::ir::BufferDecl::workgroup("shared", 0, DataType::U32).with_count(64),
+                    vyre_foundation::ir::BufferDecl::workgroup("shared", 0, DataType::U32)
+                        .with_count(64),
                     vyre_foundation::ir::BufferDecl::output("out", 1, DataType::U32).with_count(64),
                 ],
                 [64, 1, 1],
@@ -122,9 +123,7 @@ pub fn assert_mutations_are_detected() {
         assert!(
             is_detected,
             "mutation `{}` ({:?}) was not detected by compiler invariants: {}",
-            mutation.id,
-            mutation.kind,
-            mutation.description
+            mutation.id, mutation.kind, mutation.description
         );
     }
 }

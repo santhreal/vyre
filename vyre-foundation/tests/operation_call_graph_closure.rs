@@ -47,10 +47,7 @@ fn make_specialized_caps_leaf_program() -> Program {
         vec![BufferDecl::read("f64_buf", 0, DataType::F64).with_count(4)],
         [32, 1, 1],
         vec![
-            Node::let_bind(
-                "sub_val",
-                Expr::subgroup_add(Expr::f64(1.0)),
-            ),
+            Node::let_bind("sub_val", Expr::subgroup_add(Expr::f64(1.0))),
             Node::trap(Expr::u32(0), "arithmetic failure"),
         ],
     )
@@ -98,27 +95,55 @@ fn transitive_effects_propagate_across_multi_hop_calls() {
     let closure = CallGraphClosure::solve_from_registrations([&reg_a, &reg_b, &reg_c]);
 
     // 1. Check direct facts vs transitive facts on Leaf C
-    let c_direct_eff = closure.direct_effects.get("vyre-libs::test::closure::leaf_c").unwrap();
+    let c_direct_eff = closure
+        .direct_effects
+        .get("vyre-libs::test::closure::leaf_c")
+        .unwrap();
     assert!(c_direct_eff.writes, "Leaf C directly writes");
     assert!(c_direct_eff.atomics, "Leaf C directly has atomics");
 
     // 2. Direct facts on intermediate B and root A do NOT have writes/atomics locally
-    let b_direct_eff = closure.direct_effects.get("vyre-libs::test::closure::intermediate_b").unwrap();
-    assert!(!b_direct_eff.writes, "B directly only has an input buffer, no writes");
+    let b_direct_eff = closure
+        .direct_effects
+        .get("vyre-libs::test::closure::intermediate_b")
+        .unwrap();
+    assert!(
+        !b_direct_eff.writes,
+        "B directly only has an input buffer, no writes"
+    );
     assert!(!b_direct_eff.atomics, "B directly has no atomic nodes");
 
-    let a_direct_eff = closure.direct_effects.get("vyre-libs::test::closure::root_a").unwrap();
-    assert!(!a_direct_eff.writes, "A directly only has an input buffer, no writes");
+    let a_direct_eff = closure
+        .direct_effects
+        .get("vyre-libs::test::closure::root_a")
+        .unwrap();
+    assert!(
+        !a_direct_eff.writes,
+        "A directly only has an input buffer, no writes"
+    );
     assert!(!a_direct_eff.atomics, "A directly has no atomic nodes");
 
     // 3. Transitive facts on intermediate B and root A DO contain writes and atomics from C!
-    let b_trans_eff = closure.transitive_effects("vyre-libs::test::closure::intermediate_b").unwrap();
+    let b_trans_eff = closure
+        .transitive_effects("vyre-libs::test::closure::intermediate_b")
+        .unwrap();
     assert!(b_trans_eff.writes, "B transitively inherits writes from C");
-    assert!(b_trans_eff.atomics, "B transitively inherits atomics from C");
+    assert!(
+        b_trans_eff.atomics,
+        "B transitively inherits atomics from C"
+    );
 
-    let a_trans_eff = closure.transitive_effects("vyre-libs::test::closure::root_a").unwrap();
-    assert!(a_trans_eff.writes, "A transitively inherits writes from C across multi-hop");
-    assert!(a_trans_eff.atomics, "A transitively inherits atomics from C across multi-hop");
+    let a_trans_eff = closure
+        .transitive_effects("vyre-libs::test::closure::root_a")
+        .unwrap();
+    assert!(
+        a_trans_eff.writes,
+        "A transitively inherits writes from C across multi-hop"
+    );
+    assert!(
+        a_trans_eff.atomics,
+        "A transitively inherits atomics from C across multi-hop"
+    );
 }
 
 /// WHY (182.9.5): Required capabilities (f64, subgroup ops, traps, async dispatch)
@@ -140,16 +165,40 @@ fn transitive_capabilities_propagate_across_call_graph() {
 
     let closure = CallGraphClosure::solve_from_registrations([&reg_leaf, &reg_parent]);
 
-    let parent_direct_caps = closure.direct_capabilities.get("vyre-libs::test::closure::caps_parent").unwrap();
+    let parent_direct_caps = closure
+        .direct_capabilities
+        .get("vyre-libs::test::closure::caps_parent")
+        .unwrap();
     assert!(!parent_direct_caps.f64, "Parent directly does not use f64");
-    assert!(!parent_direct_caps.subgroup_ops, "Parent directly does not use subgroup ops");
-    assert!(!parent_direct_caps.trap, "Parent directly does not emit traps");
+    assert!(
+        !parent_direct_caps.subgroup_ops,
+        "Parent directly does not use subgroup ops"
+    );
+    assert!(
+        !parent_direct_caps.trap,
+        "Parent directly does not emit traps"
+    );
 
-    let parent_trans_caps = closure.transitive_capabilities("vyre-libs::test::closure::caps_parent").unwrap();
-    assert!(parent_trans_caps.f64, "Parent transitively inherits f64 requirement");
-    assert!(parent_trans_caps.subgroup_ops, "Parent transitively inherits subgroup requirement");
-    assert!(parent_trans_caps.trap, "Parent transitively inherits trap propagation requirement");
-    assert_eq!(parent_trans_caps.max_workgroup_size, [32, 1, 1], "Parent inherits workgroup size extent");
+    let parent_trans_caps = closure
+        .transitive_capabilities("vyre-libs::test::closure::caps_parent")
+        .unwrap();
+    assert!(
+        parent_trans_caps.f64,
+        "Parent transitively inherits f64 requirement"
+    );
+    assert!(
+        parent_trans_caps.subgroup_ops,
+        "Parent transitively inherits subgroup requirement"
+    );
+    assert!(
+        parent_trans_caps.trap,
+        "Parent transitively inherits trap propagation requirement"
+    );
+    assert_eq!(
+        parent_trans_caps.max_workgroup_size,
+        [32, 1, 1],
+        "Parent inherits workgroup size extent"
+    );
 }
 
 /// WHY (182.9.5): An unresolved or missing callee causes the caller to fail closed,
@@ -166,14 +215,18 @@ fn missing_callee_defaults_to_strongest_effects_and_capabilities() {
     let closure = CallGraphClosure::solve_from_registrations([&reg_caller]);
 
     assert!(closure.is_unclosed_or_cyclic("vyre-libs::test::closure::calls_missing"));
-    let trans_eff = closure.transitive_effects("vyre-libs::test::closure::calls_missing").unwrap();
+    let trans_eff = closure
+        .transitive_effects("vyre-libs::test::closure::calls_missing")
+        .unwrap();
     assert_eq!(
         trans_eff,
         OperationEffects::ALL,
         "Unresolved callee must cause caller to default to strongest applicable effects"
     );
 
-    let trans_caps = closure.transitive_capabilities("vyre-libs::test::closure::calls_missing").unwrap();
+    let trans_caps = closure
+        .transitive_capabilities("vyre-libs::test::closure::calls_missing")
+        .unwrap();
     assert_eq!(
         trans_caps,
         RequiredCapabilities::all(),
@@ -200,10 +253,13 @@ fn signature_only_callee_fails_closed_unless_explicit_contract_closes_it() {
         None,
     );
 
-    let closure_open = CallGraphClosure::solve_from_registrations([&reg_sig_open, &reg_caller_open]);
+    let closure_open =
+        CallGraphClosure::solve_from_registrations([&reg_sig_open, &reg_caller_open]);
     assert!(closure_open.is_unclosed_or_cyclic("vyre-libs::test::closure::sig_open"));
     assert_eq!(
-        closure_open.transitive_effects("vyre-libs::test::closure::caller_sig_open").unwrap(),
+        closure_open
+            .transitive_effects("vyre-libs::test::closure::caller_sig_open")
+            .unwrap(),
         OperationEffects::ALL
     );
 
@@ -232,10 +288,13 @@ fn signature_only_callee_fails_closed_unless_explicit_contract_closes_it() {
         None,
     );
 
-    let closure_closed = CallGraphClosure::solve_from_registrations([&reg_sig_closed, &reg_caller_closed]);
+    let closure_closed =
+        CallGraphClosure::solve_from_registrations([&reg_sig_closed, &reg_caller_closed]);
     assert!(!closure_closed.is_unclosed_or_cyclic("vyre-libs::test::closure::sig_closed"));
     assert_eq!(
-        closure_closed.transitive_effects("vyre-libs::test::closure::caller_sig_closed").unwrap(),
+        closure_closed
+            .transitive_effects("vyre-libs::test::closure::caller_sig_closed")
+            .unwrap(),
         closed_eff
     );
     let caller_closed_caps = closure_closed
@@ -278,11 +337,15 @@ fn recursive_cycles_fail_closed_without_contract() {
     assert!(closure.is_unclosed_or_cyclic("vyre-libs::test::closure::cycle_a"));
     assert!(closure.is_unclosed_or_cyclic("vyre-libs::test::closure::cycle_b"));
     assert_eq!(
-        closure.transitive_effects("vyre-libs::test::closure::cycle_a").unwrap(),
+        closure
+            .transitive_effects("vyre-libs::test::closure::cycle_a")
+            .unwrap(),
         OperationEffects::ALL
     );
     assert_eq!(
-        closure.transitive_effects("vyre-libs::test::closure::cycle_b").unwrap(),
+        closure
+            .transitive_effects("vyre-libs::test::closure::cycle_b")
+            .unwrap(),
         OperationEffects::ALL
     );
 }
@@ -306,8 +369,12 @@ fn nested_callee_mutation_alters_parent_composite_version_and_effects() {
     );
 
     let closure_v1 = CallGraphClosure::solve_from_registrations([&reg_parent, &reg_child_v1]);
-    let parent_ver_v1 = closure_v1.composite_version("vyre-libs::test::closure::parent", 1).unwrap();
-    let parent_eff_v1 = closure_v1.transitive_effects("vyre-libs::test::closure::parent").unwrap();
+    let parent_ver_v1 = closure_v1
+        .composite_version("vyre-libs::test::closure::parent", 1)
+        .unwrap();
+    let parent_eff_v1 = closure_v1
+        .transitive_effects("vyre-libs::test::closure::parent")
+        .unwrap();
     assert!(!parent_eff_v1.writes, "V1 parent has no writes");
     assert!(!parent_eff_v1.atomics, "V1 parent has no atomics");
 
@@ -320,10 +387,17 @@ fn nested_callee_mutation_alters_parent_composite_version_and_effects() {
     );
 
     let closure_v2 = CallGraphClosure::solve_from_registrations([&reg_parent, &reg_child_v2]);
-    let parent_ver_v2 = closure_v2.composite_version("vyre-libs::test::closure::parent", 1).unwrap();
-    let parent_eff_v2 = closure_v2.transitive_effects("vyre-libs::test::closure::parent").unwrap();
+    let parent_ver_v2 = closure_v2
+        .composite_version("vyre-libs::test::closure::parent", 1)
+        .unwrap();
+    let parent_eff_v2 = closure_v2
+        .transitive_effects("vyre-libs::test::closure::parent")
+        .unwrap();
     assert!(parent_eff_v2.writes, "V2 parent now transitively writes");
-    assert!(parent_eff_v2.atomics, "V2 parent now transitively has atomics");
+    assert!(
+        parent_eff_v2.atomics,
+        "V2 parent now transitively has atomics"
+    );
 
     assert_ne!(
         parent_ver_v1, parent_ver_v2,
@@ -340,13 +414,19 @@ fn nested_callee_mutation_alters_parent_composite_version_and_effects() {
 #[test]
 fn global_operation_registry_integrates_call_graph_closure() {
     let registry = OperationRegistry::global();
-    assert!(registry.call_graph_closure_identity() > 0, "Closure identity must be non-zero");
+    assert!(
+        registry.call_graph_closure_identity() > 0,
+        "Closure identity must be non-zero"
+    );
 
     for op in registry.iter() {
         let eff = op.effects();
         assert!(eff.is_some(), "Every registered operation resolves effects");
         let caps = op.required_capabilities();
-        assert!(caps.is_some(), "Every registered operation resolves required capabilities");
+        assert!(
+            caps.is_some(),
+            "Every registered operation resolves required capabilities"
+        );
         let comp_ver = op.composite_version();
         assert!(comp_ver > 0, "Composite version must be computed");
     }

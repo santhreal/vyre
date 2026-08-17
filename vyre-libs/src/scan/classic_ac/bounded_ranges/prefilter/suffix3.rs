@@ -24,7 +24,6 @@ use super::{
 /// suffix3 gate's three mask buffers.
 const FIRST_REGION_BINDING: u32 = FIRST_GATE_BINDING + PrefilterWidth::Suffix3.mask_count();
 
-
 /// Number of u32 words a presence bitmap needs for `pattern_count` patterns.
 #[must_use]
 pub fn presence_bitmap_words(pattern_count: u32) -> u32 {

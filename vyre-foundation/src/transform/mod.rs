@@ -61,7 +61,9 @@ pub mod collectives;
 pub mod grid_sync_split;
 
 /// Contract classification for foundation transformations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum TransformContractClass {
     /// Required for backend execution and legal hardware representation.
     RequiredLegalization,

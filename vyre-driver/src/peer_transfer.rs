@@ -119,12 +119,7 @@ impl PeerTopology {
     }
 
     /// Set directional access capability from `src` to `dst`.
-    pub fn set_capability(
-        &mut self,
-        src: u32,
-        dst: u32,
-        capability: PeerAccessCapability,
-    ) {
+    pub fn set_capability(&mut self, src: u32, dst: u32, capability: PeerAccessCapability) {
         if src < self.device_count && dst < self.device_count {
             self.matrix.insert((src, dst), capability);
         }
@@ -280,20 +275,16 @@ impl PeerTransferAccounting {
                 plan.request.byte_len,
                 "direct peer bytes",
             )?;
-            PEER_TRANSFER_ACCOUNTING.add_operation(
-                &mut self.direct_transfers,
-                "direct peer transfers",
-            )?;
+            PEER_TRANSFER_ACCOUNTING
+                .add_operation(&mut self.direct_transfers, "direct peer transfers")?;
         } else {
             PEER_TRANSFER_ACCOUNTING.add_bytes(
                 &mut self.staged_bytes,
                 plan.request.byte_len,
                 "staged peer bytes",
             )?;
-            PEER_TRANSFER_ACCOUNTING.add_operation(
-                &mut self.staged_transfers,
-                "staged peer transfers",
-            )?;
+            PEER_TRANSFER_ACCOUNTING
+                .add_operation(&mut self.staged_transfers, "staged peer transfers")?;
         }
 
         Ok(())
@@ -309,10 +300,7 @@ pub struct PeerTransferPlanner<'a> {
 impl<'a> PeerTransferPlanner<'a> {
     /// Create a planner with topology and current device generation map.
     #[must_use]
-    pub fn new(
-        topology: &'a PeerTopology,
-        device_generations: &'a BTreeMap<u32, u64>,
-    ) -> Self {
+    pub fn new(topology: &'a PeerTopology, device_generations: &'a BTreeMap<u32, u64>) -> Self {
         Self {
             topology,
             device_generations,
@@ -367,7 +355,9 @@ impl<'a> PeerTransferPlanner<'a> {
             }
         }
 
-        let capability = self.topology.capability(request.src_device, request.dst_device);
+        let capability = self
+            .topology
+            .capability(request.src_device, request.dst_device);
 
         match capability {
             PeerAccessCapability::DirectPeerMemory { .. } => Ok(PeerTransferPlan {
@@ -448,7 +438,10 @@ mod tests {
         };
 
         let err = planner.plan_transfer(req).unwrap_err();
-        assert!(matches!(err, PeerTransferError::StaleDeviceGeneration { .. }));
+        assert!(matches!(
+            err,
+            PeerTransferError::StaleDeviceGeneration { .. }
+        ));
     }
 
     #[test]

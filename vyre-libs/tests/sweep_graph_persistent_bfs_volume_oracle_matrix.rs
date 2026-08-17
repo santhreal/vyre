@@ -25,12 +25,7 @@ fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
         );
         let actual = persistent_bfs::cpu_ref(
             CsrClosureInputs::new(
-                node_count,
-                &offsets,
-                &targets,
-                &masks,
-                allow_mask,
-                max_iters,
+                node_count, &offsets, &targets, &masks, allow_mask, max_iters,
             ),
             &frontier,
         );

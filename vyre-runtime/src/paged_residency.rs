@@ -248,9 +248,7 @@ impl PagedResidencyPlanner {
             PagingCandidateStrategy::PagedAttention
         } else {
             // Explicit contiguous fallback candidate (not implicit host execution!)
-            PagingCandidateStrategy::ExplicitContiguousFallback {
-                max_context_tokens,
-            }
+            PagingCandidateStrategy::ExplicitContiguousFallback { max_context_tokens }
         }
     }
 }

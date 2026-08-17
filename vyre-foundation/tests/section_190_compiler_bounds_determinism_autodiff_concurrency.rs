@@ -12,8 +12,8 @@ use std::thread;
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::optimizer::PassScheduler;
-use vyre_foundation::transform::autodiff::rules::{binop_adjoints, fma_adjoints, unop_adjoint};
 use vyre_foundation::transform::autodiff::grad_with_pullback;
+use vyre_foundation::transform::autodiff::rules::{binop_adjoints, fma_adjoints, unop_adjoint};
 use vyre_foundation::validate::validate;
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,10 @@ fn test_190_2_fixed_pipeline_artifact_determinism() {
         ],
         [64, 1, 1],
         vec![
-            Node::let_bind("a", Expr::mul(Expr::load("x", Expr::gid_x()), Expr::f32(2.0))),
+            Node::let_bind(
+                "a",
+                Expr::mul(Expr::load("x", Expr::gid_x()), Expr::f32(2.0)),
+            ),
             Node::let_bind("b", Expr::add(Expr::var("a"), Expr::f32(1.0))),
             Node::store("out", Expr::gid_x(), Expr::var("b")),
         ],
@@ -106,12 +109,8 @@ fn test_190_2_fixed_pipeline_artifact_determinism() {
     );
 
     let scheduler = PassScheduler::default();
-    let opt_1 = scheduler
-        .run(program)
-        .expect("opt 1");
-    let opt_2 = scheduler
-        .run(opt_1.clone())
-        .expect("opt 2");
+    let opt_1 = scheduler.run(program).expect("opt 1");
+    let opt_2 = scheduler.run(opt_1.clone()).expect("opt 2");
 
     let hash_opt_1 = opt_1.canonical_wire_hash().expect("opt 1 hash");
     let hash_opt_2 = opt_2.canonical_wire_hash().expect("opt 2 hash");
@@ -159,7 +158,7 @@ fn test_190_3_conditioned_autodiff_parity_contracts() {
 
     let f = |x: f32, w: f32| x * w + x * x;
     let analytic_df_dx = w_val + 2.0 * x_val; // 5 + 6 = 11.0
-    let analytic_df_dw = x_val;               // 3.0
+    let analytic_df_dw = x_val; // 3.0
 
     // Central difference: (f(x+h) - f(x-h)) / (2h)
     let num_df_dx = (f(x_val + h, w_val) - f(x_val - h, w_val)) / (2.0 * h);
@@ -195,7 +194,10 @@ fn test_190_3_conditioned_autodiff_parity_contracts() {
 
     // UnOp Abs subgradient
     let abs_adj = unop_adjoint(&UnOp::Abs, &l, &adj).expect("abs autodiff");
-    assert!(matches!(abs_adj.adjoint, Expr::BinOp { op: BinOp::Mul, .. }));
+    assert!(matches!(
+        abs_adj.adjoint,
+        Expr::BinOp { op: BinOp::Mul, .. }
+    ));
 
     // FMA adjoint
     let c = Expr::var("c");
@@ -211,9 +213,19 @@ fn test_190_3_conditioned_autodiff_parity_contracts() {
         ],
         [1, 1, 1],
         vec![
-            Node::let_bind("prod", Expr::mul(Expr::load("x", Expr::u32(0)), Expr::load("w", Expr::u32(0)))),
-            Node::let_bind("sq", Expr::mul(Expr::load("x", Expr::u32(0)), Expr::load("x", Expr::u32(0)))),
-            Node::store("out", Expr::u32(0), Expr::add(Expr::var("prod"), Expr::var("sq"))),
+            Node::let_bind(
+                "prod",
+                Expr::mul(Expr::load("x", Expr::u32(0)), Expr::load("w", Expr::u32(0))),
+            ),
+            Node::let_bind(
+                "sq",
+                Expr::mul(Expr::load("x", Expr::u32(0)), Expr::load("x", Expr::u32(0))),
+            ),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::add(Expr::var("prod"), Expr::var("sq")),
+            ),
         ],
     );
 
@@ -340,7 +352,9 @@ fn test_190_5_termination_and_recovery_boundaries() {
         fn try_enqueue(&mut self, item: T) -> Result<(), &'static str> {
             if self.items.len() >= self.capacity {
                 self.dropped_or_shed += 1;
-                return Err("VYRE_BACKPRESSURE_QUEUE_FULL: capacity limit reached, refuse new work");
+                return Err(
+                    "VYRE_BACKPRESSURE_QUEUE_FULL: capacity limit reached, refuse new work",
+                );
             }
             self.items.push(item);
             Ok(())
@@ -357,7 +371,9 @@ fn test_190_5_termination_and_recovery_boundaries() {
         assert!(queue.try_enqueue(i).is_ok());
     }
     // 5th element must fail closed with backpressure diagnostic
-    let err = queue.try_enqueue(99).expect_err("must refuse over capacity");
+    let err = queue
+        .try_enqueue(99)
+        .expect_err("must refuse over capacity");
     assert!(err.contains("VYRE_BACKPRESSURE_QUEUE_FULL"));
 
     // Bounded drain steps

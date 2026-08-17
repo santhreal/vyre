@@ -22,8 +22,16 @@ pub fn semiring_gemm_witness(
     k: usize,
     semiring: Semiring,
 ) -> Vec<u32> {
-    assert_eq!(a.len(), m * k, "A dimension mismatch in semiring GEMM witness");
-    assert_eq!(b.len(), k * n, "B dimension mismatch in semiring GEMM witness");
+    assert_eq!(
+        a.len(),
+        m * k,
+        "A dimension mismatch in semiring GEMM witness"
+    );
+    assert_eq!(
+        b.len(),
+        k * n,
+        "B dimension mismatch in semiring GEMM witness"
+    );
 
     let zero = semiring.identity();
     let mut c = vec![zero; m * n];

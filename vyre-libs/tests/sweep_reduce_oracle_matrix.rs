@@ -1,6 +1,3 @@
-mod wire_words;
-use wire_words::{alternating, lcg_u32 as lcg, ramp};
-
 //! Oracle matrix for every generated-volume reduce sweep.
 //!
 //! One shared hostile case list feeds every reducer, and each call shape has one
@@ -15,6 +12,9 @@ use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "reduce", feature = "cpu-parity"))]
+
+mod wire_words;
+use wire_words::{alternating, lcg_u32 as lcg, ramp};
 
 use vyre_libs::reduce::{
     all, any, count, count_non_zero, gather, histogram, max, min, multi_block_prefix_scan,
@@ -326,6 +326,3 @@ fn index_pairs() -> impl Iterator<Item = (Vec<u32>, Vec<u32>)> {
 }
 
 const CASES: usize = 16384;
-
-
-

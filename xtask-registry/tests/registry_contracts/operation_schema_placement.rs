@@ -350,10 +350,7 @@ fn an_intrinsic_registration_places_the_operation_in_its_defining_crate() {
     let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
     let root = dir.path();
     workspace(root, &["primitives"]);
-    write(
-        &root.join("primitives/src/lib.rs"),
-        "pub mod hardware;\n",
-    );
+    write(&root.join("primitives/src/lib.rs"), "pub mod hardware;\n");
     write(
         &root.join("primitives/src/hardware.rs"),
         "const OP_ID: &str = \"primitives::hardware::bit_reverse_u32\";\n\

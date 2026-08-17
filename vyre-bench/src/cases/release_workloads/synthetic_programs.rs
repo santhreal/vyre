@@ -57,7 +57,15 @@ fn synthetic_count_program(pattern: SyntheticPattern, records: u32) -> Program {
 }
 
 fn condition_eval_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["match_mask", "rule_mask", "metadata_mask"], ["match_word", "rule_word", "metadata_word"], "condition_hits", TripleMaskPredicate::AllSet, CONDITION_LANES, CONDITION_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["match_mask", "rule_mask", "metadata_mask"],
+        ["match_word", "rule_word", "metadata_word"],
+        "condition_hits",
+        TripleMaskPredicate::AllSet,
+        CONDITION_LANES,
+        CONDITION_THRESHOLD,
+    )
 }
 
 pub(super) fn string_bitmap_scatter_program(records: u32) -> Program {
@@ -188,11 +196,27 @@ fn triple_mask_threshold_count_program(
 }
 
 fn offset_count_aggregation_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["offset_mask", "length_mask", "count_mask"], ["offset_word", "length_word", "count_word"], "aggregation_hits", TripleMaskPredicate::AllSet, AGGREGATION_LANES, AGGREGATION_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["offset_mask", "length_mask", "count_mask"],
+        ["offset_word", "length_word", "count_word"],
+        "aggregation_hits",
+        TripleMaskPredicate::AllSet,
+        AGGREGATION_LANES,
+        AGGREGATION_THRESHOLD,
+    )
 }
 
 fn entropy_window_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["byte_class_mask", "transition_mask", "rarity_mask"], ["byte_class_word", "transition_word", "rarity_word"], "entropy_score", TripleMaskPredicate::FirstAndEither, ENTROPY_LANES, ENTROPY_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["byte_class_mask", "transition_mask", "rarity_mask"],
+        ["byte_class_word", "transition_word", "rarity_word"],
+        "entropy_score",
+        TripleMaskPredicate::FirstAndEither,
+        ENTROPY_LANES,
+        ENTROPY_THRESHOLD,
+    )
 }
 
 fn quantified_condition_loops_program(records: u32) -> Program {
@@ -205,10 +229,7 @@ fn quantified_condition_loops_program(records: u32) -> Program {
         Expr::bitand(Expr::var("all_word"), lane_mask.clone()),
         lane_mask.clone(),
     );
-    let threshold_hits = Expr::popcount(Expr::bitand(
-        Expr::var("threshold_word"),
-        lane_mask,
-    ));
+    let threshold_hits = Expr::popcount(Expr::bitand(Expr::var("threshold_word"), lane_mask));
     let threshold_hit = Expr::ge(threshold_hits, Expr::u32(QUANTIFIED_THRESHOLD));
     let condition = Expr::and(any_hit, Expr::and(all_hit, threshold_hit));
 
@@ -245,23 +266,63 @@ fn quantified_condition_loops_program(records: u32) -> Program {
 }
 
 fn alias_reaching_def_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["def_mask", "use_mask", "kill_mask"], ["def_word", "use_word", "kill_word"], "reaching_aliases", TripleMaskPredicate::FirstTwoSetThirdClear, ALIAS_LANES, ALIAS_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["def_mask", "use_mask", "kill_mask"],
+        ["def_word", "use_word", "kill_word"],
+        "reaching_aliases",
+        TripleMaskPredicate::FirstTwoSetThirdClear,
+        ALIAS_LANES,
+        ALIAS_THRESHOLD,
+    )
 }
 
 fn ifds_witness_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["frontier_mask", "transfer_mask", "witness_mask"], ["frontier_word", "transfer_word", "witness_word"], "witness_hits", TripleMaskPredicate::AllSet, IFDS_LANES, IFDS_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["frontier_mask", "transfer_mask", "witness_mask"],
+        ["frontier_word", "transfer_word", "witness_word"],
+        "witness_hits",
+        TripleMaskPredicate::AllSet,
+        IFDS_LANES,
+        IFDS_THRESHOLD,
+    )
 }
 
 fn ast_motif_traversal_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["node_kind_mask", "depth_mask", "motif_mask"], ["node_kind_word", "depth_word", "motif_word"], "ast_hits", TripleMaskPredicate::AllSet, C_AST_LANES, C_AST_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["node_kind_mask", "depth_mask", "motif_mask"],
+        ["node_kind_word", "depth_word", "motif_word"],
+        "ast_hits",
+        TripleMaskPredicate::AllSet,
+        C_AST_LANES,
+        C_AST_THRESHOLD,
+    )
 }
 
 fn megakernel_queue_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["queue_mask", "predicate_mask", "dispatch_mask"], ["queue_word", "predicate_word", "dispatch_word"], "queued_hits", TripleMaskPredicate::AllSet, MEGAKERNEL_QUEUE_LANES, MEGAKERNEL_QUEUE_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["queue_mask", "predicate_mask", "dispatch_mask"],
+        ["queue_word", "predicate_word", "dispatch_word"],
+        "queued_hits",
+        TripleMaskPredicate::AllSet,
+        MEGAKERNEL_QUEUE_LANES,
+        MEGAKERNEL_QUEUE_THRESHOLD,
+    )
 }
 
 fn egraph_saturation_program(records: u32) -> Program {
-    triple_mask_threshold_count_program(records, ["opcode_mask", "lhs_class_mask", "rhs_class_mask"], ["opcode_word", "lhs_word", "rhs_word"], "rewrite_hits", TripleMaskPredicate::AllSet, EGRAPH_LANES, EGRAPH_THRESHOLD)
+    triple_mask_threshold_count_program(
+        records,
+        ["opcode_mask", "lhs_class_mask", "rhs_class_mask"],
+        ["opcode_word", "lhs_word", "rhs_word"],
+        "rewrite_hits",
+        TripleMaskPredicate::AllSet,
+        EGRAPH_LANES,
+        EGRAPH_THRESHOLD,
+    )
 }
 
 fn pattern_condition(pattern: SyntheticPattern) -> Expr {

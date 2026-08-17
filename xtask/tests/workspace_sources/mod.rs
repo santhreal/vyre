@@ -78,7 +78,12 @@ pub(crate) fn workspace_member_sources(root: &Path) -> Vec<PathBuf> {
 /// The fixture has to be a real checkout: every gate here reads the tree
 /// through `git ls-files`, so a directory of untracked files reads as an empty
 /// workspace and the gate would report nothing at all.
-pub(crate) fn run_gate(name: &str, gate: &'static dyn GateBehavior, root: &Path, write: bool) -> Report {
+pub(crate) fn run_gate(
+    name: &str,
+    gate: &'static dyn GateBehavior,
+    root: &Path,
+    write: bool,
+) -> Report {
     let args = if write {
         vec!["--write".to_string()]
     } else {

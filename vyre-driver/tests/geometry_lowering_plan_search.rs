@@ -200,9 +200,7 @@ fn multi_block_prefix_scan_lowers_at_target_admitted_widths() {
     let profile_1024 = test_profile_1024();
     let profile_256 = test_profile_256();
 
-    let req = GeometryRequirements::cooperative(
-        CooperativeWidth::Agnostic,
-    );
+    let req = GeometryRequirements::cooperative(CooperativeWidth::Agnostic);
     let n = 4096_u32;
 
     let geo_1024 = profile_1024

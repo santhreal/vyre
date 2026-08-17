@@ -1,12 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use super::rules::read_text_bounded;
-use super::threshold_policy::relative_to_vyre;
 use super::records::{
     HygieneFinding, StructuralGateArtifact, StructuralGateDeclaration, StructuralGateDocument,
     STRUCTURAL_GATE_SCHEMA_VERSION, STRUCTURAL_GATE_SOURCE,
 };
+use super::rules::read_text_bounded;
+use super::threshold_policy::relative_to_vyre;
 
 /// Read the structural-gate registry, or report why it could not be trusted.
 ///

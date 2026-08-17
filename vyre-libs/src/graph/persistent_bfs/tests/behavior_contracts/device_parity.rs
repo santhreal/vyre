@@ -258,7 +258,7 @@ fn assert_device_matches_oracle(
         max_iters,
     );
     let (frontier, outcome) = try_cpu_ref_converged(inputs, frontier_in)
-    .expect("Fix: CPU oracle must accept a valid graph.");
+        .expect("Fix: CPU oracle must accept a valid graph.");
     let (device_frontier, device_changed, device_converged) = run_converged(
         node_count,
         edge_offsets,
@@ -459,7 +459,7 @@ fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
             max_iters,
         );
         let (_, oracle) = try_cpu_ref_converged(inputs, &seed)
-        .expect("Fix: CPU oracle must accept a valid graph.");
+            .expect("Fix: CPU oracle must accept a valid graph.");
         assert_eq!(
             converged,
             expect_converged,
@@ -552,7 +552,7 @@ fn assert_batch_device_matches_oracle(
             max_iters,
         );
         let (frontier, outcome) = try_cpu_ref_converged(inputs, seed)
-        .expect("Fix: CPU oracle must accept a valid graph.");
+            .expect("Fix: CPU oracle must accept a valid graph.");
         let start = query * words;
         let end = start + words;
         assert_eq!(
@@ -701,7 +701,7 @@ fn assert_device_density_matches_oracle(
         max_iters,
     );
     let (frontier, _outcome, active) = try_cpu_ref_density(inputs, frontier_in)
-    .expect("Fix: CPU density oracle must accept a valid graph.");
+        .expect("Fix: CPU density oracle must accept a valid graph.");
     assert_eq!(
         active.len(),
         max_iters as usize,
@@ -874,7 +874,7 @@ fn assert_batch_device_density_matches_oracle(
             max_iters,
         );
         let (_frontier, _outcome, active) = try_cpu_ref_density(inputs, seed)
-        .expect("Fix: CPU density oracle must accept a valid graph.");
+            .expect("Fix: CPU density oracle must accept a valid graph.");
         let start = query * max_iters as usize;
         let end = start + max_iters as usize;
         assert_eq!(

@@ -374,7 +374,9 @@ fn behavior_registrations(text: &str) -> Vec<(String, String)> {
                             || behavior.contains(')')
                             || behavior.contains(' ')
                             || behavior.contains('"')
-                            || !behavior.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':')
+                            || !behavior
+                                .chars()
+                                .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':')
                         {
                             from = start;
                             continue;
@@ -922,7 +924,8 @@ mod tests {
     /// production block as its body hides the gate that follows it.
     #[test]
     fn an_out_of_line_test_module_does_not_hide_following_production() {
-        let source = "#[cfg(test)]\nmod tests;\nfn production() { Finding::new(\"wrong\", \"fix it\"); }\n";
+        let source =
+            "#[cfg(test)]\nmod tests;\nfn production() { Finding::new(\"wrong\", \"fix it\"); }\n";
         let production = without_test_modules(source);
         assert!(!production.contains("mod tests"));
         assert!(production.contains("fn production()"));

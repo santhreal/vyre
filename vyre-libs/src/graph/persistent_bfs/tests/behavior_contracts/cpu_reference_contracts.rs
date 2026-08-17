@@ -215,22 +215,12 @@ fn generated_try_cpu_ref_into_with_scratch_matches_allocating_reference() {
         let allow_mask = if case % 3 == 0 { 1 } else { 0xFFFF_FFFF };
         let max_iters = (case % 11) as u32;
         let inputs = CsrClosureInputs::new(
-            node_count,
-            &offsets,
-            &targets,
-            &masks,
-            allow_mask,
-            max_iters,
+            node_count, &offsets, &targets, &masks, allow_mask, max_iters,
         );
         let expected = try_cpu_ref(inputs, &seed)
             .expect("Fix: generated persistent BFS graph must be valid for allocating oracle.");
-        let changed = try_cpu_ref_into_with_scratch(
-            inputs,
-            &seed,
-            &mut frontier,
-            &mut scratch,
-        )
-        .expect("Fix: generated persistent BFS graph must run with reusable scratch.");
+        let changed = try_cpu_ref_into_with_scratch(inputs, &seed, &mut frontier, &mut scratch)
+            .expect("Fix: generated persistent BFS graph must run with reusable scratch.");
         assert_eq!(
             (frontier.clone(), changed),
             expected,

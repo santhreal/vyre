@@ -116,7 +116,10 @@ impl IntraDeviceExpertScheduler {
     pub fn new(limits: IntraDeviceExpertQueueLimits) -> Self {
         let mut queues = BTreeMap::new();
         for expert_id in 0..limits.num_experts {
-            queues.insert(expert_id, VecDeque::with_capacity(limits.max_queued_per_expert));
+            queues.insert(
+                expert_id,
+                VecDeque::with_capacity(limits.max_queued_per_expert),
+            );
         }
         Self {
             limits,
@@ -159,11 +162,7 @@ impl IntraDeviceExpertScheduler {
 
     /// Dequeue the next highest-priority work item for an expert (with bounded starvation).
     #[must_use]
-    pub fn dequeue_expert_work(
-        &mut self,
-        expert_id: u32,
-        max_batch: usize,
-    ) -> Vec<ExpertWorkItem> {
+    pub fn dequeue_expert_work(&mut self, expert_id: u32, max_batch: usize) -> Vec<ExpertWorkItem> {
         let queue = match self.queues.get_mut(&expert_id) {
             Some(q) => q,
             None => return Vec::new(),
@@ -333,7 +332,8 @@ mod tests {
 
     #[test]
     fn intra_device_scheduler_handles_cancellation() {
-        let mut scheduler = IntraDeviceExpertScheduler::new(IntraDeviceExpertQueueLimits::default());
+        let mut scheduler =
+            IntraDeviceExpertScheduler::new(IntraDeviceExpertQueueLimits::default());
 
         let item = ExpertWorkItem {
             ticket: 42,

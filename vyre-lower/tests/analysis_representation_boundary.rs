@@ -92,7 +92,11 @@ fn descriptor_dead_op_analysis_never_flags_side_effects() {
     };
 
     let report = analyze_dead_op(&desc);
-    assert_eq!(report.dead_op_indices, vec![0], "only op 0 should be flagged dead");
+    assert_eq!(
+        report.dead_op_indices,
+        vec![0],
+        "only op 0 should be flagged dead"
+    );
 }
 
 #[test]

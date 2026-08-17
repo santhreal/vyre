@@ -6,9 +6,7 @@
 //! - Automatic disqualification of candidates failing output parity.
 //! - Empirical candidate ranking on specific target workloads (not portable semantic guarantees).
 
-use vyre_lower::analyses::{
-    rank_measured_candidates, CandidateRanking, TargetEmittedMetrics,
-};
+use vyre_lower::analyses::{rank_measured_candidates, CandidateRanking, TargetEmittedMetrics};
 
 #[test]
 fn parity_failure_disqualifies_candidate_immediately() {

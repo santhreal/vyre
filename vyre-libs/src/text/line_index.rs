@@ -20,10 +20,10 @@ use std::sync::Arc;
 use vyre_foundation::composition::{tag_program, trap_program, wrap_anonymous_region};
 
 use crate::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes;
-use vyre_foundation::GeometryRequirements;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, PORTABLE_WORKGROUP_INVOCATIONS,
 };
+use vyre_foundation::GeometryRequirements;
 
 /// Stable op id for the registered Tier 3 wrapper.
 pub const LINE_INDEX_OP_ID: &str = "vyre-libs::text::line_index";

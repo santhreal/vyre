@@ -37,7 +37,10 @@ fn driver_pipeline_cache_key_isolation() {
     );
 
     assert_eq!(key1.version, CURRENT_PIPELINE_CACHE_KEY_VERSION);
-    assert_ne!(key1, key2, "different backends must produce isolated pipeline cache keys");
+    assert_ne!(
+        key1, key2,
+        "different backends must produce isolated pipeline cache keys"
+    );
 }
 
 #[test]
@@ -47,11 +50,7 @@ fn driver_and_runtime_store_identities_are_distinct() {
         device: 0x2684,
         driver_digest: [7u8; 32],
     };
-    let pipeline_identity = PipelineCacheIdentity::from_parts(
-        [1u8; 32],
-        [2u8; 32],
-        fingerprint,
-    );
+    let pipeline_identity = PipelineCacheIdentity::from_parts([1u8; 32], [2u8; 32], fingerprint);
 
     assert_eq!(pipeline_identity.device_fingerprint.vendor, 0x10de);
     assert_ne!(pipeline_identity.digest, [0u8; 32]);

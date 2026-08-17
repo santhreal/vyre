@@ -99,6 +99,8 @@ pub mod param_inlining;
 /// Elementwise parity-gate scaffolding shared by the concrete driver crates.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod parity_harness;
+/// Backend-neutral peer-transfer capability contracts and checked accounting.
+pub(crate) mod peer_transfer;
 /// Compiled-pipeline cache, dispatch config, batched dispatch.
 pub(crate) mod pipeline;
 /// N4 substrate: cross-pipeline disjoint-binding fusion analysis.
@@ -107,8 +109,6 @@ pub(crate) mod pipeline;
 /// reads/writes can fuse into one launch with a workgroup-bounded
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
-/// Backend-neutral peer-transfer capability contracts and checked accounting.
-pub(crate) mod peer_transfer;
 /// Read-only semantic operation projections, migrations, and policy.
 pub(crate) mod registry;
 /// Backend-neutral reservation policy adapters.
@@ -267,6 +267,10 @@ pub use launch::{
     record_launch_measurement, resolve_launch_workgroup, resolve_launch_workgroup_for_geometry,
     resolve_launch_workgroup_for_mode, LaunchGeometry,
 };
+pub use peer_transfer::{
+    PeerAccessCapability, PeerLinkKind, PeerTopology, PeerTransferAccounting, PeerTransferError,
+    PeerTransferPlan, PeerTransferPlanner, PeerTransferRequest,
+};
 pub use pipeline::{
     dispatch_policy_cache_digest, dispatch_policy_cache_string, normalized_program_cache_digest,
     pipeline_cache_limits_from_env, push_lower_hex, try_normalized_program_cache_digest,
@@ -297,7 +301,6 @@ pub use registry::{
     validate_intrinsic_lowering, Chain, EnforceGate, EnforceVerdict, IntrinsicRegistrationError,
     MutationClass,
 };
-pub use target::Target;
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
 pub use routing::pgo;
 pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};
@@ -316,7 +319,4 @@ pub use subgroup::{
     reduction_offsets, reduction_offsets_into, try_reduction_offsets, try_reduction_offsets_into,
 };
 pub use subgroup::{SubgroupCaps, SubgroupOp};
-pub use peer_transfer::{
-    PeerAccessCapability, PeerLinkKind, PeerTopology, PeerTransferAccounting, PeerTransferError,
-    PeerTransferPlan, PeerTransferPlanner, PeerTransferRequest,
-};
+pub use target::Target;
