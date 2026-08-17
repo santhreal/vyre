@@ -2,10 +2,9 @@ use super::{ResidentCsrQueueBatchScratch, ResidentCsrQueueBatchShape};
 use crate::graph::csr_frontier_queue::validate_frontier_queue_batch;
 
 use crate::dispatch_buffers::u32_word_bytes;
-use crate::graph::dispatch::csr_frontier_queue_batch_memory::ResidentCsrQueueBatchMemoryPlan;
-use crate::graph::dispatch::csr_frontier_queue_programs::ResidentCsrQueueProgramShape;
-use crate::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph;
-use crate::graph::dispatch::csr_frontier_queue_scratch::{
+use crate::graph::csr_frontier_queue::batch_memory::ResidentCsrQueueBatchMemoryPlan;
+use crate::graph::csr_frontier_queue::resident_programs::ResidentCsrQueueProgramShape;
+use crate::graph::csr_frontier_queue::scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_frontier_stats,
     resident_csr_queue_materializer_for_stats,
@@ -14,6 +13,7 @@ use crate::graph::dispatch::csr_frontier_queue_scratch::{
     resident_csr_queue_traverse_kind_for_graph_stats, FrontierWordPrefixScratch,
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlotPlan, ResidentCsrQueueTraverseKind,
 };
+use crate::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph;
 use crate::plumbing::host::scratch::reserve_vec as reserve_graph_vec;
 use vyre_foundation::program_dispatch::{
     DispatchError, ProgramDispatcher, ResidentDispatchStep, ResidentReadRange,

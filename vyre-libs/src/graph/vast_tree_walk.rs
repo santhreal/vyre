@@ -37,6 +37,74 @@ pub struct VastTreeWalkProgramPlan {
     pub postorder: Program,
 }
 
+/// Alias for [`VastTreeWalkProgramPlan`].
+pub type VastTreeWalkPlan = VastTreeWalkProgramPlan;
+
+/// Stable primitive op ids consumed by VAST tree walk passes.
+#[must_use]
+pub const fn primitive_op_ids() -> [&'static str; 2] {
+    [PREORDER_OP_ID, POSTORDER_OP_ID]
+}
+
+/// Build checked VAST traversal programs for self-hosted compiler passes.
+pub fn build_vast_tree_walk_plan(
+    nodes: &str,
+    preorder_out: &str,
+    postorder_out: &str,
+    node_count: u32,
+    traversal_capacity: u32,
+) -> Result<VastTreeWalkPlan, String> {
+    try_ast_walk_plan(
+        nodes,
+        preorder_out,
+        postorder_out,
+        node_count,
+        traversal_capacity,
+    )
+}
+
+/// Build the checked preorder VAST traversal used by top-down compiler passes.
+pub fn build_checked_preorder_walk(
+    nodes: &str,
+    out: &str,
+    node_count: u32,
+    traversal_capacity: u32,
+) -> Result<Program, String> {
+    try_ast_walk_preorder(nodes, out, node_count, traversal_capacity)
+}
+
+/// Build the checked postorder VAST traversal used by bottom-up compiler passes.
+pub fn build_checked_postorder_walk(
+    nodes: &str,
+    out: &str,
+    node_count: u32,
+    traversal_capacity: u32,
+) -> Result<Program, String> {
+    try_ast_walk_postorder(nodes, out, node_count, traversal_capacity)
+}
+
+/// Build a preorder traversal for already-validated VAST layouts.
+#[must_use]
+pub fn build_trusted_preorder_walk(
+    nodes: &str,
+    out: &str,
+    node_count: u32,
+    traversal_capacity: u32,
+) -> Program {
+    ast_walk_preorder(nodes, out, node_count, traversal_capacity)
+}
+
+/// Build a postorder traversal for already-validated VAST layouts.
+#[must_use]
+pub fn build_trusted_postorder_walk(
+    nodes: &str,
+    out: &str,
+    node_count: u32,
+    traversal_capacity: u32,
+) -> Program {
+    ast_walk_postorder(nodes, out, node_count, traversal_capacity)
+}
+
 /// Build checked preorder and postorder VAST traversal programs together.
 ///
 /// # Errors

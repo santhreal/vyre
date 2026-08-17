@@ -27,7 +27,7 @@ Product dialects, enabled by feature:
 | --- | --- | --- |
 | `math` | `math-*` | Linear algebra, scans, broadcasts, algebra, succinct queries |
 | `nn` | `nn-*` | Linear, activations, norms, attention, MoE, inference graphs |
-| `scan` | `matching-*` | Substring, DFA, NFA, and regex programs |
+| `pattern` | `pattern-*` | Substring, DFA, NFA, bracket-match, and regex programs |
 | `hash` | `hash`, `crypto-blake3` | FNV, CRC, Adler, BLAKE3 compression |
 | `decode` | `decode` | Base64, hex, inflate, ziftsieve |
 | `parsing` | `parsing` | C, Go, and Python parser compositions |
@@ -36,8 +36,8 @@ Product dialects, enabled by feature:
 | `logical` | `logical` | Element-wise boolean compositions |
 | `rule` | `rule` | Typed detection-rule conditions |
 
-`hash` replaced the old `crypto` module. `scan` replaced the old `matching`
-module. There is no `vyre-nn` / `vyre-math` split today. A domain moves to
+`hash` replaced the old `crypto` module. `pattern` unified `matching` and
+`scan`. There is no `vyre-nn` / `vyre-math` split today. A domain moves to
 its own crate only through a clean cutover that migrates every caller.
 
 Compiler-internal domains (`device`, `graph-dispatch`, `solvers`,
@@ -69,10 +69,10 @@ Author a new composition through [`AUTHORING.md`](AUTHORING.md) and
 ## Bounded regex replay
 
 Open-ended regexes need a finite accelerator work bound. Enable
-`matching-regex` (it is not a default) and set the bound when you compile:
+`pattern-regex` (it is not a default) and set the bound when you compile:
 
 ```rust
-use vyre_libs::scan::{
+use vyre_libs::pattern::{
     build_regex_dfa_pipeline_with_policy, RegexReplayPolicy,
 };
 
@@ -84,7 +84,7 @@ let pipeline = build_regex_dfa_pipeline_with_policy(
         open_ended_limit_bytes: 16 * 1024,
     },
 )?;
-# Ok::<(), vyre_libs::scan::RegexDfaError>(())
+# Ok::<(), vyre_libs::pattern::RegexDfaError>(())
 ```
 
 The limit applies to each candidate origin. Bounded patterns use their exact
@@ -104,9 +104,9 @@ vyre-libs = { version = "0.7.2", default-features = false, features = ["nn-linea
 
 Defaults (`cargo add vyre-libs`) enable `math-linalg`, `math-scan`,
 `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`,
-`matching-substring`, `matching-dfa`, `hash`, and `decode`.
+`pattern-substring`, `pattern-dfa`, `hash`, and `decode`.
 
-Bundle aliases: `math`, `nn`, `matching`, and `crypto` (`crypto` is
+Bundle aliases: `math`, `nn`, `pattern`, and `crypto` (`crypto` is
 `crypto-blake3` only). `full` enables every consumer dialect. Turn
 defaults off and pick the dialect you need.
 
@@ -140,8 +140,8 @@ Run the checked-in behavior from `vyre-libs/examples/dominator_tree_e2e.rs`:
 
 ### Features
 
-- Manifest features: `analysis`, `bitset`, `builder-ops`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `hash`, `intern`, `label`, `llm`, `logical`, `matching`, `matching-dfa`, `matching-kernels`, `matching-nfa`, `matching-regex`, `matching-substring`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `predicate`, `python-parser`, `reasoning`, `reduce`, `representation`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `topology`, `vfs`, `visual`
-- Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `matching-substring`, `matching-dfa`, `hash`, `decode`
+- Manifest features: `analysis`, `bitset`, `builder-ops`, `cat-a-builder-options`, `cpu-parity`, `crypto`, `crypto-blake3`, `decode`, `default`, `device`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `hash`, `intern`, `label`, `llm`, `logical`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-kernels`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `predicate`, `python-parser`, `reasoning`, `reduce`, `representation`, `rule`, `scheduling`, `security`, `solvers`, `telemetry`, `test-fixtures`, `text`, `topology`, `vfs`, `visual`
+- Default feature members: `math-linalg`, `math-scan`, `math-broadcast`, `nn-activation`, `nn-linear`, `nn-norm`, `pattern-substring`, `pattern-dfa`, `hash`, `decode`
 
 ### Errors and unsupported behavior
 

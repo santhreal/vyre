@@ -1,6 +1,8 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::exploded::build_cpu_reference;
+use crate::graph::exploded::{
+    build_cpu_reference, reference_build_ifds_csr, try_reference_build_ifds_csr,
+};
 use std::sync::Mutex;
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};

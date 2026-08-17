@@ -218,3 +218,34 @@ fn validate_toposort_edge_ids(node_count: u32, edges: &[(u32, u32)]) -> Result<(
     }
     Ok(())
 }
+
+/// Reference alias for topological ordering.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub fn reference_topo_order(
+    node_count: u32,
+    edges: &[(u32, u32)],
+) -> Result<Vec<u32>, ToposortError> {
+    toposort(node_count, edges)
+}
+
+/// Compute the set of nodes reachable from `sources` over `edges`.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub fn reference_reachable_set(
+    node_count: u32,
+    edges: &[(u32, u32)],
+    sources: &[u32],
+) -> Result<std::collections::HashSet<u32>, crate::graph::reachable::UnknownNode> {
+    crate::graph::reachable::reachable(node_count, edges, sources)
+}
+
+/// True iff every node in `targets` is reachable from `sources`.
+#[cfg(any(test, feature = "cpu-parity"))]
+pub fn reference_all_reachable(
+    node_count: u32,
+    edges: &[(u32, u32)],
+    sources: &[u32],
+    targets: &[u32],
+) -> Result<bool, crate::graph::reachable::UnknownNode> {
+    let reach = reference_reachable_set(node_count, edges, sources)?;
+    Ok(targets.iter().all(|t| reach.contains(t)))
+}

@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use vyre_libs::scan::{regex_construct_diagnostic_code, RegexConstruct};
+use vyre_libs::pattern::{regex_construct_diagnostic_code, RegexConstruct};
 
 use super::evidence::{
     ScanConformanceFinding, ScanConformanceMatrixToml, ScanConformanceRowEvidence,

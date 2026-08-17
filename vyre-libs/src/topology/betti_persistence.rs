@@ -21,6 +21,7 @@
 //! Implementation: a single-pass union-find over the upper-triangle
 //! edges. O(E·α(V))  -  practically linear in the edge count.
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,6 +244,7 @@ mod tests {
         let mut parent = Vec::with_capacity(16);
         let mut rank = Vec::with_capacity(16);
 
+
         let mut mask4 = empty_mask(4);
         for i in 0..4 {
             for j in (i + 1)..4 {
@@ -273,5 +275,4 @@ mod tests {
         let _ = betti_persistence_into(&[0, 1, 0], 2, &mut Vec::new(), &mut Vec::new());
         panic!("betti_persistence CPU reference failed");
     }
-
 }

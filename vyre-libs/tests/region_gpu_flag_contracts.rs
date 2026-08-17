@@ -4,9 +4,9 @@
 //! `cpu-parity`; gate the test accordingly so cargo doesn't try to
 //! resolve the import without the feature.
 
-#![cfg(feature = "matching")]
+#![cfg(feature = "pattern")]
 
-use vyre_libs::matching::{dedup_regions_flag_program, dedup_regions_inplace, RegionTriple};
+use vyre_libs::pattern::{dedup_regions_flag_program, dedup_regions_inplace, RegionTriple};
 
 fn dedup_regions_cpu(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
     let mut owned = input;

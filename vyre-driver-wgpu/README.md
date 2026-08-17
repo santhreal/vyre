@@ -102,7 +102,7 @@ Run the checked-in behavior from `vyre-driver-wgpu/examples/wgpu_release_surface
 
 ### Features
 
-- Manifest features: `default`, `matching-dfa`, `matching-nfa`, `matching-substring`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `wgpu`
+- Manifest features: `default`, `pattern-dfa`, `pattern-nfa`, `pattern-substring`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `wgpu`
 - Default feature members: None
 
 ### Errors and unsupported behavior

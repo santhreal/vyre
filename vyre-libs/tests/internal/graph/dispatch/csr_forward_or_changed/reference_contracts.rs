@@ -1,5 +1,9 @@
 use super::*;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+use crate::graph::csr_forward_or_changed::{
+    cpu_ref as csr_foc_cpu, reference_forward_closure_via_change_flag,
+    reference_forward_step_with_change_flag,
+};
 
 #[test]
 fn step_flips_change_flag_when_new_bits_added() {

@@ -5,7 +5,6 @@
 
 mod dispatch;
 
-
 #[cfg(test)]
 #[path = "../../../../tests/internal/graph/dispatch/union_find_emit/mod.rs"]
 mod tests;

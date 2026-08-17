@@ -16,7 +16,7 @@
 
 use super::super::*;
 use super::recording_dispatcher::{traversal_graph, Frontier, SparseQueueRun};
-use crate::graph::dispatch::csr_frontier_queue_scratch::WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS;
+use crate::graph::csr_frontier_queue::scratch::WORD_PREFIX_INLINE_BLOCK_OFFSET_MAX_BLOCKS;
 
 /// The queue-materialization steps a variant launches before traverse.
 ///
@@ -216,7 +216,7 @@ fn traverse_step(run: &SparseQueueRun, graph: &ResidentAdaptiveTraversalGraph) -
 /// at run time so a variant added there without a case above fails here.
 fn published_materializer_variants() -> Vec<String> {
     let path = vyre_test_support::monorepo::vyre_workspace_root()
-        .join("vyre-libs/src/graph/dispatch/csr_frontier_queue_scratch.rs");
+        .join("vyre-libs/src/graph/csr_frontier_queue/scratch.rs");
     let source = std::fs::read_to_string(&path).unwrap_or_else(|error| {
         panic!("Fix: resident CSR queue scratch source must be readable at {path:?}: {error}")
     });

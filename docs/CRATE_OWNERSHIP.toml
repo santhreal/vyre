@@ -692,7 +692,7 @@ seam = "foundation-ir"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "host-side helpers the oracle shares with the composition it checks: the FNV-1a state functions and the DFA compiler"
-features = ["matching-dfa"]
+features = ["pattern-dfa"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false
@@ -1118,7 +1118,7 @@ seam = "backend-contract"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["full", "matching-regex"]
+features = ["full", "pattern-regex"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

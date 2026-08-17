@@ -6,6 +6,7 @@
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
 };
+
 use crate::topology::vietoris_rips::vietoris_rips_edge_filter;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
@@ -84,6 +85,7 @@ pub fn region_loop_skeleton_fixed_via_into(
     }
     decode_u32_output_exact(&outputs[0], cells, "region_loop_skeleton_fixed_via", out)
 }
+
 
 #[cfg(test)]
 mod fixed_via_tests {

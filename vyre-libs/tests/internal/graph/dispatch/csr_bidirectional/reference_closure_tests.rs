@@ -1,4 +1,6 @@
-use super::*;
+use crate::graph::csr_bidirectional::{
+    reference_bidirectional_closure, reference_bidirectional_step,
+};
 use crate::graph::csr_closure_inputs::graphs;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 

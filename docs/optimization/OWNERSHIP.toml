@@ -247,23 +247,20 @@ required_commands = [
 purpose = "Literal, regex, automata, decode-scan, and static scan primitives with shared result compaction."
 layer = "Scan/static analysis"
 write = [
-  "vyre-libs/src/scan/**",
+  "vyre-libs/src/pattern/**",
   "vyre-libs/src/decode/**",
-  "vyre-libs/src/matching/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
 ]
 required_commands = [
-  "cargo_full test -p vyre-libs scan",
-  "cargo_full test -p vyre-libs matching",
+  "cargo_full test -p vyre-libs pattern",
 ]
 
 [lane.scan_automata]
 purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resident automata databases, streaming scan state, and scan-to-flow finding relations."
 layer = "Scan/automata seam"
 write = [
-  "vyre-libs/src/scan/**",
-  "vyre-libs/src/matching/**",
+  "vyre-libs/src/pattern/**",
   "vyre-libs/src/text/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
@@ -274,8 +271,7 @@ avoid = [
   "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
-  "cargo_full test -p vyre-libs scan",
-  "cargo_full test -p vyre-libs matching",
+  "cargo_full test -p vyre-libs pattern",
 ]
 
 [lane.security_dataflow]
@@ -302,7 +298,7 @@ write = [
   "vyre-driver-wgpu/src/**",
   "vyre-runtime/src/**",
   "vyre-libs/src/security/**",
-  "vyre-libs/src/scan/**",
+  "vyre-libs/src/pattern/**",
   "scripts/**",
   "release/evidence/**",
 ]

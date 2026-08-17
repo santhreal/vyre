@@ -456,8 +456,8 @@ mod tests {
     #[test]
     fn every_banned_module_name_is_rejected_as_a_file_and_as_a_directory() {
         for name in BANNED_MODULE_NAMES {
-            let flat = format!("vyre-libs/src/scan/{name}.rs");
-            let nested = format!("vyre-libs/src/scan/{name}/mod.rs");
+            let flat = format!("vyre-libs/src/pattern/{name}.rs");
+            let nested = format!("vyre-libs/src/pattern/{name}/mod.rs");
             let failures = generic_module_name_failures(
                 &[flat, nested],
                 &crate_roots(&[("vyre-libs", "vyre_libs")]),
@@ -468,7 +468,7 @@ mod tests {
             assert!(
                 failures
                     .iter()
-                    .all(|failure| failure.contains(&format!("vyre_libs::scan::{name}"))),
+                    .all(|failure| failure.contains(&format!("vyre_libs::pattern::{name}"))),
                 "{name}: {failures:?}"
             );
         }
@@ -478,8 +478,8 @@ mod tests {
     fn a_qualifier_suffix_is_rejected_as_a_file_and_as_a_directory() {
         let failures = generic_module_name_failures(
             &paths(&[
-                "vyre-libs/src/scan/window_ext.rs",
-                "vyre-libs/src/scan/region_ext/mod.rs",
+                "vyre-libs/src/pattern/window_ext.rs",
+                "vyre-libs/src/pattern/region_ext/mod.rs",
                 "xtask/src/bin/dump_ext.rs",
             ]),
             &crate_roots(&[("vyre-libs", "vyre_libs"), ("xtask", "xtask")]),
@@ -542,9 +542,9 @@ mod tests {
     fn a_crate_root_carries_no_module_name() {
         assert_eq!(judged_name_of("vyre-libs/src/lib.rs"), None);
         assert_eq!(judged_name_of("conform/vyre-conform/src/main.rs"), None);
-        assert_eq!(judged_name_of("vyre-libs/src/scan/mod.rs"), Some("scan"));
+        assert_eq!(judged_name_of("vyre-libs/src/pattern/mod.rs"), Some("pattern"));
         assert_eq!(
-            judged_name_of("vyre-libs/src/scan/window.rs"),
+            judged_name_of("vyre-libs/src/pattern/window.rs"),
             Some("window")
         );
     }
@@ -669,7 +669,7 @@ mod tests {
             binary_name_of("xtask-registry/src/bin/vyre_new_op/run.rs"),
             None
         );
-        assert_eq!(binary_name_of("vyre-libs/src/scan/window.rs"), None);
+        assert_eq!(binary_name_of("vyre-libs/src/pattern/window.rs"), None);
         assert_eq!(judged_name_of("xtask/src/bin/scaffold_rule.rs"), None);
         assert_eq!(
             judged_name_of("xtask-registry/src/bin/vyre_new_op/helpers.rs"),
@@ -713,7 +713,7 @@ mod tests {
     fn a_descriptive_module_name_is_accepted() {
         let failures = generic_module_name_failures(
             &paths(&[
-                "vyre-libs/src/scan/regex_dfa.rs",
+                "vyre-libs/src/pattern/regex_dfa.rs",
                 "vyre-libs/src/graph/dispatch/mod.rs",
                 "vyre-libs/src/lib.rs",
             ]),

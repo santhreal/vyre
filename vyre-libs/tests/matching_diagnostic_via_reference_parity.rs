@@ -28,7 +28,7 @@ use vyre_libs::encoding::matching_diagnostic_compaction::{
     bracket_pairs_via, dedup_region_survivor_flags_via, reference_dedup_regions,
     reference_sort_regions, sort_regions_via,
 };
-use vyre_libs::matching::{
+use vyre_libs::pattern::{
     bracket_match_cpu_ref as bracket_cpu_ref, RegionTriple, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
 };
 

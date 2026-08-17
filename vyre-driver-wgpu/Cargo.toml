@@ -21,9 +21,9 @@ parity-testing = []
 math-linalg = ["vyre-libs/math-linalg"]
 math-scan = ["vyre-libs/math-scan"]
 nn-attention = ["vyre-libs/nn-attention"]
-matching-substring = ["vyre-libs/matching-substring"]
-matching-dfa = ["vyre-libs/matching-dfa"]
-matching-nfa = ["vyre-libs/matching-nfa"]
+pattern-substring = ["vyre-libs/pattern-substring"]
+pattern-dfa = ["vyre-libs/pattern-dfa"]
+pattern-nfa = ["vyre-libs/pattern-nfa"]
 
 [dependencies]
 vyre-spec = { workspace = true }
@@ -68,7 +68,7 @@ criterion.workspace = true
 stats_alloc.workspace = true
 tempfile.workspace = true
 proptest.workspace = true
-vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "nn-attention", "crypto-blake3", "hash"] }
+vyre-libs = { path = "../vyre-libs", features = ["pattern", "parsing", "nn-attention", "crypto-blake3", "hash"] }
 # The integration tests under tests/ exercise the public `vyre` umbrella facade
 # (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}), the ergonomic
 # surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which

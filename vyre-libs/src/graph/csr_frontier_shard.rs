@@ -13,7 +13,7 @@
 //! makes frontier expansion shardable across devices. On a real multi-GPU host each
 //! shard's expansion runs on a distinct peer device (dispatched concurrently with the
 //! same per-device-thread pattern proven for byte-range scan sharding in
-//! `vyre_libs::scan::paged_corpus::scan_sharded_core`), and the cross-shard merge is a
+//! `vyre_libs::pattern::paged_corpus::scan_sharded_core`), and the cross-shard merge is a
 //! peer-transfer bitwise-OR reduce; on a single device the same program runs per shard
 //! and the merge is a host OR. Only the wall-clock parallel SPEEDUP and the on-device
 //! peer-transfer merge need a second physical GPU, the decomposition and its

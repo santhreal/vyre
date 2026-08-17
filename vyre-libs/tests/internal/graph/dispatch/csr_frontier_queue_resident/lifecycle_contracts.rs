@@ -1,6 +1,6 @@
 use super::super::*;
 use super::recording_dispatcher::RecordingResidentDispatcher;
-use crate::graph::dispatch::csr_frontier_queue_scratch::ResidentCsrQueueSlots;
+use crate::graph::csr_frontier_queue::scratch::ResidentCsrQueueSlots;
 
 #[test]
 fn generated_resident_csr_queue_free_releases_each_handle_once_in_first_seen_order() {

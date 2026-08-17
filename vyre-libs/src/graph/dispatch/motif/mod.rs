@@ -8,7 +8,6 @@
 
 mod dispatch;
 
-
 #[cfg(test)]
 #[path = "../../../../tests/internal/graph/dispatch/motif/mod.rs"]
 mod tests;

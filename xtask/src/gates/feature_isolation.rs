@@ -4,7 +4,7 @@
 //! can still be uncompilable under one feature on its own. `--all-features` is a
 //! union, so a feature whose prerequisites happen to be enabled by some other
 //! feature passes there; the default build never turns a granular feature on at
-//! all. The consumer who writes `features = ["matching-regex"]` in their own
+//! all. The consumer who writes `features = ["pattern-regex"]` in their own
 //! manifest is the only one who sees the break, and they see it as a compile
 //! error in a crate they did not write.
 //!
@@ -1524,7 +1524,7 @@ mod tests {
         };
         let rows = vec![
             row("vyre-pass-engine", "all-solvers", false),
-            row("vyre-libs", "matching-regex", true),
+            row("vyre-libs", "pattern-regex", true),
             row("vyre-libs", "visual", false),
         ];
         let observed = vec![
@@ -1539,7 +1539,7 @@ mod tests {
                 },
             ),
             (
-                pair("vyre-libs", "matching-regex"),
+                pair("vyre-libs", "pattern-regex"),
                 Observation {
                     compiles: true,
                     first_error: None,
@@ -1568,7 +1568,7 @@ mod tests {
             failures,
             vec![
                 "`vyre-pass-engine --no-default-features --features all-solvers` is declared with no exemption and fails with E0433 at vyre-pass-engine/tests/scope_rewrite_owner_contract.rs:19".to_string(),
-                "`vyre-libs --no-default-features --features matching-regex` is recorded `blocked` and now compiles; delete its outcome and its reason".to_string(),
+                "`vyre-libs --no-default-features --features pattern-regex` is recorded `blocked` and now compiles; delete its outcome and its reason".to_string(),
             ],
             "a declared outcome the build contradicts is reported, in the direction it was contradicted, and an agreeing pair is not"
         );

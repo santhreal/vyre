@@ -8,7 +8,7 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_driver::DispatchConfig;
-use vyre_libs::matching::{
+use vyre_libs::pattern::{
     bracket_match, bracket_match_cpu_ref as bracket_cpu, bracket_match_dispatch_grid,
     BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
 };

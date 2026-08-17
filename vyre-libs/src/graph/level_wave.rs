@@ -136,6 +136,49 @@ pub fn level_wave_program_with_buffers(
     )
 }
 
+/// Build a Program that visits every function in callee-before-caller
+/// order using GPU-side level-wave dispatch.
+///
+/// `step_body`: per-function body. Reads/writes any caller-declared
+/// buffer via `Expr::InvocationId { axis: 0 }` to address the function
+/// being visited.
+///
+/// `depth_buf`: name of the buffer containing per-function depth in the
+/// call graph (leaves at 0).
+///
+/// `max_depth`: number of waves (i.e., `max(depth) + 1`).
+///
+/// `function_count`: total functions in the dispatch grid.
+#[must_use]
+pub fn build_callee_before_caller_program(
+    step_body: Vec<Node>,
+    depth_buf: &str,
+    max_depth: u32,
+    function_count: u32,
+) -> Program {
+    level_wave_program(step_body, depth_buf, max_depth, function_count)
+}
+
+/// Like [`build_callee_before_caller_program`], but declares the pass's own
+/// per-function DATA buffers after `depth_buf` so the `step_body` can read/write
+/// them.
+#[must_use]
+pub fn build_callee_before_caller_program_with_buffers(
+    step_body: Vec<Node>,
+    depth_buf: &str,
+    extra_buffers: Vec<BufferDecl>,
+    max_depth: u32,
+    function_count: u32,
+) -> Program {
+    level_wave_program_with_buffers(
+        step_body,
+        depth_buf,
+        extra_buffers,
+        max_depth,
+        function_count,
+    )
+}
+
 /// Same as [`level_wave_program_with_buffers`] with an explicit caller op id.
 #[must_use]
 pub fn level_wave_program_with_buffers_and_op_id(
@@ -404,5 +447,62 @@ mod tests {
                 "reference eval must match expected output for case {case_idx}"
             );
         }
+    }
+
+    #[test]
+    fn callee_before_caller_builds_nonempty_program() {
+        let body = vec![Node::barrier()];
+        let program = build_callee_before_caller_program(body, "depths", 4, 16);
+        assert_ne!(program.entry().len(), 0);
+    }
+
+    #[test]
+    fn callee_before_caller_zero_depth_still_builds() {
+        let body = vec![Node::barrier()];
+        let program = build_callee_before_caller_program(body, "depths", 0, 1);
+        assert_eq!(program.workgroup_size(), [256, 1, 1]);
+        assert!(!program.buffers().is_empty());
+    }
+
+    #[test]
+    fn callee_before_caller_commits_children_before_parents() {
+        use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr};
+        use vyre_reference::reference_eval;
+        use vyre_reference::value::Value;
+
+        let t = Expr::InvocationId { axis: 0 };
+        let step_body = vec![
+            Node::let_bind("c", Expr::load("callee", t.clone())),
+            Node::store(
+                "out",
+                t.clone(),
+                Expr::add(Expr::u32(1), Expr::load("out", Expr::var("c"))),
+            ),
+        ];
+        let extra_buffers = vec![
+            BufferDecl::storage("callee", 1, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+            BufferDecl::storage("out", 2, BufferAccess::ReadWrite, DataType::U32).with_count(4),
+        ];
+        let program = build_callee_before_caller_program_with_buffers(
+            step_body,
+            "depths",
+            extra_buffers,
+            4,
+            4,
+        );
+
+        let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
+        let inputs = vec![
+            pack(&[0, 1, 2, 3]),
+            pack(&[0, 0, 1, 2]),
+            pack(&[0, 0, 0, 0]),
+        ];
+        let results = reference_eval(&program, &inputs).expect("Fix: level-wave pass eval failed");
+        let out: Vec<u32> = results[0]
+            .to_bytes()
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        assert_eq!(out, vec![1, 2, 3, 4]);
     }
 }

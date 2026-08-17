@@ -30,6 +30,8 @@ pub use csr::{
     validate_toposort_csr_order, ToposortCsrLayout, ToposortCsrScratch,
 };
 pub use edge_list::toposort;
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use edge_list::{reference_all_reachable, reference_reachable_set, reference_topo_order};
 pub use error::{ToposortCsrError, ToposortError};
 pub use plan::{
     plan_toposort_csr_dispatch, toposort_csr_slice_fingerprint, ToposortCsrDispatchPlan,

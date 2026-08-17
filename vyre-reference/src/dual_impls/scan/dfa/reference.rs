@@ -1,5 +1,5 @@
 use crate::{dual_impls::evaluator, workgroup::Memory};
-use vyre_libs::matching::CompiledDfa;
+use vyre_libs::pattern::CompiledDfa;
 use vyre_primitives::PatternMatchDfa;
 
 impl evaluator::ReferenceEvaluator for PatternMatchDfa {
@@ -50,7 +50,7 @@ mod tests {
     use super::*;
     use crate::dual_impls::evaluator::ReferenceEvaluator;
     use crate::workgroup::Memory;
-    use vyre_libs::matching::dfa_compile;
+    use vyre_libs::pattern::dfa_compile;
 
     /// Verifies that the reference evaluator correctly decodes a V2 wire blob
     /// and finds the pattern at the expected offset. Before the fix the parser

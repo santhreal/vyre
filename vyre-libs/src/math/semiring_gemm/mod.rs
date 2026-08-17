@@ -131,6 +131,17 @@ pub fn semiring_gemm(
         .build()
         .unwrap_or_else(|err| trap_program(OP_ID, Some((c, DataType::U32)), format!("Fix: {err}")))
 }
+    }
+
+    let a_ref = TensorRef::u32_2d(a, m, k);
+    let b_ref = TensorRef::u32_2d(b, k, n);
+    let c_ref = TensorRef::u32_2d(c, m, n);
+
+    ContractionComposer::semiring_2d(OP_ID, a_ref, b_ref, c_ref, m, k, n, semiring)
+        .with_region_generator(OP_ID)
+        .build()
+        .unwrap_or_else(|err| trap_program(OP_ID, Some((c, DataType::U32)), format!("Fix: {err}")))
+}
 
 
 

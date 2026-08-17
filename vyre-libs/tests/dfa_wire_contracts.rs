@@ -1,8 +1,8 @@
 //! Wire-format contracts for compiled DFA cache blobs.
 
-#![cfg(feature = "matching")]
+#![cfg(feature = "pattern")]
 
-use vyre_libs::matching::{dfa_compile, CompiledDfa, DfaWireError};
+use vyre_libs::pattern::{dfa_compile, CompiledDfa, DfaWireError};
 
 #[test]
 fn dfa_wire_round_trips_all_tables() {

@@ -4,7 +4,7 @@
 //! crate-boundary stable - independent re-implementations would
 //! show up here as divergent output.
 
-use vyre_libs::scan::pack_haystack_u32;
+use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_u32_le_bytes_all, decode_u64_le_bytes_all, pack_f32_slice,
     pack_u32_slice, pack_u64_slice, unpack_u32_slice_into,

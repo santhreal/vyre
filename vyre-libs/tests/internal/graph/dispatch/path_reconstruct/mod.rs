@@ -1,6 +1,9 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::path_reconstruct::try_cpu_ref_batched;
+use crate::graph::path_reconstruct::{
+    cpu_ref as path_reconstruct_cpu, reference_path_to_root, reference_reconstruct_path,
+    try_cpu_ref_batched,
+};
 use crate::test_parity_oracles::StaticOutputs;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

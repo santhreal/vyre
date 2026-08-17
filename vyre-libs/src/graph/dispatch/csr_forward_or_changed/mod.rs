@@ -8,7 +8,6 @@
 
 mod dispatch;
 
-
 #[cfg(test)]
 #[path = "../../../../tests/internal/graph/dispatch/csr_forward_or_changed/mod.rs"]
 mod tests;
@@ -17,6 +16,3 @@ pub use dispatch::{
     forward_closure_via_change_flag_gpu, forward_closure_via_change_flag_gpu_into,
     forward_closure_via_change_flag_gpu_with_scratch_into, ForwardChangedGpuScratch,
 };
-
-
-#[cfg(test)]

@@ -80,3 +80,22 @@ pub use validation::{
     ifds_node_count_checked, ifds_node_count_saturating, max_ifds_col_count,
     validate_ifds_csr_inputs, validate_ifds_csr_layout, validate_ifds_csr_readback,
 };
+
+/// Total node count of the exploded supergraph for the given dimensions.
+#[must_use]
+pub fn ifds_node_count(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32) -> u32 {
+    ifds_node_count_saturating(num_procs, blocks_per_proc, facts_per_proc)
+}
+
+/// Helper: round-trip a dense index through the packed encoding and back.
+#[must_use]
+pub fn round_trip_dense(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {
+    let encoded = dense_to_encoded(dense, blocks_per_proc, facts_per_proc)?;
+    encoded_to_dense(encoded, blocks_per_proc, facts_per_proc)
+}
+
+pub use canonicalize::canonicalize_csr_within_rows as reference_canonicalize_csr_within_rows;
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use cpu_ref::build_cpu_reference as reference_build_ifds_csr;
+#[cfg(any(test, feature = "cpu-parity"))]
+pub use cpu_ref::try_build_cpu_reference as try_reference_build_ifds_csr;
