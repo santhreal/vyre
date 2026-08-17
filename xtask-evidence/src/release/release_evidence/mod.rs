@@ -939,4 +939,21 @@ mod tests {
             "{failures:?}"
         );
     }
+
+    /// WHY: The authoritative descriptor and release-evidence census producer must agree on
+    /// the exact output paths so comparison is immutable and write mutations
+    /// are never undeclared.
+    #[test]
+    fn authoritative_descriptor_declares_exact_release_evidence_artifacts() {
+        let descriptor = xtask::gate_metadata::descriptor_by_name("release-evidence");
+        let mut expected: Vec<&str> =
+            super::expected_artifacts::RELEASE_EVIDENCE_EXPECTED_ARTIFACTS.to_vec();
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "Fix: release-evidence gate descriptor must declare exactly the canonical expected artifact registry and release evidence run artifacts"
+        );
+    }
 }
