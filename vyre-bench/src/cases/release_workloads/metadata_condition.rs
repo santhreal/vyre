@@ -223,7 +223,12 @@ impl BenchCase for MetadataConditionBatch {
     fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
         prepared
             .downcast_ref::<MetadataConditionPrepared>()
-            .map(|_| (u64::from(METADATA_RECORDS) * 12, METADATA_OUTPUT_RESET_BYTES))
+            .map(|_| {
+                (
+                    u64::from(METADATA_RECORDS) * 12,
+                    METADATA_OUTPUT_RESET_BYTES,
+                )
+            })
             .unwrap_or((
                 u64::from(METADATA_RECORDS) * 12,
                 METADATA_OUTPUT_RESET_BYTES,
@@ -279,12 +284,18 @@ pub(super) fn metadata_condition_program() -> Program {
                 "num_warps",
                 Expr::div(Expr::u32(METADATA_WORKGROUP_SIZE), Expr::var("subgroup_sz")),
             ),
-            Node::let_bind("in_bounds", Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS))),
+            Node::let_bind(
+                "in_bounds",
+                Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS)),
+            ),
             Node::let_bind(
                 "safe_idx",
                 Expr::select(Expr::var("in_bounds"), Expr::var("idx"), Expr::u32(0)),
             ),
-            Node::let_bind("packed", Expr::load("metadata_records", Expr::var("safe_idx"))),
+            Node::let_bind(
+                "packed",
+                Expr::load("metadata_records", Expr::var("safe_idx")),
+            ),
             Node::let_bind(
                 "size_offset",
                 Expr::bitand(Expr::var("packed"), Expr::u32(0x0001_FFFF)),

@@ -344,7 +344,20 @@ fn recognition_emits_fewer_operations_than_lowering_the_remainder() {
     //
     // Every supported divisor satisfies optimized_recognized <= lowered and its
     // direct recognized IR stays within <= 3 operations.
-    for divisor in [3u32, 5, 6, 7, 9, 10, 11, 12, 100, 1_000, 65_535, 1_000_000_007] {
+    for divisor in [
+        3u32,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        100,
+        1_000,
+        65_535,
+        1_000_000_007,
+    ] {
         let source = remainder_compared_to_zero(divisor, BinOp::Eq);
         let recognized_source =
             recognize_source_shape(&source).expect("divisibility test must fire");

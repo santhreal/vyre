@@ -511,10 +511,7 @@ fn conform_manifest_disables_registry_link_default_features() {
         .and_then(|f| f.get("gpu"))
         .and_then(toml::Value::as_array)
         .expect("vyre-conform must declare a gpu feature array");
-    let gpu_feature_strs: Vec<&str> = gpu_feature
-        .iter()
-        .filter_map(toml::Value::as_str)
-        .collect();
+    let gpu_feature_strs: Vec<&str> = gpu_feature.iter().filter_map(toml::Value::as_str).collect();
     assert!(
         gpu_feature_strs.contains(&"vyre-registry-link/cuda"),
         "vyre-conform gpu feature must enable vyre-registry-link/cuda"
