@@ -657,11 +657,19 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "launch-state",
-        help: "Hold release/evidence/launch/launch-state.json to the release gate status and the \\        three external launch actions. Proves every release evidence gate passes, that the \\        prepublication artifact set is fully closed, and that the external actions are recorded \\        as pending or complete. Proves nothing about whether the external actions succeeded: \\        the release team marks them complete when they ship. Run with --write to refresh the \\        artifact.",
+        help: "Regenerate release/evidence/final/public-launch-state.json from the launch completion \
+        marker and the four prepublish gate artifacts, and report each line the committed \
+        artifact disagrees on. Proves the recorded launch state matches the marker on disk, and \
+        that each prepublish gate left an artifact carrying no blockers. A launch whose external \
+        actions are still pending is recorded and noted, not reported: this gate runs on every \
+        tree, and the gate that requires a closed launch is `vyre-release-gate --launch-complete`, \
+        which reads this artifact in launch-complete mode. Proves nothing about whether the \
+        external actions were really performed: the marker is written by the launch script and \
+        this gate reads it, it does not contact crates.io or the git remote.",
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/launch/launch-state.json"],
+        artifacts: &["release/evidence/final/public-launch-state.json"],
         prerequisites: &[],
         proof: "crate::release::launch_state::tests::a_pending_launch_is_noted_and_a_missing_prepublish_artifact_is_reported",
     },
@@ -1121,11 +1129,20 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "release-evidence",
-        help: "Hold the release evidence status report at release/evidence/release-evidence-status.json \\        to the live tree and every evidence artifact. Proves every declared release artifact \\        exists, is non-empty, matches its generator's schema, and was produced by a clean git \\        tree. Reports every stale, ungenerated, or uncommitted artifact. The status report is \\        the sole input to release qualification tooling. Run with --write to regenerate it.",
+        help: "Regenerate release/evidence/final/release-evidence-run.json and expected-artifacts.json \
+        and report each line the committed copies disagree on. Proves every required generator \
+        declares at least one expected artifact, and that every declared artifact exists, is \
+        non-empty, is readable and carries provenance. Proves nothing about whether those \
+        generators pass: it no longer runs them. Each one is a registered gate, so the sweep \
+        runs it and fails on it directly rather than through a spawn this gate reports \
+        second-hand.",
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
-        artifacts: &["release/evidence/release-evidence-status.json"],
+        artifacts: &[
+            "release/evidence/final/expected-artifacts.json",
+            "release/evidence/final/release-evidence-run.json",
+        ],
         prerequisites: &[],
         proof: "xtask_evidence::release::release_evidence::tests::artifact_status_rejects_public_boundary_leaks",
     },

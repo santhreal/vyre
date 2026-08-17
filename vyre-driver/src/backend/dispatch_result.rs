@@ -331,10 +331,69 @@ mod tests {
     }
 
     #[test]
+    fn try_reserve_zero_increments_preserve_capacity_and_content() {
+        let mut empty_batch = BatchOutputs::default();
+        empty_batch
+            .try_reserve(0, 0)
+            .expect("zero reservation on empty batch must succeed");
+        assert_eq!(empty_batch.len(), 0);
+        assert_eq!(empty_batch.total_bytes(), 0);
+        assert!(empty_batch.is_empty());
+
+        let mut nonempty_batch = BatchOutputs::default();
+        nonempty_batch.push_row(&[1, 2, 3]);
+        nonempty_batch.push_row(&[4, 5]);
+        assert_eq!(nonempty_batch.len(), 2);
+        assert_eq!(nonempty_batch.total_bytes(), 5);
+
+        let initial_row_capacity = nonempty_batch.row_ends.capacity();
+        let initial_byte_capacity = nonempty_batch.bytes.capacity();
+        let row_ptr = nonempty_batch.row_ends.as_ptr();
+        let byte_ptr = nonempty_batch.bytes.as_ptr();
+
+        nonempty_batch
+            .try_reserve(0, 0)
+            .expect("zero reservation on nonempty batch must succeed");
+
+        assert_eq!(nonempty_batch.len(), 2);
+        assert_eq!(nonempty_batch.total_bytes(), 5);
+        assert_eq!(nonempty_batch.row(0), Some(&[1, 2, 3][..]));
+        assert_eq!(nonempty_batch.row(1), Some(&[4, 5][..]));
+        assert_eq!(nonempty_batch.row_ends.capacity(), initial_row_capacity);
+        assert_eq!(nonempty_batch.bytes.capacity(), initial_byte_capacity);
+        assert_eq!(nonempty_batch.row_ends.as_ptr(), row_ptr);
+        assert_eq!(nonempty_batch.bytes.as_ptr(), byte_ptr);
+
+        // Zero rows with nonzero bytes reserves bytes without disturbing rows.
+        nonempty_batch
+            .try_reserve(0, 16)
+            .expect("reserving additional bytes with zero additional rows must succeed");
+        assert!(
+            nonempty_batch.bytes.capacity() >= 5 + 16,
+            "byte capacity must be at least current len (5) + requested (16) = 21"
+        );
+
+        // Zero bytes with nonzero rows reserves rows without disturbing bytes.
+        nonempty_batch
+            .try_reserve(4, 0)
+            .expect("reserving additional rows with zero additional bytes must succeed");
+        assert!(
+            nonempty_batch.row_ends.capacity() >= 2 + 4,
+            "row capacity must be at least current len (2) + requested (4) = 6"
+        );
+
+        // Content remains intact after partial zero reservations.
+        assert_eq!(nonempty_batch.len(), 2);
+        assert_eq!(nonempty_batch.total_bytes(), 5);
+        assert_eq!(nonempty_batch.row(0), Some(&[1, 2, 3][..]));
+        assert_eq!(nonempty_batch.row(1), Some(&[4, 5][..]));
+    }
+
+    #[test]
     fn try_reserve_overflow_and_failure_behavior() {
         let mut batch = BatchOutputs::default();
 
-        // Absurdly large reservations on empty batch fail cleanly.
+        // Absurdly large reservations on empty batch fail cleanly without allocator exhaustion.
         assert!(
             batch.try_reserve(usize::MAX, 0).is_err(),
             "reserving usize::MAX rows must fail"
@@ -342,6 +401,10 @@ mod tests {
         assert!(
             batch.try_reserve(0, usize::MAX).is_err(),
             "reserving usize::MAX bytes must fail"
+        );
+        assert!(
+            batch.try_reserve(usize::MAX, usize::MAX).is_err(),
+            "reserving usize::MAX rows and bytes must fail"
         );
 
         // Non-empty batch preserves existing content on failed reservation.
@@ -356,6 +419,14 @@ mod tests {
         assert!(
             batch.try_reserve(0, usize::MAX - 1).is_err(),
             "reserving saturating byte count must fail"
+        );
+        assert!(
+            batch.try_reserve(usize::MAX, 0).is_err(),
+            "reserving overflowing row count on nonempty batch must fail"
+        );
+        assert!(
+            batch.try_reserve(0, usize::MAX).is_err(),
+            "reserving overflowing byte count on nonempty batch must fail"
         );
 
         // State remains intact after failed reservation.
