@@ -672,4 +672,21 @@ mod tests {
         assert_eq!(short("0123456789abcdef"), "0123456789ab");
         assert_eq!(short(""), "");
     }
+
+    /// WHY: The authoritative descriptor and cross-backend comparison producer must agree on
+    /// the exact output path so comparison is immutable and write mutations
+    /// are never undeclared.
+    #[test]
+    fn authoritative_descriptor_declares_exact_bench_crossback_artifact() {
+        let descriptor = xtask::gate_metadata::descriptor_by_name("bench-crossback");
+        let mut expected: Vec<&str> = vec![super::TABLE];
+        expected.sort_unstable();
+        let mut actual: Vec<&str> = descriptor.artifacts.to_vec();
+        actual.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "Fix: bench-crossback gate descriptor must declare exactly the canonical cross-backend table artifact (`{}`)",
+            super::TABLE
+        );
+    }
 }
