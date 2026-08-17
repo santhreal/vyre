@@ -225,7 +225,6 @@ inventory::submit! {
                 to_f32(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]), // input
                 to_f32(&[1.0, 1.0]),  // cos table
                 to_f32(&[0.0, 0.0]),  // sin table
-                vec![0u8; 4 * 8],     // output
             ]]
         }),
         Some(|| {

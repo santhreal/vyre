@@ -272,7 +272,6 @@ inventory::submit! {
         Some(|| vec![vec![
             vyre_primitives::wire::pack_u32_slice(&[BRACKET_KIND_OPEN, BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE, BRACKET_KIND_CLOSE]),
             vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
-            vyre_primitives::wire::pack_u32_slice(&[BRACKET_MATCH_NONE, BRACKET_MATCH_NONE, BRACKET_MATCH_NONE, BRACKET_MATCH_NONE]),
         ]]),
         Some(|| vec![vec![
             EXPECTED_BRACKET_MATCH_STACK_BYTES.to_vec(),

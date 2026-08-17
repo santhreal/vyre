@@ -224,7 +224,6 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
                 u32::from(b'6'),
                 u32::from(b'E'),
             ]),
-            pack_words(&[0, 0, 0]),
             pack_words(hex_decode_table_ref()),
         ],
         vec![
@@ -236,7 +235,6 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
                 u32::from(b'4'),
                 u32::from(b'A'),
             ]),
-            pack_words(&[0, 0, 0]),
             pack_words(hex_decode_table_ref()),
         ],
         vec![
@@ -248,7 +246,6 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
                 u32::from(b'0'),
                 u32::from(b'0'),
             ]),
-            pack_words(&[0, 0, 0]),
             pack_words(hex_decode_table_ref()),
         ],
     ]

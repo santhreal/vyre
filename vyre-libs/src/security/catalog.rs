@@ -10,7 +10,6 @@ macro_rules! bitset_and_entry {
                     vec![vec![
                         vec![12, 0, 0, 0],
                         vec![10, 0, 0, 0],
-                        vec![0, 0, 0, 0],
                     ]]
                 }),
                 Some(|| {
@@ -32,7 +31,6 @@ macro_rules! bitset_and_not_entry {
                     vec![vec![
                         vec![15, 0, 0, 0],
                         vec![12, 0, 0, 0],
-                        vec![0, 0, 0, 0],
                     ]]
                 }),
                 Some(|| {

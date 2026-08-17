@@ -33,7 +33,6 @@ inventory::submit! {
             vec![vec![
                 to_bytes(&[0xFF00, 0xAAAA_AAAA]),
                 to_bytes(&[0xF0F0, 0x5555_5555]),
-                to_bytes(&[0, 0]),
             ]]
         }),
         Some(|| {

@@ -151,7 +151,6 @@ inventory::submit! {
                 to_f32(&[1.0, 0.0, 5.0, 6.0]), // grad_out
                 to_f32(&[1.0]),                   // cos
                 to_f32(&[0.0]),                   // sin
-                vec![0u8; 4 * 4],
             ]]
         }),
         Some(|| {

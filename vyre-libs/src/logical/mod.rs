@@ -26,7 +26,7 @@ macro_rules! define_synthesized_logical_binary {
                         let a = [0xFF00_FF00u32, 0x00FF_00FF, 0xFFFF_FFFF, 0x0000_0000];
                         let b = [0xF0F0_F0F0u32, 0x0F0F_0F0F, 0xFFFF_FFFF, 0x0000_0000];
                         let to_bytes = vyre_primitives::wire::pack_u32_slice;
-                        vec![vec![to_bytes(&a), to_bytes(&b), vec![0u8; 16]]]
+                        vec![vec![to_bytes(&a), to_bytes(&b)]]
                     }),
                     Some(|| {
                         vec![vec![EXPECTED_OUTPUT_BYTES.to_vec()]]

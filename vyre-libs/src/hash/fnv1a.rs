@@ -413,7 +413,6 @@ inventory::submit! {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
                 to_bytes(&[0x61]), // input: one word, low byte = 'a'
-                to_bytes(&[0]),    // output
             ]]
         }),
         Some(|| {
@@ -430,7 +429,6 @@ inventory::submit! {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
                 to_bytes(&[0x61]),   // input: one word, low byte = 'a'
-                to_bytes(&[0, 0]),   // output: two words for fnv1a64 hash
             ]]
         }),
         Some(|| {

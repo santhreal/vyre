@@ -165,7 +165,6 @@ inventory::submit! {
                 to_f32(&[0.0, 0.0]),            // b1
                 to_f32(&[1.0, 0.0, 0.0, 1.0]), // w2 = identity (2×2)
                 to_f32(&[1.0, 1.0]),            // grad_out
-                vec![0u8; 4 * 2],
             ]]
         }),
         Some(|| {

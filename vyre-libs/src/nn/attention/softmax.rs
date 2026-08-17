@@ -322,7 +322,6 @@ inventory::submit! {
             let input = [0.5f32, -1.0, 1.5, 0.25];
             vec![vec![
                 vyre_primitives::wire::pack_f32_slice(&input),
-                vec![0u8; input.len() * core::mem::size_of::<f32>()],
             ]]
         }),
         Some(|| vec![

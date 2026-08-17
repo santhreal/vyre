@@ -347,7 +347,7 @@ inventory::submit! {
         },
         Some(|| {
             let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
-            vec![vec![to_bytes(&[9]), to_bytes(&[0])]]
+            vec![vec![to_bytes(&[9])]]
         }),
         Some(|| {
             vec![vec![vec![0x09, 0x00, 0x00, 0x00]]]

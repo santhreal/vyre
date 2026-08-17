@@ -113,7 +113,6 @@ inventory::submit! {
                 vyre_primitives::wire::pack_f32_slice(&q),
                 vyre_primitives::wire::pack_f32_slice(&k),
                 vyre_primitives::wire::pack_f32_slice(&v),
-                vec![0u8; 9 * core::mem::size_of::<f32>()],
             ]]
         }),
         // This deliberately uses s=9 so `direct_attention_program` declines

@@ -170,7 +170,6 @@ inventory::submit! {
         || newton_schulz_poly5_f32("mat", "output", 2, 2),
         Some(|| vec![vec![
             fixture_f32(&[0.25, 0.5, 0.75, 1.0]),
-            fixture_f32(&[0.0; 4]),
         ]]),
         Some(|| {
             vec![vec![vec![

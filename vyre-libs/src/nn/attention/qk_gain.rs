@@ -80,7 +80,6 @@ inventory::submit! {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),  // q: 2 heads × 1 seq × 2 dim
-                vec![0u8; 4 * 4],                 // q_out
                 to_f32(&[5.25, 3.0]),              // gain per head
             ]]
         }),

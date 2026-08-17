@@ -72,7 +72,7 @@ inventory::submit! {
             for (slot, value) in [(0usize, 9u32), (1, 2), (2, 3), (3, 5), (4, 11)] {
                 histogram[slot * 4..slot * 4 + 4].copy_from_slice(&value.to_le_bytes());
             }
-            vec![vec![histogram, vec![0; 4]]]
+            vec![vec![histogram]]
         }),
         Some(|| vec![vec![vec![0x0a, 0x00, 0x00, 0x00]]]),
     )

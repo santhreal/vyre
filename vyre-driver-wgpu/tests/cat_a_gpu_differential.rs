@@ -66,14 +66,13 @@ fn lower_for_gpu(program: &Program) -> Program {
         .expect("registered optimizer must converge")
 }
 
-/// Maps inputs from the original program buffer layout to the lowered program ABI by exact binding slot.
+/// Maps canonical logical inputs from the original program to the lowered program ABI by exact binding slot.
 ///
-/// WHY: Operates over canonical logical inputs (non-workgroup, non-backend-allocated buffers)
-/// as well as legacy inputs (all non-workgroup buffers) supplied by registry operations.
+/// WHY: Every caller supplies canonical logical inputs (non-workgroup, non-backend-allocated buffers).
 /// When `lower_for_gpu` eliminates dead buffers and intermediate pipeline-live-out buffers, surviving
 /// input buffers retain their original binding slots (in group 0). We index original inputs by the
-/// original program's declared buffer binding slots, ensure every required lowered input binding is present,
-/// and fail closed on any mismatch.
+/// original program's logical input binding slots, validate exact counts, ensure every required lowered
+/// input binding is present, and fail closed on any mismatch.
 fn map_inputs_for_lowered(
     original_program: &Program,
     original_inputs: &[Vec<u8>],
@@ -84,26 +83,17 @@ fn map_inputs_for_lowered(
         .iter()
         .filter(|buf| buf.access() != BufferAccess::Workgroup && !buf.is_backend_allocated_output())
         .collect();
-    let all_non_workgroup: Vec<_> = original_program
-        .buffers()
-        .iter()
-        .filter(|buf| buf.access() != BufferAccess::Workgroup)
-        .collect();
 
-    let original_input_buffers = if original_inputs.len() == logical_buffers.len() {
-        logical_buffers
-    } else if original_inputs.len() == all_non_workgroup.len() {
-        all_non_workgroup
-    } else {
-        panic!(
-            "input count ({}) matches neither logical ({}) nor legacy ({}) buffer count for program `{}`",
-            original_inputs.len(),
-            logical_buffers.len(),
-            all_non_workgroup.len(),
-            original_program.entry_op_id().unwrap_or("unknown")
-        );
-    };
+    assert_eq!(
+        original_inputs.len(),
+        logical_buffers.len(),
+        "input count ({}) must match canonical logical buffer count ({}) for program `{}`",
+        original_inputs.len(),
+        logical_buffers.len(),
+        original_program.entry_op_id().unwrap_or("unknown")
+    );
 
+    let original_input_buffers = logical_buffers;
     let mut binding_to_input: std::collections::HashMap<u32, &Vec<u8>> =
         std::collections::HashMap::new();
 

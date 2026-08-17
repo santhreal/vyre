@@ -219,7 +219,6 @@ inventory::submit! {
         Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_bytes_as_u32_slice(&[b'a', b'b', b'a', 0xC3, 0xA9]),
-                vec![0; 256 * 4],
             ]]
         }),
         Some(|| {
