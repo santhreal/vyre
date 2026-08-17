@@ -29,7 +29,9 @@ pub(crate) fn first_json_evidence_with_path(
     let evidence = requirement
         .evidence
         .iter()
-        .find(|path| path.ends_with(suffix) && !path.starts_with("cargo_full "));
+        .find(|path| {
+            Path::new(path).ends_with(Path::new(suffix)) && !path.starts_with("cargo_full ")
+        });
     let Some(evidence) = evidence else {
         failures.push(format!(
             "requirement `{}` needs JSON evidence ending in `{suffix}`",
@@ -602,6 +604,26 @@ mod workload_evidence_tests {
                 .iter()
                 .any(|failure| failure.contains("duplicate analysis fixture family rows: A13-coalesce-fixture")),
             "Fix: release gate must reject duplicate analysis fixture family rows before totals can prove A13-A16 coverage; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn first_json_evidence_enforces_path_component_boundary() {
+        let dir = tempfile::tempdir().unwrap();
+        let requirement = Requirement {
+            id: "test-req".to_string(),
+            title: "test".to_string(),
+            status: "closed".to_string(),
+            evidence: vec!["evidence/not-target.json".to_string()],
+        };
+        let mut failures = Vec::new();
+        let result = first_json_evidence(&requirement, dir.path(), "target.json", &mut failures);
+        assert!(result.is_none());
+        assert!(
+            failures
+                .iter()
+                .any(|f| f.contains("needs JSON evidence ending in `target.json`")),
+            "{failures:?}"
         );
     }
 }
