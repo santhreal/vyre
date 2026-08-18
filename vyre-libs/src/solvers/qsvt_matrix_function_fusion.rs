@@ -50,7 +50,7 @@
 
 use crate::dispatch_buffers::{
     ceil_div_u32, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
-    require_exactly_one_output, write_u32_slice_le_bytes, write_zero_bytes,
+    require_named_output, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 #[cfg(test)]
@@ -275,7 +275,12 @@ pub fn transport_residual_fixed_via_with_scratch_into(
         &scratch.inputs[..5],
         Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
-    let output = require_exactly_one_output(&outputs, "transport_residual_fixed_via")?;
+    let output = require_named_output(
+        &outputs,
+        &program,
+        "transport_residual",
+        "transport_residual_fixed_via",
+    )?;
     decode_u32_output_exact(output, n as usize, "transport_residual_fixed_via", out)
 }
 
@@ -420,5 +425,88 @@ mod tests {
         let cost = vec![1.0; 4];
         let weights = vec![1.0; 2];
         let _residual = transport_residual(&cost, &weights, 2, 0);
+    }
+
+    struct SiblingScratchDispatcher;
+
+    impl ProgramDispatcher for SiblingScratchDispatcher {
+        fn dispatch(
+            &self,
+            _program: &vyre_foundation::ir::Program,
+            inputs: &[Vec<u8>],
+            _grid: Option<[u32; 3]>,
+        ) -> Result<Vec<Vec<u8>>, DispatchError> {
+            let weights = crate::dispatch_buffers::read_u32s(&inputs[1]);
+            let scratch = vec![0u8; weights.len() * 2 * 4];
+            Ok(vec![u32_slice_to_le_bytes(&weights), scratch])
+        }
+    }
+
+    struct EmptyOutputDispatcher;
+
+    impl ProgramDispatcher for EmptyOutputDispatcher {
+        fn dispatch(
+            &self,
+            _program: &vyre_foundation::ir::Program,
+            _inputs: &[Vec<u8>],
+            _grid: Option<[u32; 3]>,
+        ) -> Result<Vec<Vec<u8>>, DispatchError> {
+            Ok(Vec::new())
+        }
+    }
+
+    struct MalformedOutputDispatcher;
+
+    impl ProgramDispatcher for MalformedOutputDispatcher {
+        fn dispatch(
+            &self,
+            _program: &vyre_foundation::ir::Program,
+            _inputs: &[Vec<u8>],
+            _grid: Option<[u32; 3]>,
+        ) -> Result<Vec<Vec<u8>>, DispatchError> {
+            Ok(vec![vec![1, 2, 3]])
+        }
+    }
+
+    #[test]
+    fn transport_residual_fixed_via_accepts_sibling_scratch_output() {
+        let out = transport_residual_fixed_via(
+            &SiblingScratchDispatcher,
+            &[1, 0, 0, 1],
+            &[7, 11],
+            &[1, 0],
+            2,
+            1,
+        )
+        .unwrap();
+        assert_eq!(out, vec![7, 11]);
+    }
+
+    #[test]
+    fn transport_residual_fixed_via_fails_on_empty_outputs() {
+        let err = transport_residual_fixed_via(
+            &EmptyOutputDispatcher,
+            &[1, 0, 0, 1],
+            &[7, 11],
+            &[1, 0],
+            2,
+            1,
+        )
+        .unwrap_err();
+        assert!(matches!(err, DispatchError::BackendError(_)));
+    }
+
+    #[test]
+    fn transport_residual_fixed_via_fails_on_malformed_output_bytes() {
+        let err = transport_residual_fixed_via(
+            &MalformedOutputDispatcher,
+            &[1, 0, 0, 1],
+            &[7, 11],
+            &[1, 0],
+            2,
+            1,
+        )
+        .unwrap_err();
+        assert!(matches!(err, DispatchError::BackendError(_)));
     }
 }
