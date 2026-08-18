@@ -187,11 +187,19 @@ impl<'a> ValidationOptions<'a> {
             .is_none_or(|backend| backend.supports_cast_target(target))
     }
 
+    /// Return the resolved backend capabilities snapshot for this validation run.
+    #[must_use]
+    #[inline]
+    pub fn backend_capabilities(&self) -> Option<BackendCapabilities> {
+        self.backend_capabilities
+            .or_else(|| self.backend.map(|b| b.backend_capabilities()))
+    }
+
     /// Return true when this validation run requires subgroup support.
     #[must_use]
     #[inline]
     pub fn requires_subgroup_ops(&self) -> bool {
-        self.backend_capabilities
+        self.backend_capabilities()
             .is_some_and(|caps| caps.supports_subgroup_ops)
     }
 
@@ -199,7 +207,7 @@ impl<'a> ValidationOptions<'a> {
     #[must_use]
     #[inline]
     pub fn supports_distributed_collectives(&self) -> bool {
-        self.backend_capabilities
+        self.backend_capabilities()
             .is_some_and(|caps| caps.supports_distributed_collectives)
     }
 }

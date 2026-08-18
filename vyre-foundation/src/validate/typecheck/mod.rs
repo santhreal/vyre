@@ -399,4 +399,69 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn comparison_bool_ordered_vs_equality_split() {
+        // Ordered comparisons on Bool must emit V096
+        for op in [BinOp::Lt, BinOp::Gt, BinOp::Le, BinOp::Ge] {
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitBool(true),
+                &Expr::LitBool(false),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.iter().any(|e| e.code().as_str() == "V096"),
+                "ordered `{op:?}` on bool must emit V096: {errors:?}"
+            );
+        }
+
+        // Equality on Bool must be accepted
+        for op in [BinOp::Eq, BinOp::Ne] {
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                op,
+                &Expr::LitBool(true),
+                &Expr::LitBool(false),
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.is_empty(),
+                "equality `{op:?}` on bool must be accepted: {errors:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn division_by_zero_detects_integer_zero() {
+        for zero_expr in [
+            Expr::LitU32(0),
+            Expr::Cast {
+                target: DataType::U32,
+                value: Box::new(Expr::LitU32(0)),
+            },
+        ] {
+            let mut errors = Vec::new();
+            validate_binop_operands(
+                BinOp::Div,
+                &Expr::LitU32(10),
+                &zero_expr,
+                &empty_buffers(),
+                &empty_scope(),
+                false,
+                &mut errors,
+            );
+            assert!(
+                errors.iter().any(|e| e.code().as_str() == "V044"),
+                "integer division by static zero must emit V044: {errors:?}"
+            );
+        }
+    }
 }

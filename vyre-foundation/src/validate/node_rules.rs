@@ -659,7 +659,7 @@ pub(crate) fn check_tile_residency(
     options: ValidationOptions<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let Some(caps) = options.backend_capabilities {
+    if let Some(caps) = options.backend_capabilities() {
         let bytes = tile_type.byte_size();
         match tile_type.residency {
             crate::ir::Residency::Workgroup => {
@@ -754,7 +754,7 @@ pub(crate) fn check_tile_matmul(
     options: ValidationOptions<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let Some(caps) = options.backend_capabilities {
+    if let Some(caps) = options.backend_capabilities() {
         if !caps.supports_tensor_cores {
             errors.push(err(
                 "V137",

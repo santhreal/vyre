@@ -80,7 +80,7 @@ fn analyze_exit_node(
 ) -> ExitProof {
     match node {
         Node::Let { name, value } => {
-            let uniform = exit_expr_is_uniform(value, state);
+            let uniform = exit_expr_is_uniform(value, state) && path_uniform;
             invalidate_expr_atomics(value, state);
             state.scope.insert(
                 name.clone(),
@@ -94,7 +94,7 @@ fn analyze_exit_node(
             ExitProof::NONE
         }
         Node::Assign { name, value } => {
-            let uniform = exit_expr_is_uniform(value, state);
+            let uniform = exit_expr_is_uniform(value, state) && path_uniform;
             invalidate_expr_atomics(value, state);
             if let Some(binding) = state.scope.get_mut(name.as_str()) {
                 binding.uniform = uniform;
@@ -122,10 +122,14 @@ fn analyze_exit_node(
             let mut then_state = before.clone();
             let then_proof =
                 analyze_exit_sequence(then, &mut then_state, path_uniform && cond_uniform);
-            let mut else_state = before;
+            let mut else_state = before.clone();
             let else_proof =
                 analyze_exit_sequence(otherwise, &mut else_state, path_uniform && cond_uniform);
-            *state = merge_exit_states(then_state, else_state);
+            let mut merged = merge_exit_states(then_state, else_state);
+            if !cond_uniform || !path_uniform {
+                merged.loads_settled = false;
+            }
+            *state = merged;
             let mut proof = then_proof;
             proof.merge(else_proof);
             proof
@@ -152,21 +156,26 @@ fn analyze_exit_node(
                         ty: DataType::U32,
                         ty_known: true,
                         mutable: false,
-                        uniform: bounds_uniform,
+                        uniform: bounds_uniform && path_uniform,
                     },
                 );
                 let proof =
                     analyze_exit_sequence(body, &mut body_state, path_uniform && bounds_uniform);
                 accumulated_proof.merge(proof);
                 body_state.scope.remove(var.as_str());
-                let next_entry_state = merge_exit_states(loop_entry_state.clone(), body_state);
+                let next_entry_state =
+                    merge_exit_states(loop_entry_state.clone(), body_state);
                 if next_entry_state == loop_entry_state {
                     break;
                 }
                 loop_entry_state = next_entry_state;
             }
 
-            *state = merge_exit_states(before, loop_entry_state);
+            let mut final_state = merge_exit_states(before, loop_entry_state);
+            if !bounds_uniform || !path_uniform {
+                final_state.loads_settled = false;
+            }
+            *state = final_state;
             accumulated_proof
         }
         Node::IndirectDispatch { .. } | Node::AsyncWait { .. } | Node::Resume { .. } => {
