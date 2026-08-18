@@ -61,18 +61,15 @@ fn sample(variant: &'static str, slot: Option<&'static str>, expr: Expr) -> Expr
 /// Every declared `Expr` variant exactly once, with default/inert payload.
 #[must_use]
 pub fn expr_variant_samples() -> Vec<ExprSample> {
-    let mut out: Vec<ExprSample> = Vec::new();
-    for mut candidate in inert_samples() {
-        if out
-            .iter()
-            .any(|existing| existing.variant == candidate.variant)
-        {
-            continue;
-        }
-        candidate.slot = None;
-        out.push(candidate);
-    }
-    out
+    let mut seen = std::collections::HashSet::new();
+    inert_samples()
+        .into_iter()
+        .filter(|sample| seen.insert(sample.variant))
+        .map(|mut sample| {
+            sample.slot = None;
+            sample
+        })
+        .collect()
 }
 
 /// Every child operand slot of every operand-nesting `Expr` variant with `marker` planted in it.

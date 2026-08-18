@@ -176,89 +176,16 @@ fn triple_mask_threshold_count_program(
             BufferDecl::workgroup("warp_scratch", 1024, DataType::U32),
         ],
         [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::let_bind("lid", Expr::local_x()),
-            Node::let_bind("subgroup_sz", Expr::subgroup_size()),
-            Node::let_bind("lane_id", Expr::subgroup_local_id()),
-            Node::let_bind(
-                "warp_id",
-                Expr::div(Expr::var("lid"), Expr::var("subgroup_sz")),
-            ),
-            Node::let_bind(
-                "num_warps",
-                Expr::div(Expr::u32(256), Expr::var("subgroup_sz")),
-            ),
-            Node::let_bind("in_bounds", Expr::lt(Expr::var("idx"), Expr::u32(records))),
-            Node::let_bind(
-                "safe_idx",
-                Expr::select(Expr::var("in_bounds"), Expr::var("idx"), Expr::u32(0)),
-            ),
-            Node::let_bind(words[0], Expr::load(buffers[0], Expr::var("safe_idx"))),
-            Node::let_bind(words[1], Expr::load(buffers[1], Expr::var("safe_idx"))),
-            Node::let_bind(words[2], Expr::load(buffers[2], Expr::var("safe_idx"))),
-            Node::let_bind(
-                "warp_matches",
-                Expr::popcount(Expr::subgroup_ballot(Expr::and(
-                    Expr::var("in_bounds"),
-                    condition,
-                ))),
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("lane_id"), Expr::u32(0)),
-                vec![Node::store(
-                    "warp_scratch",
-                    Expr::var("warp_id"),
-                    Expr::var("warp_matches"),
-                )],
-            ),
-            Node::barrier(),
-            Node::let_bind("lane_partial", Expr::u32(0)),
-            Node::if_then(
-                Expr::eq(Expr::var("warp_id"), Expr::u32(0)),
-                vec![Node::loop_for(
-                    "round",
-                    Expr::u32(0),
-                    Expr::div(
-                        Expr::add(
-                            Expr::var("num_warps"),
-                            Expr::sub(Expr::var("subgroup_sz"), Expr::u32(1)),
-                        ),
-                        Expr::var("subgroup_sz"),
-                    ),
-                    vec![
-                        Node::let_bind(
-                            "scratch_idx",
-                            Expr::add(
-                                Expr::var("lane_id"),
-                                Expr::mul(Expr::var("round"), Expr::var("subgroup_sz")),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("scratch_idx"), Expr::var("num_warps")),
-                            vec![Node::assign(
-                                "lane_partial",
-                                Expr::add(
-                                    Expr::var("lane_partial"),
-                                    Expr::load("warp_scratch", Expr::var("scratch_idx")),
-                                ),
-                            )],
-                        ),
-                    ],
-                )],
-            ),
-            Node::let_bind("wg_total", Expr::subgroup_add(Expr::var("lane_partial"))),
-            Node::if_then(
-                Expr::and(
-                    Expr::eq(Expr::var("lid"), Expr::u32(0)),
-                    Expr::gt(Expr::var("wg_total"), Expr::u32(0)),
-                ),
-                vec![Node::let_bind(
-                    "_slot",
-                    Expr::atomic_add("out_count", Expr::u32(0), Expr::var("wg_total")),
-                )],
-            ),
-        ],
+        warp_reduction_count_nodes(
+            256,
+            records,
+            Expr::and(Expr::var("in_bounds"), condition),
+            vec![
+                Node::let_bind(words[0], Expr::load(buffers[0], Expr::var("safe_idx"))),
+                Node::let_bind(words[1], Expr::load(buffers[1], Expr::var("safe_idx"))),
+                Node::let_bind(words[2], Expr::load(buffers[2], Expr::var("safe_idx"))),
+            ],
+        ),
     )
 }
 
@@ -312,92 +239,19 @@ fn quantified_condition_loops_program(records: u32) -> Program {
             BufferDecl::workgroup("warp_scratch", 1024, DataType::U32),
         ],
         [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::let_bind("lid", Expr::local_x()),
-            Node::let_bind("subgroup_sz", Expr::subgroup_size()),
-            Node::let_bind("lane_id", Expr::subgroup_local_id()),
-            Node::let_bind(
-                "warp_id",
-                Expr::div(Expr::var("lid"), Expr::var("subgroup_sz")),
-            ),
-            Node::let_bind(
-                "num_warps",
-                Expr::div(Expr::u32(256), Expr::var("subgroup_sz")),
-            ),
-            Node::let_bind("in_bounds", Expr::lt(Expr::var("idx"), Expr::u32(records))),
-            Node::let_bind(
-                "safe_idx",
-                Expr::select(Expr::var("in_bounds"), Expr::var("idx"), Expr::u32(0)),
-            ),
-            Node::let_bind("any_word", Expr::load("any_mask", Expr::var("safe_idx"))),
-            Node::let_bind("all_word", Expr::load("all_mask", Expr::var("safe_idx"))),
-            Node::let_bind(
-                "threshold_word",
-                Expr::load("threshold_mask", Expr::var("safe_idx")),
-            ),
-            Node::let_bind(
-                "warp_matches",
-                Expr::popcount(Expr::subgroup_ballot(Expr::and(
-                    Expr::var("in_bounds"),
-                    condition,
-                ))),
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("lane_id"), Expr::u32(0)),
-                vec![Node::store(
-                    "warp_scratch",
-                    Expr::var("warp_id"),
-                    Expr::var("warp_matches"),
-                )],
-            ),
-            Node::barrier(),
-            Node::let_bind("lane_partial", Expr::u32(0)),
-            Node::if_then(
-                Expr::eq(Expr::var("warp_id"), Expr::u32(0)),
-                vec![Node::loop_for(
-                    "round",
-                    Expr::u32(0),
-                    Expr::div(
-                        Expr::add(
-                            Expr::var("num_warps"),
-                            Expr::sub(Expr::var("subgroup_sz"), Expr::u32(1)),
-                        ),
-                        Expr::var("subgroup_sz"),
-                    ),
-                    vec![
-                        Node::let_bind(
-                            "scratch_idx",
-                            Expr::add(
-                                Expr::var("lane_id"),
-                                Expr::mul(Expr::var("round"), Expr::var("subgroup_sz")),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("scratch_idx"), Expr::var("num_warps")),
-                            vec![Node::assign(
-                                "lane_partial",
-                                Expr::add(
-                                    Expr::var("lane_partial"),
-                                    Expr::load("warp_scratch", Expr::var("scratch_idx")),
-                                ),
-                            )],
-                        ),
-                    ],
-                )],
-            ),
-            Node::let_bind("wg_total", Expr::subgroup_add(Expr::var("lane_partial"))),
-            Node::if_then(
-                Expr::and(
-                    Expr::eq(Expr::var("lid"), Expr::u32(0)),
-                    Expr::gt(Expr::var("wg_total"), Expr::u32(0)),
+        warp_reduction_count_nodes(
+            256,
+            records,
+            Expr::and(Expr::var("in_bounds"), condition),
+            vec![
+                Node::let_bind("any_word", Expr::load("any_mask", Expr::var("safe_idx"))),
+                Node::let_bind("all_word", Expr::load("all_mask", Expr::var("safe_idx"))),
+                Node::let_bind(
+                    "threshold_word",
+                    Expr::load("threshold_mask", Expr::var("safe_idx")),
                 ),
-                vec![Node::let_bind(
-                    "_slot",
-                    Expr::atomic_add("out_count", Expr::u32(0), Expr::var("wg_total")),
-                )],
-            ),
-        ],
+            ],
+        ),
     )
 }
 
@@ -531,4 +385,93 @@ pub(super) fn pattern_buffers(pattern: SyntheticPattern) -> &'static [&'static s
         }
         SyntheticPattern::EgraphSaturation => &["opcode_mask", "lhs_class_mask", "rhs_class_mask"],
     }
+}
+
+pub(crate) fn warp_reduction_count_nodes(
+    workgroup_size: u32,
+    records: u32,
+    is_match: Expr,
+    body_nodes: Vec<Node>,
+) -> Vec<Node> {
+    let mut nodes = vec![
+        Node::let_bind("idx", Expr::gid_x()),
+        Node::let_bind("lid", Expr::local_x()),
+        Node::let_bind("subgroup_sz", Expr::subgroup_size()),
+        Node::let_bind("lane_id", Expr::subgroup_local_id()),
+        Node::let_bind(
+            "warp_id",
+            Expr::div(Expr::var("lid"), Expr::var("subgroup_sz")),
+        ),
+        Node::let_bind(
+            "num_warps",
+            Expr::div(Expr::u32(workgroup_size), Expr::var("subgroup_sz")),
+        ),
+        Node::let_bind("in_bounds", Expr::lt(Expr::var("idx"), Expr::u32(records))),
+        Node::let_bind(
+            "safe_idx",
+            Expr::select(Expr::var("in_bounds"), Expr::var("idx"), Expr::u32(0)),
+        ),
+    ];
+    nodes.extend(body_nodes);
+    nodes.extend([
+        Node::let_bind(
+            "warp_matches",
+            Expr::popcount(Expr::subgroup_ballot(is_match)),
+        ),
+        Node::if_then(
+            Expr::eq(Expr::var("lane_id"), Expr::u32(0)),
+            vec![Node::store(
+                "warp_scratch",
+                Expr::var("warp_id"),
+                Expr::var("warp_matches"),
+            )],
+        ),
+        Node::barrier(),
+        Node::let_bind("lane_partial", Expr::u32(0)),
+        Node::if_then(
+            Expr::eq(Expr::var("warp_id"), Expr::u32(0)),
+            vec![Node::loop_for(
+                "round",
+                Expr::u32(0),
+                Expr::div(
+                    Expr::add(
+                        Expr::var("num_warps"),
+                        Expr::sub(Expr::var("subgroup_sz"), Expr::u32(1)),
+                    ),
+                    Expr::var("subgroup_sz"),
+                ),
+                vec![
+                    Node::let_bind(
+                        "scratch_idx",
+                        Expr::add(
+                            Expr::var("lane_id"),
+                            Expr::mul(Expr::var("round"), Expr::var("subgroup_sz")),
+                        ),
+                    ),
+                    Node::if_then(
+                        Expr::lt(Expr::var("scratch_idx"), Expr::var("num_warps")),
+                        vec![Node::assign(
+                            "lane_partial",
+                            Expr::add(
+                                Expr::var("lane_partial"),
+                                Expr::load("warp_scratch", Expr::var("scratch_idx")),
+                            ),
+                        )],
+                    ),
+                ],
+            )],
+        ),
+        Node::let_bind("wg_total", Expr::subgroup_add(Expr::var("lane_partial"))),
+        Node::if_then(
+            Expr::and(
+                Expr::eq(Expr::var("lid"), Expr::u32(0)),
+                Expr::gt(Expr::var("wg_total"), Expr::u32(0)),
+            ),
+            vec![Node::let_bind(
+                "_slot",
+                Expr::atomic_add("out_count", Expr::u32(0), Expr::var("wg_total")),
+            )],
+        ),
+    ]);
+    nodes
 }

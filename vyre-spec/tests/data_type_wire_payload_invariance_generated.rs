@@ -242,9 +242,7 @@ fn generated_nonzero_usize(seed: u32) -> usize {
 }
 
 fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
+    value = (value ^ (value >> 16)).wrapping_mul(0x7FEB_352D);
+    value = (value ^ (value >> 15)).wrapping_mul(0x846C_A68B);
     value ^ (value >> 16)
 }

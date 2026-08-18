@@ -194,3 +194,39 @@ pub(crate) fn queue_materialize_bytes_touched<S>(
         prepared.baseline_output.len() as u64,
     )
 }
+
+impl<S> QueueMaterializePrepared<S> {
+    pub(crate) fn from_traverse_plan(
+        reset_program: vyre_foundation::ir::Program,
+        queue_program: vyre_foundation::ir::Program,
+        plan: crate::cases::queue_traverse_plan::QueueTraversePlan,
+        high_degree_queue_capacity: u32,
+        inputs: Vec<Vec<u8>>,
+        input_bytes_total: u64,
+        baseline_output: Vec<u8>,
+        baseline_wall_ns: u64,
+        stats: S,
+        queue_capacity: u32,
+        resident: Option<crate::api::resident::ResidentInputSet>,
+    ) -> Self {
+        Self {
+            reset_program,
+            queue_program,
+            traverse_program: plan.program,
+            traverse_grid: plan.grid,
+            row_strided_traverse: plan.row_strided,
+            split_high_degree_traverse: plan.split_high_degree,
+            high_traverse_program: plan.high_program,
+            high_traverse_grid: plan.high_grid,
+            high_degree_queue_capacity,
+            traverse_logical_lanes: plan.logical_lanes,
+            inputs,
+            input_bytes_total,
+            baseline_output,
+            baseline_wall_ns,
+            stats,
+            queue_capacity,
+            resident,
+        }
+    }
+}

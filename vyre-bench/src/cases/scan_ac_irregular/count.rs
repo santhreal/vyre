@@ -2,9 +2,8 @@ use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
 use crate::api::case::{
-    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
-    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
-    WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, PerformanceContract, PreparedCase,
 };
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use crate::api::suite::SuiteKind;
@@ -66,25 +65,12 @@ impl BenchCase for ScanAcIrregularCount {
     }
 
     fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Aho-Corasick Irregular Count 4M".to_string(),
-            description: "GPU-only match cardinality preflight over unaligned, varied-length security/parser literals in a noisy 4 MiB haystack".to_string(),
-            tags: vec![
-                "scan".to_string(),
-                "pattern".to_string(),
-                "dfa".to_string(),
-                "aho-corasick".to_string(),
-                "packed-byte".to_string(),
-                "count-only".to_string(),
-                "irregular".to_string(),
-                "release".to_string(),
-            ],
-            layer: BenchLayer::Libs,
-            workload: WorkloadClass::Macro,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-libs".to_string(),
-        }
+        super::scan_ac_metadata(
+            self.id(),
+            "Aho-Corasick Irregular Count 4M",
+            "GPU-only match cardinality preflight over unaligned, varied-length security/parser literals in a noisy 4 MiB haystack",
+            true,
+        )
     }
 
     fn suites(&self) -> &'static [SuiteKind] {

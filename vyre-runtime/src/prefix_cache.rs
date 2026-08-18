@@ -1107,3 +1107,25 @@ mod tests {
         assert!(matches!(err, PrefixCacheError::DuplicateRelease(_)));
     }
 }
+
+impl PrefixCacheKey {
+    #[cfg(test)]
+    pub(crate) fn test_sample(tenant: &str, gen: u64) -> Self {
+        Self {
+            model_id: [1u8; 32],
+            tokenizer_id: [2u8; 32],
+            weights_digest: [3u8; 32],
+            config_digest: [4u8; 32],
+            dtype: DataType::F32,
+            layout: PrefixCacheLayout {
+                kv_heads: 2,
+                head_dim: 32,
+                block_tokens: 16,
+            },
+            device_generation: gen,
+            cache_schema_version: 1,
+            isolation_domain: tenant.to_string(),
+            trust_domain: None,
+        }
+    }
+}

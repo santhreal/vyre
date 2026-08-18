@@ -54,7 +54,7 @@ impl BodyCtx<'_> {
         existing: Option<(&str, Reg)>,
     ) -> Result<Option<(String, Reg)>, EmitError> {
         let existing = existing.map(|(prefix, pred)| (prefix.to_string(), pred));
-        if !matches!(memory_class, MemoryClass::Global) {
+        if !self.full_workgroup_entry || !matches!(memory_class, MemoryClass::Global) {
             return Ok(existing);
         }
 

@@ -271,120 +271,43 @@ pub(super) fn metadata_condition_program() -> Program {
             BufferDecl::workgroup("warp_scratch", 1024, DataType::U32),
         ],
         [METADATA_WORKGROUP_SIZE, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::let_bind("lid", Expr::local_x()),
-            Node::let_bind("subgroup_sz", Expr::subgroup_size()),
-            Node::let_bind("lane_id", Expr::subgroup_local_id()),
-            Node::let_bind(
-                "warp_id",
-                Expr::div(Expr::var("lid"), Expr::var("subgroup_sz")),
-            ),
-            Node::let_bind(
-                "num_warps",
-                Expr::div(Expr::u32(METADATA_WORKGROUP_SIZE), Expr::var("subgroup_sz")),
-            ),
-            Node::let_bind(
-                "in_bounds",
-                Expr::lt(Expr::var("idx"), Expr::u32(METADATA_RECORDS)),
-            ),
-            Node::let_bind(
-                "safe_idx",
-                Expr::select(Expr::var("in_bounds"), Expr::var("idx"), Expr::u32(0)),
-            ),
-            Node::let_bind(
-                "packed",
-                Expr::load("metadata_records", Expr::var("safe_idx")),
-            ),
-            Node::let_bind(
-                "size_offset",
-                Expr::bitand(Expr::var("packed"), Expr::u32(0x0001_FFFF)),
-            ),
-            Node::let_bind(
-                "entropy_offset",
-                Expr::bitand(
-                    Expr::shr(Expr::var("packed"), Expr::u32(17)),
-                    Expr::u32(0x0000_1FFF),
-                ),
-            ),
-            Node::let_bind(
-                "is_pe",
-                Expr::ne(
-                    Expr::bitand(Expr::var("packed"), Expr::u32(0x4000_0000)),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::let_bind(
-                "is_match",
+        super::synthetic_programs::warp_reduction_count_nodes(
+            METADATA_WORKGROUP_SIZE,
+            METADATA_RECORDS,
+            Expr::and(
+                Expr::var("in_bounds"),
                 Expr::and(
-                    Expr::var("in_bounds"),
+                    Expr::var("is_pe"),
                     Expr::and(
-                        Expr::var("is_pe"),
-                        Expr::and(
-                            Expr::gt(Expr::var("size_offset"), Expr::u32(3072)),
-                            Expr::gt(Expr::var("entropy_offset"), Expr::u32(2200)),
-                        ),
+                        Expr::gt(Expr::var("size_offset"), Expr::u32(3072)),
+                        Expr::gt(Expr::var("entropy_offset"), Expr::u32(2200)),
                     ),
                 ),
             ),
-            Node::let_bind(
-                "warp_matches",
-                Expr::popcount(Expr::subgroup_ballot(Expr::var("is_match"))),
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("lane_id"), Expr::u32(0)),
-                vec![Node::store(
-                    "warp_scratch",
-                    Expr::var("warp_id"),
-                    Expr::var("warp_matches"),
-                )],
-            ),
-            Node::barrier(),
-            Node::let_bind("lane_partial", Expr::u32(0)),
-            Node::if_then(
-                Expr::eq(Expr::var("warp_id"), Expr::u32(0)),
-                vec![Node::loop_for(
-                    "round",
-                    Expr::u32(0),
-                    Expr::div(
-                        Expr::add(
-                            Expr::var("num_warps"),
-                            Expr::sub(Expr::var("subgroup_sz"), Expr::u32(1)),
-                        ),
-                        Expr::var("subgroup_sz"),
-                    ),
-                    vec![
-                        Node::let_bind(
-                            "scratch_idx",
-                            Expr::add(
-                                Expr::var("lane_id"),
-                                Expr::mul(Expr::var("round"), Expr::var("subgroup_sz")),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("scratch_idx"), Expr::var("num_warps")),
-                            vec![Node::assign(
-                                "lane_partial",
-                                Expr::add(
-                                    Expr::var("lane_partial"),
-                                    Expr::load("warp_scratch", Expr::var("scratch_idx")),
-                                ),
-                            )],
-                        ),
-                    ],
-                )],
-            ),
-            Node::let_bind("wg_total", Expr::subgroup_add(Expr::var("lane_partial"))),
-            Node::if_then(
-                Expr::and(
-                    Expr::eq(Expr::var("lid"), Expr::u32(0)),
-                    Expr::gt(Expr::var("wg_total"), Expr::u32(0)),
+            vec![
+                Node::let_bind(
+                    "packed",
+                    Expr::load("metadata_records", Expr::var("safe_idx")),
                 ),
-                vec![Node::let_bind(
-                    "_slot",
-                    Expr::atomic_add("out_count", Expr::u32(0), Expr::var("wg_total")),
-                )],
-            ),
-        ],
+                Node::let_bind(
+                    "size_offset",
+                    Expr::bitand(Expr::var("packed"), Expr::u32(0x0001_FFFF)),
+                ),
+                Node::let_bind(
+                    "entropy_offset",
+                    Expr::bitand(
+                        Expr::shr(Expr::var("packed"), Expr::u32(17)),
+                        Expr::u32(0x0000_1FFF),
+                    ),
+                ),
+                Node::let_bind(
+                    "is_pe",
+                    Expr::ne(
+                        Expr::bitand(Expr::var("packed"), Expr::u32(0x4000_0000)),
+                        Expr::u32(0),
+                    ),
+                ),
+            ],
+        ),
     )
 }

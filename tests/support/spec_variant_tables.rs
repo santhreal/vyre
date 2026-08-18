@@ -170,3 +170,15 @@ pub(crate) fn public_api_variant_names(enum_name: &str) -> BTreeSet<String> {
     );
     names
 }
+
+/// Every builtin `CollectiveOp`, in wire-tag order.
+pub(crate) fn builtin_collective_ops() -> [(vyre_spec::CollectiveOp, u8); 6] {
+    [
+        (vyre_spec::CollectiveOp::Sum, 0x01),
+        (vyre_spec::CollectiveOp::Min, 0x02),
+        (vyre_spec::CollectiveOp::Max, 0x03),
+        (vyre_spec::CollectiveOp::BitAnd, 0x04),
+        (vyre_spec::CollectiveOp::BitOr, 0x05),
+        (vyre_spec::CollectiveOp::BitXor, 0x06),
+    ]
+}

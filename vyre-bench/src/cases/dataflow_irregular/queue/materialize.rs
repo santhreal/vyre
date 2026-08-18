@@ -168,25 +168,19 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_materializ
         .transpose()?
         .flatten();
 
-    Ok(DataflowIfdsSkewedQueuePrepared {
+    Ok(QueueMaterializePrepared::from_traverse_plan(
         reset_program,
         queue_program,
-        traverse_program: traverse_plan.program,
-        traverse_grid: traverse_plan.grid,
-        row_strided_traverse: traverse_plan.row_strided,
-        split_high_degree_traverse: traverse_plan.split_high_degree,
-        high_traverse_program: traverse_plan.high_program,
-        high_traverse_grid: traverse_plan.high_grid,
+        traverse_plan,
         high_degree_queue_capacity,
-        traverse_logical_lanes: traverse_plan.logical_lanes,
         inputs,
         input_bytes_total,
-        baseline_output: vyre_primitives::wire::pack_u32_slice(&oracle.output),
+        vyre_primitives::wire::pack_u32_slice(&oracle.output),
         baseline_wall_ns,
         stats,
         queue_capacity,
         resident,
-    })
+    ))
 }
 
 pub(in crate::cases::dataflow_irregular) fn ifds_queue_materialize_sequence_fingerprint(

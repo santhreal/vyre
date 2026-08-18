@@ -213,24 +213,12 @@ fn collect_node_access<'a>(node: &'a Node, out: &mut AccessSet<'a>) {
             collect_expr_access(to, out);
         }
         Node::IndirectDispatch { count_buffer, .. } => out.read(count_buffer),
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            ..
-        }
-        | Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            ..
-        } => {
-            out.read(source);
-            out.write(destination);
-            collect_expr_access(offset, out);
-            collect_expr_access(size, out);
+        Node::AsyncLoad { source: s, destination: d, offset: off, size: sz, .. }
+        | Node::AsyncStore { source: s, destination: d, offset: off, size: sz, .. } => {
+            out.read(s);
+            out.write(d);
+            collect_expr_access(off, out);
+            collect_expr_access(sz, out);
         }
         Node::AsyncWait { .. }
         | Node::Return

@@ -28,14 +28,14 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 pub fn copy_program(input: &str, output: &str) -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::read_write(input, 0, DataType::U32),
+            BufferDecl::read_write(output, 1, DataType::U32),
         ],
         [32, 1, 1],
         vec![Node::store(
             output,
-            Expr::u32(0),
-            Expr::load(input, Expr::u32(0)),
+            Expr::LocalId { axis: 0 },
+            Expr::load(input, Expr::LocalId { axis: 0 }),
         )],
     )
 }

@@ -65,16 +65,8 @@ pub fn analyze(desc: &KernelDescriptor) -> SchedulingHints {
     SchedulingHints {
         kernel_id: desc.id.clone(),
         long_chains,
-        total_op_count: count_ops(&desc.body),
+        total_op_count: u32::try_from(desc.total_ops()).unwrap_or(u32::MAX),
     }
-}
-
-fn count_ops(body: &KernelBody) -> u32 {
-    let mut total: u32 = body.ops.len() as u32;
-    for child in &body.child_bodies {
-        total = total.saturating_add(count_ops(child));
-    }
-    total
 }
 
 fn detect_chains(body: &KernelBody, chains: &mut Vec<DependencyChain>, op_index_offset: usize) {

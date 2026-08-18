@@ -7,7 +7,7 @@
 
 #![allow(dead_code, unreachable_pub)]
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// A program with no buffers and no body, at the smallest workgroup size.
 pub fn empty_program() -> Program {
@@ -18,12 +18,7 @@ pub fn empty_program() -> Program {
 /// one store of 42 into a read-write `u32` buffer named `out`.
 pub fn one_store_program() -> Program {
     Program::wrapped(
-        vec![BufferDecl::storage(
-            "out",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
         [64, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     )
