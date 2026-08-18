@@ -11,7 +11,7 @@ use vyre_libs::math::prefix_scan::{prefix_scan, ScanKind};
 use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_libs::math::stream_compact::stream_compact;
 use vyre_reference::composition_witness::{prefix_scan_witness, stream_compact_witness};
-const BLOCK_LANES: u32 = 1024;
+const SINGLE_BLOCK_SCAN_LIMIT: u32 = vyre_libs::math::prefix_scan::MAX_SINGLE_BLOCK_SCAN;
 
 fn expected_prefix_scan(input: &[u32], kind: ScanKind) -> Vec<u32> {
     match kind {
@@ -117,8 +117,8 @@ fn cuda_prefix_scan_inclusive_non_pow2() {
 }
 
 #[test]
-fn cuda_prefix_scan_large_crosses_block_boundary() {
-    let len = BLOCK_LANES as usize + 33;
+fn cuda_prefix_scan_large_crosses_single_block_scan_limit() {
+    let len = SINGLE_BLOCK_SCAN_LIMIT as usize + 33;
     let input: Vec<u32> = (0..len)
         .map(|idx| {
             (idx as u32)
@@ -130,8 +130,14 @@ fn cuda_prefix_scan_large_crosses_block_boundary() {
     let gpu = run_prefix_scan_large(&input);
 
     assert_eq!(gpu, cpu);
-    assert_eq!(gpu[BLOCK_LANES as usize - 1], cpu[BLOCK_LANES as usize - 1]);
-    assert_eq!(gpu[BLOCK_LANES as usize], cpu[BLOCK_LANES as usize]);
+    assert_eq!(
+        gpu[SINGLE_BLOCK_SCAN_LIMIT as usize - 1],
+        cpu[SINGLE_BLOCK_SCAN_LIMIT as usize - 1]
+    );
+    assert_eq!(
+        gpu[SINGLE_BLOCK_SCAN_LIMIT as usize],
+        cpu[SINGLE_BLOCK_SCAN_LIMIT as usize]
+    );
     assert_eq!(gpu[len - 1], cpu[len - 1]);
 }
 

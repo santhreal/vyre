@@ -13,7 +13,7 @@ use vyre_libs::reduce::multi_block_prefix_scan::{
 };
 use vyre_reference::composition_witness::inclusive_prefix_sum_witness;
 
-const BLOCK_LANES: u32 = 1024;
+const BLOCK_LANES: u32 = vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 
 fn run_mbps(input: &[u32]) -> Vec<u32> {
     use vyre::ir::BufferAccess;

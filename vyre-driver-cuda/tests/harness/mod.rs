@@ -205,6 +205,23 @@ pub(crate) fn compiled_cuda_outputs_with_config(
     config: &DispatchConfig,
     case_name: &str,
 ) -> Vec<Vec<u8>> {
+    let lowered_program =
+        vyre_foundation::transform::collectives::lower_single_rank_collectives(program)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA generated case `{case_name}` collective lowering failed: {error}")
+            });
+    let program = lowered_program.as_ref().unwrap_or(program);
+    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+        .unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` registration failed: {error}")
+        });
+    let compile_facts = registration
+        .acquire()
+        .unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` device acquisition failed: {error}")
+        })
+        .device_profile()
+        .compile_facts();
     let graph =
         vyre::ir::ProgramGraph::from_program(case_name, program.clone()).unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` graph failed: {error}")
@@ -215,7 +232,7 @@ pub(crate) fn compiled_cuda_outputs_with_config(
             vyre_megakernel::Digest([0; 32]),
             std::collections::BTreeMap::new(),
         ),
-        vyre_megakernel::DeviceFacts::unknown(),
+        compile_facts,
         vyre_megakernel::SearchBudget::new(128, 128, 0, 0, 128),
         60_000,
     )
@@ -226,10 +243,6 @@ pub(crate) fn compiled_cuda_outputs_with_config(
     let artifact = vyre_megakernel::compile(&request).unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` compiler failed: {error}")
     });
-    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
-        .unwrap_or_else(|error| {
-            panic!("Fix: CUDA generated case `{case_name}` registration failed: {error}")
-        });
     let compiler = registration.target_compiler().unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` target compiler failed: {error}")
     });

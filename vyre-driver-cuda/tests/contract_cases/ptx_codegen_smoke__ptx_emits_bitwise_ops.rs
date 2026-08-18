@@ -500,12 +500,19 @@ fn ptx_emits_trap_as_lane_exit() {
     let secondary_text =
         program_to_ptx(&program, &default_config()).expect("Fix: Trap must lower to PTX.");
     assert!(
-        secondary_text.contains("// trap tag: decode.invalid")
+        secondary_text.contains(&format!(
+            "{}1 decode.invalid",
+            vyre_emit_ptx::TRAP_TAG_PTX_MARKER
+        )) && secondary_text.contains(vyre_emit_ptx::TRAP_SIDECAR_SYMBOL)
+            && secondary_text.contains("atom.global.cas.b32")
+            && secondary_text.contains("st.global.u32")
             && secondary_text.contains("bra $L_exit;"),
-        "Fix: CUDA trap lowering must preserve the tag in PTX comments and terminate the lane."
+        "Fix: CUDA trap lowering must declare the decodable module sidecar, record the first \
+         trap, preserve the tag table, and terminate the lane."
     );
     assert!(
         !secondary_text.contains("__vyre_descriptor_trap_sidecar"),
-        "Fix: CUDA PTX must not expose vyre-lower's internal trap sidecar in the kernel ABI until CUDA implements trap-sidecar readback."
+        "Fix: CUDA PTX must expose only the emitter-owned module-global trap record, not \
+         vyre-lower's internal descriptor binding."
     );
 }

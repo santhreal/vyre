@@ -126,10 +126,10 @@ fn case(head_dim: u32) -> (Program, Vec<Vec<u8>>) {
     (program, inputs)
 }
 
-/// ULP budget that enables approximate transcendentals in the PTX emitter.
+/// Explicit ULP budget used by the configured-dispatch boundary cases.
 ///
-/// MLA softmax uses `Exp`, and `vyre-emit-ptx` refuses to lower `Exp` unless
-/// this is positive. Matches the value the emitter's own tests use.
+/// PTX has only approximate lowering for MLA's `Exp`, so the budget is not an
+/// admission gate. The default-config test below covers the unbudgeted route.
 const RELAXED_ULP_BUDGET: u8 = 4;
 
 /// Dispatch on live CUDA, returning the backend's own error rather than
@@ -152,7 +152,7 @@ fn cuda_out(
 }
 
 /// Compare live CUDA against the CPU reference, naming the first divergence.
-fn assert_matches_cpu(head_dim: u32) {
+fn assert_matches_cpu_with_budget(head_dim: u32, ulp_budget: Option<u8>) {
     let (program, inputs) = case(head_dim);
     let expected = bytes_to_f32(
         reference_outputs(&program, &inputs, &format!("mla_head_dim_{head_dim}"))
@@ -160,7 +160,7 @@ fn assert_matches_cpu(head_dim: u32) {
             .expect("reference must produce the out buffer"),
     );
 
-    let actual = match cuda_out(&program, &inputs, Some(RELAXED_ULP_BUDGET)) {
+    let actual = match cuda_out(&program, &inputs, ulp_budget) {
         Ok(actual) => actual,
         Err(error) => panic!(
             "CUDA REFUSED head_dim={head_dim} ({} bytes shared, cap {}): {error}",
@@ -193,6 +193,10 @@ fn assert_matches_cpu(head_dim: u32) {
         expected.len(),
         &divergences[..divergences.len().min(8)]
     );
+}
+
+fn assert_matches_cpu(head_dim: u32) {
+    assert_matches_cpu_with_budget(head_dim, Some(RELAXED_ULP_BUDGET));
 }
 
 /// Locks the scratch arithmetic itself.
@@ -234,34 +238,16 @@ fn mla_scratch_bytes_scale_linearly_with_head_dim() {
     );
 }
 
-/// `mla_decode` cannot run on CUDA under `DispatchConfig::default()`.
+/// Default CUDA dispatch executes MLA's approximate-only softmax lowering.
 ///
-/// Bug locked out: the refusal degrading into a hang, a crash, or output
-/// that merely looks plausible. MLA softmax uses `Exp`, and `vyre-emit-ptx`
-/// refuses to lower it without a positive `ulp_budget`. The refusal must
-/// stay a NAMED compile-time error that says what to set, because that is
-/// the whole difference between a documented ceiling and a silent wrong
-/// answer. This test is the ceiling's only owner: `Exp` has no strict CUDA
-/// lowering, so MLA decode needs an explicit `ulp_budget` and there is no
-/// configuration in which the default refuses for a different reason. If this
-/// starts passing, `Exp` gained a strict lowering and the ceiling is gone.
+/// WHY: PTX offers no exact `Exp`, so a ULP budget cannot select a different
+/// implementation. Treating that setting as an admission gate made a valid
+/// program depend on a value the emitter could not usefully choose. This test
+/// keeps the direct CUDA route aligned with the emitter-wide unary-op contract
+/// and checks the returned values rather than accepting plausible output.
 #[test]
-fn mla_decode_default_config_refuses_by_name_on_cuda() {
-    let (program, inputs) = case(32);
-    let error = cuda_out(&program, &inputs, None)
-        .expect_err("default DispatchConfig must not silently dispatch MLA softmax");
-    assert!(
-        error.contains("ulp_budget is not positive"),
-        "refusal must name the unset ulp_budget, got: {error}"
-    );
-    assert!(
-        error.contains("Exp"),
-        "refusal must name the offending operator, got: {error}"
-    );
-    assert!(
-        error.contains("set an explicit ULP budget"),
-        "refusal must state the fix, got: {error}"
-    );
+fn mla_decode_default_config_matches_cpu() {
+    assert_matches_cpu_with_budget(32, None);
 }
 
 /// Control: comfortably under the cap, so any failure here is not about
