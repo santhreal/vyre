@@ -1147,4 +1147,3 @@ fn a_self_exclusive_parser_is_not_piped_into_itself() {
         "Fix: the refusal must name the self-exclusivity contract: {reason}"
     );
 }
-
