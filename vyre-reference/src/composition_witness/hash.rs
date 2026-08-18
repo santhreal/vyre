@@ -92,15 +92,12 @@ pub const fn crc32_finalize_witness(crc: u32) -> u32 {
     crc ^ CRC32_INIT_WITNESS
 }
 
-fn gf2_matrix_times_witness(matrix: &[u32; 32], mut vector: u32) -> u32 {
+fn gf2_matrix_times_witness(matrix: &[u32; 32], vector: u32) -> u32 {
     let mut sum = 0u32;
-    let mut index = 0usize;
-    while vector != 0 {
-        if (vector & 1) != 0 {
-            sum ^= matrix[index];
+    for (i, &row) in matrix.iter().enumerate() {
+        if (vector >> i) & 1 != 0 {
+            sum ^= row;
         }
-        vector >>= 1;
-        index += 1;
     }
     sum
 }
@@ -274,44 +271,30 @@ pub fn crc32_map_reduce_plan_witness(
     input_len: u32,
     chunk_size: std::num::NonZeroU32,
 ) -> Option<Crc32MapReducePlanWitness> {
-    let chunk_size_words = chunk_size.get();
-    let chunk_count = if input_len == 0 {
-        1
-    } else {
-        input_len.div_ceil(chunk_size_words)
-    };
-    let chunk_output_words = chunk_count.checked_mul(2)?;
-    let mut steps = Vec::with_capacity(1 + 32);
-    steps.push(Crc32MapReduceStepWitness {
+    let c_size = chunk_size.get();
+    let chunks = if input_len == 0 { 1 } else { input_len.div_ceil(c_size) };
+    let mut steps = vec![Crc32MapReduceStepWitness {
         kind: Crc32MapReduceStepKindWitness::ChunkSummary,
         input_items: input_len,
-        output_pairs: chunk_count,
+        output_pairs: chunks,
         input_words: input_len.max(1),
-        output_words: chunk_output_words,
-        grid: [chunk_count, 1, 1],
-    });
-
-    let mut pair_count = chunk_count;
-    while pair_count > 1 {
-        let output_pairs = pair_count.div_ceil(2);
-        let input_words = pair_count.checked_mul(2)?;
-        let output_words = output_pairs.checked_mul(2)?;
+        output_words: chunks.checked_mul(2)?,
+        grid: [chunks, 1, 1],
+    }];
+    let mut curr_pairs = chunks;
+    while curr_pairs > 1 {
+        let next_pairs = curr_pairs.div_ceil(2);
         steps.push(Crc32MapReduceStepWitness {
             kind: Crc32MapReduceStepKindWitness::PairReduce,
-            input_items: pair_count,
-            output_pairs,
-            input_words,
-            output_words,
-            grid: [output_pairs, 1, 1],
+            input_items: curr_pairs,
+            output_pairs: next_pairs,
+            input_words: curr_pairs.checked_mul(2)?,
+            output_words: next_pairs.checked_mul(2)?,
+            grid: [next_pairs, 1, 1],
         });
-        pair_count = output_pairs;
+        curr_pairs = next_pairs;
     }
-
-    Some(Crc32MapReducePlanWitness {
-        input_len,
-        chunk_size,
-        steps,
-    })
+    Some(Crc32MapReducePlanWitness { input_len, chunk_size, steps })
 }
 
 /// Initial FNV-1a32 witness state (offset basis).
@@ -960,16 +943,11 @@ fn ntt_mod_pow(mut base: u32, mut exp: u32) -> u32 {
 
 fn ntt_bit_reverse<T: Copy>(a: &mut [T]) {
     let n = a.len();
-    let mut j = 0;
-    for i in 1..n {
-        let mut bit = n >> 1;
-        while j & bit != 0 {
-            j ^= bit;
-            bit >>= 1;
-        }
-        j ^= bit;
-        if i < j {
-            a.swap(i, j);
+    let shift = usize::BITS - n.trailing_zeros();
+    for i in 0..n {
+        let rev = i.reverse_bits() >> shift;
+        if i < rev {
+            a.swap(i, rev);
         }
     }
 }

@@ -3,39 +3,24 @@ pub(crate) use crate::rewrites::canonicalize_for_emit;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
-    };
+    use crate::descriptor_builder::{body, descriptor, lit, op};
+    use crate::{KernelOpKind, LiteralValue};
     use vyre_foundation::ir::BinOp;
 
     #[test]
     fn one_walk_orders_pure_forward_dependency() {
-        let descriptor = KernelDescriptor {
-            id: "emit-order".into(),
-            bindings: BindingLayout { slots: Vec::new() },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 2],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: Vec::new(),
-                literals: vec![LiteralValue::U32(1), LiteralValue::U32(2)],
-            },
-        };
+        let descriptor = descriptor("emit-order")
+            .dispatch(1, 1, 1)
+            .body(
+                body()
+                    .literals([LiteralValue::U32(1), LiteralValue::U32(2)])
+                    .ops([
+                        lit(0, 0),
+                        op(KernelOpKind::BinOpKind(BinOp::Add), [0, 2], 3),
+                        lit(1, 2),
+                    ]),
+            )
+            .build();
 
         let output = canonicalize_for_emit(&descriptor);
 
@@ -46,27 +31,13 @@ mod tests {
 
     #[test]
     fn one_walk_does_not_move_memory_operations() {
-        let descriptor = KernelDescriptor {
-            id: "side-effect-order".into(),
-            bindings: BindingLayout { slots: Vec::new() },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![1, 2],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: Vec::new(),
-                literals: Vec::new(),
-            },
-        };
+        let descriptor = descriptor("side-effect-order")
+            .dispatch(1, 1, 1)
+            .body(body().ops([
+                op(KernelOpKind::BinOpKind(BinOp::Add), [1, 2], 3),
+                op(KernelOpKind::LoadGlobal, [0, 1], 2),
+            ]))
+            .build();
 
         let output = canonicalize_for_emit(&descriptor);
 

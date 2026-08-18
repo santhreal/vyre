@@ -52,14 +52,9 @@ impl TargetCompiler for FixtureCompiler {
     }
 
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
-        TargetPayload::new(
-            artifact,
-            self.format.clone(),
-            self.profile.clone(),
-            vec![entry_point()],
-            vec![4, 2],
-        )
-        .map_err(Into::into)
+        let entries = vec![entry_point()];
+        TargetPayload::new(artifact, self.format.clone(), self.profile.clone(), entries, vec![4, 2])
+            .map_err(Into::into)
     }
 }
 

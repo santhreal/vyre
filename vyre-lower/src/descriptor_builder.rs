@@ -203,6 +203,14 @@ pub fn global_ro(index: u32, element_type: DataType, name: &str) -> BindingSlot 
     )
 }
 
+/// A fixed-size read-only global binding.
+#[must_use]
+pub fn fixed_global_ro(index: u32, element_type: DataType, count: u32, name: &str) -> BindingSlot {
+    let mut s = global_ro(index, element_type, name);
+    s.element_count = Some(count);
+    s
+}
+
 /// A runtime-sized write-only global binding.
 #[must_use]
 pub fn global_wo(index: u32, element_type: DataType, name: &str) -> BindingSlot {

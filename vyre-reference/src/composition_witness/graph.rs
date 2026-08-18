@@ -1973,29 +1973,19 @@ pub fn try_tensor_flow_forward_witness_into(
     out.clear();
     out.resize(words_len, 0);
 
-    for src in 0..node_count {
-        let start = edge_offsets[src as usize] as usize;
-        let end = edge_offsets[src as usize + 1] as usize;
+    for src in 0..node_count as usize {
+        let (start, end) = (edge_offsets[src] as usize, edge_offsets[src + 1] as usize);
         for edge in start..end {
-            if (edge_kind_mask[edge] & allow_mask) == 0 {
-                continue;
-            }
             let dst = edge_targets[edge];
-            if dst >= node_count {
+            if (edge_kind_mask[edge] & allow_mask) == 0 || dst >= node_count {
                 continue;
             }
             for ctx in 0..context_limit {
                 for fld in 0..field_limit {
-                    let src_bit =
-                        tensor_bit_index_witness(src, ctx, fld, context_limit, field_limit);
-                    let word_idx = (src_bit / 32) as usize;
-                    let bit_idx = src_bit % 32;
-                    if (tensor_in[word_idx] & (1 << bit_idx)) != 0 {
-                        let dst_bit =
-                            tensor_bit_index_witness(dst, ctx, fld, context_limit, field_limit);
-                        let dst_word = (dst_bit / 32) as usize;
-                        let dst_bit_pos = dst_bit % 32;
-                        out[dst_word] |= 1 << dst_bit_pos;
+                    let s_bit = tensor_bit_index_witness(src as u32, ctx, fld, context_limit, field_limit);
+                    if (tensor_in[(s_bit / 32) as usize] & (1 << (s_bit % 32))) != 0 {
+                        let d_bit = tensor_bit_index_witness(dst, ctx, fld, context_limit, field_limit);
+                        out[(d_bit / 32) as usize] |= 1 << (d_bit % 32);
                     }
                 }
             }
@@ -2018,15 +2008,7 @@ pub fn try_tensor_flow_forward_witness(
 ) -> Result<Vec<u32>, String> {
     let mut out = Vec::new();
     try_tensor_flow_forward_witness_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        tensor_in,
-        context_limit,
-        field_limit,
-        allow_mask,
-        &mut out,
+        node_count, edge_offsets, edge_targets, edge_kind_mask, tensor_in, context_limit, field_limit, allow_mask, &mut out,
     )?;
     Ok(out)
 }

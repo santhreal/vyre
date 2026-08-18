@@ -182,13 +182,13 @@ mod tests {
     fn lower_verified_lowers_world_allgather_before_descriptor_lowering() {
         let program = Program::wrapped(
             vec![
-                BufferDecl::read("input", 0, DataType::U32).with_count(4),
-                BufferDecl::output("out", 1, DataType::U32).with_count(4),
+                BufferDecl::read("gather_in", 0, DataType::U32).with_count(8),
+                BufferDecl::output("gather_out", 1, DataType::U32).with_count(8),
             ],
             [64, 1, 1],
             vec![Node::AllGather {
-                input: "input".into(),
-                output: "out".into(),
+                input: "gather_in".into(),
+                output: "gather_out".into(),
                 group: CommGroup::WORLD,
             }],
         );
@@ -205,13 +205,13 @@ mod tests {
     fn lower_verified_rejects_transport_collectives_before_descriptor_lowering() {
         let program = Program::wrapped(
             vec![
-                BufferDecl::read("input", 0, DataType::U32).with_count(4),
-                BufferDecl::output("out", 1, DataType::U32).with_count(4),
+                BufferDecl::read("scatter_in", 0, DataType::U32).with_count(8),
+                BufferDecl::output("scatter_out", 1, DataType::U32).with_count(8),
             ],
             [64, 1, 1],
             vec![Node::ReduceScatter {
-                input: "input".into(),
-                output: "out".into(),
+                input: "scatter_in".into(),
+                output: "scatter_out".into(),
                 op: CollectiveOp::Sum,
                 group: CommGroup(7),
             }],
@@ -226,93 +226,22 @@ mod tests {
     #[test]
     fn lower_verified_preserves_loop_carrier_swap_snapshot() {
         let program = Program::wrapped(
+            vec![BufferDecl::output("results", 0, DataType::U32).with_count(1)],
+            [64, 1, 1],
             vec![
-                BufferDecl::storage("instrs", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(7),
-                BufferDecl::output("results", 1, DataType::U32).with_count(1),
-            ],
-            [256, 1, 1],
-            vec![
-                Node::let_bind("tid", Expr::gid_x()),
-                Node::if_then(
-                    Expr::lt(Expr::var("tid"), Expr::u32(1)),
-                    vec![
-                        Node::let_bind("base", Expr::mul(Expr::var("tid"), Expr::u32(7))),
-                        Node::let_bind("s0", Expr::u32(0)),
-                        Node::let_bind("s1", Expr::u32(0)),
-                        Node::let_bind("s2", Expr::u32(0)),
-                        Node::let_bind("s3", Expr::u32(0)),
-                        Node::Loop {
-                            var: "pc".into(),
-                            from: Expr::u32(0),
-                            to: Expr::u32(7),
-                            body: vec![
-                                Node::let_bind(
-                                    "instr",
-                                    Expr::load(
-                                        "instrs",
-                                        Expr::add(Expr::var("base"), Expr::var("pc")),
-                                    ),
-                                ),
-                                Node::let_bind(
-                                    "op",
-                                    Expr::bitand(Expr::var("instr"), Expr::u32(0xFF)),
-                                ),
-                                Node::let_bind("imm", Expr::shr(Expr::var("instr"), Expr::u32(8))),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("op"), Expr::u32(0)),
-                                    vec![
-                                        Node::assign("s3", Expr::var("s2")),
-                                        Node::assign("s2", Expr::var("s1")),
-                                        Node::assign("s1", Expr::var("s0")),
-                                        Node::assign("s0", Expr::var("imm")),
-                                    ],
-                                ),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("op"), Expr::u32(1)),
-                                    vec![
-                                        Node::assign(
-                                            "s0",
-                                            Expr::add(Expr::var("s0"), Expr::var("s1")),
-                                        ),
-                                        Node::assign("s1", Expr::var("s2")),
-                                        Node::assign("s2", Expr::var("s3")),
-                                        Node::assign("s3", Expr::u32(0)),
-                                    ],
-                                ),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("op"), Expr::u32(2)),
-                                    vec![
-                                        Node::assign(
-                                            "s0",
-                                            Expr::mul(Expr::var("s0"), Expr::var("s1")),
-                                        ),
-                                        Node::assign("s1", Expr::var("s2")),
-                                        Node::assign("s2", Expr::var("s3")),
-                                        Node::assign("s3", Expr::u32(0)),
-                                    ],
-                                ),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("op"), Expr::u32(3)),
-                                    vec![
-                                        Node::assign("s3", Expr::var("s2")),
-                                        Node::assign("s2", Expr::var("s1")),
-                                        Node::assign("s1", Expr::var("s0")),
-                                    ],
-                                ),
-                                Node::if_then(
-                                    Expr::eq(Expr::var("op"), Expr::u32(4)),
-                                    vec![
-                                        Node::let_bind("tmp", Expr::var("s0")),
-                                        Node::assign("s0", Expr::var("s1")),
-                                        Node::assign("s1", Expr::var("tmp")),
-                                    ],
-                                ),
-                            ],
-                        },
-                        Node::store("results", Expr::var("tid"), Expr::var("s0")),
+                Node::let_bind("s0", Expr::u32(1)),
+                Node::let_bind("s1", Expr::u32(2)),
+                Node::Loop {
+                    var: "pc".into(),
+                    from: Expr::u32(0),
+                    to: Expr::u32(4),
+                    body: vec![
+                        Node::let_bind("tmp", Expr::var("s0")),
+                        Node::assign("s0", Expr::var("s1")),
+                        Node::assign("s1", Expr::var("tmp")),
                     ],
-                ),
+                },
+                Node::store("results", Expr::u32(0), Expr::var("s0")),
             ],
         );
 

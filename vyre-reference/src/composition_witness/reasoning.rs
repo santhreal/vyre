@@ -539,14 +539,14 @@ pub fn adjustment_set_ordering_is_safe_witness(
     outcome: u32,
     n: u32,
 ) -> bool {
-    let Some(cells) = (n as usize).checked_mul(n as usize) else {
-        return false;
-    };
-    if adj.len() != cells || treatment >= n || outcome >= n {
-        return false;
-    }
     if treatment == outcome {
         return true;
+    }
+    let Some(cells) = (n as usize).checked_mul(n as usize).filter(|&c| adj.len() == c) else {
+        return false;
+    };
+    if treatment >= n || outcome >= n {
+        return false;
     }
     let closure = dense_transitive_closure(adj, n as usize);
     closure[(outcome * n + treatment) as usize] == 0
@@ -555,28 +555,20 @@ pub fn adjustment_set_ordering_is_safe_witness(
 /// For each pass index `i`, return strict descendants reachable in the influence graph.
 #[must_use]
 pub fn adjustment_set_pass_descendants_witness(adj: &[u32], n: u32) -> Vec<Vec<u32>> {
-    if n == 0 {
-        return Vec::new();
-    }
-    let Some(cells) = (n as usize).checked_mul(n as usize) else {
+    let Some(cells) = (n as usize).checked_mul(n as usize).filter(|&c| c > 0 && adj.len() == c) else {
         return Vec::new();
     };
-    if adj.len() != cells {
-        return Vec::new();
-    }
     let closure = dense_transitive_closure(adj, n as usize);
-    let mut out = vec![Vec::new(); n as usize];
-    for i in 0..n {
-        for j in 0..n {
-            if i != j && closure[(i * n + j) as usize] != 0 {
-                out[i as usize].push(j);
-            }
-        }
-    }
-    for row in &mut out {
-        row.sort_unstable();
-    }
-    out
+    (0..n as usize)
+        .map(|i| {
+            let mut row = (0..n as usize)
+                .filter(|&j| i != j && closure[i * (n as usize) + j] != 0)
+                .map(|j| j as u32)
+                .collect::<Vec<_>>();
+            row.sort_unstable();
+            row
+        })
+        .collect()
 }
 
 fn dense_transitive_closure(adj: &[u32], n: usize) -> Vec<u32> {
@@ -672,20 +664,12 @@ pub fn passes_commute_on_witness(
 
 /// Evaluation context queried by the rule condition reference witness.
 pub trait RuleEvaluationContextWitness {
-    /// Number of times pattern `pattern_id` matched in the current record.
-    fn pattern_count(&self, _pattern_id: u32) -> u32 {
-        0
-    }
-
-    /// File size in bytes for the current record.
-    fn file_size(&self) -> u64 {
-        0
-    }
-
-    /// Resolve a named field value.
-    fn field_value(&self, _name: &str) -> Option<&str> {
-        None
-    }
+    /// Count of matched pattern occurrences.
+    fn pattern_count(&self, _pattern_id: u32) -> u32 { 0 }
+    /// Measured file size in bytes.
+    fn file_size(&self) -> u64 { 0 }
+    /// Lookup value for named record field.
+    fn field_value(&self, _name: &str) -> Option<&str> { None }
 }
 
 /// Canonical neutral rule condition representation for reference witnesses.
@@ -693,88 +677,88 @@ pub trait RuleEvaluationContextWitness {
 pub enum RuleConditionWitness {
     /// True when the pattern has any match state.
     PatternExists {
-        /// Pattern table index.
+        /// Identifier of target pattern table entry.
         pattern_id: u32,
     },
     /// True when pattern count is strictly greater than threshold.
     PatternCountGt {
-        /// Pattern table index.
+        /// Identifier of target pattern table entry.
         pattern_id: u32,
-        /// Exclusive lower bound.
+        /// Strict lower count bound.
         threshold: u32,
     },
     /// True when pattern count is greater than or equal to threshold.
     PatternCountGte {
-        /// Pattern table index.
+        /// Identifier of target pattern table entry.
         pattern_id: u32,
-        /// Inclusive lower bound.
+        /// Non-strict lower count bound.
         threshold: u32,
     },
-    /// True when file size < threshold.
-    FileSizeLt(u64),
-    /// True when file size <= threshold.
-    FileSizeLte(u64),
-    /// True when file size > threshold.
-    FileSizeGt(u64),
-    /// True when file size >= threshold.
-    FileSizeGte(u64),
-    /// True when file size == threshold.
-    FileSizeEq(u64),
-    /// True when file size != threshold.
-    FileSizeNe(u64),
-    /// Constant true leaf.
+    /// Constant true evaluation.
     LiteralTrue,
-    /// Constant false leaf.
+    /// Constant false evaluation.
     LiteralFalse,
+    /// File size exactly equals argument.
+    FileSizeEq(u64),
+    /// File size not equal to argument.
+    FileSizeNe(u64),
+    /// File size strictly below argument.
+    FileSizeLt(u64),
+    /// File size at most argument.
+    FileSizeLte(u64),
+    /// File size strictly above argument.
+    FileSizeGt(u64),
+    /// File size at least argument.
+    FileSizeGte(u64),
     /// True when text matched by field satisfies regex pattern.
     RegexMatch {
-        /// Source field name.
+        /// Target field name.
         field: std::sync::Arc<str>,
-        /// Regular expression pattern.
+        /// Regular expression text.
         pattern: std::sync::Arc<str>,
     },
     /// True when haystack contains needle.
     SubstringMatch {
-        /// Source text or field name.
+        /// Source text to search within.
         haystack: std::sync::Arc<str>,
-        /// Required substring.
+        /// Exact substring to find.
         needle: std::sync::Arc<str>,
     },
     /// True when value starts with prefix.
     PrefixMatch {
-        /// Source text or field name.
+        /// Target string value.
         value: std::sync::Arc<str>,
-        /// Required prefix.
+        /// Prefix to check.
         prefix: std::sync::Arc<str>,
     },
     /// True when value ends with suffix.
     SuffixMatch {
-        /// Source text or field name.
+        /// Target string value.
         value: std::sync::Arc<str>,
-        /// Required suffix.
+        /// Suffix to check.
         suffix: std::sync::Arc<str>,
     },
     /// True when value falls inside inclusive range.
     RangeMatch {
-        /// Observed value.
+        /// Numeric candidate value.
         value: u64,
-        /// Inclusive lower bound.
+        /// Lower range boundary.
         min: u64,
-        /// Inclusive upper bound.
+        /// Upper range boundary.
         max: u64,
     },
     /// True when value is in set.
     SetMembership {
         /// Candidate value.
         value: std::sync::Arc<str>,
-        /// Accepted set members.
+        /// Accepted member set.
         set: smallvec::SmallVec<[std::sync::Arc<str>; 4]>,
     },
     /// True when context field is in set.
     FieldInSet {
-        /// Context field name to look up.
+        /// Target field name.
         field: std::sync::Arc<str>,
-        /// Accepted set members.
+        /// Accepted member set.
         set: smallvec::SmallVec<[std::sync::Arc<str>; 4]>,
     },
     /// Extension-declared rule condition.
@@ -784,109 +768,23 @@ pub enum RuleConditionWitness {
 impl PartialEq for RuleConditionWitness {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::PatternExists { pattern_id: a }, Self::PatternExists { pattern_id: b }) => {
-                a == b
-            }
-            (
-                Self::PatternCountGt {
-                    pattern_id: a,
-                    threshold: ta,
-                },
-                Self::PatternCountGt {
-                    pattern_id: b,
-                    threshold: tb,
-                },
-            ) => a == b && ta == tb,
-            (
-                Self::PatternCountGte {
-                    pattern_id: a,
-                    threshold: ta,
-                },
-                Self::PatternCountGte {
-                    pattern_id: b,
-                    threshold: tb,
-                },
-            ) => a == b && ta == tb,
+            (Self::PatternExists { pattern_id: a }, Self::PatternExists { pattern_id: b }) => a == b,
+            (Self::PatternCountGt { pattern_id: a, threshold: ta }, Self::PatternCountGt { pattern_id: b, threshold: tb }) => (a, ta) == (b, tb),
+            (Self::PatternCountGte { pattern_id: a, threshold: ta }, Self::PatternCountGte { pattern_id: b, threshold: tb }) => (a, ta) == (b, tb),
             (Self::FileSizeLt(a), Self::FileSizeLt(b)) => a == b,
             (Self::FileSizeLte(a), Self::FileSizeLte(b)) => a == b,
             (Self::FileSizeGt(a), Self::FileSizeGt(b)) => a == b,
             (Self::FileSizeGte(a), Self::FileSizeGte(b)) => a == b,
             (Self::FileSizeEq(a), Self::FileSizeEq(b)) => a == b,
             (Self::FileSizeNe(a), Self::FileSizeNe(b)) => a == b,
-            (Self::LiteralTrue, Self::LiteralTrue) => true,
-            (Self::LiteralFalse, Self::LiteralFalse) => true,
-            (
-                Self::RegexMatch {
-                    field: af,
-                    pattern: ap,
-                },
-                Self::RegexMatch {
-                    field: bf,
-                    pattern: bp,
-                },
-            ) => af == bf && ap == bp,
-            (
-                Self::SubstringMatch {
-                    haystack: ah,
-                    needle: an,
-                },
-                Self::SubstringMatch {
-                    haystack: bh,
-                    needle: bn,
-                },
-            ) => ah == bh && an == bn,
-            (
-                Self::PrefixMatch {
-                    value: av,
-                    prefix: ap,
-                },
-                Self::PrefixMatch {
-                    value: bv,
-                    prefix: bp,
-                },
-            ) => av == bv && ap == bp,
-            (
-                Self::SuffixMatch {
-                    value: av,
-                    suffix: as_,
-                },
-                Self::SuffixMatch {
-                    value: bv,
-                    suffix: bs,
-                },
-            ) => av == bv && as_ == bs,
-            (
-                Self::RangeMatch {
-                    value: av,
-                    min: amin,
-                    max: amax,
-                },
-                Self::RangeMatch {
-                    value: bv,
-                    min: bmin,
-                    max: bmax,
-                },
-            ) => av == bv && amin == bmin && amax == bmax,
-            (
-                Self::SetMembership {
-                    value: av,
-                    set: aset,
-                },
-                Self::SetMembership {
-                    value: bv,
-                    set: bset,
-                },
-            ) => av == bv && aset == bset,
-            (
-                Self::FieldInSet {
-                    field: af,
-                    set: aset,
-                },
-                Self::FieldInSet {
-                    field: bf,
-                    set: bset,
-                },
-            ) => af == bf && aset == bset,
+            (Self::LiteralTrue, Self::LiteralTrue) | (Self::LiteralFalse, Self::LiteralFalse) => true,
+            (Self::RegexMatch { field: af, pattern: ap }, Self::RegexMatch { field: bf, pattern: bp }) => af == bf && ap == bp,
+            (Self::SubstringMatch { haystack: ah, needle: an }, Self::SubstringMatch { haystack: bh, needle: bn }) => ah == bh && an == bn,
+            (Self::PrefixMatch { value: av, prefix: ap }, Self::PrefixMatch { value: bv, prefix: bp }) => av == bv && ap == bp,
+            (Self::SuffixMatch { value: av, suffix: as_ }, Self::SuffixMatch { value: bv, suffix: bs }) => av == bv && as_ == bs,
+            (Self::RangeMatch { value: av, min: amin, max: amax }, Self::RangeMatch { value: bv, min: bmin, max: bmax }) => (av, amin, amax) == (bv, bmin, bmax),
+            (Self::SetMembership { value: av, set: aset }, Self::SetMembership { value: bv, set: bset }) => av == bv && aset == bset,
+            (Self::FieldInSet { field: af, set: aset }, Self::FieldInSet { field: bf, set: bset }) => af == bf && aset == bset,
             (Self::Opaque(a), Self::Opaque(b)) => a.extension_id() == b.extension_id(),
             _ => false,
         }

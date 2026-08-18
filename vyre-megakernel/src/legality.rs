@@ -442,11 +442,11 @@ fn pins_workgroup_geometry(program: &Program) -> bool {
 mod tests {
     use std::collections::BTreeMap;
     use vyre_foundation::ir::{
-        BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, MemoryOrdering, Node,
-        Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
+        BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
     };
     use vyre_foundation::validate::BackendCapabilities;
     use vyre_test_support::pass_programs::copy_program;
+    use crate::graph_fixtures::{independent_two_arm_graph, two_arm_graph};
 
     use super::*;
     use crate::facts::derive as derive_planning_facts;
@@ -512,15 +512,6 @@ mod tests {
         assert_eq!(codes.len(), reasons.len());
     }
 
-    fn invocation_contract() -> ValueContract {
-        ValueContract {
-            dtype: DataType::U32,
-            shape: vec![ShapeDim::Symbol("items".into())],
-            access: BufferAccess::ReadWrite,
-            lifetime: ValueLifetime::Invocation,
-        }
-    }
-
     fn bindings() -> BTreeMap<String, u64> {
         BTreeMap::from([("items".into(), 64)])
     }
@@ -533,56 +524,6 @@ mod tests {
             .with_cooperative_launch(true)
     }
 
-    fn independent_two_arm_graph() -> ProgramGraph {
-        let mut graph = ProgramGraph::new();
-        let in_a = graph
-            .add_external_value("in_a", invocation_contract())
-            .unwrap();
-        let in_b = graph
-            .add_external_value("in_b", invocation_contract())
-            .unwrap();
-        graph
-            .add_node(
-                "arm_a",
-                copy_program("in_a", "out_a"),
-                vec![GraphInput {
-                    buffer: "in_a".into(),
-                    value: in_a,
-                    contract: invocation_contract(),
-                }],
-                vec![GraphOutput {
-                    buffer: "out_a".into(),
-                    name: "out_a".into(),
-                    contract: ValueContract {
-                        lifetime: ValueLifetime::Output,
-                        ..invocation_contract()
-                    },
-                    retained_successor_of: None,
-                }],
-            )
-            .unwrap();
-        graph
-            .add_node(
-                "arm_b",
-                copy_program("in_b", "out_b"),
-                vec![GraphInput {
-                    buffer: "in_b".into(),
-                    value: in_b,
-                    contract: invocation_contract(),
-                }],
-                vec![GraphOutput {
-                    buffer: "out_b".into(),
-                    name: "out_b".into(),
-                    contract: ValueContract {
-                        lifetime: ValueLifetime::Output,
-                        ..invocation_contract()
-                    },
-                    retained_successor_of: None,
-                }],
-            )
-            .unwrap();
-        graph
-    }
 
     #[test]
     fn test_insufficient_concurrent_queues() {
@@ -684,13 +625,6 @@ mod tests {
 
     #[test]
     fn test_grid_sync_in_arm_rejects_control_dependency_or_effect() {
-        let mut graph = ProgramGraph::new();
-        let in_a = graph
-            .add_external_value("in_a", invocation_contract())
-            .unwrap();
-        let in_b = graph
-            .add_external_value("in_b", invocation_contract())
-            .unwrap();
         let prog_with_fence = Program::wrapped(
             vec![
                 BufferDecl::read_write("in_a", 0, DataType::U32),
@@ -701,46 +635,7 @@ mod tests {
                 ordering: MemoryOrdering::GridSync,
             }],
         );
-        graph
-            .add_node(
-                "arm_a",
-                prog_with_fence,
-                vec![GraphInput {
-                    buffer: "in_a".into(),
-                    value: in_a,
-                    contract: invocation_contract(),
-                }],
-                vec![GraphOutput {
-                    buffer: "out_a".into(),
-                    name: "out_a".into(),
-                    contract: ValueContract {
-                        lifetime: ValueLifetime::Output,
-                        ..invocation_contract()
-                    },
-                    retained_successor_of: None,
-                }],
-            )
-            .unwrap();
-        graph
-            .add_node(
-                "arm_b",
-                copy_program("in_b", "out_b"),
-                vec![GraphInput {
-                    buffer: "in_b".into(),
-                    value: in_b,
-                    contract: invocation_contract(),
-                }],
-                vec![GraphOutput {
-                    buffer: "out_b".into(),
-                    name: "out_b".into(),
-                    contract: ValueContract {
-                        lifetime: ValueLifetime::Output,
-                        ..invocation_contract()
-                    },
-                    retained_successor_of: None,
-                }],
-            )
-            .unwrap();
+        let graph = two_arm_graph(prog_with_fence, copy_program("in_b", "out_b"));
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
         let candidate = CandidatePlan::baseline(2)
@@ -760,13 +655,6 @@ mod tests {
 
     #[test]
     fn test_occupancy_exceeded() {
-        let mut graph = ProgramGraph::new();
-        let in_a = graph
-            .add_external_value("in_a", invocation_contract())
-            .unwrap();
-        let in_b = graph
-            .add_external_value("in_b", invocation_contract())
-            .unwrap();
         let prog_with_scratch = Program::wrapped(
             vec![
                 BufferDecl::read_write("in_a", 0, DataType::U32),
@@ -780,46 +668,7 @@ mod tests {
                 Expr::load("in_a", Expr::u32(0)),
             )],
         );
-        graph
-            .add_node(
-                "arm_a",
-                prog_with_scratch,
-                vec![GraphInput {
-                    buffer: "in_a".into(),
-                    value: in_a,
-                    contract: invocation_contract(),
-                }],
-                vec![GraphOutput {
-                    buffer: "out_a".into(),
-                    name: "out_a".into(),
-                    contract: ValueContract {
-                        lifetime: ValueLifetime::Output,
-                        ..invocation_contract()
-                    },
-                    retained_successor_of: None,
-                }],
-            )
-            .unwrap();
-        graph
-            .add_node(
-                "arm_b",
-                copy_program("in_b", "out_b"),
-                vec![GraphInput {
-                    buffer: "in_b".into(),
-                    value: in_b,
-                    contract: invocation_contract(),
-                }],
-                vec![GraphOutput {
-                    buffer: "out_b".into(),
-                    name: "out_b".into(),
-                    contract: ValueContract {
-                        lifetime: ValueLifetime::Output,
-                        ..invocation_contract()
-                    },
-                    retained_successor_of: None,
-                }],
-            )
-            .unwrap();
+        let graph = two_arm_graph(prog_with_scratch, copy_program("in_b", "out_b"));
         let norm = normalize(&graph).unwrap();
         let facts = derive_planning_facts(&graph, &norm.dependencies, &bindings()).unwrap();
         let candidate =

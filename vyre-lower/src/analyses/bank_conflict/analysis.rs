@@ -26,6 +26,7 @@
 use super::report::{BankAccessSite, BankConflictKind, BankConflictReport};
 use super::DEFAULT_BANK_COUNT;
 use crate::analyses::constant_u32_operand;
+use crate::analyses::gcd_u32;
 use crate::analyses::structured_walk::walk_accesses;
 use crate::analyses::ProducerMap;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, MemoryClass};
@@ -175,15 +176,6 @@ fn classify_mul(
     }
 }
 
-fn gcd_u32(a: u32, b: u32) -> u32 {
-    let (mut a, mut b) = (a, b);
-    while b != 0 {
-        let t = a % b;
-        a = b;
-        b = t;
-    }
-    a
-}
 
 // Inline: covers the crate-private `analyze` and `gcd_u32`, which no integration test can reach.
 #[cfg(test)]

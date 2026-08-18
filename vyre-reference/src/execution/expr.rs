@@ -150,23 +150,12 @@ pub(crate) fn eval_frame_oracle(
                     frames.push(Frame::Expr(b));
                     frames.push(Frame::Expr(a));
                 }
-                Expr::Atomic {
-                    op,
-                    buffer,
-                    index,
-                    expected,
-                    value,
-                    ordering: _,
-                } => {
-                    match (*op, expected.as_deref()) {
-                        (AtomicOp::CompareExchange, None) => {
-                            return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
-                        }
-                        (AtomicOp::CompareExchange, Some(_)) => {}
-                        (_, Some(_)) => {
-                            return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
-                        }
-                        (_, None) => {}
+                Expr::Atomic { op, buffer, index, expected, value, ordering: _ } => {
+                    if *op == AtomicOp::CompareExchange && expected.is_none() {
+                        return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
+                    }
+                    if *op != AtomicOp::CompareExchange && expected.is_some() {
+                        return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
                     }
                     frames.push(Frame::AtomicIndex {
                         op: *op,
@@ -528,15 +517,9 @@ fn buffer_decl<'a>(
 }
 
 fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
-    values
-        .get(axis as usize)
-        .copied()
-        .map(Value::U32)
-        .ok_or_else(|| {
-            ReferenceError::new(format!(
-                "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
-            ))
-        })
+    (axis < 3)
+        .then(|| Value::U32(values[axis as usize]))
+        .ok_or_else(|| ReferenceError::new(format!("invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2.")))
 }
 
 // Inline: covers the crate-private `eval`, which no integration test can reach.

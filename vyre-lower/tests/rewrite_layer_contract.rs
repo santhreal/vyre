@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::descriptor_builder::{
+    body, descriptor, effect, fixed_global_ro, global_rw, lit, op,
+};
 use vyre_lower::rewrites::{
     all_registered_contracts, apply_lowering_rewrites, canonicalize_for_emit, classify_rule,
     lowering_owned_rules, rewrite_const_buffer_promote, rewrite_dead_ops, rewrite_vector_memory,
@@ -276,26 +278,16 @@ fn vector_memory_rewrite_transforms_eligible_load_and_store_chains_at_vec2_and_v
         rewritten.body.ops[4].kind,
         KernelOpKind::VectorLoadGlobal { width: 4 }
     );
-    assert_eq!(
-        rewritten.body.ops[5].kind,
-        KernelOpKind::ExtractLane { lane: 0 }
-    );
-    assert_eq!(
-        rewritten.body.ops[6].kind,
-        KernelOpKind::ExtractLane { lane: 1 }
-    );
-    assert_eq!(
-        rewritten.body.ops[7].kind,
-        KernelOpKind::ExtractLane { lane: 2 }
-    );
-    assert_eq!(
-        rewritten.body.ops[8].kind,
-        KernelOpKind::ExtractLane { lane: 3 }
-    );
-    assert_eq!(rewritten.body.ops[5].result, Some(10));
-    assert_eq!(rewritten.body.ops[6].result, Some(11));
-    assert_eq!(rewritten.body.ops[7].result, Some(12));
-    assert_eq!(rewritten.body.ops[8].result, Some(13));
+    for lane in 0..4u8 {
+        assert_eq!(
+            rewritten.body.ops[5 + lane as usize].kind,
+            KernelOpKind::ExtractLane { lane }
+        );
+        assert_eq!(
+            rewritten.body.ops[5 + lane as usize].result,
+            Some(10 + lane as u32)
+        );
+    }
     assert!(verify(&rewritten).is_ok());
     // Positive vec2 store chain
     let store_desc = descriptor("vec2_store_kernel")
@@ -791,69 +783,42 @@ fn vector_memory_rewrite_preserves_scalar_for_unsupported_byte_types() {
 
 #[test]
 fn dead_op_elimination_rewrite_strips_unreferenced_pure_ops() {
-    let desc = KernelDescriptor {
-        id: "dead_op_contract".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                name: "out".into(),
-                element_type: DataType::U32,
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                element_count: Some(64),
-            }],
-        },
-        dispatch: Dispatch {
-            workgroup_size: [64, 1, 1],
-        },
-        body: KernelBody {
-            ops: vec![
-                lit(0, 0), // result 0, used
-                lit(0, 1), // result 1, DEAD
-                lit(0, 2), // result 2, DEAD
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 0],
-                    result: None,
-                },
-            ],
-            literals: vec![LiteralValue::U32(99)],
-            child_bodies: vec![],
-        },
-    };
+    let desc = descriptor("dead_op_contract")
+        .slot(global_rw(0, DataType::U32, "out"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(99)])
+                .ops([
+                    lit(0, 0), // result 0, used
+                    lit(0, 1), // result 1, DEAD
+                    lit(0, 2), // result 2, DEAD
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
+                ]),
+        )
+        .build();
 
     let rewritten = rewrite_dead_ops(&desc);
-
     assert_eq!(rewritten.body.ops.len(), 2);
-    assert_eq!(rewritten.body.ops[0].result, Some(0));
-    assert_eq!(rewritten.body.ops[1].kind, KernelOpKind::StoreGlobal);
+    assert!(rewritten.body.ops.iter().all(|op| op.result != Some(1) && op.result != Some(2)));
     assert!(verify(&rewritten).is_ok());
 }
 
 #[test]
 fn representation_canonicalize_orders_pure_producers_before_consumers() {
-    let desc = KernelDescriptor {
-        id: "canonicalize_contract".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch {
-            workgroup_size: [1, 1, 1],
-        },
-        body: KernelBody {
-            ops: vec![
-                lit(0, 0),
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![1, 2],
-                    result: Some(3),
-                },
-                lit(0, 1),
-                lit(0, 2),
-            ],
-            literals: vec![LiteralValue::U32(10)],
-            child_bodies: vec![],
-        },
-    };
-
+    let desc = descriptor("canonicalize_contract")
+        .dispatch(1, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(10)])
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [1, 2], 3),
+                    lit(0, 1),
+                    lit(0, 2),
+                ]),
+        )
+        .build();
     let canonical = canonicalize_for_emit(&desc);
 
     assert_eq!(canonical.body.ops[1].result, Some(1));
@@ -867,60 +832,23 @@ fn representation_canonicalize_orders_pure_producers_before_consumers() {
 
 #[test]
 fn apply_lowering_rewrites_pipeline_is_idempotent_and_verifies() {
-    let desc = KernelDescriptor {
-        id: "pipeline_contract".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    name: "lut".into(),
-                    element_type: DataType::U32,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    element_count: Some(64),
-                },
-                BindingSlot {
-                    slot: 1,
-                    name: "dest".into(),
-                    element_type: DataType::U32,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    element_count: Some(64),
-                },
-            ],
-        },
-        dispatch: Dispatch {
-            workgroup_size: [64, 1, 1],
-        },
-        body: KernelBody {
-            ops: vec![
-                lit(0, 0), // index 0 (result 0)
-                lit(0, 1), // dead literal (result 1)
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 3],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 4],
-                    result: None,
-                },
-            ],
-            literals: vec![LiteralValue::U32(0)],
-            child_bodies: vec![],
-        },
-    };
+    let desc = descriptor("pipeline_contract")
+        .slot(fixed_global_ro(0, DataType::U32, 64, "lut"))
+        .slot(global_rw(1, DataType::U32, "dest"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(0)])
+                .ops([
+                    lit(0, 0),
+                    lit(0, 1),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 2),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 3),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+                ]),
+        )
+        .build();
 
     let pass1 = apply_lowering_rewrites(&desc);
     let pass2 = apply_lowering_rewrites(&pass1);

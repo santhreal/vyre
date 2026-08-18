@@ -105,6 +105,20 @@ pub(crate) fn kernel_op_kind_is_dce_pure(kind: &KernelOpKind) -> bool {
     !facts_for(kind).retained_effect
 }
 
+/// True when the op kind represents an ambient thread ID, subgroup property, or constant literal.
+#[must_use]
+pub(crate) fn is_ambient_or_literal(kind: &KernelOpKind) -> bool {
+    matches!(
+        kind,
+        KernelOpKind::Literal
+            | KernelOpKind::LocalInvocationId
+            | KernelOpKind::GlobalInvocationId
+            | KernelOpKind::WorkgroupId
+            | KernelOpKind::SubgroupLocalId
+            | KernelOpKind::SubgroupSize
+    )
+}
+
 // Inline: covers the crate-private `kernel_op_kind_is_dce_pure`, which no integration test can reach.
 #[cfg(test)]
 mod tests {

@@ -43,22 +43,36 @@ fn load_from_undefined_buffer_errors() {
     );
 }
 
+fn binary_scalar_prog(ty: DataType, compute: Expr) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("a", 0, ty.clone()).with_count(1),
+            BufferDecl::read("b", 1, ty.clone()).with_count(1),
+            BufferDecl::output("out", 2, ty).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), compute)],
+    )
+}
+
+fn unary_scalar_prog(ty: DataType, compute: Expr) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::read("in", 0, ty.clone()).with_count(1),
+            BufferDecl::output("out", 1, ty).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), compute)],
+    )
+}
+
 #[test]
 fn u32_div_by_zero_in_program_returns_max() {
     // Validation rejects a statically-zero divisor (V044), so force a
     // dynamic zero by loading it from a buffer.
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32).with_count(1),
-            BufferDecl::read("b", 1, DataType::U32).with_count(1),
-            BufferDecl::output("out", 2, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::div(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
+    let program = binary_scalar_prog(
+        DataType::U32,
+        Expr::div(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
     );
     let outputs = reference_eval(
         &program,
@@ -76,18 +90,9 @@ fn u32_div_by_zero_in_program_returns_max() {
 fn i32_div_by_zero_in_program_errors() {
     // Validation rejects a statically-zero divisor, so load the divisor
     // dynamically. The output buffer must match the expression type (I32).
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::I32).with_count(1),
-            BufferDecl::read("b", 1, DataType::I32).with_count(1),
-            BufferDecl::output("out", 2, DataType::I32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::div(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
+    let program = binary_scalar_prog(
+        DataType::I32,
+        Expr::div(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
     );
     let err = reference_eval(
         &program,
@@ -108,18 +113,9 @@ fn i32_div_by_zero_in_program_errors() {
 fn u32_mod_by_zero_in_program_returns_zero() {
     // Validation rejects a statically-zero divisor (V044), so force a
     // dynamic zero by loading it from a buffer.
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32).with_count(1),
-            BufferDecl::read("b", 1, DataType::U32).with_count(1),
-            BufferDecl::output("out", 2, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::rem(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
+    let program = binary_scalar_prog(
+        DataType::U32,
+        Expr::rem(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
     );
     let outputs = reference_eval(
         &program,
@@ -261,18 +257,7 @@ fn loop_with_from_greater_than_to_skips_body() {
 fn negative_i32_index_is_rejected_not_wrapped() {
     // WGSL allows negative i32 indices by casting to u32 (wrapping).
     // The reference interpreter rejects them. This test documents the gap.
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("in", 0, DataType::U32).with_count(1),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::load("in", Expr::i32(-1)),
-        )],
-    );
+    let program = unary_scalar_prog(DataType::U32, Expr::load("in", Expr::i32(-1)));
     let err = reference_eval(
         &program,
         &[Value::from(vec![0xAB; 4]), Value::from(vec![0u8; 4])],

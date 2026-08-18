@@ -109,6 +109,16 @@ pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet
         .iter()
         .all(|child| body_refs_only(child, produced))
 }
+/// Greatest common divisor for positive unsigned integers.
+pub(crate) fn gcd_u32(mut a: u32, mut b: u32) -> u32 {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
 
 /// Child-body indices referenced by a structured control-flow op's operands.
 ///

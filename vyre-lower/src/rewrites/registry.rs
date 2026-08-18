@@ -199,7 +199,7 @@ pub fn classify_rule(rule: LoweringRewriteRule) -> RewriteApplicabilityContract 
             rule,
             id: "texture_promote",
             ownership: RewriteOwnership::EmitterOwned {
-                emitter_role: "Metal / WGPU texture binding decoration and sampler configuration",
+                emitter_role: "Hardware texture binding decoration and sampler configuration",
             },
             preserves_program_semantics: true,
             consumed_analysis: Some("analyses::texture_promote"),
