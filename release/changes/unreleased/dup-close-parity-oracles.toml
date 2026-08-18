@@ -1,2 +1,2 @@
 category = "Fixed"
-text = "Parity suites, backend materializers and the gate tooling each take their shared routine from one definition instead of a per-file copy."
+text = "Parity suites, backend materializers and gate tooling share canonical routines, and dispatcher-based solvers select named results without rejecting writable scratch outputs."

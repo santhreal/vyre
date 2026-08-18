@@ -293,6 +293,7 @@ pub(crate) fn source_inspection_test_findings(file: &syn::File) -> Vec<(usize, S
                 }
             }
         }
+        reads_rust_source |= calls_read_to_string && mentions_rust_path;
         if reads_rust_source && inspects_text {
             findings.push((test.line, test.name.clone()));
         }

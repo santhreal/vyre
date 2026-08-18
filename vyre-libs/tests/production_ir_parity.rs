@@ -41,6 +41,14 @@ fn unpack(value: &Value) -> Vec<u32> {
 
 fn output_words(program: &Program, outputs: &[Value], name: &str) -> Vec<u32> {
     let index = vyre_reference::output_index(program, name)
+        .or_else(|| {
+            let reference_output_count = program
+                .buffers()
+                .iter()
+                .filter(|decl| vyre_reference::is_reference_output(decl))
+                .count();
+            (reference_output_count == 1).then_some(0)
+        })
         .unwrap_or_else(|| panic!("Fix: `{name}` must remain a declared reference output"));
     unpack(&outputs[index])
 }
