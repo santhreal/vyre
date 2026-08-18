@@ -42,8 +42,12 @@ jobs:
             echo "FAIL: no Criterion comparison lines found; benchmark target is not exercising Criterion"
             exit 1
           fi
-          worst="$(grep -oE 'change: \[[^]]+\]' bench.log \
-            | awk -F'[][% ]+' '{print $4}' \
-            | sort -g | tail -1)"
-          echo "Worst median change: ${worst}%"
-          awk -v w="$worst" 'BEGIN { if (w+0 > 5) { print "FAIL: criterion regression > 5% (worst " w "%)"; exit 1 } print "PASS: no criterion regressions > 5%" }'
+          # Criterion prints `change: [lower median upper]`. The gate reads the
+          # upper bound of the confidence interval, not the point estimate, so a
+          # noisy run has to clear the threshold at its worst credible value.
+          changes="$(grep -oE 'change: \[[^]]+\]' bench.log)"
+          worst_median="$(printf '%s\n' "$changes" | awk -F'[][% ]+' '{print $3}' | sort -g | tail -1)"
+          worst="$(printf '%s\n' "$changes" | awk -F'[][% ]+' '{print $4}' | sort -g | tail -1)"
+          echo "Worst median change: ${worst_median}%"
+          echo "Worst upper-bound change: ${worst}%"
+          awk -v w="$worst" 'BEGIN { if (w+0 > 5) { print "FAIL: criterion regression > 5% at the upper confidence bound (worst " w "%)"; exit 1 } print "PASS: no criterion regressions > 5%" }'

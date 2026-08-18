@@ -17,7 +17,9 @@ jobs:
       # xtask/src/gates/public_api.rs. Any job that runs the extraction installs
       # that toolchain and the pinned extractor, or the contract reads a
       # different compiler's rendering as tree drift.
-      - uses: dtolnay/rust-toolchain@nightly-2026-08-07
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-07
       - name: Install cargo-public-api
         run: cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
 

@@ -24,7 +24,22 @@ jobs:
           packages="$(./cargo_full run -q -p xtask --bin publishable_packages | cut -d: -f2 | paste -sd,)"
           test -n "$packages" || { echo "Fix: no publishable workspace members found." >&2; exit 2; }
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
+      # The baseline is the git revision of the last release, not the registry
+      # copy of it. Every published 0.7.1 crate resolves its sibling
+      # dependencies to whatever the registry offers now, and rustdoc fails on
+      # the result before a single semver rule runs, so a registry baseline
+      # reports a toolchain failure on a tree it never inspected. The tag is
+      # exactly what shipped and it builds against its own siblings.
+      - id: baseline
+        name: Resolve the newest released tag as the semver baseline
+        run: |
+          rev="$(git tag --list 'vyre-v*' --sort=-v:refname | grep -v -- '-rc' | head -1)"
+          test -n "$rev" || { echo "Fix: no released vyre-v* tag to baseline against." >&2; exit 2; }
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+      # Both lists are derived, so a new publishable member and a new release
+      # tag are covered without editing this job.
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           manifest-path: Cargo.toml
           package: ${{ steps.packages.outputs.packages }}
+          baseline-rev: ${{ steps.baseline.outputs.rev }}

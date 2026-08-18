@@ -155,6 +155,151 @@ fn every_cargo_fuzz_job_selects_nightly() {
     );
 }
 
+fn workflow_jobs(workflow: &str) -> Vec<(String, String)> {
+    let mut jobs = Vec::new();
+    let mut current: Option<(String, String)> = None;
+    for line in workflow.lines() {
+        if line.starts_with("  ") && !line.starts_with("    ") && line.trim_end().ends_with(':') {
+            if let Some(job) = current.take() {
+                jobs.push(job);
+            }
+            current = Some((line.trim().trim_end_matches(':').to_string(), String::new()));
+        } else if let Some((_, body)) = &mut current {
+            body.push_str(line);
+            body.push('\n');
+        }
+    }
+    if let Some(job) = current {
+        jobs.push(job);
+    }
+    jobs
+}
+
+fn toolchains_selected_at_public_api_installs(
+    workflow_job: &str,
+) -> Result<Vec<(String, String)>, String> {
+    let lines = workflow_job.lines().collect::<Vec<_>>();
+    let mut selected = None;
+    let mut installs = Vec::new();
+
+    for (index, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if let Some(action_ref) = trimmed
+            .strip_prefix("- uses: dtolnay/rust-toolchain@")
+            .or_else(|| trimmed.strip_prefix("uses: dtolnay/rust-toolchain@"))
+        {
+            let action_ref = action_ref.trim();
+            if action_ref.is_empty() || action_ref.chars().any(char::is_whitespace) {
+                return Err(format!(
+                    "line {} has a malformed dtolnay/rust-toolchain action ref",
+                    index + 1
+                ));
+            }
+
+            let action_indent = line.len() - line.trim_start().len();
+            let step_end = lines[index + 1..]
+                .iter()
+                .position(|candidate| {
+                    let candidate_indent = candidate.len() - candidate.trim_start().len();
+                    candidate_indent <= action_indent && candidate.trim_start().starts_with("- ")
+                })
+                .map_or(lines.len(), |offset| index + 1 + offset);
+            let mut inputs = Vec::new();
+            let mut with_indent = None;
+            for candidate in &lines[index + 1..step_end] {
+                let candidate_indent = candidate.len() - candidate.trim_start().len();
+                let candidate = candidate.trim();
+                if candidate == "with:" {
+                    with_indent = Some(candidate_indent);
+                    continue;
+                }
+                let Some(parent_indent) = with_indent else {
+                    continue;
+                };
+                if !candidate.is_empty() && candidate_indent <= parent_indent {
+                    with_indent = None;
+                    continue;
+                }
+                if let Some(input) = candidate.strip_prefix("toolchain:").map(str::trim) {
+                    inputs.push(input);
+                }
+            }
+            if inputs.len() > 1 || inputs.first().is_some_and(|input| input.is_empty()) {
+                return Err(format!(
+                    "line {} has malformed or repeated toolchain inputs",
+                    index + 1
+                ));
+            }
+            let input = inputs.first().copied();
+            if action_ref == "master" && input.is_none() {
+                return Err(format!(
+                    "line {} selects @master without an explicit toolchain input",
+                    index + 1
+                ));
+            }
+            selected = Some(input.unwrap_or(action_ref).to_string());
+        }
+
+        if trimmed.contains("install --locked cargo-public-api") {
+            let toolchain = selected.clone().ok_or_else(|| {
+                format!(
+                    "line {} installs cargo-public-api before selecting a Rust toolchain",
+                    index + 1
+                )
+            })?;
+            installs.push((toolchain, trimmed.to_string()));
+        }
+    }
+
+    Ok(installs)
+}
+
+/// WHY: dated Rust releases can be expressed either as the action ref or as
+/// the `toolchain` input on `@master`. The workflow contract must accept both
+/// valid shapes and fail closed when either selector is incomplete.
+#[test]
+fn rust_toolchain_action_parser_accepts_both_pinned_forms_and_rejects_gaps() {
+    let direct = "\
+      - uses: dtolnay/rust-toolchain@nightly-2026-08-07
+      - run: cargo +nightly-2026-08-07 install --locked cargo-public-api
+";
+    assert_eq!(
+        toolchains_selected_at_public_api_installs(direct).unwrap(),
+        vec![(
+            "nightly-2026-08-07".to_string(),
+            "- run: cargo +nightly-2026-08-07 install --locked cargo-public-api".to_string()
+        )]
+    );
+
+    let explicit_input = "\
+      - name: Install the pinned rustdoc
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-07
+      - run: cargo +nightly-2026-08-07 install --locked cargo-public-api
+";
+    assert_eq!(
+        toolchains_selected_at_public_api_installs(explicit_input)
+            .unwrap()
+            .first()
+            .map(|event| event.0.as_str()),
+        Some("nightly-2026-08-07")
+    );
+
+    for malformed in [
+        "      - uses: dtolnay/rust-toolchain@\n",
+        "      - uses: dtolnay/rust-toolchain@master\n",
+        "      - run: cargo +nightly install --locked cargo-public-api\n",
+        "      - uses: dtolnay/rust-toolchain@master\n        toolchain: nightly-2026-08-07\n",
+        "      - uses: dtolnay/rust-toolchain@master\n        with:\n          toolchain:\n",
+    ] {
+        assert!(
+            toolchains_selected_at_public_api_installs(malformed).is_err(),
+            "malformed selector must fail closed: {malformed:?}"
+        );
+    }
+}
+
 /// WHY: the public-API snapshot records rustdoc's rendering of every item path,
 /// and that rendering moves with the compiler. The release that re-homed
 /// `std::io::Error` under `core` rewrote nine committed snapshots with no source
@@ -193,60 +338,52 @@ fn every_job_running_the_public_api_extraction_installs_the_declared_rustdoc() {
         let name = path
             .file_name()
             .and_then(|value| value.to_str())
-            .expect("Fix: a workflow file name must be UTF-8")
-            .to_string();
+            .expect("Fix: a workflow file name must be UTF-8");
         let workflow =
             std::fs::read_to_string(&path).expect("Fix: every workflow file must be readable");
 
-        // A step that runs the snapshot gate directly, or the contract suite that
-        // drives it, needs the extractor and the toolchain it renders with.
-        let runs_extraction = workflow.lines().any(|line| {
-            let trimmed = line.trim();
-            trimmed.contains("public-api-snapshot") || trimmed.contains("--test tree_contracts")
-        });
-        if !runs_extraction {
-            continue;
-        }
-        reached += 1;
-
-        let mut selected: Option<String> = None;
-        let mut installs = 0usize;
-        for line in workflow.lines() {
-            let trimmed = line.trim();
-            if let Some(toolchain) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
-                selected = Some(toolchain.to_string());
+        for (job, body) in workflow_jobs(&workflow) {
+            let runs_extraction = body.lines().any(|line| {
+                let trimmed = line.trim();
+                trimmed.contains("public-api-snapshot") || trimmed.contains("--test tree_contracts")
+            });
+            if !runs_extraction {
+                continue;
             }
-            if trimmed.contains("install --locked cargo-public-api") {
-                installs += 1;
-                assert_eq!(
-                    selected.as_deref(),
-                    Some(pinned),
-                    "Fix: in {name}, select dtolnay/rust-toolchain@{pinned} before installing \
-                     cargo-public-api, so the extraction renders with the toolchain \
-                     RUSTDOC_TOOLCHAIN names"
-                );
-                assert!(
-                    trimmed.contains(&format!("cargo +{pinned} install")),
-                    "Fix: in {name}, install cargo-public-api with `cargo +{pinned}`: {trimmed}"
-                );
-                assert!(
-                    trimmed.contains(version),
-                    "Fix: in {name}, install the pinned cargo-public-api version {version}: \
-                     {trimmed}"
-                );
-            }
-        }
+            reached += 1;
 
-        assert_eq!(
-            installs, 1,
-            "Fix: {name} runs the public-API extraction, so it must install cargo-public-api \
-             exactly once on {pinned}"
-        );
+            let installs =
+                toolchains_selected_at_public_api_installs(&body).unwrap_or_else(|error| {
+                    panic!("Fix: {name} job `{job}` has an invalid toolchain setup: {error}")
+                });
+            assert_eq!(
+                installs.len(),
+                1,
+                "Fix: {name} job `{job}` runs the public-API extraction, so it must install \
+                 cargo-public-api exactly once on {pinned}"
+            );
+            let (selected, install) = &installs[0];
+            assert_eq!(
+                selected, pinned,
+                "Fix: in {name} job `{job}`, select {pinned} through \
+                 dtolnay/rust-toolchain before installing cargo-public-api"
+            );
+            assert!(
+                install.contains(&format!("cargo +{pinned} install")),
+                "Fix: in {name} job `{job}`, install cargo-public-api with \
+                 `cargo +{pinned}`: {install}"
+            );
+            assert!(
+                install.contains(version),
+                "Fix: in {name} job `{job}`, install the pinned cargo-public-api version \
+                 {version}: {install}"
+            );
+        }
     }
 
     assert!(
         reached >= 2,
-        "Fix: the workflow scan found {reached} job file(s) running the public-API extraction; \
+        "Fix: the workflow scan found {reached} job(s) running the public-API extraction; \
          the snapshot gate and the tree-contract suite both run it, so a lower count means the \
          scan stopped matching and this contract guards nothing"
     );
