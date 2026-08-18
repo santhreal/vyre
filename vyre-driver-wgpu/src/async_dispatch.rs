@@ -1,5 +1,5 @@
 use crate::dispatch_timeout::{deadline, enforce_budget, reject_unserviceable};
-use crate::pipeline::wgpu_launch_limits;
+use crate::pipeline::tuning::wgpu_launch_limits;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use vyre_driver::validation::LaunchGeometryLimits;

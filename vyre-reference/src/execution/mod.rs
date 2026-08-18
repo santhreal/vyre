@@ -10,6 +10,8 @@ pub mod expr;
 pub(crate) mod expr_cast;
 pub(crate) mod hashmap;
 pub mod node;
+pub(crate) mod node_async;
+pub(crate) mod node_tile;
 pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;

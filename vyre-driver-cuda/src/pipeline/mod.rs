@@ -15,6 +15,7 @@ use crate::backend::{CachedCudaGraph, CudaBackend, CudaDispatchPlan, ModuleCache
 use crate::device::CudaDeviceCaps;
 
 mod compiled_dispatch;
+mod compiled_graph_replay;
 mod materialized_cache;
 mod static_params;
 

@@ -6,6 +6,7 @@
 mod binary_ops;
 mod body_emission;
 mod byte_element_access;
+mod cast_ops;
 mod diagnostics;
 mod op_routing;
 

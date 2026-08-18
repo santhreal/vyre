@@ -480,10 +480,7 @@ impl IoUringState {
     /// Returns [`PipelineError::IoUringSyscall`] if
     /// `io_uring_register` fails  -  typical causes are `EFAULT` (bad
     /// pointer), `ENOMEM`, or `EOPNOTSUPP` (kernel < 5.1).
-    pub fn register_buffers(
-        &self,
-        iovecs: &[crate::uring::stream::Iovec],
-    ) -> Result<(), PipelineError> {
+    pub fn register_buffers(&self, iovecs: &[super::buffer::Iovec]) -> Result<(), PipelineError> {
         // SAFETY: ring fd and iovec slice are live for the duration of io_uring_register.
         let res = unsafe {
             libc::syscall(

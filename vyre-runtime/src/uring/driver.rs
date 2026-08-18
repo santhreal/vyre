@@ -7,10 +7,11 @@ use std::path::Path;
 use crate::resident_work_queue::io::ResidentIoQueue;
 use crate::PipelineError;
 
+use super::buffer::{GpuMappedBuffer, Iovec};
 #[cfg(feature = "uring-cmd-nvme")]
 use super::gpudirect::encode_nvme_read_sqe;
 use super::gpudirect::GpuDirectCapability;
-use super::stream::{AsyncUringStream, GpuMappedBuffer, Iovec};
+use super::stream::AsyncUringStream;
 
 #[derive(Debug)]
 struct PendingIngest {

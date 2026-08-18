@@ -17,6 +17,7 @@ pub(crate) mod copy;
 pub(crate) mod cuda_graph;
 /// cudaGraph replay path.
 pub(crate) mod cuda_graph_replay;
+pub(crate) mod cuda_graph_types;
 /// CUDA backend handle, launch geometry, and kernel-launch orchestration  -
 /// including the cooperative-launch path that routes through
 /// `cuLaunchCooperativeKernel` when the caller opts in via
@@ -36,10 +37,12 @@ pub(crate) mod launch;
 pub(crate) mod launch_params;
 /// Loaded PTX module cache and submodular eviction policy.
 pub(crate) mod module_cache;
+pub(crate) mod module_globals;
 /// Shared monotonic ordering helpers for staging hot paths.
 pub(crate) mod ordering;
 /// CUDA output readback range handling.
 pub(crate) mod output_range;
+pub(crate) mod pinned_allocations;
 /// Shared dispatch-plan assembly helpers.
 pub(crate) mod plan;
 /// PTX target probing against the live CUDA driver.
@@ -52,6 +55,7 @@ pub(crate) mod resident_dispatch;
 pub(crate) mod resident_dispatch_accounting;
 /// Host and device copies for resident buffers.
 pub(crate) mod resident_io;
+pub(crate) mod resident_io_download;
 /// Shared resident readback interval fusion.
 pub(crate) mod resident_readback_fusion;
 /// Shared resident upload interval fusion.
@@ -62,6 +66,7 @@ pub(crate) mod staging_reserve;
 pub(crate) mod stream_ordered_pool;
 /// Atomic CUDA runtime telemetry counters.
 pub(crate) mod telemetry;
+pub(crate) mod transient_memory_budget;
 
 fn required_input<'a>(
     inputs: &'a [&[u8]],
@@ -105,10 +110,9 @@ macro_rules! define_required_input {
 }
 pub(crate) use define_required_input;
 
-pub(crate) use allocations::*;
 pub(crate) use module_cache::ModuleCacheKey;
 pub(crate) use plan::CudaDispatchPlan;
-pub(crate) use resident::{resident_bindings_from_handles, ResidentUseGuard};
+pub(crate) use resident::resident_bindings_from_handles;
 pub(crate) use resident_dispatch_accounting::CudaResidentDispatchStep;
 // Public surface  -  these names appear on the crate root.
 pub use cuda_graph::CachedCudaGraph;

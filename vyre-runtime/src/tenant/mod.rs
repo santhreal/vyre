@@ -36,14 +36,19 @@
 //! wrapper that we can ship alongside the runtime  -  the registry
 //! here already handles the interesting concurrency.
 
+mod counters;
 mod error;
 mod handle;
+mod quiesce;
 mod quota;
 mod registry;
+mod selection;
+pub use counters::{TenantQuotaCounters, TenantRuntimeCounters};
 pub use error::TenantError;
-pub use handle::{TenantHandle, TenantQuotaCounters, TenantRuntimeCounters};
+pub use handle::TenantHandle;
 pub use quota::TenantQuota;
-pub use registry::{TenantRegistry, TenantSelectionScratch};
+pub use registry::TenantRegistry;
+pub use selection::TenantSelectionScratch;
 
 /// First opcode the tenant registry hands out. Sits inside the
 /// user-extension range reserved by the megakernel protocol so fused
@@ -61,13 +66,13 @@ pub const TENANT_ID_MAX: u32 = u32::MAX - 1;
 /// opcode range.
 pub const OPCODE_RANGE_PER_TENANT: u32 = 1 << 20;
 
-// Inline: covers the crate-private `handle` module and its `pub(super)`
+// Inline: covers the crate-private `quiesce` module and its `pub(super)`
 // quiesce parameters (`quiesce_backoff_duration`, `tenant_registry_retry_idle`,
 // `QUIESCE_MIN_PARK`, `QUIESCE_MAX_PARK`, `QUIESCE_SPIN_POLLS`), which no
 // integration test can reach.
 #[cfg(test)]
 mod tests {
-    use super::handle::{
+    use super::quiesce::{
         quiesce_backoff_duration, tenant_registry_retry_idle, QUIESCE_MAX_PARK, QUIESCE_MIN_PARK,
         QUIESCE_SPIN_POLLS,
     };

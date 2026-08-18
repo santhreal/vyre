@@ -9,6 +9,8 @@
 
 /// Backend-neutral checked arithmetic and atomic accounting primitives.
 pub mod accounting;
+/// Backend-neutral atomic accounting primitives.
+pub(crate) mod accounting_atomic;
 /// Backend-neutral fallible allocation reservation helpers.
 pub mod allocation;
 /// Backend-neutral ahead-of-time emission registry.
@@ -31,6 +33,8 @@ pub(crate) mod backend;
 pub mod benchmark_pass_selection;
 /// Backend-neutral program binding plans.
 pub(crate) mod binding;
+/// Stable fingerprints and descriptor-layout sharing for binding plans.
+pub(crate) mod binding_layout;
 /// Bindless buffers / textures decision policy (ROADMAP D9). Decides
 /// whether to use a bindless descriptor array or traditional per-
 /// resource bindings, given the kernel's resource count and the
@@ -87,6 +91,10 @@ pub mod hostile_input_closure;
 pub mod input_identity;
 /// Backend-neutral target-payload admission shared by every concrete driver.
 pub mod materialize;
+/// Target payload admission against neutral artifacts.
+pub(crate) mod materialize_admission;
+/// Materialized instance execution and resident submission paths.
+pub(crate) mod materialize_instance;
 /// Backend-neutral monotonic ordering helpers for staging hot paths.
 pub mod ordering;
 /// Backend-neutral fallible output-slot vector management.
@@ -193,6 +201,8 @@ pub mod grid_sync;
 pub(crate) mod launch;
 /// Backend-neutral adjacent-stage launch fusion planning.
 pub mod launch_fusion;
+/// Natural-gradient launch tuning, caching, and workgroup resolution.
+pub(crate) mod launch_natural;
 /// Backend-neutral megakernel wave barrier planning.
 pub mod megakernel_barrier;
 /// Backend-neutral persistent megakernel execution planning.

@@ -36,6 +36,19 @@ pub mod frozen_contract;
 pub mod gate_canon;
 pub mod gpu_loudness;
 pub mod host_oracle_elimination;
+mod host_oracle_elimination_ast;
+mod host_oracle_elimination_classify;
+mod host_oracle_elimination_eval;
+mod host_oracle_elimination_extract;
+mod host_oracle_elimination_records;
+mod host_oracle_elimination_scanners;
+#[cfg(test)]
+mod host_oracle_elimination_tests_part1;
+#[cfg(test)]
+mod host_oracle_elimination_tests_part2;
+#[cfg(test)]
+mod host_oracle_elimination_tests_part3;
+mod host_oracle_elimination_visitor;
 pub mod hot_path;
 pub mod hot_path_scan;
 pub mod hygiene_matrix;

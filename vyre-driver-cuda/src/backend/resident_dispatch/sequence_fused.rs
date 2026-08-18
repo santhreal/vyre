@@ -5,10 +5,11 @@ use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
-use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
+use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::output_range::CudaOutputReadback;
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
 use crate::backend::resident_dispatch::host_uploads::{
     enqueue_resident_h2d_copy, enqueue_resident_upload_copies_on_stream,

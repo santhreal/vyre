@@ -1,58 +1,24 @@
 //! Public persistent GPU buffer handle.
 
+mod align;
+mod pending;
+mod resident;
+#[cfg(test)]
+mod tests;
+
 use std::hash::{Hash, Hasher};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, LazyLock, OnceLock, Weak};
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::time::Instant;
 
-use dashmap::DashMap;
 use rustc_hash::FxHasher;
-use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
+use vyre_driver::{BackendError, ResidentHandle};
 
+pub(crate) use self::align::{aligned_len, aligned_len_u64, write_padded};
+pub(crate) use self::pending::PendingGpuBufferReadback;
+pub(crate) use self::resident::check_resident_owner;
 use super::pool::PoolReturn;
-
 use super::staging::StagingBufferPool;
-
-static NEXT_BUFFER_ID: AtomicU64 = AtomicU64::new(1);
-static RESIDENT_BUFFERS: OnceLock<DashMap<u64, Weak<GpuBufferInner>>> = OnceLock::new();
-
-fn resident_buffers() -> &'static DashMap<u64, Weak<GpuBufferInner>> {
-    RESIDENT_BUFFERS.get_or_init(DashMap::new)
-}
-
-/// Identity of the WGPU driver's resident-buffer namespace.
-///
-/// `NEXT_BUFFER_ID` and `RESIDENT_BUFFERS` are process-wide rather than per
-/// backend instance, so every live WGPU resident buffer shares one namespace
-/// and therefore one owner. Minting the owner here, next to the registry it
-/// describes, keeps that structural: a WGPU resident handle stays valid for as
-/// long as its buffer lives, and a handle minted by any other driver is
-/// refused instead of being resolved against an unrelated buffer of the same
-/// id.
-static RESIDENT_OWNER: LazyLock<Result<ResidentOwner, BackendError>> =
-    LazyLock::new(ResidentOwner::new);
-
-/// Owner of every WGPU resident handle in this process.
-fn resident_owner() -> Result<ResidentOwner, BackendError> {
-    match &*RESIDENT_OWNER {
-        Ok(owner) => Ok(*owner),
-        Err(error) => Err(BackendError::new(format!(
-            "WGPU resident buffers have no namespace identity: {error} Fix: reduce the number of backend instances created in this process."
-        ))),
-    }
-}
-
-/// Refuse a resident handle minted outside the WGPU resident namespace.
-///
-/// Resolving one anyway would look up a foreign id in this driver's registry,
-/// where the same number names an unrelated live buffer.
-pub(crate) fn check_resident_owner(
-    handle: ResidentHandle,
-    context: &str,
-) -> Result<(), BackendError> {
-    resident_owner()?.resolve(handle, context)?;
-    Ok(())
-}
 
 fn pointer_identity_key<T>(ptr: *const T) -> u64 {
     let mut hasher = FxHasher::default();
@@ -78,121 +44,6 @@ struct GpuBufferInner {
     element_count: usize,
     usage: wgpu::BufferUsages,
     pool_return: Option<PoolReturn>,
-}
-
-/// Readback copy and map request submitted without waiting for GPU completion.
-pub(crate) enum PendingGpuBufferReadback {
-    Ready,
-    Mapping {
-        readback: wgpu::Buffer,
-        read_len: u64,
-        readback_usage: wgpu::BufferUsages,
-        pool: Option<StagingBufferPool>,
-        submission: wgpu::SubmissionIndex,
-        receiver: crossbeam_channel::Receiver<Result<(), wgpu::BufferAsyncError>>,
-        ready: Arc<std::sync::atomic::AtomicBool>,
-        trim_start: usize,
-        visible_len: usize,
-    },
-}
-
-impl PendingGpuBufferReadback {
-    pub(crate) fn is_ready(&self, device: &wgpu::Device) -> bool {
-        match self {
-            Self::Ready => true,
-            Self::Mapping { ready, .. } => {
-                if crate::runtime::device::poll_device_once(device).is_err() {
-                    return false;
-                }
-                ready.load(Ordering::Acquire)
-            }
-        }
-    }
-
-    pub(crate) fn await_into(
-        self,
-        device: &wgpu::Device,
-        deadline: Option<Instant>,
-        out: &mut Vec<u8>,
-    ) -> Result<(), BackendError> {
-        let Self::Mapping {
-            readback,
-            read_len,
-            readback_usage,
-            pool,
-            submission,
-            receiver,
-            trim_start,
-            visible_len,
-            ..
-        } = self
-        else {
-            out.clear();
-            return Ok(());
-        };
-        let mapping = if let Some(deadline) = deadline {
-            let mut backoff = crate::wait_backoff::AdaptiveWaitBackoff::from_micros(64, 2, 50, 5);
-            loop {
-                crate::runtime::device::poll_device_once(device)?;
-                match receiver.try_recv() {
-                    Ok(result) => break result,
-                    Err(crossbeam_channel::TryRecvError::Empty) => {}
-                    Err(crossbeam_channel::TryRecvError::Disconnected) => {
-                        return Err(BackendError::new(
-                            "persistent buffer readback channel closed before completion. Fix: keep the GPU device alive until readback completes.",
-                        ));
-                    }
-                }
-                let now = Instant::now();
-                if now >= deadline {
-                    return Err(BackendError::new(
-                        "dispatch cancelled after DispatchConfig.timeout before readback completed. Fix: raise DispatchConfig.timeout or split the program into smaller chunks.",
-                    ));
-                }
-                backoff.idle_for(deadline.saturating_duration_since(now));
-            }
-        } else {
-            crate::runtime::device::poll_device_wait_for(device, submission)?;
-            receiver
-                .recv_timeout(std::time::Duration::from_secs(30))
-                .map_err(|source| {
-                    BackendError::new(format!(
-                        "persistent buffer readback callback did not complete after submission wait: {source}. Fix: keep the GPU device alive and inspect driver callback progress."
-                    ))
-                })?
-        };
-        mapping.map_err(|source| {
-            BackendError::new(format!(
-                "persistent buffer readback mapping failed: {source:?}. Fix: use COPY_SRC handles and MAP_READ staging buffers."
-            ))
-        })?;
-        let slice = readback.slice(0..read_len);
-        let mapped = slice.get_mapped_range();
-        let trim_end = trim_start.checked_add(visible_len).ok_or_else(|| {
-            BackendError::new(format!(
-                "persistent buffer range trim overflows usize at offset {trim_start} len {visible_len}. Fix: split the buffer before readback."
-            ))
-        })?;
-        let visible = &mapped[trim_start..trim_end];
-        if out.len() == visible_len {
-            out.copy_from_slice(visible);
-        } else {
-            vyre_foundation::allocation::reserve_exact_cleared(out, visible_len).map_err(
-                |source| {
-                    BackendError::new(format!(
-                        "persistent buffer readback could not reserve {visible_len} output bytes exactly: {source}. Fix: lower max_output_bytes or stream readback in smaller shards."
-                    ))
-                },
-            )?;
-            out.extend_from_slice(visible);
-        }
-        drop(mapped);
-        readback.unmap();
-        if let Some(pool) = pool {
-            pool.release(readback, read_len, readback_usage);
-        }
-        Ok(())
-    }
 }
 
 impl GpuBufferHandle {
@@ -517,17 +368,7 @@ impl GpuBufferHandle {
     /// Resolve a process-local resident buffer id back into a live GPU handle.
     #[must_use]
     pub fn from_resident_id(id: u64) -> Option<Self> {
-        let registry = resident_buffers();
-        let entry = registry.get(&id)?;
-        let upgraded = entry.value().upgrade();
-        drop(entry);
-        match upgraded {
-            Some(inner) => Some(Self { inner }),
-            None => {
-                registry.remove(&id);
-                None
-            }
-        }
+        resident::resolve_resident_id(id)
     }
 
     /// Resident handle naming this buffer, owner included.
@@ -537,7 +378,7 @@ impl GpuBufferHandle {
     /// Returns a backend error when this process could not mint an identity
     /// for the WGPU resident namespace.
     pub fn resident_handle(&self) -> Result<ResidentHandle, BackendError> {
-        Ok(resident_owner()?.handle(self.inner.id))
+        Ok(resident::resident_owner()?.handle(self.inner.id))
     }
 
     /// Resolve a resident handle back into a live GPU handle.
@@ -553,7 +394,7 @@ impl GpuBufferHandle {
         handle: ResidentHandle,
         context: &str,
     ) -> Result<Option<Self>, BackendError> {
-        let id = resident_owner()?.resolve(handle, context)?;
+        let id = resident::resident_owner()?.resolve(handle, context)?;
         Ok(Self::from_resident_id(id))
     }
 
@@ -604,7 +445,7 @@ impl GpuBufferHandle {
         pool_return: Option<PoolReturn>,
     ) -> Self {
         let inner = Arc::new(GpuBufferInner {
-            id: NEXT_BUFFER_ID.fetch_add(1, Ordering::Relaxed),
+            id: resident::next_buffer_id(),
             buffer,
             byte_len,
             allocation_len,
@@ -612,7 +453,7 @@ impl GpuBufferHandle {
             usage,
             pool_return,
         });
-        resident_buffers().insert(inner.id, Arc::downgrade(&inner));
+        resident::register_resident_buffer(inner.id, &inner);
         Self { inner }
     }
 }
@@ -632,7 +473,7 @@ impl std::fmt::Debug for GpuBufferHandle {
 
 impl Drop for GpuBufferInner {
     fn drop(&mut self) {
-        resident_buffers().remove(&self.id);
+        resident::remove_resident_buffer(self.id);
         if let Some(pool_return) = self.pool_return.take() {
             pool_return.release(
                 Arc::clone(&self.buffer),
@@ -641,150 +482,5 @@ impl Drop for GpuBufferInner {
                 self.usage,
             );
         }
-    }
-}
-
-pub(crate) fn aligned_len(len: usize) -> Result<u64, BackendError> {
-    let padded = aligned_len_usize(len, "GPU buffer length")?;
-    u64::try_from(padded).map_err(|source| {
-        BackendError::new(format!(
-            "GPU buffer length {padded} cannot fit u64: {source}. Fix: split the dispatch input."
-        ))
-    })
-}
-
-pub(super) fn aligned_len_u64(len: u64, label: &'static str) -> Result<u64, BackendError> {
-    crate::numeric::WGPU_NUMERIC.align_up_u64(len, 4, 4, label)
-}
-
-fn aligned_len_usize(len: usize, label: &'static str) -> Result<usize, BackendError> {
-    crate::numeric::WGPU_NUMERIC.align_up_usize(len, 4, 4, label)
-}
-
-pub(crate) fn write_padded(
-    queue: &wgpu::Queue,
-    buffer: &wgpu::Buffer,
-    bytes: &[u8],
-    allocation_len: u64,
-) -> Result<(), BackendError> {
-    crate::padded_upload::write_padded_and_zero_fill(queue, buffer, bytes, allocation_len)
-}
-
-// Inline: covers the crate-private `padded_upload::write_padded_into_mapped`,
-// `resident_owner`, `check_resident_owner` and `ResidentOwner`, none of which an
-// integration test can reach.
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// The mapped-at-creation upload fast path (the StagingBelt replacement)
-    /// must produce a buffer whose contents byte-for-byte equal the input across
-    /// every boundary class: sub-word, exactly-a-word, word+tail, and a large
-    /// payload (the catalog-scale path). A regression here is a silent data
-    /// corruption on the ~1 GB DFA-catalog upload.
-    #[test]
-    fn mapped_upload_roundtrips_exact_bytes_across_boundaries() {
-        let arc = crate::runtime::cached_device()
-            .expect("Fix: live GPU device required for mapped upload roundtrip test");
-        let (device, queue) = &*arc;
-        // 1,3 exercise the 4-byte tail; 4 is exactly aligned; 5 is word+tail;
-        // 257 is multi-word+tail; 1 MiB + 3 is the large, tail-padded path that
-        // used to route through the slow per-write StagingBelt.
-        for &len in &[1usize, 3, 4, 5, 257, (1 << 20) + 3] {
-            let contents: Vec<u8> = (0..len).map(|i| (i % 251) as u8).collect();
-            let handle =
-                GpuBufferHandle::upload(device, queue, &contents, wgpu::BufferUsages::COPY_SRC)
-                    .expect("Fix: mapped upload should succeed at every size");
-            let mut out = Vec::new();
-            handle
-                .readback(device, queue, &mut out)
-                .expect("Fix: readback should succeed");
-            assert_eq!(
-                out, contents,
-                "mapped upload corrupted {len}-byte payload: readback != input"
-            );
-        }
-    }
-
-    /// `write_padded_into_mapped` (the fast-path filler) must copy the logical
-    /// bytes and zero the alignment tail deterministically, proved without a
-    /// GPU so the contract holds on every host.
-    #[test]
-    fn write_padded_into_mapped_zeroes_the_tail() {
-        // Allocation of 8 bytes, 5 logical: bytes 0..5 copied, 5..8 zeroed even
-        // if the destination started with garbage.
-        let mut mapped = [0xAAu8; 8];
-        let bytes = [1u8, 2, 3, 4, 5];
-        crate::padded_upload::write_padded_into_mapped(&mut mapped, &bytes)
-            .expect("Fix: filling a large-enough mapped slice must succeed");
-        assert_eq!(&mapped[..5], &bytes);
-        assert_eq!(&mapped[5..], &[0u8, 0, 0], "alignment tail must be zeroed");
-        // A slice smaller than the data must fail closed, never truncate.
-        let mut too_small = [0u8; 2];
-        assert!(crate::padded_upload::write_padded_into_mapped(&mut too_small, &bytes).is_err());
-    }
-
-    #[test]
-    fn foreign_resident_handle_is_refused_not_resolved() {
-        // A handle minted outside the WGPU namespace carries an id that is
-        // perfectly valid here, so resolving it by bare id would hand back an
-        // unrelated live buffer. The boundary must refuse instead.
-        let foreign = ResidentOwner::new().expect("Fix: owner ids must be available");
-        let native = resident_owner().expect("Fix: WGPU resident owner must be available");
-        assert_ne!(foreign, native);
-
-        let error = GpuBufferHandle::from_resident_handle(foreign.handle(1), "refusal test")
-            .expect_err("Fix: a foreign resident handle must never resolve to a WGPU buffer");
-        let BackendError::InvalidProgram { fix } = error else {
-            panic!("Fix: foreign resident handle refusal must be BackendError::InvalidProgram");
-        };
-        assert!(
-            fix.contains("owned by backend instance") && fix.contains("Fix: "),
-            "Fix: refusal must name the owning instance and carry actionable text, got {fix}"
-        );
-
-        assert!(
-            check_resident_owner(native.handle(u64::MAX), "refusal test").is_ok(),
-            "Fix: a handle from this namespace must pass the owner check even when its buffer is gone"
-        );
-    }
-
-    #[test]
-    fn resident_registry_handles_concurrent_lookup_and_drop() {
-        let arc = crate::runtime::cached_device()
-            .expect("Fix: GPU device is required for resident registry concurrency test");
-        let (device, queue) = &*arc;
-        let handle =
-            GpuBufferHandle::upload(device, queue, &[1, 2, 3, 4], wgpu::BufferUsages::COPY_SRC)
-                .expect("Fix: upload should register a resident buffer");
-        let id = handle.id();
-
-        // Phase 1: while the handle is alive, 8 concurrent readers
-        // must always resolve the resident id. Join BEFORE the drop so
-        // there is no readers-vs-drop race producing flaky panics.
-        let readers = (0..8)
-            .map(|_| {
-                std::thread::spawn(move || {
-                    for _ in 0..1_000 {
-                        let resident = GpuBufferHandle::from_resident_id(id)
-                            .expect("Fix: resident id must resolve while handle is alive");
-                        assert_eq!(resident.id(), id);
-                    }
-                })
-            })
-            .collect::<Vec<_>>();
-        for reader in readers {
-            reader
-                .join()
-                .expect("Fix: concurrent resident lookups must not panic");
-        }
-
-        // Phase 2: dropping the handle must remove the id from the
-        // registry so subsequent lookups return None.
-        drop(handle);
-        assert!(
-            GpuBufferHandle::from_resident_id(id).is_none(),
-            "dropped handles must be removed from the resident registry"
-        );
     }
 }

@@ -1,0 +1,805 @@
+use std::collections::BTreeMap;
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ShapeDim, ValueContract, ValueLifetime,
+};
+use vyre_megakernel::{
+    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts, Digest,
+    ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
+    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+};
+
+use crate::materialize::{unbound_input, unbound_resident_buffer, InstanceCore, NEUTRAL_MESSAGES};
+use crate::{BackendError, BindingPlan, DeviceIdentity, Resource};
+
+fn test_format() -> TargetPayloadFormat {
+    TargetPayloadFormat::new("test.target-binary", 1).unwrap()
+}
+
+fn test_profile() -> TargetProfile {
+    TargetProfile::new("test.target-binary", 1, [32, 1, 1], 32, 1024, 0).unwrap()
+}
+
+fn test_device() -> DeviceIdentity {
+    DeviceIdentity {
+        backend: "test",
+        device: "test-device".into(),
+        generation: 1,
+    }
+}
+
+fn test_instance_core(
+    artifact: &Artifact,
+    payload: &TargetPayload,
+) -> Result<InstanceCore, BackendError> {
+    InstanceCore::new_with_module_slots(
+        artifact,
+        payload,
+        test_device(),
+        NEUTRAL_MESSAGES,
+        vec![BTreeMap::new(); artifact.fusion().len()],
+    )
+}
+
+fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
+    ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Known(32)],
+        access,
+        lifetime,
+    }
+}
+
+#[test]
+fn sparse_and_reordered_module_binding_identities() {
+    let mut graph = ProgramGraph::new();
+    let val_x = graph
+        .add_external_value(
+            "x",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+    let val_y = graph
+        .add_external_value(
+            "y",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+
+    let program0 = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_b", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("in_a", 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("out_0", 2, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out_0",
+            Expr::u32(0),
+            Expr::add(
+                Expr::load("in_b", Expr::u32(0)),
+                Expr::load("in_a", Expr::u32(0)),
+            ),
+        )],
+    );
+
+    let (_, outputs) = graph
+        .add_node(
+            "node0",
+            program0.clone(),
+            vec![
+                GraphInput {
+                    buffer: "in_b".into(),
+                    value: val_y,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+                GraphInput {
+                    buffer: "in_a".into(),
+                    value: val_x,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "out_0".into(),
+                name: "res".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let res_id = outputs[0];
+
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+
+    let bindings = vec![
+        TargetResourceBinding {
+            resource: ArtifactValueId(val_y.0),
+            group: 0,
+            slot: 0,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(val_x.0),
+            group: 0,
+            slot: 1,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadOnly,
+        },
+        TargetResourceBinding {
+            resource: ArtifactValueId(res_id.0),
+            group: 0,
+            slot: 2,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::WriteOnly,
+        },
+    ];
+
+    let payload = TargetPayload::new(
+        &artifact,
+        test_format(),
+        test_profile(),
+        vec![TargetEntryPoint {
+            name: "entry0".into(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [32, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings,
+        }],
+        vec![1, 2, 3],
+    )
+    .unwrap();
+
+    let core = test_instance_core(&artifact, &payload).unwrap();
+    let plan0 = BindingPlan::build(&program0).unwrap();
+
+    let mut state = BTreeMap::new();
+    state.insert(ArtifactValueId(val_y.0), vec![2, 0, 0, 0]);
+    state.insert(ArtifactValueId(val_x.0), vec![1, 0, 0, 0]);
+
+    let gathered = core
+        .gather_inputs_for_module(0, &plan0, &program0, &state, unbound_input)
+        .unwrap();
+
+    assert_eq!(gathered[0], &[2, 0, 0, 0]);
+    assert_eq!(gathered[1], &[1, 0, 0, 0]);
+
+    core.absorb_outputs_for_module(
+        0,
+        &plan0,
+        &program0,
+        vec![vec![3, 0, 0, 0]],
+        &mut state,
+        |idx, name| BackendError::InvalidProgram {
+            fix: format!("missing output {idx} {name}"),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(
+        state.get(&ArtifactValueId(res_id.0)).unwrap(),
+        &[3, 0, 0, 0]
+    );
+
+    let completion = core.completion(&state, None).unwrap();
+    assert_eq!(
+        completion.outputs.get(&ArtifactValueId(res_id.0)).unwrap(),
+        &[3, 0, 0, 0]
+    );
+
+    let owner = crate::ResidentOwner::new().expect("resident owner identity");
+    let res_x = Resource::Resident(owner.handle(10));
+    let res_y = Resource::Resident(owner.handle(20));
+    let res_out = Resource::Resident(owner.handle(30));
+
+    let mut resident_map = BTreeMap::new();
+    resident_map.insert(ArtifactValueId(val_x.0), res_x.clone());
+    resident_map.insert(ArtifactValueId(val_y.0), res_y.clone());
+    resident_map.insert(ArtifactValueId(res_id.0), res_out.clone());
+
+    let ordered = core
+        .ordered_resident_resources_for_module(
+            0,
+            &plan0,
+            &program0,
+            &resident_map,
+            unbound_resident_buffer,
+        )
+        .expect("ordered resident resources must resolve by authenticated identity");
+
+    // Binding plan order: in_b (0), in_a (1), out_0 (2)
+    assert_eq!(ordered[0], res_y);
+    assert_eq!(ordered[1], res_x);
+    assert_eq!(ordered[2], res_out);
+
+    // Unbound resource fails closed
+    let mut missing_map = resident_map.clone();
+    missing_map.remove(&ArtifactValueId(val_x.0));
+    let unbound_err = core
+        .ordered_resident_resources_for_module(
+            0,
+            &plan0,
+            &program0,
+            &missing_map,
+            unbound_resident_buffer,
+        )
+        .expect_err("missing resident resource must fail closed");
+    assert!(unbound_err.to_string().contains("in_a"));
+}
+
+/// WHY: multi-segment dispatches with whole-grid fences or fused pipelines
+/// link successive retained values via `retained_successor_of`. Materialization
+/// must preserve transitive retained value lineage in both directions:
+/// when gathering module inputs (resolving the successor value from the
+/// root canonical value or previous segment output) and when absorbing outputs
+/// (propagating the produced bytes back to all transitive predecessors).
+///
+/// Does not catch: hardware device timeouts during multi-segment dispatch,
+/// which is covered by backend-specific resident grid sync suites.
+#[test]
+fn transitive_retained_predecessor_lineage_preservation() {
+    let mut graph = ProgramGraph::new();
+    let state_init = graph
+        .add_external_value(
+            "canonical_state",
+            contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+        )
+        .unwrap();
+
+    let seg0_prog = Program::wrapped(
+        vec![BufferDecl::storage(
+            "state",
+            0,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )],
+        [32, 1, 1],
+        vec![Node::store(
+            "state",
+            Expr::u32(0),
+            Expr::add(Expr::load("state", Expr::u32(0)), Expr::u32(1)),
+        )],
+    );
+
+    let (node0, seg0_outputs) = graph
+        .add_node(
+            "seg0",
+            seg0_prog.clone(),
+            vec![GraphInput {
+                buffer: "state".into(),
+                value: state_init,
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![GraphOutput {
+                buffer: "state".into(),
+                name: "state_mid".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                retained_successor_of: Some(state_init),
+            }],
+        )
+        .unwrap();
+    let state_mid = seg0_outputs[0];
+
+    let seg1_prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("state", 0, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::storage("res", 1, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::store(
+                "state",
+                Expr::u32(0),
+                Expr::add(Expr::load("state", Expr::u32(0)), Expr::u32(2)),
+            ),
+            Node::store("res", Expr::u32(0), Expr::load("state", Expr::u32(0))),
+        ],
+    );
+
+    let (node1, seg1_outputs) = graph
+        .add_node(
+            "seg1",
+            seg1_prog.clone(),
+            vec![GraphInput {
+                buffer: "state".into(),
+                value: state_mid,
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![
+                GraphOutput {
+                    buffer: "state".into(),
+                    name: "state_final".into(),
+                    contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                    retained_successor_of: Some(state_mid),
+                },
+                GraphOutput {
+                    buffer: "res".into(),
+                    name: "res".into(),
+                    contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                    retained_successor_of: None,
+                },
+            ],
+        )
+        .unwrap();
+    let state_final = seg1_outputs[0];
+    let out_id = seg1_outputs[1];
+
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+
+    let payload = TargetPayload::new(
+        &artifact,
+        test_format(),
+        test_profile(),
+        vec![
+            TargetEntryPoint {
+                name: "seg0_entry".into(),
+                node: ArtifactNodeId(node0.0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![TargetResourceBinding {
+                    resource: ArtifactValueId(state_mid.0),
+                    group: 0,
+                    slot: 0,
+                    memory: TargetResourceMemory::Global,
+                    access: TargetResourceAccess::ReadWrite,
+                }],
+            },
+            TargetEntryPoint {
+                name: "seg1_entry".into(),
+                node: ArtifactNodeId(node1.0),
+                workgroup_size: [32, 1, 1],
+                grid_size: [1, 1, 1],
+                dynamic_shared_bytes: 0,
+                resource_bindings: vec![
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(state_final.0),
+                        group: 0,
+                        slot: 0,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::ReadWrite,
+                    },
+                    TargetResourceBinding {
+                        resource: ArtifactValueId(out_id.0),
+                        group: 0,
+                        slot: 1,
+                        memory: TargetResourceMemory::Global,
+                        access: TargetResourceAccess::WriteOnly,
+                    },
+                ],
+            },
+        ],
+        vec![1, 2, 3],
+    )
+    .unwrap();
+
+    let core = test_instance_core(&artifact, &payload).unwrap();
+    assert_eq!(
+        core.module_inputs,
+        vec![
+            vec![ArtifactValueId(state_init.0)],
+            vec![ArtifactValueId(state_init.0)]
+        ],
+        "every retained successor module must read the bound root predecessor",
+    );
+    assert!(
+        core.value_for_buffer("state").is_err(),
+        "the fused Program-local name must not be present in the canonical artifact ABI",
+    );
+    let seg0_plan = BindingPlan::build(&seg0_prog).unwrap();
+    assert!(
+        core.value_for_module_binding(&core.module_inputs, 2, &seg0_plan.bindings[0])
+            .is_err(),
+        "a missing module identity must fail closed instead of falling back to module zero",
+    );
+    let seg1_plan = BindingPlan::build(&seg1_prog).unwrap();
+
+    let mut state = BTreeMap::new();
+    state.insert(ArtifactValueId(state_init.0), vec![0, 0, 0, 0]);
+
+    let gathered0 = core
+        .gather_inputs_for_module(0, &seg0_plan, &seg0_prog, &state, unbound_input)
+        .unwrap();
+    assert_eq!(gathered0[0], &[0, 0, 0, 0]);
+
+    core.absorb_outputs_for_module(
+        0,
+        &seg0_plan,
+        &seg0_prog,
+        vec![vec![42, 0, 0, 0]],
+        &mut state,
+        |idx, name| BackendError::InvalidProgram {
+            fix: format!("missing output {idx} {name}"),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(
+        state.get(&ArtifactValueId(state_mid.0)).unwrap(),
+        &[42, 0, 0, 0]
+    );
+    assert_eq!(
+        state.get(&ArtifactValueId(state_init.0)).unwrap(),
+        &[42, 0, 0, 0]
+    );
+
+    let gathered1 = core
+        .gather_inputs_for_module(1, &seg1_plan, &seg1_prog, &state, unbound_input)
+        .unwrap();
+    assert_eq!(gathered1[0], &[42, 0, 0, 0]);
+
+    core.absorb_outputs_for_module(
+        1,
+        &seg1_plan,
+        &seg1_prog,
+        vec![vec![99, 0, 0, 0], vec![1, 2, 3, 4]],
+        &mut state,
+        |idx, name| BackendError::InvalidProgram {
+            fix: format!("missing output {idx} {name}"),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(
+        state.get(&ArtifactValueId(state_final.0)).unwrap(),
+        &[99, 0, 0, 0]
+    );
+    assert_eq!(
+        state.get(&ArtifactValueId(state_mid.0)).unwrap(),
+        &[99, 0, 0, 0]
+    );
+    assert_eq!(
+        state.get(&ArtifactValueId(state_init.0)).unwrap(),
+        &[99, 0, 0, 0]
+    );
+    assert_eq!(
+        state.get(&ArtifactValueId(out_id.0)).unwrap(),
+        &[1, 2, 3, 4]
+    );
+
+    let completion = core.completion(&state, Some(1000)).unwrap();
+    assert_eq!(
+        completion
+            .retained
+            .get(&ArtifactValueId(state_init.0))
+            .unwrap(),
+        &[99, 0, 0, 0]
+    );
+    assert_eq!(
+        completion
+            .retained
+            .get(&ArtifactValueId(state_mid.0))
+            .unwrap(),
+        &[99, 0, 0, 0]
+    );
+    assert_eq!(
+        completion
+            .retained
+            .get(&ArtifactValueId(state_final.0))
+            .unwrap(),
+        &[99, 0, 0, 0]
+    );
+    assert_eq!(
+        completion.outputs.get(&ArtifactValueId(out_id.0)).unwrap(),
+        &[1, 2, 3, 4]
+    );
+}
+
+#[test]
+fn later_module_inputs_and_outputs_resolve_by_named_entry_identity() {
+    let mut graph = ProgramGraph::new();
+    let val_a = graph
+        .add_external_value(
+            "a",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+    let val_b = graph
+        .add_external_value(
+            "b",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+    let program = |input: &str, output: &str| {
+        Program::wrapped(
+            vec![
+                BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32),
+                BufferDecl::storage(output, 1, BufferAccess::WriteOnly, DataType::U32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                output,
+                Expr::u32(0),
+                Expr::load(input, Expr::u32(0)),
+            )],
+        )
+    };
+    let prog0 = program("node0_in", "node0_out");
+    let prog1 = program("node1_in", "node1_out");
+    let (node0, outputs0) = graph
+        .add_node(
+            "node0",
+            prog0.clone(),
+            vec![GraphInput {
+                buffer: "node0_in".into(),
+                value: val_a,
+                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            }],
+            vec![GraphOutput {
+                buffer: "node0_out".into(),
+                name: "out0".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let out0 = outputs0[0];
+    let (node1, outputs1) = graph
+        .add_node(
+            "node1",
+            prog1.clone(),
+            vec![GraphInput {
+                buffer: "node1_in".into(),
+                value: val_b,
+                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            }],
+            vec![GraphOutput {
+                buffer: "node1_out".into(),
+                name: "out1".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let out1 = outputs1[0];
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+    let artifact = compile(&request).expect("compilation must succeed");
+    let entry = |node, input, output| TargetEntryPoint {
+        name: "main".into(),
+        node,
+        workgroup_size: [32, 1, 1],
+        grid_size: [1, 1, 1],
+        dynamic_shared_bytes: 0,
+        resource_bindings: vec![
+            TargetResourceBinding {
+                resource: input,
+                group: 0,
+                slot: 0,
+                memory: TargetResourceMemory::Global,
+                access: TargetResourceAccess::ReadOnly,
+            },
+            TargetResourceBinding {
+                resource: output,
+                group: 0,
+                slot: 1,
+                memory: TargetResourceMemory::Global,
+                access: TargetResourceAccess::WriteOnly,
+            },
+        ],
+    };
+    let payload = TargetPayload::new(
+        &artifact,
+        test_format(),
+        test_profile(),
+        vec![
+            entry(
+                ArtifactNodeId(node0.0),
+                ArtifactValueId(val_a.0),
+                ArtifactValueId(out0.0),
+            ),
+            entry(
+                ArtifactNodeId(node1.0),
+                ArtifactValueId(val_b.0),
+                ArtifactValueId(out1.0),
+            ),
+        ],
+        vec![1, 2, 3],
+    )
+    .unwrap();
+    let core = test_instance_core(&artifact, &payload).unwrap();
+    let module0 = core
+        .module_named_resources
+        .iter()
+        .position(|resources| resources.contains_key("node0_in"))
+        .unwrap();
+    let module1 = core
+        .module_named_resources
+        .iter()
+        .position(|resources| resources.contains_key("node1_in"))
+        .unwrap();
+    let mut state = BTreeMap::from([
+        (ArtifactValueId(val_a.0), vec![10, 0, 0, 0]),
+        (ArtifactValueId(val_b.0), vec![30, 0, 0, 0]),
+    ]);
+    let gathered0 = core
+        .gather_inputs_for_module(
+            module0,
+            &BindingPlan::build(&prog0).unwrap(),
+            &prog0,
+            &state,
+            unbound_input,
+        )
+        .unwrap();
+    let gathered1 = core
+        .gather_inputs_for_module(
+            module1,
+            &BindingPlan::build(&prog1).unwrap(),
+            &prog1,
+            &state,
+            unbound_input,
+        )
+        .unwrap();
+    assert_eq!(gathered0, vec![&[10, 0, 0, 0][..]]);
+    assert_eq!(gathered1, vec![&[30, 0, 0, 0][..]]);
+    core.absorb_outputs_for_module(
+        module0,
+        &BindingPlan::build(&prog0).unwrap(),
+        &prog0,
+        vec![vec![20, 0, 0, 0]],
+        &mut state,
+        |idx, name| BackendError::InvalidProgram {
+            fix: format!("missing output {idx} {name}"),
+        },
+    )
+    .unwrap();
+    core.absorb_outputs_for_module(
+        module1,
+        &BindingPlan::build(&prog1).unwrap(),
+        &prog1,
+        vec![vec![40, 0, 0, 0]],
+        &mut state,
+        |idx, name| BackendError::InvalidProgram {
+            fix: format!("missing output {idx} {name}"),
+        },
+    )
+    .unwrap();
+    assert_eq!(state[&ArtifactValueId(out0.0)], [20, 0, 0, 0]);
+    assert_eq!(state[&ArtifactValueId(out1.0)], [40, 0, 0, 0]);
+}
+
+#[test]
+fn read_write_output_lifetime_is_output_only_and_not_module_input() {
+    let mut graph = ProgramGraph::new();
+    let val_in = graph
+        .add_external_value(
+            "input_val",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+
+    let prog = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_buf", 0, BufferAccess::ReadOnly, DataType::U32).with_count(32),
+            BufferDecl::output("out_buf", 1, DataType::U32).with_count(32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out_buf",
+            Expr::u32(0),
+            Expr::load("in_buf", Expr::u32(0)),
+        )],
+    );
+
+    let (_, outputs) = graph
+        .add_node(
+            "node0",
+            prog.clone(),
+            vec![GraphInput {
+                buffer: "in_buf".into(),
+                value: val_in,
+                contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            }],
+            vec![GraphOutput {
+                buffer: "out_buf".into(),
+                name: "output_val".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let out_id = outputs[0];
+
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+
+    let artifact = compile(&req).expect("compilation must succeed");
+
+    let payload = TargetPayload::new(
+        &artifact,
+        test_format(),
+        test_profile(),
+        vec![TargetEntryPoint {
+            name: "entry0".into(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [32, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: vec![
+                TargetResourceBinding {
+                    resource: ArtifactValueId(val_in.0),
+                    group: 0,
+                    slot: 0,
+                    memory: TargetResourceMemory::Global,
+                    access: TargetResourceAccess::ReadOnly,
+                },
+                TargetResourceBinding {
+                    resource: ArtifactValueId(out_id.0),
+                    group: 0,
+                    slot: 1,
+                    memory: TargetResourceMemory::Global,
+                    access: TargetResourceAccess::WriteOnly,
+                },
+            ],
+        }],
+        vec![1, 2, 3],
+    )
+    .unwrap();
+
+    let core = test_instance_core(&artifact, &payload).unwrap();
+    assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_in.0)]);
+    assert_eq!(core.module_outputs[0], vec![ArtifactValueId(out_id.0)]);
+
+    let plan = BindingPlan::build(&prog).unwrap();
+    let mut state = BTreeMap::new();
+    state.insert(ArtifactValueId(val_in.0), vec![42, 0, 0, 0]);
+
+    let gathered = core
+        .gather_inputs_for_module(0, &plan, &prog, &state, unbound_input)
+        .unwrap();
+    assert_eq!(gathered.len(), 1);
+    assert_eq!(gathered[0], &[42, 0, 0, 0]);
+
+    core.absorb_outputs_for_module(
+        0,
+        &plan,
+        &prog,
+        vec![vec![42, 0, 0, 0]],
+        &mut state,
+        |idx, name| BackendError::InvalidProgram {
+            fix: format!("missing output {idx} {name}"),
+        },
+    )
+    .unwrap();
+
+    let completion = core.completion(&state, None).unwrap();
+    assert_eq!(
+        completion.outputs.get(&ArtifactValueId(out_id.0)).unwrap(),
+        &[42, 0, 0, 0]
+    );
+}

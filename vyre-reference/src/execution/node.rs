@@ -8,10 +8,11 @@
 
 use vyre_foundation::ir::{Expr, Node, Program};
 
+use crate::execution::node_async::{self, AsyncLoadEval, AsyncStoreEval};
+use crate::execution::node_tile;
 use crate::value::Value;
 use crate::ReferenceError;
 use crate::{
-    execution::async_transfer::{self, AsyncTransfer},
     execution::expr as eval_expr,
     execution::node_tree::{contains_barrier, node_id},
     oob,
@@ -126,7 +127,7 @@ fn step_loop_frame<'a>(
     Ok(())
 }
 
-fn execute_node<'a>(
+pub(crate) fn execute_node<'a>(
     node: &'a Node,
     invocation: &mut Invocation<'a>,
     memory: &mut Memory,
@@ -164,7 +165,7 @@ fn execute_node<'a>(
             offset,
             size,
             tag,
-        } => eval_async_load(
+        } => node_async::eval_async_load(
             AsyncLoadEval {
                 source,
                 destination,
@@ -182,7 +183,7 @@ fn execute_node<'a>(
             offset,
             size,
             tag,
-        } => eval_async_store(
+        } => node_async::eval_async_store(
             AsyncStoreEval {
                 source,
                 destination,
@@ -194,7 +195,7 @@ fn execute_node<'a>(
             memory,
             program,
         ),
-        Node::AsyncWait { tag } => eval_async_wait(tag, invocation, memory, program),
+        Node::AsyncWait { tag } => node_async::eval_async_wait(tag, invocation, memory, program),
         Node::Trap { address, tag } => {
             let address = eval_expr::eval(address, invocation, memory, program)?
                 .try_as_u32()
@@ -251,7 +252,7 @@ fn execute_node<'a>(
             buffer,
             origin,
             layout,
-        } => eval_tile_load(
+        } => node_tile::eval_tile_load(
             tile.as_str(),
             tile_type,
             buffer.as_str(),
@@ -265,7 +266,7 @@ fn execute_node<'a>(
             buffer,
             origin,
             tile,
-        } => eval_tile_store(
+        } => node_tile::eval_tile_store(
             buffer.as_str(),
             origin,
             tile.as_str(),
@@ -274,16 +275,16 @@ fn execute_node<'a>(
             program,
         ),
         Node::TileMatmul { acc, a, b } => {
-            eval_tile_matmul(acc.as_str(), a.as_str(), b.as_str(), invocation)
+            node_tile::eval_tile_matmul(acc.as_str(), a.as_str(), b.as_str(), invocation)
         }
         Node::TileReduce {
             out,
             tile,
             op,
             axis,
-        } => eval_tile_reduce(out.as_str(), tile.as_str(), *op, *axis, invocation),
+        } => node_tile::eval_tile_reduce(out.as_str(), tile.as_str(), *op, *axis, invocation),
         Node::TileElementwise { out, inputs, body } => {
-            eval_tile_elementwise(out.as_str(), inputs, body, invocation, memory, program)
+            node_tile::eval_tile_elementwise(out.as_str(), inputs, body, invocation, memory, program)
         }
         Node::TileDecl { name, tile } => {
             let elements = vec![Value::Float(0.0); tile.element_count()];
@@ -386,142 +387,6 @@ fn eval_indirect_dispatch(
     Err(ReferenceError::new(format!(
         "Node::IndirectDispatch cannot execute in the sequential reference interpreter because dynamic indirect dispatch requires runtime queue scheduling. Fix: run this program on a backend/runtime that supports indirect dispatch or lower `{count_buffer}` at byte offset {count_offset} to a static workgroup grid before reference execution."
     )))
-}
-
-struct AsyncLoadEval<'a> {
-    source: &'a str,
-    destination: &'a str,
-    offset: &'a Expr,
-    size: &'a Expr,
-    tag: &'a str,
-}
-
-struct AsyncStoreEval<'a> {
-    source: &'a str,
-    destination: &'a str,
-    offset: &'a Expr,
-    size: &'a Expr,
-    tag: &'a str,
-}
-
-fn eval_async_load(
-    request: AsyncLoadEval<'_>,
-    invocation: &mut Invocation<'_>,
-    memory: &mut Memory,
-    program: &Program,
-) -> Result<(), crate::ReferenceError> {
-    let start = eval_byte_count(
-        request.offset,
-        "async load source offset",
-        invocation,
-        memory,
-        program,
-    )?;
-    let byte_count = eval_byte_count(request.size, "async load size", invocation, memory, program)?;
-    let payload = read_bytes(memory, program, request.source, start, byte_count)?;
-    ensure_writable_buffer(memory, program, request.destination)?;
-    invocation.begin_async(
-        request.tag,
-        AsyncTransfer::load(request.destination, payload),
-    )
-}
-
-fn eval_async_store(
-    request: AsyncStoreEval<'_>,
-    invocation: &mut Invocation<'_>,
-    memory: &mut Memory,
-    program: &Program,
-) -> Result<(), crate::ReferenceError> {
-    let start = eval_byte_count(
-        request.offset,
-        "async store destination offset",
-        invocation,
-        memory,
-        program,
-    )?;
-    let byte_count = eval_byte_count(
-        request.size,
-        "async store size",
-        invocation,
-        memory,
-        program,
-    )?;
-    let payload = read_bytes(memory, program, request.source, 0, byte_count)?;
-    ensure_writable_buffer(memory, program, request.destination)?;
-    invocation.begin_async(
-        request.tag,
-        AsyncTransfer::store(request.destination, start, payload),
-    )
-}
-
-fn eval_async_wait(
-    tag: &str,
-    invocation: &mut Invocation<'_>,
-    memory: &mut Memory,
-    program: &Program,
-) -> Result<(), crate::ReferenceError> {
-    apply_async_transfer(invocation.finish_async(tag)?, memory, program)
-}
-
-fn eval_byte_count(
-    expr: &Expr,
-    label: &str,
-    invocation: &mut Invocation<'_>,
-    memory: &mut Memory,
-    program: &Program,
-) -> Result<usize, ReferenceError> {
-    let value = eval_expr::eval(expr, invocation, memory, program)?;
-    async_transfer::byte_count(&value, label)
-}
-
-fn read_bytes(
-    memory: &Memory,
-    program: &Program,
-    source: &str,
-    start: usize,
-    byte_count: usize,
-) -> Result<Vec<u8>, ReferenceError> {
-    Ok(resolve_buffer(memory, program, source)?.read_window(start, byte_count))
-}
-
-fn ensure_writable_buffer(
-    memory: &mut Memory,
-    program: &Program,
-    name: &str,
-) -> Result<(), ReferenceError> {
-    eval_expr::buffer_mut(memory, program, name).map(|_| ())
-}
-
-fn apply_async_transfer(
-    transfer: AsyncTransfer,
-    memory: &mut Memory,
-    program: &Program,
-) -> Result<(), ReferenceError> {
-    let buffer = eval_expr::buffer_mut(memory, program, transfer.destination())?;
-    transfer.apply_to(buffer);
-    Ok(())
-}
-
-fn resolve_buffer<'a>(
-    memory: &'a Memory,
-    program: &Program,
-    name: &str,
-) -> Result<&'a oob::Buffer, ReferenceError> {
-    let decl = program.buffer(name).ok_or_else(|| {
-        ReferenceError::new(format!(
-            "missing buffer declaration `{name}`. Fix: declare every async transfer buffer."
-        ))
-    })?;
-    if decl.access() == vyre_foundation::ir::BufferAccess::Workgroup {
-        memory.workgroup.get(name)
-    } else {
-        memory.storage.get(name)
-    }
-    .ok_or_else(|| {
-        ReferenceError::new(format!(
-            "missing buffer `{name}`. Fix: initialize every declared async transfer buffer."
-        ))
-    })
 }
 
 fn eval_if<'a>(
@@ -945,150 +810,4 @@ mod tests {
             }
         }
     }
-}
-fn eval_tile_load(
-    tile_name: &str,
-    tile_type: &vyre_foundation::ir::Tile,
-    buffer: &str,
-    origin: &[Expr],
-    layout: &vyre_foundation::ir::Layout,
-    invocation: &mut Invocation<'_>,
-    memory: &mut Memory,
-    program: &Program,
-) -> Result<(), crate::ReferenceError> {
-    let mut origin_coords = Vec::with_capacity(origin.len());
-    for expr in origin {
-        let v = eval_expr::eval(expr, invocation, memory, program)?;
-        let coord = v.try_as_u32().ok_or_else(|| {
-            crate::ReferenceError::new("tile load origin coord must be u32".to_string())
-        })?;
-        origin_coords.push(coord);
-    }
-    let target = eval_expr::buffer(memory, program, buffer)?;
-    let elements = crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout);
-    invocation.bind(tile_name, Value::Array(elements))
-}
-
-fn eval_tile_store(
-    buffer: &str,
-    origin: &[Expr],
-    tile_name: &str,
-    invocation: &mut Invocation<'_>,
-    memory: &mut Memory,
-    program: &Program,
-) -> Result<(), crate::ReferenceError> {
-    let mut origin_coords = Vec::with_capacity(origin.len());
-    for expr in origin {
-        let v = eval_expr::eval(expr, invocation, memory, program)?;
-        let coord = v.try_as_u32().ok_or_else(|| {
-            crate::ReferenceError::new("tile store origin coord must be u32".to_string())
-        })?;
-        origin_coords.push(coord);
-    }
-    let tile_val = invocation.local(tile_name).ok_or_else(|| {
-        crate::ReferenceError::new(format!(
-            "tile `{tile_name}` not found in scope for tile store"
-        ))
-    })?;
-    let elements = match tile_val {
-        Value::Array(elems) => elems.clone(),
-        single => vec![single.clone()],
-    };
-    let target = eval_expr::buffer_mut(memory, program, buffer)?;
-    crate::execution::tile::store_elements(target, &origin_coords, &elements);
-    Ok(())
-}
-
-fn eval_tile_matmul(
-    acc_name: &str,
-    a_name: &str,
-    b_name: &str,
-    invocation: &mut Invocation<'_>,
-) -> Result<(), crate::ReferenceError> {
-    let acc_val = invocation
-        .local(acc_name)
-        .cloned()
-        .unwrap_or(Value::Array(Vec::new()));
-    let a_val = invocation.local(a_name).cloned().ok_or_else(|| {
-        crate::ReferenceError::new(format!("tile `{a_name}` not found for matmul"))
-    })?;
-    let b_val = invocation.local(b_name).cloned().ok_or_else(|| {
-        crate::ReferenceError::new(format!("tile `{b_name}` not found for matmul"))
-    })?;
-    let a_elems = crate::execution::tile::to_elements(&a_val);
-    let b_elems = crate::execution::tile::to_elements(&b_val);
-    let mut acc_elems = crate::execution::tile::to_elements(&acc_val);
-    crate::execution::tile::matmul(&mut acc_elems, &a_elems, &b_elems);
-    invocation.assign(acc_name, Value::Array(acc_elems))
-}
-
-fn eval_tile_reduce(
-    out_name: &str,
-    tile_name: &str,
-    op: vyre_foundation::ir::SubgroupReduceOp,
-    axis: u32,
-    invocation: &mut Invocation<'_>,
-) -> Result<(), crate::ReferenceError> {
-    let tile_val = invocation.local(tile_name).cloned().ok_or_else(|| {
-        crate::ReferenceError::new(format!("tile `{tile_name}` not found for reduce"))
-    })?;
-    let elements = match tile_val {
-        Value::Array(e) => e,
-        s => vec![s],
-    };
-    let res = crate::execution::tile::reduce(&elements, op, axis);
-    invocation.bind(out_name, Value::Array(res))
-}
-
-fn eval_tile_elementwise<'a>(
-    out_name: &str,
-    inputs: &[vyre_foundation::ir::Ident],
-    body: &'a [Node],
-    invocation: &mut Invocation<'a>,
-    memory: &mut Memory,
-    program: &'a Program,
-) -> Result<(), crate::ReferenceError> {
-    let mut input_arrays = Vec::with_capacity(inputs.len());
-    let mut max_len = 0;
-    let mut saved_inputs = Vec::with_capacity(inputs.len());
-    for input in inputs {
-        let val = invocation
-            .local(input.as_str())
-            .cloned()
-            .ok_or_else(|| crate::ReferenceError::new(format!("tile input `{input}` not found")))?;
-        let elems = match &val {
-            Value::Array(e) => e.clone(),
-            s => vec![s.clone()],
-        };
-        max_len = max_len.max(elems.len());
-        input_arrays.push(elems);
-        saved_inputs.push(val);
-    }
-    for input in inputs {
-        invocation.unbind(input.as_str());
-    }
-    let mut out_elems = Vec::with_capacity(max_len);
-    for idx in 0..max_len {
-        invocation.push_scope();
-        for (i, input) in inputs.iter().enumerate() {
-            let elem = input_arrays[i]
-                .get(idx)
-                .cloned()
-                .unwrap_or(Value::Float(0.0));
-            invocation.bind(input.as_str(), elem)?;
-        }
-        for node in body {
-            execute_node(node, invocation, memory, program)?;
-        }
-        let out_val = invocation
-            .local(out_name)
-            .cloned()
-            .unwrap_or(Value::Float(0.0));
-        out_elems.push(out_val);
-        invocation.pop_scope();
-    }
-    for (input, val) in inputs.iter().zip(saved_inputs) {
-        let _ = invocation.bind(input.as_str(), val);
-    }
-    invocation.bind(out_name, Value::Array(out_elems))
 }

@@ -1,6 +1,6 @@
 //! Bounded cache for WGPU pipeline artifacts.
 
-use crate::pipeline::CachedPipelineArtifact;
+use crate::pipeline::artifact::CachedPipelineArtifact;
 use crate::staging_reserve::reserve_backend_vec;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;

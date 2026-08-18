@@ -21,6 +21,7 @@
 //! [`attribute_serial_child`], which names the invocation they run on.
 
 use thiserror::Error;
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -166,7 +167,10 @@ impl TokenSampler<'_> {
             fuse_programs(&[adjust, select, draw]).map_err(|error| SamplingError::Fusion {
                 reason: error.to_string(),
             })?;
-        Ok(demote_intermediate_outputs(fused, self.token))
+        Ok(tag_program(
+            SAMPLE_TOKEN_OP_ID,
+            demote_intermediate_outputs(fused, self.token),
+        ))
     }
 
     fn check(&self) -> Result<(), SamplingError> {

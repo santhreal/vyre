@@ -6,6 +6,20 @@ use crate::PipelineError;
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum TenantError {
+    /// The registry has reached its maximum tenant capacity.
+    #[error("tenant registry capacity exceeded (max {cap} tenants). Fix: unregister unused tenants or raise max tenant limit.")]
+    CapacityExceeded {
+        /// Configured maximum tenant count.
+        cap: u32,
+    },
+    /// Tenant with the requested id was not found in the registry.
+    #[error("tenant {tenant_id} not found. Fix: {fix}")]
+    NotFound {
+        /// Missing tenant id.
+        tenant_id: u32,
+        /// Corrective action for the caller.
+        fix: &'static str,
+    },
     /// The registry ran out of tenant ids. Unregister unused tenants
     /// or raise the range per tenant.
     #[error("tenant registry exhausted after {issued} registrations. Fix: shrink OPCODE_RANGE_PER_TENANT or recycle tenants.")]

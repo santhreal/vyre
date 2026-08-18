@@ -26,6 +26,8 @@ mod arena_cursor;
 mod arena_kernel;
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;
+pub mod cse_cross_scope;
+pub mod cse_programs;
 pub mod cse_via_encoded;
 pub mod dce_program;
 pub mod dce_via_encoded;

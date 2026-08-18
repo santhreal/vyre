@@ -25,16 +25,18 @@
 //! Every walk is an explicit worklist rather than recursion, so an
 //! adversarially deep program costs heap instead of native stack.
 
+pub(crate) mod bound_names;
 /// Canonical bound-name (`Let` / `Loop` variable) collector shared by the
 /// scope-aware passes (`region_inline`, `tail_duplication`,
 /// `read_only_load_hoist`). Internal: all helpers are `pub(crate)`, so the
 /// module stays off the public API surface.
-pub(crate) mod bound_names;
+pub(crate) mod collectors;
 /// Per-variant `Expr` decisions: operands, buffer reference, sub-expression walks.
 pub(crate) mod expr_parts;
 /// The exhaustive `Expr` visitor contract and its traversal entry points.
 pub(crate) mod expr_visitor;
 /// Per-variant `Node` decisions: nesting, scalar binding, operands, buffers.
+pub(crate) mod node_bodies;
 pub(crate) mod node_parts;
 /// The exhaustive `Node` visitor contract and its traversal entry points.
 pub(crate) mod node_visitor;

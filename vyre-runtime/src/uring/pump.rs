@@ -41,6 +41,7 @@
 //! surface itself is Linux-specific. Callers gate their pipeline
 //! code the same way.
 
+use super::buffer::Iovec;
 use crate::resident_work_queue::ResidentWorkQueue;
 use crate::uring::stream::AsyncUringStream;
 use crate::PipelineError;
@@ -75,11 +76,11 @@ pub struct UringResidentQueuePump<'a> {
     /// stable address for the SQE's raw pointer and is retired FIFO with the
     /// matching CQE. Bounded by the ring's submission entries: one entry per
     /// outstanding iovec, and a submission without an SQ slot is rejected.
-    iovec_scratch: VecDeque<Box<super::stream::Iovec>>,
+    iovec_scratch: VecDeque<Box<Iovec>>,
     /// Reusable stable iovec boxes retired from completed CQEs.
     // Boxes keep every SQE-visible iovec address stable across free-list growth.
     #[allow(clippy::vec_box)]
-    iovec_free: Vec<Box<super::stream::Iovec>>,
+    iovec_free: Vec<Box<Iovec>>,
     /// Chunks submitted and pending drain, in submission order.
     /// Iterated FIFO by `drain_into_ring` as each CQE arrives. Bounded by the
     /// ring's submission entries for the same reason as `iovec_scratch`.
@@ -108,16 +109,16 @@ impl<'a> UringResidentQueuePump<'a> {
         }
     }
 
-    fn acquire_iovec(&mut self) -> Box<super::stream::Iovec> {
+    fn acquire_iovec(&mut self) -> Box<Iovec> {
         self.iovec_free.pop().unwrap_or_else(|| {
-            Box::new(super::stream::Iovec {
+            Box::new(Iovec {
                 iov_base: core::ptr::null_mut(),
                 iov_len: 0,
             })
         })
     }
 
-    fn release_iovec(&mut self, mut iovec: Box<super::stream::Iovec>) {
+    fn release_iovec(&mut self, mut iovec: Box<Iovec>) {
         iovec.iov_base = core::ptr::null_mut();
         iovec.iov_len = 0;
         self.iovec_free.push(iovec);
@@ -348,11 +349,11 @@ mod tests {
 
     #[test]
     fn iovec_pool_reuses_stable_box_without_retaining_stale_pointer() {
-        let mut iovec = Box::new(super::super::stream::Iovec {
+        let mut iovec = Box::new(super::super::buffer::Iovec {
             iov_base: core::ptr::dangling_mut::<core::ffi::c_void>(),
             iov_len: 4096,
         });
-        let original_addr = (&*iovec as *const super::super::stream::Iovec) as usize;
+        let original_addr = (&*iovec as *const super::super::buffer::Iovec) as usize;
         iovec.iov_len = 8192;
 
         let mut free = Vec::new();
@@ -362,7 +363,7 @@ mod tests {
         let reused = free.pop().expect("Fix: released iovec must be reusable");
 
         assert_eq!(
-            (&*reused as *const super::super::stream::Iovec) as usize,
+            (&*reused as *const super::super::buffer::Iovec) as usize,
             original_addr
         );
         assert!(reused.iov_base.is_null());

@@ -20,7 +20,8 @@
 use cudarc::driver::sys::CUstream;
 use vyre_driver::BackendError;
 
-use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
+use crate::backend::allocations::DispatchAllocations;
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::resident::ResidentUseGuard;
 use crate::backend::telemetry::CudaTelemetry;
 use crate::stream::{CudaEvent, CudaLaunchResourceLease, CudaStream};

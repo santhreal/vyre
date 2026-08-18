@@ -18,6 +18,7 @@
 
 use std::{error::Error, fmt};
 
+mod builder;
 mod compile;
 #[cfg(test)]
 #[path = "../../../tests/internal/pattern/dfa_compile/mod.rs"]

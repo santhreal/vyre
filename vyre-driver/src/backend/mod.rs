@@ -29,6 +29,8 @@ mod resident_sequence;
 mod resource;
 mod typed_dispatch;
 mod vyre_backend;
+#[cfg(test)]
+mod vyre_backend_tests;
 
 pub use artifact_lifecycle::{
     ArtifactInstance, ArtifactMaterializer, BindingSet, BoundResource, Completion, Device,

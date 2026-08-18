@@ -2,48 +2,18 @@
 
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crate::resident_work_queue::ResidentWorkQueue;
 use crate::PipelineError;
 
+use super::counters::{TenantQuotaCounters, TenantRuntimeCounters};
 use super::error::TenantError;
+use super::quiesce::quiesce_idle;
 use super::quota::{
     release_resource_quota, reserve_resource_quota, saturating_atomic_add_u64,
     saturating_atomic_sub_u64,
 };
-
-pub(super) const QUIESCE_SPIN_POLLS: u64 = 64;
-pub(super) const QUIESCE_MIN_PARK: Duration = Duration::from_micros(2);
-pub(super) const QUIESCE_MAX_PARK: Duration = Duration::from_micros(50);
-pub(super) const QUIESCE_BACKOFF_SHIFT_CAP: u64 = 5;
-
-#[allow(clippy::unnecessary_min_or_max)]
-pub(super) fn quiesce_backoff_duration(poll: u64) -> Duration {
-    let parked_poll = poll.saturating_sub(QUIESCE_SPIN_POLLS);
-    let shift = parked_poll.min(QUIESCE_BACKOFF_SHIFT_CAP) as u32;
-    let multiplier = 1_u32 << shift;
-    QUIESCE_MIN_PARK
-        .checked_mul(multiplier)
-        .unwrap_or(QUIESCE_MAX_PARK)
-        .min(QUIESCE_MAX_PARK)
-}
-
-fn quiesce_idle(poll: u64) {
-    if poll < QUIESCE_SPIN_POLLS {
-        std::hint::spin_loop();
-    } else {
-        std::thread::park_timeout(quiesce_backoff_duration(poll));
-    }
-}
-
-pub(super) fn tenant_registry_retry_idle(retry: u64) {
-    if retry < QUIESCE_SPIN_POLLS {
-        std::hint::spin_loop();
-    } else {
-        std::thread::park_timeout(quiesce_backoff_duration(retry));
-    }
-}
 
 /// One tenant's accounting state. Lives inside an `Arc` so handles
 /// stay valid after the registry borrow drops.
@@ -85,42 +55,6 @@ pub(super) struct TenantState {
 #[derive(Clone)]
 pub struct TenantHandle {
     pub(super) state: Arc<TenantState>,
-}
-
-/// Host-visible tenant runtime counters.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TenantRuntimeCounters {
-    /// Tenant id.
-    pub tenant_id: u32,
-    /// Number of slots ever published by this tenant.
-    pub published_count: u64,
-    /// Number of slots observed drained for this tenant.
-    pub drained_count: u64,
-    /// Current host-visible backlog (`published_count - drained_count`).
-    pub outstanding_slots: u64,
-    /// Configured outstanding-slot cap for this tenant.
-    pub max_outstanding_slots: u64,
-    /// Number of quiesce calls recorded for this tenant.
-    pub quiesce_calls: u64,
-    /// Number of quiesce calls that timed out.
-    pub quiesce_timeouts: u64,
-    /// Cumulative nanoseconds spent waiting for this tenant to drain.
-    pub quiesce_wait_ns: u64,
-}
-
-/// Host-visible tenant quota counters.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TenantQuotaCounters {
-    /// Tenant id.
-    pub tenant_id: u32,
-    /// Current reserved staging bytes.
-    pub staging_bytes: u64,
-    /// Configured staging byte cap.
-    pub max_staging_bytes: u64,
-    /// Current reserved resident handle count.
-    pub resident_handles: u64,
-    /// Configured resident handle cap.
-    pub max_resident_handles: u64,
 }
 
 impl std::fmt::Debug for TenantHandle {

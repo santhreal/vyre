@@ -5,9 +5,10 @@ use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, BindingPlan, DispatchConfig};
 use vyre_foundation::ir::Program;
 
-use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
+use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::resident::{
     resident_bindings_from_handles, CudaDispatchBinding, CudaResidentBuffer, ResidentViewCache,
 };

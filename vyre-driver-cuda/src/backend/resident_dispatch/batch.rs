@@ -7,13 +7,14 @@ use vyre_driver::BindingRole;
 use vyre_driver::{BackendError, DispatchConfig, ResidentHandle};
 use vyre_foundation::ir::Program;
 
-use crate::backend::allocations::{DispatchAllocations, HostTransferAllocations};
+use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::enqueue_cleanup::EnqueueGuards;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::module_cache::ModuleCacheKey;
 use crate::backend::ordering::sort_unstable_by_key_if_needed;
 use crate::backend::output_range::{cuda_output_readback_for_binding, CudaOutputReadback};
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
 use crate::backend::resident_dispatch::dense_index_validation::validate_dense_resident_output_indices;

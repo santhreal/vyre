@@ -10,8 +10,9 @@ use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 
 use super::allocations::cuda_check;
-use super::dispatch::{CudaBackend, ModuleGlobalsLease};
+use super::dispatch::CudaBackend;
 use super::module_cache::ModuleCacheKey;
+use super::module_globals::ModuleGlobalsLease;
 use super::plan::CudaDispatchPlan;
 use super::staging_reserve::reserve_smallvec;
 use crate::numeric::CUDA_NUMERIC;

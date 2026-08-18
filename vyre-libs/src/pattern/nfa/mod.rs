@@ -28,7 +28,7 @@
 //! in a grammar-to-NFA compiler layer that produces the same transition
 //! and epsilon tables before calling this scan kernel.
 
-use vyre_foundation::composition::{trap_program, wrap_child_region};
+use vyre_foundation::composition::{tag_program, trap_program, wrap_child_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
@@ -467,20 +467,23 @@ pub fn nfa_scan_with_plan(
             .with_count(1),
     ];
 
-    Ok(Program::wrapped(
-        buffers,
-        [LANES_PER_SUBGROUP as u32, 1, 1],
-        vec![wrap_child_region(
-            crate::pattern::hit_buffer::EMIT_HIT_OP_ID,
-            Ident::from(REGEX_SCAN_OP_ID),
-            vec![Node::if_then(
-                Expr::and(
-                    Expr::lt(lane_u32(), Expr::u32(LANES_PER_SUBGROUP as u32)),
-                    Expr::lt(start_u32(), haystack_len_expr()),
-                ),
-                body,
+    Ok(tag_program(
+        REGEX_SCAN_OP_ID,
+        Program::wrapped(
+            buffers,
+            [LANES_PER_SUBGROUP as u32, 1, 1],
+            vec![wrap_child_region(
+                crate::pattern::hit_buffer::EMIT_HIT_OP_ID,
+                Ident::from(REGEX_SCAN_OP_ID),
+                vec![Node::if_then(
+                    Expr::and(
+                        Expr::lt(lane_u32(), Expr::u32(LANES_PER_SUBGROUP as u32)),
+                        Expr::lt(start_u32(), haystack_len_expr()),
+                    ),
+                    body,
+                )],
             )],
-        )],
+        ),
     ))
 }
 

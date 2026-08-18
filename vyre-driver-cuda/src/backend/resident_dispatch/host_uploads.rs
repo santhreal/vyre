@@ -5,7 +5,7 @@ use std::ffi::c_void;
 
 use vyre_driver::BackendError;
 
-use crate::backend::allocations::HostTransferAllocations;
+use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::resident_upload_fusion::ResidentUploadCopy;
 use crate::backend::staging_reserve::reserve_vec;
 
