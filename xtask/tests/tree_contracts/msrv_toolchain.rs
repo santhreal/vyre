@@ -154,3 +154,57 @@ fn every_cargo_fuzz_job_selects_nightly() {
         "Fix: every cargo-fuzz install must have one nightly cargo-fuzz run"
     );
 }
+
+/// WHY: the public-API snapshot records rustdoc's rendering of every item path,
+/// and that rendering moves with the compiler. The release that re-homed
+/// `std::io::Error` under `core` rewrote nine committed snapshots with no source
+/// change behind them, so a floating `nightly` turns the gate red on a date. The
+/// date is declared once by `RUSTDOC_TOOLCHAIN`, exported onto the extraction,
+/// and installed by the workflow; nothing but this contract keeps the workflow
+/// from drifting off the constant and blessing a snapshot the gate cannot
+/// reproduce.
+#[test]
+fn the_public_api_workflow_installs_the_declared_rustdoc_toolchain() {
+    let root = workspace_root();
+    let pinned = xtask::gates::public_api::RUSTDOC_TOOLCHAIN;
+    let workflow = std::fs::read_to_string(root.join(".github/workflows/public-api.yml"))
+        .expect("Fix: the public-api workflow must be readable");
+
+    let mut selected = None;
+    let mut installs = 0usize;
+    for line in workflow.lines() {
+        let trimmed = line.trim();
+        if let Some(toolchain) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
+            selected = Some(toolchain.to_string());
+        }
+        if trimmed.contains("install --locked cargo-public-api") {
+            installs += 1;
+            assert_eq!(
+                selected.as_deref(),
+                Some(pinned),
+                "Fix: select dtolnay/rust-toolchain@{pinned} before installing cargo-public-api, \
+                 so the workflow renders the snapshot with the toolchain RUSTDOC_TOOLCHAIN names"
+            );
+            assert!(
+                trimmed.contains(&format!("cargo +{pinned} install")),
+                "Fix: install cargo-public-api with `cargo +{pinned}`: {trimmed}"
+            );
+            assert!(
+                trimmed.contains(xtask::gates::public_api::CARGO_PUBLIC_API_VERSION),
+                "Fix: install the pinned cargo-public-api version {}: {trimmed}",
+                xtask::gates::public_api::CARGO_PUBLIC_API_VERSION
+            );
+        }
+    }
+
+    assert_eq!(
+        installs, 1,
+        "Fix: the public-api workflow must install cargo-public-api exactly once, or this \
+         contract guards nothing"
+    );
+    assert!(
+        !pinned.eq("nightly"),
+        "Fix: RUSTDOC_TOOLCHAIN must name a dated nightly; a floating channel makes the \
+         snapshot a function of the calendar"
+    );
+}

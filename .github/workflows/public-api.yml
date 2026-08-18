@@ -15,9 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      # Dated, not floating: the snapshot records rustdoc's item paths, so a new
+      # nightly rewrites committed lines with no source change behind it. The
+      # date is declared by RUSTDOC_TOOLCHAIN in xtask/src/gates/public_api.rs
+      # and the gate exports it for the extraction, so both must move together.
+      - uses: dtolnay/rust-toolchain@nightly-2026-08-07
       - name: Install cargo-public-api
-        run: cargo +nightly install --locked cargo-public-api --version 0.51.0
+        run: cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
       - name: Diff every publishable crate
         run: ./cargo_full run -q -p xtask --bin xtask -- public-api-snapshot
       - name: One public path per published item

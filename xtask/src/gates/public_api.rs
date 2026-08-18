@@ -30,6 +30,15 @@ use crate::gates::scan::Tree;
 pub const SNAPSHOT_DIR: &str = "docs/public-api";
 /// Required pinned version of `cargo-public-api`.
 pub const CARGO_PUBLIC_API_VERSION: &str = "0.51.0";
+/// Toolchain whose rustdoc renders the snapshot.
+///
+/// The snapshot records rustdoc's rendering of every item path, and that
+/// rendering moves with the compiler: the release that re-homed `std::io::Error`
+/// under `core` rewrote every `std::io::error::Result` line in nine snapshots
+/// with no source change behind it. A floating `nightly` therefore turns this
+/// gate red on a date rather than on a change, so the date is declared here and
+/// the workflow installs the same one.
+pub const RUSTDOC_TOOLCHAIN: &str = "nightly-2026-08-07";
 
 /// One publishable package and where its sources live.
 pub struct Snapshotted {
@@ -290,12 +299,13 @@ fn extract(root: &Path, package: &str) -> Result<String, GateError> {
             "-p",
             package,
         ])
+        .env("RUSTUP_TOOLCHAIN", RUSTDOC_TOOLCHAIN)
         .current_dir(root)
         .output()
         .map_err(|error| {
             GateError::new(
                 format!("cannot run `{} public-api -p {package}`: {error}", cargo.display()),
-                format!("install cargo-public-api {CARGO_PUBLIC_API_VERSION} (`cargo +nightly install --locked cargo-public-api --version {CARGO_PUBLIC_API_VERSION}`), and restore the cargo_full wrapper at the workspace root"),
+                format!("install cargo-public-api {CARGO_PUBLIC_API_VERSION} on {RUSTDOC_TOOLCHAIN} (`cargo +{RUSTDOC_TOOLCHAIN} install --locked cargo-public-api --version {CARGO_PUBLIC_API_VERSION}`), and restore the cargo_full wrapper at the workspace root"),
             )
         })?;
     if !output.status.success() {
