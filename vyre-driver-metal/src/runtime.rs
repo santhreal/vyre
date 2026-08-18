@@ -21,7 +21,7 @@ use vyre_driver::{
     DeviceTimingQuality, DispatchConfig, OutputBindingLayout, PipelineCacheSnapshot,
     ResidentHandle, ResidentOwner, Resource, TimedDispatchResult, VyreBackend,
 };
-use vyre_driver::{private, BackendError, PendingDispatch};
+use vyre_driver::{sealed, BackendError, PendingDispatch};
 use vyre_driver::{PipelineCacheIdentity, PipelineCacheMissReason};
 use vyre_foundation::ir::{OpId, Program};
 

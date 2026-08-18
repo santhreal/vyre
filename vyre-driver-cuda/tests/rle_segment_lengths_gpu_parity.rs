@@ -7,9 +7,8 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::decode::rle_segment_lengths::{
-    rle_segment_lengths, rle_segment_lengths_cpu, MAX_SEGMENT_LENGTH,
-};
+use vyre_libs::decode::rle_segment_lengths::{rle_segment_lengths, MAX_SEGMENT_LENGTH};
+use vyre_reference::composition_witness::rle_segment_lengths_witness as rle_segment_lengths_cpu;
 
 fn run_rle(segments: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let count = segments.len() as u32;

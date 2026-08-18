@@ -214,6 +214,9 @@ impl crate::gate::GateBehavior for CiRequired {
 
             let text = tree.read(&path)?;
             report.findings.extend(trigger_findings(&path, &text));
+            report
+                .findings
+                .extend(baseline_comparison_findings(&path, &text));
 
             let jobs = jobs(&text);
             for (line, context) in &section.contexts {
@@ -470,6 +473,33 @@ fn fail_closed_findings(path: &str, job: &Job) -> Vec<Finding> {
             "exit nonzero when a dependency did not succeed; printing the failure and exiting \
              zero is a green required check over a red lane",
         ));
+    }
+    findings
+}
+
+/// What is wrong with a benchmark baseline step in a workflow.
+///
+/// A benchmark regression check that compares a PR against a baseline must derive
+/// that baseline from the target branch (`origin/main`), not from the PR head itself.
+/// Falling back to self-comparison turns a regression gate into a vacuous self-check.
+fn baseline_comparison_findings(path: &str, text: &str) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (number, line) in crate::gates::scan::numbered(text) {
+        let trimmed = line.trim();
+        if trimmed.contains("--save-baseline")
+            && (trimmed.contains("fallback")
+                || trimmed.contains("PR head")
+                || trimmed.contains("self-baseline")
+                || trimmed.contains("self-comparison"))
+        {
+            findings.push(Finding::at(
+                path,
+                number,
+                "baseline step permits fallback to self-comparison on PR head",
+                "benchmark the target branch implementation directly by materializing the \
+                 benchmark target into the main checkout; self-comparison is a vacuous gate",
+            ));
+        }
     }
     findings
 }
@@ -855,5 +885,43 @@ mod tests {
                  make it blocking"
             );
         }
+    }
+
+    /// WHY: A benchmark regression check that compares a PR against a baseline must
+    /// derive that baseline from the target branch (origin/main), not from the PR head
+    /// itself. Falling back to self-comparison turns a regression gate into a vacuous check.
+    #[test]
+    fn a_baseline_step_permitting_self_comparison_is_reported() {
+        let bad_workflow = "\
+jobs:
+  bench:
+    steps:
+      - name: Save baseline
+        run: |
+          git checkout -
+          ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --save-baseline main fallback to PR head
+";
+        let findings = baseline_comparison_findings("bench.yml", bad_workflow);
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("fallback to self-comparison"));
+
+        let passing_workflow = "\
+jobs:
+  bench:
+    steps:
+      - name: Save baseline from main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout origin/main
+          git checkout - -- vyre-foundation/benches
+          if ! grep -q 'name = \"optimizer_pipeline\"' vyre-foundation/Cargo.toml; then
+            printf '\\n[[bench]]\\nname = \"optimizer_pipeline\"\\nharness = false\\n' >> vyre-foundation/Cargo.toml
+          fi
+          ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --save-baseline main
+          git checkout -f -
+";
+        let clean_findings = baseline_comparison_findings("bench.yml", passing_workflow);
+        assert!(clean_findings.is_empty(), "clean workflow must pass");
     }
 }

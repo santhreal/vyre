@@ -52,10 +52,7 @@ fn step_frames<'a>(
     memory: &mut Memory,
     program: &'a Program,
 ) -> Result<(), crate::ReferenceError> {
-    loop {
-        let Some(frame) = invocation.frames_mut().pop() else {
-            return Ok(());
-        };
+    while let Some(frame) = invocation.frames_mut().pop() {
         match frame {
             Frame::Nodes {
                 nodes,
@@ -71,9 +68,12 @@ fn step_frames<'a>(
                 next,
                 to,
                 body,
-            } => step_loop_frame(invocation, var, next, to, body)?,
+            } => {
+                step_loop_frame(invocation, var, next, to, body)?;
+            }
         }
     }
+    Ok(())
 }
 
 fn step_nodes_frame<'a>(

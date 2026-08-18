@@ -84,6 +84,15 @@ fn prepare_copied_buffer(out: &mut Vec<u32>, words: usize, src: &[u32]) {
         out.resize(words, 0);
     }
 }
+fn accumulate_frontier_step(frontier: &mut [u32], step: &[u32]) -> bool {
+    let mut step_changed = false;
+    for (word, reached) in frontier.iter_mut().zip(step) {
+        let previous = *word;
+        *word |= *reached;
+        step_changed |= *word != previous;
+    }
+    step_changed
+}
 
 fn for_each_active_edge(
     node_count: u32,
@@ -403,12 +412,7 @@ pub fn csr_persistent_closure_witness_with_scratch_into(
             allow_mask,
             step_scratch,
         );
-        let mut step_changed = false;
-        for (word, reached) in frontier_out.iter_mut().zip(step_scratch.iter()) {
-            let previous = *word;
-            *word |= *reached;
-            step_changed |= *word != previous;
-        }
+        let step_changed = accumulate_frontier_step(frontier_out, step_scratch);
         if step_changed {
             changed = 1;
         } else {
@@ -496,12 +500,7 @@ pub fn csr_persistent_closure_detailed_witness(
                 allow_mask,
                 &mut step,
             );
-            let mut step_changed = false;
-            for (word, reached) in frontier.iter_mut().zip(&step) {
-                let previous = *word;
-                *word |= *reached;
-                step_changed |= *word != previous;
-            }
+            let step_changed = accumulate_frontier_step(&mut frontier, &step);
             stop_iteration = iteration + 1;
             active_per_iteration.push(frontier.iter().map(|word| word.count_ones()).sum());
             if step_changed {
@@ -592,28 +591,23 @@ pub fn csr_forward_or_changed_witness_into(
         return 0;
     }
     let mut changed = 0;
-    for source in 0..node_count_u {
-        if output[source / 32] & (1 << (source % 32)) == 0 {
-            continue;
-        }
-        let start = edge_offsets[source] as usize;
-        let end = (edge_offsets[source + 1] as usize)
-            .min(edge_targets.len())
-            .min(edge_kind_mask.len());
-        for edge in start..end {
-            if edge_kind_mask[edge] & allow_mask != 0 {
-                let dst = edge_targets[edge] as usize;
-                if dst < node_count_u {
-                    let bit = 1 << (dst % 32);
-                    let word = &mut output[dst / 32];
-                    if *word & bit == 0 {
-                        *word |= bit;
-                        changed = 1;
-                    }
+    for_each_active_edge(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        allow_mask,
+        |source, dst| {
+            if output[source / 32] & (1 << (source % 32)) != 0 {
+                let bit = 1 << (dst % 32);
+                let word = &mut output[dst / 32];
+                if *word & bit == 0 {
+                    *word |= bit;
+                    changed = 1;
                 }
             }
-        }
-    }
+        },
+    );
     changed
 }
 

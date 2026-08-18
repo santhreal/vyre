@@ -5,9 +5,8 @@
 mod harness;
 
 use harness::with_cuda_optimizer_dispatcher;
-use vyre_libs::graph::dispatch::dominator_frontier::{
-    dominance_frontier as reference_dominance_frontier, dominance_frontier_via,
-};
+use vyre_libs::graph::dispatch::dominator_frontier::dominance_frontier_via;
+use vyre_reference::composition_witness::dominator_frontier_witness as reference_dominance_frontier;
 
 #[test]
 fn cuda_dominance_frontier_via_chain_is_empty() {

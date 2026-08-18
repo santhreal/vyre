@@ -54,10 +54,10 @@ fn f32_adversarial() -> impl Strategy<Value = f32> {
 struct DummyOpaque;
 impl vyre_foundation::ir::ExprNode for DummyOpaque {
     fn extension_kind(&self) -> &'static str {
-        "test.dummy"
+        "expr.dummy_opaque"
     }
     fn debug_identity(&self) -> &str {
-        "dummy"
+        "opaque_dummy"
     }
     fn result_type(&self) -> Option<DataType> {
         Some(DataType::U32)
@@ -66,7 +66,7 @@ impl vyre_foundation::ir::ExprNode for DummyOpaque {
         false
     }
     fn stable_fingerprint(&self) -> [u8; 32] {
-        [0x5A; 32]
+        [0x42; 32]
     }
     fn validate_extension(&self) -> Result<(), String> {
         Ok(())

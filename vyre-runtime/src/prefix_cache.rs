@@ -795,54 +795,48 @@ impl PrefixCacheManager {
         }
     }
 
-    /// Pin pages so they cannot be evicted during compilation or resident preparation.
-    pub fn pin_pages(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
+    fn set_pages_flag<F>(
+        &mut self,
+        page_ids: &[u32],
+        mut flag_setter: F,
+    ) -> Result<(), PrefixCacheError>
+    where
+        F: FnMut(&mut PhysicalPageRecord),
+    {
         for &id in page_ids {
             let page = self
                 .pages
                 .get_mut(&id)
                 .ok_or(PrefixCacheError::PageNotFound(id))?;
-            page.pinned = true;
+            flag_setter(page);
         }
+        Ok(())
+    }
+
+    /// Pin pages so they cannot be evicted during compilation or resident preparation.
+    pub fn pin_pages(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
+        self.set_pages_flag(page_ids, |p| p.pinned = true)?;
         self.metrics.pinned_pages = self.pages.values().filter(|p| p.pinned).count();
         Ok(())
     }
 
     /// Unpin pages after compilation / submission completes.
     pub fn unpin_pages(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
-        for &id in page_ids {
-            let page = self
-                .pages
-                .get_mut(&id)
-                .ok_or(PrefixCacheError::PageNotFound(id))?;
-            page.pinned = false;
-        }
+        self.set_pages_flag(page_ids, |p| p.pinned = false)?;
         self.metrics.pinned_pages = self.pages.values().filter(|p| p.pinned).count();
         Ok(())
     }
 
     /// Mark pages as in-flight during kernel execution.
     pub fn mark_in_flight(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
-        for &id in page_ids {
-            let page = self
-                .pages
-                .get_mut(&id)
-                .ok_or(PrefixCacheError::PageNotFound(id))?;
-            page.in_flight = true;
-        }
+        self.set_pages_flag(page_ids, |p| p.in_flight = true)?;
         self.metrics.in_flight_pages = self.pages.values().filter(|p| p.in_flight).count();
         Ok(())
     }
 
     /// Clear in-flight status after kernel completion.
     pub fn clear_in_flight(&mut self, page_ids: &[u32]) -> Result<(), PrefixCacheError> {
-        for &id in page_ids {
-            let page = self
-                .pages
-                .get_mut(&id)
-                .ok_or(PrefixCacheError::PageNotFound(id))?;
-            page.in_flight = false;
-        }
+        self.set_pages_flag(page_ids, |p| p.in_flight = false)?;
         self.metrics.in_flight_pages = self.pages.values().filter(|p| p.in_flight).count();
         Ok(())
     }
@@ -959,22 +953,7 @@ mod tests {
     use super::*;
 
     fn test_key(tenant: &str, trust: Option<&str>, gen: u64) -> PrefixCacheKey {
-        PrefixCacheKey {
-            model_id: [1u8; 32],
-            tokenizer_id: [2u8; 32],
-            weights_digest: [3u8; 32],
-            config_digest: [4u8; 32],
-            dtype: DataType::F32,
-            layout: PrefixCacheLayout {
-                kv_heads: 2,
-                head_dim: 64,
-                block_tokens: 16,
-            },
-            device_generation: gen,
-            cache_schema_version: 1,
-            isolation_domain: tenant.to_string(),
-            trust_domain: trust.map(|s| s.to_string()),
-        }
+        PrefixCacheKey::test_sample(tenant, trust, gen)
     }
 
     #[test]
@@ -1109,13 +1088,14 @@ mod tests {
 }
 
 impl PrefixCacheKey {
+    /// Constructs a representative prefix cache key for testing.
     #[cfg(test)]
-    pub(crate) fn test_sample(tenant: &str, gen: u64) -> Self {
+    pub fn test_sample(tenant: &str, trust: Option<&str>, gen: u64) -> Self {
         Self {
-            model_id: [1u8; 32],
-            tokenizer_id: [2u8; 32],
-            weights_digest: [3u8; 32],
-            config_digest: [4u8; 32],
+            model_id: [10u8; 32],
+            tokenizer_id: [20u8; 32],
+            weights_digest: [30u8; 32],
+            config_digest: [40u8; 32],
             dtype: DataType::F32,
             layout: PrefixCacheLayout {
                 kv_heads: 2,
@@ -1125,7 +1105,7 @@ impl PrefixCacheKey {
             device_generation: gen,
             cache_schema_version: 1,
             isolation_domain: tenant.to_string(),
-            trust_domain: None,
+            trust_domain: trust.map(|s| s.to_string()),
         }
     }
 }

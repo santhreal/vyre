@@ -1,7 +1,9 @@
 use super::*;
 
-use vyre_libs::math::quantized::{
-    i4x8_dot_f32_scaled, i4x8_dot_f32_scaled_cpu, i4x8_dot_i32, i4x8_dot_i32_cpu,
+use vyre_libs::math::quantized::{i4x8_dot_f32_scaled, i4x8_dot_i32};
+use vyre_reference::composition_witness::{
+    i4x8_dot_f32_scaled_witness as i4x8_dot_f32_scaled_cpu,
+    i4x8_dot_i32_witness as i4x8_dot_i32_cpu,
 };
 
 /// Fixed-pattern packed operands for one dot lane count.

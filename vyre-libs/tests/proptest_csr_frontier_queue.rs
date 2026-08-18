@@ -3,7 +3,7 @@
 #![cfg(feature = "graph")]
 
 mod wire_words;
-use wire_words::mix64;
+use wire_words::{mix64, queue_forward_oracle};
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
@@ -247,32 +247,6 @@ fn max_row_degree(edge_offsets: &[u32]) -> u32 {
         .map(|pair| pair[1] - pair[0])
         .max()
         .unwrap_or(0)
-}
-
-fn queue_forward_oracle(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    node_count: u32,
-    allow_mask: u32,
-) -> Vec<u32> {
-    let mut out = vec![0u32; bitset_words(node_count) as usize];
-    let take = (queue_len as usize).min(active_queue.len());
-    for &src in &active_queue[..take] {
-        if src >= node_count {
-            continue;
-        }
-        let start = edge_offsets[src as usize] as usize;
-        let end = edge_offsets[src as usize + 1] as usize;
-        for edge_index in start..end {
-            if edge_kind_mask[edge_index] & allow_mask != 0 {
-                set_node(&mut out, edge_targets[edge_index]);
-            }
-        }
-    }
-    out
 }
 
 fn frontier_has_node(frontier: &[u32], node: u32) -> bool {

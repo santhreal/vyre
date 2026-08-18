@@ -45,6 +45,6 @@ fn cuda_scaling_bench_gpu_vs_cpu_pipeline() {
 
 fn body() {
     let backend = CudaBackend::acquire().expect("CudaBackend acquire");
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     report_scaling("cuda", &dispatcher, sequential_gpu_pipeline);
 }

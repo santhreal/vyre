@@ -687,93 +687,93 @@ pub trait RuleEvaluationContextWitness {
 /// Canonical neutral rule condition representation for reference witnesses.
 #[derive(Debug, Clone)]
 pub enum RuleConditionWitness {
-    /// True when the pattern has any match state.
+    /// Evaluates true when matching pattern is present.
     PatternExists {
-        /// Identifier of target pattern table entry.
+        /// Target pattern index.
         pattern_id: u32,
     },
-    /// True when pattern count is strictly greater than threshold.
+    /// Evaluates true when pattern count strictly exceeds threshold.
     PatternCountGt {
-        /// Identifier of target pattern table entry.
+        /// Target pattern index.
         pattern_id: u32,
-        /// Strict lower count bound.
+        /// Minimum threshold count.
         threshold: u32,
     },
-    /// True when pattern count is greater than or equal to threshold.
+    /// Evaluates true when pattern count is at least threshold.
     PatternCountGte {
-        /// Identifier of target pattern table entry.
+        /// Target pattern index.
         pattern_id: u32,
-        /// Non-strict lower count bound.
+        /// Minimum threshold count.
         threshold: u32,
     },
-    /// Constant true evaluation.
+    /// Evaluates unconditionally true.
     LiteralTrue,
-    /// Constant false evaluation.
+    /// Evaluates unconditionally false.
     LiteralFalse,
-    /// File size exactly equals argument.
+    /// Compares payload file size for equality.
     FileSizeEq(u64),
-    /// File size not equal to argument.
+    /// Compares payload file size for inequality.
     FileSizeNe(u64),
-    /// File size strictly below argument.
+    /// Compares payload file size strictly less than bound.
     FileSizeLt(u64),
-    /// File size at most argument.
+    /// Compares payload file size at most bound.
     FileSizeLte(u64),
-    /// File size strictly above argument.
+    /// Compares payload file size strictly exceeding bound.
     FileSizeGt(u64),
-    /// File size at least argument.
+    /// Compares payload file size at least bound.
     FileSizeGte(u64),
-    /// True when text matched by field satisfies regex pattern.
+    /// Compares regex match over named field value.
     RegexMatch {
-        /// Target field name.
+        /// Evaluation field key.
         field: std::sync::Arc<str>,
-        /// Regular expression text.
+        /// Regular expression string.
         pattern: std::sync::Arc<str>,
     },
-    /// True when haystack contains needle.
+    /// Evaluates whether text contains needle substring.
     SubstringMatch {
-        /// Source text to search within.
+        /// Haystack source key.
         haystack: std::sync::Arc<str>,
-        /// Exact substring to find.
+        /// Needle search pattern.
         needle: std::sync::Arc<str>,
     },
-    /// True when value starts with prefix.
+    /// Evaluates whether text begins with prefix.
     PrefixMatch {
-        /// Target string value.
+        /// Source text key.
         value: std::sync::Arc<str>,
-        /// Prefix to check.
+        /// Required prefix string.
         prefix: std::sync::Arc<str>,
     },
-    /// True when value ends with suffix.
+    /// Evaluates whether text ends with suffix.
     SuffixMatch {
-        /// Target string value.
+        /// Source text key.
         value: std::sync::Arc<str>,
-        /// Suffix to check.
+        /// Required suffix string.
         suffix: std::sync::Arc<str>,
     },
-    /// True when value falls inside inclusive range.
+    /// Evaluates whether integer is within closed interval.
     RangeMatch {
-        /// Numeric candidate value.
+        /// Candidate value.
         value: u64,
-        /// Lower range boundary.
+        /// Minimum bound.
         min: u64,
-        /// Upper range boundary.
+        /// Maximum bound.
         max: u64,
     },
-    /// True when value is in set.
+    /// Evaluates member presence in string collection.
     SetMembership {
-        /// Candidate value.
+        /// Key string value.
         value: std::sync::Arc<str>,
-        /// Accepted member set.
+        /// Acceptable set items.
         set: smallvec::SmallVec<[std::sync::Arc<str>; 4]>,
     },
-    /// True when context field is in set.
+    /// Evaluates context lookup presence in string collection.
     FieldInSet {
-        /// Target field name.
+        /// Key field to inspect.
         field: std::sync::Arc<str>,
-        /// Accepted member set.
+        /// Acceptable set items.
         set: smallvec::SmallVec<[std::sync::Arc<str>; 4]>,
     },
-    /// Extension-declared rule condition.
+    /// Opaque extension condition.
     Opaque(std::sync::Arc<dyn vyre_foundation::extension::RuleConditionExt>),
 }
 
@@ -792,8 +792,8 @@ impl PartialEq for RuleConditionWitness {
                     pattern_id: b,
                     threshold: tb,
                 },
-            ) => (a, ta) == (b, tb),
-            (
+            )
+            | (
                 Self::PatternCountGte {
                     pattern_id: a,
                     threshold: ta,
@@ -803,87 +803,74 @@ impl PartialEq for RuleConditionWitness {
                     threshold: tb,
                 },
             ) => (a, ta) == (b, tb),
-            (Self::FileSizeLt(a), Self::FileSizeLt(b)) => a == b,
-            (Self::FileSizeLte(a), Self::FileSizeLte(b)) => a == b,
-            (Self::FileSizeGt(a), Self::FileSizeGt(b)) => a == b,
-            (Self::FileSizeGte(a), Self::FileSizeGte(b)) => a == b,
-            (Self::FileSizeEq(a), Self::FileSizeEq(b)) => a == b,
-            (Self::FileSizeNe(a), Self::FileSizeNe(b)) => a == b,
+            (Self::FileSizeEq(a), Self::FileSizeEq(b))
+            | (Self::FileSizeNe(a), Self::FileSizeNe(b))
+            | (Self::FileSizeLt(a), Self::FileSizeLt(b))
+            | (Self::FileSizeLte(a), Self::FileSizeLte(b))
+            | (Self::FileSizeGt(a), Self::FileSizeGt(b))
+            | (Self::FileSizeGte(a), Self::FileSizeGte(b)) => a == b,
             (Self::LiteralTrue, Self::LiteralTrue) | (Self::LiteralFalse, Self::LiteralFalse) => {
                 true
             }
             (
                 Self::RegexMatch {
-                    field: af,
+                    field: a,
                     pattern: ap,
                 },
                 Self::RegexMatch {
-                    field: bf,
+                    field: b,
                     pattern: bp,
                 },
-            ) => af == bf && ap == bp,
+            ) => (a, ap) == (b, bp),
             (
                 Self::SubstringMatch {
-                    haystack: ah,
+                    haystack: a,
                     needle: an,
                 },
                 Self::SubstringMatch {
-                    haystack: bh,
+                    haystack: b,
                     needle: bn,
                 },
-            ) => ah == bh && an == bn,
+            ) => (a, an) == (b, bn),
             (
                 Self::PrefixMatch {
-                    value: av,
+                    value: a,
                     prefix: ap,
                 },
                 Self::PrefixMatch {
-                    value: bv,
+                    value: b,
                     prefix: bp,
                 },
-            ) => av == bv && ap == bp,
+            ) => (a, ap) == (b, bp),
             (
                 Self::SuffixMatch {
-                    value: av,
+                    value: a,
                     suffix: as_,
                 },
                 Self::SuffixMatch {
-                    value: bv,
+                    value: b,
                     suffix: bs,
                 },
-            ) => av == bv && as_ == bs,
+            ) => (a, as_) == (b, bs),
             (
                 Self::RangeMatch {
-                    value: av,
+                    value: a,
                     min: amin,
                     max: amax,
                 },
                 Self::RangeMatch {
-                    value: bv,
+                    value: b,
                     min: bmin,
                     max: bmax,
                 },
-            ) => (av, amin, amax) == (bv, bmin, bmax),
+            ) => (a, amin, amax) == (b, bmin, bmax),
             (
-                Self::SetMembership {
-                    value: av,
-                    set: aset,
-                },
-                Self::SetMembership {
-                    value: bv,
-                    set: bset,
-                },
-            ) => av == bv && aset == bset,
-            (
-                Self::FieldInSet {
-                    field: af,
-                    set: aset,
-                },
-                Self::FieldInSet {
-                    field: bf,
-                    set: bset,
-                },
-            ) => af == bf && aset == bset,
+                Self::SetMembership { value: a, set: sa },
+                Self::SetMembership { value: b, set: sb },
+            ) => (a, sa) == (b, sb),
+            (Self::FieldInSet { field: a, set: sa }, Self::FieldInSet { field: b, set: sb }) => {
+                (a, sa) == (b, sb)
+            }
             (Self::Opaque(a), Self::Opaque(b)) => a.extension_id() == b.extension_id(),
             _ => false,
         }
@@ -911,77 +898,62 @@ pub fn evaluate_condition_witness<C: RuleEvaluationContextWitness + ?Sized>(
     condition: &RuleConditionWitness,
     ctx: &C,
 ) -> bool {
+    let p = |id| ctx.pattern_count(id);
+    let s = || ctx.file_size();
+    let val = |fld: &std::sync::Arc<str>| ctx.field_value(fld.as_ref());
     match condition {
-        RuleConditionWitness::PatternExists { pattern_id } => ctx.pattern_count(*pattern_id) > 0,
+        RuleConditionWitness::PatternExists { pattern_id } => p(*pattern_id) > 0,
         RuleConditionWitness::PatternCountGt {
             pattern_id,
             threshold,
-        } => ctx.pattern_count(*pattern_id) > *threshold,
+        } => p(*pattern_id) > *threshold,
         RuleConditionWitness::PatternCountGte {
             pattern_id,
             threshold,
-        } => ctx.pattern_count(*pattern_id) >= *threshold,
-        RuleConditionWitness::FileSizeLt(t) => ctx.file_size() < *t,
-        RuleConditionWitness::FileSizeLte(t) => ctx.file_size() <= *t,
-        RuleConditionWitness::FileSizeGt(t) => ctx.file_size() > *t,
-        RuleConditionWitness::FileSizeGte(t) => ctx.file_size() >= *t,
-        RuleConditionWitness::FileSizeEq(t) => ctx.file_size() == *t,
-        RuleConditionWitness::FileSizeNe(t) => ctx.file_size() != *t,
+        } => p(*pattern_id) >= *threshold,
+        RuleConditionWitness::FileSizeLt(t) => s() < *t,
+        RuleConditionWitness::FileSizeLte(t) => s() <= *t,
+        RuleConditionWitness::FileSizeGt(t) => s() > *t,
+        RuleConditionWitness::FileSizeGte(t) => s() >= *t,
+        RuleConditionWitness::FileSizeEq(t) => s() == *t,
+        RuleConditionWitness::FileSizeNe(t) => s() != *t,
         RuleConditionWitness::LiteralTrue => true,
         RuleConditionWitness::LiteralFalse => false,
         RuleConditionWitness::RegexMatch { field, pattern } => {
-            let Some(value) = ctx.field_value(field.as_ref()) else {
-                return false;
-            };
-            use std::collections::HashMap;
-            use std::sync::LazyLock;
-            use std::sync::Mutex;
-            static REGEX_CACHE: LazyLock<Mutex<HashMap<String, regex::Regex>>> =
-                LazyLock::new(|| Mutex::new(HashMap::new()));
-            let Ok(cache) = REGEX_CACHE.lock() else {
-                return false;
-            };
-            let re = cache.get(pattern.as_ref()).cloned();
-            drop(cache);
-            match re {
-                Some(re) => re.is_match(value),
-                None => match regex::Regex::new(pattern.as_ref()) {
-                    Ok(re) => {
-                        let Ok(mut cache) = REGEX_CACHE.lock() else {
-                            return false;
-                        };
-                        cache.insert(pattern.to_string(), re.clone());
-                        re.is_match(value)
-                    }
-                    Err(_) => false,
-                },
-            }
+            val(field).map_or(false, |v| match_regex(v, pattern))
         }
-        RuleConditionWitness::SubstringMatch { haystack, needle } => ctx
-            .field_value(haystack.as_ref())
-            .map(|h| h.contains(needle.as_ref()))
-            .unwrap_or(false),
-        RuleConditionWitness::PrefixMatch { value, prefix } => ctx
-            .field_value(value.as_ref())
-            .map(|v| v.starts_with(prefix.as_ref()))
-            .unwrap_or(false),
-        RuleConditionWitness::SuffixMatch { value, suffix } => ctx
-            .field_value(value.as_ref())
-            .map(|v| v.ends_with(suffix.as_ref()))
-            .unwrap_or(false),
+        RuleConditionWitness::SubstringMatch { haystack, needle } => {
+            val(haystack).map_or(false, |h| h.contains(needle.as_ref()))
+        }
+        RuleConditionWitness::PrefixMatch { value, prefix } => {
+            val(value).map_or(false, |v| v.starts_with(prefix.as_ref()))
+        }
+        RuleConditionWitness::SuffixMatch { value, suffix } => {
+            val(value).map_or(false, |v| v.ends_with(suffix.as_ref()))
+        }
         RuleConditionWitness::RangeMatch { value, min, max } => *value >= *min && *value <= *max,
-        RuleConditionWitness::SetMembership { value, set } => set
-            .iter()
-            .map(std::sync::Arc::as_ref)
-            .any(|m| m == value.as_ref()),
+        RuleConditionWitness::SetMembership { value, set } => {
+            set.iter().any(|m| m.as_ref() == value.as_ref())
+        }
         RuleConditionWitness::FieldInSet { field, set } => {
-            let Some(value) = ctx.field_value(field.as_ref()) else {
-                return false;
-            };
-            set.iter().map(std::sync::Arc::as_ref).any(|m| m == value)
+            val(field).map_or(false, |v| set.iter().any(|m| m.as_ref() == v))
         }
         RuleConditionWitness::Opaque(ext) => ext.evaluate_opaque(&() as &dyn std::any::Any),
     }
+}
+
+fn match_regex(value: &str, pattern: &str) -> bool {
+    use std::collections::HashMap;
+    use std::sync::{LazyLock, Mutex};
+    static CACHE: LazyLock<Mutex<HashMap<String, Option<regex::Regex>>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
+    let Ok(mut lock) = CACHE.lock() else {
+        return false;
+    };
+    lock.entry(pattern.to_string())
+        .or_insert_with(|| regex::Regex::new(pattern).ok())
+        .as_ref()
+        .map_or(false, |re| re.is_match(value))
 }
 
 /// Evaluate a [`RuleFormulaWitness`] tree against `ctx`.

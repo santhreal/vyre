@@ -58,14 +58,14 @@ pub struct FrontierTypedPlanWitness {
 /// Frontier scheduling witness errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FrontierTypedPlanWitnessError {
-    /// Duplicate node identifier.
+    /// Duplicate node identifier in input graph.
     DuplicateNode {
-        /// Duplicated node identifier.
+        /// Assigned duplicate identifier.
         id: u32,
     },
-    /// Dependency references an unknown node.
+    /// Dependency references an unresolved node identifier.
     UnknownDependencyNode {
-        /// Unknown node identifier.
+        /// Missing node identifier.
         id: u32,
     },
     /// Dependency graph contains a cycle.

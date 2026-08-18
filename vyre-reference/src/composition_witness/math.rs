@@ -3663,26 +3663,13 @@ pub fn try_sinkhorn_iterate_f64_witness_into(
     u_old.clear();
     u_old.resize(m, 0.0_f64);
 
+    let mut kv = Vec::new();
+    let mut ktu = Vec::new();
     for iter in 0..max_iterations {
         u_old.copy_from_slice(u_out);
-
-        let step_f64 = |in_v: &[f64],
-                        tgt: &[f64],
-                        out_v: &mut [f64],
-                        rows: usize,
-                        cols: usize,
-                        trans: bool| {
-            for r in 0..rows {
-                let mut sum = 0.0_f64;
-                for c in 0..cols {
-                    let idx = if trans { c * rows + r } else { r * cols + c };
-                    sum += k[idx] * in_v[c];
-                }
-                out_v[r] = if sum == 0.0 { 0.0 } else { tgt[r] / sum };
-            }
-        };
-        step_f64(v_out, a, u_out, m, n, false);
-        step_f64(u_out, b, v_out, n, m, true);
+        try_sinkhorn_iter_f64_in_place_witness_into(
+            k, a, b, u_out, v_out, m as u32, n as u32, &mut kv, &mut ktu,
+        )?;
 
         let max_delta = u_out
             .iter()
@@ -3778,35 +3765,19 @@ pub fn sinkhorn_iter_f64_step_witness_into(
     u_out: &mut Vec<f64>,
     v_out: &mut Vec<f64>,
 ) {
-    let (m, n) = (m as usize, n as usize);
+    let (m_us, n_us) = (m as usize, n as usize);
     u_out.clear();
-    u_out.resize(m, 0.0_f64);
+    u_out.resize(m_us, 0.0);
     v_out.clear();
-    v_out.resize(n, 0.0_f64);
-    for i in 0..m {
-        let mut sum = 0.0;
-        for j in 0..n {
-            sum += k.get(i * n + j).copied().unwrap_or(0.0) * v_in.get(j).copied().unwrap_or(0.0);
-        }
-        u_out[i] = if sum == 0.0 {
-            0.0
-        } else {
-            a.get(i).copied().unwrap_or(0.0) / sum
-        };
+    v_out.extend_from_slice(v_in);
+    if v_out.len() < n_us {
+        v_out.resize(n_us, 0.0);
     }
-    for j in 0..n {
-        let mut sum = 0.0;
-        for i in 0..m {
-            sum += k.get(i * n + j).copied().unwrap_or(0.0) * u_out[i];
-        }
-        v_out[j] = if sum == 0.0 {
-            0.0
-        } else {
-            b.get(j).copied().unwrap_or(0.0) / sum
-        };
-    }
+    let mut kv = Vec::new();
+    let mut ktu = Vec::new();
+    let _ =
+        try_sinkhorn_iter_f64_in_place_witness_into(k, a, b, u_out, v_out, m, n, &mut kv, &mut ktu);
 }
-
 /// One sequential step of floating-point Sinkhorn normalization.
 #[must_use]
 pub fn sinkhorn_iter_f64_step_witness(

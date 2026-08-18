@@ -165,38 +165,10 @@ inventory::submit! {
 
 #[cfg(test)]
 mod tests {
+    use super::super::complex_length::naive_dft;
     use super::*;
-    use crate::fixture_bytes::f32_bytes;
+    use crate::fixture_bytes::{decode_f32, f32_bytes};
     use vyre_reference::value::Value;
-
-    fn decode(bytes: &[u8]) -> Vec<f32> {
-        bytes
-            .chunks_exact(4)
-            .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
-            .collect()
-    }
-
-    fn naive_dft4(input: &[f32]) -> Vec<f32> {
-        // Reference DFT for N=4 (interleaved re/im).
-        let n = 4usize;
-        let mut out = vec![0.0f32; 8];
-        for k in 0..n {
-            let mut re = 0.0_f32;
-            let mut im = 0.0_f32;
-            for nn in 0..n {
-                let xr = input[2 * nn];
-                let xi = input[2 * nn + 1];
-                let theta = -2.0 * std::f32::consts::PI * (nn as f32) * (k as f32) / (n as f32);
-                let cos_t = theta.cos();
-                let sin_t = theta.sin();
-                re += xr * cos_t - xi * sin_t;
-                im += xr * sin_t + xi * cos_t;
-            }
-            out[2 * k] = re;
-            out[2 * k + 1] = im;
-        }
-        out
-    }
 
     fn run(input: &[f32]) -> Vec<f32> {
         let prog = fft4_complex("input", "output");
@@ -205,7 +177,7 @@ mod tests {
             &[Value::from(f32_bytes(input)), Value::from(vec![0u8; 32])],
         )
         .expect("Fix: fft4_complex must execute in the reference interpreter.");
-        decode(&outputs[0].to_bytes())
+        decode_f32(&outputs[0].to_bytes())
     }
 
     /// Impulse response: FFT of [1, 0, 0, 0] is [1, 1, 1, 1] across
@@ -262,7 +234,7 @@ mod tests {
         for _ in 0..50 {
             let input: Vec<f32> = (0..8).map(|_| next()).collect();
             let actual = run(&input);
-            let expected = naive_dft4(&input);
+            let expected = naive_dft(&input, 4);
             for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
                 assert!(
                     (a - e).abs() <= 1.0e-4,

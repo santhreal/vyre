@@ -8,18 +8,9 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn copy_input_to_output_program(input: BufferDecl) -> Program {
-    Program::wrapped(
-        vec![
-            input.with_count(1),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
-    )
+    let out_buf = BufferDecl::output("out", 1, DataType::U32).with_count(1);
+    let st = Node::store("out", Expr::u32(0), Expr::load("input", Expr::u32(0)));
+    Program::wrapped(vec![input.with_count(1), out_buf], [1, 1, 1], vec![st])
 }
 
 #[test]

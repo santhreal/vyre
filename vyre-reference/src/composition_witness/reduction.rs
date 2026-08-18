@@ -207,11 +207,21 @@ pub fn try_segment_reduce_sum_witness_into(
         out.clear();
         return Ok(());
     }
+    if offsets.len() == 1 {
+        if offsets[0] as usize > input.len() {
+            return Err("malformed segment offsets".to_string());
+        }
+        out.clear();
+        return Ok(());
+    }
     let segment_count = offsets.len() - 1;
     for i in 0..segment_count {
         let start = offsets[i] as usize;
         let end = offsets[i + 1] as usize;
-        if start > end || end > input.len() {
+        if start > end {
+            return Err("non-monotonic segment offsets".to_string());
+        }
+        if end > input.len() {
             return Err("malformed segment offsets".to_string());
         }
     }

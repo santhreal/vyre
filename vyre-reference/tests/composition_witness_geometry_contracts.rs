@@ -109,11 +109,9 @@ fn tfn_scalar_mix_short_inputs_and_rotation_invariance() {
 
 #[test]
 fn persistent_fixpoint_into_witness_convergence_and_scratch_reuse() {
-    let seed = vec![0u32];
-    let mut current = Vec::with_capacity(16);
-    let mut next = Vec::with_capacity(16);
-    let current_ptr = current.as_ptr();
-    let next_ptr = next.as_ptr();
+    let seed = [0u32];
+    let (mut current, mut next) = (Vec::with_capacity(16), Vec::with_capacity(16));
+    let (c_ptr, n_ptr) = (current.as_ptr(), next.as_ptr());
 
     let mut transfer = |cur: &[u32], out: &mut [u32]| {
         out[0] = cur[0] | 0b1010;
@@ -121,10 +119,9 @@ fn persistent_fixpoint_into_witness_convergence_and_scratch_reuse() {
     let iters = persistent_fixpoint_into_witness(&seed, 16, &mut transfer, &mut current, &mut next);
     assert!(iters < 5);
     assert_eq!(current, vec![0b1010]);
-    assert!(current.as_ptr() == current_ptr || current.as_ptr() == next_ptr);
-    assert!(next.as_ptr() == current_ptr || next.as_ptr() == next_ptr);
+    assert!(current.as_ptr() == c_ptr || current.as_ptr() == n_ptr);
+    assert!(next.as_ptr() == c_ptr || next.as_ptr() == n_ptr);
     assert_ne!(current.as_ptr(), next.as_ptr());
-
     // Diverging transfer caps at max_iterations
     let (div_out, div_iters) =
         persistent_fixpoint_witness(&[0u32], 8, |cur| vec![cur[0].wrapping_add(1)]);

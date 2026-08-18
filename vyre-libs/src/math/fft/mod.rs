@@ -20,7 +20,7 @@
 //! ... powers of two; convolution then composes forward FFTs,
 //! pointwise complex multiply, and inverse FFT.
 
-mod complex_length;
+pub(crate) mod complex_length;
 pub(crate) mod convolution;
 pub(crate) mod fft4;
 pub(crate) mod fft_radix2;

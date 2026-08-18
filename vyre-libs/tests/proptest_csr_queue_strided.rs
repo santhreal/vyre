@@ -3,7 +3,7 @@
 #![cfg(feature = "graph")]
 
 mod wire_words;
-use wire_words::mix64;
+use wire_words::{mix64, queue_forward_oracle};
 
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
@@ -38,7 +38,7 @@ proptest! {
         let queue = generated_active_queue(node_count, graph.hub, queue_slots, queue_seed);
         let queue_len = (queue.len() as u32).saturating_add(queue_len_extra);
         let allow_mask = allow_mask | 1;
-        let expected = independent_queue_oracle(
+        let expected = queue_forward_oracle(
             &queue,
             queue_len,
             &graph.edge_offsets,
@@ -177,32 +177,4 @@ fn generated_active_queue(node_count: u32, hub: u32, slots: usize, seed: u64) ->
         queue.push(src);
     }
     queue
-}
-
-fn independent_queue_oracle(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    node_count: u32,
-    allow_mask: u32,
-) -> Vec<u32> {
-    let mut out = vec![0u32; bitset_words(node_count) as usize];
-    let take = (queue_len as usize).min(active_queue.len());
-    for &src in &active_queue[..take] {
-        if src >= node_count {
-            continue;
-        }
-        let start = edge_offsets[src as usize] as usize;
-        let end = edge_offsets[src as usize + 1] as usize;
-        for edge in start..end {
-            if edge_kind_mask[edge] & allow_mask == 0 {
-                continue;
-            }
-            let dst = edge_targets[edge];
-            out[dst as usize / 32] |= 1u32 << (dst % 32);
-        }
-    }
-    out
 }
