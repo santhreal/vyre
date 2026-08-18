@@ -28,6 +28,66 @@ pub(crate) fn free_unique_resident_handles(
     }
 }
 
+macro_rules! impl_resident_graph_accessors {
+    ($graph:ident) => {
+        impl $graph {
+            /// Number of graph nodes.
+            #[must_use]
+            pub fn node_count(&self) -> u32 {
+                self.node_count
+            }
+
+            /// Number of physical or logical CSR edges.
+            #[must_use]
+            pub fn edge_count(&self) -> u32 {
+                self.edge_count
+            }
+
+            /// Largest CSR row degree.
+            #[must_use]
+            pub fn max_row_degree(&self) -> u32 {
+                self.max_row_degree
+            }
+
+            /// Number of rows at or above the resident mixed-split high-degree threshold.
+            #[must_use]
+            pub fn high_degree_source_count(&self) -> u32 {
+                self.high_degree_source_count
+            }
+
+            /// Number of u32 words in each frontier bitset.
+            #[must_use]
+            pub fn words(&self) -> usize {
+                self.words
+            }
+        }
+    };
+}
+pub(crate) use impl_resident_graph_accessors;
+
+macro_rules! impl_resident_graph_free {
+    ($graph:ident, $label:literal) => {
+        impl $graph {
+            /// Free graph-resident buffers.
+            ///
+            /// # Errors
+            ///
+            /// Returns the first backend free failure after attempting all handles.
+            pub fn free(
+                self,
+                dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher,
+            ) -> Result<(), vyre_foundation::program_dispatch::DispatchError> {
+                $crate::graph::dispatch::resident_handles::free_unique_resident_handles(
+                    dispatcher,
+                    &self.handles,
+                    $label,
+                )
+            }
+        }
+    };
+}
+pub(crate) use impl_resident_graph_free;
+
 #[cfg(test)]
 mod tests {
     use super::*;

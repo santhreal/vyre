@@ -18,7 +18,9 @@ use crate::graph::csr_frontier_queue::resident_programs::ResidentCsrQueueProgram
 use crate::graph::csr_frontier_queue::scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueSlots,
 };
-use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
+use crate::graph::dispatch::resident_handles::{
+    free_unique_resident_handles, impl_resident_graph_accessors,
+};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
 /// Device-resident CSR graph for queue-driven sparse traversal.
@@ -34,37 +36,9 @@ pub struct ResidentCsrQueueGraph {
     edge_kind_mask_handle: u64,
 }
 
+impl_resident_graph_accessors!(ResidentCsrQueueGraph);
+
 impl ResidentCsrQueueGraph {
-    /// Number of graph nodes.
-    #[must_use]
-    pub fn node_count(&self) -> u32 {
-        self.node_count
-    }
-
-    /// Number of physical CSR edges.
-    #[must_use]
-    pub fn edge_count(&self) -> u32 {
-        self.edge_count
-    }
-
-    /// Largest CSR row degree.
-    #[must_use]
-    pub fn max_row_degree(&self) -> u32 {
-        self.max_row_degree
-    }
-
-    /// Number of rows at or above the resident mixed-split high-degree threshold.
-    #[must_use]
-    pub fn high_degree_source_count(&self) -> u32 {
-        self.high_degree_source_count
-    }
-
-    /// Number of u32 words in each frontier bitset.
-    #[must_use]
-    pub fn words(&self) -> usize {
-        self.words
-    }
-
     /// Resident edge-offset buffer handle.
     #[must_use]
     pub fn edge_offsets_handle(&self) -> u64 {

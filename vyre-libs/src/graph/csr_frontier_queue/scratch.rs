@@ -524,6 +524,7 @@ fn checked_add(base: usize, extra: usize, label: &str) -> Result<usize, String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::mix32;
 
     #[test]
     fn materializer_switches_at_word_prefix_threshold() {
@@ -831,11 +832,4 @@ mod tests {
             .sum()
     }
 
-    fn mix32(mut value: u32) -> u32 {
-        value ^= value >> 16;
-        value = value.wrapping_mul(0x7feb_352d);
-        value ^= value >> 15;
-        value = value.wrapping_mul(0x846c_a68b);
-        value ^ (value >> 16)
-    }
 }

@@ -425,6 +425,7 @@ pub const fn adaptive_node_dispatch_grid(node_count: u32) -> [u32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::mix32;
     use crate::graph::adaptive_traverse::mode_selection::should_use_dense;
     use crate::graph::adaptive_traverse::test_graphs::build_dense_adj;
 
@@ -657,11 +658,4 @@ mod tests {
         assert!(!plan.frontier.work.has_active_bits);
     }
 
-    fn mix32(mut value: u32) -> u32 {
-        value ^= value >> 16;
-        value = value.wrapping_mul(0x7feb_352d);
-        value ^= value >> 15;
-        value = value.wrapping_mul(0x846c_a68b);
-        value ^ (value >> 16)
-    }
 }

@@ -8,8 +8,6 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use super::frontier_plan::ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE;
 use super::mode_selection::dense_cutover_nodes;
 use super::HYBRID_OP_ID;
-use crate::bitset::bitset_words;
-use crate::graph::frontier_bits::{set_bit, BitAccess};
 /// Build the GPU Program for one adaptive sparse/dense step.
 ///
 /// Each invocation uses the device-resident `frontier_popcount[0]` to choose
@@ -35,21 +33,15 @@ pub fn adaptive_sparse_dense_step(
     allow_mask: u32,
     dense_threshold_pct: u32,
 ) -> Program {
-    if node_count == 0 {
-        return trap_program(
-            HYBRID_OP_ID,
-            Some((frontier_out, DataType::U32)),
-            "Fix: adaptive_sparse_dense_step requires node_count > 0, got 0.".to_string(),
-        );
-    }
-
-    let words = bitset_words(node_count);
-    let Some(adj_count) = u64::from(node_count).checked_mul(u64::from(words)) else {
-        return trap_program(HYBRID_OP_ID, Some((frontier_out, DataType::U32)), format!("Fix: adaptive_sparse_dense_step dense buffer size overflows u64 ({node_count} nodes x {words} words)."));
+    let (words, adj_count) = match super::dense_step::validate_dense_adj_counts(
+        HYBRID_OP_ID,
+        frontier_out,
+        node_count,
+        "adaptive_sparse_dense_step",
+    ) {
+        Ok(counts) => counts,
+        Err(trap) => return trap,
     };
-    if adj_count > u64::from(u32::MAX) {
-        return trap_program(HYBRID_OP_ID, Some((frontier_out, DataType::U32)), format!("Fix: adaptive_sparse_dense_step dense buffer size {adj_count} exceeds u32::MAX ({node_count} nodes x {words} words). Partition the graph."));
-    }
     let Some(offset_count) = node_count.checked_add(1) else {
         return trap_program(
             HYBRID_OP_ID,
@@ -62,42 +54,14 @@ pub fn adaptive_sparse_dense_step(
 
     let lane = Expr::InvocationId { axis: 0 };
     let dense_cutover = dense_cutover_nodes(node_count, dense_threshold_pct);
-    let dense_body: Vec<Node> = vec![
-        Node::let_bind("dense_row_start", Expr::mul(lane.clone(), Expr::u32(words))),
-        Node::let_bind("dense_hit", Expr::u32(0)),
-        Node::loop_for(
-            "dense_w",
-            Expr::u32(0),
-            Expr::u32(words),
-            vec![Node::assign(
-                "dense_hit",
-                Expr::bitor(
-                    Expr::var("dense_hit"),
-                    Expr::bitand(
-                        Expr::load(
-                            adj_rows_dense,
-                            Expr::add(Expr::var("dense_row_start"), Expr::var("dense_w")),
-                        ),
-                        Expr::load(frontier_in, Expr::var("dense_w")),
-                    ),
-                ),
-            )],
-        ),
-        Node::if_then(
-            Expr::ne(Expr::var("dense_hit"), Expr::u32(0)),
-            set_bit(
-                frontier_out,
-                &lane,
-                BitAccess {
-                    word: "dense_word_idx",
-                    mask: "dense_bit_mask",
-                    value: "_dense_prev",
-                },
-                |word| word,
-                Vec::new(),
-            ),
-        ),
-    ];
+    let dense_body = super::dense_step::dense_reverse_scan_body(
+        frontier_in,
+        frontier_out,
+        adj_rows_dense,
+        &lane,
+        words,
+        "dense_",
+    );
 
     let sparse_body: Vec<Node> = crate::builder::csr::CsrTraversalComposer::new(
         HYBRID_OP_ID,
@@ -143,7 +107,7 @@ pub fn adaptive_sparse_dense_step(
             BufferDecl::storage(edge_kind_mask, 5, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(physical_edge_count),
             BufferDecl::storage(adj_rows_dense, 6, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(adj_count as u32),
+                .with_count(adj_count),
         ],
         ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
@@ -159,6 +123,7 @@ pub fn adaptive_sparse_dense_step(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bitset::bitset_words;
 
     #[test]
     fn emitted_hybrid_program_has_device_selector_and_both_graph_layouts() {

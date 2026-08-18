@@ -1,6 +1,7 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl};
 
-use crate::graph::program_graph::{word_buffer, BINDING_PRIMITIVE_START};
+use super::hash::persistent_bfs_program_layout_hash;
+use crate::graph::program_graph::{word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::persistent_bfs";
@@ -117,6 +118,95 @@ pub const fn persistent_bfs_batch_dispatch_grid(node_count: u32, query_count: u3
 /// Grid X for a resident persistent-BFS launch: one lane per node.
 const fn persistent_bfs_grid_x(node_count: u32) -> u32 {
     vyre_primitives::lane_grid(node_count, PERSISTENT_BFS_WORKGROUP_SIZE[0])[0]
+}
+
+/// Program graph shape with primitive-owned empty-edge padding.
+#[must_use]
+pub(super) fn persistent_bfs_program_shape(node_count: u32, edge_count: u32) -> ProgramGraphShape {
+    ProgramGraphShape::new(node_count, edge_count.max(1))
+}
+
+/// Build a primitive-owned single-query program cache key with explicit layout hash.
+#[must_use]
+pub(super) const fn persistent_bfs_single_cache_key(
+    layout_hash: u64,
+    node_count: u32,
+    edge_count: u32,
+    words_u32: u32,
+    allow_mask: u32,
+    max_iters: u32,
+    device_features: u64,
+) -> PersistentBfsPlanCacheKey {
+    PersistentBfsPlanCacheKey {
+        layout_hash,
+        node_count,
+        edge_count,
+        words_per_query: words_u32,
+        query_count: 1,
+        allow_mask,
+        max_iters,
+        device_features,
+        kind: PersistentBfsPlanCacheKind::Single,
+    }
+}
+
+/// Build a shape-only program cache key for a single persistent BFS plan.
+#[must_use]
+pub(super) fn persistent_bfs_single_program_cache_key(
+    node_count: u32,
+    edge_count: u32,
+    words_u32: u32,
+    allow_mask: u32,
+    max_iters: u32,
+    device_features: u64,
+) -> PersistentBfsPlanCacheKey {
+    PersistentBfsPlanCacheKey {
+        layout_hash: persistent_bfs_program_layout_hash(
+            node_count,
+            edge_count,
+            words_u32,
+            1,
+            PersistentBfsPlanCacheKind::Single,
+        ),
+        node_count,
+        edge_count,
+        words_per_query: words_u32,
+        query_count: 1,
+        allow_mask,
+        max_iters,
+        device_features,
+        kind: PersistentBfsPlanCacheKind::Single,
+    }
+}
+
+/// Build a shape-only program cache key for a batched persistent BFS plan.
+#[must_use]
+pub(super) fn persistent_bfs_batch_program_cache_key(
+    node_count: u32,
+    edge_count: u32,
+    words_per_query: u32,
+    query_count: u32,
+    allow_mask: u32,
+    max_iters: u32,
+    device_features: u64,
+) -> PersistentBfsPlanCacheKey {
+    PersistentBfsPlanCacheKey {
+        layout_hash: persistent_bfs_program_layout_hash(
+            node_count,
+            edge_count,
+            words_per_query,
+            query_count,
+            PersistentBfsPlanCacheKind::Batch,
+        ),
+        node_count,
+        edge_count,
+        words_per_query,
+        query_count,
+        allow_mask,
+        max_iters,
+        device_features,
+        kind: PersistentBfsPlanCacheKind::Batch,
+    }
 }
 
 /// Validated persistent-BFS graph layout metadata.

@@ -255,15 +255,10 @@ inventory::submit! {
         || tensor_flow_forward(ProgramGraphShape::new(4, 4), "tin", "tout", 2, 2, 0xFFFF_FFFF),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
-                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
-                to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+            vec![crate::graph::program_graph::sample_program_graph_inputs(&[
                 to_bytes(&[0b00010001]),          // tin
                 to_bytes(&[0]),                   // tout
-            ]]
+            ])]
         }),
         Some(|| {
             vec![vec![EXPECTED_TENSOR_FLOW_FORWARD_OUTPUT_BYTES.to_vec()]]

@@ -775,6 +775,167 @@ fn csr_queue_emit_nodes(
 }
 
 #[cfg(test)]
+pub(crate) fn csr_frontier_step_cpu_ref(
+    kind: CsrFrontierStepKind,
+    graph: crate::graph::csr_closure_inputs::CsrGraphView<'_>,
+    frontier: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    assert!(
+        graph.edge_offsets.len() == (graph.node_count as usize) + 1,
+        "node_count + 1 CSR offsets required"
+    );
+    match kind {
+        CsrFrontierStepKind::Forward => {
+            vyre_reference::composition_witness::csr_forward_traverse_witness(
+                graph.node_count,
+                graph.edge_offsets,
+                graph.edge_targets,
+                graph.edge_kind_mask,
+                frontier,
+                allow_mask,
+            )
+        }
+        CsrFrontierStepKind::Backward => {
+            vyre_reference::composition_witness::csr_backward_traverse_witness(
+                graph.node_count,
+                graph.edge_offsets,
+                graph.edge_targets,
+                graph.edge_kind_mask,
+                frontier,
+                allow_mask,
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn csr_frontier_step_cpu_ref_into(
+    kind: CsrFrontierStepKind,
+    graph: crate::graph::csr_closure_inputs::CsrGraphView<'_>,
+    frontier: &[u32],
+    allow_mask: u32,
+    out: &mut Vec<u32>,
+) {
+    match kind {
+        CsrFrontierStepKind::Forward => {
+            vyre_reference::composition_witness::csr_forward_traverse_witness_into(
+                graph.node_count,
+                graph.edge_offsets,
+                graph.edge_targets,
+                graph.edge_kind_mask,
+                frontier,
+                allow_mask,
+                out,
+            )
+        }
+        CsrFrontierStepKind::Backward => {
+            vyre_reference::composition_witness::csr_backward_traverse_witness_into(
+                graph.node_count,
+                graph.edge_offsets,
+                graph.edge_targets,
+                graph.edge_kind_mask,
+                frontier,
+                allow_mask,
+                out,
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn csr_forward_traverse_cpu_ref(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    csr_frontier_step_cpu_ref(
+        CsrFrontierStepKind::Forward,
+        crate::graph::csr_closure_inputs::CsrGraphView::new(
+            node_count,
+            row_offsets,
+            col_indices,
+            edge_kind_mask,
+        ),
+        frontier,
+        allow_mask,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn csr_forward_traverse_cpu_ref_into(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+    out: &mut Vec<u32>,
+) {
+    csr_frontier_step_cpu_ref_into(
+        CsrFrontierStepKind::Forward,
+        crate::graph::csr_closure_inputs::CsrGraphView::new(
+            node_count,
+            row_offsets,
+            col_indices,
+            edge_kind_mask,
+        ),
+        frontier,
+        allow_mask,
+        out,
+    );
+}
+
+#[cfg(test)]
+pub(crate) fn csr_backward_traverse_cpu_ref(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    csr_frontier_step_cpu_ref(
+        CsrFrontierStepKind::Backward,
+        crate::graph::csr_closure_inputs::CsrGraphView::new(
+            node_count,
+            row_offsets,
+            col_indices,
+            edge_kind_mask,
+        ),
+        frontier,
+        allow_mask,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn csr_backward_traverse_cpu_ref_into(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+    out: &mut Vec<u32>,
+) {
+    csr_frontier_step_cpu_ref_into(
+        CsrFrontierStepKind::Backward,
+        crate::graph::csr_closure_inputs::CsrGraphView::new(
+            node_count,
+            row_offsets,
+            col_indices,
+            edge_kind_mask,
+        ),
+        frontier,
+        allow_mask,
+        out,
+    );
+}
+
+#[cfg(test)]
 mod tests {
     use super::{csr_frontier_step_dispatch_grid, CSR_FRONTIER_STEP_WORKGROUP_SIZE};
     use vyre_reference::composition_witness::{

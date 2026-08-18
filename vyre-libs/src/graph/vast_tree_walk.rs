@@ -499,8 +499,8 @@ mod tests {
         })
         .expect_err("legacy postorder builder must fail fast on node_count overflow");
 
-        let preorder_message = panic_payload_message(preorder_panic);
-        let postorder_message = panic_payload_message(postorder_panic);
+        let preorder_message = crate::graph::panic_payload_message(preorder_panic);
+        let postorder_message = crate::graph::panic_payload_message(postorder_panic);
         assert!(
             preorder_message.contains("out_cap > 0"),
             "error should describe the launch-shape fix: {preorder_message}"
@@ -511,15 +511,6 @@ mod tests {
         );
     }
 
-    fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
-        if let Some(message) = payload.downcast_ref::<&str>() {
-            message.to_string()
-        } else if let Some(message) = payload.downcast_ref::<String>() {
-            message.clone()
-        } else {
-            format!("{payload:?}")
-        }
-    }
 
     // -----------------------------------------------------------------------
     // CPU reference tree walk tests

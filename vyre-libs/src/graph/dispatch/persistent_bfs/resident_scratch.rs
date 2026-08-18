@@ -1,5 +1,7 @@
 use crate::graph::dispatch::plan_cache::GraphPlanCache;
-use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
+use crate::graph::dispatch::resident_handles::{
+    free_unique_resident_handles, impl_resident_graph_free,
+};
 use crate::graph::persistent_bfs::{
     copy_persistent_bfs_batch_seed_and_clear_changed_into, copy_persistent_bfs_seed_frontier_into,
     PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey,
@@ -26,6 +28,8 @@ pub struct ResidentBfsGraph {
     pub(super) layout_hash: u64,
     pub(super) handles: [u64; 5],
 }
+
+impl_resident_graph_free!(ResidentBfsGraph, "resident BFS graph");
 
 impl ResidentBfsGraph {
     /// Number of graph nodes represented by this resident CSR.
@@ -57,15 +61,6 @@ impl ResidentBfsGraph {
     #[must_use]
     pub fn handles(&self) -> [u64; 5] {
         self.handles
-    }
-
-    /// Free the resident graph buffers.
-    ///
-    /// # Errors
-    ///
-    /// Returns the first backend free failure, after attempting every handle.
-    pub fn free(self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
-        free_unique_resident_handles(dispatcher, &self.handles, "resident BFS graph")
     }
 }
 
