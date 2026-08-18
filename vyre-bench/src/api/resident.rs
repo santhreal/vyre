@@ -360,6 +360,16 @@ impl ResidentInputSet {
         ctx.dispatch_resident_timed(program, &self.resources, config)
     }
 
+    /// Dispatch against uploaded resources while timing execution before readback.
+    pub fn dispatch_execution_timed(
+        &self,
+        ctx: &BenchContext,
+        program: &vyre::ir::Program,
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        ctx.dispatch_resident_execution_timed(program, &self.resources, config)
+    }
+
     /// Re-upload a small payload into an existing resident resource.
     pub fn upload_resource(
         &self,

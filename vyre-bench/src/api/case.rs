@@ -332,11 +332,32 @@ impl BenchContext {
             wait_ns: None,
         })
     }
+    /// Dispatch resident resources and include output readback in wall time.
     pub fn dispatch_resident_timed(
         &self,
         prog: &vyre::ir::Program,
         resources: &[vyre_driver::Resource],
         config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        self.dispatch_resident_timed_inner(prog, resources, config, true)
+    }
+
+    /// Dispatch resident resources while timing execution before output readback.
+    pub fn dispatch_resident_execution_timed(
+        &self,
+        prog: &vyre::ir::Program,
+        resources: &[vyre_driver::Resource],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        self.dispatch_resident_timed_inner(prog, resources, config, false)
+    }
+
+    fn dispatch_resident_timed_inner(
+        &self,
+        prog: &vyre::ir::Program,
+        resources: &[vyre_driver::Resource],
+        config: &DispatchConfig,
+        include_readback: bool,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         let session = self.artifact_session_for(prog)?;
         let mut bindings = session
@@ -349,12 +370,17 @@ impl BenchContext {
         let completion = session
             .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let execution_wall_ns = elapsed_ns(start);
         let outputs = session
             .program_outputs(prog, &completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok(vyre_driver::TimedDispatchResult {
             outputs,
-            wall_ns: elapsed_ns(start),
+            wall_ns: if include_readback {
+                elapsed_ns(start)
+            } else {
+                execution_wall_ns
+            },
             device_ns: completion.device_ns,
             enqueue_ns: None,
             wait_ns: None,

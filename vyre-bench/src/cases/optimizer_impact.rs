@@ -1,8 +1,7 @@
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
 use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::cases::harness::{
-    program_payload, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
-};
+use crate::api::resident::ResidentInputSet;
+use crate::cases::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 static WORKLOAD: WorkloadDescription = WorkloadDescription {
@@ -19,22 +18,74 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     ..WorkloadDescription::BASE
 };
 
-static OPS: CaseOps<Program> = CaseOps {
-    build: |_ctx| Ok(redundant_program()),
+static OPS: CaseOps<OptimizerImpactPrepared> = CaseOps {
+    build: prepare,
     measure,
     verify,
-    program: program_payload,
+    program: |prepared| Some(&prepared.program),
     fingerprint: None,
     bytes_touched: |_prepared| (BYTES_IN * 2, BYTES_IN),
 };
 
-pub(crate) static CASE: HarnessCase<Program> = HarnessCase {
+pub(crate) static CASE: HarnessCase<OptimizerImpactPrepared> = HarnessCase {
     workload: &WORKLOAD,
     ops: &OPS,
 };
 
 /// Bytes of one input buffer, and of the single output buffer.
 const BYTES_IN: u64 = 1_000_000 * 4;
+
+pub(crate) struct OptimizerImpactPrepared {
+    program: Program,
+    optimized_program: Program,
+    inputs: Vec<Vec<u8>>,
+    resident: Option<ResidentInputSet>,
+    optimizer_input_nodes: u64,
+    optimizer_output_nodes: u64,
+}
+
+fn prepare(ctx: &mut BenchContext) -> Result<OptimizerImpactPrepared, BenchError> {
+    let program = redundant_program();
+    let optimized_program = vyre_foundation::optimizer::optimize(program.clone())
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    let inputs = input_buffers();
+    let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
+        ctx,
+        &program,
+        &inputs,
+        "optimizer impact",
+    )?;
+    if matches!(ctx.preferred_backend.id(), "cuda" | "wgpu") && resident.is_none() {
+        return Err(BenchError::BackendFailed(format!(
+            "{} lacks resident buffer allocation required to measure optimizer execution without host-transfer noise",
+            ctx.preferred_backend.id()
+        )));
+    }
+    let optimizer_input_nodes = program.stats().node_count as u64;
+    let optimizer_output_nodes = optimized_program.stats().node_count as u64;
+
+    Ok(OptimizerImpactPrepared {
+        program,
+        optimized_program,
+        inputs,
+        resident,
+        optimizer_input_nodes,
+        optimizer_output_nodes,
+    })
+}
+
+fn input_buffers() -> Vec<Vec<u8>> {
+    let size = 1_000_000;
+    let mut a_bytes = vec![0u8; size * 4];
+    let mut b_bytes = vec![0u8; size * 4];
+    for i in 0..size {
+        let a_val = (i % 257) as f32;
+        let b_val = (i % 131) as f32;
+        a_bytes[i * 4..i * 4 + 4].copy_from_slice(&a_val.to_le_bytes());
+        b_bytes[i * 4..i * 4 + 4].copy_from_slice(&b_val.to_le_bytes());
+    }
+    vec![a_bytes, b_bytes]
+}
 
 /// A program with four identical subexpressions, two foldable constants, a
 /// bit-or with zero and a bit-and with zero, so CSE, constant folding and the
@@ -93,54 +144,37 @@ fn redundant_program() -> Program {
     )
 }
 
-fn measure(ctx: &mut BenchContext, prog: &mut Program) -> Result<BenchRun, BenchError> {
-    let prog = &*prog;
-    let size = 1_000_000;
-    let mut a_bytes = vec![0u8; size * 4];
-    let mut b_bytes = vec![0u8; size * 4];
-    for i in 0..size {
-        let a_val = (i % 257) as f32;
-        let b_val = (i % 131) as f32;
-        a_bytes[i * 4..i * 4 + 4].copy_from_slice(&a_val.to_le_bytes());
-        b_bytes[i * 4..i * 4 + 4].copy_from_slice(&b_val.to_le_bytes());
-    }
-
-    let inputs = vec![a_bytes, b_bytes];
-
-    let timed_unopt = ctx
-        .dispatch_timed(prog, &inputs, &ctx.dispatch_config)
-        .map_err(|e| BenchError::BackendFailed(e.to_string()))?;
+fn measure(
+    ctx: &mut BenchContext,
+    prepared: &mut OptimizerImpactPrepared,
+) -> Result<BenchRun, BenchError> {
+    let timed_unopt = dispatch_variant(ctx, &prepared.program, prepared)?;
     let elapsed_unopt = timed_unopt.wall_ns;
     let unopt_dispatch_ns = timed_unopt.device_ns;
     let unopt_outputs = timed_unopt.outputs;
 
-    let optimized_prog = vyre_foundation::optimizer::optimize(prog.clone())
-        .map_err(|e| BenchError::BackendFailed(e.to_string()))?;
-    let optimizer_input_nodes = prog.stats().node_count as u64;
-    let optimizer_output_nodes = optimized_prog.stats().node_count as u64;
-    let optimizer_nodes_eliminated = optimizer_input_nodes.saturating_sub(optimizer_output_nodes);
-
-    let timed_opt = ctx
-        .dispatch_timed(&optimized_prog, &inputs, &ctx.dispatch_config)
-        .map_err(|e| BenchError::BackendFailed(e.to_string()))?;
+    let timed_opt = dispatch_variant(ctx, &prepared.optimized_program, prepared)?;
     let elapsed_opt = timed_opt.wall_ns;
     let opt_dispatch_ns = timed_opt.device_ns;
     let outputs = timed_opt.outputs;
+    let optimizer_nodes_eliminated = prepared
+        .optimizer_input_nodes
+        .saturating_sub(prepared.optimizer_output_nodes);
 
     Ok(BenchRun {
         metrics: BenchMetrics {
             wall_ns: Some(elapsed_opt),
             dispatch_ns: opt_dispatch_ns,
-            input_bytes: Some(inputs.iter().map(Vec::len).sum::<usize>() as u64),
+            input_bytes: Some(prepared.inputs.iter().map(Vec::len).sum::<usize>() as u64),
             output_bytes: Some(outputs.iter().map(Vec::len).sum::<usize>() as u64),
             custom: vec![
                 MetricPoint {
                     name: "optimizer_input_nodes".to_string(),
-                    value: optimizer_input_nodes,
+                    value: prepared.optimizer_input_nodes,
                 },
                 MetricPoint {
                     name: "optimizer_output_nodes".to_string(),
-                    value: optimizer_output_nodes,
+                    value: prepared.optimizer_output_nodes,
                 },
                 MetricPoint {
                     name: "optimizer_nodes_eliminated".to_string(),
@@ -152,13 +186,27 @@ fn measure(ctx: &mut BenchContext, prog: &mut Program) -> Result<BenchRun, Bench
         baseline_metrics: Some(BenchMetrics {
             wall_ns: Some(elapsed_unopt),
             dispatch_ns: unopt_dispatch_ns,
-            input_bytes: Some(inputs.iter().map(Vec::len).sum::<usize>() as u64),
+            input_bytes: Some(prepared.inputs.iter().map(Vec::len).sum::<usize>() as u64),
             output_bytes: Some(unopt_outputs.iter().map(Vec::len).sum::<usize>() as u64),
             ..Default::default()
         }),
         outputs,
         baseline_outputs: Some(unopt_outputs),
     })
+}
+
+fn dispatch_variant(
+    ctx: &BenchContext,
+    program: &Program,
+    prepared: &OptimizerImpactPrepared,
+) -> Result<vyre_driver::TimedDispatchResult, BenchError> {
+    if let Some(resident) = &prepared.resident {
+        return resident
+            .dispatch_execution_timed(ctx, program, &ctx.dispatch_config)
+            .map_err(|error| BenchError::BackendFailed(error.to_string()));
+    }
+    ctx.dispatch_timed(program, &prepared.inputs, &ctx.dispatch_config)
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))
 }
 
 fn verify(run: &BenchRun) -> Result<Correctness, BenchError> {
