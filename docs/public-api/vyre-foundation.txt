@@ -2368,6 +2368,7 @@ pub fn vyre_foundation::validate::ValidationError::fmt(&self, output: &mut core:
 pub fn vyre_foundation::validate::ValidationError::message(&self) -> alloc::borrow::Cow<'_, str>
 pub fn vyre_foundation::validate::ValidationError::trace_event(&self) -> vyre_foundation::validate::ValidationTraceEvent
 pub fn vyre_foundation::validate::ValidationError::unsupported_op(backend: &'static str, op_id: &alloc::sync::Arc<str>, node_index: usize) -> Self
+pub fn vyre_foundation::validate::ValidationOptions<'a>::backend_capabilities(&self) -> core::option::Option<vyre_foundation::validate::BackendCapabilities>
 pub fn vyre_foundation::validate::ValidationOptions<'a>::backend_name(&self) -> &'static str
 pub fn vyre_foundation::validate::ValidationOptions<'a>::requires_subgroup_ops(&self) -> bool
 pub fn vyre_foundation::validate::ValidationOptions<'a>::supports_cast_target(&self, target: &vyre_spec::data_type::DataType) -> bool

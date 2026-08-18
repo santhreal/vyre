@@ -150,7 +150,9 @@ fn char_class_body(source: &str, classified: &str, n: u32) -> Vec<Node> {
     let program = ElementwiseComposer::new(CHAR_CLASS_OP_ID, n)
         .with_anonymous(false)
         .build_pointwise(classified, |i| {
-            crate::builder::TableStateMachineComposer::source_byte_table_lookup("table", source, i)
+            crate::builder::state_machine::TableStateMachineComposer::source_byte_table_lookup(
+                "table", source, i,
+            )
         });
     program.into_entry_vec()
 }

@@ -679,7 +679,9 @@ mod tests {
         let mut ends = Vec::new();
         for (i, &b) in haystack.iter().enumerate() {
             state = dfa.transitions
-                [crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
+                [crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                    state, b,
+                )];
             if dfa.accept[state as usize] != 0 {
                 ends.push(i + 1);
             }
@@ -704,7 +706,9 @@ mod tests {
         let mut prev_accept = false;
         for (i, &b) in haystack.iter().enumerate() {
             state = dfa.transitions
-                [crate::builder::TableStateMachineComposer::flat_byte_index(state, b)];
+                [crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                    state, b,
+                )];
             let accept = dfa.accept[state as usize] != 0;
             if prev_accept && !accept {
                 // The accepting run ended: `prev_end` was its maximal end.
@@ -965,7 +969,10 @@ mod tests {
         let mut accepted = false;
         for &b in b"xxabc" {
             state = pipeline.dfa.transitions
-                [crate::builder::TableStateMachineComposer::flat_byte_index(state as u32, b)];
+                [crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                    state as u32,
+                    b,
+                )];
             if pipeline.dfa.accept[state as usize] != 0 {
                 accepted = true;
             }
@@ -985,7 +992,10 @@ mod tests {
         let mut hits = Vec::new();
         for (i, &b) in hay.iter().enumerate() {
             state = dfa.transitions
-                [crate::builder::TableStateMachineComposer::flat_byte_index(state as u32, b)];
+                [crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                    state as u32,
+                    b,
+                )];
             let s = state as usize;
             let lo = dfa.output_offsets[s] as usize;
             let hi = dfa.output_offsets[s + 1] as usize;

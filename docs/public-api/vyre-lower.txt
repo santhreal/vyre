@@ -309,6 +309,7 @@ pub fn vyre_lower::descriptor_builder::descriptor(id: &str) -> vyre_lower::descr
 pub fn vyre_lower::descriptor_builder::effect(kind: vyre_lower::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::emission_target(workgroup: vyre_lower::WorkgroupLimits, subgroup: vyre_lower::SubgroupCapabilities) -> vyre_lower::EmissionTargetCapabilities
 pub fn vyre_lower::descriptor_builder::extract_lane(vector_id: u32, lane: u8, result: u32) -> vyre_lower::KernelOp
+pub fn vyre_lower::descriptor_builder::fixed_global_ro(index: u32, element_type: vyre_spec::data_type::DataType, count: u32, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::for_loop(loop_var: &str, lo: u32, hi: u32, loop_body: u32) -> vyre_lower::KernelOp
 pub fn vyre_lower::descriptor_builder::global_ro(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::BindingSlot
 pub fn vyre_lower::descriptor_builder::global_rw(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::BindingSlot

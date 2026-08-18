@@ -131,7 +131,10 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         let mut state = 0u32;
         for step in 0..window {
             let byte = haystack[origin_idx + step];
-            let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(state, byte);
+            let trans_idx =
+                crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                    state, byte,
+                );
             state = self.dfa.transitions[trans_idx];
             if Some(state) == self.dead_state {
                 // Dead sink: self-loops forever, never accepts, no match can
@@ -203,7 +206,10 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         let mut longest: Vec<(u32, u32)> = Vec::new();
         for step in 0..window {
             let byte = haystack[origin_idx + step];
-            let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(state, byte);
+            let trans_idx =
+                crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
+                    state, byte,
+                );
             state = self.dfa.transitions[trans_idx];
             if Some(state) == self.dead_state {
                 // Dead sink: never accepts again, so no longer match can follow.

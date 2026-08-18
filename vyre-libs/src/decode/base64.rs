@@ -95,7 +95,10 @@ fn clamp_lookup(name: &str, table: &str) -> Vec<Node> {
         // is what keeps this mask from being forgotten again.
         Node::let_bind(
             raw.as_str(),
-            crate::builder::TableStateMachineComposer::byte_table_lookup(table, Expr::var(name)),
+            crate::builder::state_machine::TableStateMachineComposer::byte_table_lookup(
+                table,
+                Expr::var(name),
+            ),
         ),
         Node::let_bind(
             value.as_str(),

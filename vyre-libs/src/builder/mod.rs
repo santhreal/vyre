@@ -34,9 +34,6 @@ pub mod gemm;
 /// contract.
 pub mod range_ordering;
 pub(crate) mod reduction;
-/// Shared table-walking state machine / DFA composer.
-pub mod state_machine;
-pub(crate) use state_machine::TableStateMachineComposer;
 /// The two shared child regions registered as operations in their own right.
 ///
 /// Behind `builder-ops` because `INDEXED_MAP_OP_ID` and
@@ -45,6 +42,8 @@ pub(crate) use state_machine::TableStateMachineComposer;
 /// composes them without asking for their registrations.
 #[cfg(feature = "builder-ops")]
 mod registrations;
+/// Shared table-walking state machine / DFA composer.
+pub mod state_machine;
 /// Canonical 2D grid, coordinate decomposition, stencil, and pixel composer.
 pub mod stencil;
 

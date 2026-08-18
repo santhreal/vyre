@@ -64,13 +64,3 @@ pub(crate) fn matmul_bias_2x2_fixture_expected() -> Vec<Vec<Vec<u8>>> {
         0x46, 0x00, 0x00, 0x00, // 70
     ]]]
 }
-
-#[must_use]
-pub(crate) fn matmul_2x2_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![vec![
-        0x13, 0x00, 0x00, 0x00, // 19
-        0x16, 0x00, 0x00, 0x00, // 22
-        0x2b, 0x00, 0x00, 0x00, // 43
-        0x32, 0x00, 0x00, 0x00, // 50
-    ]]]
-}

@@ -303,7 +303,7 @@ fn dfa_compile_inner_capped(
             let mut s = state;
             loop {
                 let child = trie[s][fb];
-                let idx = crate::builder::TableStateMachineComposer::flat_byte_index(
+                let idx = crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
                     state as u32,
                     b as u8,
                 );

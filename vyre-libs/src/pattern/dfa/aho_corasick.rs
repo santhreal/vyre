@@ -64,7 +64,7 @@ pub fn aho_corasick_bounded(
     state_count: u32,
     max_pattern_len: u32,
 ) -> Program {
-    let body = crate::builder::TableStateMachineComposer::new(transitions)
+    let body = crate::builder::state_machine::TableStateMachineComposer::new(transitions)
         .bounded_suffix_scan_body(haystack, accept, matches, max_pattern_len);
 
     Program::wrapped(

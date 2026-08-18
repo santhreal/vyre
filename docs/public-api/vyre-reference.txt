@@ -676,7 +676,7 @@ pub fn vyre_reference::dialect_dispatch::dispatch_op(op_id: &str, input: &[u8], 
 pub fn vyre_reference::dual::DualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual::DualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_reference::dual_impls::EvalError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::dual_impls::EvalError::new(diagnostic: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_reference::dual_impls::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::EvalError>
 pub fn vyre_reference::dual_impls::arith::add::AddDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::arith::add::AddDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>

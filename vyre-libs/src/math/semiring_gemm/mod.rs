@@ -219,7 +219,7 @@ inventory::submit! {
             fixture_u32(&[1, 2, 3, 4]),
             fixture_u32(&[5, 6, 7, 8]),
         ]]),
-        Some(crate::math::linalg::matmul_2x2_fixture_expected),
+        Some(crate::fixture_bytes::matmul_2x2_expected),
     )
 }
 

@@ -9,7 +9,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_spec::python_token::*;
 
 fn load_byte(buffer: &str, index: Expr) -> Expr {
-    crate::builder::TableStateMachineComposer::masked_byte_load(buffer, index)
+    crate::builder::state_machine::TableStateMachineComposer::masked_byte_load(buffer, index)
 }
 
 fn ascii(ch: u8) -> Expr {

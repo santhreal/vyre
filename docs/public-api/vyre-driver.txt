@@ -700,6 +700,7 @@ pub fn vyre_driver::allocation::reserve_smallvec_to_capacity<A>(vec: &mut smallv
 pub fn vyre_driver::allocation::reserve_vec_additional<T>(vec: &mut alloc::vec::Vec<T>, additional: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::allocation::reserve_vec_to_capacity<T>(vec: &mut alloc::vec::Vec<T>, target_capacity: usize, context: &'static str, item: &'static str, fix: &'static str) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::arm_independence::ArmBindingSummary::default() -> Self
+pub fn vyre_driver::arm_independence::ArmBindingSummary::from_slices(reads: &[u32], writes: &[u32]) -> Self
 pub fn vyre_driver::arm_independence::ArmBindingSummary::new() -> Self
 pub fn vyre_driver::arm_independence::BindingSlotSet::contains(&self, slot: &u32) -> bool
 pub fn vyre_driver::arm_independence::BindingSlotSet::from_iter<T: core::iter::traits::collect::IntoIterator<Item = u32>>(iter: T) -> Self

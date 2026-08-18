@@ -1,6 +1,6 @@
 //! Shared decode-to-DFA scan bodies.
 
-use crate::builder::TableStateMachineComposer;
+use crate::builder::state_machine::TableStateMachineComposer;
 use vyre_foundation::ir::{Expr, Node};
 
 /// Build a bounded Aho-Corasick scan body for fused decoders.

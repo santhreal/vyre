@@ -25,7 +25,11 @@ fn correction_lane(local_lane: Expr, offset: u32) -> Expr {
 }
 
 fn transition_expr(transitions: &str, state: Expr, byte: Expr) -> Expr {
-    crate::builder::TableStateMachineComposer::byte_transition_expr(transitions, state, byte)
+    crate::builder::state_machine::TableStateMachineComposer::byte_transition_expr(
+        transitions,
+        state,
+        byte,
+    )
 }
 
 fn fixture_case() -> (Vec<u32>, CompiledDfa, Vec<u32>) {

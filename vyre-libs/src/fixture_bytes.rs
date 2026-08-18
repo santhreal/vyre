@@ -2,6 +2,11 @@ pub(crate) fn u32_bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
+#[must_use]
+pub(crate) fn matmul_2x2_expected() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![u32_bytes(&[19, 22, 43, 50])]]
+}
+
 pub(crate) fn f32_bytes(values: &[f32]) -> Vec<u8> {
     vyre_primitives::wire::pack_f32_slice(values)
 }

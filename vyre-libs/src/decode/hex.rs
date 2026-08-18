@@ -60,7 +60,7 @@ pub const fn hex_decoded_capacity(input_len: u32) -> u32 {
 }
 
 fn nibble_expr(byte: Expr, table: &str) -> Expr {
-    crate::builder::TableStateMachineComposer::byte_table_lookup(table, byte)
+    crate::builder::state_machine::TableStateMachineComposer::byte_table_lookup(table, byte)
 }
 
 /// Decode one hex byte pair into a single u32 byte value.
