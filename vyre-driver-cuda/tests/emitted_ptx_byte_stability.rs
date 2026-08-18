@@ -22,7 +22,8 @@ use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use vyre_driver::materialize::{self, MaterializerTarget};
-use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph};
+use vyre_foundation::validate::BackendCapabilities;
 use vyre_lower::artifact_golden::{
     assert_matches_golden, contains_case, render_sections, write_golden,
 };
@@ -35,6 +36,27 @@ use vyre_megakernel::{
 fn golden_path() -> PathBuf {
     vyre_test_support::monorepo::vyre_workspace_root()
         .join("vyre-driver-cuda/tests/golden/emitted_ptx_corpus.ptx")
+}
+
+/// Capability floor required to render CUDA PTX without probing a device.
+///
+/// A zero byte budget remains unknown, so this admits workgroup scratch
+/// syntax without inventing a concrete device limit.
+fn cuda_emission_device_facts(program: &Program) -> DeviceFacts {
+    if !program
+        .buffers()
+        .iter()
+        .any(|buffer| buffer.access() == BufferAccess::Workgroup)
+    {
+        return DeviceFacts::unknown();
+    }
+    DeviceFacts::new(
+        BackendCapabilities {
+            has_shared_memory: true,
+            ..BackendCapabilities::default()
+        },
+        0,
+    )
 }
 
 /// Wrap one corpus program in the single-node graph the artifact route expects.
@@ -51,7 +73,7 @@ fn artifact_for(case: &StabilityCase) -> Artifact {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
+        cuda_emission_device_facts(&case.program),
         SearchBudget::new(1, 1, 0, 0, 1),
         1_000_000,
     )
