@@ -474,7 +474,7 @@ pub(crate) fn input_witness_len(program: &Program, case: &[Vec<u8>], name: &str)
 /// Attempt to compose `op_a` followed by `op_b` via shared-buffer fusion.
 ///
 /// Returns `Ok(fused_program)` when:
-/// * `op_a` has exactly one ReadWrite output buffer,
+/// * `op_a` has exactly one result buffer to pipe,
 /// * `op_b` has at least one ReadOnly/Uniform input buffer,
 /// * the output/input element types match,
 /// * the output/input counts are compatible (both zero, or equal, or one is zero
@@ -486,29 +486,27 @@ pub(crate) fn try_compose(a: &UnifiedEntry, b: &UnifiedEntry) -> Result<Composit
     let prog_a = (a.build)();
     let prog_b = (b.build)();
 
-    // ---- op_a output analysis ----
-    let a_outputs: Vec<&BufferDecl> = prog_a
-        .buffers()
-        .iter()
-        .filter(|buf| buf.access() == BufferAccess::ReadWrite)
-        .collect();
-    if a_outputs.is_empty() {
+    // `Program::output_buffer_indices` owns writable-result classification.
+    // The explicit output marker disambiguates that canonical set; a lone
+    // writable result is the fallback for a program that declares none.
+    let a_writable = prog_a.output_buffer_indices();
+    if a_writable.is_empty() {
         return Err(format!(
-            "Fix: {} has no ReadWrite output buffer; cannot wire into downstream op.",
+            "Fix: {} has no writable output buffer; cannot wire into downstream op.",
             a.id
         ));
     }
-    let explicit_outputs: Vec<&BufferDecl> = a_outputs
+    let explicit_outputs: Vec<&BufferDecl> = a_writable
         .iter()
-        .copied()
+        .map(|index| &prog_a.buffers()[*index as usize])
         .filter(|buf| buf.is_output())
         .collect();
-    let a_out = match (explicit_outputs.as_slice(), a_outputs.as_slice()) {
+    let a_out = match (explicit_outputs.as_slice(), a_writable) {
         ([output], _) => *output,
-        ([], [output]) => *output,
+        ([], [output]) => &prog_a.buffers()[*output as usize],
         ([], outputs) => {
             return Err(format!(
-                "Fix: {} has {} ReadWrite buffers and no explicit output; mark the intended pipeline result with BufferDecl::output before composing.",
+                "Fix: {} has {} writable buffers and no explicit output; mark the intended pipeline result with BufferDecl::output before composing.",
                 a.id,
                 outputs.len()
             ));
