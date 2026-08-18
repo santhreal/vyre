@@ -66,7 +66,7 @@ Own pure PTX target compilation, native device acquisition, materialization, dis
 ### Boundaries
 
 The `cuda-driver` owner maintains this `concrete-backend` crate at `vyre-driver-cuda`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

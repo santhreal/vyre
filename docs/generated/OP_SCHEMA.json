@@ -11752,7 +11752,7 @@
           {
             "binding": 3,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 4,
@@ -11843,7 +11843,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 4,
@@ -13102,7 +13102,7 @@
           {
             "binding": 2,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 4,
@@ -18638,7 +18638,7 @@
           {
             "binding": 4,
             "name": "grad_scale",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "F32",
             "count": 4,
@@ -20635,7 +20635,7 @@
           {
             "binding": 2,
             "name": "grad_attn",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "F32",
             "count": 4,
@@ -20644,7 +20644,7 @@
           {
             "binding": 3,
             "name": "grad_mlp",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "F32",
             "count": 4,
@@ -27872,6 +27872,11 @@
       "composition_chain": [
         {
           "depth": 0,
+          "operation": "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum",
+          "registered": true
+        },
+        {
+          "depth": 1,
           "operation": "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
           "registered": false
         }
@@ -32120,6 +32125,11 @@
         },
         {
           "depth": 2,
+          "operation": "vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum",
+          "registered": true
+        },
+        {
+          "depth": 3,
           "operation": "anonymous::vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum::guarded_single_block",
           "registered": false
         }

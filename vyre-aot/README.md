@@ -85,7 +85,7 @@ Package the same megakernel artifact class ahead of time. Not a second compile p
 ### Boundaries
 
 The `aot-artifacts` owner maintains this `packaging` crate at `vyre-aot`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

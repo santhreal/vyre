@@ -384,6 +384,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `proptest_ziftsieve` | `vyre-libs/tests/proptest_ziftsieve.rs` | None | `./cargo_full test -p vyre-libs --test proptest_ziftsieve` |
 | `test` | `provenance_closure` | `vyre-libs/tests/provenance_closure.rs` | None | `./cargo_full test -p vyre-libs --test provenance_closure` |
 | `test` | `provenance_closure` | `vyre-libs/tests/provenance_closure.rs` | `encoding` | `./cargo_full test -p vyre-libs --test provenance_closure` |
+| `test` | `public_program_builders_behavioral_coverage` | `vyre-libs/tests/public_program_builders_behavioral_coverage.rs` | None | `./cargo_full test -p vyre-libs --test public_program_builders_behavioral_coverage` |
 | `test` | `qk_gain_shape_overflow_contracts` | `vyre-libs/tests/qk_gain_shape_overflow_contracts.rs` | None | `./cargo_full test -p vyre-libs --test qk_gain_shape_overflow_contracts` |
 | `test` | `qk_gain_shape_overflow_contracts` | `vyre-libs/tests/qk_gain_shape_overflow_contracts.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test qk_gain_shape_overflow_contracts` |
 | `test` | `qk_gain_zero_shape_contracts` | `vyre-libs/tests/qk_gain_zero_shape_contracts.rs` | None | `./cargo_full test -p vyre-libs --test qk_gain_zero_shape_contracts` |

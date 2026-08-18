@@ -74,7 +74,7 @@ Own marker types and uncomposable hardware intrinsics. A composition belongs in 
 ### Boundaries
 
 The `primitive-library` owner maintains this `primitives` crate at `vyre-primitives`.
-Its allowed internal production dependencies are: `vyre-foundation`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-foundation`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

@@ -5662,6 +5662,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   normalize them per logical item. String bitmap scatter uses subgroup ballots
   to materialize 16 independent output rows in one resident dispatch, with
   exact CPU-oracle parity.
+- Resident value-returning dispatch helpers now preserve backend upload,
+  kernel, and readback fusion instead of adding separate host synchronization
+  boundaries.
 - Ring occupancy sums report an overflowing slot count instead of saturating to
   a plausible total, so a launch recommendation over an impossible decoded ring
   now fails with that reason instead of running on ratios derived from a

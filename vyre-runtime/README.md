@@ -123,7 +123,7 @@ Execute the artifact's selected persistence: sessions, recovery, residency, sche
 ### Boundaries
 
 The `runtime` owner maintains this `runtime` crate at `vyre-runtime`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

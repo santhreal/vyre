@@ -41,7 +41,7 @@ Own SPIR-V target compilation, immutable module-bundle emission, Vulkan material
 ### Boundaries
 
 The `spirv-driver` owner maintains this `concrete-backend` crate at `vyre-driver-spirv`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
