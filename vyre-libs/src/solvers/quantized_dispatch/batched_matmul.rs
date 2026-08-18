@@ -60,8 +60,13 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
     scratch: &mut QuantizedBatchedMatmulGpuScratch,
     out: &mut Vec<f32>,
 ) -> Result<(), DispatchError> {
-    let shape = validate_batched_packed_matmul_shape(
+    let QuantizedBatchedMatmulGpuScratch {
+        inputs,
+        program_cache,
+    } = scratch;
+    dispatch_packed_batched_matmul(
         "i4x8_batched_matmul_f32_scaled_via",
+        dispatcher,
         weights_packed,
         activation_batches_packed,
         row_scales,
@@ -69,43 +74,22 @@ pub fn i4x8_batched_matmul_f32_scaled_via_with_scratch_into(
         batch,
         rows,
         cols,
-    )?;
-
-    let QuantizedBatchedMatmulGpuScratch {
         inputs,
         program_cache,
-    } = scratch;
-    let program = program_cache.get_or_insert_with((batch, rows, cols), || {
-        i4x8_batched_matmul_f32_scaled(
-            "weights",
-            "activations",
-            "row_scales",
-            "batch_scales",
-            "out",
-            batch,
-            rows,
-            cols,
-        )
-    });
-    // Four input-consuming buffers: weights/activation/row_scales/batch_scales ReadOnly(0-3). `out`
-    // is `BufferDecl::output`(4) (backend-allocated, consumes NO dispatch input).
-    write_packed_batched_matmul_inputs(
-        inputs,
-        weights_packed,
-        activation_batches_packed,
-        row_scales,
-        batch_scales,
-    );
-
-    let outputs = dispatcher.dispatch(
-        program,
-        &inputs[..4],
-        Some([ceil_div_u32(shape.total_outputs_u32, 64), 1, 1]),
-    )?;
-    decode_f32_output_exact(
-        expect_one_output("i4x8_batched_matmul_f32_scaled_via", &outputs)?,
-        shape.output_words,
-        "i4x8_batched_matmul_f32_scaled_via",
+        None,
+        None,
+        || {
+            i4x8_batched_matmul_f32_scaled(
+                "weights",
+                "activations",
+                "row_scales",
+                "batch_scales",
+                "out",
+                batch,
+                rows,
+                cols,
+            )
+        },
         out,
     )
 }

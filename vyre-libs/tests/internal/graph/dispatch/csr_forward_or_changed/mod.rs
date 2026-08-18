@@ -4,35 +4,16 @@ use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 use crate::test_parity_oracles::{NeverDispatches, StaticOutputs};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
+#[path = "../csr_fixtures.rs"]
+mod csr_fixtures;
+use csr_fixtures::*;
+
 mod reference_contracts;
 
 /// Seven inputs is the legacy shape; eight is the changed-history shape. Both
 /// are live, so a dispatcher that accepts only one of them would reject a
 /// correct plan.
 const CSR_CHANGED_CONTRACT: &str = "csr_forward_or_changed dispatch";
-
-fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    // 0 -> 1 -> 2 -> 3
-    (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
-}
-fn linear_inputs<'a>(
-    off: &'a [u32],
-    tgt: &'a [u32],
-    msk: &'a [u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> CsrClosureInputs<'a> {
-    CsrClosureInputs {
-        graph: CsrGraphView {
-            node_count: 4,
-            edge_offsets: off,
-            edge_targets: tgt,
-            edge_kind_mask: msk,
-        },
-        allow_mask,
-        max_iters,
-    }
-}
 
 /// Runs the changed-flag closure over [`linear_graph`] seeded at node 0 with every edge kind
 /// allowed. The contracts below vary the dispatcher and the iteration budget; the graph itself is
@@ -216,20 +197,17 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
         ],
     )
     .recording_input(2);
-    let edge_offsets = vec![0, 1, 2, 3, 3];
-    let first_targets = vec![1, 2, 3];
-    let second_targets = vec![2, 3, 0];
-    let edge_kind_mask = vec![1, 1, 1];
+    let fixture = SameShapeGraphChanges::new();
     let mut scratch = ForwardChangedGpuScratch::default();
     let mut frontier = Vec::new();
 
     for (edge_targets, why) in [
         (
-            &first_targets,
+            &fixture.first_targets,
             "Fix: first same-shape dispatch should succeed",
         ),
         (
-            &second_targets,
+            &fixture.second_targets,
             "Fix: second same-shape dispatch should refresh static CSR inputs",
         ),
     ] {
@@ -238,9 +216,9 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
             CsrClosureInputs::allow_all(
                 CsrGraphView {
                     node_count: 4,
-                    edge_offsets: &edge_offsets,
+                    edge_offsets: &fixture.edge_offsets,
                     edge_targets,
-                    edge_kind_mask: &edge_kind_mask,
+                    edge_kind_mask: &fixture.edge_kind_mask,
                 },
                 1,
             ),
@@ -251,11 +229,7 @@ fn gpu_refreshes_static_inputs_when_same_shape_graph_content_changes() {
         .expect(why);
     }
 
-    let recorded_targets = dispatcher.recorded();
-    assert_eq!(
-        recorded_targets.as_slice(),
-        &[first_targets, second_targets]
-    );
+    fixture.assert_refreshed_targets(&dispatcher.recorded());
     assert_eq!(
         scratch.program_builds(),
         1,

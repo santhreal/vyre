@@ -37,9 +37,7 @@ pub use prefilter::{
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
-use prefilter::{
-    build_ranges_scan, ranges_scan_program, try_build_ranges_scan, PrefilterGate, PrefilterWidth,
-};
+use prefilter::{build_ranges_scan, try_build_ranges_scan, PrefilterWidth};
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub(in crate::pattern) use regex_exact::regex_exact_ranges_program;
 
@@ -194,14 +192,26 @@ pub(in crate::pattern) struct AcInputBindings<'a> {
 }
 
 impl<'a> AcInputBindings<'a> {
-    /// The shared inputs under the six buffer names every bounded-ranges builder
-    /// threads through, in binding order, plus the three DFA-derived counts that
-    /// size bindings 1-4.
-    ///
-    /// Taking the names as one array is what keeps the field list from being
-    /// respelled at every call site: the builders here bind the identical six
-    /// names, and a struct literal spelling them out is nine lines of the same
-    /// text in each.
+    /// All six bounded-range inputs under their canonical runtime names.
+    pub(in crate::pattern) const fn canonical(
+        state_count: u32,
+        output_records_len: u32,
+        pattern_count: u32,
+    ) -> Self {
+        Self::from_names(
+            "haystack",
+            "transitions",
+            "output_offsets",
+            "output_records",
+            "pattern_lengths",
+            "haystack_len",
+            state_count,
+            output_records_len,
+            pattern_count,
+        )
+    }
+
+    /// The shared inputs under caller-selected buffer names and DFA-derived counts.
     pub(in crate::pattern) const fn from_names(
         haystack: &'a str,
         transitions: &'a str,
@@ -327,116 +337,6 @@ pub(in crate::pattern) fn ac_ranges_program_or_fail_closed(
              use {fallible} and shard oversized DFAs across multiple programs."
         ),
     }
-}
-
-/// Build a Program that scans `haystack` for any AC match and emits
-/// `(pattern_id, start, end)` triples through the canonical
-/// [`append_match`] hit buffer. Pairs with
-/// the product-side haystack packer: each invocation `i`
-/// corresponds to byte position `i` of the
-/// **unpacked** haystack, but loads from the packed u32 buffer via
-/// [`load_packed_byte_expr`](crate::pattern::builders::load_packed_byte_expr).
-///
-/// Buffer layout (bindings 0..7):
-///
-/// | binding | name | access | element shape |
-/// |---|---|---|---|
-/// | 0 | `haystack`        | ReadOnly  | packed u32, 4 bytes / word |
-/// | 1 | `transitions`     | ReadOnly  | `state_count * 256` u32    |
-/// | 2 | `output_offsets`  | ReadOnly  | `state_count + 1` u32      |
-/// | 3 | `output_records`  | ReadOnly  | `output_records_len` u32   |
-/// | 4 | `pattern_lengths` | ReadOnly  | `pattern_count` u32        |
-/// | 5 | `haystack_len`    | ReadOnly  | 1 u32 (byte length)        |
-/// | 6 | `match_count`     | ReadWrite | 1 u32 (atomic)             |
-/// | 7 | `matches`         | Output    | `max_matches * 3` u32      |
-///
-/// Each invocation `i` replays the suffix window
-/// `haystack[max(0, i+1-max_pattern_len)..=i]` from state 0, then
-/// emits every `(pid, start, end)` triple that accepts at `i`. The
-/// scan window cap is the only difference from the unbounded walk:
-/// `max_pattern_len` must be greater than or equal to the longest
-/// entry in `pattern_lengths`, or matches longer than the window are
-/// invisible because the walk never sees their first byte.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_program(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
-    match_count: &str,
-    matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    max_matches: u32,
-    max_pattern_len: u32,
-) -> Program {
-    classic_ac_bounded_ranges_program_with_subgroup_coalesce(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        haystack_len,
-        match_count,
-        matches,
-        state_count,
-        output_records_len,
-        pattern_count,
-        max_matches,
-        max_pattern_len,
-        true,
-    )
-}
-
-/// Variant of [`classic_ac_bounded_ranges_program`] with explicit
-/// control over the match-append strategy.
-///
-/// Set `use_subgroup_coalesce = true` for `append_match_subgroup`
-/// (Innovation I.17, one atomic per subgroup leader, the default).
-/// Set `false` for the simpler `append_match` (one atomic per lane
-/// per hit). Use the `false` variant on backends whose IR lowering
-/// can't emit `subgroup_ballot`/`subgroup_shuffle`.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_program_with_subgroup_coalesce(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
-    match_count: &str,
-    matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    max_matches: u32,
-    max_pattern_len: u32,
-    use_subgroup_coalesce: bool,
-) -> Program {
-    ranges_scan_program(
-        PrefilterGate::unfiltered(),
-        AcInputBindings::from_names(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
-            state_count,
-            output_records_len,
-            pattern_count,
-        ),
-        match_count,
-        matches,
-        max_matches,
-        max_pattern_len,
-        use_subgroup_coalesce,
-    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -822,7 +722,7 @@ fn bounded_ranges_presence_and_positions_by_region_nodes(
 
 /// Build the dispatch Program for a bounded-ranges AC scan over an
 /// already-compiled DFA. Pairs with
-/// [`classic_ac_bounded_ranges_program`]: identical buffer layout
+/// [`build_ac_bounded_ranges_program_with_subgroup_coalesce`]: identical buffer layout
 /// and emit format, but the caller doesn't have to thread through
 /// the eight derived count fields every time.
 #[must_use]

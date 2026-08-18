@@ -1,8 +1,11 @@
 use crate::dispatch_buffers::{
-    ensure_input_slots, write_f32_slice_le_bytes, write_u32_slice_le_bytes,
+    ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
+    write_u32_slice_le_bytes,
 };
 use crate::math::quantized::i4_packed_words;
-use vyre_foundation::program_dispatch::DispatchError;
+use crate::plumbing::host::program_cache::ProgramCache;
+use vyre_foundation::ir::Program;
+use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct PackedI4BatchedMatmulShape {
     pub(super) total_outputs_u32: u32,
@@ -101,4 +104,56 @@ pub(super) fn write_packed_batched_matmul_inputs(
     write_u32_slice_le_bytes(&mut inputs[1], activation_batches_packed);
     write_f32_slice_le_bytes(&mut inputs[2], row_scales);
     write_f32_slice_le_bytes(&mut inputs[3], batch_scales);
+}
+/// Validate, materialize, dispatch, and decode one packed batched-matmul program.
+pub(super) fn dispatch_packed_batched_matmul<F>(
+    context: &str,
+    dispatcher: &impl ProgramDispatcher,
+    weights_packed: &[u32],
+    activation_batches_packed: &[u32],
+    row_scales: &[f32],
+    batch_scales: &[f32],
+    batch: u32,
+    rows: u32,
+    cols: u32,
+    inputs: &mut Vec<Vec<u8>>,
+    program_cache: &mut ProgramCache<(u32, u32, u32), Program>,
+    dispatch_items: Option<u32>,
+    expected_words: Option<usize>,
+    build_program: F,
+    out: &mut Vec<f32>,
+) -> Result<(), DispatchError>
+where
+    F: FnOnce() -> Program,
+{
+    let shape = validate_batched_packed_matmul_shape(
+        context,
+        weights_packed,
+        activation_batches_packed,
+        row_scales,
+        batch_scales,
+        batch,
+        rows,
+        cols,
+    )?;
+
+    let grid_x = ceil_div_u32(dispatch_items.unwrap_or(shape.total_outputs_u32), 64);
+    let output_words = expected_words.unwrap_or(shape.output_words);
+
+    let program = program_cache.get_or_insert_with((batch, rows, cols), build_program);
+    write_packed_batched_matmul_inputs(
+        inputs,
+        weights_packed,
+        activation_batches_packed,
+        row_scales,
+        batch_scales,
+    );
+
+    let outputs = dispatcher.dispatch(program, &inputs[..4], Some([grid_x, 1, 1]))?;
+    decode_f32_output_exact(
+        expect_one_output(context, &outputs)?,
+        output_words,
+        context,
+        out,
+    )
 }

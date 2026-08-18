@@ -40,48 +40,31 @@ pub fn presence_bitmap_words(pattern_count: u32) -> u32 {
 /// readback is the small bitmap (removing the dense-workload output bottleneck).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_suffix3_presence_program(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
+fn suffix3_presence_program(
+    inputs: AcInputBindings<'_>,
     presence: &str,
     candidate_end_mask: &str,
     candidate_suffix2_mask: &str,
     candidate_suffix3_bloom: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
     max_pattern_len: u32,
 ) -> Program {
+    let pattern_count = inputs.pattern_count;
     gated_ranges_program(
         PrefilterGate::suffix3(
             candidate_end_mask,
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
         ),
-        AcInputBindings::from_names(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
-            state_count,
-            output_records_len,
-            pattern_count,
-        ),
+        inputs,
         BufferDecl::read_write(presence, 6, DataType::U32)
             .with_count(presence_bitmap_words(pattern_count)),
         Vec::new(),
         "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence",
         bounded_ranges_presence_nodes(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
+            inputs.haystack,
+            inputs.transitions,
+            inputs.output_offsets,
+            inputs.output_records,
             presence,
             max_pattern_len,
         ),
@@ -98,20 +81,12 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_program(
     pattern_count: u32,
 ) -> Result<Program, String> {
     let output_records_len = ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 presence")?;
-    Ok(classic_ac_bounded_ranges_suffix3_presence_program(
-        "haystack",
-        "transitions",
-        "output_offsets",
-        "output_records",
-        "pattern_lengths",
-        "haystack_len",
+    Ok(suffix3_presence_program(
+        AcInputBindings::canonical(dfa.state_count, output_records_len, pattern_count),
         "presence",
         "candidate_end_mask",
         "candidate_suffix2_mask",
         "candidate_suffix3_bloom",
-        dfa.state_count,
-        output_records_len,
-        pattern_count,
         dfa.max_pattern_len,
     ))
 }
@@ -169,51 +144,34 @@ fn region_table_decls(region_starts: &str, region_base: &str) -> Vec<BufferDecl>
 /// count is read from `buf_len(region_starts)`).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_suffix3_presence_by_region_program(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
+fn suffix3_presence_by_region_program(
+    inputs: AcInputBindings<'_>,
     presence: &str,
     candidate_end_mask: &str,
     candidate_suffix2_mask: &str,
     candidate_suffix3_bloom: &str,
     region_starts: &str,
     region_base: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
     max_pattern_len: u32,
     max_regions: u32,
 ) -> Program {
+    let pattern_count = inputs.pattern_count;
     gated_ranges_program(
         PrefilterGate::suffix3(
             candidate_end_mask,
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
         ),
-        AcInputBindings::from_names(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
-            state_count,
-            output_records_len,
-            pattern_count,
-        ),
+        inputs,
         BufferDecl::read_write(presence, 6, DataType::U32)
             .with_count(presence_by_region_words(pattern_count, max_regions)),
         region_table_decls(region_starts, region_base),
         "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_by_region",
         bounded_ranges_presence_by_region_nodes(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
+            inputs.haystack,
+            inputs.transitions,
+            inputs.output_offsets,
+            inputs.output_records,
             presence,
             region_starts,
             region_base,
@@ -237,27 +195,17 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
 ) -> Result<Program, String> {
     let output_records_len =
         ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 region-presence")?;
-    Ok(
-        classic_ac_bounded_ranges_suffix3_presence_by_region_program(
-            "haystack",
-            "transitions",
-            "output_offsets",
-            "output_records",
-            "pattern_lengths",
-            "haystack_len",
-            "presence",
-            "candidate_end_mask",
-            "candidate_suffix2_mask",
-            "candidate_suffix3_bloom",
-            "region_starts",
-            "region_base",
-            dfa.state_count,
-            output_records_len,
-            pattern_count,
-            dfa.max_pattern_len,
-            max_regions,
-        ),
-    )
+    Ok(suffix3_presence_by_region_program(
+        AcInputBindings::canonical(dfa.state_count, output_records_len, pattern_count),
+        "presence",
+        "candidate_end_mask",
+        "candidate_suffix2_mask",
+        "candidate_suffix3_bloom",
+        "region_starts",
+        "region_base",
+        dfa.max_pattern_len,
+        max_regions,
+    ))
 }
 
 /// FUSED region-presence + match-positions program: one suffix3-gated bounded-ranges
@@ -276,13 +224,8 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
 /// same `output_records` iteration).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
+fn suffix3_presence_and_positions_by_region_program_filtered(
+    inputs: AcInputBindings<'_>,
     presence: &str,
     candidate_end_mask: &str,
     candidate_suffix2_mask: &str,
@@ -291,66 +234,12 @@ fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
     region_base: &str,
     match_count: &str,
     matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    max_pattern_len: u32,
-    max_regions: u32,
-    max_matches: u32,
-) -> Program {
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        haystack_len,
-        presence,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
-        region_starts,
-        region_base,
-        match_count,
-        matches,
-        state_count,
-        output_records_len,
-        pattern_count,
-        max_pattern_len,
-        max_regions,
-        max_matches,
-        0,
-    )
-}
-
-/// Fused region presence with positioned output restricted to pattern IDs at
-/// or above `first_positioned_pattern_id`. Presence remains complete for every
-/// pattern; only the atomic triple append is filtered.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
-    presence: &str,
-    candidate_end_mask: &str,
-    candidate_suffix2_mask: &str,
-    candidate_suffix3_bloom: &str,
-    region_starts: &str,
-    region_base: &str,
-    match_count: &str,
-    matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
     max_pattern_len: u32,
     max_regions: u32,
     max_matches: u32,
     first_positioned_pattern_id: u32,
 ) -> Program {
+    let pattern_count = inputs.pattern_count;
     let mut trailing = region_table_decls(region_starts, region_base);
     // Match counter + triple output: the position half of the fused output.
     // `append_match` bounds writes to `buf_len(matches) / 3 == max_matches`.
@@ -368,27 +257,17 @@ fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_fi
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
         ),
-        AcInputBindings::from_names(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
-            state_count,
-            output_records_len,
-            pattern_count,
-        ),
+        inputs,
         BufferDecl::read_write(presence, 6, DataType::U32)
             .with_count(presence_by_region_words(pattern_count, max_regions)),
         trailing,
         "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region",
         bounded_ranges_presence_and_positions_by_region_nodes(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
+            inputs.haystack,
+            inputs.transitions,
+            inputs.output_offsets,
+            inputs.output_records,
+            inputs.pattern_lengths,
             presence,
             region_starts,
             region_base,
@@ -443,31 +322,21 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_prog
     }
     let output_records_len =
         ac_ranges_output_records_len(dfa, "bounded-ranges suffix3 region-presence+positions")?;
-    Ok(
-        classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
-            "haystack",
-            "transitions",
-            "output_offsets",
-            "output_records",
-            "pattern_lengths",
-            "haystack_len",
-            "presence",
-            "candidate_end_mask",
-            "candidate_suffix2_mask",
-            "candidate_suffix3_bloom",
-            "region_starts",
-            "region_base",
-            "match_count",
-            "matches",
-            dfa.state_count,
-            output_records_len,
-            pattern_count,
-            dfa.max_pattern_len,
-            max_regions,
-            max_matches,
-            first_positioned_pattern_id,
-        ),
-    )
+    Ok(suffix3_presence_and_positions_by_region_program_filtered(
+        AcInputBindings::canonical(dfa.state_count, output_records_len, pattern_count),
+        "presence",
+        "candidate_end_mask",
+        "candidate_suffix2_mask",
+        "candidate_suffix3_bloom",
+        "region_starts",
+        "region_base",
+        "match_count",
+        "matches",
+        dfa.max_pattern_len,
+        max_regions,
+        max_matches,
+        first_positioned_pattern_id,
+    ))
 }
 
 /// Build the suffix-prefiltered bounded-ranges AC scan for a compiled DFA.

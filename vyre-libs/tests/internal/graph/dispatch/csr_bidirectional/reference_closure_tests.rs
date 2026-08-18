@@ -9,20 +9,9 @@ use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 /// across components. Seed in component A must not flag B.
 #[test]
 fn closure_does_not_bridge_disjoint_components() {
-    // Two-component CSR: 0 -> 1, 2 -> 3 (disjoint).
-    let off = vec![0, 1, 1, 2, 2];
-    let tgt = vec![1, 3];
-    let msk = vec![1, 1];
+    let (off, tgt, msk) = super::two_component_disjoint_graph();
     let out = reference_bidirectional_closure(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            5,
-        ),
+        CsrClosureInputs::allow_all(CsrGraphView::new(4, &off, &tgt, &msk), 5),
         &[0b0001],
     );
     // Reaches {0, 1} only.

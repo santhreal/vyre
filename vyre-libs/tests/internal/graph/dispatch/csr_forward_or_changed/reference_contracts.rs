@@ -42,15 +42,7 @@ fn matches_primitive_directly() {
 fn closure_reaches_full_chain_via_change_flag() {
     let (off, tgt, msk) = linear_graph();
     let out = reference_forward_closure_via_change_flag(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            10,
-        ),
+        linear_inputs_all(&off, &tgt, &msk, 10),
         &[0b0001],
     );
     assert_eq!(out, vec![0b1111]);
@@ -72,20 +64,9 @@ fn empty_seed_yields_empty_closure_no_change() {
 /// termination signal we trust).
 #[test]
 fn closure_terminates_with_self_loop_under_max_iters() {
-    // 0 -> 0 (self-loop), 1 isolated.
-    let off = vec![0, 1, 1];
-    let tgt = vec![0];
-    let msk = vec![1];
+    let (off, tgt, msk) = self_loop_isolated_node_graph();
     let out = reference_forward_closure_via_change_flag(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 2,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            50,
-        ),
+        CsrClosureInputs::allow_all(CsrGraphView::new(2, &off, &tgt, &msk), 50),
         &[0b01],
     );
     // Self-loop never adds new bits -> terminates immediately.
@@ -96,9 +77,7 @@ fn closure_terminates_with_self_loop_under_max_iters() {
 /// must not propagate; the change flag must register no change.
 #[test]
 fn allow_mask_filters_step() {
-    let off = vec![0, 1, 1];
-    let tgt = vec![1];
-    let msk = vec![0b0010]; // kind bit 1
+    let (off, tgt, msk) = single_edge_kind_bit1_graph();
     let (out, changed) = reference_forward_step_with_change_flag(
         2,
         &off,

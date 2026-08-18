@@ -330,16 +330,11 @@ pub(in crate::pattern) fn try_build_ranges_scan(
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Result<Program, String> {
-    let [input_names @ .., match_count, _, _, _, matches] = RANGES_BUFFER_NAMES;
+    let [.., match_count, _, _, _, matches] = RANGES_BUFFER_NAMES;
     let output_records_len = ac_ranges_output_records_len(dfa, width.dispatch_shape())?;
     Ok(ranges_scan_program(
         canonical_gate(width),
-        AcInputBindings::new(
-            input_names,
-            dfa.state_count,
-            output_records_len,
-            pattern_count,
-        ),
+        AcInputBindings::canonical(dfa.state_count, output_records_len, pattern_count),
         match_count,
         matches,
         max_matches,
@@ -368,91 +363,6 @@ pub(in crate::pattern) fn build_ranges_scan(
         ),
         width.dispatch_shape(),
         width.fallible_entrypoint(),
-    )
-}
-
-/// Build a bounded-window AC ranges program with an exact candidate-end-byte
-/// prefilter.
-///
-/// `candidate_end_mask` is an 8-word bitset where bit `b` is set when byte `b`
-/// can terminate at least one accepted DFA state. Non-candidate lanes skip the
-/// bounded replay window and match append path entirely.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_prefilter_program(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
-    match_count: &str,
-    candidate_end_mask: &str,
-    matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    max_matches: u32,
-    max_pattern_len: u32,
-) -> Program {
-    classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        haystack_len,
-        match_count,
-        candidate_end_mask,
-        matches,
-        state_count,
-        output_records_len,
-        pattern_count,
-        max_matches,
-        max_pattern_len,
-        true,
-    )
-}
-
-/// Variant of [`classic_ac_bounded_ranges_prefilter_program`] with explicit
-/// control over subgroup match-append coalescing.
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-fn classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
-    match_count: &str,
-    candidate_end_mask: &str,
-    matches: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
-    max_matches: u32,
-    max_pattern_len: u32,
-    use_subgroup_coalesce: bool,
-) -> Program {
-    ranges_scan_program(
-        PrefilterGate::end_byte(candidate_end_mask),
-        AcInputBindings::from_names(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
-            state_count,
-            output_records_len,
-            pattern_count,
-        ),
-        match_count,
-        matches,
-        max_matches,
-        max_pattern_len,
-        use_subgroup_coalesce,
     )
 }
 

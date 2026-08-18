@@ -11,17 +11,17 @@
 # refuses to move a pin up. A crate with duplication and no row fails, so a new
 # crate cannot arrive unmeasured.
 #
-# vyre-libs sits at a measured value but not at a floor: the iterative-solver
-# builders duplicate against their dispatch partners, and neither side owns the
-# shape yet. Its pin is below its measurement because the composition move
-# relabelled duplication that had been attributed to vyre-primitives without
-# moving the allowance with the files. The CSR frontier buffer layout is no
-# longer part of that: `graph::program_graph` owns `word_buffer`,
-# `frontier_buffer` and `push_frontier_changed_buffers`, and every graph
-# primitive declares its own buffers through them. Nor is the kernel-body
-# skeleton below those buffers: `graph::frontier_bits` owns packed-bitset word
-# and mask addressing, `graph::lane_grid` owns the one-dimensional dispatch grid,
-# and `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes` owns the
+# vyre-libs is pinned at its current measurement, not at a floor. Quantized
+# batched matmul dispatch owns validation, input materialization, dispatch, and
+# exact output decoding in `solvers::quantized_dispatch::shapes`. Bounded
+# Aho-Corasick construction owns shared input bindings in
+# `pattern::classic_ac::bounded_ranges::AcInputBindings`. CSR dispatch tests
+# obtain canonical graph and mutation fixtures from one sibling module.
+#
+# `graph::program_graph` owns the CSR frontier buffer layout,
+# `graph::frontier_bits` owns packed-bitset word and mask addressing,
+# `graph::lane_grid` owns the one-dimensional dispatch grid, and
+# `reduce::workgroup_tree::hillis_steele_inclusive_sum_nodes` owns the
 # double-buffered workgroup scan sweep.
 #
 # The eleven vyre-primitives lines that were pinned as deliberate are gone.
@@ -128,13 +128,13 @@ total_lines = 1127
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 2423
-total_lines = 104436
+duplicate_lines = 2403
+total_lines = 104820
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 6135
-total_lines = 213050
+duplicate_lines = 5914
+total_lines = 214297
 
 [[crate]]
 name = "vyre-lints"

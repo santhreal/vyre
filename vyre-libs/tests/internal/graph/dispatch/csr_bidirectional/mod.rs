@@ -26,11 +26,12 @@ fn reference_bidirectional_closure_into(
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
 ) {
+    let graph = inputs.graph;
     vyre_reference::composition_witness::csr_bidirectional_closure_witness_into(
-        inputs.graph.node_count,
-        inputs.graph.edge_offsets,
-        inputs.graph.edge_targets,
-        inputs.graph.edge_kind_mask,
+        graph.node_count,
+        graph.edge_offsets,
+        graph.edge_targets,
+        graph.edge_kind_mask,
         seed,
         inputs.allow_mask,
         inputs.max_iters,
@@ -40,11 +41,12 @@ fn reference_bidirectional_closure_into(
 }
 
 fn reference_bidirectional_closure(inputs: CsrClosureInputs<'_>, seed: &[u32]) -> Vec<u32> {
+    let graph = inputs.graph;
     vyre_reference::composition_witness::csr_bidirectional_closure_witness(
-        inputs.graph.node_count,
-        inputs.graph.edge_offsets,
-        inputs.graph.edge_targets,
-        inputs.graph.edge_kind_mask,
+        graph.node_count,
+        graph.edge_offsets,
+        graph.edge_targets,
+        graph.edge_kind_mask,
         seed,
         inputs.allow_mask,
         inputs.max_iters,
@@ -57,6 +59,10 @@ use reference_bidirectional_closure as reference_csr_bidir_closure;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 
+#[path = "../csr_fixtures.rs"]
+mod csr_fixtures;
+use csr_fixtures::*;
+
 mod reference_closure_tests;
 
 /// 4 nodes dispatched at CSR_FRONTIER_STEP_WORKGROUP_SIZE (256 threads/group):
@@ -64,38 +70,6 @@ mod reference_closure_tests;
 /// over-dispatch in plan_csr_bidirectional_step (vyre-primitives
 /// csr-bidir-grid-miscompile), so every contract below asserts 1 workgroup.
 const BIDIR_CONTRACT: &str = "bidirectional step dispatch";
-
-fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    // 0 -> 1 -> 2 -> 3
-    (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
-}
-fn linear_inputs<'a>(
-    off: &'a [u32],
-    tgt: &'a [u32],
-    msk: &'a [u32],
-    allow_mask: u32,
-    max_iters: u32,
-) -> CsrClosureInputs<'a> {
-    CsrClosureInputs {
-        graph: CsrGraphView {
-            node_count: 4,
-            edge_offsets: off,
-            edge_targets: tgt,
-            edge_kind_mask: msk,
-        },
-        allow_mask,
-        max_iters,
-    }
-}
-
-fn linear_inputs_all<'a>(
-    off: &'a [u32],
-    tgt: &'a [u32],
-    msk: &'a [u32],
-    max_iters: u32,
-) -> CsrClosureInputs<'a> {
-    linear_inputs(off, tgt, msk, 0xFFFF_FFFF, max_iters)
-}
 
 /// Runs one bidirectional step over [`linear_graph`] into caller-owned storage. The contracts below
 /// vary the dispatcher and the seed; the graph itself is incidental to them.
@@ -179,9 +153,7 @@ fn matches_primitive_directly() {
 /// the seed in its output).
 #[test]
 fn allow_mask_filters_out_wrong_edge_kinds() {
-    let off = vec![0, 1, 1];
-    let tgt = vec![1];
-    let msk = vec![0b0010]; // edge kind bit 1
+    let (off, tgt, msk) = single_edge_kind_bit1_graph();
     let out = reference_bidirectional_step(2, &off, &tgt, &msk, &[0b01], 0b0001);
     let direct = reference_csr_bidir(2, &off, &tgt, &msk, &[0b01], 0b0001);
     // Substrate output must match primitive directly.
@@ -196,18 +168,7 @@ fn allow_mask_filters_out_wrong_edge_kinds() {
 #[test]
 fn closure_reaches_full_chain() {
     let (off, tgt, msk) = linear_graph();
-    let out = reference_bidirectional_closure(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            5,
-        ),
-        &[0b0001],
-    );
+    let out = reference_bidirectional_closure(linear_inputs_all(&off, &tgt, &msk, 5), &[0b0001]);
     assert_eq!(out, vec![0b1111]);
 }
 
@@ -279,29 +240,26 @@ fn via_step_with_scratch_reuses_dispatch_storage() {
 fn via_step_refreshes_static_inputs_when_same_shape_graph_content_changes() {
     let dispatcher = StaticOutputs::new(BIDIR_CONTRACT, vec![u32_slice_to_le_bytes(&[0b1010])])
         .recording_input(2);
-    let edge_offsets = vec![0, 1, 2, 3, 3];
-    let first_targets = vec![1, 2, 3];
-    let second_targets = vec![2, 3, 0];
-    let edge_kind_mask = vec![1, 1, 1];
+    let fixture = SameShapeGraphChanges::new();
     let mut scratch = BidirectionalGpuScratch::default();
     let mut out = Vec::new();
 
     for (edge_targets, why) in [
         (
-            &first_targets,
+            &fixture.first_targets,
             "Fix: first same-shape bidirectional dispatch should succeed",
         ),
         (
-            &second_targets,
+            &fixture.second_targets,
             "Fix: second same-shape bidirectional dispatch should refresh static CSR inputs",
         ),
     ] {
         bidirectional_step_via_with_scratch_into(
             &dispatcher,
             4,
-            &edge_offsets,
+            &fixture.edge_offsets,
             edge_targets,
-            &edge_kind_mask,
+            &fixture.edge_kind_mask,
             &[0b0010],
             0xFFFF_FFFF,
             &mut scratch,
@@ -310,11 +268,7 @@ fn via_step_refreshes_static_inputs_when_same_shape_graph_content_changes() {
         .expect(why);
     }
 
-    let recorded_targets = dispatcher.recorded();
-    assert_eq!(
-        recorded_targets.as_slice(),
-        &[first_targets, second_targets]
-    );
+    fixture.assert_refreshed_targets(&dispatcher.recorded());
     assert_eq!(
         scratch.program_builds(),
         1,

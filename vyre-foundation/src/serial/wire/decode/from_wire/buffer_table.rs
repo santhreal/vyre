@@ -6,8 +6,8 @@
 //! checks, so a hostile blob cannot nest connectives until the stack ends.
 
 use super::payload::{
-    data_type_from_tag, memory_kind_from_tag, read_dense_quantization_scale,
-    read_dense_quantization_zero_point, read_hints,
+    memory_kind_from_tag, read_dense_quantization_scale, read_dense_quantization_zero_point,
+    read_hints,
 };
 use super::{DecodedMetadata, LebReader};
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
@@ -15,6 +15,7 @@ use crate::ir_inner::model::program::{LinearType, ShapePredicate};
 use crate::serial::wire::decode::{invariants, reject_reserved_extension_id};
 use crate::serial::wire::framing::{MAX_SHAPE_PREDICATE_DEPTH, WIRE_FORMAT_VERSION};
 use crate::serial::wire::tags::access_from_tag::access_from_tag;
+use crate::serial::wire::tags::data_type_from_tag::data_type_from_tag;
 use crate::serial::wire::{Reader, MAX_BUFFERS};
 
 /// Decode a [`LinearType`] wire tag.

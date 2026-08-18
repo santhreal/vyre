@@ -323,7 +323,7 @@ mod tests {
             inputs: &[Vec<u8>],
             grid: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            if grid != Some([1, 1, 1]) || inputs.len() != 3 {
+            if grid != Some([1, 1, 1]) || inputs.len() != 2 {
                 return Err(DispatchError::BadInputs(
                     "compose dispatch shape mismatch".into(),
                 ));
