@@ -30,13 +30,18 @@ use vyre_reference::value::Value;
 pub const SOURCE_WORDS: u32 = 8;
 /// Words in the transfer destination.
 pub const DESTINATION_WORDS: u32 = 6;
-/// Invocations that redundantly perform the same copy.
+/// Workgroup widths under test.
 ///
-/// A span whose ends fall inside a word has every invocation reading and
-/// rewriting the same destination word, so the workgroup is wider than one
-/// invocation on purpose: each computes the same word from the same source, and
-/// the bytes a mask preserves are written by no invocation.
-pub const WORKGROUP: [u32; 3] = [16, 1, 1];
+/// The emitted copy loop carries no invocation guard, so a dispatched program
+/// runs the whole copy in every invocation of the workgroup: that is the shape
+/// production dispatches, and a span whose ends fall inside a word has every
+/// invocation merging the same destination word under the same mask. The merge
+/// is idempotent by construction, since the bytes it preserves are the bytes it
+/// read, so every ordering must land on the same word. A single invocation
+/// proves the arithmetic alone; the wider width proves that claim on silicon,
+/// and a divergence between the two is a real defect rather than a fixture
+/// artifact.
+pub const WORKGROUPS: [[u32; 3]; 2] = [[1, 1, 1], [16, 1, 1]];
 
 /// Byte offsets under test: every residue modulo four, a span that starts past
 /// the middle of the source, and one that starts near its end.
@@ -123,6 +128,8 @@ pub struct SpanCase {
     pub offset: u32,
     /// Byte length of the span.
     pub size: u32,
+    /// Workgroup the transfer is dispatched with.
+    pub workgroup: [u32; 3],
 }
 
 impl SpanCase {
@@ -154,7 +161,7 @@ impl SpanCase {
                 },
             ],
         )];
-        Program::wrapped(buffers, WORKGROUP, body)
+        Program::wrapped(buffers, self.workgroup, body)
     }
 
     /// The dispatch inputs, in declaration order.
@@ -198,11 +205,12 @@ impl SpanCase {
         assert_eq!(
             actual.len(),
             expected.len(),
-            "{backend} {} {} offset={} size={}: {lowering} returned {} buffers, the reference returned {}",
+            "{backend} {} {} offset={} size={} workgroup={:?}: {lowering} returned {} buffers, the reference returned {}",
             self.direction.label(),
             self.form.label(),
             self.offset,
             self.size,
+            self.workgroup,
             actual.len(),
             expected.len(),
         );
@@ -216,13 +224,14 @@ impl SpanCase {
                 .position(|(left, right)| left != right)
                 .unwrap_or_else(|| measured.len().min(reference.len()));
             panic!(
-                "{backend} {} {} offset={} size={}: {lowering} diverges from the reference in \
+                "{backend} {} {} offset={} size={} workgroup={:?}: {lowering} diverges from the reference in \
                  buffer #{index} at byte {first}\n  {backend}: {measured:02x?}\n  reference: \
                  {reference:02x?}",
                 self.direction.label(),
                 self.form.label(),
                 self.offset,
                 self.size,
+                self.workgroup,
             );
         }
     }
@@ -232,7 +241,9 @@ impl SpanCase {
 /// produces different bytes rather than the same ones.
 #[must_use]
 pub fn source_bytes() -> Vec<u8> {
-    (0..SOURCE_WORDS * 4).map(|index| (index + 1) as u8).collect()
+    (0..SOURCE_WORDS * 4)
+        .map(|index| (index + 1) as u8)
+        .collect()
 }
 
 /// Destination bytes: a pattern no copy can produce, so a byte the transfer must
@@ -245,17 +256,20 @@ pub fn destination_bytes() -> Vec<u8> {
 /// Every case in the matrix: both directions, both offset forms, every span.
 #[must_use]
 pub fn cases() -> Vec<SpanCase> {
-    let mut cases = Vec::with_capacity(4 * OFFSETS.len() * SIZES.len());
-    for direction in [Direction::Load, Direction::Store] {
-        for form in [OffsetForm::Literal, OffsetForm::Loaded] {
-            for offset in OFFSETS {
-                for size in SIZES {
-                    cases.push(SpanCase {
-                        direction,
-                        form,
-                        offset,
-                        size,
-                    });
+    let mut cases = Vec::with_capacity(4 * WORKGROUPS.len() * OFFSETS.len() * SIZES.len());
+    for workgroup in WORKGROUPS {
+        for direction in [Direction::Load, Direction::Store] {
+            for form in [OffsetForm::Literal, OffsetForm::Loaded] {
+                for offset in OFFSETS {
+                    for size in SIZES {
+                        cases.push(SpanCase {
+                            direction,
+                            form,
+                            offset,
+                            size,
+                            workgroup,
+                        });
+                    }
                 }
             }
         }
@@ -299,8 +313,17 @@ pub fn assert_matrix_covers_every_alignment() {
         "Fix: the matrix must exercise both the literal and the loaded offset form"
     );
     assert!(
-        cases().iter().any(|case| case.direction == Direction::Store)
+        cases()
+            .iter()
+            .any(|case| case.direction == Direction::Store)
             && cases().iter().any(|case| case.direction == Direction::Load),
         "Fix: the matrix must exercise both transfer directions"
+    );
+    assert!(
+        cases().iter().any(|case| case.workgroup[0] == 1)
+            && cases().iter().any(|case| case.workgroup[0] > 1),
+        "Fix: the matrix must dispatch the transfer both with one invocation and with the wider \
+         workgroup a program really dispatches, so a redundant copy that disagrees with itself is \
+         a failure rather than an untested shape"
     );
 }
