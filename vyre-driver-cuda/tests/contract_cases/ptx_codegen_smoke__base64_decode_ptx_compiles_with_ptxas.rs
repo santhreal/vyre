@@ -121,20 +121,7 @@ fn ptx_rejects_invalid_subgroup_width() {
 
 #[test]
 fn ptx_shared_memory_declaration_uses_element_byte_width() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::workgroup("scratch", 16, DataType::U32),
-            BufferDecl::output("out", 0, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::store("scratch", Expr::u32(0), Expr::u32(7)),
-            Node::Barrier {
-                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
-            },
-            Node::store("out", Expr::u32(0), Expr::load("scratch", Expr::u32(0))),
-        ],
-    );
+    let program = shared_memory_smoke_program([1, 1, 1]);
     let secondary_text = program_to_ptx(&program, &default_config())
         .expect("Fix: live shared-memory fixture must lower to PTX.");
     assert!(
@@ -232,19 +219,7 @@ fn ptx_emits_integer_arithmetic() {
         ("div", Expr::div(Expr::gid_x(), Expr::u32(3)), "mul.hi.u32"),
         ("rem", Expr::rem(Expr::gid_x(), Expr::u32(3)), "rem.u32"),
     ];
-    for (name, expr, expected_insn) in ops {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), expr)],
-        );
-        let secondary_text = program_to_ptx(&program, &default_config())
-            .unwrap_or_else(|e| panic!("Fix: {name} must lower to PTX: {e}"));
-        assert!(
-            secondary_text.contains(expected_insn),
-            "Fix: {name} must emit {expected_insn}, got:\n{secondary_text}"
-        );
-    }
+    assert_ptx_emits_expr_insns(&ops);
 }
 
 #[test]

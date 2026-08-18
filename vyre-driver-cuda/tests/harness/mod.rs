@@ -27,6 +27,109 @@ pub(crate) fn pack_nodes(nodes: &[u32], node_count: u32) -> Vec<u32> {
     }
     words
 }
+pub(crate) fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
+    source.iter().map(|&b| b as u32).collect()
+}
+
+pub(crate) fn set_frontier_node(frontier: &mut [u32], node: u32) {
+    frontier[node as usize / 32] |= 1_u32 << (node & 31);
+}
+pub(crate) fn frontier_has_node(frontier: &[u32], node: u32) -> bool {
+    frontier[node as usize / 32] & (1_u32 << (node & 31)) != 0
+}
+
+pub(crate) fn mix32_value(mut value: u32) -> u32 {
+    value ^= value >> 16;
+    value = value.wrapping_mul(0x7feb_352d);
+    value ^= value >> 15;
+    value = value.wrapping_mul(0x846c_a68b);
+    value ^ (value >> 16)
+}
+
+pub(crate) fn is_required_input_buffer(buffer: &BufferDecl) -> bool {
+    let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();
+    matches!(
+        buffer.access(),
+        BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
+    ) && !backend_allocated
+        && buffer.access() != BufferAccess::Workgroup
+}
+
+pub(crate) fn find_output_buffer_index(program: &Program, name: &str) -> usize {
+    program
+        .buffers()
+        .iter()
+        .filter(|buffer| {
+            buffer.is_output()
+                || buffer.is_pipeline_live_out()
+                || matches!(
+                    buffer.access(),
+                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
+                )
+        })
+        .position(|buffer| buffer.name() == name)
+        .unwrap_or_else(|| panic!("Fix: output buffer `{name}` must be declared in program"))
+}
+
+pub(crate) fn output_range_store_program(range: std::ops::Range<usize>) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("state", 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(4)
+                .with_output_byte_range(range),
+        ],
+        [1, 1, 1],
+        vec![Node::store("state", Expr::u32(3), Expr::u32(99))],
+    )
+}
+
+pub(crate) fn csr_traversal_inputs(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier: &[u32],
+) -> Vec<Vec<u8>> {
+    let words = node_count.div_ceil(32).max(1);
+    let pg_nodes = vec![0u32; node_count as usize];
+    let pg_node_tags = vec![0u32; node_count as usize];
+    vec![
+        u32_bytes(&pg_nodes),
+        u32_bytes(edge_offsets),
+        u32_bytes(edge_targets),
+        u32_bytes(edge_kind_mask),
+        u32_bytes(&pg_node_tags),
+        u32_bytes(frontier),
+        vec![0u8; words as usize * 4],
+    ]
+}
+
+pub(crate) fn build_atomic_reduction_program(
+    lane_count: u32,
+    workgroup_size_x: u32,
+    bucket_mask: u32,
+    build: impl FnOnce(&str, Expr, Expr) -> Expr,
+) -> Program {
+    let idx = Expr::var("idx");
+    let bucket = Expr::bitand(idx.clone(), Expr::u32(bucket_mask));
+    let value = Expr::load("values", idx.clone());
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("acc", 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(lane_count),
+            BufferDecl::read("values", 1, DataType::U32).with_count(lane_count),
+        ],
+        [workgroup_size_x, 1, 1],
+        vec![
+            Node::let_bind("idx", Expr::gid_x()),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::u32(lane_count)),
+                vec![Node::let_bind("old_value", build("acc", bucket, value))],
+            ),
+        ],
+    )
+}
+
 
 /// Acquire the live CUDA backend required by release-path GPU tests.
 pub(crate) fn live_dispatcher() -> CudaBackend {

@@ -21,7 +21,6 @@ mod harness;
 use harness::no_op_program;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn assert_noop_output(outputs: &[Vec<u8>], phase: &str) {
     let expected = 0u32.to_le_bytes();

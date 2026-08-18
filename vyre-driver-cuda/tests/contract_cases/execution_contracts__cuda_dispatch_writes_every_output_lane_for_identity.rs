@@ -320,27 +320,8 @@ fn cuda_signed_mod_round_trips_after_foundation_started_allowing_it() {
 
 #[test]
 fn cuda_grid_override_drives_logical_lane_count_for_output_small_kernels() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-            BufferDecl::read("values", 1, DataType::U32).with_count(256),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(256)),
-                vec![Node::let_bind(
-                    "old_sum",
-                    Expr::atomic_add("sum", Expr::u32(0), Expr::load("values", Expr::var("idx"))),
-                )],
-            ),
-        ],
-    );
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let program = make_atomic_sum_program(256, true);
+    let backend = acquire_cuda_backend();
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 1, 1]);
     let outputs = backend

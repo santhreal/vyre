@@ -1,5 +1,7 @@
-use crate::harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::ir::{BufferAccess, DataType, Program};
+use crate::harness::{
+    bytes_u32, find_output_buffer_index, is_required_input_buffer, u32_bytes, with_live_backend,
+};
+use vyre::ir::{DataType, Program};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::hash::fnv1a::{fnv1a32_program, fnv1a32_program_u8, fnv1a64_program_n_u8};
@@ -22,26 +24,18 @@ fn fnv_inputs_for_program(program: &Program, bytes: &[u8]) -> Vec<Vec<u8>> {
     program
         .buffers()
         .iter()
-        .filter_map(|buffer| {
-            let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();
-            let needs_input = matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-            ) && !backend_allocated
-                && buffer.access() != BufferAccess::Workgroup;
-            if !needs_input {
-                return None;
-            }
+        .filter(|buffer| is_required_input_buffer(buffer))
+        .map(|buffer| {
             if buffer.name() == "input" {
                 match buffer.element() {
-                    DataType::U8 => Some(bytes.to_vec()),
+                    DataType::U8 => bytes.to_vec(),
                     DataType::U32 => {
                         let mut words: Vec<u32> =
                             bytes.iter().map(|byte| u32::from(*byte)).collect();
                         if words.is_empty() {
                             words.push(0);
                         }
-                        Some(u32_bytes(&words))
+                        u32_bytes(&words)
                     }
                     other => panic!("Fix: CUDA FNV input must be U8 or U32, got {other:?}"),
                 }
@@ -50,22 +44,6 @@ fn fnv_inputs_for_program(program: &Program, bytes: &[u8]) -> Vec<Vec<u8>> {
             }
         })
         .collect()
-}
-
-fn output_index(program: &Program, name: &str) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
-        .position(|buffer| buffer.name() == name)
-        .expect("Fix: CUDA FNV output buffer must be declared")
 }
 
 fn run_fnv1a32_program(
@@ -77,7 +55,7 @@ fn run_fnv1a32_program(
     let inputs = fnv_inputs_for_program(&program, bytes);
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 1, 1]);
-    let out_index = output_index(&program, "out");
+    let out_index = find_output_buffer_index(&program, "out");
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .unwrap_or_else(|error| panic!("Fix: CUDA {case_name} dispatch failed: {error}"));
@@ -98,7 +76,7 @@ fn run_fnv1a64_u8(backend: &CudaBackend, bytes: &[u8]) -> u64 {
     let inputs = fnv_inputs_for_program(&program, bytes);
     let mut config = DispatchConfig::default();
     config.grid_override = Some([1, 1, 1]);
-    let out_index = output_index(&program, "out");
+    let out_index = find_output_buffer_index(&program, "out");
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .unwrap_or_else(|error| panic!("Fix: CUDA packed-u8 FNV-1a64 dispatch failed: {error}"));

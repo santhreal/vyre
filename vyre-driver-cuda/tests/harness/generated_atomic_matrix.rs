@@ -127,26 +127,11 @@ pub(crate) const ATOMIC_RETURN_CASES: &[AtomicReturnCase] = &[
 ];
 
 pub(crate) fn atomic_reduction_program(case: &AtomicReductionCase) -> Program {
-    let idx = Expr::var("idx");
-    let bucket = Expr::bitand(idx.clone(), Expr::u32(BUCKET_MASK));
-    let value = Expr::load("values", idx.clone());
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("acc", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(LANE_COUNT as u32),
-            BufferDecl::read("values", 1, DataType::U32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(LANE_COUNT as u32)),
-                vec![Node::let_bind(
-                    "old_value",
-                    (case.build)("acc", bucket, value),
-                )],
-            ),
-        ],
+    crate::harness::build_atomic_reduction_program(
+        LANE_COUNT as u32,
+        WORKGROUP_SIZE_X,
+        BUCKET_MASK,
+        case.build,
     )
 }
 
@@ -314,24 +299,7 @@ pub(crate) fn atomic_exchange_single_writer_program() -> Program {
 }
 
 pub(crate) fn generated_atomic_values(salt: u32) -> Vec<u32> {
-    (0..LANE_COUNT)
-        .map(|lane| {
-            let lane = lane as u32;
-            let mixed = lane.wrapping_mul(0x9e37_79b9).rotate_left((lane & 31) + 1)
-                ^ salt.rotate_right(lane & 31);
-            match lane % 16 {
-                0 => 0,
-                1 => 1,
-                2 => u32::MAX,
-                3 => 0x8000_0000,
-                4 => 0x7fff_ffff,
-                5 => 0x5555_5555,
-                6 => 0xaaaa_aaaa,
-                7 => 0x0123_4567,
-                _ => mixed,
-            }
-        })
-        .collect()
+    crate::harness::generated_mixed_u32_values(salt)
 }
 
 pub(crate) fn generated_exchange_initial_values() -> Vec<u32> {

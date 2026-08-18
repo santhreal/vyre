@@ -24,7 +24,7 @@ use harness::{
     GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
 };
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 const OUTPUT_BYTES: usize = LANE_COUNT * std::mem::size_of::<u32>();
 const BUCKET_COUNT: usize = 8;
