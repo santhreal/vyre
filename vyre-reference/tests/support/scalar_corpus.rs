@@ -47,34 +47,16 @@ pub(crate) fn u32_anchors() -> Vec<u32> {
 
 /// The bit patterns a `u64` sweep must always contain.
 pub(crate) fn u64_anchors() -> Vec<u64> {
-    vec![
-        0,
-        1,
-        2,
-        3,
-        7,
-        8,
-        15,
-        16,
-        31,
-        32,
-        63,
-        64,
-        127,
-        128,
-        255,
-        256,
-        1023,
-        1024,
-        u64::from(u16::MAX),
-        u64::from(u16::MAX) + 1,
+    let mut anchors: Vec<u64> = u32_anchors().into_iter().map(u64::from).collect();
+    anchors.extend([
         u64::from(u32::MAX),
         u64::from(u32::MAX) + 1,
         i64::MAX as u64,
         i64::MIN as u64,
         u64::MAX - 1,
         u64::MAX,
-    ]
+    ]);
+    anchors
 }
 
 /// The bit patterns an `i32` sweep must always contain.

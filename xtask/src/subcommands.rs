@@ -70,7 +70,7 @@ pub fn subsets() -> Vec<Subset> {
             help: AREA_HELP
                 .iter()
                 .find_map(|(area, help)| (*area == name).then_some(*help))
-                .expect("every gate area has help text"),
+                .expect("Fix: add help text for every gate area in AREA_HELP"),
             gates: crate::gate_metadata::gates_in_area(name),
         })
         .collect()

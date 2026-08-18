@@ -8,8 +8,8 @@
 //! conflict to another phase. Universal zero conflicts is not promised.
 
 use super::report::{BankConflictKind, ConflictSeverity};
-use serde::{Deserialize, Serialize};
 use crate::analyses::gcd_u32;
+use serde::{Deserialize, Serialize};
 
 /// Physical and execution geometry for target shared-memory banks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -264,7 +264,6 @@ fn classify_phase_conflict(stride: u32, bank_count: u32, active_threads: u32) ->
         }
     }
 }
-
 
 fn severity_rank(sev: ConflictSeverity) -> u32 {
     match sev {

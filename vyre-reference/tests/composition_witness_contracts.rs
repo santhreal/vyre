@@ -8,12 +8,12 @@ use vyre_reference::composition_witness::{
     argmax_of_marginals_witness, argmin_cost_witness, backdoor_descendants_check_witness,
     bellman_shortest_path_witness, betti_persistence_witness, bhattacharyya_coefficient_witness,
     bigint_add_carry_witness, bigint_add_carry_witness_into, bitset_saturation_ratio_witness,
-    bitset_subset_of_witness,
-    canonicalize_union_find_witness, chebyshev_filter_witness, chebyshev_filter_witness_into,
-    cluster_projection_matrix_witness_into, compose_ir_arrows_witness, compose_passes_witness,
-    compose_passes_witness_into, composition_associates_witness, conformal_threshold_witness,
-    conv1d_witness, conv1d_witness_into, count_sketch_query_witness, count_sketch_update_witness,
-    crc32_witness, csr_backward_closure_witness, csr_backward_step_with_change_witness,
+    bitset_subset_of_witness, canonicalize_union_find_witness, chebyshev_filter_witness,
+    chebyshev_filter_witness_into, cluster_projection_matrix_witness_into,
+    compose_ir_arrows_witness, compose_passes_witness, compose_passes_witness_into,
+    composition_associates_witness, conformal_threshold_witness, conv1d_witness,
+    conv1d_witness_into, count_sketch_query_witness, count_sketch_update_witness, crc32_witness,
+    csr_backward_closure_witness, csr_backward_step_with_change_witness,
     csr_backward_traverse_witness, csr_backward_traverse_witness_into, csr_bfs_witness,
     csr_bidirectional_closure_witness, csr_bidirectional_closure_witness_into,
     csr_bidirectional_step_witness, csr_bidirectional_step_witness_into,
@@ -2484,7 +2484,6 @@ fn frontier_bitset_witness_contracts() {
     let sat_words = vec![0xAAAA_AAAA_u32; 64];
     assert!((bitset_saturation_ratio_witness(&sat_words) - 0.5).abs() < 1e-12);
     assert_eq!(bitset_saturation_ratio_witness(&[]), 0.0);
-
 }
 
 /// WHY: Zip-truncation defect class where `lhs.iter().zip(rhs.iter())` stops comparison
@@ -2502,14 +2501,44 @@ fn bitset_subset_of_witness_length_and_boundary_invariants() {
         ("nonzero_lhs_empty_rhs_single_word", &[1], &[], false),
         ("nonzero_lhs_empty_rhs_multi_word", &[0, 1], &[], false),
         ("equal_single_word", &[0b1010], &[0b1010], true),
-        ("equal_multi_word", &[0b1010, 0x1234], &[0b1010, 0x1234], true),
-        ("shorter_lhs_proper_subset", &[0b0010], &[0b1010, 0xFFFF_0000], true),
-        ("shorter_lhs_equal_prefix_extra_rhs", &[0b1010], &[0b1010, 0x0001], true),
+        (
+            "equal_multi_word",
+            &[0b1010, 0x1234],
+            &[0b1010, 0x1234],
+            true,
+        ),
+        (
+            "shorter_lhs_proper_subset",
+            &[0b0010],
+            &[0b1010, 0xFFFF_0000],
+            true,
+        ),
+        (
+            "shorter_lhs_equal_prefix_extra_rhs",
+            &[0b1010],
+            &[0b1010, 0x0001],
+            true,
+        ),
         ("longer_lhs_all_zero_tail", &[0b0010, 0, 0], &[0b1010], true),
-        ("longer_lhs_nonzero_tail_word1", &[0b0010, 1], &[0b1010], false),
-        ("longer_lhs_nonzero_tail_word2", &[0b0010, 0, 0x8000_0000], &[0b1010, 0], false),
+        (
+            "longer_lhs_nonzero_tail_word1",
+            &[0b0010, 1],
+            &[0b1010],
+            false,
+        ),
+        (
+            "longer_lhs_nonzero_tail_word2",
+            &[0b0010, 0, 0x8000_0000],
+            &[0b1010, 0],
+            false,
+        ),
         ("prefix_mismatch_single_word", &[0b1011], &[0b1010], false),
-        ("prefix_mismatch_multi_word", &[0b1010, 0b11], &[0b1010, 0b01], false),
+        (
+            "prefix_mismatch_multi_word",
+            &[0b1010, 0b11],
+            &[0b1010, 0b01],
+            false,
+        ),
     ];
 
     for (label, lhs, rhs, expected) in cases {

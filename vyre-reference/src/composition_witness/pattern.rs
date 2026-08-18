@@ -180,20 +180,16 @@ pub fn try_match_post_process_witness_into(
 ) -> Result<(), WitnessPostProcessError> {
     triples.clear();
     output.clear();
-    try_match_post_process_records_into(
-        matches,
-        haystack,
-        |pattern_id, start, end, entropy_bits_per_byte, confidence| {
-            triples.push((pattern_id, start, end));
-            output.push(WitnessPostProcessedMatch {
-                pattern_id,
-                start,
-                end,
-                entropy_bits_per_byte,
-                confidence,
-            });
-        },
-    )
+    try_match_post_process_records_into(matches, haystack, |pid, start, end, entropy, conf| {
+        triples.push((pid, start, end));
+        output.push(WitnessPostProcessedMatch {
+            pattern_id: pid,
+            start,
+            end,
+            entropy_bits_per_byte: entropy,
+            confidence: conf,
+        });
+    })
 }
 
 /// Infallible canonical match post-processing witness.

@@ -49,7 +49,11 @@ fn caller_calling(op_id: &str) -> Program {
         BufferDecl::storage("x", 0, BufferAccess::ReadOnly, DataType::U32).with_count(64),
         BufferDecl::output("out", 1, DataType::U32).with_count(64),
     ];
-    let call_node = Node::store("out", Expr::u32(0), Expr::call(op_id, vec![Expr::load("x", Expr::u32(0))]));
+    let call_node = Node::store(
+        "out",
+        Expr::u32(0),
+        Expr::call(op_id, vec![Expr::load("x", Expr::u32(0))]),
+    );
     Program::wrapped(buffers, [64, 1, 1], vec![call_node])
 }
 
@@ -64,8 +68,12 @@ fn trap_resolver(id: &str) -> Option<Program> {
 /// Collect every name a `let` / loop introduces, descending all node bodies.
 fn collect_declared(nodes: &[Node], out: &mut HashSet<String>) {
     vyre_foundation::visit::for_each_node(nodes, |n: &Node| match n {
-        Node::Let { name, .. } => { out.insert(name.to_string()); }
-        Node::Loop { var, .. } => { out.insert(var.to_string()); }
+        Node::Let { name, .. } => {
+            out.insert(name.to_string());
+        }
+        Node::Loop { var, .. } => {
+            out.insert(var.to_string());
+        }
         _ => {}
     });
 }

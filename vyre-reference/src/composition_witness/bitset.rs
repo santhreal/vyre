@@ -245,7 +245,7 @@ pub fn four_russians_dense_matvec_witness_into(
     let expected_lut_words = tile_count
         .checked_mul(256)
         .and_then(|words| words.checked_mul(destination_words))
-        .expect("dense Four-Russians LUT dimensions must not overflow")
+        .expect("Fix: keep tile_count * 256 * destination_words within u32 bounds to avoid LUT overflow")
         as usize;
     assert_eq!(
         tile_lut.len(),
@@ -294,8 +294,9 @@ pub fn four_russians_dense_matvec_witness(
 #[must_use]
 pub fn stochastic_encode_witness(p: f64, len_bits: usize, seed: u32) -> Vec<u32> {
     let mut out = Vec::new();
-    try_stochastic_encode_witness_into(p, len_bits, seed, &mut out)
-        .expect("stochastic witness dimensions must be representable");
+    try_stochastic_encode_witness_into(p, len_bits, seed, &mut out).expect(
+        "Fix: provide a bitstream length within usize bounds and allocate required storage",
+    );
     out
 }
 
@@ -513,7 +514,7 @@ pub fn frontier_absorb_witness(
     next_wave: &mut Vec<u32>,
 ) -> (bool, u32) {
     try_frontier_absorb_witness_into(visited, neighbors, node_count, next_wave)
-        .expect("frontier_absorb_witness failed")
+        .expect("Fix: pass visited and neighbors buffers sized to ceil(node_count / 32) words")
 }
 
 /// Sequential mathematical witness for bitset saturation ratio (set bits / total bits).

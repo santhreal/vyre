@@ -50,10 +50,6 @@ fn u32_shared_binop(op: &BinOp, left: u32, right: u32) -> Option<Value> {
         BinOp::Min => Some(Value::U32(left.min(right))),
         BinOp::Max => Some(Value::U32(left.max(right))),
         BinOp::AbsDiff => Some(Value::U32(left.abs_diff(right))),
-        // `right` is taken mod 32 (backend shift-mask semantics extend
-        // naturally to rotates). `rotate_left(0)` / `rotate_right(0)`
-        // are the identity and would otherwise produce UB on some
-        // platforms via `x << 32`.
         BinOp::RotateLeft => Some(Value::U32(left.rotate_left(right & 31))),
         BinOp::RotateRight => Some(Value::U32(left.rotate_right(right & 31))),
         BinOp::WrappingAdd => Some(Value::U32(left.wrapping_add(right))),
@@ -67,32 +63,34 @@ fn u32_shared_binop(op: &BinOp, left: u32, right: u32) -> Option<Value> {
 }
 
 fn i32_shared_binop(op: &BinOp, left: i32, right: i32) -> Option<Value> {
-    match op {
-        BinOp::Min => Some(Value::I32(left.min(right))),
-        BinOp::Max => Some(Value::I32(left.max(right))),
-        BinOp::AbsDiff => Some(Value::U32(left.abs_diff(right))),
-        BinOp::WrappingAdd => Some(Value::I32(left.wrapping_add(right))),
-        BinOp::WrappingSub => Some(Value::I32(left.wrapping_sub(right))),
-        BinOp::SaturatingAdd => Some(Value::I32(left.saturating_add(right))),
-        BinOp::SaturatingSub => Some(Value::I32(left.saturating_sub(right))),
-        BinOp::SaturatingMul => Some(Value::I32(left.saturating_mul(right))),
-        _ => None,
-    }
+    let v = match op {
+        BinOp::Min => left.min(right),
+        BinOp::Max => left.max(right),
+        BinOp::AbsDiff => return Some(Value::U32(left.abs_diff(right))),
+        BinOp::WrappingAdd => left.wrapping_add(right),
+        BinOp::WrappingSub => left.wrapping_sub(right),
+        BinOp::SaturatingAdd => left.saturating_add(right),
+        BinOp::SaturatingSub => left.saturating_sub(right),
+        BinOp::SaturatingMul => left.saturating_mul(right),
+        _ => return None,
+    };
+    Some(Value::I32(v))
 }
 
 fn u64_shared_binop(op: &BinOp, left: u64, right: u64) -> Option<Value> {
-    match op {
-        BinOp::Min => Some(Value::U64(left.min(right))),
-        BinOp::Max => Some(Value::U64(left.max(right))),
-        BinOp::AbsDiff => Some(Value::U64(left.abs_diff(right))),
-        BinOp::WrappingAdd => Some(Value::U64(left.wrapping_add(right))),
-        BinOp::WrappingSub => Some(Value::U64(left.wrapping_sub(right))),
-        BinOp::SaturatingAdd => Some(Value::U64(left.saturating_add(right))),
-        BinOp::SaturatingSub => Some(Value::U64(left.saturating_sub(right))),
-        BinOp::SaturatingMul => Some(Value::U64(left.saturating_mul(right))),
-        BinOp::MulHigh => Some(Value::U64(((left as u128 * right as u128) >> 64) as u64)),
-        _ => None,
-    }
+    let v = match op {
+        BinOp::Min => left.min(right),
+        BinOp::Max => left.max(right),
+        BinOp::AbsDiff => left.abs_diff(right),
+        BinOp::WrappingAdd => left.wrapping_add(right),
+        BinOp::WrappingSub => left.wrapping_sub(right),
+        BinOp::SaturatingAdd => left.saturating_add(right),
+        BinOp::SaturatingSub => left.saturating_sub(right),
+        BinOp::SaturatingMul => left.saturating_mul(right),
+        BinOp::MulHigh => ((left as u128 * right as u128) >> 64) as u64,
+        _ => return None,
+    };
+    Some(Value::U64(v))
 }
 
 pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::ReferenceError> {

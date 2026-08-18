@@ -176,7 +176,6 @@ fn classify_mul(
     }
 }
 
-
 // Inline: covers the crate-private `analyze` and `gcd_u32`, which no integration test can reach.
 #[cfg(test)]
 mod tests {

@@ -51,22 +51,22 @@ pub(crate) fn binary_direct_predicate(input: &[u8], op: impl FnOnce(u32, u32) ->
 /// Error returned by canonical primitive reference evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EvalError {
-    message: String,
+    diagnostic: String,
 }
 
 impl EvalError {
     /// Build an actionable evaluation error.
     #[must_use]
-    pub fn new(message: impl Into<String>) -> Self {
+    pub fn new(diagnostic: impl Into<String>) -> Self {
         Self {
-            message: message.into(),
+            diagnostic: diagnostic.into(),
         }
     }
 }
 
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.message)
+        f.write_str(&self.diagnostic)
     }
 }
 

@@ -138,30 +138,7 @@ fn node_reads_any(node: &Node, names: &FxHashSet<Ident>) -> bool {
     match node {
         Node::Let { value, .. } => expr_reads_any(value, names),
         Node::Block(body) => body.iter().any(|node| node_reads_any(node, names)),
-        Node::Store { .. }
-        | Node::Assign { .. }
-        | Node::If { .. }
-        | Node::Loop { .. }
-        | Node::Region { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::TileLoad { .. }
-        | Node::TileStore { .. }
-        | Node::TileMatmul { .. }
-        | Node::TileReduce { .. }
-        | Node::TileElementwise { .. }
-        | Node::TileDecl { .. }
-        | Node::Opaque(_) => true,
+        _ => true,
     }
 }
 
@@ -203,31 +180,7 @@ fn node_is_observably_free(node: &Node) -> bool {
     match node {
         Node::Let { value, .. } => expr_is_observably_free(value),
         Node::Block(body) => body.iter().all(node_is_observably_free),
-        // Everything else has or may have side effects.
-        Node::Store { .. }
-        | Node::Assign { .. }
-        | Node::If { .. }
-        | Node::Loop { .. }
-        | Node::Region { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::TileLoad { .. }
-        | Node::TileStore { .. }
-        | Node::TileMatmul { .. }
-        | Node::TileReduce { .. }
-        | Node::TileElementwise { .. }
-        | Node::TileDecl { .. }
-        | Node::Opaque(_) => false,
+        _ => false,
     }
 }
 

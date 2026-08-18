@@ -38,17 +38,14 @@ fn assign_mutates_prior_let_in_same_scope() {
 #[test]
 fn assign_accumulates_across_loop_iterations() {
     // acc starts at 0; loop 4 times, add i each time. Expected: 0+1+2+3 = 6.
+    let loop_body = vec![Node::assign(
+        "acc",
+        Expr::add(Expr::var("acc"), Expr::var("i")),
+    )];
+    let loop_node = Node::loop_for("i", Expr::u32(0), Expr::u32(4), loop_body);
     let body = vec![
         Node::let_bind("acc", Expr::u32(0)),
-        Node::loop_for(
-            "i",
-            Expr::u32(0),
-            Expr::u32(4),
-            vec![Node::assign(
-                "acc",
-                Expr::add(Expr::var("acc"), Expr::var("i")),
-            )],
-        ),
+        loop_node,
         Node::store("out", Expr::u32(0), Expr::var("acc")),
     ];
     let out = run(&store_u32_program(body), vec![vec![0u8; 4]]);

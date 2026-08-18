@@ -2,36 +2,12 @@ use super::super::*;
 
 #[test]
 fn mod_i32_by_zero_errors() {
-    let program = empty_program();
-    let expr = Expr::BinOp {
-        op: BinOp::Mod,
-        left: Box::new(Expr::i32(42)),
-        right: Box::new(Expr::i32(0)),
-    };
-    let result = eval_expr::eval(
-        &expr,
-        &mut zero_invocation(&program),
-        &mut Memory::empty(),
-        &program,
-    );
-    assert!(result.is_err(), "i32 remainder by zero must error");
+    assert_binop_i32_err(BinOp::Mod, 42, 0, "i32 remainder by zero must error");
 }
 
 #[test]
 fn div_i32_min_by_neg_one_errors() {
-    let program = empty_program();
-    let expr = Expr::BinOp {
-        op: BinOp::Div,
-        left: Box::new(Expr::i32(i32::MIN)),
-        right: Box::new(Expr::i32(-1)),
-    };
-    let result = eval_expr::eval(
-        &expr,
-        &mut zero_invocation(&program),
-        &mut Memory::empty(),
-        &program,
-    );
-    assert!(result.is_err(), "i32 MIN / -1 overflow must error");
+    assert_binop_i32_err(BinOp::Div, i32::MIN, -1, "i32 MIN / -1 overflow must error");
 }
 
 // ---------------------------------------------------------------------------

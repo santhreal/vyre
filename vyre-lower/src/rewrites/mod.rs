@@ -60,18 +60,14 @@ mod tests {
             })
             .slot(global_rw(1, DataType::F32, "output"))
             .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .literals([LiteralValue::U32(0)])
-                    .ops([
-                        lit(0, 0), // index 0 (result 0)
-                        lit(0, 1), // dead literal (result 1)
-                        op(KernelOpKind::LoadGlobal, [0, 0], 2),
-                        op(KernelOpKind::LoadGlobal, [0, 0], 3),
-                        op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
-                        effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
-                    ]),
-            )
+            .body(body().literals([LiteralValue::U32(0)]).ops([
+                lit(0, 0), // index 0 (result 0)
+                lit(0, 1), // dead literal (result 1)
+                op(KernelOpKind::LoadGlobal, [0, 0], 2),
+                op(KernelOpKind::LoadGlobal, [0, 0], 3),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
+                effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+            ]))
             .build();
 
         let result = apply_lowering_rewrites(&desc);

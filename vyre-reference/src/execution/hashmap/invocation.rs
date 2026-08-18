@@ -149,7 +149,11 @@ impl<'a> HashmapInvocation<'a> {
     }
 
     #[inline]
-    pub(crate) fn begin_async(&mut self, tag: &str, transfer: AsyncTransfer) -> Result<(), ReferenceError> {
+    pub(crate) fn begin_async(
+        &mut self,
+        tag: &str,
+        transfer: AsyncTransfer,
+    ) -> Result<(), ReferenceError> {
         self.pending_async.begin(tag, transfer)
     }
 
@@ -194,7 +198,11 @@ pub(crate) fn create_invocations<'a>(
                 })?;
                 let idx = invocations.len() as u32;
                 invocations.push(HashmapInvocation::new(
-                    InvocationIds { global: [gx, gy, gz], workgroup, local: [x, y, z] },
+                    InvocationIds {
+                        global: [gx, gy, gz],
+                        workgroup,
+                        local: [x, y, z],
+                    },
                     idx,
                     entry,
                 ));

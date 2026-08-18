@@ -786,21 +786,21 @@ fn dead_op_elimination_rewrite_strips_unreferenced_pure_ops() {
     let desc = descriptor("dead_op_contract")
         .slot(global_rw(0, DataType::U32, "out"))
         .dispatch(64, 1, 1)
-        .body(
-            body()
-                .literals([LiteralValue::U32(99)])
-                .ops([
-                    lit(0, 0), // result 0, used
-                    lit(0, 1), // result 1, DEAD
-                    lit(0, 2), // result 2, DEAD
-                    effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
-                ]),
-        )
+        .body(body().literals([LiteralValue::U32(99)]).ops([
+            lit(0, 0), // result 0, used
+            lit(0, 1), // result 1, DEAD
+            lit(0, 2), // result 2, DEAD
+            effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
+        ]))
         .build();
 
     let rewritten = rewrite_dead_ops(&desc);
     assert_eq!(rewritten.body.ops.len(), 2);
-    assert!(rewritten.body.ops.iter().all(|op| op.result != Some(1) && op.result != Some(2)));
+    assert!(rewritten
+        .body
+        .ops
+        .iter()
+        .all(|op| op.result != Some(1) && op.result != Some(2)));
     assert!(verify(&rewritten).is_ok());
 }
 
@@ -808,16 +808,12 @@ fn dead_op_elimination_rewrite_strips_unreferenced_pure_ops() {
 fn representation_canonicalize_orders_pure_producers_before_consumers() {
     let desc = descriptor("canonicalize_contract")
         .dispatch(1, 1, 1)
-        .body(
-            body()
-                .literals([LiteralValue::U32(10)])
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [1, 2], 3),
-                    lit(0, 1),
-                    lit(0, 2),
-                ]),
-        )
+        .body(body().literals([LiteralValue::U32(10)]).ops([
+            lit(0, 0),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [1, 2], 3),
+            lit(0, 1),
+            lit(0, 2),
+        ]))
         .build();
     let canonical = canonicalize_for_emit(&desc);
 
@@ -836,18 +832,14 @@ fn apply_lowering_rewrites_pipeline_is_idempotent_and_verifies() {
         .slot(fixed_global_ro(0, DataType::U32, 64, "lut"))
         .slot(global_rw(1, DataType::U32, "dest"))
         .dispatch(64, 1, 1)
-        .body(
-            body()
-                .literals([LiteralValue::U32(0)])
-                .ops([
-                    lit(0, 0),
-                    lit(0, 1),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 2),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 3),
-                    op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
-                ]),
-        )
+        .body(body().literals([LiteralValue::U32(0)]).ops([
+            lit(0, 0),
+            lit(0, 1),
+            op(KernelOpKind::LoadGlobal, [0, 0], 2),
+            op(KernelOpKind::LoadGlobal, [0, 0], 3),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+        ]))
         .build();
 
     let pass1 = apply_lowering_rewrites(&desc);

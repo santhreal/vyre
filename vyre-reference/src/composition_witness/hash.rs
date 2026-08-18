@@ -272,7 +272,11 @@ pub fn crc32_map_reduce_plan_witness(
     chunk_size: std::num::NonZeroU32,
 ) -> Option<Crc32MapReducePlanWitness> {
     let c_size = chunk_size.get();
-    let chunks = if input_len == 0 { 1 } else { input_len.div_ceil(c_size) };
+    let chunks = if input_len == 0 {
+        1
+    } else {
+        input_len.div_ceil(c_size)
+    };
     let mut steps = vec![Crc32MapReduceStepWitness {
         kind: Crc32MapReduceStepKindWitness::ChunkSummary,
         input_items: input_len,
@@ -294,7 +298,11 @@ pub fn crc32_map_reduce_plan_witness(
         });
         curr_pairs = next_pairs;
     }
-    Some(Crc32MapReducePlanWitness { input_len, chunk_size, steps })
+    Some(Crc32MapReducePlanWitness {
+        input_len,
+        chunk_size,
+        steps,
+    })
 }
 
 /// Initial FNV-1a32 witness state (offset basis).

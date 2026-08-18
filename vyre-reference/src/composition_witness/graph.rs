@@ -1577,9 +1577,9 @@ pub fn matroid_exchange_bfs_step_witness_into(
 ) -> bool {
     assert_eq!(frontier.len(), element_count, "complete matroid frontier");
     assert_eq!(visited.len(), element_count, "complete matroid visited set");
-    let expected_adj = element_count
-        .checked_mul(element_count)
-        .expect("element_count * element_count overflows usize");
+    let expected_adj = element_count.checked_mul(element_count).expect(
+        "Fix: keep element_count * element_count within usize bounds for dense matroid adjacency",
+    );
     assert_eq!(
         exchange_adjacency.len(),
         expected_adj,
@@ -1936,56 +1936,49 @@ pub fn try_tensor_flow_forward_witness_into(
     allow_mask: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    if edge_offsets.len() != (node_count as usize) + 1 {
-        return Err("edge offsets length must match node count + 1".to_owned());
+    if edge_offsets.len() != (node_count as usize) + 1
+        || edge_offsets.first() != Some(&0)
+        || edge_offsets.windows(2).any(|w| w[0] > w[1])
+        || edge_offsets.last().map_or(0, |&v| v as usize) != edge_targets.len()
+        || edge_targets.len() != edge_kind_mask.len()
+    {
+        return Err("invalid CSR offsets or edge buffer size mismatch".to_owned());
     }
-    if edge_offsets.is_empty() || edge_offsets[0] != 0 {
-        return Err("edge offsets must start at zero".to_owned());
-    }
-    if edge_offsets.windows(2).any(|w| w[0] > w[1]) {
-        return Err("non-monotonic CSR offsets".to_owned());
-    }
-    let Some(&last_offset) = edge_offsets.last() else {
-        return Err("edge offsets must not be empty".to_owned());
-    };
-    if last_offset as usize != edge_targets.len() {
-        return Err("edge offset bound does not match edge targets".to_owned());
-    }
-    if edge_targets.len() != edge_kind_mask.len() {
-        return Err("edge target count does not match edge kind mask".to_owned());
-    }
-    let words = {
-        let lanes_per_node = context_limit
-            .checked_mul(field_limit)
-            .ok_or_else(|| "context_limit * field_limit overflowed u32".to_string())?;
-        let total_bits = (node_count as u64)
-            .checked_mul(lanes_per_node as u64)
-            .ok_or_else(|| "node_count * lanes_per_node overflowed u64".to_string())?;
-        u32::try_from((total_bits + 31) / 32)
-            .map_err(|_| "tensor words count exceeds u32 limit".to_string())?
-    };
-    if tensor_in.len() < words as usize {
+    let lanes_per_node = context_limit
+        .checked_mul(field_limit)
+        .ok_or_else(|| "context_limit * field_limit overflowed u32".to_string())?;
+    let total_bits = (node_count as u64)
+        .checked_mul(lanes_per_node as u64)
+        .ok_or_else(|| "node_count * lanes_per_node overflowed u64".to_string())?;
+    let words = usize::try_from(total_bits.div_ceil(32))
+        .map_err(|_| "tensor words count exceeds usize limit".to_string())?;
+    if tensor_in.len() < words {
         return Err("tensor input buffer shorter than required tensor words".to_owned());
     }
-    let words_len = words as usize;
-    out.try_reserve(words_len.saturating_sub(out.len()))
+    out.try_reserve(words.saturating_sub(out.len()))
         .map_err(|error| format!("failed to reserve tensor output buffer: {error}"))?;
     out.clear();
-    out.resize(words_len, 0);
+    out.resize(words, 0);
 
     for src in 0..node_count as usize {
         let (start, end) = (edge_offsets[src] as usize, edge_offsets[src + 1] as usize);
         for edge in start..end {
             let dst = edge_targets[edge];
-            if (edge_kind_mask[edge] & allow_mask) == 0 || dst >= node_count {
-                continue;
-            }
-            for ctx in 0..context_limit {
-                for fld in 0..field_limit {
-                    let s_bit = tensor_bit_index_witness(src as u32, ctx, fld, context_limit, field_limit);
-                    if (tensor_in[(s_bit / 32) as usize] & (1 << (s_bit % 32))) != 0 {
-                        let d_bit = tensor_bit_index_witness(dst, ctx, fld, context_limit, field_limit);
-                        out[(d_bit / 32) as usize] |= 1 << (d_bit % 32);
+            if (edge_kind_mask[edge] & allow_mask) != 0 && dst < node_count {
+                for ctx in 0..context_limit {
+                    for fld in 0..field_limit {
+                        let s_bit = tensor_bit_index_witness(
+                            src as u32,
+                            ctx,
+                            fld,
+                            context_limit,
+                            field_limit,
+                        );
+                        if (tensor_in[(s_bit / 32) as usize] & (1 << (s_bit % 32))) != 0 {
+                            let d_bit =
+                                tensor_bit_index_witness(dst, ctx, fld, context_limit, field_limit);
+                            out[(d_bit / 32) as usize] |= 1 << (d_bit % 32);
+                        }
                     }
                 }
             }
@@ -2008,7 +2001,15 @@ pub fn try_tensor_flow_forward_witness(
 ) -> Result<Vec<u32>, String> {
     let mut out = Vec::new();
     try_tensor_flow_forward_witness_into(
-        node_count, edge_offsets, edge_targets, edge_kind_mask, tensor_in, context_limit, field_limit, allow_mask, &mut out,
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        tensor_in,
+        context_limit,
+        field_limit,
+        allow_mask,
+        &mut out,
     )?;
     Ok(out)
 }

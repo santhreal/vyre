@@ -22,20 +22,7 @@ pub(crate) fn square_via_local_program() -> Program {
 
 pub(crate) fn flatten_nodes(nodes: &[Node]) -> Vec<&Node> {
     let mut out = Vec::new();
-    for node in nodes {
-        out.push(node);
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                out.extend(flatten_nodes(then));
-                out.extend(flatten_nodes(otherwise));
-            }
-            Node::Loop { body, .. } | Node::Block(body) => out.extend(flatten_nodes(body)),
-            Node::Region { body, .. } => out.extend(flatten_nodes(body)),
-            _ => {}
-        }
-    }
+    vyre_foundation::visit::for_each_node(nodes, |node| out.push(node));
     out
 }
 

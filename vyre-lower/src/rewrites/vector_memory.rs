@@ -11,8 +11,8 @@ use vyre_foundation::ir::{BinOp, DataType};
 
 use crate::analyses::alias_facts::AliasFactSet;
 use crate::analyses::child_body_operands;
-use crate::op_facts::kernel_op_kind_is_dce_pure;
 use crate::analyses::vec_pack::{index_expr_by_result, IndexExpr};
+use crate::op_facts::kernel_op_kind_is_dce_pure;
 use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass};
 
@@ -420,7 +420,6 @@ fn apply_vector_chain(
 
 // ---------- Alignment & Index Facts ----------
 
-
 fn is_proven_aligned(body: &KernelBody, expr: IndexExpr, width: u32) -> bool {
     if width == 0 || (width != 2 && width != 4) {
         return false;
@@ -497,7 +496,6 @@ fn literal_u32_value(body: &KernelBody, result_id: u32) -> Option<u32> {
         _ => None,
     }
 }
-
 
 #[cfg(test)]
 mod tests {

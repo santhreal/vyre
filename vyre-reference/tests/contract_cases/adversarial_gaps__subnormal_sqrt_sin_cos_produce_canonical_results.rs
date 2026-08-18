@@ -168,7 +168,10 @@ fn read_and_output_prog(in_count: u32, node: Node) -> Program {
 
 #[test]
 fn oob_load_returns_zero() {
-    let program = read_and_output_prog(1, Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(999))));
+    let program = read_and_output_prog(
+        1,
+        Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(999))),
+    );
     let outputs = reference_eval(
         &program,
         &[Value::from(vec![0xAB; 4]), Value::from(vec![0u8; 4])],
@@ -191,7 +194,11 @@ fn oob_store_is_silent_noop() {
             BufferDecl::output("out", 1, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::store("out", Expr::load("idx", Expr::u32(0)), Expr::u32(0xDEAD_BEEF))],
+        vec![Node::store(
+            "out",
+            Expr::load("idx", Expr::u32(0)),
+            Expr::u32(0xDEAD_BEEF),
+        )],
     );
     let outputs = reference_eval(
         &program,
@@ -210,7 +217,10 @@ fn oob_store_is_silent_noop() {
 
 #[test]
 fn zero_sized_buffer_load_returns_zero() {
-    let program = read_and_output_prog(0, Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(0))));
+    let program = read_and_output_prog(
+        0,
+        Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(0))),
+    );
     let outputs = reference_eval(&program, &[Value::from(vec![]), Value::from(vec![0u8; 4])])
         .expect("Fix: zero-sized buffer load must not panic");
     assert_eq!(
