@@ -51,7 +51,7 @@ Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 
 ./cargo_full run -p xtask-registry --bin xtask-registry -- --help
 ```
 
-Commands: `abstraction-gate`, `catalog`, `compile`, `conformance-matrix`, `cross-target`, `gate1`, `heuristic-audit`, `lego-composability`, `lego-composition-chains`, `lego-composition-depth`, `lego-cross-dialect`, `lego-exemption-liveness`, `lego-name-stems`, `lego-no-reinvention`, `lego-operand-shapes`, `lego-primitive-coverage`, `lego-semantic-organization`, `lego-trend`, `list-ops`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `print-composition`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `whats-similar`.
+Commands: `abstraction-gate`, `catalog`, `compile`, `conformance-matrix`, `cross-target`, `error-codes`, `gate1`, `heuristic-audit`, `lego-composability`, `lego-composition-chains`, `lego-composition-depth`, `lego-cross-dialect`, `lego-exemption-liveness`, `lego-name-stems`, `lego-no-reinvention`, `lego-operand-shapes`, `lego-primitive-coverage`, `lego-semantic-organization`, `lego-trend`, `list-ops`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `print-composition`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `whats-similar`.
 
 Hardware: No accelerator is required; a missing device is reported, not assumed.
 

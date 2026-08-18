@@ -2331,6 +2331,7 @@ pub fn vyre_libs::reasoning::do_calculus_change_impact::predict_impact_observati
 pub fn vyre_libs::reasoning::do_calculus_change_impact::predict_impact_observation_form_via_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, adj: &[u32], observation_mask: &[u32], n: u32, scratch: &mut vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::reasoning::do_calculus_change_impact::predict_impact_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, adj: &[u32], intervention_mask: &[u32], n: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::reasoning::do_calculus_change_impact::predict_impact_via_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, adj: &[u32], intervention_mask: &[u32], n: u32, scratch: &mut vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reasoning::do_calculus_change_impact::project_impacted_lineage_entries_via_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, impact_mask: &[u32], closure: &[u32], n: u32, lineage_cells: &[u32], scratch: &mut vyre_libs::reasoning::do_calculus_change_impact::ImpactedLineageProjectionScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::reasoning::do_calculus_change_impact::rule2_reverse_incoming_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, adj: &[u32], treatment_mask: &[u32], n: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::reasoning::do_calculus_change_impact::rule2_reverse_incoming_via_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, adj: &[u32], treatment_mask: &[u32], n: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::reasoning::do_calculus_change_impact::rule3_subgraph_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, adj: &[u32], keep_mask: &[u32], n: u32) -> core::result::Result<(alloc::vec::Vec<u32>, alloc::vec::Vec<u32>), vyre_foundation::program_dispatch::DispatchError>
@@ -3269,6 +3270,7 @@ pub struct vyre_libs::pattern::nfa::NfaPlan
 pub struct vyre_libs::prelude::MatmulBias
 pub struct vyre_libs::prelude::MatmulBiasTiled
 pub struct vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch
+pub struct vyre_libs::reasoning::do_calculus_change_impact::ImpactedLineageProjectionScratch
 pub struct vyre_libs::reasoning::string_diagram_ir_rewrite::StringDiagramRewriteScratch
 pub struct vyre_libs::rule::file_size_eq::FileSizeEq
 pub struct vyre_libs::rule::file_size_gt::FileSizeGt

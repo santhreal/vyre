@@ -5341,6 +5341,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   including read-write pipeline live-outs, as an output. Artifact submission no
   longer asks callers to provide internal fused-pipeline storage as a host
   input.
+- The structural-gate registry now declares every post-dispatch oracle mutation
+  and decoder-boundary test added to the host-oracle elimination gate.
 - The `types` feature of `vyre-primitives` now depends on `vyre-foundation`,
   which its shape-predicate evaluator has always aliased. Enabling only that
   feature against the published crate failed to compile; in-workspace builds

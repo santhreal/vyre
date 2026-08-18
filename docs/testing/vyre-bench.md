@@ -22,7 +22,11 @@ The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
 ```
 
 ```console
-./cargo_full run --bin xtask -- release-benchmarks --backend cuda
+./cargo_full run --bin xtask -- release-benchmarks --backend cuda --measured-samples 30 --write
+```
+
+```console
+./cargo_full run --bin xtask -- release-benchmarks --backend wgpu --measured-samples 30 --write
 ```
 
 ## Feature sets
