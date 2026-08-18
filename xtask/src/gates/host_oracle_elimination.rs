@@ -5711,10 +5711,7 @@ fn is_fmt_signature(sig: &syn::Signature) -> bool {
     let is_fmt_ret = match &sig.output {
         syn::ReturnType::Type(_, ty) => {
             if let syn::Type::Path(p) = &**ty {
-                p.path
-                    .segments
-                    .last()
-                    .map_or(false, |s| s.ident == "Result")
+                p.path.segments.last().is_some_and(|s| s.ident == "Result")
             } else {
                 false
             }
@@ -8456,7 +8453,7 @@ mod tests {
 "#;
         let findings = analyze_files(&[("vyre-libs/src/facade.rs", code)]);
         assert!(
-            findings.len() >= 1,
+            !findings.is_empty(),
             "zero-arg oracle behind facade must be flagged"
         );
         assert!(findings

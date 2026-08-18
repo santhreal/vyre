@@ -434,17 +434,17 @@ pub trait ProgramDispatcher {
 
     /// Dispatch an ordered resident sequence and read selected resident buffers.
     ///
-    /// Default implementation keeps the portable contract: execute the ordered
-    /// sequence, then read buffers through `read_resident_many`. A dispatcher
-    /// with an ordered queue overrides this to enqueue the readbacks behind the
-    /// kernels and pay one host fence.
+    /// The value-returning convenience path delegates to the caller-owned
+    /// output variant so a dispatcher with an ordered queue keeps kernels and
+    /// readbacks behind one host fence.
     fn dispatch_resident_sequence_read_many(
         &self,
         steps: &[ResidentDispatchStep<'_>],
         read_handles: &[u64],
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.dispatch_resident_sequence(steps)?;
-        self.read_resident_many(read_handles)
+        let mut outputs = Vec::new();
+        self.upload_resident_many_sequence_read_many_into(&[], steps, read_handles, &mut outputs)?;
+        Ok(outputs)
     }
 
     /// Dispatch an ordered resident sequence and read selected byte ranges.
@@ -453,24 +453,31 @@ pub trait ProgramDispatcher {
         steps: &[ResidentDispatchStep<'_>],
         read_ranges: &[ResidentReadRange],
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.dispatch_resident_sequence(steps)?;
-        self.read_resident_ranges(read_ranges)
+        let mut outputs = Vec::new();
+        self.upload_resident_many_sequence_read_ranges_into(&[], steps, read_ranges, &mut outputs)?;
+        Ok(outputs)
     }
 
     /// Upload resident buffers, dispatch an ordered resident sequence, then
     /// read selected resident buffers.
     ///
-    /// Default implementation fences at each portable boundary. A dispatcher
-    /// with an ordered queue overrides this so uploads, kernels, and readbacks
-    /// are ordered on one queue with one host synchronization point.
+    /// The value-returning convenience path delegates to the caller-owned
+    /// output variant. Its portable default fences at each boundary; an ordered
+    /// queue override keeps uploads, kernels, and readbacks behind one fence.
     fn upload_resident_many_sequence_read_many(
         &self,
         uploads: &[(u64, &[u8])],
         steps: &[ResidentDispatchStep<'_>],
         read_handles: &[u64],
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.upload_resident_many(uploads)?;
-        self.dispatch_resident_sequence_read_many(steps, read_handles)
+        let mut outputs = Vec::new();
+        self.upload_resident_many_sequence_read_many_into(
+            uploads,
+            steps,
+            read_handles,
+            &mut outputs,
+        )?;
+        Ok(outputs)
     }
 
     /// Upload resident buffers, dispatch an ordered resident sequence, then
@@ -481,8 +488,14 @@ pub trait ProgramDispatcher {
         steps: &[ResidentDispatchStep<'_>],
         read_ranges: &[ResidentReadRange],
     ) -> Result<Vec<Vec<u8>>, DispatchError> {
-        self.upload_resident_many(uploads)?;
-        self.dispatch_resident_sequence_read_ranges(steps, read_ranges)
+        let mut outputs = Vec::new();
+        self.upload_resident_many_sequence_read_ranges_into(
+            uploads,
+            steps,
+            read_ranges,
+            &mut outputs,
+        )?;
+        Ok(outputs)
     }
 
     /// Same contract as [`Self::upload_resident_many_sequence_read_many`],
@@ -494,8 +507,9 @@ pub trait ProgramDispatcher {
         read_handles: &[u64],
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<(), DispatchError> {
-        let readbacks =
-            self.upload_resident_many_sequence_read_many(uploads, steps, read_handles)?;
+        self.upload_resident_many(uploads)?;
+        self.dispatch_resident_sequence(steps)?;
+        let readbacks = self.read_resident_many(read_handles)?;
         if outputs.len() < readbacks.len() {
             outputs.resize_with(readbacks.len(), Vec::new);
         } else {
@@ -733,6 +747,50 @@ mod tests {
         }
     }
 
+    struct IntoOverrideDispatcher {
+        many_calls: Cell<usize>,
+        range_calls: Cell<usize>,
+    }
+
+    impl ProgramDispatcher for IntoOverrideDispatcher {
+        fn dispatch(
+            &self,
+            _program: &Program,
+            _inputs: &[Vec<u8>],
+            _grid_override: Option<[u32; 3]>,
+        ) -> Result<Vec<Vec<u8>>, DispatchError> {
+            Err(DispatchError::Rejected(
+                "Fix: into-override test dispatcher does not implement dispatch.".to_string(),
+            ))
+        }
+
+        fn upload_resident_many_sequence_read_many_into(
+            &self,
+            uploads: &[(u64, &[u8])],
+            _steps: &[ResidentDispatchStep<'_>],
+            read_handles: &[u64],
+            outputs: &mut Vec<Vec<u8>>,
+        ) -> Result<(), DispatchError> {
+            self.many_calls.set(self.many_calls.get() + 1);
+            outputs.clear();
+            outputs.push(vec![uploads.len() as u8, read_handles.len() as u8]);
+            Ok(())
+        }
+
+        fn upload_resident_many_sequence_read_ranges_into(
+            &self,
+            uploads: &[(u64, &[u8])],
+            _steps: &[ResidentDispatchStep<'_>],
+            read_ranges: &[ResidentReadRange],
+            outputs: &mut Vec<Vec<u8>>,
+        ) -> Result<(), DispatchError> {
+            self.range_calls.set(self.range_calls.get() + 1);
+            outputs.clear();
+            outputs.push(vec![uploads.len() as u8, read_ranges.len() as u8]);
+            Ok(())
+        }
+    }
+
     struct FailingAllocDispatcher {
         next_handle: Cell<u64>,
         fail_at_call: usize,
@@ -780,6 +838,60 @@ mod tests {
             self.freed.borrow_mut().push(handle);
             Ok(())
         }
+    }
+
+    /// Value-returning resident helpers must preserve a dispatcher's fused
+    /// caller-owned implementation. Falling back to upload, dispatch, then
+    /// read introduces two extra host fences on CUDA.
+    #[test]
+    fn resident_value_wrappers_route_through_into_overrides() {
+        let dispatcher = IntoOverrideDispatcher {
+            many_calls: Cell::new(0),
+            range_calls: Cell::new(0),
+        };
+        let payload = [0xA5_u8];
+        let uploads = [(7_u64, payload.as_slice())];
+        let handles = [11_u64];
+        let ranges = [ResidentReadRange {
+            handle_id: 13,
+            byte_offset: 2,
+            byte_len: 3,
+        }];
+
+        assert_eq!(
+            dispatcher
+                .upload_resident_many_sequence_read_many(&uploads, &[], &handles)
+                .expect("Fix: fused whole-buffer convenience dispatch should succeed"),
+            vec![vec![1, 1]]
+        );
+        assert_eq!(
+            dispatcher
+                .dispatch_resident_sequence_read_many(&[], &handles)
+                .expect("Fix: fused whole-buffer dispatch/read convenience should succeed"),
+            vec![vec![0, 1]]
+        );
+        assert_eq!(
+            dispatcher
+                .upload_resident_many_sequence_read_ranges(&uploads, &[], &ranges)
+                .expect("Fix: fused ranged convenience dispatch should succeed"),
+            vec![vec![1, 1]]
+        );
+        assert_eq!(
+            dispatcher
+                .dispatch_resident_sequence_read_ranges(&[], &ranges)
+                .expect("Fix: fused ranged dispatch/read convenience should succeed"),
+            vec![vec![0, 1]]
+        );
+        assert_eq!(
+            dispatcher.many_calls.get(),
+            2,
+            "Fix: both whole-buffer value wrappers must route through the fused into override."
+        );
+        assert_eq!(
+            dispatcher.range_calls.get(),
+            2,
+            "Fix: both ranged value wrappers must route through the fused into override."
+        );
     }
 
     #[test]
