@@ -1,19 +1,20 @@
 //! The selection `whats-similar` accepts on the command line.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use xtask::artifact_paths::REGISTERED_OP_DUPLICATES_ARTIFACT;
 use xtask::gates::dedup_report::duplicate_report_json_path;
 
-const DEFAULT_TOP_N: usize = 5;
+pub(super) const DEFAULT_TOP_N: usize = 5;
 const DEFAULT_MIN_SCORE: f64 = 0.20;
-const DEFAULT_ALL_MIN_SCORE: f64 = 0.80;
+pub(super) const DEFAULT_ALL_MIN_SCORE: f64 = 0.80;
 
 #[derive(Debug)]
 pub(super) struct Cli {
     pub(super) mode: Mode,
     pub(super) top_n: usize,
     pub(super) min_score: f64,
-    pub(super) duplicate_report_json: Option<PathBuf>,
+    pub(super) duplicate_report_json: PathBuf,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -27,7 +28,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Cli, String> {
     let mut all = false;
     let mut top_n = DEFAULT_TOP_N;
     let mut min_score = None;
-    let mut duplicate_report_json = None;
+    let mut duplicate_report_json = PathBuf::from(REGISTERED_OP_DUPLICATES_ARTIFACT);
     let mut iter = args.iter().skip(2);
     while let Some(a) = iter.next() {
         match a.as_str() {
@@ -66,11 +67,17 @@ pub(super) fn parse_args(args: &[String]) -> Result<Cli, String> {
                 min_score = Some(parsed_min_score);
             }
             "--duplicate-report-json" => {
-                duplicate_report_json = Some(duplicate_report_json_path(
+                let path = duplicate_report_json_path(
                     "--duplicate-report-json",
                     iter.next().map(String::as_str),
                     "--duplicate-report-json needs a value",
-                )?);
+                )?;
+                if path != Path::new(REGISTERED_OP_DUPLICATES_ARTIFACT) {
+                    return Err(format!(
+                        "--duplicate-report-json is fixed at `{REGISTERED_OP_DUPLICATES_ARTIFACT}`"
+                    ));
+                }
+                duplicate_report_json = path;
             }
             "--file" => {
                 return Err(
@@ -159,9 +166,7 @@ mod tests {
         assert_eq!(cli.mode, Mode::All);
         assert_eq!(
             cli.duplicate_report_json,
-            Some(PathBuf::from(
-                "release/evidence/dedup/registered-op-duplicates.json"
-            ))
+            PathBuf::from("release/evidence/dedup/registered-op-duplicates.json")
         );
     }
 
@@ -177,6 +182,18 @@ mod tests {
         assert_eq!(cli.mode, Mode::All);
     }
 
+    #[test]
+    fn parse_rejects_caller_selected_report_path() {
+        let args = vec![
+            "xtask".to_string(),
+            "whats-similar".to_string(),
+            "--all".to_string(),
+            "--duplicate-report-json".to_string(),
+            "other.json".to_string(),
+        ];
+        let error = parse_args(&args).unwrap_err();
+        assert!(error.contains(REGISTERED_OP_DUPLICATES_ARTIFACT));
+    }
     #[test]
     fn parse_all_sets_duplicate_floor() {
         let args = vec![

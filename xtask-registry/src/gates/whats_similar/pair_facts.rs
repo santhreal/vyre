@@ -11,6 +11,10 @@ pub(super) fn same_buffer_contract(left: &OpInfo, right: &OpInfo) -> bool {
     left.buffer_signature == right.buffer_signature
 }
 
+pub(super) fn same_semantics(left: &OpInfo, right: &OpInfo) -> bool {
+    left.semantic_fingerprint == right.semantic_fingerprint
+}
+
 pub(super) fn same_centralized_family(left: &OpInfo, right: &OpInfo) -> bool {
     same_implementation_family(&left.id, &right.id)
 }

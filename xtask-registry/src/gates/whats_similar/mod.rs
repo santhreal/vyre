@@ -48,7 +48,7 @@ use xtask::gate::{GateCtx, GateError, Report};
 
 use crate::gates::lego_audit::collect_ops;
 
-use self::cli::{parse_args, Mode};
+use self::cli::{parse_args, Mode, DEFAULT_ALL_MIN_SCORE, DEFAULT_TOP_N};
 use self::query::{run_all_pairs_query, run_target_query};
 
 mod cli;
@@ -61,7 +61,7 @@ pub struct WhatsSimilar;
 
 impl xtask::gate::GateBehavior for WhatsSimilar {
     fn usage(&self) -> &'static [&'static str] {
-        &["--op-id ID narrows the comparison to one registered operation"]
+        &["--op-id ID adds a focused view to the complete registered-operation scan"]
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
@@ -73,7 +73,7 @@ impl xtask::gate::GateBehavior for WhatsSimilar {
         let cli = parse_args(&argv).map_err(|error| {
             GateError::new(
                 error,
-                "pass --op-id ID to narrow to one operation, or no selection to scan every pair",
+                "pass --op-id ID to add a focused view, or no selection to scan every pair",
             )
         })?;
         let mut report = Report::clean();
@@ -81,22 +81,33 @@ impl xtask::gate::GateBehavior for WhatsSimilar {
         report.cover_complete("registered operations", ops.iter().count());
         let ops = collect_ops(&mut report);
         match &cli.mode {
-            Mode::Target(op_id) => run_target_query(
-                &mut report,
-                &ops,
-                op_id,
-                cli.top_n,
-                cli.min_score,
-                cli.duplicate_report_json.as_ref(),
-                &ctx.root,
-                ctx.write,
-            )?,
+            Mode::Target(op_id) => {
+                run_target_query(
+                    &mut report,
+                    &ops,
+                    op_id,
+                    cli.top_n,
+                    cli.min_score,
+                    None,
+                    &ctx.root,
+                    ctx.write,
+                )?;
+                run_all_pairs_query(
+                    &mut report,
+                    &ops,
+                    DEFAULT_TOP_N,
+                    DEFAULT_ALL_MIN_SCORE,
+                    Some(&cli.duplicate_report_json),
+                    &ctx.root,
+                    ctx.write,
+                )?;
+            }
             Mode::All => run_all_pairs_query(
                 &mut report,
                 &ops,
                 cli.top_n,
                 cli.min_score,
-                cli.duplicate_report_json.as_ref(),
+                Some(&cli.duplicate_report_json),
                 &ctx.root,
                 ctx.write,
             )?,

@@ -1361,11 +1361,11 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "whats-similar",
-        help: "Report duplicate operations by IR shape across the whole registry; --op-id ID narrows to one",
+        help: "Report duplicate operations by IR shape across the whole registry; --op-id ID adds a focused view",
         package: "xtask-registry",
         areas: &["prepublish"],
         subject: "registered operations",
-        artifacts: &[],
+        artifacts: &[crate::artifact_paths::REGISTERED_OP_DUPLICATES_ARTIFACT],
         prerequisites: &[],
         proof: "xtask_registry::gates::whats_similar::query::tests::a_skip_class_over_its_ceiling_is_a_finding",
     },

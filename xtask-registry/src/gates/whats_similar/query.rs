@@ -13,7 +13,7 @@ use crate::gates::lego_audit::{OpInfo, MIN_COMPARABLE_FINGERPRINT_BYTES};
 
 use super::pair_facts::{
     implementation_family, known_distinct_implementation_family, pair_verdict,
-    same_buffer_contract, same_centralized_family, tier_label,
+    same_buffer_contract, same_centralized_family, same_semantics, tier_label,
 };
 use super::report::{all_pairs_duplicate_report, target_duplicate_report};
 
@@ -22,23 +22,21 @@ const DUPLICATE_SCORE: f64 = 0.95;
 
 /// Pairs skipped because the two bodies match and the buffer contracts differ.
 ///
-/// Measured 323 on 2026-08-15. A skip is not a note. A gate that reports zero
-/// findings while stepping over five hundred pairs has described the surface
-/// politely rather than judged it, so every class it steps over carries a
-/// ceiling: a pair added to the class is a duplicate nobody looked at and fails
-/// here, and the number moves down only when the pairs it counted left the
-/// registry.
-const CONTRACT_VARIANT_CEILING: usize = 323;
+/// Semantic identity qualification currently leaves no skipped pair. A gate
+/// that reports zero findings while stepping over a pair has described the
+/// surface rather than judged it, so every class it steps over carries a zero
+/// ceiling. A new skipped pair is a duplicate nobody looked at and fails here.
+const CONTRACT_VARIANT_CEILING: usize = 0;
 
 /// Pairs skipped because both are routed through one centralized builder.
 ///
-/// Measured 157 on 2026-08-15.
-const CENTRALIZED_FAMILY_CEILING: usize = 157;
+/// Semantic identity qualification currently leaves no skipped pair.
+const CENTRALIZED_FAMILY_CEILING: usize = 0;
 
 /// Pairs skipped because their families are recorded as distinct.
 ///
-/// Measured 24 on 2026-08-15.
-const KNOWN_DISTINCT_FAMILY_CEILING: usize = 24;
+/// Semantic identity qualification currently leaves no skipped pair.
+const KNOWN_DISTINCT_FAMILY_CEILING: usize = 0;
 
 /// One skipped class, its measured ceiling and what the skip claims.
 struct SkipClass {
@@ -143,6 +141,7 @@ pub(super) fn run_target_query(
         .iter()
         .filter(|o| o.id != target.id)
         .filter(|o| o.fingerprint.len() >= MIN_COMPARABLE_FINGERPRINT_BYTES)
+        .filter(|o| same_semantics(target, o))
         .map(|o| {
             (
                 structural_similarity(&target.fingerprint, &o.fingerprint),
@@ -154,8 +153,12 @@ pub(super) fn run_target_query(
         .filter(|(s, _, _, _)| *s >= min_score)
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    for (score, _, _, op) in &scored {
-        if *score >= DUPLICATE_SCORE {
+    for (score, same_contract, same_family, op) in &scored {
+        if *score >= DUPLICATE_SCORE
+            && *same_contract
+            && !*same_family
+            && !known_distinct_implementation_family(target, op)
+        {
             report.find(duplicate_finding(op_id, &op.id, *score));
         }
     }
@@ -243,6 +246,9 @@ pub(super) fn run_all_pairs_query(
             let right = *right;
             let score = structural_similarity(&left.fingerprint, &right.fingerprint);
             if score >= min_score {
+                if !same_semantics(left, right) {
+                    continue;
+                }
                 if same_centralized_family(left, right) {
                     centralized_family_variants += 1;
                     continue;
@@ -342,6 +348,7 @@ mod tests {
     use std::fs;
 
     use super::{settle_duplicate_report, skip_class_findings, SkipClass};
+    use crate::gates::lego_audit::test_ops::op_with_fingerprint;
     use xtask::gate::Report;
     use xtask::gates::dedup_report::duplicate_family_report;
 
@@ -386,6 +393,61 @@ mod tests {
         assert!(fs::read_to_string(root.path().join(path))
             .unwrap()
             .contains("\"family_count\": 0"));
+    }
+
+    /// Shape similarity is only a candidate generator. Different canonical
+    /// semantic fingerprints prove that two similar programs compute different
+    /// operations and must not be reported as duplicate implementations.
+    #[test]
+    fn shape_similarity_does_not_override_semantic_identity() {
+        let fingerprint = (0..64_u8).collect::<Vec<_>>();
+        let left = op_with_fingerprint("vyre-libs::reduce::sum", fingerprint.clone());
+        let mut right = op_with_fingerprint("vyre-libs::reduce::max", fingerprint);
+        right.semantic_fingerprint = [1; 32];
+        let root = tempfile::tempdir().unwrap();
+        let mut report = Report::clean();
+
+        super::run_all_pairs_query(
+            &mut report,
+            &[left, right],
+            5,
+            0.8,
+            None,
+            root.path(),
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(report.count(), 0);
+        assert!(report
+            .notes
+            .iter()
+            .any(|note| note.contains("no registered-op pair crossed")));
+    }
+
+    /// Equal canonical semantics and equal structure remain a hard duplicate,
+    /// so the semantic discriminator cannot make the detector vacuous.
+    #[test]
+    fn equal_semantics_and_shape_remain_a_duplicate() {
+        let fingerprint = (0..64_u8).collect::<Vec<_>>();
+        let left = op_with_fingerprint("vyre-libs::alpha::left", fingerprint.clone());
+        let right = op_with_fingerprint("vyre-libs::beta::right", fingerprint);
+        let root = tempfile::tempdir().unwrap();
+        let mut report = Report::clean();
+
+        super::run_all_pairs_query(
+            &mut report,
+            &[left, right],
+            5,
+            0.8,
+            None,
+            root.path(),
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(report.count(), 1);
+        assert!(report.findings[0].message.contains("same operation twice"));
     }
 
     /// A class that grew past its measured ceiling is a finding naming both

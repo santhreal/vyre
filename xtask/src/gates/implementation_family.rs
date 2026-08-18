@@ -228,6 +228,18 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::reduce::workgroup_tree",
     ),
     (
+        "vyre-libs::reduce::workgroup_max_u32",
+        "vyre-libs::reduce::workgroup_tree",
+    ),
+    (
+        "vyre-libs::reduce::workgroup_min_f32",
+        "vyre-libs::reduce::workgroup_tree",
+    ),
+    (
+        "vyre-libs::reduce::workgroup_min_u32",
+        "vyre-libs::reduce::workgroup_tree",
+    ),
+    (
         "vyre-libs::math::atomic::atomic_add_u32",
         "vyre-libs::math::atomic::build_atomic_serial",
     ),
