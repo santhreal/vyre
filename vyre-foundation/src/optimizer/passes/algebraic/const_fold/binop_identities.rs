@@ -175,13 +175,6 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                     return Some(Expr::fma(a.clone(), b.clone(), left.clone()));
                 }
             }
-            // x + 0 → x,  0 + x → x
-            if is_zero(right) {
-                return Some(left.clone());
-            }
-            if is_zero(left) {
-                return Some(right.clone());
-            }
 
             // ─── Algebraic Reassociation ─────────────────────────
             // (a + K1) + K2 → a + (K1 + K2)
@@ -263,7 +256,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         }
 
         BinOp::Sub => {
-            if left == right {
+            if left == right && is_reflexive_cmp_safe(left) {
                 return Some(Expr::u32(0));
             }
             if let Some((a, b)) = mul_operands(left) {
@@ -275,9 +268,6 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                 if is_float_expr(left) {
                     return Some(Expr::fma(Expr::negate(a.clone()), b.clone(), left.clone()));
                 }
-            }
-            if is_zero(right) {
-                return Some(left.clone());
             }
 
             // ─── Distributive Law ──────────────────────────────────────────

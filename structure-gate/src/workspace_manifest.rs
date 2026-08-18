@@ -281,8 +281,8 @@ pub fn discarding_imports(text: &str) -> Vec<String> {
     let mut imports = Vec::new();
     for offset in code_offsets(text) {
         let rest = &text[offset..];
-        if rest.starts_with("use ") {
-            if let Some(crate_name) = discarded_crate(&rest["use ".len()..]) {
+        if let Some(rest) = rest.strip_prefix("use ") {
+            if let Some(crate_name) = discarded_crate(rest) {
                 imports.push(crate_name);
             }
         }

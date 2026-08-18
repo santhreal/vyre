@@ -32,15 +32,6 @@ proptest.workspace = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
-# Both backends register themselves through `inventory::submit!`, so linking the
-# crate is the whole use of it and no source line in this facade names either
-# one. A dependency scanner reads that as unused; enabling the feature is what
-# puts the backend in the registry.
-[package.metadata.cargo-machete]
-ignored = ["vyre-driver-cuda", "vyre-driver-wgpu"]
-
-[package.metadata.cargo-udeps.ignore]
-normal = ["vyre-driver-cuda", "vyre-driver-wgpu"]
 
 [features]
 default = []

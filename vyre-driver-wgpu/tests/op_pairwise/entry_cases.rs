@@ -368,7 +368,7 @@ fn ambiguous_multi_output_producer_is_not_pairwise_composable() {
         .err()
         .expect("ambiguous quest output must be rejected");
     assert!(
-        error.contains("writable buffers and no explicit output"),
+        error.contains("2 writable buffers and no explicit output"),
         "unexpected rejection: {error}"
     );
 }
@@ -1049,6 +1049,31 @@ fn entry_named(id: &str) -> &'static UnifiedEntry {
         .position(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("Fix: no op registry entry named `{id}`"));
     entry_by_index(index)
+}
+
+/// WHY: `Program::output_buffer_indices` classifies both `ReadWrite` and
+/// `WriteOnly` results. The old local filter rejected a producer whose sole
+/// result was `WriteOnly`, even when its shape matched the downstream input.
+#[test]
+fn lone_write_only_result_is_a_pairwise_pipeline_value() {
+    let producer = entry_named("vyre-libs::bitset::xor");
+    let consumer = entry_named("vyre-libs::bitset::not");
+    let program = (producer.build)();
+    let [output_index] = program.output_buffer_indices() else {
+        panic!("fixture must have exactly one writable result");
+    };
+    let output = &program.buffers()[*output_index as usize];
+    assert_eq!(output.access(), BufferAccess::WriteOnly);
+    assert!(
+        program
+            .buffers()
+            .iter()
+            .all(|buffer| buffer.access() != BufferAccess::ReadWrite),
+        "fixture must isolate the WriteOnly classification path"
+    );
+
+    let composition = try_compose(producer, consumer).expect("lone write-only result must compose");
+    assert_eq!(composition.wired_name, output.name());
 }
 
 /// Piping a 64-wide elementwise op into a 4-wide scan must be refused.

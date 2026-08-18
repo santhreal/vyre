@@ -396,7 +396,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   through the source crate's own feature table, and every feature that gates a
   registration is one the source crate's widest aggregate turns on. A new
   domain feature carrying registrations turns both red until the aggregate
-  covers it, and a consumer naming the aggregate then needs no change.
+  covers it, and a consumer naming the aggregate then needs no change. The
+  `vyre` facade now keeps the CUDA and WGPU registration providers linked when
+  their optional features are enabled, with feature-specific tests that fail if
+  either provider is reduced to an unused manifest dependency.
 - Every registry closure gate in the workspace is a tracked test. The gate
   asserts that each `pub fn ... -> Program` builder a crate publishes is
   reachable from its `inventory` registry or named by one of its tests, that
@@ -4536,8 +4539,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   invariants for a `DialectRegistry` the crate does not define. Every invariant
   now names a construct that exists, and the sealing entry names
   `backend::private::Sealed`.
-- Parity suites, backend materializers and the gate tooling each take their
-  shared routine from one definition instead of a per-file copy.
+- Parity suites, backend materializers and gate tooling share canonical
+  routines, and dispatcher-based solvers select named results without rejecting
+  writable scratch outputs.
 - The duplication gate measures the repository rather than the working
   directory. It walked the tree with `walkdir` and counted every `.rs` file
   present, including files an ignore rule excludes, so a pin recorded on a
@@ -4750,7 +4754,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   plus named entry input and output bindings. `InstanceCore` derives module
   resources from exact target binding metadata, updates antecedent retained
   values after dispatch, and rejects missing or mismatched resource identities
-  instead of falling back to positional descriptor order.
+  instead of falling back to positional descriptor order. A read-write buffer's
+  input and renamed output identities may share one Program buffer name only
+  when retained lineage relates them.
 - The fusion-alias hazard rule `V116` has one owner, the whole-program pass in
   `vyre-foundation/src/validate/fusion_safety.rs`, which both the production
   single-pass validator and the legacy differential arm call. Production
@@ -5598,7 +5604,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   measures all 30 harness-owned release-profile samples instead of setup,
   environment probes, or one-time artifact preparation. Resident string-bitmap
   batching reads back one canonical bitmap while retaining the full
-  device-resident batch, avoiding redundant PCIe output transfers.
+  device-resident batch, avoiding redundant PCIe output transfers. The
+  Criterion optimizer corpus records one benchmark per semantic family, so
+  adding a family creates a new baseline instead of slowing an unrelated
+  aggregate id.
 - The release macro benchmarks no longer time a CPU baseline that rebuilds its
   own input. `synthetic_cpu_count` regenerated every record from its index
   inside the timed region, twelve to twenty-four rotate-multiply rounds per
@@ -5901,11 +5910,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now proves it. It named a path only the core table listed, so it asserted a
   core cap and never exercised the precedence; cap_from takes both tables, and
   the test injects one path into both and asserts the tighter number wins.
-- The optimizer folded `x + 0.0` and `x - -0.0` away, both of which rewrite a
-  negative-zero input to positive zero under IEEE-754. Each operator now folds
-  only the zero that is its true identity: addition takes the negative zero,
-  subtraction the positive one. The shipped proof obligations were corrected to
-  the sound rules, and one of them was refuted by the solver before the fix.
+- Float algebraic rewrites now preserve IEEE-754 signed zero: addition
+  eliminates only negative zero, subtraction only a positive-zero right
+  operand, and FMA zero-product elimination requires a negative-zero product.
+  Type-blind `x - x` expressions no longer become an unsigned zero when the
+  operand may be a float, signed integer, NaN, or infinity. The shipped proof
+  obligations now encode the same sound identities.
 - The gate-canon gate holds the registry, the pinned baselines and the subsets
   to each other and fails on the seven shapes that soften them: a baseline
   count that rises, a floor constant that moves up, a weakened target, a gate

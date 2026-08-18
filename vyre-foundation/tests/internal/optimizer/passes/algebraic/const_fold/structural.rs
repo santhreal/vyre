@@ -53,21 +53,26 @@ fn fma_a_one_c() {
         Some(Expr::add(a, c))
     );
 }
+/// WHY: replacing an FMA zero product with its addend is valid only when the
+/// product is `-0.0`, the additive identity. A `+0.0` product changes a
+/// runtime `-0.0` addend to `+0.0`.
 #[test]
-fn fma_zero_b_c() {
+fn fma_zero_multiplier_folds_only_for_negative_zero_products() {
     let c = Expr::var("c");
-    assert_eq!(
-        fold_expr(&Expr::fma(Expr::f32(0.0), Expr::f32(2.0), c.clone())),
-        Some(c)
-    );
-}
-#[test]
-fn fma_a_zero_c() {
-    let c = Expr::var("c");
-    assert_eq!(
-        fold_expr(&Expr::fma(Expr::f32(2.0), Expr::f32(0.0), c.clone())),
-        Some(c)
-    );
+    for (a, b) in [(0.0, 2.0), (-0.0, -2.0), (2.0, 0.0), (-2.0, -0.0)] {
+        assert_eq!(
+            fold_expr(&Expr::fma(Expr::f32(a), Expr::f32(b), c.clone())),
+            None,
+            "{a:?} * {b:?} produces +0.0 and is not an additive identity"
+        );
+    }
+    for (a, b) in [(-0.0, 2.0), (0.0, -2.0), (2.0, -0.0), (-2.0, 0.0)] {
+        assert_eq!(
+            fold_expr(&Expr::fma(Expr::f32(a), Expr::f32(b), c.clone())),
+            Some(c.clone()),
+            "{a:?} * {b:?} produces the -0.0 additive identity"
+        );
+    }
 }
 #[test]
 fn fma_a_b_zero() {

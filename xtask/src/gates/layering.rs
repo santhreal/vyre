@@ -202,7 +202,10 @@ impl crate::gate::GateBehavior for Layering {
             if exempt_from_vocabulary(registry.layer(member)) {
                 continue;
             }
-            for (file, line, words) in backend_vocabulary(&tree, graph.directory(member))? {
+            let link_interfaces = optional_backend_interfaces(&tree, graph.directory(member))?;
+            for (file, line, words) in
+                backend_vocabulary(&tree, graph.directory(member), &link_interfaces)?
+            {
                 scanned += 1;
                 report.find(Finding::at(
                     file,
@@ -260,6 +263,121 @@ fn exempt_from_vocabulary(layer: &str) -> bool {
         .any(|(exempt, _)| *exempt == layer)
 }
 
+/// Feature selectors and private symbol references that retain optional backend
+/// registrations without making them part of a neutral crate's domain language.
+///
+/// Both sets come from the member manifest. A source spelling is an interface
+/// only when the manifest proves that it selects or references an optional
+/// forbidden dependency; the same spelling anywhere else remains vocabulary.
+#[derive(Default)]
+struct OptionalBackendInterfaces {
+    features: BTreeSet<String>,
+    dependency_idents: BTreeSet<String>,
+}
+
+fn optional_backend_interfaces(
+    tree: &Tree,
+    directory: &str,
+) -> Result<OptionalBackendInterfaces, GateError> {
+    let root = tree.read_toml("Cargo.toml")?;
+    let workspace_deps = root
+        .get("workspace")
+        .and_then(toml::Value::as_table)
+        .and_then(|workspace| workspace.get("dependencies"))
+        .and_then(toml::Value::as_table)
+        .cloned()
+        .unwrap_or_default();
+    let manifest = tree.read_toml(format!("{directory}/Cargo.toml"))?;
+    Ok(optional_backend_interfaces_from_manifest(
+        &manifest,
+        &workspace_deps,
+    ))
+}
+
+fn optional_backend_interfaces_from_manifest(
+    manifest: &toml::Table,
+    workspace_deps: &toml::Table,
+) -> OptionalBackendInterfaces {
+    let mut dependency_keys = BTreeSet::new();
+    for (_, host) in dependency_hosts(manifest) {
+        for section in PRODUCTION_TABLES {
+            for (key, spec) in entries(&host, section) {
+                let optional = spec
+                    .get("optional")
+                    .and_then(toml::Value::as_bool)
+                    .unwrap_or(false);
+                let package = target_package(&key, &spec, workspace_deps);
+                if optional && FORBIDDEN_DEPENDENCIES.contains(&package.as_str()) {
+                    dependency_keys.insert(key);
+                }
+            }
+        }
+    }
+
+    let mut interfaces = OptionalBackendInterfaces {
+        dependency_idents: dependency_keys
+            .iter()
+            .map(|key| key.replace('-', "_"))
+            .collect(),
+        ..OptionalBackendInterfaces::default()
+    };
+    let Some(features) = manifest.get("features").and_then(toml::Value::as_table) else {
+        return interfaces;
+    };
+    for (feature, activations) in features {
+        let activates_optional_backend = activations
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(toml::Value::as_str)
+            .any(|activation| {
+                let activation = activation.strip_prefix("dep:").unwrap_or(activation);
+                let dependency = activation
+                    .split_once('/')
+                    .map_or(activation, |(dependency, _)| dependency);
+                !dependency.ends_with('?') && dependency_keys.contains(dependency)
+            });
+        if activates_optional_backend {
+            interfaces.features.insert(feature.clone());
+        }
+    }
+    interfaces
+}
+
+/// Mask only compiler interfaces proven by the manifest.
+///
+/// A whole `cfg(feature = ...)` line is a Cargo selector rather than domain
+/// prose. A dependency spelling is masked only in the exact private function
+/// pointer shape that keeps `registered_backend_id` in the linked image.
+fn mask_optional_backend_interface(line: &str, interfaces: &OptionalBackendInterfaces) -> String {
+    let trimmed = line.trim();
+    if let Some(feature) = trimmed
+        .strip_prefix("#[cfg(feature = \"")
+        .and_then(|rest| rest.strip_suffix("\")]"))
+    {
+        if interfaces.features.contains(feature) {
+            return " ".repeat(line.len());
+        }
+    }
+
+    let mut masked = line.to_string();
+    if !trimmed.starts_with("static ") {
+        return masked;
+    }
+    for dependency in &interfaces.dependency_idents {
+        let suffix = format!(" = {dependency}::registered_backend_id;");
+        if trimmed.ends_with(&suffix)
+            && trimmed.contains(": fn() -> Option<&'static str>")
+            && masked.contains(dependency)
+        {
+            while let Some(at) = masked.find(dependency) {
+                masked.replace_range(at..at + dependency.len(), &" ".repeat(dependency.len()));
+            }
+        }
+    }
+    masked
+}
+
 /// Backend words in the production source under `directory`, one entry per line.
 ///
 /// Test code is excluded twice over: a file the tree reaches only as test support
@@ -269,6 +387,7 @@ fn exempt_from_vocabulary(layer: &str) -> bool {
 fn backend_vocabulary(
     tree: &Tree,
     directory: &str,
+    link_interfaces: &OptionalBackendInterfaces,
 ) -> Result<Vec<(String, u32, String)>, GateError> {
     let prefix = format!("{directory}/src/");
     let mut found = Vec::new();
@@ -290,7 +409,8 @@ fn backend_vocabulary(
             if test_only.get(index).copied().unwrap_or(false) {
                 continue;
             }
-            let words = words_in(&mask_interface_names(line, relative));
+            let line = mask_interface_names(line, relative);
+            let words = words_in(&mask_optional_backend_interface(&line, link_interfaces));
             if !words.is_empty() {
                 found.push((relative.to_string(), number, words.join(", ")));
             }
@@ -1111,6 +1231,55 @@ mod tests {
             "Fix: naming the crate that owns a backend states the backend; only a layer \
              exempted by VOCABULARY_EXEMPT_LAYERS may write the roster."
         );
+    }
+
+    #[test]
+    fn optional_backend_interfaces_are_derived_and_narrow() {
+        let manifest = table(
+            r#"
+            [features]
+            concrete = ["dep:vyre-driver-cuda"]
+            weak = ["vyre-driver-cuda?/extra"]
+            unrelated = []
+
+            [dependencies]
+            vyre-driver-cuda = { workspace = true, optional = true }
+            "#,
+        );
+        let workspace_deps = table(
+            r#"
+            vyre-driver-cuda = { package = "vyre-driver-cuda", path = "driver" }
+            "#,
+        );
+        let interfaces = optional_backend_interfaces_from_manifest(&manifest, &workspace_deps);
+        assert_eq!(interfaces.features, ["concrete".to_string()].into());
+        assert_eq!(
+            interfaces.dependency_idents,
+            ["vyre_driver_cuda".to_string()].into()
+        );
+
+        let selector = "#[cfg(feature = \"concrete\")]";
+        assert_eq!(
+            mask_optional_backend_interface(selector, &interfaces),
+            " ".repeat(selector.len())
+        );
+        let anchor = "static PRIMARY_PROVIDER_LINK: fn() -> Option<&'static str> = vyre_driver_cuda::registered_backend_id;";
+        assert!(
+            words_in(&mask_optional_backend_interface(anchor, &interfaces)).is_empty(),
+            "Fix: the exact private link anchor is a manifest-proven compiler interface."
+        );
+
+        for line in [
+            "#[cfg(feature = \"cuda\")]",
+            "use vyre_driver_cuda::CudaDevice;",
+            "pub static CUDA_LINK: fn() -> Option<&'static str> = vyre_driver_cuda::registered_backend_id;",
+            "/// vyre_driver_cuda owns the selected path.",
+        ] {
+            assert!(
+                !words_in(&mask_optional_backend_interface(line, &interfaces)).is_empty(),
+                "Fix: only the declared feature selector and exact private anchor may be masked: {line}"
+            );
+        }
     }
 
     #[test]

@@ -486,24 +486,10 @@ pub(crate) fn try_compose(a: &UnifiedEntry, b: &UnifiedEntry) -> Result<Composit
     let prog_a = (a.build)();
     let prog_b = (b.build)();
 
-    // ---- op_a output analysis ----
-    // A program's result is whatever it marks with `BufferDecl::output`, and
-    // that buffer is `WriteOnly` whenever the op only writes it. Selecting on
-    // `ReadWrite` alone therefore skipped the real result and piped op_b off an
-    // internal scratch buffer, which left the fused program carrying op_a's
-    // untouched output next to op_b's: two outputs, and V022 on a pair the
-    // compatibility check had just called composable. The declared output wins,
-    // and a lone writable buffer is the fallback for an op that declares none.
-    let a_writable: Vec<&BufferDecl> = prog_a
-        .buffers()
-        .iter()
-        .filter(|buf| {
-            matches!(
-                buf.access(),
-                BufferAccess::ReadWrite | BufferAccess::WriteOnly
-            )
-        })
-        .collect();
+    // `Program::output_buffer_indices` owns writable-result classification.
+    // The explicit output marker disambiguates that canonical set; a lone
+    // writable result is the fallback for a program that declares none.
+    let a_writable = prog_a.output_buffer_indices();
     if a_writable.is_empty() {
         return Err(format!(
             "Fix: {} has no writable output buffer; cannot wire into downstream op.",
@@ -512,12 +498,12 @@ pub(crate) fn try_compose(a: &UnifiedEntry, b: &UnifiedEntry) -> Result<Composit
     }
     let explicit_outputs: Vec<&BufferDecl> = a_writable
         .iter()
-        .copied()
+        .map(|index| &prog_a.buffers()[*index as usize])
         .filter(|buf| buf.is_output())
         .collect();
-    let a_out = match (explicit_outputs.as_slice(), a_writable.as_slice()) {
+    let a_out = match (explicit_outputs.as_slice(), a_writable) {
         ([output], _) => *output,
-        ([], [output]) => *output,
+        ([], [output]) => &prog_a.buffers()[*output as usize],
         ([], outputs) => {
             return Err(format!(
                 "Fix: {} has {} writable buffers and no explicit output; mark the intended pipeline result with BufferDecl::output before composing.",
