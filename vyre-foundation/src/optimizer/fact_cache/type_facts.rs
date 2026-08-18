@@ -12,6 +12,7 @@ pub(super) fn derive(program: &Program) -> TypeFacts {
             .map(|buffer| (Ident::from(buffer.name()), buffer.element().clone()))
             .collect(),
         expr_key: Vec::with_capacity(64),
+        scope_log: Vec::with_capacity(32),
     };
     ctx.infer_nodes_types(program.entry());
     ctx.facts
@@ -21,6 +22,7 @@ struct TypeFactCtx {
     facts: TypeFacts,
     buffer_types: FxHashMap<Ident, DataType>,
     expr_key: Vec<u8>,
+    scope_log: Vec<(Ident, Option<DataType>)>,
 }
 
 /// The optimizer reads the same answer validation does.
@@ -47,17 +49,49 @@ impl TypeEnv for TypeFactCtx {
 }
 
 impl TypeFactCtx {
+    fn bind_var(&mut self, name: Ident, ty: Option<DataType>) {
+        let prior = match ty {
+            Some(ty) => self.facts.var_types.insert(name.clone(), ty),
+            None => self.facts.var_types.remove(&name),
+        };
+        if let Some(old_ty) = prior {
+            self.scope_log.push((name, Some(old_ty)));
+        }
+    }
+
+    fn bind_scoped_var(&mut self, name: Ident, ty: DataType) {
+        let prior = self.facts.var_types.insert(name.clone(), ty);
+        self.scope_log.push((name, prior));
+    }
+
+    fn restore_scope(&mut self, start: usize) {
+        while self.scope_log.len() > start {
+            if let Some((name, prior)) = self.scope_log.pop() {
+                match prior {
+                    Some(old_ty) => {
+                        self.facts.var_types.insert(name, old_ty);
+                    }
+                    None => {
+                        self.facts.var_types.remove(&name);
+                    }
+                }
+            }
+        }
+    }
+
+    fn infer_scoped_nodes(&mut self, nodes: &[Node]) {
+        let start = self.scope_log.len();
+        self.infer_nodes_types(nodes);
+        self.restore_scope(start);
+    }
+
     fn infer_nodes_types(&mut self, nodes: &[Node]) {
         for node in nodes {
             match node {
-                Node::Let { name, value } => match expr_type(value, self) {
-                    Some(ty) => {
-                        self.facts.var_types.insert(name.clone(), ty);
-                    }
-                    None => {
-                        self.facts.var_types.remove(name);
-                    }
-                },
+                Node::Let { name, value } => {
+                    let ty = expr_type(value, self);
+                    self.bind_var(name.clone(), ty);
+                }
                 Node::Assign { name, value } => match expr_type(value, self) {
                     Some(ty) => {
                         self.facts.var_types.insert(name.clone(), ty);
@@ -76,8 +110,8 @@ impl TypeFactCtx {
                     otherwise,
                 } => {
                     self.record_expr_type(cond);
-                    self.infer_nodes_types(then);
-                    self.infer_nodes_types(otherwise);
+                    self.infer_scoped_nodes(then);
+                    self.infer_scoped_nodes(otherwise);
                 }
                 Node::Loop {
                     var,
@@ -87,25 +121,33 @@ impl TypeFactCtx {
                 } => {
                     self.record_expr_type(from);
                     self.record_expr_type(to);
-                    let prior = self.facts.var_types.insert(var.clone(), DataType::U32);
+                    let start = self.scope_log.len();
+                    self.bind_scoped_var(var.clone(), DataType::U32);
                     self.infer_nodes_types(body);
-                    match prior {
-                        Some(old_ty) => {
-                            self.facts.var_types.insert(var.clone(), old_ty);
-                        }
-                        None => {
-                            self.facts.var_types.remove(var);
-                        }
-                    }
+                    self.restore_scope(start);
                 }
                 Node::Block(nodes) => {
-                    self.infer_nodes_types(nodes);
+                    self.infer_scoped_nodes(nodes);
                 }
-                Node::Region { body, .. } => {
-                    self.infer_nodes_types(body);
+                Node::Region { generator, body, .. } => {
+                    if generator.as_str() == Program::ROOT_REGION_GENERATOR {
+                        self.infer_nodes_types(body);
+                    } else {
+                        self.infer_scoped_nodes(body);
+                    }
                 }
-                Node::TileElementwise { body, .. } => {
+                Node::TileElementwise { inputs, body, .. } => {
+                    let start = self.scope_log.len();
+                    for input in inputs {
+                        self.bind_scoped_var(input.clone(), DataType::F32);
+                    }
                     self.infer_nodes_types(body);
+                    self.restore_scope(start);
+                }
+                Node::TileLoad { origin, .. } | Node::TileStore { origin, .. } => {
+                    for expr in origin {
+                        self.record_expr_type(expr);
+                    }
                 }
                 Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
                     self.record_expr_type(offset);
@@ -123,8 +165,6 @@ impl TypeFactCtx {
                 | Node::Broadcast { .. }
                 | Node::AsyncWait { .. }
                 | Node::Resume { .. }
-                | Node::TileLoad { .. }
-                | Node::TileStore { .. }
                 | Node::TileMatmul { .. }
                 | Node::TileReduce { .. }
                 | Node::TileDecl { .. }

@@ -428,6 +428,185 @@ fn derive_type_facts_loop_induction_shadowing_same_name_restoration() {
 }
 
 #[test]
+fn derive_type_facts_nested_blocks_and_regions_restoration() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("x", Expr::f32(1.0)),
+            Node::Block(vec![
+                Node::let_bind("x", Expr::u32(10)),
+                Node::let_bind("inner_block_dep", Expr::add(Expr::var("x"), Expr::u32(1))),
+                Node::let_bind("block_only", Expr::u32(20)),
+            ]),
+            Node::let_bind("post_block_x_dep", Expr::add(Expr::var("x"), Expr::f32(2.0))),
+            Node::Region {
+                generator: "test_region".into(),
+                source_region: None,
+                body: Arc::new(vec![
+                    Node::let_bind("x", Expr::u32(30)),
+                    Node::let_bind("inner_reg_dep", Expr::add(Expr::var("x"), Expr::u32(2))),
+                    Node::let_bind("region_only", Expr::u32(40)),
+                ]),
+            },
+            Node::let_bind("post_region_x_dep", Expr::add(Expr::var("x"), Expr::f32(3.0))),
+        ],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().unwrap();
+
+    assert_eq!(
+        types.var_types.get(&Ident::from("inner_block_dep")),
+        Some(&DataType::U32),
+        "inner block binding using shadowed x must type as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("inner_reg_dep")),
+        Some(&DataType::U32),
+        "inner region binding using shadowed x must type as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("x")),
+        Some(&DataType::F32),
+        "outer x must be restored to F32 after block and region exit"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("post_block_x_dep")),
+        Some(&DataType::F32),
+        "post-block expression must use restored F32 type"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("post_region_x_dep")),
+        Some(&DataType::F32),
+        "post-region expression must use restored F32 type"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("block_only")),
+        Some(&DataType::U32),
+        "block-local variable is inferred and recorded in fact cache"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("region_only")),
+        Some(&DataType::U32),
+        "region-local variable is inferred and recorded in fact cache"
+    );
+}
+
+#[test]
+fn derive_type_facts_if_branches_isolation_and_restoration() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("x", Expr::f32(1.0)),
+            Node::If {
+                cond: Expr::bool(true),
+                then: vec![
+                    Node::let_bind("x", Expr::u32(10)),
+                    Node::let_bind("then_dep", Expr::add(Expr::var("x"), Expr::u32(1))),
+                    Node::let_bind("then_only", Expr::u32(20)),
+                ],
+                otherwise: vec![
+                    Node::let_bind("else_dep", Expr::add(Expr::var("x"), Expr::f32(5.0))),
+                    Node::let_bind("else_only", Expr::f32(30.0)),
+                ],
+            },
+            Node::let_bind("post_if_dep", Expr::add(Expr::var("x"), Expr::f32(2.0))),
+        ],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().unwrap();
+
+    assert_eq!(
+        types.var_types.get(&Ident::from("then_dep")),
+        Some(&DataType::U32),
+        "then-branch binding using shadowed x must type as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("else_dep")),
+        Some(&DataType::F32),
+        "else-branch binding must see outer F32 x without then-branch pollution"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("x")),
+        Some(&DataType::F32),
+        "outer x must be restored to F32 after If exit"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("post_if_dep")),
+        Some(&DataType::F32),
+        "post-if expression must use restored F32 type"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("then_only")),
+        Some(&DataType::U32),
+        "then-branch local variable is inferred and recorded in fact cache"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("else_only")),
+        Some(&DataType::F32),
+        "else-branch local variable is inferred and recorded in fact cache"
+    );
+}
+
+#[test]
+fn derive_type_facts_tile_elementwise_inputs_and_restoration() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("outer_elem", Expr::u32(99)),
+            Node::tile_elementwise(
+                "out_tile",
+                vec!["outer_elem".into(), "in_b".into()],
+                vec![
+                    Node::let_bind("body_dep_a", Expr::add(Expr::var("outer_elem"), Expr::f32(1.0))),
+                    Node::let_bind("body_dep_b", Expr::mul(Expr::var("in_b"), Expr::f32(2.0))),
+                    Node::let_bind("elem_local", Expr::f32(3.0)),
+                ],
+            ),
+            Node::let_bind("post_tile_dep", Expr::add(Expr::var("outer_elem"), Expr::u32(1))),
+        ],
+    );
+
+    let cache = FactCache::derive(&program);
+    let types = cache.type_map.as_ref().unwrap();
+
+    assert_eq!(
+        types.var_types.get(&Ident::from("body_dep_a")),
+        Some(&DataType::F32),
+        "expression depending on tile elementwise input must be inferred as F32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("body_dep_b")),
+        Some(&DataType::F32),
+        "expression depending on tile elementwise input must be inferred as F32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("outer_elem")),
+        Some(&DataType::U32),
+        "outer variable shadowed by tile input must be restored to U32 after tile exit"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("post_tile_dep")),
+        Some(&DataType::U32),
+        "post-tile expression using restored variable must be inferred as U32"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("in_b")),
+        None,
+        "unshadowed tile input is removed on exit"
+    );
+    assert_eq!(
+        types.var_types.get(&Ident::from("elem_local")),
+        Some(&DataType::F32),
+        "tile-local binding is inferred and recorded in fact cache"
+    );
+}
+
+#[test]
 fn invalidate_clears_all() {
     let program = Program::wrapped(
         vec![BufferDecl::read_write("out", 0, DataType::U32)],
