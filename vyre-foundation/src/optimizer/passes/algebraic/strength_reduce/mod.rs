@@ -241,15 +241,19 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
                 )
             })
         }
-        // Float: x + 0.0 → x (additive identity).
+        // Float: x + (-0.0) → x (additive identity).
         BinOp::Add => {
             if let Some(fma) = synthesize_fma_add(left, right) {
                 return Some(fma);
             }
-            if matches!(right.as_ref(), Expr::LitF32(v) if *v == 0.0) {
+            // Only the negative zero is an additive identity under IEEE-754:
+            // `-0.0 + 0.0` is `+0.0`, so folding `x + 0.0` away rewrites the
+            // sign of a negative-zero input. `lit_f32_eq` compares bit patterns
+            // because `-0.0 == 0.0` holds for the value comparison.
+            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, -0.0)) {
                 return Some(left.as_ref().clone());
             }
-            if matches!(left.as_ref(), Expr::LitF32(v) if *v == 0.0) {
+            if matches!(left.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, -0.0)) {
                 return Some(right.as_ref().clone());
             }
             // Integer: x + 0 → x.
@@ -278,12 +282,14 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
             }
             None
         }
-        // Float: x - 0.0 → x (subtractive identity).
+        // Float: x - (+0.0) → x (subtractive identity).
         BinOp::Sub => {
             if let Some(fma) = synthesize_fma_sub(left, right) {
                 return Some(fma);
             }
-            if matches!(right.as_ref(), Expr::LitF32(v) if *v == 0.0) {
+            // The subtractive identity takes the opposite zero: `-0.0 - -0.0`
+            // is `+0.0`, while `x - 0.0` is `x` for every input.
+            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 0.0)) {
                 return Some(left.as_ref().clone());
             }
             if matches!(right.as_ref(), Expr::LitU32(0)) {

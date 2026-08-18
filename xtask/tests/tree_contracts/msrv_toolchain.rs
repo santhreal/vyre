@@ -184,7 +184,9 @@ fn every_job_running_the_public_api_extraction_installs_the_declared_rustdoc() {
     for entry in
         std::fs::read_dir(&directory).expect("Fix: the workflow directory must be readable")
     {
-        let path = entry.expect("Fix: every workflow entry must be readable").path();
+        let path = entry
+            .expect("Fix: every workflow entry must be readable")
+            .path();
         if path.extension().and_then(|value| value.to_str()) != Some("yml") {
             continue;
         }
@@ -207,6 +209,9 @@ fn every_job_running_the_public_api_extraction_installs_the_declared_rustdoc() {
         }
         reached += 1;
 
+        // The action publishes refs for floating channels only, so a dated
+        // nightly is selected through the `toolchain` input on `@master`. The
+        // input is what the step installs, so it wins over the ref.
         let mut selected: Option<String> = None;
         let mut installs = 0usize;
         for line in workflow.lines() {
@@ -214,13 +219,16 @@ fn every_job_running_the_public_api_extraction_installs_the_declared_rustdoc() {
             if let Some(toolchain) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
                 selected = Some(toolchain.to_string());
             }
+            if let Some(toolchain) = trimmed.strip_prefix("toolchain: ") {
+                selected = Some(toolchain.to_string());
+            }
             if trimmed.contains("install --locked cargo-public-api") {
                 installs += 1;
                 assert_eq!(
                     selected.as_deref(),
                     Some(pinned),
-                    "Fix: in {name}, select dtolnay/rust-toolchain@{pinned} before installing \
-                     cargo-public-api, so the extraction renders with the toolchain \
+                    "Fix: in {name}, select {pinned} through dtolnay/rust-toolchain before \
+                     installing cargo-public-api, so the extraction renders with the toolchain \
                      RUSTDOC_TOOLCHAIN names"
                 );
                 assert!(

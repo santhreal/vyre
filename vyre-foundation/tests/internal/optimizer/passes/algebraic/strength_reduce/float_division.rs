@@ -33,18 +33,50 @@ fn float_div_by_two_becomes_mul_half() {
     assert!(matches!(&reduced, Expr::BinOp { op: BinOp::Mul, .. }));
 }
 
+/// Signed zero decides which additive fold is sound, and the two operators take
+/// opposite zeros. `-0.0 + 0.0` is `+0.0`, so eliminating `x + 0.0` rewrites the
+/// sign of a negative-zero input; `-0.0 - -0.0` is `+0.0`, so eliminating
+/// `x - -0.0` does the same. Rust's `-0.0 == 0.0` hides the difference, which is
+/// how both folds shipped unsound, so each case is pinned separately here.
+///
+/// These cases cover the literal on both sides for addition and the right-hand
+/// literal for subtraction, which is the whole fold surface. They say nothing
+/// about NaN or infinity, which pass through unfolded either way.
 #[test]
-fn float_add_zero_becomes_identity() {
-    // x + 0.0 → x
-    let result = reduce_expr(&Expr::add(Expr::var("x"), Expr::f32(0.0)));
-    assert_eq!(result, Some(Expr::var("x")));
-}
+fn float_additive_identity_folds_only_the_zero_that_preserves_the_sign() {
+    let x = Expr::var("x");
 
-#[test]
-fn float_sub_zero_becomes_identity() {
-    // x - 0.0 → x
-    let result = reduce_expr(&Expr::sub(Expr::var("x"), Expr::f32(0.0)));
-    assert_eq!(result, Some(Expr::var("x")));
+    assert_eq!(
+        reduce_expr(&Expr::add(x.clone(), Expr::f32(-0.0))),
+        Some(x.clone()),
+        "x + -0.0 is x for every input, including -0.0",
+    );
+    assert_eq!(
+        reduce_expr(&Expr::add(Expr::f32(-0.0), x.clone())),
+        Some(x.clone()),
+        "-0.0 + x is x for every input, including -0.0",
+    );
+    assert_eq!(
+        reduce_expr(&Expr::add(x.clone(), Expr::f32(0.0))),
+        None,
+        "x + 0.0 must survive: it maps -0.0 to +0.0",
+    );
+    assert_eq!(
+        reduce_expr(&Expr::add(Expr::f32(0.0), x.clone())),
+        None,
+        "0.0 + x must survive: it maps -0.0 to +0.0",
+    );
+
+    assert_eq!(
+        reduce_expr(&Expr::sub(x.clone(), Expr::f32(0.0))),
+        Some(x.clone()),
+        "x - 0.0 is x for every input, including -0.0",
+    );
+    assert_eq!(
+        reduce_expr(&Expr::sub(x, Expr::f32(-0.0))),
+        None,
+        "x - -0.0 must survive: it maps -0.0 to +0.0",
+    );
 }
 
 #[test]

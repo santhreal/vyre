@@ -51,7 +51,7 @@ proptest! {
             (rng >> 32) as u32
         };
         // Dense candidate maps (~50% set) so exclusion conflicts are frequent.
-        let candidates: Vec<u32> = (0..h * w).map(|_| (next() & 1)).collect();
+        let candidates: Vec<u32> = (0..h * w).map(|_| next() & 1).collect();
         let expected = reference_planar_rewrite_schedule(&candidates, h, w, k);
         let got = gpu_schedule(&candidates, h, w, k);
         prop_assert_eq!(got, expected, "planar_rewrite IR diverged (h={}, w={}, k={})", h, w, k);

@@ -87,7 +87,7 @@ fn adversarial_widths_preserve_exact_reference_parity() {
         0usize, 1, 2, 7, 31, 32, 33, 63, 64, 65, 255, 256, 257, 512, 1024,
     ] {
         let input: Vec<u32> = (0..words)
-            .map(|i| ((i as u32).wrapping_mul(0x9E37_79B9) ^ 0x5555_AAAA))
+            .map(|i| (i as u32).wrapping_mul(0x9E37_79B9) ^ 0x5555_AAAA)
             .collect();
         let want: Vec<u32> = input.iter().map(|w| w.count_ones()).collect();
         let got = per_word_popcount_via(&dispatcher, &input)

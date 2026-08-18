@@ -54,7 +54,7 @@ fn exclusive_equals_inclusive_minus_input() {
         state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
         let n = (state % 40) as usize;
         let input: Vec<u32> = (0..n)
-            .map(|i| (state.rotate_left(i as u32 % 31) % 1000))
+            .map(|i| state.rotate_left(i as u32 % 31) % 1000)
             .collect();
         let inclusive = reference_inclusive_scan(&input);
         let exclusive = reference_exclusive_scan(&input);

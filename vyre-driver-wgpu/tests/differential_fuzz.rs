@@ -55,7 +55,7 @@ proptest! {
     ) {
         use vyre_libs::math::linalg::dot;
         let rhs: Vec<u32> = (0..lhs.len())
-            .map(|i| ((rhs_seed.wrapping_mul(i as u64 + 1) ^ 0xdead_beef) as u32))
+            .map(|i| (rhs_seed.wrapping_mul(i as u64 + 1) ^ 0xdead_beef) as u32)
             .collect();
         let program = dot("a", "b", "c", lhs.len() as u32).unwrap();
         let outputs = run(

@@ -672,7 +672,8 @@ macro_rules! artifact_instance_identity {
     };
 }
 
-/// Answer [`crate::ArtifactMaterializer::device`] from a [`MaterializerDevice`]
+/// Answer [`crate::ArtifactMaterializer::device`] from a
+/// [`crate::materialize::MaterializerDevice`]
 /// field named `descriptor`, and optionally forward the four resident-resource
 /// methods to a [`crate::VyreBackend`] field.
 ///

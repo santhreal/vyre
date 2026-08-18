@@ -9,8 +9,8 @@
 //! shapes are covered.
 //!
 //! Inputs:
-//! - `release_corpus_families`: one program per semantic family from the
-//!   shipped release corpus (`optimizer::corpus`), the same shapes the release
+//! - `corpus/<family>`: one program per semantic family from the shipped
+//!   release corpus (`optimizer::corpus`), the same shapes the release
 //!   optimization gate scores.
 //! - `kernel_wide` / `kernel_loop_nest`: synthesized kernels sized like real
 //!   generated code (long straight-line arithmetic with reused subexpressions,
@@ -119,8 +119,16 @@ fn kernel_loop_nest(rows: u32, columns: u32) -> Program {
         .with_entry_op_id("bench.optimizer.kernel_loop_nest")
 }
 
-/// One program per semantic family, seed 0, from the shipped release corpus.
-fn corpus_families() -> Vec<Program> {
+/// One program per semantic family, seed 0, from the shipped release corpus,
+/// paired with the family it came from.
+///
+/// The family name is carried out with the program because it becomes the
+/// benchmark id. A single id that optimized every family measured the size of
+/// the corpus as much as the speed of the pipeline: adding a family lengthened
+/// the same id and criterion reported the growth as a regression against a
+/// baseline tree that had one family fewer. Per-family ids make a new family a
+/// new id instead.
+fn corpus_families() -> Vec<(String, Program)> {
     let cases = generate_release_corpus();
     let mut seen = Vec::new();
     let mut programs = Vec::new();
@@ -129,7 +137,7 @@ fn corpus_families() -> Vec<Program> {
             continue;
         }
         seen.push(case.family.clone());
-        programs.push(case.program);
+        programs.push((case.family, case.program));
     }
     programs
 }
@@ -145,21 +153,16 @@ fn checked(program: Program) -> Program {
 fn bench_pipeline(c: &mut Criterion) {
     let mut group = c.benchmark_group("optimizer/pipeline");
 
-    let families = corpus_families();
-    for program in &families {
-        assert!(
-            optimize(program.clone()).is_ok(),
-            "release corpus program must converge"
-        );
-    }
-    group.bench_function("release_corpus_families", |b| {
-        b.iter(|| {
-            for program in &families {
-                let optimized = optimize(program.clone());
-                let _ = black_box(&optimized);
-            }
+    for (family, program) in corpus_families() {
+        let program = checked(program);
+        group.bench_function(format!("corpus/{family}"), |b| {
+            b.iter_batched(
+                || program.clone(),
+                |program| black_box(optimize(program)),
+                BatchSize::SmallInput,
+            );
         });
-    });
+    }
 
     for depth in [16u32, 64] {
         let program = checked(kernel_wide(depth));

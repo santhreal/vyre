@@ -640,6 +640,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - xtask gates --write-baseline records a measured finding count only when it is
   at or below the pin already recorded, and fails naming every gate that
   reports more, so a run can no longer legalize a red gate.
+- Nineteen source files that carried unrelated concerns in one compilation unit
+  are split into submodules, and the ten whose test suites outweighed the
+  implementation they cover now keep those suites beside the code. Every moved
+  item keeps its path through the parent module, so no caller changes.
 - The Aho-Corasick emit paths in `vyre-libs/src/scan/` read the flat
   output-record span through one owner. Six builders each wrote their own loop
   over `out_begin..out_end` binding `pattern_id` from `output_records`, and
@@ -2753,6 +2757,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose generator was retired is stale by construction, and the README sections
   plus `--help` are the live surface. `scripts/cli_docs.py` and
   `scripts/lib/cargo_runner.py` are gone.
+- The release corpus optimizer benchmark reported every semantic family under
+  one criterion id, so adding a family grew the measured work and read as a
+  regression on that id. Each family now has its own id.
 - The duplication scanner lists source files through the shared tree scanner
   instead of invoking git itself, so one rule decides what counts as a source
   file in the tree.
@@ -3701,6 +3708,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   submissions. `ordered_outputs` keeps its slot-order contract for a caller
   that authored the graph and has no Program to declare an order. Closes 7
   diverging (backend, op) conformance pairs.
+- The public-API snapshot is rendered by a dated nightly rather than whatever
+  nightly the workflow resolved that morning. rustdoc's item paths move with
+  the compiler, and the release that re-homed std::io::Error under core rewrote
+  nine committed snapshots with no source change behind them. RUSTDOC_TOOLCHAIN
+  declares the date, the extraction exports it, the workflow installs it, and a
+  contract fails when the two drift.
 - The release benchmark generator builds vyre-bench with --release, vyre-bench
   refuses to measure the release suite from an unoptimized build, and every
   release benchmark artifact records the build profile that measured it, so a
@@ -3713,6 +3726,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Three file-size ratchet rows whose files moved from vyre-primitives into
   vyre-libs follow the code to its new path at the measured count instead of
   lapsing to the flat cap.
+- A read-write buffer is wired to the resource it reads and to the renamed
+  resource it writes, and fusion-group admission rejected that pair as two
+  resources under one buffer name, refusing every fixpoint program. Admission
+  now rejects only identities the retained chain does not relate, and a module
+  reports the root of the chain as its input, which is the identity a caller
+  can bind.
 - The crate README generator renders nothing while the ownership registry, the
   crate guides or the release train disagrees with the workspace, and it
   refuses to write a generated contract that itself claims a retired release,
@@ -5022,6 +5041,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Loop guard elision, range folding, software pipelining and unrolling rewrite
   every nested body the IR node declares, taking the slots from the shared
   owner instead of a per-pass list.
+- Loop transform proof obligations declared an integer arithmetic logic while
+  emitting bit-vector declarations, so the solver rejected the script before
+  reading the assertion and left every one of them undischarged. Iteration
+  spaces are machine integers, so the domain now declares the bit-vector logic,
+  and a contract test rejects any obligation whose declared logic does not
+  admit the sorts it emits.
 - The measured release-evidence workflow now runs conformance and release
   benchmarks on the self-hosted RTX 4090 axiomexec lane instead of the local
   workstation or a GPU-less hosted runner.
@@ -5821,6 +5846,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   module behind a feature that is off by default all pass, so no frozen public
   path has to be renamed. No dependency outside dev-dependencies may name the
   test support crate.
+- The AES-CTR benchmark case vendors openssl on every host instead of resolving
+  whichever build the host installed, so two recorded results compare the same
+  library. Declaring the same dependency in two target-conditional tables also
+  left windows-msvc on the system probe rather than the vendored feature, and
+  that probe has no answer there: the harness failed to build before taking a
+  measurement.
+- The criterion regression gate reported its threshold check as a median change
+  while reading the upper bound of the confidence interval. It now prints both
+  and names the bound it gates on. The threshold is unchanged.
 - eigenvector_column_sign declared the matrix it rewrites in place as an output
   buffer. An output buffer is not a witness input, so the caller matrix never
   reached the program: the operation read zeros, wrote zeros, and its recorded
@@ -5871,6 +5905,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now proves it. It named a path only the core table listed, so it asserted a
   core cap and never exercised the precedence; cap_from takes both tables, and
   the test injects one path into both and asserts the tighter number wins.
+- The optimizer folded `x + 0.0` and `x - -0.0` away, both of which rewrite a
+  negative-zero input to positive zero under IEEE-754. Each operator now folds
+  only the zero that is its true identity: addition takes the negative zero,
+  subtraction the positive one. The shipped proof obligations were corrected to
+  the sound rules, and one of them was refuted by the solver before the fix.
 - The gate-canon gate holds the registry, the pinned baselines and the subsets
   to each other and fails on the seven shapes that soften them: a baseline
   count that rises, a floor constant that moves up, a weakened target, a gate

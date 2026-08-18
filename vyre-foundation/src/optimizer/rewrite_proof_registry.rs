@@ -139,11 +139,25 @@ pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
         RewriteProofObligation::equivalence(
             "fp32_add_zero",
             std::iter::empty(),
-            ProofExpr::fpadd(fp_var("x"), ProofExpr::fp32(0.0)),
+            ProofExpr::fpadd(fp_var("x"), ProofExpr::fp32(-0.0)),
             fp_var("x"),
         )
         .with_domain(ProofDomain::FloatingPoint)
-        .with_assumption("IEEE-754 RNE rounding mode, finite non-negative-zero operand"),
+        .with_assumption(
+            "IEEE-754 RNE rounding mode; the negative zero is the additive identity, \
+             because `-0.0 + 0.0` is `+0.0`",
+        ),
+        RewriteProofObligation::equivalence(
+            "fp32_sub_zero",
+            std::iter::empty(),
+            ProofExpr::fpsub(fp_var("x"), ProofExpr::fp32(0.0)),
+            fp_var("x"),
+        )
+        .with_domain(ProofDomain::FloatingPoint)
+        .with_assumption(
+            "IEEE-754 RNE rounding mode; the positive zero is the subtractive identity, \
+             because `-0.0 - -0.0` is `+0.0`",
+        ),
         RewriteProofObligation::equivalence(
             "fp32_mul_one",
             std::iter::empty(),
@@ -179,7 +193,8 @@ pub fn shipped_obligations() -> Vec<RewriteProofObligation> {
         )
         .with_domain(ProofDomain::MemoryAlias)
         .with_assumption("disjoint indices i != j guarantee no store-load alias"),
-        // Loop iteration space rules (Linear Integer Arithmetic QF_LIA)
+        // Loop iteration space rules. Trip counts are machine integers, so the
+        // obligation is a bit-vector obligation (QF_BV).
         RewriteProofObligation::equivalence(
             "loop_trip_count_nonnegative",
             vec![ProofExpr::not_(ProofExpr::eq(bv_var("from"), bv_var("to")))],

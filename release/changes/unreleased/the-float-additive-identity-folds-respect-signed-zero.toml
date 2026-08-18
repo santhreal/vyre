@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The optimizer folded `x + 0.0` and `x - -0.0` away, both of which rewrite a negative-zero input to positive zero under IEEE-754. Each operator now folds only the zero that is its true identity: addition takes the negative zero, subtraction the positive one. The shipped proof obligations were corrected to the sound rules, and one of them was refuted by the solver before the fix."

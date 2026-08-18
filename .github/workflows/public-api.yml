@@ -19,7 +19,9 @@ jobs:
       # nightly rewrites committed lines with no source change behind it. The
       # date is declared by RUSTDOC_TOOLCHAIN in xtask/src/gates/public_api.rs
       # and the gate exports it for the extraction, so both must move together.
-      - uses: dtolnay/rust-toolchain@nightly-2026-08-07
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-07
       - name: Install cargo-public-api
         run: cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
       - name: Diff every publishable crate

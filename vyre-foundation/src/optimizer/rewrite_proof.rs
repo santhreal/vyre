@@ -19,7 +19,8 @@ pub enum ProofDomain {
     IntegerBitVector,
     /// IEEE-754 floating point arithmetic.
     FloatingPoint,
-    /// Loop transformations and iteration space reasoning.
+    /// Loop transformations and iteration space reasoning over machine
+    /// integers.
     LoopTransform,
     /// Memory aliasing and load/store forwarding.
     MemoryAlias,
@@ -27,12 +28,18 @@ pub enum ProofDomain {
 
 impl ProofDomain {
     /// Authoritative SMT-LIB logic name for this domain.
+    ///
+    /// The logic has to admit every sort the domain's obligations declare.
+    /// Iteration spaces are machine integers, so loop obligations are
+    /// bit-vector obligations and share the bit-vector logic; naming an integer
+    /// arithmetic logic here left every loop obligation undischarged, because
+    /// the solver rejected the bit-vector declarations before reading the
+    /// assertion.
     #[must_use]
     pub const fn smt_logic(self) -> &'static str {
         match self {
-            Self::IntegerBitVector => "QF_BV",
+            Self::IntegerBitVector | Self::LoopTransform => "QF_BV",
             Self::FloatingPoint => "QF_FP",
-            Self::LoopTransform => "QF_LIA",
             Self::MemoryAlias => "QF_ABV",
         }
     }
