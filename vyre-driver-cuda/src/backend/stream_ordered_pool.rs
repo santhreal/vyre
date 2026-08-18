@@ -251,10 +251,13 @@ impl CudaStreamOrderedPool {
         Ok(value)
     }
 
-    /// Release pooled memory back to the OS, keeping at least `min_keep_bytes`
-    /// reserved. Use this to bound resident VRAM after a burst of dispatches when
-    /// the retained reservation is no longer worth holding.
+    /// Request release of pooled memory back to the OS, keeping at least `min_keep_bytes`
+    /// reserved.
     ///
+    /// Configures the pool's release threshold attribute to `min_keep_bytes` and invokes
+    /// `cuMemPoolTrimTo`. For the context's default CUDA memory pool, the driver manages
+    /// virtual memory backing at device/context scope, so physical deallocation to the OS is
+    /// best-effort and the driver may retain mapped granules across dispatches.
     /// # Errors
     ///
     /// Returns [`BackendError`] if the trim fails.
@@ -366,12 +369,10 @@ mod tests {
             reserved_after_realloc, reserved_after_free,
             "re-allocating a just-freed same-size block must reuse the reserved memory, not grow the pool's OS reservation (before={reserved_after_free}, after={reserved_after_realloc})"
         );
-        pool.free_async(ptr2, stream.raw())
-            .expect("free second allocation");
+        pool.free_async(ptr2, stream.raw()).expect("free second allocation");
         stream.synchronize().expect("final sync");
-
         // Trimming configures the pool's release threshold down to min_keep_bytes
-        // and instructs the driver to release unneeded reservation.
+        // and requests the driver to release unneeded reservation.
         assert_eq!(
             pool.release_threshold().expect("query release threshold before trim"),
             RETAIN_ALL_FREED_BYTES,
@@ -381,7 +382,7 @@ mod tests {
         assert_eq!(
             pool.release_threshold().expect("query release threshold after trim"),
             0,
-            "trim(0) must set the pool release threshold to 0 so the driver releases memory"
+            "trim(0) must set the pool release threshold to 0 so the driver is permitted to release memory"
         );
         let reserved_after_trim = pool
             .reserved_bytes()
