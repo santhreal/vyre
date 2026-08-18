@@ -50,28 +50,17 @@ const EXPECTED_FMA_OUTPUT_BYTES: [u8; 16] = [
     0xff, 0xff, 0xff, 0x7e, // f32::from_bits(0x7eff_ffff)
 ];
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::intrinsic(
-        OP_ID,
-        crate::hardware::catalog::F32_TERNARY_SIGNATURE,
-        Some(|| fma_f32("a", "b", "c", "out", 4)),
-        Some(test_inputs),
-        Some(|| vec![vec![EXPECTED_FMA_OUTPUT_BYTES.to_vec()]]),
-    )
-    .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE)
-    .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
-}
-
-inventory::submit! {
-    crate::hardware::catalog::IntrinsicFacet {
-        operation_id: OP_ID,
-        shape: crate::hardware::catalog::OpShape::new(
-            3,
-            1,
-            4,
-            crate::hardware::catalog::HardwareSemantic::FmaF32,
-        ),
-    }
+submit_hardware_intrinsic! {
+    id: OP_ID,
+    signature: crate::hardware::catalog::F32_TERNARY_SIGNATURE,
+    builder: || fma_f32("a", "b", "c", "out", 4),
+    inputs: test_inputs,
+    expected: || vec![vec![EXPECTED_FMA_OUTPUT_BYTES.to_vec()]],
+    effects: vyre_foundation::operation::OperationEffects::READ_WRITE,
+    capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
+    inputs_count: 3,
+    outputs_count: 1,
+    semantic: crate::hardware::catalog::HardwareSemantic::FmaF32
 }
 
 #[cfg(test)]

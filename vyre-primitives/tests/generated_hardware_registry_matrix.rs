@@ -5,12 +5,14 @@
 //! future CUDA/Vulkan/WGPU gates can reason about arity and semantics without
 //! reverse-engineering fixture buffers.
 
+mod gate_fixtures;
+
 use std::collections::BTreeMap;
 
+use gate_fixtures::run_cpu;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_primitives::hardware::all_entries;
 use vyre_primitives::hardware::catalog::{intrinsic_facet, HardwareSemantic, OpShape};
-use vyre_reference::value::Value;
 
 #[derive(Clone, Copy)]
 struct ExpectedHardwareEntry {
@@ -64,20 +66,6 @@ fn hardware_entries() -> BTreeMap<&'static str, SemanticOperation> {
         .collect()
 }
 
-fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let program = entry
-        .program()
-        .expect("Fix: registered hardware intrinsic must provide a neutral builder");
-    let values = inputs
-        .iter()
-        .map(|bytes| Value::Bytes(bytes.clone().into()))
-        .collect::<Vec<_>>();
-    vyre_reference::reference_eval(&program, &values)
-        .expect("Fix: registered hardware intrinsic must execute on the CPU oracle.")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect()
-}
 
 #[test]
 fn generated_hardware_registry_shapes_match_declared_surface() {

@@ -1,10 +1,9 @@
 //! Cat-C `subgroup_add`  -  per-lane sum reduction broadcast to every lane.
 //! Maps to hardware `subgroupAdd()`.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Program};
 
-use crate::hardware::{packed_u32_input_with_output, MAP_WORKGROUP};
+use crate::hardware::packed_u32_input_with_output;
 /// Canonical op id shared by semantics, fixtures, and driver registration.
 pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_add";
 
@@ -27,33 +26,7 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_add";
 /// the in-range lanes of that subgroup.
 #[must_use]
 pub fn subgroup_add(values: &str, out: &str, n: u32) -> Program {
-    let body = vec![wrap_anonymous_region(
-        OP_ID,
-        vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-            Node::let_bind("lane_value", Expr::u32(0)),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::buf_len(values)),
-                vec![Node::assign(
-                    "lane_value",
-                    Expr::load(values, Expr::var("idx")),
-                )],
-            ),
-            Node::let_bind("sum", Expr::subgroup_add(Expr::var("lane_value"))),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::buf_len(out)),
-                vec![Node::store(out, Expr::var("idx"), Expr::var("sum"))],
-            ),
-        ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 1, DataType::U32).with_count(n),
-        ],
-        MAP_WORKGROUP,
-        body,
-    )
+    crate::hardware::subgroup_unary_u32_program(OP_ID, values, out, n, Expr::subgroup_add)
 }
 
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
@@ -64,58 +37,39 @@ const EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES: [u8; 16] = [
     0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00,
 ];
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::intrinsic(
-        OP_ID,
-        crate::hardware::catalog::U32_UNARY_SIGNATURE,
-        Some(|| subgroup_add("values", "out", 4)),
-        Some(test_inputs),
-        Some(|| vec![vec![EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES.to_vec()]]),
-    )
-    .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
-    .with_explicit_capabilities(
-        vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
-    )
-}
-
-inventory::submit! {
-    crate::hardware::catalog::IntrinsicFacet {
-        operation_id: OP_ID,
-        shape: crate::hardware::catalog::OpShape::new(
-            1,
-            1,
-            4,
-            crate::hardware::catalog::HardwareSemantic::SubgroupAddU32,
-        ),
-    }
+submit_hardware_intrinsic! {
+    id: OP_ID,
+    signature: crate::hardware::catalog::U32_UNARY_SIGNATURE,
+    builder: || subgroup_add("values", "out", 4),
+    inputs: test_inputs,
+    expected: || vec![vec![EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES.to_vec()]],
+    effects: vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES,
+    capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
+    inputs_count: 1,
+    outputs_count: 1,
+    semantic: crate::hardware::catalog::HardwareSemantic::SubgroupAddU32
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hardware::{lcg_u32, run_program};
-    use crate::wire::pack_u32_slice as pack_u32;
+    use crate::hardware::{assert_unary_u32_case, lcg_u32};
 
-    fn test_cpu_ref(values: &[u32]) -> Vec<u8> {
+    fn test_cpu_ref(values: &[u32]) -> Vec<u32> {
         let sim = vyre_reference::subgroup::SubgroupSimulator::default();
-        let mut out = Vec::with_capacity(values.len() * 4);
+        let mut out = Vec::with_capacity(values.len());
         for chunk in values.chunks(sim.width()) {
             let sum = sim.add(chunk);
             for _ in 0..chunk.len() {
-                out.extend_from_slice(&sum.to_le_bytes());
+                out.push(sum);
             }
         }
         out
     }
 
     fn assert_case(values: &[u32]) {
-        let n = values.len() as u32;
-        let program = subgroup_add("values", "out", n.max(1));
-        let outputs = run_program(
-            &program,
-            vec![pack_u32(values), vec![0u8; (n.max(1) * 4) as usize]],
-        );
-        assert_eq!(outputs, vec![test_cpu_ref(values)]);
+        let expected = test_cpu_ref(values);
+        assert_unary_u32_case(subgroup_add, values, &expected);
     }
 
     /// This boundary test proves a one-lane subgroup broadcasts its only value unchanged.
@@ -138,7 +92,7 @@ mod tests {
     fn registration_fixture_matches_exact_byte_constant() {
         assert_eq!(
             EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES.to_vec(),
-            test_cpu_ref(&[1, 2, 3, 4])
+            crate::wire::pack_u32_slice(&test_cpu_ref(&[1, 2, 3, 4]))
         );
     }
 }

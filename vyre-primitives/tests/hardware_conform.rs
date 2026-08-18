@@ -6,24 +6,10 @@
 //! gate; GPU conform tests run separately through the backend lowering
 //! and dispatch suites.
 
-use vyre_foundation::operation::SemanticOperation;
-use vyre_primitives::hardware::all_entries;
-use vyre_reference::value::Value;
+mod gate_fixtures;
 
-fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let program = entry
-        .program()
-        .expect("Fix: registered hardware intrinsic must provide a neutral builder");
-    let values: Vec<Value> = inputs
-        .iter()
-        .map(|b| Value::Bytes(b.clone().into()))
-        .collect();
-    vyre_reference::reference_eval(&program, &values)
-        .expect("intrinsic must execute on CPU reference")
-        .into_iter()
-        .map(|v| v.to_bytes())
-        .collect()
-}
+use gate_fixtures::run_cpu;
+use vyre_primitives::hardware::all_entries;
 
 #[test]
 fn hardware_intrinsics_match_expected_output() {

@@ -2,18 +2,21 @@
 //! Inputs that are non-finite, negative, zero, or subnormal are clamped to
 //! `f32::MIN_POSITIVE` before the reciprocal square root.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr, Node, Program};
 
-use crate::hardware::{pack_f32, MAP_WORKGROUP};
+use crate::hardware::pack_f32;
 /// Canonical op id shared by semantics, fixtures, and driver registration.
 pub const OP_ID: &str = "vyre-primitives::hardware::inverse_sqrt_f32";
 
 /// Build a Program that computes finite-domain `out[i] = 1.0 / sqrt(input[i])`.
 #[must_use]
 pub fn inverse_sqrt_f32(input: &str, out: &str, n: u32) -> Program {
-    let body = vec![wrap_anonymous_region(
+    crate::hardware::unary_program(
         OP_ID,
+        input,
+        out,
+        n,
+        DataType::F32,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(
@@ -39,14 +42,6 @@ pub fn inverse_sqrt_f32(input: &str, out: &str, n: u32) -> Program {
                 ],
             ),
         ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(out, 1, DataType::F32).with_count(n),
-        ],
-        MAP_WORKGROUP,
-        body,
     )
 }
 
@@ -63,51 +58,27 @@ const EXPECTED_INVERSE_SQRT_OUTPUT_BYTES: [u8; 16] = [
     0x00, 0x00, 0x80, 0x3e, // 0.25f32
 ];
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::intrinsic(
-        OP_ID,
-        crate::hardware::catalog::F32_UNARY_SIGNATURE,
-        Some(|| inverse_sqrt_f32("input", "out", 4)),
-        Some(test_inputs),
-        Some(|| vec![vec![EXPECTED_INVERSE_SQRT_OUTPUT_BYTES.to_vec()]]),
-    )
-    .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE)
-    .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
-}
-
-inventory::submit! {
-    crate::hardware::catalog::IntrinsicFacet {
-        operation_id: OP_ID,
-        shape: crate::hardware::catalog::OpShape::new(
-            1,
-            1,
-            4,
-            crate::hardware::catalog::HardwareSemantic::InverseSqrtF32,
-        ),
-    }
+submit_hardware_intrinsic! {
+    id: OP_ID,
+    signature: crate::hardware::catalog::F32_UNARY_SIGNATURE,
+    builder: || inverse_sqrt_f32("input", "out", 4),
+    inputs: test_inputs,
+    expected: || vec![vec![EXPECTED_INVERSE_SQRT_OUTPUT_BYTES.to_vec()]],
+    effects: vyre_foundation::operation::OperationEffects::READ_WRITE,
+    capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
+    inputs_count: 1,
+    outputs_count: 1,
+    semantic: crate::hardware::catalog::HardwareSemantic::InverseSqrtF32
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hardware::{lcg_f32, run_program};
+    use crate::hardware::{inverse_sqrt_f32_ref, lcg_f32, run_program};
 
     fn test_cpu_ref(input: &[f32]) -> Vec<u8> {
-        pack_f32(
-            &input
-                .iter()
-                .map(|&x| {
-                    let safe_x = if x.is_finite() && x > f32::MIN_POSITIVE {
-                        x
-                    } else {
-                        f32::MIN_POSITIVE
-                    };
-                    1.0 / safe_x.sqrt()
-                })
-                .collect::<Vec<_>>(),
-        )
+        pack_f32(&input.iter().copied().map(inverse_sqrt_f32_ref).collect::<Vec<_>>())
     }
-
     fn assert_case(input: &[f32]) {
         let n = input.len() as u32;
         let program = inverse_sqrt_f32("input", "out", n.max(1));

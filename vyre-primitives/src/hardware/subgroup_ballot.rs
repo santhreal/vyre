@@ -3,12 +3,9 @@
 //! Maps to the target-native subgroup ballot intrinsic via a concrete
 //! driver emitter arm.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Program};
 
-use crate::hardware::{packed_u32_input_with_output, MAP_WORKGROUP};
-#[cfg(test)]
-use crate::wire::pack_u32_slice as pack_u32;
+use crate::hardware::packed_u32_input_with_output;
 /// Canonical op id shared by semantics, fixtures, and driver registration.
 pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 
@@ -25,38 +22,9 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 /// well defined rather than dependent on the active mask of a divergent branch.
 #[must_use]
 pub fn subgroup_ballot(cond_input: &str, out: &str, n: u32) -> Program {
-    let body = vec![wrap_anonymous_region(
-        OP_ID,
-        vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-            Node::let_bind("pred", Expr::u32(0)),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::buf_len(cond_input)),
-                vec![Node::assign(
-                    "pred",
-                    Expr::load(cond_input, Expr::var("idx")),
-                )],
-            ),
-            Node::let_bind(
-                "mask",
-                Expr::SubgroupBallot {
-                    cond: Box::new(Expr::eq(Expr::var("pred"), Expr::u32(1))),
-                },
-            ),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::buf_len(out)),
-                vec![Node::store(out, Expr::var("idx"), Expr::var("mask"))],
-            ),
-        ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(cond_input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 1, DataType::U32).with_count(n),
-        ],
-        MAP_WORKGROUP,
-        body,
-    )
+    crate::hardware::subgroup_unary_u32_program(OP_ID, cond_input, out, n, |pred| Expr::SubgroupBallot {
+        cond: Box::new(Expr::eq(pred, Expr::u32(1))),
+    })
 }
 
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
@@ -67,38 +35,25 @@ const EXPECTED_SUBGROUP_BALLOT_OUTPUT_BYTES: [u8; 16] = [
     0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00,
 ];
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::intrinsic(
-        OP_ID,
-        crate::hardware::catalog::U32_UNARY_SIGNATURE,
-        Some(|| subgroup_ballot("cond", "out", 4)),
-        Some(test_inputs),
-        Some(|| vec![vec![EXPECTED_SUBGROUP_BALLOT_OUTPUT_BYTES.to_vec()]]),
-    )
-    .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
-    .with_explicit_capabilities(
-        vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
-    )
-}
-
-inventory::submit! {
-    crate::hardware::catalog::IntrinsicFacet {
-        operation_id: OP_ID,
-        shape: crate::hardware::catalog::OpShape::new(
-            1,
-            1,
-            4,
-            crate::hardware::catalog::HardwareSemantic::SubgroupBallotU32,
-        ),
-    }
+submit_hardware_intrinsic! {
+    id: OP_ID,
+    signature: crate::hardware::catalog::U32_UNARY_SIGNATURE,
+    builder: || subgroup_ballot("cond", "out", 4),
+    inputs: test_inputs,
+    expected: || vec![vec![EXPECTED_SUBGROUP_BALLOT_OUTPUT_BYTES.to_vec()]],
+    effects: vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES,
+    capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
+    inputs_count: 1,
+    outputs_count: 1,
+    semantic: crate::hardware::catalog::HardwareSemantic::SubgroupBallotU32
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hardware::run_program;
+    use crate::hardware::assert_unary_u32_case;
 
-    fn test_cpu_ref(cond: &[u32]) -> Vec<u8> {
+    fn test_cpu_ref(cond: &[u32]) -> Vec<u32> {
         let sim = vyre_reference::subgroup::SubgroupSimulator::default();
         let n = cond.len();
         let mut out = Vec::with_capacity(n);
@@ -110,17 +65,12 @@ mod tests {
                 .collect::<Vec<_>>();
             out.push(sim.ballot_slice(&mask));
         }
-        pack_u32(&out)
+        out
     }
 
     fn assert_case(cond: &[u32]) {
-        let n = cond.len() as u32;
-        let program = subgroup_ballot("cond", "out", n.max(1));
-        let outputs = run_program(
-            &program,
-            vec![pack_u32(cond), vec![0u8; (n.max(1) * 4) as usize]],
-        );
-        assert_eq!(outputs, vec![test_cpu_ref(cond)]);
+        let expected = test_cpu_ref(cond);
+        assert_unary_u32_case(subgroup_ballot, cond, &expected);
     }
 
     #[test]
@@ -140,7 +90,7 @@ mod tests {
     fn registration_fixture_matches_exact_byte_constant() {
         assert_eq!(
             EXPECTED_SUBGROUP_BALLOT_OUTPUT_BYTES.to_vec(),
-            test_cpu_ref(&[0, 1, 0, 1])
+            crate::wire::pack_u32_slice(&test_cpu_ref(&[0, 1, 0, 1]))
         );
     }
 }

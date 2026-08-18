@@ -1,10 +1,8 @@
 //! Cat-C `subgroup_shuffle`  -  per-lane permutation via source-lane indices.
 //! Maps to hardware `subgroupShuffle()`.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
-use crate::hardware::MAP_WORKGROUP;
 use crate::wire::pack_u32_slice as pack_u32;
 /// Canonical op id shared by semantics, fixtures, and driver registration.
 pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_shuffle";
@@ -22,8 +20,12 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_shuffle";
 /// active mask of a divergent branch.
 #[must_use]
 pub fn subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> Program {
-    let body = vec![wrap_anonymous_region(
+    crate::hardware::binary_u32_program(
         OP_ID,
+        values,
+        lanes,
+        out,
+        n,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::let_bind("lane_value", Expr::u32(0)),
@@ -54,15 +56,6 @@ pub fn subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> Program
                 vec![Node::store(out, Expr::var("idx"), Expr::var("shuffled"))],
             ),
         ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::storage(lanes, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 2, DataType::U32).with_count(n),
-        ],
-        MAP_WORKGROUP,
-        body,
     )
 }
 
@@ -77,30 +70,17 @@ const EXPECTED_SUBGROUP_SHUFFLE_OUTPUT_BYTES: [u8; 16] = [
     0x0A, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x1E, 0x00, 0x00, 0x00,
 ];
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::intrinsic(
-        OP_ID,
-        crate::hardware::catalog::U32_BINARY_SIGNATURE,
-        Some(|| subgroup_shuffle("values", "lanes", "out", 4)),
-        Some(test_inputs),
-        Some(|| vec![vec![EXPECTED_SUBGROUP_SHUFFLE_OUTPUT_BYTES.to_vec()]]),
-    )
-    .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
-    .with_explicit_capabilities(
-        vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
-    )
-}
-
-inventory::submit! {
-    crate::hardware::catalog::IntrinsicFacet {
-        operation_id: OP_ID,
-        shape: crate::hardware::catalog::OpShape::new(
-            2,
-            1,
-            4,
-            crate::hardware::catalog::HardwareSemantic::SubgroupShuffleU32,
-        ),
-    }
+submit_hardware_intrinsic! {
+    id: OP_ID,
+    signature: crate::hardware::catalog::U32_BINARY_SIGNATURE,
+    builder: || subgroup_shuffle("values", "lanes", "out", 4),
+    inputs: test_inputs,
+    expected: || vec![vec![EXPECTED_SUBGROUP_SHUFFLE_OUTPUT_BYTES.to_vec()]],
+    effects: vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES,
+    capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
+    inputs_count: 2,
+    outputs_count: 1,
+    semantic: crate::hardware::catalog::HardwareSemantic::SubgroupShuffleU32
 }
 
 #[cfg(test)]
