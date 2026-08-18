@@ -374,33 +374,21 @@ impl BodyBuilder<'_> {
                 }))
             }
             BinOp::SaturatingMul => {
+                // Overflow is the high half of the 64-bit product, not a
+                // division test. `MAX / b` needs a divide plus a guard against
+                // b == 0, and the NVIDIA 580 shader compiler crashes
+                // (SIGILL in libnvidia-gpucomp) on that guarded-divide plus
+                // LogicalAnd shape. `mulhi(a, b) != 0` is the same predicate in
+                // multiply-shift arithmetic: the product exceeds u32 exactly
+                // when a word above bit 31 is set, and b == 0 yields a zero
+                // high half, so the b == 0 case needs no separate arm.
                 let zero = self.append_expr(Expression::Literal(Literal::U32(0)));
                 let max = self.append_expr(Expression::Literal(Literal::U32(u32::MAX)));
-                let right_ne_zero = self.append_expr(Expression::Binary {
-                    op: BinaryOperator::NotEqual,
-                    left: right,
-                    right: zero,
-                });
-                let one = self.append_expr(Expression::Literal(Literal::U32(1)));
-                let divisor = self.append_expr(Expression::Select {
-                    condition: right_ne_zero,
-                    accept: right,
-                    reject: one,
-                });
-                let limit = self.append_expr(Expression::Binary {
-                    op: BinaryOperator::Divide,
-                    left: max,
-                    right: divisor,
-                });
-                let left_gt_limit = self.append_expr(Expression::Binary {
-                    op: BinaryOperator::Greater,
-                    left,
-                    right: limit,
-                });
+                let high = self.emit_u32_mul_high(left, right);
                 let overflow = self.append_expr(Expression::Binary {
-                    op: BinaryOperator::LogicalAnd,
-                    left: right_ne_zero,
-                    right: left_gt_limit,
+                    op: BinaryOperator::NotEqual,
+                    left: high,
+                    right: zero,
                 });
                 let product = self.append_expr(Expression::Binary {
                     op: BinaryOperator::Multiply,

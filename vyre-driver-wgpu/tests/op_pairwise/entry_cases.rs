@@ -367,7 +367,7 @@ fn ambiguous_multi_output_producer_is_not_pairwise_composable() {
         .err()
         .expect("ambiguous quest output must be rejected");
     assert!(
-        error.contains("2 ReadWrite buffers and no explicit output"),
+        error.contains("writable buffers and no explicit output"),
         "unexpected rejection: {error}"
     );
 }

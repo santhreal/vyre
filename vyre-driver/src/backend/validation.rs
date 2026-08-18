@@ -19,6 +19,7 @@ const CORE_SUPPORTED_OP_IDS: &[&str] = &[
     "vyre.node.barrier",
     "vyre.node.indirect_dispatch",
     "vyre.node.async_load",
+    "vyre.node.async_store",
     "vyre.node.async_wait",
     "vyre.node.region",
     "vyre.lit_u32",

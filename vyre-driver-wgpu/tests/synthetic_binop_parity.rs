@@ -8,7 +8,7 @@
 //!   * `abs_diff`      -> `select(a < b, b - a, a - b)`
 //!   * `saturating_add`-> `select(a + b < a, MAX, a + b)`
 //!   * `saturating_sub`-> `select(a < b, 0, a - b)`
-//!   * `saturating_mul`-> `select(b != 0 && a > MAX/b, MAX, a * b)`
+//!   * `saturating_mul`-> `select(mulhi(a, b) != 0, MAX, a * b)`
 //!   * `rotate_left/right` -> `(x << (s&31)) | (x >> ((32-(s&31))&31))`
 //!
 //! Rotate is exercised inside the real BLAKE3 workload by

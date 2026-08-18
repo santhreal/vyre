@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Ident, MemoryKind, Node, Program};
-use vyre_foundation::visit::{for_each_node, node_operands};
+use vyre_foundation::visit::{for_each_node, node_buffer_refs, node_operands};
 
 use super::{
     entry_sequence, reserve_grid_sync_hash_map, reserve_grid_sync_hash_set, reserve_grid_sync_vec,
@@ -92,9 +92,20 @@ fn first_writer_segment_per_buffer(
             program.buffers().len(),
             "grid-sync first-writer write scan",
         )?;
-        collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes);
-        for name in writes {
-            first_writer.entry(name).or_insert(segment_idx);
+        if collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes) {
+            for name in writes {
+                first_writer.entry(name).or_insert(segment_idx);
+            }
+        } else {
+            // A segment carrying an extension node names buffers this scan
+            // cannot see. Treating it as the first writer of every declared
+            // buffer keeps a later real writer reading the forwarded value
+            // instead of overwriting it.
+            for buffer in program.buffers() {
+                first_writer
+                    .entry(Ident::from(buffer.name()))
+                    .or_insert(segment_idx);
+            }
         }
     }
     Ok(first_writer)
@@ -118,7 +129,18 @@ fn rewrite_segment_buffers_for_host_split(
         source.buffers().len(),
         "grid-sync segment write set",
     )?;
-    collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes);
+    let complete =
+        collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes);
+    if !complete {
+        // An extension node names buffers no walk can enumerate. Dropping a
+        // declaration the segment still references produces a segment program
+        // that fails lowering, so keep the whole source table read-write.
+        for buffer in source.buffers() {
+            let name = Ident::from(buffer.name());
+            reads.insert(name.clone());
+            writes.insert(name);
+        }
+    }
 
     let mut buffers = Vec::new();
     reserve_grid_sync_vec(
@@ -265,38 +287,38 @@ pub(super) fn segment_buffer_produces_output(buffer: &BufferDecl) -> bool {
 
 /// The buffers `nodes` reads and writes, at any nesting depth.
 ///
-/// Descent and operand positions come from `visit::for_each_node`
-/// and `node_operands`, the owners of which variants nest and which carry an
-/// expression. The match below asks only what a statement does to a buffer BY
-/// NAME, which is a per-variant question with no body-bearing arm left in it:
-/// the previous version restated the four nesting variants and the operand
-/// positions of six more, so it read a `Loop` bound but not an `AsyncLoad`
-/// offset, and a first-writer set that misses a buffer promotes a segment
-/// output to an input.
+/// Every answer comes from an owner. [`node_buffer_refs`] owns "what does this
+/// statement do to a buffer BY NAME" and fails to compile when a `Node` variant
+/// is added; [`node_operands`] plus [`collect_segment_expr_targets`] own the
+/// buffers an operand expression reaches. The version that restated the
+/// question here as a per-variant match ending in `_ => {}` named `Store` and
+/// the four collectives and silently reported that an `AsyncLoad` touches
+/// nothing: its source buffer then matched no segment role, its declaration was
+/// dropped from the segment table, and the surviving node referenced a buffer
+/// the segment no longer declared.
+///
+/// Returns `false` when a node refuses to name its buffers (`Node::Opaque`), so
+/// the caller can keep every declaration rather than trust an incomplete set.
 fn collect_segment_buffer_targets(
     nodes: &[Node],
     reads: &mut HashSet<Ident>,
     writes: &mut HashSet<Ident>,
-) {
+) -> bool {
+    let mut complete = true;
     for_each_node(nodes, |node| {
-        match node {
-            Node::Store { buffer, .. } => {
-                writes.insert(Ident::from(buffer));
-            }
-            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-                reads.insert(buffer.clone());
-                writes.insert(buffer.clone());
-            }
-            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-                reads.insert(input.clone());
-                writes.insert(output.clone());
-            }
-            _ => {}
+        let refs = node_buffer_refs(node);
+        complete &= refs.complete;
+        for buffer in refs.reads.into_iter().flatten() {
+            reads.insert(buffer.clone());
+        }
+        for buffer in refs.writes.into_iter().flatten() {
+            writes.insert(buffer.clone());
         }
         for operand in node_operands(node).into_iter().flatten() {
             collect_segment_expr_targets(operand, reads, writes);
         }
     });
+    complete
 }
 
 fn collect_segment_expr_targets(

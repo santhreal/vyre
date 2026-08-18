@@ -150,6 +150,8 @@ macro_rules! test_node_extension {
 #[cfg(feature = "ir-fixtures")]
 pub mod adversarial_generators;
 #[cfg(feature = "ir-fixtures")]
+pub mod async_span_parity;
+#[cfg(feature = "ir-fixtures")]
 pub mod binop_parity;
 pub mod case_table;
 #[cfg(feature = "ir-fixtures")]
