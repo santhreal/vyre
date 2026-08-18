@@ -134,3 +134,24 @@ pub(super) struct BodyCtx<'a> {
     /// that walked the descriptor instead.
     pub(super) trap_tag_codes: FxHashMap<Name, u32>,
 }
+
+impl BodyCtx<'_> {
+    pub(super) fn canonical_store_reg(
+        &mut self,
+        value: Reg,
+        element_type: &vyre_foundation::ir::DataType,
+        elem_ty: crate::reg::PtxType,
+    ) -> Reg {
+        use std::fmt::Write as _;
+        if matches!(element_type, vyre_foundation::ir::DataType::Bool) {
+            let pred = self.pred_from_boolish(value);
+            let word = self.alloc(crate::reg::PtxType::U32);
+            let _ = writeln!(self.text, "    selp.u32    {word}, 1, 0, {pred};");
+            word
+        } else if elem_ty == crate::reg::PtxType::F32 {
+            self.canonicalize_f32(value)
+        } else {
+            value
+        }
+    }
+}

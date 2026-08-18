@@ -55,3 +55,59 @@ pub(crate) const PATTERNS: &[&[u8]] = &[
     b"container_of(",
     b"ioread32(",
 ];
+
+pub(super) fn scan_ac_requirements() -> crate::api::case::BenchRequirements {
+    crate::api::case::BenchRequirements {
+        needs_gpu: true,
+        needs_network: false,
+        min_vram_bytes: Some(32 * 1024 * 1024),
+        min_input_bytes: Some(HAYSTACK_BYTES as u64),
+        feature_set: Vec::new(),
+    }
+}
+
+pub(super) fn scan_ac_candidate_masks(
+    ac: &vyre_libs::pattern::classic_ac::ClassicAcAutomaton,
+) -> ([u32; 8], [u32; 2048], Vec<u32>) {
+    let candidate_end_mask = vyre_reference::composition_witness::classic_ac_candidate_end_byte_mask_words_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        ac.dfa.state_count,
+    );
+    let candidate_suffix2_mask = vyre_reference::composition_witness::classic_ac_candidate_suffix2_mask_words_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        ac.dfa.state_count,
+    );
+    let candidate_suffix3_bloom = vyre_reference::composition_witness::classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom)
+}
+
+pub(super) fn scan_ac_metadata(
+    id: crate::api::case::BenchId,
+    name: &'static str,
+    description: &'static str,
+    is_count_only: bool,
+) -> crate::api::case::BenchMetadata {
+    let mut tags = vec![
+        "scan".to_string(),
+        "pattern".to_string(),
+        "dfa".to_string(),
+        "aho-corasick".to_string(),
+        "packed-byte".to_string(),
+    ];
+    if is_count_only {
+        tags.push("count-only".to_string());
+    }
+    tags.extend(["irregular".to_string(), "release".to_string()]);
+    crate::api::case::BenchMetadata {
+        id,
+        name: name.to_string(),
+        description: description.to_string(),
+        tags,
+        layer: crate::api::case::BenchLayer::Libs,
+        workload: crate::api::case::WorkloadClass::Macro,
+        determinism: crate::api::case::DeterminismClass::Deterministic,
+        owner_crate: "vyre-libs".to_string(),
+    }
+}

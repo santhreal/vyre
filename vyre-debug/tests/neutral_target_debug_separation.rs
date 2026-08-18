@@ -12,21 +12,13 @@ use vyre_debug::{
     neutral_debug_capabilities, source_assignments, DebugCapabilityKind, DescriptorDumpOptions,
     DEBUG_CAPABILITIES,
 };
-use vyre_lower::{BindingLayout, KernelBody, KernelDescriptor};
+use vyre_lower::KernelDescriptor;
 
 fn sample_descriptor() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "debug_sample_kernel".to_string(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: vyre_lower::Dispatch {
-            workgroup_size: [32, 1, 1],
-        },
-        body: KernelBody {
-            ops: vec![],
-            literals: vec![],
-            child_bodies: vec![],
-        },
-    }
+    vyre_lower::descriptor_builder::descriptor("debug_sample_kernel")
+        .dispatch(32, 1, 1)
+        .body(vyre_lower::descriptor_builder::body())
+        .build()
 }
 
 #[test]

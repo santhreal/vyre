@@ -263,26 +263,10 @@ impl MtpCoordinator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prefix_cache::{PrefixCacheLayout, PrefixCacheLimits};
-    use vyre_foundation::ir::DataType;
+    use crate::prefix_cache::PrefixCacheLimits;
 
     fn test_key() -> PrefixCacheKey {
-        PrefixCacheKey {
-            model_id: [1u8; 32],
-            tokenizer_id: [2u8; 32],
-            weights_digest: [3u8; 32],
-            config_digest: [4u8; 32],
-            dtype: DataType::F32,
-            layout: PrefixCacheLayout {
-                kv_heads: 2,
-                head_dim: 32,
-                block_tokens: 16,
-            },
-            device_generation: 1,
-            cache_schema_version: 1,
-            isolation_domain: "tenant_mtp".to_string(),
-            trust_domain: None,
-        }
+        PrefixCacheKey::test_sample("tenant_mtp", 1)
     }
 
     #[test]

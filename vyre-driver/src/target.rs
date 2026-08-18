@@ -1,6 +1,6 @@
 //! Lookup target for a dialect op's lowering path.
 //!
-//! Restored for SemVer baseline compatibility with published `vyre-driver` releases.
+//! Provides neutral target classification for AOT and runtime lowering.
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -14,17 +14,15 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Target {
-    /// CUDA PTX AOT artifact target.
-    Ptx,
-    /// SPIR-V AOT artifact target.
-    SpirV,
     /// Primary text target.
     PrimaryText,
     /// Primary binary target.
     PrimaryBinary,
     /// Secondary text target.
     SecondaryText,
-    /// native-module IR. Reserved for a native-module emitter.
+    /// Secondary binary target.
+    SecondaryBinary,
+    /// Native-module IR. Reserved for a native-module emitter.
     NativeModule,
     /// Portable reference backend. Always available.
     ReferenceBackend,
@@ -39,10 +37,10 @@ impl Target {
     #[must_use]
     pub fn aot_target_id(self) -> &'static str {
         match self {
-            Self::Ptx | Self::SecondaryText => "secondary_text",
-            Self::SpirV => "spv",
             Self::PrimaryText => "primary_text",
             Self::PrimaryBinary => "primary_binary",
+            Self::SecondaryText => "secondary_text",
+            Self::SecondaryBinary => "secondary_binary",
             Self::NativeModule => "native_module",
             Self::ReferenceBackend => "reference_backend",
             Self::Extension(id) => id,
@@ -72,14 +70,14 @@ impl<'de> Deserialize<'de> for Target {
     {
         let value = String::deserialize(deserializer)?;
         match value.as_str() {
-            "ptx" | "secondary_text" => Ok(Self::Ptx),
-            "spv" | "spirv" => Ok(Self::SpirV),
             "primary_text" => Ok(Self::PrimaryText),
             "primary_binary" => Ok(Self::PrimaryBinary),
+            "secondary_text" => Ok(Self::SecondaryText),
+            "secondary_binary" => Ok(Self::SecondaryBinary),
             "native_module" => Ok(Self::NativeModule),
             "reference_backend" => Ok(Self::ReferenceBackend),
             other => Err(serde::de::Error::custom(format!(
-                "unsupported target `{other}`: unknown targets are rejected fail-closed to avoid unbounded memory growth. Fix: use a supported in-tree target name (ptx, spv, primary_text, primary_binary, native_module, reference_backend)."
+                "unsupported target `{other}`: unknown targets are rejected fail-closed to avoid unbounded memory growth. Fix: use a supported in-tree target name (primary_text, primary_binary, secondary_text, secondary_binary, native_module, reference_backend)."
             ))),
         }
     }

@@ -33,15 +33,14 @@ pub fn generate_adversarial_suite() -> Vec<AdversarialTestCase> {
             name: "extreme_1d_single_invocation",
             program: Program::wrapped(
                 vec![
-                    BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32)
-                        .with_count(1),
-                    BufferDecl::output("out", 1, DataType::U32).with_count(1),
+                    BufferDecl::read("in_val", 0, DataType::U32).with_count(1),
+                    BufferDecl::output("out_val", 1, DataType::U32).with_count(1),
                 ],
                 [1, 1, 1],
                 vec![Node::store(
-                    "out",
+                    "out_val",
                     Expr::u32(0),
-                    Expr::load("in", Expr::u32(0)),
+                    Expr::load("in_val", Expr::u32(0)),
                 )],
             ),
             inputs: vec![vec![42, 0, 0, 0]],
@@ -129,8 +128,7 @@ pub fn generate_adversarial_suite() -> Vec<AdversarialTestCase> {
 /// # Panics
 /// Panics if a valid test case fails validation or an invalid test case passes validation.
 pub fn assert_adversarial_suite_validity() {
-    let suite = generate_adversarial_suite();
-    for case in suite {
+    for case in generate_adversarial_suite() {
         let errors = validate::validate(&case.program);
         if case.is_valid {
             assert!(
@@ -145,15 +143,22 @@ pub fn assert_adversarial_suite_validity() {
                 "expected adversarial case `{}` to be rejected, but validation succeeded",
                 case.name
             );
-            if let Some(expected) = case.expected_error {
-                let err_msg = format!("{errors:?}");
-                assert!(
-                    err_msg.to_lowercase().contains(&expected.to_lowercase()),
-                    "case `{}` error message `{err_msg}` does not contain expected substring `{expected}`",
-                    case.name
-                );
-            }
+            assert_expected_substring(case.expected_error, &errors, case.name);
         }
+    }
+}
+
+fn assert_expected_substring(
+    expected: Option<&'static str>,
+    errors: &[validate::ValidationError],
+    name: &str,
+) {
+    if let Some(expected) = expected {
+        let err_msg = format!("{errors:?}");
+        assert!(
+            err_msg.to_lowercase().contains(&expected.to_lowercase()),
+            "adversarial case `{name}` error message `{err_msg}` missing `{expected}`"
+        );
     }
 }
 

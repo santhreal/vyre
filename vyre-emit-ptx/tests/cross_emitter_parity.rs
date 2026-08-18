@@ -179,13 +179,8 @@ fn ptx_output_contains_required_directives() {
         )
         .unwrap();
         assert!(
-            ptx.contains(".version"),
-            "PTX for `{}` missing .version",
-            desc.id
-        );
-        assert!(
-            ptx.contains(".target"),
-            "PTX for `{}` missing .target",
+            ptx.contains(".version") && ptx.contains(".target"),
+            "PTX for `{}` missing .version or .target directive",
             desc.id
         );
         assert!(

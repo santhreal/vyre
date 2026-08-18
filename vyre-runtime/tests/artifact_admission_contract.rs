@@ -34,7 +34,7 @@ use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
 #[path = "../../tests/support/artifact_fixtures.rs"]
 mod artifact_fixtures;
 
-use artifact_fixtures::{compile_graph, contract, entry_point, graph_over, neutral_artifact};
+use artifact_fixtures::{compile_graph, contract, entry_point, graph_over, neutral_artifact, single_input_graph};
 use vyre_test_support::pass_programs::{add_program, copy_program};
 
 const FRAME_HEADER_BYTES: usize = 10;
@@ -819,19 +819,7 @@ static RECORDING_REGISTRATION: BackendRegistration = BackendRegistration {
 /// WHY: DeviceFinalists binds exact non-zero representative bytes for each host input.
 #[test]
 fn finalist_measurement_binds_exact_representative_inputs() {
-    let graph = graph_over(
-        "entry",
-        [8, 1, 1],
-        &[(
-            "input",
-            contract(
-                DataType::U32,
-                8,
-                BufferAccess::ReadOnly,
-                ValueLifetime::Invocation,
-            ),
-        )],
-    );
+    let graph = single_input_graph([8, 1, 1]);
     let facts = ExternalFacts::new(Digest([1; 32]), BTreeMap::new());
     let non_zero_bytes = vec![0xAB; 32];
     let representative_inputs =

@@ -246,16 +246,7 @@ impl BodyCtx<'_> {
         for &op_idx in chain {
             let (_, _, value_op_id) = read_store_operands(&body.ops[op_idx])?;
             let value = self.lookup_operand(value_op_id)?;
-            regs.push(if matches!(element_type, DataType::Bool) {
-                let pred = self.pred_from_boolish(value);
-                let word = self.alloc(PtxType::U32);
-                let _ = writeln!(self.text, "    selp.u32    {word}, 1, 0, {pred};");
-                word
-            } else if elem_ty == PtxType::F32 {
-                self.canonicalize_f32(value)
-            } else {
-                value
-            });
+            regs.push(self.canonical_store_reg(value, &element_type, elem_ty));
         }
         let _ = write!(
             self.text,

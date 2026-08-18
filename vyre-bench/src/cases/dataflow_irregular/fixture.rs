@@ -90,9 +90,7 @@ pub(super) fn build_ifds_skewed_fixture(node_count: u32) -> Result<IfdsSkewedFix
     for src in 0..node_count {
         let degree = skewed_degree(src);
         stats.max_degree = stats.max_degree.max(degree);
-        if degree >= HIGH_DEGREE_THRESHOLD {
-            stats.high_degree_sources += 1;
-        }
+        stats.high_degree_sources += u64::from(degree >= HIGH_DEGREE_THRESHOLD);
         if source_is_active(src) {
             stats.active_sources += 1;
             frontier_in[(src / 32) as usize] |= 1_u32 << (src % 32);

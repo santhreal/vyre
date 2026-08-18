@@ -130,23 +130,24 @@ pub(crate) fn compile_graph(graph: ProgramGraph, facts_seed: u8) -> Artifact {
 /// `vyre-megakernel` and `vyre-runtime` both assert against this exact artifact,
 /// including its digest, so it is one function rather than two copies that have
 /// to stay identical for those assertions to keep meaning what they say.
-pub(crate) fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
-    compile_graph(
-        graph_over(
-            "entry",
-            workgroup_size,
-            &[(
-                "input",
-                contract(
-                    DataType::U32,
-                    8,
-                    BufferAccess::ReadOnly,
-                    ValueLifetime::Invocation,
-                ),
-            )],
-        ),
-        0,
+pub(crate) fn single_input_graph(workgroup_size: [u32; 3]) -> ProgramGraph {
+    graph_over(
+        "entry",
+        workgroup_size,
+        &[(
+            "input",
+            contract(
+                DataType::U32,
+                8,
+                BufferAccess::ReadOnly,
+                ValueLifetime::Invocation,
+            ),
+        )],
     )
+}
+
+pub(crate) fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
+    compile_graph(single_input_graph(workgroup_size), 0)
 }
 
 /// The single-binding entry point the target payload fixtures attach.
