@@ -1130,22 +1130,13 @@ mod tests {
         })
         .expect_err("legacy dominator-frontier builder must fail fast on CSR offset overflow");
 
-        let message = panic_payload_message(panic);
+        let message = crate::graph::panic_payload_message(panic);
         assert!(
             message.contains("overflows CSR offset buffer count"),
             "error should describe the CSR offset overflow: {message}"
         );
     }
 
-    fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
-        if let Some(message) = payload.downcast_ref::<&str>() {
-            message.to_string()
-        } else if let Some(message) = payload.downcast_ref::<String>() {
-            message.clone()
-        } else {
-            format!("{payload:?}")
-        }
-    }
 
     #[test]
     fn missing_seed_word_fails_loudly() {

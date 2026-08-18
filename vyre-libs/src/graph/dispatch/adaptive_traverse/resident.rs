@@ -1,28 +1,7 @@
-use crate::graph::dispatch::resident_handles::free_unique_resident_handles;
+use crate::graph::dispatch::resident_handles::{
+    impl_resident_graph_accessors, impl_resident_graph_free,
+};
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-fn free_adaptive_graph<const N: usize>(
-    dispatcher: &dyn ProgramDispatcher,
-    handles: &[u64; N],
-    label: &'static str,
-) -> Result<(), DispatchError> {
-    free_unique_resident_handles(dispatcher, handles, label)
-}
-
-macro_rules! impl_adaptive_graph_free {
-    ($graph:ty, $label:literal) => {
-        impl $graph {
-            /// Free graph-resident buffers.
-            ///
-            /// # Errors
-            ///
-            /// Returns the first backend free failure after attempting all handles.
-            pub fn free(self, dispatcher: &dyn ProgramDispatcher) -> Result<(), DispatchError> {
-                free_adaptive_graph(dispatcher, &self.handles, $label)
-            }
-        }
-    };
-}
 
 /// Device-resident graph layouts for adaptive sparse/dense traversal.
 #[derive(Debug, Clone)]
@@ -48,14 +27,17 @@ pub struct ResidentAdaptiveSparseQueueGraph {
     pub(crate) handles: [u64; 3],
 }
 
-impl_adaptive_graph_free!(
+impl_resident_graph_free!(
     ResidentAdaptiveSparseQueueGraph,
     "resident adaptive sparse-queue graph"
 );
-impl_adaptive_graph_free!(
+impl_resident_graph_free!(
     ResidentAdaptiveTraversalGraph,
     "resident adaptive traversal graph"
 );
+
+impl_resident_graph_accessors!(ResidentAdaptiveSparseQueueGraph);
+impl_resident_graph_accessors!(ResidentAdaptiveTraversalGraph);
 
 /// Device-resident Four-Russians dense traversal LUT for adaptive graph waves.
 #[derive(Debug, Clone)]
@@ -102,36 +84,6 @@ impl ResidentAdaptiveFourRussiansDenseGraph {
 }
 
 impl ResidentAdaptiveSparseQueueGraph {
-    /// Number of graph nodes.
-    #[must_use]
-    pub fn node_count(&self) -> u32 {
-        self.node_count
-    }
-
-    /// Number of logical CSR edges.
-    #[must_use]
-    pub fn edge_count(&self) -> u32 {
-        self.edge_count
-    }
-
-    /// Largest sparse CSR row degree.
-    #[must_use]
-    pub fn max_row_degree(&self) -> u32 {
-        self.max_row_degree
-    }
-
-    /// Number of sparse CSR rows at or above the mixed-split high-degree threshold.
-    #[must_use]
-    pub fn high_degree_source_count(&self) -> u32 {
-        self.high_degree_source_count
-    }
-
-    /// Number of u32 words per frontier bitset.
-    #[must_use]
-    pub fn words(&self) -> usize {
-        self.words
-    }
-
     /// Stable in-session hash of CSR graph layout.
     #[must_use]
     pub fn layout_hash(&self) -> u64 {
@@ -147,36 +99,6 @@ impl ResidentAdaptiveSparseQueueGraph {
 }
 
 impl ResidentAdaptiveTraversalGraph {
-    /// Number of graph nodes.
-    #[must_use]
-    pub fn node_count(&self) -> u32 {
-        self.node_count
-    }
-
-    /// Number of logical CSR edges.
-    #[must_use]
-    pub fn edge_count(&self) -> u32 {
-        self.edge_count
-    }
-
-    /// Largest sparse CSR row degree.
-    #[must_use]
-    pub fn max_row_degree(&self) -> u32 {
-        self.max_row_degree
-    }
-
-    /// Number of sparse CSR rows at or above the mixed-split high-degree threshold.
-    #[must_use]
-    pub fn high_degree_source_count(&self) -> u32 {
-        self.high_degree_source_count
-    }
-
-    /// Number of u32 words per frontier bitset.
-    #[must_use]
-    pub fn words(&self) -> usize {
-        self.words
-    }
-
     /// Stable in-session hash of CSR and dense graph layouts.
     #[must_use]
     pub fn layout_hash(&self) -> u64 {

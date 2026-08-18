@@ -361,6 +361,7 @@ fn reachable_forward_wave_node(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::mix32;
 
     fn hs(items: &[u32]) -> HashSet<u32> {
         items.iter().copied().collect()
@@ -574,11 +575,4 @@ mod tests {
             .collect()
     }
 
-    fn mix32(mut value: u32) -> u32 {
-        value ^= value >> 16;
-        value = value.wrapping_mul(0x7FEB_352D);
-        value ^= value >> 15;
-        value = value.wrapping_mul(0x846C_A68B);
-        value ^ (value >> 16)
-    }
 }

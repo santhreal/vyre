@@ -100,6 +100,7 @@ pub fn csr_queue_delta_strided_enqueue_with(params: CsrQueueDeltaEnqueueParams<'
 mod tests {
     use super::super::tests::{assert_offset_overflow_traps, delta_program};
     use super::*;
+    use crate::graph::mix32;
 
     #[test]
     fn emitted_strided_program_keeps_delta_queue_abi_and_expands_grid() {
@@ -197,11 +198,4 @@ mod tests {
         assert!(capped_cases > CASES * 9 / 10);
     }
 
-    const fn mix32(mut value: u32) -> u32 {
-        value ^= value >> 16;
-        value = value.wrapping_mul(0x7FEB_352D);
-        value ^= value >> 15;
-        value = value.wrapping_mul(0x846C_A68B);
-        value ^ (value >> 16)
-    }
 }

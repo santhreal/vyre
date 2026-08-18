@@ -1,7 +1,7 @@
-use super::hash::persistent_bfs_program_layout_hash;
 use super::layout::{
-    persistent_bfs_single_dispatch_grid, PersistentBfsLayout, PersistentBfsPlanCacheKey,
-    PersistentBfsPlanCacheKind, PersistentBfsStaticInputKey,
+    persistent_bfs_program_shape, persistent_bfs_single_cache_key,
+    persistent_bfs_single_dispatch_grid, persistent_bfs_single_program_cache_key,
+    PersistentBfsLayout, PersistentBfsPlanCacheKey, PersistentBfsStaticInputKey,
 };
 use super::program::persistent_bfs;
 use crate::graph::program_graph::ProgramGraphShape;
@@ -69,7 +69,7 @@ impl PersistentBfsDispatchPlan {
     /// Program graph shape with primitive-owned empty-edge padding.
     #[must_use]
     pub fn program_shape(&self) -> ProgramGraphShape {
-        ProgramGraphShape::new(self.layout.node_count, self.layout.edge_count.max(1))
+        persistent_bfs_program_shape(self.layout.node_count, self.layout.edge_count)
     }
 
     /// Build the canonical primitive program for this plan.
@@ -87,17 +87,15 @@ impl PersistentBfsDispatchPlan {
     /// Build the primitive-owned program-cache key for this dispatch plan.
     #[must_use]
     pub const fn cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
-        PersistentBfsPlanCacheKey {
-            layout_hash: self.layout_hash,
-            node_count: self.layout.node_count,
-            edge_count: self.layout.edge_count,
-            words_per_query: self.layout.words_u32,
-            query_count: 1,
-            allow_mask: self.allow_mask,
-            max_iters: self.max_iters,
+        persistent_bfs_single_cache_key(
+            self.layout_hash,
+            self.layout.node_count,
+            self.layout.edge_count,
+            self.layout.words_u32,
+            self.allow_mask,
+            self.max_iters,
             device_features,
-            kind: PersistentBfsPlanCacheKind::Single,
-        }
+        )
     }
 
     /// Build a shape-only program cache key for this non-resident dispatch plan.
@@ -108,23 +106,14 @@ impl PersistentBfsDispatchPlan {
     /// compiled-program cache.
     #[must_use]
     pub fn program_cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
-        PersistentBfsPlanCacheKey {
-            layout_hash: persistent_bfs_program_layout_hash(
-                self.layout.node_count,
-                self.layout.edge_count,
-                self.layout.words_u32,
-                1,
-                PersistentBfsPlanCacheKind::Single,
-            ),
-            node_count: self.layout.node_count,
-            edge_count: self.layout.edge_count,
-            words_per_query: self.layout.words_u32,
-            query_count: 1,
-            allow_mask: self.allow_mask,
-            max_iters: self.max_iters,
+        persistent_bfs_single_program_cache_key(
+            self.layout.node_count,
+            self.layout.edge_count,
+            self.layout.words_u32,
+            self.allow_mask,
+            self.max_iters,
             device_features,
-            kind: PersistentBfsPlanCacheKind::Single,
-        }
+        )
     }
 
     /// Stable identity for immutable graph inputs associated with this plan.

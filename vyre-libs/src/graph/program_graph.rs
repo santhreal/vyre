@@ -235,6 +235,27 @@ pub fn push_frontier_changed_buffers(
     ));
 }
 
+/// Sample 4-node 4-edge ProgramGraph wire buffers for library operation registrations.
+#[doc(hidden)]
+pub fn sample_program_graph_wire_buffers() -> Vec<Vec<u8>> {
+    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+    vec![
+        to_bytes(&[0, 0, 0, 0]),          // pg_nodes
+        to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
+        to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
+        to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
+        to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+    ]
+}
+
+/// Sample 4-node 4-edge ProgramGraph wire buffers with extra primitive inputs appended.
+#[doc(hidden)]
+pub fn sample_program_graph_inputs(extra: &[Vec<u8>]) -> Vec<Vec<u8>> {
+    let mut inputs = sample_program_graph_wire_buffers();
+    inputs.extend_from_slice(extra);
+    inputs
+}
+
 /// Error kinds surfaced by [`validate_program_graph`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum GraphValidationError {
@@ -417,22 +438,13 @@ mod tests {
         })
         .expect_err("legacy read_only_buffers must fail fast on edge-offset overflow");
 
-        let message = panic_payload_message(panic);
+        let message = crate::graph::panic_payload_message(panic);
         assert!(
             message.contains("overflows edge-offset buffer count"),
             "error should describe the graph shape overflow: {message}"
         );
     }
 
-    fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
-        if let Some(message) = payload.downcast_ref::<&str>() {
-            message.to_string()
-        } else if let Some(message) = payload.downcast_ref::<String>() {
-            message.clone()
-        } else {
-            format!("{payload:?}")
-        }
-    }
 
     #[test]
     fn validate_rejects_oob_edge_target() {

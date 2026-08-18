@@ -254,15 +254,10 @@ inventory::submit! {
         || persistent_bfs_step(ProgramGraphShape::new(4, 4), "frontier_out", "changed", 0xFFFF_FFFF),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),
-                to_bytes(&[0, 2, 3, 4, 4]),
-                to_bytes(&[1, 2, 3, 3]),
-                to_bytes(&[1, 1, 1, 1]),
-                to_bytes(&[0, 0, 0, 0]),
+            vec![crate::graph::program_graph::sample_program_graph_inputs(&[
                 to_bytes(&[0b0001]),
                 to_bytes(&[0]),
-            ]]
+            ])]
         }),
         Some(|| {
             vec![vec![

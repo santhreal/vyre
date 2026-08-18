@@ -75,6 +75,27 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
     hash
 }
 
+#[cfg(feature = "graph")]
+#[inline]
+pub(crate) const fn mix32(mut value: u32) -> u32 {
+    value ^= value >> 16;
+    value = value.wrapping_mul(0x7feb_352d);
+    value ^= value >> 15;
+    value = value.wrapping_mul(0x846c_a68b);
+    value ^ (value >> 16)
+}
+
+#[cfg(test)]
+pub(crate) fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        message.to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        format!("{payload:?}")
+    }
+}
+
 /// The ONE named-field input bundle every CSR closure entry point takes, so a
 /// run of same-typed CSR slices cannot transpose silently at a call site.
 #[cfg(feature = "graph")]

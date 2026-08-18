@@ -1,6 +1,7 @@
-use super::hash::persistent_bfs_program_layout_hash;
 use super::layout::{
-    persistent_bfs_batch_dispatch_grid, persistent_bfs_single_dispatch_grid,
+    persistent_bfs_batch_dispatch_grid, persistent_bfs_batch_program_cache_key,
+    persistent_bfs_program_shape, persistent_bfs_single_cache_key,
+    persistent_bfs_single_dispatch_grid, persistent_bfs_single_program_cache_key,
     PersistentBfsBatchLayout, PersistentBfsFrontierLayout, PersistentBfsPlanCacheKey,
     PersistentBfsPlanCacheKind,
 };
@@ -61,7 +62,7 @@ impl PersistentBfsResidentDispatchPlan {
     /// Program graph shape with primitive-owned empty-edge padding.
     #[must_use]
     pub fn program_shape(&self) -> ProgramGraphShape {
-        ProgramGraphShape::new(self.node_count, self.edge_count.max(1))
+        persistent_bfs_program_shape(self.node_count, self.edge_count)
     }
 
     /// Build the canonical primitive program for this resident plan.
@@ -83,39 +84,28 @@ impl PersistentBfsResidentDispatchPlan {
         layout_hash: u64,
         device_features: u64,
     ) -> PersistentBfsPlanCacheKey {
-        PersistentBfsPlanCacheKey {
+        persistent_bfs_single_cache_key(
             layout_hash,
-            node_count: self.node_count,
-            edge_count: self.edge_count,
-            words_per_query: self.frontier_layout.words_u32,
-            query_count: 1,
-            allow_mask: self.allow_mask,
-            max_iters: self.max_iters,
+            self.node_count,
+            self.edge_count,
+            self.frontier_layout.words_u32,
+            self.allow_mask,
+            self.max_iters,
             device_features,
-            kind: PersistentBfsPlanCacheKind::Single,
-        }
+        )
     }
 
     /// Build a shape-only program cache key for this resident dispatch plan.
     #[must_use]
     pub fn program_cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
-        PersistentBfsPlanCacheKey {
-            layout_hash: persistent_bfs_program_layout_hash(
-                self.node_count,
-                self.edge_count,
-                self.frontier_layout.words_u32,
-                1,
-                PersistentBfsPlanCacheKind::Single,
-            ),
-            node_count: self.node_count,
-            edge_count: self.edge_count,
-            words_per_query: self.frontier_layout.words_u32,
-            query_count: 1,
-            allow_mask: self.allow_mask,
-            max_iters: self.max_iters,
+        persistent_bfs_single_program_cache_key(
+            self.node_count,
+            self.edge_count,
+            self.frontier_layout.words_u32,
+            self.allow_mask,
+            self.max_iters,
             device_features,
-            kind: PersistentBfsPlanCacheKind::Single,
-        }
+        )
     }
 }
 
@@ -181,7 +171,7 @@ impl PersistentBfsResidentBatchDispatchPlan {
     /// Program graph shape with primitive-owned empty-edge padding.
     #[must_use]
     pub fn program_shape(&self) -> ProgramGraphShape {
-        ProgramGraphShape::new(self.node_count, self.edge_count.max(1))
+        persistent_bfs_program_shape(self.node_count, self.edge_count)
     }
 
     /// Build the canonical primitive batch program for this resident plan.
@@ -234,22 +224,14 @@ impl PersistentBfsResidentBatchDispatchPlan {
     /// Build a shape-only program cache key for this resident batch plan.
     #[must_use]
     pub fn program_cache_key(&self, device_features: u64) -> PersistentBfsPlanCacheKey {
-        PersistentBfsPlanCacheKey {
-            layout_hash: persistent_bfs_program_layout_hash(
-                self.node_count,
-                self.edge_count,
-                self.words_per_query,
-                self.batch_layout.query_count,
-                PersistentBfsPlanCacheKind::Batch,
-            ),
-            node_count: self.node_count,
-            edge_count: self.edge_count,
-            words_per_query: self.words_per_query,
-            query_count: self.batch_layout.query_count,
-            allow_mask: self.allow_mask,
-            max_iters: self.max_iters,
+        persistent_bfs_batch_program_cache_key(
+            self.node_count,
+            self.edge_count,
+            self.words_per_query,
+            self.batch_layout.query_count,
+            self.allow_mask,
+            self.max_iters,
             device_features,
-            kind: PersistentBfsPlanCacheKind::Batch,
-        }
+        )
     }
 }

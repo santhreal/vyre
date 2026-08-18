@@ -98,16 +98,11 @@ inventory::submit! {
         ),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
-                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
-                to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+            vec![crate::graph::program_graph::sample_program_graph_inputs(&[
                 to_bytes(&[0b0011]),              // frontier_in = {0, 1}
                 to_bytes(&[0b0010]),              // excluded_sources = {1}
                 to_bytes(&[0]),                   // frontier_out
-            ]]
+            ])]
         }),
         Some(|| {
             // Source 0 reaches {1, 2}; excluded source 1 does not reach 3.
@@ -121,18 +116,11 @@ inventory::submit! {
         OP_ID,
         || csr_forward_traverse(ProgramGraphShape::new(4, 4), "fin", "fout", 0xFFFF_FFFF),
         Some(|| {
-            // Graph: 0→1, 0→2, 1→3, 2→3. Start frontier = {0}.
-            // Expected out frontier = {1, 2}.
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
-                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
-                to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+            vec![crate::graph::program_graph::sample_program_graph_inputs(&[
                 to_bytes(&[0b0001]),              // frontier_in = {0}
                 to_bytes(&[0]),                   // frontier_out
-            ]]
+            ])]
         }),
         Some(|| {
             // After one forward step starting from {0}: frontier = {1, 2}.
@@ -142,48 +130,10 @@ inventory::submit! {
 }
 
 #[cfg(test)]
-pub(crate) fn cpu_ref(
-    node_count: u32,
-    row_offsets: &[u32],
-    col_indices: &[u32],
-    edge_kind_mask: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    assert!(
-        row_offsets.len() == (node_count as usize) + 1,
-        "node_count + 1 CSR offsets required"
-    );
-    vyre_reference::composition_witness::csr_forward_traverse_witness(
-        node_count,
-        row_offsets,
-        col_indices,
-        edge_kind_mask,
-        frontier,
-        allow_mask,
-    )
-}
-
-#[cfg(test)]
-pub(crate) fn cpu_ref_into(
-    node_count: u32,
-    row_offsets: &[u32],
-    col_indices: &[u32],
-    edge_kind_mask: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    vyre_reference::composition_witness::csr_forward_traverse_witness_into(
-        node_count,
-        row_offsets,
-        col_indices,
-        edge_kind_mask,
-        frontier,
-        allow_mask,
-        out,
-    );
-}
+pub(crate) use crate::graph::csr_frontier_step::{
+    csr_forward_traverse_cpu_ref as cpu_ref,
+    csr_forward_traverse_cpu_ref_into as cpu_ref_into,
+};
 
 #[cfg(test)]
 mod tests {

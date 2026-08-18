@@ -50,15 +50,10 @@ inventory::submit! {
             // one reverse step, frontier_out = {1, 2} (both point at
             // 3).
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),
-                to_bytes(&[0, 2, 3, 4, 4]),
-                to_bytes(&[1, 2, 3, 3]),
-                to_bytes(&[1, 1, 1, 1]),
-                to_bytes(&[0, 0, 0, 0]),
+            vec![crate::graph::program_graph::sample_program_graph_inputs(&[
                 to_bytes(&[0b1000]),
                 to_bytes(&[0]),
-            ]]
+            ])]
         }),
         Some(|| {
             vec![vec![EXPECTED_CSR_BACKWARD_TRAVERSE_OUTPUT_BYTES.to_vec()]]
@@ -67,48 +62,10 @@ inventory::submit! {
 }
 
 #[cfg(test)]
-pub(crate) fn cpu_ref(
-    node_count: u32,
-    row_offsets: &[u32],
-    col_indices: &[u32],
-    edge_kind_mask: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    assert!(
-        row_offsets.len() == (node_count as usize) + 1,
-        "node_count + 1 CSR offsets required"
-    );
-    vyre_reference::composition_witness::csr_backward_traverse_witness(
-        node_count,
-        row_offsets,
-        col_indices,
-        edge_kind_mask,
-        frontier,
-        allow_mask,
-    )
-}
-
-#[cfg(test)]
-pub(crate) fn cpu_ref_into(
-    node_count: u32,
-    row_offsets: &[u32],
-    col_indices: &[u32],
-    edge_kind_mask: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-    out: &mut Vec<u32>,
-) {
-    vyre_reference::composition_witness::csr_backward_traverse_witness_into(
-        node_count,
-        row_offsets,
-        col_indices,
-        edge_kind_mask,
-        frontier,
-        allow_mask,
-        out,
-    );
-}
+pub(crate) use crate::graph::csr_frontier_step::{
+    csr_backward_traverse_cpu_ref as cpu_ref,
+    csr_backward_traverse_cpu_ref_into as cpu_ref_into,
+};
 
 #[cfg(test)]
 mod tests {

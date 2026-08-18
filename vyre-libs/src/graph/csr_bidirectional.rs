@@ -355,9 +355,8 @@ pub fn plan_csr_bidirectional_step(
 ///
 /// Returns caller-mapped errors for malformed seed width, reservation failure,
 /// step execution failure, or frontier shape drift.
-#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
-pub fn run_csr_bidirectional_closure_plan_with_step<E, MapError, Step>(
+pub(crate) fn run_csr_bidirectional_closure_plan_with_step<E, MapError, Step>(
     plan: &CsrBidirectionalDispatchPlan,
     seed: &[u32],
     max_iters: u32,
@@ -637,7 +636,6 @@ mod dispatch_plan_tests {
 ///
 /// Panics when the two frontier slices differ in length. That is a caller
 /// contract violation: both slices must be bitsets for the same `node_count`.
-#[cfg(test)]
 #[must_use]
 pub fn merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool {
     // Fail fast on a caller contract violation (mismatched bitset lengths).
@@ -648,7 +646,6 @@ pub fn merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool {
 }
 
 /// Fallible variant of [`merge_frontier_or_changed`].
-#[cfg(test)]
 pub fn try_merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> Result<bool, String> {
     if current.len() != next.len() {
         return Err(format!(
