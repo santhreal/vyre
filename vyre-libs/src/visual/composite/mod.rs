@@ -5,8 +5,6 @@
 //! Category A composition  -  pure IR over existing expressions.
 //! No Tier 2.5 primitives consumed.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::composite";
@@ -17,126 +15,111 @@ const OP_ID: &str = "vyre-libs::visual::composite";
 /// All buffers are `[u32; count]`  -  packed RGBA pixels.
 #[must_use]
 pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
-    Program::wrapped(
+    let body = vec![
+        // Load foreground and background pixels.
+        Node::let_bind("fg_px", Expr::load(fg, Expr::var("idx"))),
+        Node::let_bind("bg_px", Expr::load(bg, Expr::var("idx"))),
+        Node::let_bind(
+            "fg_r",
+            crate::builder::stencil::unpack_channel("fg_px", 0),
+        ),
+        Node::let_bind(
+            "fg_g",
+            crate::builder::stencil::unpack_channel("fg_px", 8),
+        ),
+        Node::let_bind(
+            "fg_b",
+            crate::builder::stencil::unpack_channel("fg_px", 16),
+        ),
+        Node::let_bind(
+            "fg_a",
+            crate::builder::stencil::unpack_channel("fg_px", 24),
+        ),
+        Node::let_bind(
+            "bg_r",
+            crate::builder::stencil::unpack_channel("bg_px", 0),
+        ),
+        Node::let_bind(
+            "bg_g",
+            crate::builder::stencil::unpack_channel("bg_px", 8),
+        ),
+        Node::let_bind(
+            "bg_b",
+            crate::builder::stencil::unpack_channel("bg_px", 16),
+        ),
+        Node::let_bind(
+            "bg_a",
+            crate::builder::stencil::unpack_channel("bg_px", 24),
+        ),
+        // inv_a = 255 - fg_a
+        Node::let_bind("inv_a", Expr::sub(Expr::u32(255), Expr::var("fg_a"))),
+        // Porter-Duff over per channel.
+        Node::let_bind(
+            "out_r",
+            crate::builder::stencil::blend_channel_porter_duff(
+                Expr::var("fg_r"),
+                Expr::var("bg_r"),
+                Expr::var("inv_a"),
+            ),
+        ),
+        Node::let_bind(
+            "out_g",
+            crate::builder::stencil::blend_channel_porter_duff(
+                Expr::var("fg_g"),
+                Expr::var("bg_g"),
+                Expr::var("inv_a"),
+            ),
+        ),
+        Node::let_bind(
+            "out_b",
+            crate::builder::stencil::blend_channel_porter_duff(
+                Expr::var("fg_b"),
+                Expr::var("bg_b"),
+                Expr::var("inv_a"),
+            ),
+        ),
+        Node::let_bind(
+            "out_a",
+            crate::builder::stencil::blend_channel_porter_duff(
+                Expr::var("fg_a"),
+                Expr::var("bg_a"),
+                Expr::var("inv_a"),
+            ),
+        ),
+        // Clamp to 255 and pack RGBA.
+        Node::let_bind(
+            "cr",
+            crate::builder::stencil::clamp_u8(Expr::var("out_r")),
+        ),
+        Node::let_bind(
+            "cg",
+            crate::builder::stencil::clamp_u8(Expr::var("out_g")),
+        ),
+        Node::let_bind(
+            "cb",
+            crate::builder::stencil::clamp_u8(Expr::var("out_b")),
+        ),
+        Node::let_bind(
+            "ca",
+            crate::builder::stencil::clamp_u8(Expr::var("out_a")),
+        ),
+        Node::let_bind(
+            "packed",
+            crate::builder::stencil::pack_rgba_named("cr", "cg", "cb", "ca"),
+        ),
+        Node::store(output, Expr::var("idx"), Expr::var("packed")),
+    ];
+
+    crate::visual::packed_rgba_map::build_pixel_pipeline(
+        OP_ID,
         vec![
             BufferDecl::storage(fg, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
             BufferDecl::storage(bg, 1, BufferAccess::ReadOnly, DataType::U32).with_count(count),
             BufferDecl::storage(output, 2, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(count),
         ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![wrap_child_region(
-                crate::visual::packed_rgba_map::OP_ID,
-                Ident::from(OP_ID),
-                vec![
-                    Node::let_bind("idx", Expr::gid_x()),
-                    Node::if_then(
-                        Expr::lt(Expr::var("idx"), Expr::u32(count)),
-                        vec![
-                            // Load foreground and background pixels.
-                            Node::let_bind("fg_px", Expr::load(fg, Expr::var("idx"))),
-                            Node::let_bind("bg_px", Expr::load(bg, Expr::var("idx"))),
-                            Node::let_bind(
-                                "fg_r",
-                                crate::builder::stencil::unpack_channel("fg_px", 0),
-                            ),
-                            Node::let_bind(
-                                "fg_g",
-                                crate::builder::stencil::unpack_channel("fg_px", 8),
-                            ),
-                            Node::let_bind(
-                                "fg_b",
-                                crate::builder::stencil::unpack_channel("fg_px", 16),
-                            ),
-                            Node::let_bind(
-                                "fg_a",
-                                crate::builder::stencil::unpack_channel("fg_px", 24),
-                            ),
-                            Node::let_bind(
-                                "bg_r",
-                                crate::builder::stencil::unpack_channel("bg_px", 0),
-                            ),
-                            Node::let_bind(
-                                "bg_g",
-                                crate::builder::stencil::unpack_channel("bg_px", 8),
-                            ),
-                            Node::let_bind(
-                                "bg_b",
-                                crate::builder::stencil::unpack_channel("bg_px", 16),
-                            ),
-                            Node::let_bind(
-                                "bg_a",
-                                crate::builder::stencil::unpack_channel("bg_px", 24),
-                            ),
-                            // inv_a = 255 - fg_a
-                            Node::let_bind("inv_a", Expr::sub(Expr::u32(255), Expr::var("fg_a"))),
-                            // Porter-Duff over per channel.
-                            Node::let_bind(
-                                "out_r",
-                                crate::builder::stencil::blend_channel_porter_duff(
-                                    Expr::var("fg_r"),
-                                    Expr::var("bg_r"),
-                                    Expr::var("inv_a"),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "out_g",
-                                crate::builder::stencil::blend_channel_porter_duff(
-                                    Expr::var("fg_g"),
-                                    Expr::var("bg_g"),
-                                    Expr::var("inv_a"),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "out_b",
-                                crate::builder::stencil::blend_channel_porter_duff(
-                                    Expr::var("fg_b"),
-                                    Expr::var("bg_b"),
-                                    Expr::var("inv_a"),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "out_a",
-                                crate::builder::stencil::blend_channel_porter_duff(
-                                    Expr::var("fg_a"),
-                                    Expr::var("bg_a"),
-                                    Expr::var("inv_a"),
-                                ),
-                            ),
-                            // Clamp to 255 and pack RGBA.
-                            Node::let_bind(
-                                "cr",
-                                crate::builder::stencil::clamp_u8(Expr::var("out_r")),
-                            ),
-                            Node::let_bind(
-                                "cg",
-                                crate::builder::stencil::clamp_u8(Expr::var("out_g")),
-                            ),
-                            Node::let_bind(
-                                "cb",
-                                crate::builder::stencil::clamp_u8(Expr::var("out_b")),
-                            ),
-                            Node::let_bind(
-                                "ca",
-                                crate::builder::stencil::clamp_u8(Expr::var("out_a")),
-                            ),
-                            Node::let_bind(
-                                "packed",
-                                crate::builder::stencil::pack_rgba(
-                                    Expr::var("cr"),
-                                    Expr::var("cg"),
-                                    Expr::var("cb"),
-                                    Expr::var("ca"),
-                                ),
-                            ),
-                            Node::store(output, Expr::var("idx"), Expr::var("packed")),
-                        ],
-                    ),
-                ],
-            )],
-        )],
+        count,
+        body,
     )
 }
 

@@ -312,6 +312,34 @@ pub struct ContractionComposer {
 }
 
 impl ContractionComposer {
+    fn base_linear(
+        op_id: &'static str,
+        a: TensorRef,
+        b: TensorRef,
+        out: TensorRef,
+        dtype: DataType,
+        acc_dtype: DataType,
+        geometry: ContractionGeometry,
+    ) -> Self {
+        Self {
+            op_id,
+            generator: None,
+            a,
+            b,
+            out,
+            bias: None,
+            dtype,
+            acc_dtype,
+            semiring: ContractionSemiring::Standard,
+            tiling: ContractionTiling::Linear {
+                workgroup_size: [256, 1, 1],
+            },
+            epilogue: ContractionEpilogue::None,
+            geometry,
+            options: BuildOptions::default(),
+        }
+    }
+
     /// Create a standard 2D GEMM composer.
     #[must_use]
     pub fn matmul_2d(
@@ -324,23 +352,15 @@ impl ContractionComposer {
         n: u32,
     ) -> Self {
         let dtype = a.dtype.clone();
-        Self {
+        Self::base_linear(
             op_id,
-            generator: None,
             a,
             b,
             out,
-            bias: None,
-            dtype: dtype.clone(),
-            acc_dtype: dtype,
-            semiring: ContractionSemiring::Standard,
-            tiling: ContractionTiling::Linear {
-                workgroup_size: [256, 1, 1],
-            },
-            epilogue: ContractionEpilogue::None,
-            geometry: ContractionGeometry::Matmul2D { m, k, n },
-            options: BuildOptions::default(),
-        }
+            dtype.clone(),
+            dtype,
+            ContractionGeometry::Matmul2D { m, k, n },
+        )
     }
 
     /// Create a 2D GEMM composer with fused bias.
@@ -357,27 +377,22 @@ impl ContractionComposer {
     ) -> Self {
         let dtype = a.dtype.clone();
         let bias_name = bias.name_str().to_string();
-        Self {
+        let mut composer = Self::base_linear(
             op_id,
-            generator: None,
             a,
             b,
             out,
-            bias: Some(bias),
-            dtype: dtype.clone(),
-            acc_dtype: dtype.clone(),
-            semiring: ContractionSemiring::Standard,
-            tiling: ContractionTiling::Linear {
-                workgroup_size: [256, 1, 1],
-            },
-            epilogue: ContractionEpilogue::Bias {
-                buffer: bias_name,
-                count: n,
-                dtype,
-            },
-            geometry: ContractionGeometry::Matmul2D { m, k, n },
-            options: BuildOptions::default(),
-        }
+            dtype.clone(),
+            dtype.clone(),
+            ContractionGeometry::Matmul2D { m, k, n },
+        );
+        composer.bias = Some(bias);
+        composer.epilogue = ContractionEpilogue::Bias {
+            buffer: bias_name,
+            count: n,
+            dtype,
+        };
+        composer
     }
 
     /// Create a cooperative tiled 2D GEMM composer.
@@ -435,23 +450,17 @@ impl ContractionComposer {
         n: u32,
         semiring: Semiring,
     ) -> Self {
-        Self {
+        let mut composer = Self::base_linear(
             op_id,
-            generator: None,
             a,
             b,
             out,
-            bias: None,
-            dtype: DataType::U32,
-            acc_dtype: DataType::U32,
-            semiring: ContractionSemiring::Closed(semiring),
-            tiling: ContractionTiling::Linear {
-                workgroup_size: [256, 1, 1],
-            },
-            epilogue: ContractionEpilogue::None,
-            geometry: ContractionGeometry::Matmul2D { m, k, n },
-            options: BuildOptions::default(),
-        }
+            DataType::U32,
+            DataType::U32,
+            ContractionGeometry::Matmul2D { m, k, n },
+        );
+        composer.semiring = ContractionSemiring::Closed(semiring);
+        composer
     }
 
     /// Create a 3D batched GEMM composer.
@@ -467,23 +476,15 @@ impl ContractionComposer {
         n: u32,
     ) -> Self {
         let dtype = a.dtype.clone();
-        Self {
+        Self::base_linear(
             op_id,
-            generator: None,
             a,
             b,
             out,
-            bias: None,
-            dtype: dtype.clone(),
-            acc_dtype: dtype,
-            semiring: ContractionSemiring::Standard,
-            tiling: ContractionTiling::Linear {
-                workgroup_size: [256, 1, 1],
-            },
-            epilogue: ContractionEpilogue::None,
-            geometry: ContractionGeometry::BatchedMatmul3D { batch, m, k, n },
-            options: BuildOptions::default(),
-        }
+            dtype.clone(),
+            dtype,
+            ContractionGeometry::BatchedMatmul3D { batch, m, k, n },
+        )
     }
 
     /// Create a row-batched affine projection composer.
@@ -508,29 +509,28 @@ impl ContractionComposer {
                 dtype: dtype.clone(),
             })
             .unwrap_or(ContractionEpilogue::None);
-        Self {
+        let mut composer = Self::base_linear(
             op_id,
-            generator: None,
-            a: x,
-            b: w,
+            x,
+            w,
             out,
-            bias,
             dtype,
-            acc_dtype: DataType::F32,
-            semiring: ContractionSemiring::Standard,
-            tiling: ContractionTiling::Linear {
-                workgroup_size: [64, 1, 1],
-            },
-            epilogue,
-            geometry: ContractionGeometry::BatchedRows {
+            DataType::F32,
+            ContractionGeometry::BatchedRows {
                 rows,
                 in_dim,
                 out_dim,
                 weight_out_in,
             },
-            options: BuildOptions::default(),
-        }
+        );
+        composer.tiling = ContractionTiling::Linear {
+            workgroup_size: [64, 1, 1],
+        };
+        composer.bias = bias;
+        composer.epilogue = epilogue;
+        composer
     }
+
     /// Create a fixed-point u32 matrix-vector contraction composer.
     #[must_use]
     pub fn fixed_u32_matvec(
@@ -541,23 +541,17 @@ impl ContractionComposer {
         n: u32,
         matrix_cells: u32,
     ) -> Self {
-        Self {
+        let mut composer = Self::base_linear(
             op_id,
-            generator: None,
-            a: matrix,
-            b: vector,
+            matrix,
+            vector,
             out,
-            bias: None,
-            dtype: DataType::U32,
-            acc_dtype: DataType::U32,
-            semiring: ContractionSemiring::Fixed16_16,
-            tiling: ContractionTiling::Linear {
-                workgroup_size: [256, 1, 1],
-            },
-            epilogue: ContractionEpilogue::None,
-            geometry: ContractionGeometry::Matvec { n, matrix_cells },
-            options: BuildOptions::default(),
-        }
+            DataType::U32,
+            DataType::U32,
+            ContractionGeometry::Matvec { n, matrix_cells },
+        );
+        composer.semiring = ContractionSemiring::Fixed16_16;
+        composer
     }
 
     /// Create a custom u32 matrix contraction composer.
@@ -578,29 +572,22 @@ impl ContractionComposer {
         C: Fn(Expr, Expr) -> Expr + Send + Sync + 'static,
         A: Fn(Expr, Expr) -> Expr + Send + Sync + 'static,
     {
-        Self {
+        let mut composer = Self::base_linear(
             op_id,
-            generator: None,
-            a: lhs,
-            b: rhs,
+            lhs,
+            rhs,
             out,
-            bias: None,
-            dtype: DataType::U32,
-            acc_dtype: DataType::U32,
-            semiring: ContractionSemiring::Custom {
-                identity,
-                combine: Arc::new(combine),
-                accumulate: Arc::new(accumulate),
-            },
-            tiling: ContractionTiling::Linear {
-                workgroup_size: [256, 1, 1],
-            },
-            epilogue: ContractionEpilogue::None,
-            geometry: ContractionGeometry::Matmul2D { m, k, n },
-            options: BuildOptions::default(),
-        }
+            DataType::U32,
+            DataType::U32,
+            ContractionGeometry::Matmul2D { m, k, n },
+        );
+        composer.semiring = ContractionSemiring::Custom {
+            identity,
+            combine: Arc::new(combine),
+            accumulate: Arc::new(accumulate),
+        };
+        composer
     }
-
     /// Set workgroup size override.
     #[must_use]
     pub fn with_workgroup_size(mut self, size: [u32; 3]) -> Self {

@@ -83,14 +83,7 @@ impl ElementwiseComposer {
     /// Add a standard ReadOnly input buffer with `count` elements.
     #[must_use]
     pub fn add_input(self, name: &str, dtype: DataType, count: u32) -> Self {
-        let idx = self.buffers.len() as u32;
-        let decl = BufferDecl::storage(name, idx, BufferAccess::ReadOnly, dtype);
-        let decl = if count == 0 {
-            decl
-        } else {
-            decl.with_count(count)
-        };
-        self.add_buffer(decl)
+        self.add_input_storage(name, BufferAccess::ReadOnly, dtype, count)
     }
 
     /// Add a storage buffer with custom access permissions.
@@ -150,14 +143,7 @@ impl ElementwiseComposer {
         dtype: DataType,
         count: u32,
     ) -> Self {
-        let idx = self.buffers.len() as u32;
-        let decl = BufferDecl::storage(name, idx, access, dtype);
-        let decl = if count == 0 {
-            decl
-        } else {
-            decl.with_count(count)
-        };
-        self.add_buffer(decl)
+        self.add_input_storage(name, access, dtype, count)
     }
 
     /// Build a custom loop kernel given a body generator closure `Fn(Expr) -> Vec<Node>`.

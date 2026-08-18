@@ -3,8 +3,7 @@
 //! Rasterizes a linear gradient with up to 16 color stops.
 //! Category A composition  -  pure IR expressions.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
+use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::gradient";
@@ -109,13 +108,8 @@ pub fn try_linear_gradient(
     // 2. Find enclosing stop pair
     // 3. Lerp between stops
 
-    let mut body = vec![Node::let_bind("idx", Expr::gid_x())];
-
-    body.push(Node::if_then(
-        Expr::lt(Expr::var("idx"), Expr::u32(count)),
-        {
-            let (py, px) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
-            let mut inner = vec![Node::let_bind("px", px), Node::let_bind("py", py)];
+    let (py, px) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
+    let mut inner = vec![Node::let_bind("px", px), Node::let_bind("py", py)];
 
             // Compute dot product: dp = px * dx + py * dy
             // Handle signed direction with select.
@@ -267,36 +261,21 @@ pub fn try_linear_gradient(
             // Pack output.
             inner.push(Node::let_bind(
                 "packed",
-                crate::builder::stencil::pack_rgba(
-                    Expr::var("out_r"),
-                    Expr::var("out_g"),
-                    Expr::var("out_b"),
-                    Expr::var("out_a"),
-                ),
+                crate::builder::stencil::pack_rgba_named("out_r", "out_g", "out_b", "out_a"),
             ));
             inner.push(Node::let_bind(
                 "oidx",
                 crate::builder::stencil::flat_index(Expr::var("py"), width, Expr::var("px")),
             ));
             inner.push(Node::store(output, Expr::var("oidx"), Expr::var("packed")));
-            inner
-        },
-    ));
-
-    Ok(Program::wrapped(
+    Ok(crate::visual::packed_rgba_map::build_pixel_pipeline(
+        OP_ID,
         vec![
             BufferDecl::storage(output, 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(count),
         ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![wrap_child_region(
-                crate::visual::packed_rgba_map::OP_ID,
-                Ident::from(OP_ID),
-                body,
-            )],
-        )],
+        count,
+        inner,
     ))
 }
 

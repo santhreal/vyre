@@ -6,7 +6,6 @@
 //!
 //! Category A composition  -  pure IR. No Tier 2.5 primitives.
 
-use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::upsample";
@@ -22,37 +21,30 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
     let in_h = height / 2;
     let input_count = in_w.saturating_mul(in_h);
     let output_count = width.saturating_mul(height);
-    let (oy, ox) = crate::builder::stencil::decompose_index(&Expr::var("idx"), width);
-    let in_sample_idx =
-        crate::builder::stencil::upsample_2x_source_index(&Expr::var("oy"), &Expr::var("ox"), in_w);
 
-    Program::wrapped(
-        vec![
+    crate::builder::stencil::Grid2DComposer::new(OP_ID, width, height)
+        .with_buffers(vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(input_count),
             BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(output_count),
-        ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
+        ])
+        .build(|_shape, _idx, py, px| {
+            let in_sample_idx = crate::builder::stencil::upsample_2x_source_index(
+                &Expr::var("oy"),
+                &Expr::var("ox"),
+                in_w,
+            );
             vec![
-                Node::let_bind("idx", Expr::gid_x()),
-                Node::if_then(
-                    Expr::lt(Expr::var("idx"), Expr::u32(output_count)),
-                    vec![
-                        // Output coordinates.
-                        Node::let_bind("ox", ox),
-                        Node::let_bind("oy", oy),
-                        // Load input pixel.
-                        Node::let_bind("pixel", Expr::load(input, in_sample_idx)),
-                        // Write to output.
-                        Node::store(output, Expr::var("idx"), Expr::var("pixel")),
-                    ],
-                ),
-            ],
-        )],
-    )
+                // Output coordinates.
+                Node::let_bind("ox", px),
+                Node::let_bind("oy", py),
+                // Load input pixel.
+                Node::let_bind("pixel", Expr::load(input, in_sample_idx)),
+                // Write to output.
+                Node::store(output, Expr::var("idx"), Expr::var("pixel")),
+            ]
+        })
 }
 
 const EXPECTED_UPSAMPLE_2X_OUTPUT_BYTES: [u8; 64] = [0xFF; 64];

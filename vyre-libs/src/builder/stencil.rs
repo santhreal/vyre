@@ -437,6 +437,17 @@ pub fn pack_rgba(r: Expr, g: Expr, b: Expr, a: Expr) -> Expr {
     )
 }
 
+/// Pack 4 named channel variables `(r, g, b, a)` into a single little-endian `u32` RGBA word.
+#[must_use]
+pub fn pack_rgba_named(r_var: &str, g_var: &str, b_var: &str, a_var: &str) -> Expr {
+    pack_rgba(
+        Expr::var(r_var),
+        Expr::var(g_var),
+        Expr::var(b_var),
+        Expr::var(a_var),
+    )
+}
+
 /// Clamp value to `[0, 255]`.
 #[must_use]
 pub fn clamp_u8(val: Expr) -> Expr {
@@ -466,6 +477,21 @@ pub fn blend_channel_coverage(fg_c: Expr, bg_c: Expr, cov: Expr, inv_cov: Expr) 
         ),
         Expr::u32(257),
         16,
+    )
+}
+
+/// Compute the rounded box-average of four 8-bit channel samples: `(c0 + c1 + c2 + c3 + 2) >> 2`.
+#[must_use]
+pub fn avg4_channel(c0: Expr, c1: Expr, c2: Expr, c3: Expr) -> Expr {
+    Expr::shr(
+        Expr::add(
+            Expr::add(
+                Expr::add(c0, c1),
+                Expr::add(c2, c3),
+            ),
+            Expr::u32(2),
+        ),
+        Expr::u32(2),
     )
 }
 
