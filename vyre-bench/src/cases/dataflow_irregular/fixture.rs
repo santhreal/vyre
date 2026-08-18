@@ -5,7 +5,6 @@ use crate::cases::queue_closure_oracle::{
 };
 use crate::cases::skewed_graph::{skewed_degree as shared_skewed_degree, skewed_target};
 use vyre_libs::predicate::edge_kind;
-use vyre_reference::composition_witness::frontier_to_queue_witness_into;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
 pub(super) const FRONTIER_WORDS: usize = NODE_COUNT.div_ceil(32) as usize;
@@ -198,31 +197,13 @@ pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
     queue_capacity: usize,
     context: &str,
 ) -> Result<Vec<u32>, BenchError> {
-    let mut active_queue = Vec::new();
-    let expected = u32::try_from(fixture.stats.active_sources).map_err(|_| {
-        BenchError::EnvironmentInvalid(format!(
-            "{context} active source count {} exceeds u32 indexing. Fix: split the frontier.",
-            fixture.stats.active_sources
-        ))
-    })?;
-    let seen = frontier_to_queue_witness_into(
+    crate::cases::skewed_graph::materialize_active_frontier_queue(
         &fixture.frontier_in,
         fixture.stats.nodes,
+        fixture.stats.active_sources,
         queue_capacity,
-        &mut active_queue,
-    );
-    if seen != expected {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "{context} counted {seen} active sources but stats recorded {}. Fix: rebuild the fixture active frontier stats from the same bitset.",
-            fixture.stats.active_sources
-        )));
-    }
-    if active_queue.len() < expected as usize {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "{context} queue_capacity {queue_capacity} cannot hold {expected} active sources. Fix: increase queue capacity.",
-        )));
-    }
-    Ok(active_queue)
+        context,
+    )
 }
 
 pub(super) fn ifds_queue_closure_inputs(

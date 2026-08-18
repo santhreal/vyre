@@ -165,23 +165,8 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
 }
 
 fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
-    let selected = std::env::var("VYRE_BACKEND")
-        .ok()
-        .filter(|value| !value.trim().is_empty());
-    vyre_registry_link::backend::live_backend_registry()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| {
-            // The lens compares a backend against the CPU reference, so the
-            // reference oracle would be compared against itself.
-            !registration.reference_oracle
-                && vyre_driver::backend_dispatches(registration.id).expect("valid backend registry")
-                && selected
-                    .as_deref()
-                    .is_none_or(|backend| registration.id == backend)
-        })
-        .expect(
-            "Fix: a dispatch-capable backend must be registered for convergence lens. \
-             Link a concrete driver crate into the test binary.",
-        )
+    vyre_conform::production::live_test_backend().expect(
+        "Fix: a dispatch-capable backend must be registered for convergence lens. \
+         Link a concrete driver crate into the test binary.",
+    )
 }

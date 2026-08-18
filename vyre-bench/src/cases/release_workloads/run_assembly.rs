@@ -4,7 +4,7 @@
 use super::synthetic_count::SyntheticPattern;
 use crate::api::case::{BenchError, BenchRun};
 use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::api::resident::TransferAccounting;
+use crate::api::resident::{transfer_accounting_with_resident_reset, TransferAccounting};
 use crate::cases::byte_pack::gb_per_second;
 use crate::cases::reference_sample::reference_metrics;
 
@@ -14,16 +14,12 @@ pub(super) fn resident_reset_transfer_accounting(
     resident_used: bool,
     resident_reset_bytes: u64,
 ) -> TransferAccounting {
-    let bytes_read = if resident_used {
-        resident_reset_bytes
-    } else {
-        input_bytes_total
-    };
-    TransferAccounting {
-        bytes_touched: bytes_read.saturating_add(output_bytes_total),
-        bytes_read,
-        bytes_written: output_bytes_total,
-    }
+    transfer_accounting_with_resident_reset(
+        input_bytes_total,
+        output_bytes_total,
+        resident_used,
+        resident_reset_bytes,
+    )
 }
 
 fn bench_run_from_timed(

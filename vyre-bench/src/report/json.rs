@@ -630,20 +630,7 @@ mod tests {
     }
 
     fn stats(value: u64) -> MetricStats {
-        MetricStats {
-            min: value,
-            p50: value,
-            p90: value,
-            p95: value,
-            p99: value,
-            p999: value,
-            p9999: value,
-            max: value,
-            mean: value as f64,
-            stddev: 0.0,
-            samples: 1,
-            determinism_cv: None,
-        }
+        MetricStats::single(value)
     }
 
     fn performance(contract_passed: bool) -> PerformanceEvaluation {

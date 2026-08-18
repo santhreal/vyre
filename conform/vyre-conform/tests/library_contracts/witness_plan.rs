@@ -38,14 +38,7 @@ fn witness_input_plan_accepts_logical_fixture_order_after_output_buffer() {
 
 #[test]
 fn owned_expansion_matches_the_borrowed_stream_byte_for_byte() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
+    let program = super::input_scratch_program();
     let plan = WitnessInputPlan::for_program(&program)
         .expect("Fix: static read-write zero-fill planning must succeed.");
     let case = vec![7u32.to_le_bytes().to_vec()];
@@ -66,16 +59,7 @@ fn owned_expansion_matches_the_borrowed_stream_byte_for_byte() {
 
 #[test]
 fn owned_expansion_reports_the_same_rejection_as_the_borrowed_one() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage(
-            "scratch",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
+    let program = super::scratch_readwrite_program();
     let plan = WitnessInputPlan::for_program(&program)
         .expect("Fix: dynamic read-write buffers may be fixture-backed per case.");
     let mut owned = Vec::new();
@@ -116,14 +100,7 @@ fn witness_input_plan_accepts_fixture_backed_runtime_sized_read_input() {
 
 #[test]
 fn witness_input_plan_uses_zeroed_static_read_write_inputs() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
+    let program = super::input_scratch_program();
     let plan = WitnessInputPlan::for_program(&program)
         .expect("Fix: static read-write zero-fill planning must succeed.");
     let case = vec![1u32.to_le_bytes().to_vec()];
@@ -141,16 +118,7 @@ fn witness_input_plan_uses_zeroed_static_read_write_inputs() {
 
 #[test]
 fn witness_input_plan_rejects_omitted_runtime_sized_read_write_input() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage(
-            "scratch",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
+    let program = super::scratch_readwrite_program();
     let plan = WitnessInputPlan::for_program(&program)
         .expect("Fix: dynamic read-write buffers may be fixture-backed per case.");
     let mut backend_inputs = Vec::new();
@@ -436,14 +404,7 @@ fn witness_input_plan_accepts_full_program_buffer_layout_fixture() {
 
 #[test]
 fn witness_input_plan_accepts_explicit_static_read_write_fixture_bytes() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage("scratch", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
+    let program = super::input_scratch_program();
     let plan = WitnessInputPlan::for_program(&program)
         .expect("Fix: static read-write planning must succeed.");
 
@@ -488,16 +449,7 @@ fn witness_input_plan_rejects_mismatched_explicit_static_read_write_byte_length(
 
 #[test]
 fn witness_input_plan_accepts_explicit_dynamic_read_write_fixture_bytes() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage(
-            "scratch",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
+    let program = super::scratch_readwrite_program();
     let plan = WitnessInputPlan::for_program(&program)
         .expect("Fix: dynamic read-write planning must succeed.");
 

@@ -604,3 +604,23 @@ impl ReplayCapsule {
         session.submit(&input_slices)
     }
 }
+/// Find a live dispatch-capable non-oracle backend registration, honoring `VYRE_BACKEND`.
+#[doc(hidden)]
+pub fn live_test_backend() -> Result<&'static BackendRegistration, String> {
+    let selected = std::env::var("VYRE_BACKEND")
+        .ok()
+        .filter(|value| !value.trim().is_empty());
+    vyre_registry_link::backend::live_backend_registry()
+        .map_err(|error| format!("backend registry startup failed: {error}"))?
+        .iter()
+        .find(|registration| {
+            !registration.reference_oracle
+                && vyre_driver::backend_dispatches(registration.id).unwrap_or(false)
+                && selected
+                    .as_deref()
+                    .is_none_or(|backend| registration.id == backend)
+        })
+        .ok_or_else(|| {
+            "Fix: a dispatch-capable backend must be registered. Link a concrete driver crate into the test binary.".to_string()
+        })
+}

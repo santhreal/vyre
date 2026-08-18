@@ -13,7 +13,7 @@ use crate::report::{CaseReport, ReportSchema, ReportSummary};
 use std::collections::BTreeMap;
 
 /// One metric's statistics, flat below p50 and flat above p99.
-pub(super) fn stat(p50: u64, p99: u64) -> MetricStats {
+pub fn stat(p50: u64, p99: u64) -> MetricStats {
     MetricStats {
         min: p50,
         p50,
@@ -31,7 +31,7 @@ pub(super) fn stat(p50: u64, p99: u64) -> MetricStats {
 }
 
 /// One case carrying the named metrics, each as `(key, p50, p99)`.
-pub(super) fn case(id: &str, stages: &[(&str, u64, u64)]) -> CaseReport {
+pub fn case(id: &str, stages: &[(&str, u64, u64)]) -> CaseReport {
     let mut metrics = BTreeMap::new();
     for (key, p50, p99) in stages {
         metrics.insert((*key).to_string(), stat(*p50, *p99));
@@ -62,7 +62,7 @@ pub(super) fn case(id: &str, stages: &[(&str, u64, u64)]) -> CaseReport {
 }
 
 /// A whole report around those cases, named by the emitter under test.
-pub(super) fn schema(suite: &str, cases: Vec<CaseReport>) -> ReportSchema {
+pub fn schema(suite: &str, cases: Vec<CaseReport>) -> ReportSchema {
     ReportSchema {
         schema: "vyre-bench/v1".to_string(),
         run_id: "test".to_string(),

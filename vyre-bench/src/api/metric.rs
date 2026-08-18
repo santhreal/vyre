@@ -16,6 +16,46 @@ pub struct MetricStats {
     pub determinism_cv: Option<f64>,
 }
 
+impl MetricStats {
+    /// Produce a degenerate `MetricStats` for a single observation.
+    #[must_use]
+    pub fn single(value: u64) -> Self {
+        Self {
+            min: value,
+            p50: value,
+            p90: value,
+            p95: value,
+            p99: value,
+            p999: value,
+            p9999: value,
+            max: value,
+            mean: value as f64,
+            stddev: 0.0,
+            samples: 1,
+            determinism_cv: None,
+        }
+    }
+
+    /// MetricStats with custom summary parameters.
+    #[must_use]
+    pub fn point(p50: u64, mean: f64, stddev: f64, samples: u32) -> Self {
+        Self {
+            min: p50,
+            p50,
+            p90: p50,
+            p95: p50,
+            p99: p50,
+            p999: p50,
+            p9999: p50,
+            max: p50,
+            mean,
+            stddev,
+            samples,
+            determinism_cv: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuCounter {
     pub name: String,

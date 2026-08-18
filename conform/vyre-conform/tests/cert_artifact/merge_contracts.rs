@@ -35,22 +35,7 @@ fn merge_verifies_and_resigns_disjoint_certificate_shards() {
         ]),
     );
 
-    let status = Command::new(conform_binary())
-        .args(["merge", "--out"])
-        .arg(&merged)
-        .arg(&shard_a)
-        .arg(&shard_b)
-        .status()
-        .expect("Fix: the built vyre-conform binary must launch");
-    assert!(
-        status.success(),
-        "Fix: merge must accept signed disjoint shards"
-    );
-
-    let merged_json =
-        std::fs::read_to_string(&merged).expect("Fix: merge must write a readable artifact");
-    let parsed: Value =
-        serde_json::from_str(&merged_json).expect("Fix: merged artifact must be valid JSON");
+    let parsed = merge_shards(&merged, &shard_a, &shard_b);
     assert_eq!(
         parsed["backend_id"].as_str(),
         Some("merged"),

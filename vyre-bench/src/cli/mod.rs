@@ -395,20 +395,7 @@ mod tests {
     }
 
     fn wall_stats(p50: u64, mean: f64, stddev: f64, samples: u32) -> MetricStats {
-        MetricStats {
-            min: p50,
-            p50,
-            p90: p50,
-            p95: p50,
-            p99: p50,
-            p999: p50,
-            p9999: p50,
-            max: p50,
-            mean,
-            stddev,
-            samples,
-            determinism_cv: None,
-        }
+        MetricStats::point(p50, mean, stddev, samples)
     }
 
     fn case_report_with_wall(id: &str, p50: u64, mean: f64) -> CaseReport {

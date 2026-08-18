@@ -215,6 +215,25 @@ pub fn transfer_accounting(
     }
 }
 
+/// Host-transfer accounting for a resident sample whose loop includes a host reset upload.
+pub fn transfer_accounting_with_resident_reset(
+    input_bytes_total: u64,
+    output_bytes_total: u64,
+    resident_used: bool,
+    resident_reset_bytes: u64,
+) -> TransferAccounting {
+    let bytes_read = if resident_used {
+        resident_reset_bytes
+    } else {
+        input_bytes_total
+    };
+    TransferAccounting {
+        bytes_touched: bytes_read.saturating_add(output_bytes_total),
+        bytes_read,
+        bytes_written: output_bytes_total,
+    }
+}
+
 /// Submit one materialized artifact through a resident pool when present.
 pub fn dispatch_artifact_timed(
     ctx: &BenchContext,

@@ -66,6 +66,24 @@ pub struct ReleaseMacroGeneratedCase {
     pub expected_output_digest: u64,
 }
 
+impl ReleaseMacroGeneratedCase {
+    /// Count of input buffers passed to dispatch (non-write-only buffers).
+    #[must_use]
+    pub fn dispatch_input_buffer_count(&self) -> usize {
+        self.program
+            .buffers()
+            .iter()
+            .filter(|buffer| {
+                matches!(
+                    buffer.access(),
+                    vyre::ir::BufferAccess::ReadOnly | vyre::ir::BufferAccess::Uniform
+                ) || matches!(buffer.access(), vyre::ir::BufferAccess::ReadWrite)
+                    && !buffer.is_output
+            })
+            .count()
+    }
+}
+
 fn release_macro_workload(id: &str) -> Option<&'static SyntheticCountWorkload> {
     release_macro_workloads()
         .into_iter()
