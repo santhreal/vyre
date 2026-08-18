@@ -61,7 +61,8 @@ pub fn try_rms_norm_linear(
                 shape: vec![in_dim, out_dim],
             })?;
 
-    let lane = Expr::var("lane");
+    let global_lane = Expr::var("global_lane");
+    let local_lane = Expr::var("local_lane");
     let k = Expr::var("k");
 
     let mean_sq = vec![
@@ -86,7 +87,7 @@ pub fn try_rms_norm_linear(
     ];
 
     let output_lane = vec![
-        Node::let_bind("acc", Expr::load(b, lane.clone())),
+        Node::let_bind("acc", Expr::f32(0.0)),
         Node::let_bind("scale", Expr::load("inv_rms", Expr::u32(0))),
         Node::loop_for(
             "k",
@@ -100,7 +101,10 @@ pub fn try_rms_norm_linear(
                         Expr::mul(Expr::load(input, k.clone()), Expr::var("scale")),
                         Expr::load(
                             w,
-                            Expr::add(Expr::mul(k.clone(), Expr::u32(out_dim)), lane.clone()),
+                            Expr::add(
+                                Expr::mul(k.clone(), Expr::u32(out_dim)),
+                                global_lane.clone(),
+                            ),
                         ),
                     ),
                 ),
@@ -108,8 +112,8 @@ pub fn try_rms_norm_linear(
         ),
         Node::Store {
             buffer: out.into(),
-            index: lane.clone(),
-            value: Expr::var("acc"),
+            index: global_lane.clone(),
+            value: Expr::add(Expr::var("acc"), Expr::load(b, global_lane.clone())),
         },
     ];
 
@@ -126,10 +130,11 @@ pub fn try_rms_norm_linear(
         vec![wrap_anonymous_region(
             "vyre-libs::nn::rms_norm_linear",
             vec![
-                Node::let_bind("lane", Expr::InvocationId { axis: 0 }),
-                Node::if_then(Expr::eq(lane.clone(), Expr::u32(0)), mean_sq),
+                Node::let_bind("local_lane", Expr::LocalId { axis: 0 }),
+                Node::let_bind("global_lane", Expr::InvocationId { axis: 0 }),
+                Node::if_then(Expr::eq(local_lane.clone(), Expr::u32(0)), mean_sq),
                 Node::barrier(),
-                Node::if_then(Expr::lt(lane.clone(), Expr::u32(out_dim)), output_lane),
+                Node::if_then(Expr::lt(global_lane.clone(), Expr::u32(out_dim)), output_lane),
             ],
         )],
     )

@@ -4427,13 +4427,14 @@ pub fn rms_norm_linear_witness(
     (0..out_dim)
         .map(|j| {
             let b = bias.get(j).copied().unwrap_or(0.0);
-            let dot: f32 = (0..in_dim)
-                .map(|k| {
-                    input.get(k).copied().unwrap_or(0.0)
-                        * weights.get(k * out_dim + j).copied().unwrap_or(0.0)
-                })
-                .sum();
-            b + dot * inv_scale
+            let mut dot = 0.0_f32;
+            for k in 0..in_dim {
+                let in_val = input.get(k).copied().unwrap_or(0.0);
+                let norm_val = in_val * inv_scale;
+                let w_val = weights.get(k * out_dim + j).copied().unwrap_or(0.0);
+                dot += norm_val * w_val;
+            }
+            dot + b
         })
         .collect()
 }
