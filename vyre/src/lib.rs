@@ -8,6 +8,18 @@
 //! target payload through [`ArtifactSession`]. Raw `Program` dispatch remains
 //! available only in explicit reference and conformance adapters.
 
+// Feature-selected drivers submit backend registrations at link time. These
+// private function pointers make the linker retain each provider without
+// adding a second public backend API or a dependency-gate exemption.
+#[cfg(feature = "cuda")]
+#[used]
+static PRIMARY_PROVIDER_LINK: fn() -> Option<&'static str> =
+    vyre_driver_cuda::registered_backend_id;
+#[cfg(feature = "wgpu")]
+#[used]
+static PORTABLE_PROVIDER_LINK: fn() -> Option<&'static str> =
+    vyre_driver_wgpu::registered_backend_id;
+
 /// The vyre Program model.
 ///
 /// This module defines `Program`, the frozen, serializable model that every
@@ -50,3 +62,28 @@ pub use vyre_foundation::validate::validate;
 
 /// Domain-neutral tagged byte range shared by source-processing products.
 pub use vyre_foundation::match_result::ByteRange;
+
+#[cfg(test)]
+mod tests {
+    fn backend_is_registered(id: &str) -> bool {
+        vyre_driver::registered_backends()
+            .expect("feature-selected backend registrations must not conflict")
+            .iter()
+            .any(|registration| registration.id == id)
+    }
+
+    /// WHY: optional facade features promise to link their inventory provider.
+    /// Merely listing an optional dependency does not keep its registration.
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn cuda_feature_links_the_cuda_registration() {
+        assert!(backend_is_registered("cuda"));
+    }
+
+    /// The WGPU feature carries the same link-time registration contract.
+    #[cfg(feature = "wgpu")]
+    #[test]
+    fn wgpu_feature_links_the_wgpu_registration() {
+        assert!(backend_is_registered("wgpu"));
+    }
+}

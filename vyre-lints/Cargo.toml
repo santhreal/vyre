@@ -33,7 +33,7 @@ clap = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 vyre-test-support.workspace = true
-# integration tests/benches assert against these crates' public APIs
-vyre = { path = "../vyre", default-features = false }
+# `vyre` appears only inside the fixture source text these tests feed to the
+# linter, never as a compiled call, so it is not a dependency of this crate.
 vyre-foundation = { path = "../vyre-foundation" }
 tempfile = { workspace = true }

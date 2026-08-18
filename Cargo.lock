@@ -3753,7 +3753,6 @@ dependencies = [
  "syn 2.0.117",
  "tempfile",
  "toml",
- "vyre",
  "vyre-foundation",
  "vyre-test-support",
  "walkdir",

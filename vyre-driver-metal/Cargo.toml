@@ -29,12 +29,14 @@ vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower = { workspace = true }
-vyre-emit-metal = { workspace = true }
 inventory.workspace = true
 tracing.workspace = true
 serde_json.workspace = true
 
+# Every module that names the Metal artifact types is gated on an Apple target,
+# so the emitter is a dependency only where those modules compile.
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+vyre-emit-metal = { workspace = true }
 metal.workspace = true
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dev-dependencies]
