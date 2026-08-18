@@ -265,7 +265,7 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),analysis,full"
+feature = "(default),analysis,full,solvers"
 
 [[pair]]
 member = "vyre-libs"

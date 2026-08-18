@@ -162,7 +162,7 @@ impl TenantRegistry {
             OPCODE_RANGE_PER_TENANT,
             TenantError::RegistryFull { issued: id },
         )?;
-        if top_opcode >= SHUTDOWN {
+        if top_opcode == SHUTDOWN {
             return Err(TenantError::RegistryFull { issued: id });
         }
         let handle = TenantHandle {

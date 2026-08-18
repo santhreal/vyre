@@ -28,6 +28,7 @@ rustc-hash = { workspace = true }
 inventory = { workspace = true }
 serde_json.workspace = true
 tracing = { workspace = true }
+smallvec.workspace = true
 
 [dev-dependencies]
 vyre-lower = { workspace = true, features = ["test-fixtures"] }

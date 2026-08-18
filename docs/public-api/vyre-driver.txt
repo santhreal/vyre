@@ -1930,10 +1930,9 @@ pub vyre_driver::Target::Extension(&'static str)
 pub vyre_driver::Target::NativeModule
 pub vyre_driver::Target::PrimaryBinary
 pub vyre_driver::Target::PrimaryText
-pub vyre_driver::Target::Ptx
 pub vyre_driver::Target::ReferenceBackend
+pub vyre_driver::Target::SecondaryBinary
 pub vyre_driver::Target::SecondaryText
-pub vyre_driver::Target::SpirV
 pub vyre_driver::TimedDispatchResult::device_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::enqueue_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::outputs: vyre_driver::OutputBuffers

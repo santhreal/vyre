@@ -34,12 +34,14 @@ const WRAPPER: &str = "cargo_full";
 /// a child of a `+nightly` run is not silently built by whatever is first on
 /// `PATH`. The bare name is last.
 fn resolve(runner: Option<OsString>, root: &Path, cargo: Option<OsString>) -> PathBuf {
-    if let Some(runner) = runner.filter(|value| !value.is_empty()) {
-        return PathBuf::from(runner);
-    }
-    let wrapper = root.join(WRAPPER);
-    if wrapper.is_file() {
-        return wrapper;
+    if !cfg!(windows) {
+        if let Some(runner) = runner.filter(|value| !value.is_empty()) {
+            return PathBuf::from(runner);
+        }
+        let wrapper = root.join(WRAPPER);
+        if wrapper.is_file() {
+            return wrapper;
+        }
     }
     if let Some(cargo) = cargo.filter(|value| !value.is_empty()) {
         return PathBuf::from(cargo);
