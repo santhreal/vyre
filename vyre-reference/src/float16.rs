@@ -114,8 +114,8 @@ mod tests {
         }
         assert!(f16_to_f32(0x7e01).is_nan());
         assert_eq!(f32_to_f16(f32::NAN), 0x7e00);
-        assert_eq!(f32_to_f16(1.000_488_281_25), 0x3c00);
-        assert_eq!(f32_to_f16(1.001_464_843_75), 0x3c02);
+        assert_eq!(f32_to_f16(1.000_488_3), 0x3c00);
+        assert_eq!(f32_to_f16(1.001_464_8), 0x3c02);
 
         for (bits, value) in [
             (0x0000, 0.0),

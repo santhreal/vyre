@@ -344,10 +344,11 @@ pub fn ziftsieve_extract_literals_witness(
         let mut literal_len = usize::from(token >> 4);
         if literal_len == 15 {
             loop {
-                let extension = *input
-                    .get(cursor)
-                    .ok_or_else(|| "truncated literal-length extension".to_owned())?;
-                cursor += 1;
+                let extension = *input.get(cursor).ok_or_else(|| {
+                    "truncated length encoding for LZ4 literal. Fix: provide the complete \
+                     extended literal length."
+                        .to_owned()
+                })?;
                 literal_len = literal_len
                     .checked_add(usize::from(extension))
                     .ok_or_else(|| "literal length overflow".to_owned())?;

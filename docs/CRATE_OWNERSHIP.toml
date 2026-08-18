@@ -419,17 +419,6 @@ default_features = true
 boundary = "private"
 seam = "megakernel-compiler"
 
-[[crate.dependency]]
-package = "vyre-spec"
-purpose = "stable cross-engine schemas and operation definitions"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "specification"
-
 [[crate]]
 package = "vyre-driver-cuda"
 path = "vyre-driver-cuda"
@@ -513,17 +502,6 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "pass-engine"
-
-[[crate.dependency]]
-package = "vyre-spec"
-purpose = "stable cross-engine schemas and operation definitions"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "specification"
 
 [[crate]]
 package = "vyre-driver-reference"
@@ -743,17 +721,6 @@ optional = true
 default_features = true
 boundary = "private"
 seam = "foundation-ir"
-
-[[crate.dependency]]
-package = "vyre-spec"
-purpose = "stable cross-engine schemas and operation definitions"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "specification"
 
 [[crate]]
 package = "vyre-test-support"
@@ -1241,17 +1208,6 @@ boundary = "private"
 seam = "product-libraries"
 
 [[crate.dependency]]
-package = "vyre-primitives"
-purpose = "buffer and extent records the planner's forwarded builders take"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = true
-default_features = false
-boundary = "public"
-seam = "primitive-library"
-
-[[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
 features = []
@@ -1370,28 +1326,6 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "megakernel-compiler"
-
-[[crate.dependency]]
-package = "vyre-primitives"
-purpose = "reusable semantic Program builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = false
-boundary = "private"
-seam = "primitive-library"
-
-[[crate.dependency]]
-package = "vyre-spec"
-purpose = "stable cross-engine schemas and operation definitions"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "specification"
 
 [[crate]]
 package = "vyre-bench"
@@ -1778,14 +1712,3 @@ optional = false
 default_features = true
 boundary = "public"
 seam = "lowering"
-
-[[crate.dependency]]
-package = "vyre-primitives"
-purpose = "reusable semantic Program builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = false
-boundary = "private"
-seam = "primitive-library"

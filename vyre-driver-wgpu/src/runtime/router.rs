@@ -110,9 +110,8 @@ impl BackendRouter {
         if let Some(forced) = forced {
             let forced = forced.trim();
             if !forced.is_empty() {
-                let hit = registered.iter().find_map(|registration| {
-                    (registration.id == forced && !registration.reference_oracle)
-                        .then_some(registration)
+                let hit = registered.iter().find(|registration| {
+                    registration.id == forced && !registration.reference_oracle
                 });
                 let hit = match hit {
                     Some(registration) if backend_dispatches(registration.id)? => {

@@ -45,8 +45,6 @@ arrayvec.workspace = true
 workspace = true
 
 [dev-dependencies]
-# integration tests/benches assert against these crates' public APIs
-vyre-lower = { path = "../vyre-lower" }
 vyre-reference = { path = "../vyre-reference" }
 # Integration tests under tests/ use the `vyre` umbrella facade (vyre::ir::*)
 # as the public boundary they assert against. The `vyre` facade package

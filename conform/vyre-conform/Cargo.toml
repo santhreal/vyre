@@ -10,6 +10,9 @@ homepage.workspace = true
 description = "Canonical Vyre conformance engine and thin proof CLI."
 publish = false
 
+[package.metadata.cargo-machete]
+ignored = ["vyre-test-support"]
+
 [lints]
 workspace = true
 

@@ -101,7 +101,7 @@ static OPS: CaseOps<AesCtrPrepared> = CaseOps {
     verify: verify_exact,
     program: referenced_program::<AesCtrPrepared>,
     fingerprint: None,
-    bytes_touched: bytes_touched,
+    bytes_touched,
 };
 
 static CASE: HarnessCase<AesCtrPrepared> = HarnessCase {

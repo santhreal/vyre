@@ -15,7 +15,7 @@ pub(crate) mod report_fixture;
 /// `xtask` links no vyre crate, so it cannot call these directly. It builds
 /// this crate's binary and runs it, and the binary resolves the name against
 /// this table, runs the gate and prints one `Report` on stdout.
-pub static GATES: &[(&'static str, &'static dyn xtask::gate::GateBehavior)] = &[
+pub static GATES: &[(&str, &'static dyn xtask::gate::GateBehavior)] = &[
     (
         "backend-matrix",
         &release::backend_matrix::BackendMatrixGate,

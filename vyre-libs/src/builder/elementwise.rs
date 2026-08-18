@@ -134,7 +134,7 @@ impl ElementwiseComposer {
         )
     }
 
-    /// Add an output buffer configured as storage with custom access (e.g. ReadWrite).
+    /// Add an output buffer configured as storage with custom access (e.g. WriteOnly, ReadWrite).
     #[must_use]
     pub fn add_output_storage(
         self,
@@ -143,7 +143,19 @@ impl ElementwiseComposer {
         dtype: DataType,
         count: u32,
     ) -> Self {
-        self.add_input_storage(name, access, dtype, count)
+        let idx = self.buffers.len() as u32;
+        let elem_size = dtype.size_bytes().unwrap_or(4);
+        let range = 0..(count as usize).saturating_mul(elem_size);
+        let decl = match access {
+            BufferAccess::ReadWrite => BufferDecl::output(name, idx, dtype),
+            other => BufferDecl::storage(name, idx, other, dtype),
+        };
+        let decl = if count == 0 {
+            decl
+        } else {
+            decl.with_count(count)
+        };
+        self.add_buffer(decl.with_output_byte_range(range))
     }
 
     /// Build a custom loop kernel given a body generator closure `Fn(Expr) -> Vec<Node>`.
@@ -439,7 +451,7 @@ impl ElementwiseComposer {
             .with_workgroup_size([256, 1, 1])
             .add_input_storage(lhs, BufferAccess::ReadOnly, dtype.clone(), count)
             .add_input_storage(rhs, BufferAccess::ReadOnly, dtype.clone(), rhs_count)
-            .add_output_storage(out, BufferAccess::ReadWrite, dtype, count)
+            .add_output_storage(out, BufferAccess::WriteOnly, dtype, count)
             .build_pointwise(out, |i| {
                 let r_idx = rhs_index(&i);
                 let l = Expr::load(lhs, i);

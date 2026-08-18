@@ -436,7 +436,10 @@ impl AffineAccessMap {
         new_strides[dim] = StrideExpr::Static(new_stride);
 
         let new_offset = self.offset_bytes.saturating_add(offset_delta);
-        let new_alignment = gcd_u32(self.alignment_bytes, (new_offset.abs() as u32).max(1));
+        let new_alignment = gcd_u32(
+            self.alignment_bytes,
+            (new_offset.unsigned_abs() as u32).max(1),
+        );
 
         Ok(Self {
             shape: new_shape,

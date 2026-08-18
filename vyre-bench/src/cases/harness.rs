@@ -379,6 +379,6 @@ mod tests {
     #[test]
     fn a_harness_case_reports_the_harness_as_its_owner() {
         assert_eq!(CASE.declaration_owner(), super::HARNESS_OWNER);
-        assert!(!super::HARNESS_OWNER.is_empty());
+        assert_ne!(super::HARNESS_OWNER, "");
     }
 }

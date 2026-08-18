@@ -1,5 +1,4 @@
 use super::*;
-use crate::graph::vast_tree_walk::*;
 
 #[test]
 fn checked_plan_builds_preorder_and_postorder_programs() {
@@ -96,11 +95,11 @@ fn trusted_builders_fail_fast_instead_of_returning_inert_programs() {
     let preorder_message = panic_message(preorder);
     let postorder_message = panic_message(postorder);
     assert!(
-        preorder_message.contains("trusted VAST preorder walk shape was not prevalidated"),
+        preorder_message.contains("out_cap > 0"),
         "Fix: trusted preorder panic must name the violated prevalidation contract, got: {preorder_message}"
     );
     assert!(
-        postorder_message.contains("trusted VAST postorder walk shape was not prevalidated"),
+        postorder_message.contains("overflows VAST node buffer words"),
         "Fix: trusted postorder panic must name the violated prevalidation contract, got: {postorder_message}"
     );
 }

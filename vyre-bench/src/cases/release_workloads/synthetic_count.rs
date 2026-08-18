@@ -288,10 +288,7 @@ impl BenchCase for SyntheticCountWorkload {
                     rule_bitmap,
                     self.records,
                 ));
-                (
-                    vec![baseline_row.repeat(STRING_BITMAP_RESIDENT_BATCH_SIZE)],
-                    None,
-                )
+                (vec![baseline_row], None)
             }
         };
         let baseline_wall = elapsed_ns(baseline_start);
@@ -305,12 +302,7 @@ impl BenchCase for SyntheticCountWorkload {
                 )));
             }
         }
-        let output_bytes = timed
-            .outputs
-            .iter()
-            .map(Vec::len)
-            .sum::<usize>()
-            .div_ceil(batch_len.unwrap_or(1) as usize) as u64;
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let accounting = resident_reset_transfer_accounting(
             prepared.input_bytes_total,
             output_bytes,

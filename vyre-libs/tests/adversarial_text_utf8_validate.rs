@@ -3,7 +3,8 @@
 
 use vyre_foundation::ir::{DataType, Program};
 use vyre_libs::text::{
-    utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_4,
+    utf8_validate, utf8_validate_u8, UTF8_ASCII, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_2, UTF8_LEAD_3,
+    UTF8_LEAD_4,
 };
 use vyre_reference::composition_witness::utf8_validate_witness as reference_utf8_validate;
 use vyre_reference::value::Value;
@@ -66,10 +67,36 @@ fn utf8_validate_hostile_corpus() {
         (b"", &[]),
         (b"a", &[UTF8_ASCII]),
         (b"\xff", &[UTF8_INVALID]),
+        (b"\x80", &[UTF8_INVALID]),
         (b"\xc2\x80", &[UTF8_LEAD_2, UTF8_CONT]),
+        (b"\xc0\x80", &[UTF8_INVALID, UTF8_INVALID]),
+        (b"\xc3", &[UTF8_INVALID]),
+        (b"\xe2\x82\xac", &[UTF8_LEAD_3, UTF8_CONT, UTF8_CONT]),
+        (b"\xe0\x80\x80", &[UTF8_INVALID, UTF8_INVALID, UTF8_INVALID]),
+        (b"\xed\xa0\x80", &[UTF8_INVALID, UTF8_INVALID, UTF8_INVALID]),
+        (b"\xe2\x82", &[UTF8_INVALID, UTF8_INVALID]),
         (
             b"\xf0\x90\x80\x80",
             &[UTF8_LEAD_4, UTF8_CONT, UTF8_CONT, UTF8_CONT],
+        ),
+        (
+            b"\xf0\x80\x80\x80",
+            &[UTF8_INVALID, UTF8_INVALID, UTF8_INVALID, UTF8_INVALID],
+        ),
+        (
+            b"\xf4\x90\x80\x80",
+            &[UTF8_INVALID, UTF8_INVALID, UTF8_INVALID, UTF8_INVALID],
+        ),
+        (b"\xf0\x90\x80", &[UTF8_INVALID, UTF8_INVALID, UTF8_INVALID]),
+        (
+            b"\xf8\x80\x80\x80\x80",
+            &[
+                UTF8_INVALID,
+                UTF8_INVALID,
+                UTF8_INVALID,
+                UTF8_INVALID,
+                UTF8_INVALID,
+            ],
         ),
     ];
     for (idx, (source, expected)) in cases.iter().enumerate() {

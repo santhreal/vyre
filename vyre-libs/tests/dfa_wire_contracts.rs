@@ -2,9 +2,8 @@
 
 #![cfg(feature = "pattern")]
 
-use vyre_libs::pattern::{
-    aho_corasick_program_from_dfa_wire, dfa_compile, CompiledDfa, DfaWireError,
-};
+use vyre_libs::pattern::aho_corasick::aho_corasick_program_from_dfa_wire;
+use vyre_libs::pattern::{dfa_compile, CompiledDfa, DfaWireError};
 
 #[test]
 fn dfa_wire_round_trips_all_tables() {

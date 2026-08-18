@@ -836,7 +836,54 @@ mod tests {
             .map(|value| value.to_bytes())
             .collect::<Vec<_>>();
 
-        assert_eq!(outputs, vec![expected_row.repeat(batch_size as usize)]);
+        assert_eq!(outputs, vec![expected_row]);
+    }
+
+    /// WHY: resident batching allocates the full resident output buffer on device while
+    /// reading back only the representative canonical output bitmap; reference evaluation and
+    /// buffer declarations must be exact across different batch sizes.
+    #[test]
+    fn string_bitmap_scatter_resident_batch_abi_and_reference_parity_across_batch_sizes() {
+        for batch_size in [1, 2, 4, 8, 16] {
+            for records in [1, 31, 32, 33, 127, 257] {
+                let program = string_bitmap_scatter_program_with_batch(records, batch_size);
+                let output_words = records.div_ceil(32) as usize;
+                let total_output_words = output_words * batch_size as usize;
+
+                assert_eq!(program.buffers()[0].count, total_output_words as u32);
+                assert_eq!(
+                    program.buffers()[0].output_byte_range(),
+                    Some(0..output_words * 4)
+                );
+
+                let mut generated = string_bitmap_scatter_inputs(records);
+                let expected_words = string_bitmap_scatter_expected_words(
+                    &generated.pattern_bitmap,
+                    &generated.rule_bitmap,
+                    records,
+                );
+                let expected_row = encode_u32_words(&expected_words);
+                generated.inputs[0].resize(expected_row.len() * batch_size as usize, 0);
+                let values = generated
+                    .inputs
+                    .iter()
+                    .cloned()
+                    .map(vyre_reference::value::Value::from)
+                    .collect::<Vec<_>>();
+
+                let outputs = vyre_reference::reference_eval(&program, &values)
+                    .expect("Fix: resident batched string bitmap scatter must reference-evaluate")
+                    .into_iter()
+                    .map(|value| value.to_bytes())
+                    .collect::<Vec<_>>();
+
+                assert_eq!(
+                    outputs,
+                    vec![expected_row],
+                    "records={records}, batch_size={batch_size} must produce canonical 1-row reference evaluation"
+                );
+            }
+        }
     }
     /// WHY: release.condition_eval.1m uses bitwise popcount reduction instead of an unrolled loop;
     /// reference evaluation must produce byte-exact agreement with the scalar CPU oracle.

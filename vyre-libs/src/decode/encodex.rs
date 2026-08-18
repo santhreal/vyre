@@ -102,37 +102,61 @@ fn fixture_inputs() -> Vec<Vec<Vec<u8>>> {
         .collect()
 }
 
+const fn build_hist<const N: usize>(input: &[u8; N]) -> [u8; 1024] {
+    let mut out = [0u8; 1024];
+    let mut i = 0;
+    while i < N {
+        let b = input[i] as usize;
+        let base = b * 4;
+        let count = (out[base] as u32)
+            | ((out[base + 1] as u32) << 8)
+            | ((out[base + 2] as u32) << 16)
+            | ((out[base + 3] as u32) << 24);
+        let next = count + 1;
+        out[base] = next as u8;
+        out[base + 1] = (next >> 8) as u8;
+        out[base + 2] = (next >> 16) as u8;
+        out[base + 3] = (next >> 24) as u8;
+        i += 1;
+    }
+    out
+}
+
+const EXPECTED_ENCODEX_HIST_0: [u8; 1024] = build_hist(b"Hello");
+const EXPECTED_ENCODEX_HIST_1: [u8; 1024] = build_hist(&[0xC3, 0xA9, 0xC3, 0xA9, b'!']);
+const EXPECTED_ENCODEX_HIST_2: [u8; 1024] = build_hist(&[0x00, 0x00, 0x00, 0x41, 0x42]);
+const EXPECTED_ENCODEX_HIST_3: [u8; 1024] = build_hist(&[0xE9, 0xE8, 0xEA, 0xEB, 0xEC]);
+
 const EXPECTED_ENCODEX_ENC_0: [u8; 4] = [0, 0, 0, 0];
 const EXPECTED_ENCODEX_ENC_1: [u8; 4] = [1, 0, 0, 0];
 const EXPECTED_ENCODEX_ENC_2: [u8; 4] = [2, 0, 0, 0];
 const EXPECTED_ENCODEX_ENC_3: [u8; 4] = [4, 0, 0, 0];
-
-fn fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    let enc_bytes = [
-        EXPECTED_ENCODEX_ENC_0.to_vec(),
-        EXPECTED_ENCODEX_ENC_1.to_vec(),
-        EXPECTED_ENCODEX_ENC_2.to_vec(),
-        EXPECTED_ENCODEX_ENC_3.to_vec(),
-    ];
-    FIXTURE_INPUTS
-        .iter()
-        .zip(enc_bytes)
-        .map(|(input, enc_b)| {
-            let mut hist = vec![0u32; 256];
-            for &b in *input {
-                hist[b as usize] += 1;
-            }
-            vec![pack_words(&hist), enc_b]
-        })
-        .collect()
-}
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || encodex_gpu("input", "output", 5),
         Some(fixture_inputs),
-        Some(fixture_expected),
+        Some(|| {
+            vec![
+                vec![
+                    EXPECTED_ENCODEX_HIST_0.to_vec(),
+                    EXPECTED_ENCODEX_ENC_0.to_vec(),
+                ],
+                vec![
+                    EXPECTED_ENCODEX_HIST_1.to_vec(),
+                    EXPECTED_ENCODEX_ENC_1.to_vec(),
+                ],
+                vec![
+                    EXPECTED_ENCODEX_HIST_2.to_vec(),
+                    EXPECTED_ENCODEX_ENC_2.to_vec(),
+                ],
+                vec![
+                    EXPECTED_ENCODEX_HIST_3.to_vec(),
+                    EXPECTED_ENCODEX_ENC_3.to_vec(),
+                ],
+            ]
+        }),
     )
 }
 

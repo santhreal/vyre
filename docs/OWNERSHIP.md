@@ -46,15 +46,13 @@ Package the same megakernel artifact class ahead of time. Not a second compile p
 - Path: `vyre-aot`
 - Owner: `aot-artifacts`
 - Layer: `packaging`
-- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
-| `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
-| `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
 
 ### `vyre-bench`
 
@@ -128,7 +126,7 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 - Path: `vyre-debug`
 - Owner: `debugging`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`
+- Internal production dependencies: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -137,7 +135,6 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `public` | `lowering` |
-| `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
 
 ### `vyre-driver`
 
@@ -162,7 +159,7 @@ Own pure PTX target compilation, native device acquisition, materialization, dis
 - Path: `vyre-driver-cuda`
 - Owner: `cuda-driver`
 - Layer: `concrete-backend`
-- Internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-megakernel`, `vyre-pass-engine`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -173,7 +170,6 @@ Own pure PTX target compilation, native device acquisition, materialization, dis
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
 | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | `public` | `pass-engine` |
-| `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
 
 ### `vyre-driver-metal`
 
@@ -214,7 +210,7 @@ Own SPIR-V target compilation, immutable module-bundle emission, Vulkan material
 - Path: `vyre-driver-spirv`
 - Owner: `spirv-driver`
 - Layer: `concrete-backend`
-- Internal production dependencies: `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -223,7 +219,6 @@ Own SPIR-V target compilation, immutable module-bundle emission, Vulkan material
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
-| `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
 
 ### `vyre-driver-wgpu`
 
@@ -398,12 +393,11 @@ Own marker types and uncomposable hardware intrinsics. A composition belongs in 
 - Path: `vyre-primitives`
 - Owner: `primitive-library`
 - Layer: `primitives`
-- Internal production dependencies: `vyre-foundation`, `vyre-spec`
+- Internal production dependencies: `vyre-foundation`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
-| `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
 
 ### `vyre-reference`
 
@@ -448,7 +442,7 @@ Execute the artifact's selected persistence: sessions, recovery, residency, sche
 - Path: `vyre-runtime`
 - Owner: `runtime`
 - Layer: `runtime`
-- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`
+- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -456,7 +450,6 @@ Execute the artifact's selected persistence: sessions, recovery, residency, sche
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-libs` | composition trees the megakernel planner plans against | `private` | `product-libraries` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
-| `vyre-primitives` | buffer and extent records the planner's forwarded builders take | `public` | `primitive-library` |
 
 ### `vyre-safetensors`
 

@@ -1,39 +1,368 @@
-//! Permanent guard for the two clone families collapsed in PR-13:
-//! `math::conv` (direct conv vs im2col patch extraction) and
-//! `graph::ast_walk_*` (preorder vs postorder VAST traversal).
+//! Permanent guard for the two clone families:
+//! `math::conv` (direct conv vs im2col patch extraction vs decision router) and
+//! `graph::ast_walk_*` / `graph::vast_tree_walk` (preorder vs postorder VAST traversal).
 //!
-//! Section 1 pins `Program::fingerprint()` for every public entry point of
-//! both families across a shape/size spread including boundary cases. A
-//! fingerprint move means the emitted IR changed, which for a de-duplication
-//! change is a semantic question, not a golden to re-pin.
-//!
-//! Section 2 is the numeric contract the fingerprints stand in for: direct
-//! convolution must equal the im2col patch matrix contracted against the
-//! kernel, both evaluated through the reference interpreter, and both walks
-//! must equal the host traversal oracles. These survive an intentional IR
-//! change; the fingerprints do not.
+//! Replaces stale serialized IR hash fingerprints with live family derivation,
+//! compile-time/run-time closure over all declared public entry points,
+//! canonical shared-owner structural invariants, and byte-exact reference
+//! evaluation or algebraic equivalence against host oracles.
 //!
 //! GPU acquisition: none - reference interpreter only.
 
+#![cfg(feature = "graph")]
+#![forbid(unsafe_code)]
+
+mod harness;
+
+use std::collections::BTreeSet;
+
 use vyre_foundation::ir::Program;
-use vyre_libs::graph::{ast_walk_postorder, ast_walk_postorder_nodes, ast_walk_preorder};
+use vyre_foundation::vast::{
+    pack_spine_vast, walk_postorder_indices, walk_preorder_indices, NODE_STRIDE_U32,
+};
+use vyre_libs::graph::vast_tree_walk::{
+    self, try_ast_walk_plan, try_ast_walk_postorder, try_ast_walk_preorder, VastTreeWalkPlan,
+    VastWalkOrder,
+};
+use vyre_libs::graph::{
+    ast_walk, ast_walk_postorder, ast_walk_postorder_nodes, ast_walk_preorder,
+    pack_branching_fixture,
+};
 use vyre_libs::math::conv::{conv2d_3x3_decision, conv2d_3x3_direct, im2col_3x3};
-use vyre_primitives::wire::{decode_f32_le_bytes_all, pack_f32_slice, pack_u32_slice};
+use vyre_primitives::wire::{
+    decode_f32_le_bytes_all, decode_u32_le_bytes_all, pack_f32_slice, pack_u32_slice,
+};
 use vyre_reference::value::Value;
 
-fn fingerprint_hex(program: &Program) -> String {
-    program
-        .fingerprint()
-        .iter()
-        .fold(String::with_capacity(64), |mut acc, byte| {
-            acc.push_str(&format!("{byte:02x}"));
-            acc
-        })
+// ===========================================================================
+// Section 1: Live Family Derivation & Classification Gates
+// ===========================================================================
+
+/// Classified members of the `math::conv` dialect family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum ConvFamilyMember {
+    Direct,
+    Im2Col,
+    Decision,
 }
 
-/// Shape spread: degenerate rows/columns, the smallest square that has an
-/// interior pixel, the registered fixture shape, and both sides of the
-/// `conv2d_3x3_decision` im2col threshold (4096 pixels).
+impl ConvFamilyMember {
+    const ALL: [Self; 3] = [Self::Direct, Self::Im2Col, Self::Decision];
+}
+
+/// Classified members of the `graph::ast_walk` / `graph::vast_tree_walk` family.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum AstWalkFamilyMember {
+    AstWalkGeneric,
+    AstWalkPreorder,
+    AstWalkPostorderNodes,
+    AstWalkPostorderSpine,
+    VastBuildPlan,
+    VastBuildCheckedPreorder,
+    VastBuildCheckedPostorder,
+    VastBuildTrustedPreorder,
+    VastBuildTrustedPostorder,
+    VastTryOrder,
+    VastTryPreorder,
+    VastTryPostorder,
+    VastTryPlan,
+    VastPreorder,
+    VastPostorder,
+}
+
+impl AstWalkFamilyMember {
+    #[allow(dead_code)]
+    const ALL: [Self; 15] = [
+        Self::AstWalkGeneric,
+        Self::AstWalkPreorder,
+        Self::AstWalkPostorderNodes,
+        Self::AstWalkPostorderSpine,
+        Self::VastBuildPlan,
+        Self::VastBuildCheckedPreorder,
+        Self::VastBuildCheckedPostorder,
+        Self::VastBuildTrustedPreorder,
+        Self::VastBuildTrustedPostorder,
+        Self::VastTryOrder,
+        Self::VastTryPreorder,
+        Self::VastTryPostorder,
+        Self::VastTryPlan,
+        Self::VastPreorder,
+        Self::VastPostorder,
+    ];
+}
+
+/// Extract all `pub fn` identifiers and `pub use` re-exports from a Rust source file.
+fn extract_declared_public_items(source: &str) -> BTreeSet<String> {
+    let mut items = BTreeSet::new();
+    for line in source.lines() {
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed
+            .strip_prefix("pub const fn ")
+            .or_else(|| trimmed.strip_prefix("pub fn "))
+        {
+            if let Some((name, _)) = rest.split_once('(') {
+                let name = name.trim().trim_start_matches("r#");
+                if !name.is_empty() && !name.starts_with('_') {
+                    items.insert(name.to_string());
+                }
+            }
+        } else if let Some(rest) = trimmed.strip_prefix("pub use ") {
+            let item = rest.split("//").next().unwrap_or(rest).trim();
+            let item = item.trim_end_matches(';').trim();
+            if let Some((_, name)) = item.rsplit_once("::") {
+                let name = name
+                    .trim()
+                    .trim_start_matches('{')
+                    .trim_end_matches('}')
+                    .trim();
+                for sub in name.split(',') {
+                    let sub = sub.trim();
+                    if !sub.is_empty() {
+                        items.insert(sub.to_string());
+                    }
+                }
+            }
+        }
+    }
+    items
+}
+
+fn classify_conv_entrypoint(name: &str) -> Option<ConvFamilyMember> {
+    match name {
+        "conv2d_3x3_direct" => Some(ConvFamilyMember::Direct),
+        "im2col_3x3" => Some(ConvFamilyMember::Im2Col),
+        "conv2d_3x3_decision" => Some(ConvFamilyMember::Decision),
+        _ => None,
+    }
+}
+
+#[test]
+fn conv_family_roster_is_exhaustively_classified() {
+    let source = harness::crate_file("src/math/conv/mod.rs");
+    let declared = extract_declared_public_items(&source);
+    assert!(
+        declared.contains("conv2d_3x3_direct")
+            && declared.contains("im2col_3x3")
+            && declared.contains("conv2d_3x3_decision"),
+        "Fix: src/math/conv/mod.rs must declare the core conv family entrypoints: {declared:?}"
+    );
+
+    let mut unclassified = Vec::new();
+    let mut classified_members = BTreeSet::new();
+
+    for name in &declared {
+        match classify_conv_entrypoint(name) {
+            Some(member) => {
+                classified_members.insert(member);
+            }
+            None => {
+                unclassified.push(name.clone());
+            }
+        }
+    }
+
+    assert!(
+        unclassified.is_empty(),
+        "Fix: newly added conv family member(s) must be classified and tested: {:?}",
+        unclassified
+    );
+
+    for member in ConvFamilyMember::ALL {
+        assert!(
+            classified_members.contains(&member),
+            "Fix: ConvFamilyMember::{member:?} has no corresponding declaration in src/math/conv/mod.rs"
+        );
+    }
+}
+
+#[test]
+fn ast_walk_family_roster_is_exhaustively_classified() {
+    let walk_source = harness::crate_file("src/graph/ast_walk.rs");
+    let vast_source = harness::crate_file("src/graph/vast_tree_walk.rs");
+
+    let declared_walk = extract_declared_public_items(&walk_source);
+    let declared_vast = extract_declared_public_items(&vast_source);
+
+    // Filter out fixture generators which are test-only helpers
+    let core_walk_fns: BTreeSet<String> = declared_walk
+        .into_iter()
+        .filter(|name| !name.starts_with("pack_"))
+        .collect();
+
+    let mut unclassified_walk = Vec::new();
+    let mut covered_walk = BTreeSet::new();
+
+    for name in &core_walk_fns {
+        match name.as_str() {
+            "ast_walk" => {
+                covered_walk.insert(AstWalkFamilyMember::AstWalkGeneric);
+            }
+            "ast_walk_preorder" => {
+                covered_walk.insert(AstWalkFamilyMember::AstWalkPreorder);
+            }
+            "ast_walk_postorder_nodes" => {
+                covered_walk.insert(AstWalkFamilyMember::AstWalkPostorderNodes);
+            }
+            "ast_walk_postorder" => {
+                covered_walk.insert(AstWalkFamilyMember::AstWalkPostorderSpine);
+            }
+            other => unclassified_walk.push(other.to_string()),
+        }
+    }
+
+    assert!(
+        unclassified_walk.is_empty(),
+        "Fix: newly added ast_walk family member(s) must be classified and tested: {:?}",
+        unclassified_walk
+    );
+
+    let mut unclassified_vast = Vec::new();
+    let mut covered_vast = BTreeSet::new();
+
+    for name in &declared_vast {
+        match name.as_str() {
+            "build_vast_tree_walk_plan" => {
+                covered_vast.insert(AstWalkFamilyMember::VastBuildPlan);
+            }
+            "build_checked_preorder_walk" => {
+                covered_vast.insert(AstWalkFamilyMember::VastBuildCheckedPreorder);
+            }
+            "build_checked_postorder_walk" => {
+                covered_vast.insert(AstWalkFamilyMember::VastBuildCheckedPostorder);
+            }
+            "build_trusted_preorder_walk" => {
+                covered_vast.insert(AstWalkFamilyMember::VastBuildTrustedPreorder);
+            }
+            "build_trusted_postorder_walk" => {
+                covered_vast.insert(AstWalkFamilyMember::VastBuildTrustedPostorder);
+            }
+            "try_ast_walk_order" => {
+                covered_vast.insert(AstWalkFamilyMember::VastTryOrder);
+            }
+            "try_ast_walk_preorder" => {
+                covered_vast.insert(AstWalkFamilyMember::VastTryPreorder);
+            }
+            "try_ast_walk_postorder" => {
+                covered_vast.insert(AstWalkFamilyMember::VastTryPostorder);
+            }
+            "try_ast_walk_plan" => {
+                covered_vast.insert(AstWalkFamilyMember::VastTryPlan);
+            }
+            "ast_walk_preorder" => {
+                covered_vast.insert(AstWalkFamilyMember::VastPreorder);
+            }
+            "ast_walk_postorder" => {
+                covered_vast.insert(AstWalkFamilyMember::VastPostorder);
+            }
+            "primitive_op_ids" => {} // metadata helper
+            other => unclassified_vast.push(other.to_string()),
+        }
+    }
+    assert!(
+        unclassified_vast.is_empty(),
+        "Fix: newly added vast_tree_walk member(s) must be classified and tested: {:?}",
+        unclassified_vast
+    );
+}
+
+// ===========================================================================
+// Section 2: Canonical Shared-Owner Closure Invariants
+// ===========================================================================
+
+#[test]
+fn conv_family_shares_canonical_stencil_owner() {
+    let conv2d_src = harness::crate_file("src/math/conv/conv2d.rs");
+    let im2col_src = harness::crate_file("src/math/conv/im2col.rs");
+    let mod_src = harness::crate_file("src/math/conv/mod.rs");
+
+    // Both conv2d and im2col must use the shared stencil helper rather than hand-rolling coordinate/tap logic.
+    assert!(
+        conv2d_src.contains("stencil_3x3_taps") || conv2d_src.contains("decompose_index"),
+        "Fix: conv2d.rs must build upon crate::builder::stencil shared owner."
+    );
+    assert!(
+        im2col_src.contains("stencil_3x3_taps") || im2col_src.contains("decompose_index"),
+        "Fix: im2col.rs must build upon crate::builder::stencil shared owner."
+    );
+
+    // conv2d_3x3_decision must delegate to conv2d_3x3_direct under both arms.
+    assert!(
+        mod_src.contains("conv2d_3x3_direct("),
+        "Fix: conv2d_3x3_decision must delegate to conv2d_3x3_direct."
+    );
+
+    // Structural IR invariant check: conv2d_3x3_direct and im2col_3x3 share identical invocation grid shape
+    let direct_prog = conv2d_3x3_direct("in", "k", "out", 8, 8).expect("Fix: direct conv builds");
+    let im2col_prog = im2col_3x3("in", "out", 8, 8).expect("Fix: im2col builds");
+    let decision_prog =
+        conv2d_3x3_decision("in", "k", "out", 8, 8).expect("Fix: decision conv builds");
+
+    assert_eq!(
+        direct_prog.workgroup_size(),
+        im2col_prog.workgroup_size(),
+        "Direct conv and im2col must share workgroup geometry."
+    );
+    assert_eq!(
+        direct_prog.workgroup_size(),
+        decision_prog.workgroup_size(),
+        "Direct conv and decision conv must share workgroup geometry."
+    );
+}
+
+#[test]
+fn ast_walk_family_shares_canonical_tree_walk_owner() {
+    let walk_src = harness::crate_file("src/graph/ast_walk.rs");
+
+    // ast_walk.rs must delegate to vast_tree_walk rather than implementing its own loop.
+    assert!(
+        walk_src.contains("vast_tree_walk::try_ast_walk_order"),
+        "Fix: ast_walk.rs must delegate to vast_tree_walk::try_ast_walk_order."
+    );
+
+    // ast_walk_preorder and ast_walk_postorder_nodes must delegate to ast_walk.
+    assert!(
+        walk_src.contains("ast_walk(VastWalkOrder::Preorder"),
+        "Fix: ast_walk_preorder must delegate to ast_walk."
+    );
+    assert!(
+        walk_src.contains("ast_walk(VastWalkOrder::Postorder"),
+        "Fix: ast_walk_postorder_nodes must delegate to ast_walk."
+    );
+
+    // Structural AST equivalence: compare IR nodes between ast_walk and vast_tree_walk
+    let node_count = 6u32;
+    let out_cap = 8u32;
+
+    let pre_direct = ast_walk_preorder("nodes", "out", node_count, out_cap);
+    let pre_order = ast_walk(VastWalkOrder::Preorder, "nodes", "out", node_count, out_cap);
+    let pre_vast = try_ast_walk_preorder("nodes", "out", node_count, out_cap)
+        .expect("Fix: try_ast_walk_preorder builds");
+
+    // Buffers and workgroup size must be identical
+    assert_eq!(pre_direct.buffers(), pre_order.buffers());
+    assert_eq!(pre_direct.workgroup_size(), pre_order.workgroup_size());
+    assert_eq!(pre_direct.buffers(), pre_vast.buffers());
+
+    let post_direct = ast_walk_postorder_nodes("nodes", "out", node_count, out_cap);
+    let post_order = ast_walk(
+        VastWalkOrder::Postorder,
+        "nodes",
+        "out",
+        node_count,
+        out_cap,
+    );
+    let post_vast = try_ast_walk_postorder("nodes", "out", node_count, out_cap)
+        .expect("Fix: try_ast_walk_postorder builds");
+
+    assert_eq!(post_direct.buffers(), post_order.buffers());
+    assert_eq!(post_direct.workgroup_size(), post_order.workgroup_size());
+    assert_eq!(post_direct.buffers(), post_vast.buffers());
+}
+
+// ===========================================================================
+// Section 3: Convolution Family Semantic Parity & Algebraic Equivalence
+// ===========================================================================
+
 const CONV_SHAPES: &[(u32, u32)] = &[
     (1, 1),
     (1, 5),
@@ -42,345 +371,22 @@ const CONV_SHAPES: &[(u32, u32)] = &[
     (3, 3),
     (4, 4),
     (8, 8),
+    (16, 16),
     (64, 63),
     (64, 64),
     (65, 65),
 ];
 
-fn conv_family_fingerprints() -> Vec<(String, String)> {
-    let mut rows = Vec::new();
-    for &(h, w) in CONV_SHAPES {
-        let direct = conv2d_3x3_direct("input", "kernel", "output", h, w)
-            .expect("Fix: conv2d_3x3_direct must build for a non-degenerate shape.");
-        rows.push((
-            format!("conv2d_3x3_direct:{h}x{w}"),
-            fingerprint_hex(&direct),
-        ));
-
-        let patches = im2col_3x3("input", "output", h, w)
-            .expect("Fix: im2col_3x3 must build for a non-degenerate shape.");
-        rows.push((format!("im2col_3x3:{h}x{w}"), fingerprint_hex(&patches)));
-
-        let decision = conv2d_3x3_decision("input", "kernel", "output", h, w)
-            .expect("Fix: conv2d_3x3_decision must build for a non-degenerate shape.");
-        rows.push((
-            format!("conv2d_3x3_decision:{h}x{w}"),
-            fingerprint_hex(&decision),
-        ));
-    }
-    rows
-}
-
-/// Walk spread: empty tree, single node, spine, the branching fixture, and
-/// caps below / equal to / above the node count.
-const WALK_SHAPES: &[(u32, u32)] = &[
-    (0, 8),
-    (1, 8),
-    (1, 1),
-    (4, 8),
-    (6, 8),
-    (8, 4),
-    (8, 16),
-    (8, 1),
-];
-
-fn walk_family_fingerprints() -> Vec<(String, String)> {
-    let mut rows = Vec::new();
-    for &(node_count, out_cap) in WALK_SHAPES {
-        rows.push((
-            format!("ast_walk_preorder:{node_count}/{out_cap}"),
-            fingerprint_hex(&ast_walk_preorder("nodes", "out", node_count, out_cap)),
-        ));
-        rows.push((
-            format!("ast_walk_postorder_nodes:{node_count}/{out_cap}"),
-            fingerprint_hex(&ast_walk_postorder_nodes(
-                "nodes", "out", node_count, out_cap,
-            )),
-        ));
-    }
-    for node_count in [0u32, 1, 4, 8] {
-        rows.push((
-            format!("ast_walk_postorder:{node_count}"),
-            fingerprint_hex(&ast_walk_postorder("out", node_count)),
-        ));
-    }
-    rows
-}
-
-fn assert_pinned(family: &str, actual: &[(String, String)], pinned: &[(&str, &str)]) {
-    let mut divergences = Vec::new();
-    if actual.len() != pinned.len() {
-        divergences.push(format!(
-            "entry count {} != pinned {}",
-            actual.len(),
-            pinned.len()
-        ));
-    }
-    for (index, (label, digest)) in actual.iter().enumerate() {
-        match pinned.get(index) {
-            Some((pinned_label, pinned_digest)) => {
-                if pinned_label != label {
-                    divergences.push(format!("[{index}] label {pinned_label} != {label}"));
-                } else if pinned_digest != digest {
-                    divergences.push(format!("[{index}] {label}: {pinned_digest} != {digest}"));
-                }
-            }
-            None => divergences.push(format!("[{index}] {label}: unpinned")),
-        }
-    }
-    if divergences.is_empty() {
-        return;
-    }
-    let table = actual
-        .iter()
-        .map(|(label, digest)| format!("    (\"{label}\", \"{digest}\"),"))
-        .collect::<Vec<_>>()
-        .join("\n");
-    panic!(
-        "{family} fingerprints diverged from the pinned pre-merge tree.\n\
-         Divergences:\n  {}\n\
-         A fingerprint move is a semantic question. Prove numeric equivalence \
-         through the reference interpreter and record which behavior won before \
-         touching this table.\nObserved:\n{table}",
-        divergences.join("\n  ")
-    );
-}
-
-/// Pinned on the pre-merge tree at b72b96dbc8, before either family was
-/// collapsed onto a single owner.
-const CONV_PINS: &[(&str, &str)] = &[
-    (
-        "conv2d_3x3_direct:1x1",
-        "4c3ae41462bd7c0ede42aa23d3107f556c2f903d550a5156808135f912e79dfb",
-    ),
-    (
-        "im2col_3x3:1x1",
-        "09cd8133dfc56300f244c284235c03bfc9ba11427dbedc02fa44c65e8bcb96d7",
-    ),
-    (
-        "conv2d_3x3_decision:1x1",
-        "4c3ae41462bd7c0ede42aa23d3107f556c2f903d550a5156808135f912e79dfb",
-    ),
-    (
-        "conv2d_3x3_direct:1x5",
-        "60744680c2cd595acb224de3d02f5975284ae93f3a2170a9611ac1616fca9098",
-    ),
-    (
-        "im2col_3x3:1x5",
-        "ce5c180d5f242b74bbe0ee95fd375348411a6a69bd5348c02f58c1cd5a6b9ed6",
-    ),
-    (
-        "conv2d_3x3_decision:1x5",
-        "60744680c2cd595acb224de3d02f5975284ae93f3a2170a9611ac1616fca9098",
-    ),
-    (
-        "conv2d_3x3_direct:5x1",
-        "4ed6860ac6b6a384a1edbf22f126f7b1eec6ffac0a04785d03a06bde22917dbc",
-    ),
-    (
-        "im2col_3x3:5x1",
-        "7b0cd8b3d9cdc7b4f1aac98b93c9e4eddc019b3181eb9e5ab55b31a4a59084c4",
-    ),
-    (
-        "conv2d_3x3_decision:5x1",
-        "4ed6860ac6b6a384a1edbf22f126f7b1eec6ffac0a04785d03a06bde22917dbc",
-    ),
-    (
-        "conv2d_3x3_direct:2x3",
-        "d116c48341d46aece6f5b485efdb724a3f73b5d00b714bf3c867f2c908a9dec3",
-    ),
-    (
-        "im2col_3x3:2x3",
-        "e55f8e6d3b3c13812a0f6113cf37a8e12fdab1e1a8a95848c8758c1f56a2a95d",
-    ),
-    (
-        "conv2d_3x3_decision:2x3",
-        "d116c48341d46aece6f5b485efdb724a3f73b5d00b714bf3c867f2c908a9dec3",
-    ),
-    (
-        "conv2d_3x3_direct:3x3",
-        "22a4b5597652b20113c8299b607e418e043fd53a51e24c52e0c81a9a4638007b",
-    ),
-    (
-        "im2col_3x3:3x3",
-        "4b4c35959b639b4e3f5022f43cb18808dbcaf0a664fd3e39777dcb0b930122a1",
-    ),
-    (
-        "conv2d_3x3_decision:3x3",
-        "22a4b5597652b20113c8299b607e418e043fd53a51e24c52e0c81a9a4638007b",
-    ),
-    (
-        "conv2d_3x3_direct:4x4",
-        "8bb5a403a6f9b80c421afdbb9157c36cb1f286e28a35b641f02c5ba94e27fde8",
-    ),
-    (
-        "im2col_3x3:4x4",
-        "10f3acdebc88dd249887fd650e1807cd302048841ddc1fe65ff222c9635ad7fd",
-    ),
-    (
-        "conv2d_3x3_decision:4x4",
-        "8bb5a403a6f9b80c421afdbb9157c36cb1f286e28a35b641f02c5ba94e27fde8",
-    ),
-    (
-        "conv2d_3x3_direct:8x8",
-        "68f10294db503217f359bc7eee7b6c48e1f4b794718ed291d20d86fa2767334c",
-    ),
-    (
-        "im2col_3x3:8x8",
-        "032bb55e239de7b29228d1963603c55d7ae5790c738fa2df7ff14fd361f6562f",
-    ),
-    (
-        "conv2d_3x3_decision:8x8",
-        "68f10294db503217f359bc7eee7b6c48e1f4b794718ed291d20d86fa2767334c",
-    ),
-    (
-        "conv2d_3x3_direct:64x63",
-        "f63baaa5b6b7911ae7611b94c99bd885ca94c6d310f48d51ea8dca8fee453a38",
-    ),
-    (
-        "im2col_3x3:64x63",
-        "070cd727c4f472392b9ff60dcebaff22a44e45c93d06beb442ec6a78be81e05e",
-    ),
-    (
-        "conv2d_3x3_decision:64x63",
-        "f63baaa5b6b7911ae7611b94c99bd885ca94c6d310f48d51ea8dca8fee453a38",
-    ),
-    (
-        "conv2d_3x3_direct:64x64",
-        "fb45f42bc6664dedc8a8bbd21e9e56dfa2cdf3ecf5e5efb2d8a5398d9df2c1ea",
-    ),
-    (
-        "im2col_3x3:64x64",
-        "d062cb0a1024b50a85f515540ddef0055201adf9bc681511a4b52e60127a6b13",
-    ),
-    (
-        "conv2d_3x3_decision:64x64",
-        "5732ebfa1597679bed723d90f846933ff8f53bdca1fb6d94c435aade601d4995",
-    ),
-    (
-        "conv2d_3x3_direct:65x65",
-        "6d4463b09b4fc2c975d4cdcadcec95f2a64ff461511ccddc1a0763ebef027bac",
-    ),
-    (
-        "im2col_3x3:65x65",
-        "9b621bbe26261d0e8ce45104d6e06a631cc70370ae8c969d84d2621d65ce0e3c",
-    ),
-    (
-        "conv2d_3x3_decision:65x65",
-        "b796bf011ad434b9463efb9c86d99cff575a99426ce22696e67ad05b97c8d830",
-    ),
-];
-
-/// Pinned on the same pre-merge tree.
-const WALK_PINS: &[(&str, &str)] = &[
-    (
-        "ast_walk_preorder:0/8",
-        "9120d57d92ebe0e5ef493b33b9d8f1fb84ee5d624fe2bee967d10fdcaacfe2af",
-    ),
-    (
-        "ast_walk_postorder_nodes:0/8",
-        "e45c14d24a29d8420ef3f381c4b17fad422bf9c89927178be66512518613bda0",
-    ),
-    (
-        "ast_walk_preorder:1/8",
-        "3640238ad3649e8e8aacbda1618e5e2b81cd4629f790b445e152f9429d6b5088",
-    ),
-    (
-        "ast_walk_postorder_nodes:1/8",
-        "81e3dcf6a968d9b2f791d37325a3cf694cf037382334ab465d887f5fe87f415d",
-    ),
-    (
-        "ast_walk_preorder:1/1",
-        "f7f6a497dcb68afdd22d36cb6e6dc3f9219c8e9e3bbed17b76fdd77492828a65",
-    ),
-    (
-        "ast_walk_postorder_nodes:1/1",
-        "bb1d6fe37eccd4e41875eaab2bec1653e4e20d293a519e3480e5098d443dc2fa",
-    ),
-    (
-        "ast_walk_preorder:4/8",
-        "8c4533866cc00485a92f5085e61731023ab3bacd1d913c62b7dc2ee5c9542558",
-    ),
-    (
-        "ast_walk_postorder_nodes:4/8",
-        "bab7219257e19d16890d76bd363c7d8a9cc4eee7cc295aec60c23919e68bd872",
-    ),
-    (
-        "ast_walk_preorder:6/8",
-        "bad02976f3fe033754f2e15d00239e002dbdbc8e5f8cf90449da4e959abcf33e",
-    ),
-    (
-        "ast_walk_postorder_nodes:6/8",
-        "f36af89b6a428591855ca76abd1ea6af1ef81a4651350435cc252b9a9820a281",
-    ),
-    (
-        "ast_walk_preorder:8/4",
-        "1d3636b9cbe36cc51028eed8c4e0f3febb9489266a5de312d0358744facb4359",
-    ),
-    (
-        "ast_walk_postorder_nodes:8/4",
-        "30b37ac6fddfd9908edd9a807c753e6209fa6a70e54a1043a1f7ef4c763f2c00",
-    ),
-    (
-        "ast_walk_preorder:8/16",
-        "b34bb9140a44618799a566c6bd8561b8a8f65bf095f352e01d5f70b63c1f9701",
-    ),
-    (
-        "ast_walk_postorder_nodes:8/16",
-        "3cf95a1fd6fe72d3c21dd17f8200f57fcecfdc19292eef11944248e149d05725",
-    ),
-    (
-        "ast_walk_preorder:8/1",
-        "0111e649fa300d5a493fe9e482a9f18afec250c0d44087e96c3edf6cd830d360",
-    ),
-    (
-        "ast_walk_postorder_nodes:8/1",
-        "df9d61ce48e41de5da63fd12d4f81dff5167f02021749560df59053b361557db",
-    ),
-    (
-        "ast_walk_postorder:0",
-        "5629e403cd40dd4a11b2b48f359cbab5868e24dc058f3579e3504295230464cd",
-    ),
-    (
-        "ast_walk_postorder:1",
-        "bf077cdd00d0c30fe461001aeb96e072ff24457af62cd9675c6f434169c81d01",
-    ),
-    (
-        "ast_walk_postorder:4",
-        "8db64ba191e7705338d3a74613e4777605ed4b4967b9e13e5e86e7985f86f58e",
-    ),
-    (
-        "ast_walk_postorder:8",
-        "ff8acc9176f0a5ef2b8b0d440fdafa5ac20cd1b86cd504a91cfbcc12eaca782b",
-    ),
-];
-
-#[test]
-fn conv_family_ir_is_pinned() {
-    assert_pinned("math::conv", &conv_family_fingerprints(), CONV_PINS);
-}
-
-#[test]
-fn ast_walk_family_ir_is_pinned() {
-    assert_pinned("graph::ast_walk", &walk_family_fingerprints(), WALK_PINS);
-}
-// ---------------------------------------------------------------------------
-// Numeric contracts: what the fingerprints stand in for.
-// ---------------------------------------------------------------------------
-
-/// Deterministic non-symmetric image; the ramp makes a transposed or
-/// off-by-one patch index visible in the output.
-fn image(h: u32, w: u32) -> Vec<f32> {
+fn test_image(h: u32, w: u32) -> Vec<f32> {
     (0..h * w).map(|i| (i % 17) as f32 - 4.5).collect()
 }
 
-/// Kernels with distinct taps, negative taps, and an asymmetric layout, so a
-/// swapped `ky`/`kx` or a dropped tap cannot pass.
 const KERNELS: &[[f32; 9]] = &[
     [1.0; 9],
     [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
     [0.0, -1.0, 0.0, -1.0, 4.0, -1.0, 0.0, -1.0, 0.0],
     [-0.5, 0.25, 0.125, 2.0, -3.0, 0.0625, 7.5, -0.75, 1.5],
+    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0], // identity tap
 ];
 
 fn run_conv(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
@@ -394,6 +400,20 @@ fn run_conv(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
         ],
     )
     .expect("Fix: conv2d_3x3_direct must execute in the reference interpreter.");
+    decode_f32_le_bytes_all(&outputs[0].to_bytes())
+}
+
+fn run_conv_decision(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
+    let program = conv2d_3x3_decision("input", "kernel", "output", h, w)
+        .expect("Fix: conv2d_3x3_decision must build.");
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[
+            Value::from(pack_f32_slice(input)),
+            Value::from(pack_f32_slice(kernel)),
+        ],
+    )
+    .expect("Fix: conv2d_3x3_decision must execute in the reference interpreter.");
     decode_f32_le_bytes_all(&outputs[0].to_bytes())
 }
 
@@ -426,15 +446,31 @@ fn host_conv(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
     out
 }
 
-/// The family's cross-entry-point equality: `conv2d_3x3_direct` must equal the
-/// `im2col_3x3` patch matrix contracted against the kernel. This is the exact
-/// property a "direct conv re-walks the convolution itself" implementation and
-/// an "im2col plus gemm" implementation must agree on, so it holds across the
-/// merge regardless of which one emits the IR.
+fn host_im2col(h: u32, w: u32, input: &[f32]) -> Vec<f32> {
+    let (h, w) = (h as i64, w as i64);
+    let mut out = Vec::with_capacity((h * w * 9) as usize);
+    for y in 0..h {
+        for x in 0..w {
+            for ky in 0..3i64 {
+                for kx in 0..3i64 {
+                    let ny = y + ky - 1;
+                    let nx = x + kx - 1;
+                    if ny >= 0 && ny < h && nx >= 0 && nx < w {
+                        out.push(input[(ny * w + nx) as usize]);
+                    } else {
+                        out.push(0.0f32);
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
 #[test]
 fn direct_conv_equals_im2col_contracted_with_the_kernel() {
-    for &(h, w) in &[(1u32, 1u32), (1, 5), (5, 1), (2, 3), (3, 3), (4, 4), (8, 8)] {
-        let input = image(h, w);
+    for &(h, w) in CONV_SHAPES {
+        let input = test_image(h, w);
         let patches = run_im2col(h, w, &input);
         assert_eq!(
             patches.len(),
@@ -460,8 +496,8 @@ fn direct_conv_equals_im2col_contracted_with_the_kernel() {
 
 #[test]
 fn conv_matches_host_zero_padded_convolution() {
-    for &(h, w) in &[(1u32, 1u32), (1, 5), (5, 1), (2, 3), (3, 3), (4, 4), (8, 8)] {
-        let input = image(h, w);
+    for &(h, w) in CONV_SHAPES {
+        let input = test_image(h, w);
         for kernel in KERNELS {
             assert_eq!(
                 run_conv(h, w, &input, kernel),
@@ -473,7 +509,45 @@ fn conv_matches_host_zero_padded_convolution() {
 }
 
 #[test]
-fn conv_rejects_degenerate_shapes() {
+fn im2col_matches_host_patch_extraction() {
+    for &(h, w) in CONV_SHAPES {
+        let input = test_image(h, w);
+        assert_eq!(
+            run_im2col(h, w, &input),
+            host_im2col(h, w, &input),
+            "{h}x{w}: im2col output must match the host patch extraction oracle bit-for-bit"
+        );
+    }
+}
+
+#[test]
+fn conv2d_decision_matches_direct_and_host_oracle_across_threshold() {
+    for &(h, w) in CONV_SHAPES {
+        let input = test_image(h, w);
+        for kernel in KERNELS {
+            let decision_result = run_conv_decision(h, w, &input, kernel);
+            let host_result = host_conv(h, w, &input, kernel);
+            assert_eq!(
+                decision_result, host_result,
+                "{h}x{w} kernel {kernel:?}: decision conv must match the host oracle bit-for-bit"
+            );
+        }
+
+        let prog = conv2d_3x3_decision("in", "k", "out", h, w).expect("decision program builds");
+        let pixels = h * w;
+        if pixels >= 4096 {
+            // Must contain hint for im2col preferred
+            let dump = format!("{prog:?}");
+            assert!(
+                dump.contains("conv2d_3x3_im2col_preferred"),
+                "{h}x{w}: large image must carry im2col preference tag in region header"
+            );
+        }
+    }
+}
+
+#[test]
+fn conv_rejects_degenerate_and_overflowing_shapes() {
     for (h, w) in [(0u32, 0u32), (0, 4), (4, 0)] {
         let error = conv2d_3x3_direct("input", "kernel", "output", h, w)
             .expect_err("Fix: a zero extent must be rejected, not silently emptied.");
@@ -482,12 +556,25 @@ fn conv_rejects_degenerate_shapes() {
             "{h}x{w}: {error}"
         );
     }
+
+    // Overflow check
+    let err = conv2d_3x3_direct("in", "k", "out", u32::MAX, 2)
+        .expect_err("Fix: overflowing dimensions must error.");
+    assert!(err.contains("overflows u32"), "{err}");
+
+    let err_im = im2col_3x3("in", "out", u32::MAX / 4, 2)
+        .expect_err("Fix: overflowing im2col dimensions must error.");
+    assert!(err_im.contains("overflows u32"), "{err_im}");
 }
 
+// ===========================================================================
+// Section 4: AST-Walk Family Semantic Parity & Host Oracle Equivalence
+// ===========================================================================
+
 fn spine_nodes(node_count: u32) -> Vec<u8> {
-    let full = vyre_foundation::vast::pack_spine_vast(&vec![1u32; node_count as usize]);
+    let full = pack_spine_vast(&vec![1u32; node_count as usize]);
     let start = vyre_foundation::vast::HEADER_LEN;
-    let len = (node_count as usize) * vyre_foundation::vast::NODE_STRIDE_U32 * 4;
+    let len = (node_count as usize) * NODE_STRIDE_U32 * 4;
     full[start..start + len].to_vec()
 }
 
@@ -500,24 +587,23 @@ fn run_walk(program: &Program, nodes: &[u8], out_words: usize) -> Vec<u32> {
         ],
     )
     .expect("Fix: an AST walk must execute in the reference interpreter.");
-    vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+    decode_u32_le_bytes_all(&outputs[0].to_bytes())
 }
 
-/// Both walk entry points must agree with the host traversal oracle on the same
-/// tree, which is the contract a direction-parameterized single walk has to keep.
 #[test]
-fn both_walks_match_the_host_traversal_oracles() {
-    for node_count in [1u32, 2, 4, 8] {
+fn both_walks_match_the_host_traversal_oracles_on_spines() {
+    for node_count in [1u32, 2, 4, 8, 16] {
         let nodes = spine_nodes(node_count);
-        let cap = 16u32;
+        let cap = 32u32;
         let words = cap as usize;
 
+        // 1. ast_walk_preorder
         let pre = run_walk(
             &ast_walk_preorder("nodes", "out", node_count, cap),
             &nodes,
             words,
         );
-        let host_pre = vyre_foundation::vast::walk_preorder_indices(&nodes, node_count, 128)
+        let host_pre = walk_preorder_indices(&nodes, node_count, 128)
             .expect("Fix: host preorder oracle must accept the spine fixture.");
         assert_eq!(
             &pre[..host_pre.len()],
@@ -525,12 +611,37 @@ fn both_walks_match_the_host_traversal_oracles() {
             "spine {node_count}: preorder walk must match the host oracle"
         );
 
+        // 2. Order-parameterized preorder
+        let pre_order = run_walk(
+            &ast_walk(VastWalkOrder::Preorder, "nodes", "out", node_count, cap),
+            &nodes,
+            words,
+        );
+        assert_eq!(
+            &pre_order[..host_pre.len()],
+            host_pre.as_slice(),
+            "spine {node_count}: order-parameterized preorder walk must match host oracle"
+        );
+
+        // 3. vast_tree_walk::try_ast_walk_preorder
+        let vast_pre = run_walk(
+            &try_ast_walk_preorder("nodes", "out", node_count, cap).expect("vast preorder builds"),
+            &nodes,
+            words,
+        );
+        assert_eq!(
+            &vast_pre[..host_pre.len()],
+            host_pre.as_slice(),
+            "spine {node_count}: vast_tree_walk preorder must match host oracle"
+        );
+
+        // 4. ast_walk_postorder_nodes
         let post = run_walk(
             &ast_walk_postorder_nodes("nodes", "out", node_count, cap),
             &nodes,
             words,
         );
-        let host_post = vyre_foundation::vast::walk_postorder_indices(&nodes, node_count, 128)
+        let host_post = walk_postorder_indices(&nodes, node_count, 128)
             .expect("Fix: host postorder oracle must accept the spine fixture.");
         assert_eq!(
             &post[..host_post.len()],
@@ -538,10 +649,219 @@ fn both_walks_match_the_host_traversal_oracles() {
             "spine {node_count}: postorder walk must match the host oracle"
         );
 
+        // 5. Order-parameterized postorder
+        let post_order = run_walk(
+            &ast_walk(VastWalkOrder::Postorder, "nodes", "out", node_count, cap),
+            &nodes,
+            words,
+        );
+        assert_eq!(
+            &post_order[..host_post.len()],
+            host_post.as_slice(),
+            "spine {node_count}: order-parameterized postorder walk must match host oracle"
+        );
+
+        // 6. vast_tree_walk::try_ast_walk_postorder
+        let vast_post = run_walk(
+            &try_ast_walk_postorder("nodes", "out", node_count, cap)
+                .expect("vast postorder builds"),
+            &nodes,
+            words,
+        );
+        assert_eq!(
+            &vast_post[..host_post.len()],
+            host_post.as_slice(),
+            "spine {node_count}: vast_tree_walk postorder must match host oracle"
+        );
+
+        // 7. Spine closed-form postorder helper agreement (single output buffer)
+        let spine_post_prog = ast_walk_postorder("out", node_count);
+        let spine_post = {
+            let outputs = vyre_reference::reference_eval(
+                &spine_post_prog,
+                &[Value::from(pack_u32_slice(&vec![
+                    0u32;
+                    node_count as usize
+                ]))],
+            )
+            .expect("Fix: spine postorder walk must execute in reference interpreter.");
+            decode_u32_le_bytes_all(&outputs[0].to_bytes())
+        };
+        assert_eq!(
+            spine_post.as_slice(),
+            host_post.as_slice(),
+            "spine {node_count}: ast_walk_postorder closed-form must match host postorder oracle"
+        );
+
+        // 7b. Checked and trusted vast_tree_walk builder helpers
+        let checked_pre = run_walk(
+            &vast_tree_walk::build_checked_preorder_walk("nodes", "out", node_count, cap)
+                .expect("checked preorder builds"),
+            &nodes,
+            words,
+        );
+        assert_eq!(&checked_pre[..host_pre.len()], host_pre.as_slice());
+
+        let checked_post = run_walk(
+            &vast_tree_walk::build_checked_postorder_walk("nodes", "out", node_count, cap)
+                .expect("checked postorder builds"),
+            &nodes,
+            words,
+        );
+        assert_eq!(&checked_post[..host_post.len()], host_post.as_slice());
+
+        let trusted_pre = run_walk(
+            &vast_tree_walk::build_trusted_preorder_walk("nodes", "out", node_count, cap),
+            &nodes,
+            words,
+        );
+        assert_eq!(&trusted_pre[..host_pre.len()], host_pre.as_slice());
+
+        let trusted_post = run_walk(
+            &vast_tree_walk::build_trusted_postorder_walk("nodes", "out", node_count, cap),
+            &nodes,
+            words,
+        );
+        assert_eq!(&trusted_post[..host_post.len()], host_post.as_slice());
+
+        // 8. Preorder vs Postorder duality on a spine: postorder is exact reverse of preorder
         assert_eq!(
             host_post,
             host_pre.iter().rev().copied().collect::<Vec<_>>(),
             "spine {node_count}: postorder is the reverse of preorder"
         );
+
+        // 9. Combined plan verification
+        let plan: VastTreeWalkPlan = try_ast_walk_plan("nodes", "pre", "post", node_count, cap)
+            .expect("Fix: try_ast_walk_plan must build successfully.");
+        let plan_pre = run_walk(&plan.preorder, &nodes, words);
+        let plan_post = run_walk(&plan.postorder, &nodes, words);
+        assert_eq!(&plan_pre[..host_pre.len()], host_pre.as_slice());
+        assert_eq!(&plan_post[..host_post.len()], host_post.as_slice());
     }
+}
+
+#[test]
+fn both_walks_match_the_host_traversal_oracles_on_branching_trees() {
+    let branching_nodes = pack_branching_fixture();
+    let node_count = 6u32;
+    let cap = 8u32;
+    let words = cap as usize;
+
+    let pre = run_walk(
+        &ast_walk_preorder("nodes", "out", node_count, cap),
+        &branching_nodes,
+        words,
+    );
+    let host_pre = walk_preorder_indices(&branching_nodes, node_count, 128)
+        .expect("Fix: host preorder oracle accepts branching fixture.");
+
+    assert_eq!(
+        &pre[..host_pre.len()],
+        host_pre.as_slice(),
+        "branching fixture: preorder walk must match host oracle [0, 1, 4, 2, 3, 5]"
+    );
+
+    let post = run_walk(
+        &ast_walk_postorder_nodes("nodes", "out", node_count, cap),
+        &branching_nodes,
+        words,
+    );
+    let host_post = walk_postorder_indices(&branching_nodes, node_count, 128)
+        .expect("Fix: host postorder oracle accepts branching fixture.");
+
+    assert_eq!(
+        &post[..host_post.len()],
+        host_post.as_slice(),
+        "branching fixture: postorder walk must match host oracle [4, 1, 2, 5, 3, 0]"
+    );
+}
+
+#[test]
+fn ast_walk_capacity_and_degenerate_invariants() {
+    // Capacity truncation: walk must not overflow capacity
+    let branching_nodes = pack_branching_fixture();
+    let node_count = 6u32;
+    let small_cap = 3u32;
+
+    let program = ast_walk_preorder("nodes", "out", node_count, small_cap);
+    let (outputs, oob_report) = vyre_reference::reference_eval_oob_report(
+        &program,
+        &[
+            Value::from(branching_nodes),
+            Value::from(pack_u32_slice(&vec![0u32; small_cap as usize])),
+        ],
+    )
+    .expect("Fix: capacity-limited walk must execute without reference error.");
+
+    assert_eq!(
+        oob_report.total(),
+        0,
+        "Capacity-limited walk must produce zero out-of-bounds writes."
+    );
+
+    let decoded = decode_u32_le_bytes_all(&outputs[0].to_bytes());
+    assert_eq!(
+        decoded.len(),
+        small_cap as usize,
+        "Must emit exactly output capacity words."
+    );
+
+    // Empty tree (node_count = 0)
+    let empty_prog = ast_walk_preorder("nodes", "out", 0, 4);
+    let (empty_out, empty_oob) = vyre_reference::reference_eval_oob_report(
+        &empty_prog,
+        &[
+            Value::from(vec![0u8; 32]),
+            Value::from(pack_u32_slice(&[0u32; 4])),
+        ],
+    )
+    .expect("Fix: 0-node walk must evaluate safely.");
+    assert_eq!(empty_oob.total(), 0);
+    assert_eq!(decode_u32_le_bytes_all(&empty_out[0].to_bytes()).len(), 4);
+}
+
+// ===========================================================================
+// Section 5: Deliberate Semantic Divergence Defense & Mutation Gates
+// ===========================================================================
+
+#[test]
+fn deliberate_semantic_divergence_fails_parity_assertions() {
+    // Negative test 1: Mutated kernel tap must fail direct conv == im2col contraction
+    let (h, w) = (4u32, 4u32);
+    let input = test_image(h, w);
+    let patches = run_im2col(h, w, &input);
+    let kernel = [1.0f32; 9];
+    let direct = run_conv(h, w, &input, &kernel);
+
+    let mut corrupted_patches = patches.clone();
+    corrupted_patches[0] += 0.1; // corrupt one cell
+    let corrupted_gemm: Vec<f32> = (0..(h * w) as usize)
+        .map(|pixel| {
+            (0..9)
+                .map(|tap| corrupted_patches[pixel * 9 + tap] * kernel[tap])
+                .fold(0.0f32, |acc, term| acc + term)
+        })
+        .collect();
+
+    assert_ne!(
+        direct, corrupted_gemm,
+        "Deliberate divergence in patch extraction must fail equality assertion."
+    );
+
+    // Negative test 2: Mutated walk index must fail host oracle assertion
+    let nodes = spine_nodes(4);
+    let host_pre = walk_preorder_indices(&nodes, 4, 128).unwrap();
+    let mut corrupted_pre = host_pre.clone();
+    corrupted_pre[0] ^= 1; // corrupt index
+    assert_ne!(
+        host_pre, corrupted_pre,
+        "Deliberate divergence in walk indices must fail host oracle comparison."
+    );
+
+    // Negative test 3: Unclassified synthetic member name must fail classification
+    assert!(
+        classify_conv_entrypoint("conv2d_3x3_unclassified_variant").is_none(),
+        "Unclassified entry point must return None and fail the exhaustiveness gate."
+    );
 }

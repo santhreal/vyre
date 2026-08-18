@@ -33,6 +33,7 @@ use std::collections::BTreeSet;
 use std::fs;
 
 use vyre_foundation::ir::{BufferAccess, Node, Program};
+use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::visit::referenced_buffers;
 use vyre_libs::pattern::classic_ac::{
     build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
@@ -41,6 +42,8 @@ use vyre_libs::pattern::classic_ac::{
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 use vyre_libs::pattern::CompiledDfa;
+
+const AHO_CORASICK_OP_ID: &str = "vyre-libs::pattern::aho_corasick";
 
 /// The source file that owns the width table, relative to the crate root. Read at
 /// run time so the member set is the shipped enum rather than a copy of it.
@@ -75,19 +78,37 @@ struct WidthRow {
     build: fn(&CompiledDfa, u32, u32, bool) -> Program,
 }
 
+/// Resolve the canonical generator identity from the live Aho-Corasick operation descriptor.
+///
+/// Bounded-ranges prefilter programs carry the canonical Aho-Corasick operation identity
+/// in their wrapping region. Deriving this from the live `OperationRegistry` descriptor
+/// ensures any future identity or registration drift fails closed.
+fn canonical_aho_corasick_generator() -> &'static str {
+    let operation = OperationRegistry::global()
+        .get(AHO_CORASICK_OP_ID)
+        .unwrap_or_else(|| {
+            panic!(
+                "Fix: canonical Aho-Corasick operation `{AHO_CORASICK_OP_ID}` must have a live \
+                 descriptor registered in `OperationRegistry`"
+            )
+        });
+    operation.id
+}
+
 /// The recorded ABI of every width the crate ships.
 fn rows() -> Vec<WidthRow> {
+    let generator = canonical_aho_corasick_generator();
     vec![
         WidthRow {
             variant: "Unfiltered",
             masks: &[],
-            generator: "vyre-libs::matching::classic_ac_bounded_ranges",
+            generator,
             build: build_ac_bounded_ranges_program_with_subgroup_coalesce,
         },
         WidthRow {
             variant: "EndByte",
             masks: &[("candidate_end_mask", 8)],
-            generator: "vyre-libs::matching::classic_ac_bounded_ranges_prefilter",
+            generator,
             build: build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
         },
         WidthRow {
@@ -103,7 +124,7 @@ fn rows() -> Vec<WidthRow> {
                     CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32,
                 ),
             ],
-            generator: "vyre-libs::matching::classic_ac_bounded_ranges_suffix3_prefilter",
+            generator,
             build: build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
         },
     ]

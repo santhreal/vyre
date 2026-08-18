@@ -153,21 +153,10 @@ pub fn impacted_entries_into(
             CacheInvalidationError::from(err)
         })?;
 
-        let impacted_rules = _scratch.impact.impact_mask();
-        let closure = &_scratch.closure;
-        if impacted_rules.len() != n_us || closure.len() != matrix_len {
-            out.clear();
-            return Err(CacheInvalidationError::new(format!(
-                "Fix: cache invalidation GPU output dimensions mismatched: impact_mask={}, closure={}, required n={n_us}, matrix={matrix_len}.",
-                impacted_rules.len(),
-                closure.len()
-            )));
-        }
-
         project_impacted_lineage_entries_via_into(
             dispatcher,
-            impacted_rules,
-            closure,
+            _scratch.impact.impact_mask(),
+            &_scratch.closure,
             n,
             lineage_cells,
             &mut _scratch.projection,
@@ -264,5 +253,58 @@ mod tests {
             err.to_string().contains("Fix:"),
             "cache invalidation dimension errors must be actionable"
         );
+    }
+
+    #[test]
+    fn empty_lineage_cells_clears_output_and_succeeds() {
+        let dispatcher = ReferenceEvalDispatcher;
+        let mut out = vec![42u32; 10];
+        let mut scratch = CacheInvalidationScratch::default();
+        impacted_entries_into(
+            &dispatcher,
+            &[1, 0],
+            &[0; 4],
+            &[0; 4],
+            &[0; 4],
+            2,
+            4,
+            &[],
+            &mut out,
+            &mut scratch,
+        )
+        .expect("empty lineage cells must succeed immediately");
+        assert!(
+            out.is_empty(),
+            "output must be cleared for empty lineage cells"
+        );
+    }
+
+    #[test]
+    fn transitive_impact_and_provenance_propagation_matches_exact_device_output() {
+        let dispatcher = ReferenceEvalDispatcher;
+        let n = 4;
+        let mut rule_adj = vec![0u32; 16];
+        // 0 -> 1 -> 2
+        rule_adj[0 * 4 + 1] = 1;
+        rule_adj[1 * 4 + 2] = 1;
+        let intervention_mask = vec![1, 0, 0, 0];
+
+        let mut state = vec![0u32; 16];
+        // Rule 2 affects lineage cell 3
+        state[2 * 4 + 3] = 1;
+        let join_rules = vec![0u32; 16];
+
+        let mask = impacted_entries(
+            &dispatcher,
+            &intervention_mask,
+            &rule_adj,
+            &state,
+            &join_rules,
+            n,
+            16,
+            &[0, 1, 2, 3],
+        )
+        .expect("transitive impact must execute on device");
+        assert_eq!(mask, vec![1, 1, 1, 0]);
     }
 }

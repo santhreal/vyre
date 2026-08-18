@@ -1,4 +1,4 @@
-use super::walk::{pack_sparse_tokens, pad_u32_words_bytes, DottedName, TokenPass};
+use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, find_matching_delimiter_into, load_u32, search_next_token,
     search_next_token_into, search_prev_token, store_words,
@@ -401,6 +401,8 @@ pub fn python312_extract_with_blocks(
     )
     .build_record_program(out_records, out_counts, WITH_RECORD_WORDS, body)
 }
+const EXPECTED_STRUCTURE_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 4, 1, 5, 6, 7]);
+const EXPECTED_STRUCTURE_COUNTS: [u8; 4] = 6u32.to_le_bytes();
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -408,12 +410,15 @@ inventory::submit! {
         || python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(structure_fixture_inputs),
         Some(|| vec![vec![
-            pad_u32_words_bytes(&[1, 4, 1, 5, 6, 7], 96),
-            crate::fixture_bytes::u32_bytes(&[6]),
+            EXPECTED_STRUCTURE_RECORDS.to_vec(),
+            EXPECTED_STRUCTURE_COUNTS.to_vec(),
         ]]),
     )
     .with_category("parsing")
 }
+
+const EXPECTED_IMPORTS_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 7, 2, 0, 7, u32::MAX]);
+const EXPECTED_IMPORTS_COUNTS: [u8; 4] = 6u32.to_le_bytes();
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -421,12 +426,15 @@ inventory::submit! {
         || python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(import_fixture_inputs),
         Some(|| vec![vec![
-            pad_u32_words_bytes(&[1, 7, 2, 0, 7, u32::MAX], 96),
-            crate::fixture_bytes::u32_bytes(&[6]),
+            EXPECTED_IMPORTS_RECORDS.to_vec(),
+            EXPECTED_IMPORTS_COUNTS.to_vec(),
         ]]),
     )
     .with_category("parsing")
 }
+
+const EXPECTED_WITH_BLOCKS_RECORDS: [u8; 384] = pack_words_padded_bytes([11, 3, 6, 14, 1]);
+const EXPECTED_WITH_BLOCKS_COUNTS: [u8; 4] = 6u32.to_le_bytes();
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -434,8 +442,8 @@ inventory::submit! {
         || python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(with_fixture_inputs),
         Some(|| vec![vec![
-            pad_u32_words_bytes(&[11, 3, 6, 14, 1], 96),
-            crate::fixture_bytes::u32_bytes(&[6]),
+            EXPECTED_WITH_BLOCKS_RECORDS.to_vec(),
+            EXPECTED_WITH_BLOCKS_COUNTS.to_vec(),
         ]]),
     )
     .with_category("parsing")

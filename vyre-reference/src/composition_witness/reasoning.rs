@@ -920,23 +920,23 @@ pub fn evaluate_condition_witness<C: RuleEvaluationContextWitness + ?Sized>(
         RuleConditionWitness::LiteralTrue => true,
         RuleConditionWitness::LiteralFalse => false,
         RuleConditionWitness::RegexMatch { field, pattern } => {
-            val(field).map_or(false, |v| match_regex(v, pattern))
+            val(field).is_some_and(|v| match_regex(v, pattern))
         }
         RuleConditionWitness::SubstringMatch { haystack, needle } => {
-            val(haystack).map_or(false, |h| h.contains(needle.as_ref()))
+            val(haystack).is_some_and(|h| h.contains(needle.as_ref()))
         }
         RuleConditionWitness::PrefixMatch { value, prefix } => {
-            val(value).map_or(false, |v| v.starts_with(prefix.as_ref()))
+            val(value).is_some_and(|v| v.starts_with(prefix.as_ref()))
         }
         RuleConditionWitness::SuffixMatch { value, suffix } => {
-            val(value).map_or(false, |v| v.ends_with(suffix.as_ref()))
+            val(value).is_some_and(|v| v.ends_with(suffix.as_ref()))
         }
         RuleConditionWitness::RangeMatch { value, min, max } => *value >= *min && *value <= *max,
         RuleConditionWitness::SetMembership { value, set } => {
             set.iter().any(|m| m.as_ref() == value.as_ref())
         }
         RuleConditionWitness::FieldInSet { field, set } => {
-            val(field).map_or(false, |v| set.iter().any(|m| m.as_ref() == v))
+            val(field).is_some_and(|v| set.iter().any(|m| m.as_ref() == v))
         }
         RuleConditionWitness::Opaque(ext) => ext.evaluate_opaque(&() as &dyn std::any::Any),
     }
@@ -953,7 +953,7 @@ fn match_regex(value: &str, pattern: &str) -> bool {
     lock.entry(pattern.to_string())
         .or_insert_with(|| regex::Regex::new(pattern).ok())
         .as_ref()
-        .map_or(false, |re| re.is_match(value))
+        .is_some_and(|re| re.is_match(value))
 }
 
 /// Evaluate a [`RuleFormulaWitness`] tree against `ctx`.

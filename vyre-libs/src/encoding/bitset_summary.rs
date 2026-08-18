@@ -139,12 +139,8 @@ pub fn per_word_popcount_via_with_scratch_into(
         ))
     })?;
     let program = crate::bitset::popcount::bitset_popcount("input", "count_words", word_count);
-    ensure_input_slots(&mut scratch.inputs, 2);
+    ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    write_zero_bytes(
-        &mut scratch.inputs[1],
-        input.len() * std::mem::size_of::<u32>(),
-    );
     let grid_x = ceil_div_u32(word_count, 256);
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([grid_x, 1, 1]))?;
     let [out_buf, ..] = match outputs.as_slice() {
@@ -232,9 +228,8 @@ pub fn saturation_ratio_via_with_scratch_into(
     }
     let word_count = validate_total_set_bits_len(input.len())?;
     let program = bitset_saturation_ratio("input", "out", word_count);
-    ensure_input_slots(&mut scratch.inputs, 2);
+    ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<f32>());
     let outputs = dispatcher.dispatch(&program, &scratch.inputs, Some([1, 1, 1]))?;
     let [out_buf, ..] = match outputs.as_slice() {
         [out_buf, ..] => [out_buf],
@@ -290,26 +285,29 @@ mod tests {
             inputs: &[Vec<u8>],
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 2);
-            let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let op_id = program.entry.iter().find_map(|node| match node {
                 vyre_foundation::ir::Node::Region { generator, .. } => Some(generator.as_str()),
                 _ => None,
             });
             if op_id == Some(crate::reduce::count::OP_ID) {
+                assert_eq!(grid_override, Some([1, 1, 1]));
+                assert_eq!(inputs.len(), 2);
+                let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
                 assert_eq!(inputs[1].len(), std::mem::size_of::<u32>());
                 let total: u32 = input.iter().map(|word| word.count_ones()).sum();
                 return Ok(vec![u32_slice_to_le_bytes(&[total])]);
             }
+            assert_eq!(inputs.len(), 1);
+            let input = crate::dispatch_buffers::read_u32s(&inputs[0]);
             if op_id == Some(SATURATION_RATIO_OP_ID) {
-                assert_eq!(inputs[1].len(), std::mem::size_of::<f32>());
+                assert_eq!(grid_override, Some([1, 1, 1]));
                 let total: u32 = input.iter().map(|word| word.count_ones()).sum();
                 let capacity = (input.len() * 32) as f32;
                 let ratio = (total as f32) / capacity;
                 return Ok(vec![vyre_primitives::wire::pack_f32_slice(&[ratio])]);
             }
-            assert_eq!(inputs[1].len(), input.len() * std::mem::size_of::<u32>());
+            let grid_x = ceil_div_u32(input.len() as u32, 256);
+            assert_eq!(grid_override, Some([grid_x, 1, 1]));
             let out: Vec<u32> = input.iter().map(|word| word.count_ones()).collect();
             Ok(vec![u32_slice_to_le_bytes(&out)])
         }

@@ -52,7 +52,7 @@ static OPS: CaseOps<BinarySearchPrepared> = CaseOps {
     verify: verify_exact,
     program: referenced_program::<BinarySearchPrepared>,
     fingerprint: None,
-    bytes_touched: bytes_touched,
+    bytes_touched,
 };
 
 static CASE: HarnessCase<BinarySearchPrepared> = HarnessCase {

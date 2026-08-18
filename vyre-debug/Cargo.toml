@@ -11,6 +11,9 @@ documentation = "https://docs.rs/vyre-debug"
 categories = ["development-tools", "compilers"]
 keywords = ["vyre", "debug", "gpu", "shader"]
 
+[package.metadata.cargo-machete]
+ignored = ["vyre-megakernel"]
+
 [lints]
 workspace = true
 
@@ -30,7 +33,6 @@ clap = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 vyre-libs = { workspace = true, features = ["python-parser"] }
-vyre-primitives.workspace = true
 bincode = { workspace = true }
 
 [dev-dependencies]

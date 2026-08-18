@@ -168,7 +168,7 @@ fn top_level_variant_names(body: &str) -> BTreeSet<String> {
             '}' | ')' | ']' => depth = depth.saturating_sub(1),
             ',' if depth == 0 => at_item_start = true,
             '/' if depth == 0 && body[offset..].starts_with("//") => {
-                while let Some((_, skipped)) = chars.next() {
+                for (_, skipped) in chars.by_ref() {
                     if skipped == '\n' {
                         break;
                     }

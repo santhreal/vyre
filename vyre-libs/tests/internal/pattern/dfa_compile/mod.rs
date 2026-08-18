@@ -384,7 +384,7 @@ fn duplicate_literal_accept_field_contains_first_pattern() {
 fn from_bytes_wire_program_builder_round_trip() {
     let dfa = dfa_compile(&[b"test".as_slice()]);
     let bytes = dfa.to_bytes().expect("encode DFA wire blob");
-    let prog = crate::pattern::dfa::aho_corasick_program_from_dfa_wire(
+    let prog = crate::pattern::aho_corasick::aho_corasick_program_from_dfa_wire(
         &bytes,
         "haystack",
         "transitions",
@@ -402,7 +402,7 @@ fn from_bytes_wire_program_builder_rejects_bad_magic() {
         .to_bytes()
         .expect("encode DFA wire blob");
     bytes[0] = 0;
-    let err = crate::pattern::dfa::aho_corasick_program_from_dfa_wire(
+    let err = crate::pattern::aho_corasick::aho_corasick_program_from_dfa_wire(
         &bytes,
         "haystack",
         "transitions",

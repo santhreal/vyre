@@ -63,7 +63,7 @@ inventory::submit! {
         || bitset_popcount("input", "count", 2),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0b1111, 0xFFFF_FFFF]), to_bytes(&[0, 0])]]
+            vec![vec![to_bytes(&[0b1111, 0xFFFF_FFFF])]]
         }),
         Some(|| {
             vec![vec![EXPECTED_BITSET_POPCOUNT_OUTPUT_BYTES.to_vec()]]

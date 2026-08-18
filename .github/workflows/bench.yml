@@ -33,7 +33,7 @@ jobs:
 
       - name: Compare PR against baseline
         run: |
-          ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --baseline main --save-baseline pr 2>&1 | tee bench.log
+          ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --baseline main 2>&1 | tee bench.log
       - name: Check for regressions > 5%
         shell: bash
         run: |

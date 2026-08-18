@@ -1718,7 +1718,7 @@ pub fn toposort_witness(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32
             .enumerate()
             .find(|(_, deg)| **deg > 0)
             .map(|(i, _)| i as u32)
-            .ok_or_else(|| format!("toposort could not find positive indegree seed"))?;
+            .ok_or_else(|| "toposort could not find positive indegree seed".to_string())?;
         let mut on_stack = vec![false; n];
         let mut cursor = seed;
         let cycle_node = loop {

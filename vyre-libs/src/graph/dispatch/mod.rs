@@ -13,6 +13,7 @@ pub mod csr_frontier_queue_resident;
 pub(crate) mod dispatch_bridge;
 pub mod dominator_frontier;
 pub mod exploded;
+pub(crate) mod frontier;
 
 pub mod motif;
 pub mod path_reconstruct;

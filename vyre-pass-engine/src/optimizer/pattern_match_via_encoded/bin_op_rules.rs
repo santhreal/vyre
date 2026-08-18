@@ -103,7 +103,7 @@ fn operand_prologue() -> Vec<Node> {
     nodes.extend(
         OPERATOR_FLAGS
             .iter()
-            .map(|(name, tag)| operator_flag(*name, *tag)),
+            .map(|(name, tag)| operator_flag(name, *tag)),
     );
     nodes.extend(OPERAND_KIND_FLAGS.iter().map(|(name, operand_kind, kind)| {
         Node::let_bind(*name, Expr::eq(Expr::var(*operand_kind), Expr::u32(*kind)))

@@ -34,9 +34,6 @@ vyre-test-support.workspace = true
 # artifacts are instead of growing a second comparison spelling.
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 proptest.workspace = true
-regex-automata.workspace = true
-hex.workspace = true
-fnv.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

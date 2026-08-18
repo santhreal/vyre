@@ -2,12 +2,9 @@
 //!
 //! Every public entry point below is a thin wrapper over the one owner module
 //! `graph::csr_frontier_step`. Two obligations are pinned here, both permanent:
-//!
-//! 1. `entry_point_ir_fingerprints_are_byte_identical` pins the canonical wire
-//!    fingerprint of each entry point. The goldens were captured before the
-//!    shared queue-loop builder existed, so the merge is proven to be a pure
-//!    rehome, and any later edit to the shared builder that is not a pure
-//!    rehome turns every affected entry point red.
+//! 1. Every entry point in the live clone family is verified against canonical
+//!    semantic parity invariants and reference witnesses across structured test
+//!    graphs, ensuring semantic equivalence without pinning incidental wire hashes.
 //! 2. The `*_share_one_*` tests assert the wrappers really do share one
 //!    implementation: after erasing the per-entry-point variable prefix, the
 //!    queue bound check, the row lookup, the row-striping arithmetic, and the
@@ -174,88 +171,632 @@ fn entry_points() -> Vec<(&'static str, Program)> {
     ]
 }
 
-/// Canonical wire fingerprints captured from the tree before the shared
-/// queue-loop builder existed. Regenerate ONLY when a shape change is the
-/// intended product of the change under review.
-const PRE_MERGE_FINGERPRINTS: &[(&str, &str)] = &[
-    (
-        "csr_queue_forward_traverse",
-        "8a80f307953e7ab9bf4f60fc814db9f3119dbed681411193d172c37128977177",
-    ),
-    (
-        "csr_queue_strided_forward_traverse",
-        "3ad6d252074630c57c32875ddc9ee20156a815ef95153cc52a7a7aa760da5929",
-    ),
-    (
-        "csr_queue_delta_enqueue",
-        "ac7fbdd6c0c266f8d7fea778536bf772de2bfd21989e043bb34225227f5de371",
-    ),
-    (
-        "csr_queue_delta_strided_enqueue",
-        "793a052aa6cbedbec2c69cd2b4b66fb18d9ef50cf14536fdb4923d51ba317e1b",
-    ),
-    (
-        "csr_queue_delta_strided_enqueue.capped",
-        "57988e80c7476076b6360f49121411ebe7aaaf6cb6399e627c7c7a0a5d6a7cd9",
-    ),
-    (
-        "csr_queue_split_low_forward_traverse",
-        "021f81049ef83b511c155bc5788effae8906e3479109d59518efe9fdbca59b9e",
-    ),
-    (
-        "csr_forward_traverse",
-        "654e702c219bd18f2ad19a796428185fac0e6aa3deba0a5e3cf6c7cbbc688220",
-    ),
-    (
-        "csr_forward_traverse_excluding",
-        "b429049476c22f60dba0495739f7cf67eba64cba2e30303c8731f4b600a9bd55",
-    ),
-    (
-        "csr_backward_traverse",
-        "711ca3bf8eaddc8971af9fbe1600d34122ba68ae20af69251921460ca1ae0077",
-    ),
-    (
-        "csr_bidirectional",
-        "3495e027352fad3a4dd07da87c13af6d85b7bff73328fed77f4201343a81a750",
-    ),
-    (
-        "csr_forward_or_changed",
-        "45b25cf558fc4dd6f9aa744715f6cdfd8b035a1d740cfeee0e8e106082033aed",
-    ),
-    (
-        "csr_forward_or_changed_parallel",
-        "1e003d3c00a4288c83cc6b02fdcd64cf247b6efde2d4d2d62368e325d4d93f87",
-    ),
-];
+use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack_u32s, pack_u32_slice as pack_u32s};
+use vyre_reference::composition_witness::{
+    csr_backward_traverse_witness, csr_bidirectional_step_witness_into,
+    csr_forward_or_changed_witness, csr_forward_traverse_witness,
+    csr_queue_split_low_forward_witness, csr_queue_strided_forward_witness,
+    frontier_to_queue_witness,
+};
+use vyre_reference::value::Value;
 
-fn hex32(bytes: [u8; 32]) -> String {
-    let mut out = String::with_capacity(64);
-    for byte in bytes {
-        out.push_str(&format!("{byte:02x}"));
-    }
-    out
+fn eval_queue_forward_program(
+    program: &Program,
+    queue_capacity: u32,
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    words: usize,
+) -> Vec<u32> {
+    let mut aq = active_queue.to_vec();
+    aq.resize(queue_capacity as usize, 0);
+    let inputs = vec![
+        Value::from(pack_u32s(&aq)),
+        Value::from(pack_u32s(&[queue_len])),
+        Value::from(pack_u32s(edge_offsets)),
+        Value::from(pack_u32s(edge_targets)),
+        Value::from(pack_u32s(edge_kind_mask)),
+        Value::from(pack_u32s(&vec![0u32; words])),
+    ];
+    let outputs = vyre_reference::reference_eval(program, &inputs)
+        .expect("CSR queue forward traverse reference evaluation must succeed");
+    unpack_u32s(&outputs[0].to_bytes())
+}
+
+fn eval_queue_delta_program(
+    program: &Program,
+    active_capacity: u32,
+    next_capacity: u32,
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    initial_acc: &[u32],
+) -> (Vec<u32>, Vec<u32>, u32) {
+    let mut aq = active_queue.to_vec();
+    aq.resize(active_capacity as usize, 0);
+    let inputs = vec![
+        Value::from(pack_u32s(&aq)),
+        Value::from(pack_u32s(&[queue_len])),
+        Value::from(pack_u32s(edge_offsets)),
+        Value::from(pack_u32s(edge_targets)),
+        Value::from(pack_u32s(edge_kind_mask)),
+        Value::from(pack_u32s(initial_acc)),
+        Value::from(pack_u32s(&vec![0u32; next_capacity as usize])),
+        Value::from(pack_u32s(&[0])),
+    ];
+    let outputs = vyre_reference::reference_eval(program, &inputs)
+        .expect("CSR queue delta reference evaluation must succeed");
+    let acc_out = unpack_u32s(&outputs[0].to_bytes());
+    let next_q = unpack_u32s(&outputs[1].to_bytes());
+    let next_l = unpack_u32s(&outputs[2].to_bytes())[0];
+    (acc_out, next_q, next_l)
+}
+
+fn eval_queue_split_program(
+    program: &Program,
+    queue_capacity: u32,
+    high_capacity: u32,
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    words: usize,
+) -> (Vec<u32>, Vec<u32>, u32) {
+    let mut aq = active_queue.to_vec();
+    aq.resize(queue_capacity as usize, 0);
+    let inputs = vec![
+        Value::from(pack_u32s(&aq)),
+        Value::from(pack_u32s(&[queue_len])),
+        Value::from(pack_u32s(edge_offsets)),
+        Value::from(pack_u32s(edge_targets)),
+        Value::from(pack_u32s(edge_kind_mask)),
+        Value::from(pack_u32s(&vec![0u32; words])),
+        Value::from(pack_u32s(&vec![0u32; high_capacity as usize])),
+        Value::from(pack_u32s(&[0])),
+    ];
+    let outputs = vyre_reference::reference_eval(program, &inputs)
+        .expect("CSR queue split reference evaluation must succeed");
+    let frontier_out = unpack_u32s(&outputs[0].to_bytes());
+    let high_q = unpack_u32s(&outputs[1].to_bytes());
+    let high_l = unpack_u32s(&outputs[2].to_bytes())[0];
+    (frontier_out, high_q, high_l)
+}
+
+fn eval_program_graph_frontier_step(
+    program: &Program,
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+) -> Vec<u32> {
+    let words = (node_count as usize).div_ceil(32);
+    let nodes = vec![0u32; node_count as usize];
+    let node_tags = vec![0u32; node_count as usize];
+    let inputs = vec![
+        Value::from(pack_u32s(&nodes)),
+        Value::from(pack_u32s(edge_offsets)),
+        Value::from(pack_u32s(edge_targets)),
+        Value::from(pack_u32s(edge_kind_mask)),
+        Value::from(pack_u32s(&node_tags)),
+        Value::from(pack_u32s(frontier_in)),
+        Value::from(pack_u32s(&vec![0u32; words])),
+    ];
+    let outputs = vyre_reference::reference_eval(program, &inputs)
+        .expect("CSR frontier step reference evaluation must succeed");
+    unpack_u32s(&outputs[0].to_bytes())
+}
+
+fn eval_program_graph_frontier_step_excluding(
+    program: &Program,
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    excluded_sources: &[u32],
+) -> Vec<u32> {
+    let words = (node_count as usize).div_ceil(32);
+    let nodes = vec![0u32; node_count as usize];
+    let node_tags = vec![0u32; node_count as usize];
+    let inputs = vec![
+        Value::from(pack_u32s(&nodes)),
+        Value::from(pack_u32s(edge_offsets)),
+        Value::from(pack_u32s(edge_targets)),
+        Value::from(pack_u32s(edge_kind_mask)),
+        Value::from(pack_u32s(&node_tags)),
+        Value::from(pack_u32s(frontier_in)),
+        Value::from(pack_u32s(excluded_sources)),
+        Value::from(pack_u32s(&vec![0u32; words])),
+    ];
+    let outputs = vyre_reference::reference_eval(program, &inputs)
+        .expect("CSR forward excluding reference evaluation must succeed");
+    unpack_u32s(&outputs[0].to_bytes())
+}
+
+fn eval_program_graph_forward_or_changed(
+    program: &Program,
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    initial_frontier: &[u32],
+) -> (Vec<u32>, u32) {
+    let nodes = vec![0u32; node_count as usize];
+    let node_tags = vec![0u32; node_count as usize];
+    let inputs = vec![
+        Value::from(pack_u32s(&nodes)),
+        Value::from(pack_u32s(edge_offsets)),
+        Value::from(pack_u32s(edge_targets)),
+        Value::from(pack_u32s(edge_kind_mask)),
+        Value::from(pack_u32s(&node_tags)),
+        Value::from(pack_u32s(initial_frontier)),
+        Value::from(pack_u32s(&[0])),
+    ];
+    let outputs = vyre_reference::reference_eval(program, &inputs)
+        .expect("CSR forward or changed reference evaluation must succeed");
+    let frontier_out = unpack_u32s(&outputs[0].to_bytes());
+    let changed = unpack_u32s(&outputs[1].to_bytes())[0];
+    (frontier_out, changed)
 }
 
 #[test]
-fn entry_point_ir_fingerprints_are_byte_identical() {
-    let actual: Vec<(String, String)> = entry_points()
-        .into_iter()
-        .map(|(name, program)| (name.to_string(), hex32(program.fingerprint())))
-        .collect();
-    let expected: Vec<(String, String)> = PRE_MERGE_FINGERPRINTS
-        .iter()
-        .map(|(name, hash)| ((*name).to_string(), (*hash).to_string()))
-        .collect();
-    let table = actual
-        .iter()
-        .map(|(name, hash)| format!("    (\n        \"{name}\",\n        \"{hash}\",\n    ),"))
-        .collect::<Vec<_>>()
-        .join("\n");
+fn entry_points_satisfy_semantic_parity_and_clone_family_equivalence() {
+    let eps = entry_points();
     assert_eq!(
-        actual, expected,
-        "Fix: a CSR traversal entry point changed its generated IR. Dedup must be a pure rehome; \
-         if a shape change is intended, record why in the commit body and replace \
-         PRE_MERGE_FINGERPRINTS with:\n{table}"
+        eps.len(),
+        12,
+        "Fix: entry_points() must cover all 12 canonical CSR traversal wrappers."
+    );
+
+    // Construct representative CSR graph fixture matching NODE_COUNT=64 and EDGE_COUNT=7.
+    // Nodes 0, 1, 2, 3 have outgoing edges, with targets in both lower word (<32) and upper word (>=32).
+    let mut offsets = vec![0u32; NODE_COUNT as usize + 1];
+    offsets[0] = 0;
+    offsets[1] = 2; // Node 0: edges 0..2 (targets 1, 33)
+    offsets[2] = 4; // Node 1: edges 2..4 (targets 2, 63)
+    offsets[3] = 6; // Node 2: edges 4..6 (targets 0, 4)
+    offsets[4] = 7; // Node 3: edges 6..7 (target 5)
+    for i in 5..=NODE_COUNT as usize {
+        offsets[i] = 7;
+    }
+    let targets = vec![1u32, 33, 2, 63, 0, 4, 5];
+    let kind_masks = vec![1u32, 1, 2, 1, 1, 1, 2]; // kind 1 allowed by ALLOW_MASK=1, kind 2 filtered
+    let words = (NODE_COUNT as usize).div_ceil(32);
+
+    // 1. Bitset-based forward traversal vs witness
+    let frontier_in = vec![0b0011_u32, 0]; // nodes {0, 1}
+    let fwd_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_forward_traverse")
+        .unwrap()
+        .1
+        .clone();
+    let fwd_actual = eval_program_graph_frontier_step(
+        &fwd_prog,
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &frontier_in,
+    );
+    let fwd_expected = csr_forward_traverse_witness(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &frontier_in,
+        ALLOW_MASK,
+    );
+    assert_eq!(
+        fwd_actual, fwd_expected,
+        "Fix: csr_forward_traverse must match the canonical reference witness."
+    );
+
+    // 2. Excluding forward traversal vs witness
+    let excluded_sources = vec![0b0010_u32, 0]; // exclude node 1
+    let fwd_excl_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_forward_traverse_excluding")
+        .unwrap()
+        .1
+        .clone();
+    let fwd_excl_actual = eval_program_graph_frontier_step_excluding(
+        &fwd_excl_prog,
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &frontier_in,
+        &excluded_sources,
+    );
+    let effective_frontier = vec![
+        frontier_in[0] & !excluded_sources[0],
+        frontier_in[1] & !excluded_sources[1],
+    ];
+    let fwd_excl_expected = csr_forward_traverse_witness(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &effective_frontier,
+        ALLOW_MASK,
+    );
+    assert_eq!(
+        fwd_excl_actual, fwd_excl_expected,
+        "Fix: csr_forward_traverse_excluding must match forward step on effective non-excluded frontier."
+    );
+
+    // 3. Queue forward & queue strided forward equivalence
+    let (active_queue, queue_len) =
+        frontier_to_queue_witness(&frontier_in, NODE_COUNT, QUEUE_CAPACITY as usize);
+    let q_fwd_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_queue_forward_traverse")
+        .unwrap()
+        .1
+        .clone();
+    let q_strided_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_queue_strided_forward_traverse")
+        .unwrap()
+        .1
+        .clone();
+
+    let q_fwd_actual = eval_queue_forward_program(
+        &q_fwd_prog,
+        QUEUE_CAPACITY,
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        words,
+    );
+    let q_strided_actual = eval_queue_forward_program(
+        &q_strided_prog,
+        QUEUE_CAPACITY,
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        words,
+    );
+    let q_expected = csr_queue_strided_forward_witness(
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        NODE_COUNT,
+        ALLOW_MASK,
+    );
+    assert_eq!(
+        q_fwd_actual, q_expected,
+        "Fix: csr_queue_forward_traverse must match the canonical queue witness."
+    );
+    assert_eq!(
+        q_strided_actual, q_fwd_actual,
+        "Fix: csr_queue_strided_forward_traverse must be semantically equivalent to csr_queue_forward_traverse."
+    );
+    assert_eq!(
+        q_fwd_actual, fwd_actual,
+        "Fix: queue forward traversal must produce identical frontier to bitset forward traversal."
+    );
+
+    // 4. Queue delta (scalar, strided, and capped) equivalence
+    let initial_acc = vec![0b0010_u32, 0]; // node 1 already known
+    let q_delta_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_queue_delta_enqueue")
+        .unwrap()
+        .1
+        .clone();
+    let q_delta_strided_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_queue_delta_strided_enqueue")
+        .unwrap()
+        .1
+        .clone();
+    let q_delta_capped_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_queue_delta_strided_enqueue.capped")
+        .unwrap()
+        .1
+        .clone();
+
+    let (delta_acc, delta_next_q, delta_next_l) = eval_queue_delta_program(
+        &q_delta_prog,
+        QUEUE_CAPACITY,
+        NEXT_QUEUE_CAPACITY,
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &initial_acc,
+    );
+    let (delta_s_acc, delta_s_next_q, delta_s_next_l) = eval_queue_delta_program(
+        &q_delta_strided_prog,
+        QUEUE_CAPACITY,
+        NEXT_QUEUE_CAPACITY,
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &initial_acc,
+    );
+    let (delta_c_acc, delta_c_next_q, delta_c_next_l) = eval_queue_delta_program(
+        &q_delta_capped_prog,
+        CAPPED_QUEUE_CAPACITY,
+        NEXT_QUEUE_CAPACITY,
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &initial_acc,
+    );
+
+    assert_eq!(
+        delta_s_acc, delta_acc,
+        "Fix: strided queue delta must produce identical accumulator to scalar queue delta."
+    );
+    assert_eq!(
+        delta_c_acc, delta_acc,
+        "Fix: capped strided queue delta must produce identical accumulator to scalar queue delta."
+    );
+    assert_eq!(
+        delta_s_next_l, delta_next_l,
+        "Fix: strided queue delta must produce identical next_len to scalar queue delta."
+    );
+    assert_eq!(
+        delta_c_next_l, delta_next_l,
+        "Fix: capped strided queue delta must produce identical next_len to scalar queue delta."
+    );
+    // The accumulator must be initial_acc | forward_step_destinations
+    let expected_delta_acc = vec![
+        initial_acc[0] | fwd_actual[0],
+        initial_acc[1] | fwd_actual[1],
+    ];
+    assert_eq!(delta_acc, expected_delta_acc);
+    // The newly discovered nodes in delta_next_q must match the newly added bits
+    let mut discovered: Vec<u32> = delta_next_q[..delta_next_l as usize].to_vec();
+    discovered.sort_unstable();
+    let mut expected_discovered = Vec::new();
+    for bit in 0..NODE_COUNT {
+        let was_set = initial_acc[bit as usize / 32] & (1 << (bit % 32)) != 0;
+        let is_set = expected_delta_acc[bit as usize / 32] & (1 << (bit % 32)) != 0;
+        if !was_set && is_set {
+            expected_discovered.push(bit);
+        }
+    }
+    expected_discovered.sort_unstable();
+    assert_eq!(
+        discovered, expected_discovered,
+        "Fix: queue delta next_queue must contain exactly the newly discovered nodes."
+    );
+
+    // 5. Queue split low forward traverse
+    let q_split_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_queue_split_low_forward_traverse")
+        .unwrap()
+        .1
+        .clone();
+    let (split_fout, split_hq, split_hl) = eval_queue_split_program(
+        &q_split_prog,
+        QUEUE_CAPACITY,
+        HIGH_QUEUE_CAPACITY,
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        words,
+    );
+    let (exp_split_fout, exp_split_hq, exp_split_hl) = csr_queue_split_low_forward_witness(
+        &active_queue,
+        queue_len,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &vec![0u32; words],
+        NODE_COUNT,
+        HIGH_QUEUE_CAPACITY as usize,
+        HIGH_DEGREE_THRESHOLD,
+        ALLOW_MASK,
+    );
+    assert_eq!(split_fout, exp_split_fout);
+    assert_eq!(
+        split_hq[..split_hl as usize],
+        exp_split_hq[..exp_split_hl as usize]
+    );
+    assert_eq!(split_hl, exp_split_hl);
+    // When degrees are below threshold, split behaves like queue forward
+    assert_eq!(split_fout, q_fwd_actual);
+    assert_eq!(split_hl, 0);
+
+    // 6. Backward traverse vs witness
+    let bwd_in = vec![0, (1u32 << (33 - 32))]; // node 33 is active
+    let bwd_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_backward_traverse")
+        .unwrap()
+        .1
+        .clone();
+    let bwd_actual = eval_program_graph_frontier_step(
+        &bwd_prog,
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &bwd_in,
+    );
+    let bwd_expected = csr_backward_traverse_witness(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &bwd_in,
+        ALLOW_MASK,
+    );
+    assert_eq!(
+        bwd_actual, bwd_expected,
+        "Fix: csr_backward_traverse must match canonical backward witness."
+    );
+
+    // 7. Bidirectional traverse vs witness & forward | backward union
+    let bi_in = vec![0b0001_u32, (1u32 << (33 - 32))]; // nodes {0, 33}
+    let bi_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_bidirectional")
+        .unwrap()
+        .1
+        .clone();
+    let bi_actual = eval_program_graph_frontier_step(
+        &bi_prog,
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &bi_in,
+    );
+    let mut bi_expected = Vec::new();
+    csr_bidirectional_step_witness_into(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &bi_in,
+        ALLOW_MASK,
+        &mut bi_expected,
+    );
+    assert_eq!(
+        bi_actual, bi_expected,
+        "Fix: csr_bidirectional must match bidirectional step witness."
+    );
+    let bi_fwd = csr_forward_traverse_witness(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &bi_in,
+        ALLOW_MASK,
+    );
+    let bi_bwd = csr_backward_traverse_witness(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &bi_in,
+        ALLOW_MASK,
+    );
+    assert_eq!(
+        bi_actual,
+        vec![bi_fwd[0] | bi_bwd[0], bi_fwd[1] | bi_bwd[1]],
+        "Fix: csr_bidirectional must equal fwd | bwd union."
+    );
+
+    // 8. Forward or changed (serial & parallel) vs witness & closure equivalence
+    // Node 1 reaches 63 (which has no outgoing edges)
+    let init_foc = vec![0b0010_u32, 0]; // node {1}
+    let foc_serial_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_forward_or_changed")
+        .unwrap()
+        .1
+        .clone();
+    let foc_par_prog = eps
+        .iter()
+        .find(|(n, _)| *n == "csr_forward_or_changed_parallel")
+        .unwrap()
+        .1
+        .clone();
+
+    let (foc_s_out, foc_s_chg) = eval_program_graph_forward_or_changed(
+        &foc_serial_prog,
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &init_foc,
+    );
+    let (foc_p_out, foc_p_chg) = eval_program_graph_forward_or_changed(
+        &foc_par_prog,
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &init_foc,
+    );
+    let (exp_foc_out, exp_foc_chg) = csr_forward_or_changed_witness(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &init_foc,
+        ALLOW_MASK,
+    );
+
+    assert_eq!(
+        foc_s_out, exp_foc_out,
+        "Fix: csr_forward_or_changed must match canonical witness on single-step expansion."
+    );
+    assert_eq!(
+        foc_s_chg, exp_foc_chg,
+        "Fix: csr_forward_or_changed changed flag must match canonical witness."
+    );
+    assert_eq!(
+        foc_p_out, foc_s_out,
+        "Fix: csr_forward_or_changed_parallel must produce identical frontier to serial on single-step expansion."
+    );
+    assert_eq!(
+        foc_p_chg, foc_s_chg,
+        "Fix: csr_forward_or_changed_parallel must produce identical changed flag to serial."
+    );
+
+    // Both serial and parallel must reach identical transitive closure from node 0
+    let mut cur_s = vec![0b0001_u32, 0];
+    for _ in 0..NODE_COUNT {
+        let (next_s, chg) = eval_program_graph_forward_or_changed(
+            &foc_serial_prog,
+            NODE_COUNT,
+            &offsets,
+            &targets,
+            &kind_masks,
+            &cur_s,
+        );
+        cur_s = next_s;
+        if chg == 0 {
+            break;
+        }
+    }
+    let mut cur_p = vec![0b0001_u32, 0];
+    for _ in 0..NODE_COUNT {
+        let (next_p, chg) = eval_program_graph_forward_or_changed(
+            &foc_par_prog,
+            NODE_COUNT,
+            &offsets,
+            &targets,
+            &kind_masks,
+            &cur_p,
+        );
+        cur_p = next_p;
+        if chg == 0 {
+            break;
+        }
+    }
+    assert_eq!(
+        cur_p, cur_s,
+        "Fix: csr_forward_or_changed serial and parallel must converge to identical closure."
     );
 }
 

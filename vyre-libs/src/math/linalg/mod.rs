@@ -55,12 +55,26 @@ pub(crate) fn matmul_bias_2x2_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
+pub(crate) const MATMUL_BIAS_2X2_EXPECTED_BYTES: [u8; 16] = [
+    0x1d, 0x00, 0x00, 0x00, // 29
+    0x2a, 0x00, 0x00, 0x00, // 42
+    0x35, 0x00, 0x00, 0x00, // 53
+    0x46, 0x00, 0x00, 0x00, // 70
+];
+
+#[cfg(test)]
 #[must_use]
 pub(crate) fn matmul_bias_2x2_fixture_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![vec![
-        0x1d, 0x00, 0x00, 0x00, // 29
-        0x2a, 0x00, 0x00, 0x00, // 42
-        0x35, 0x00, 0x00, 0x00, // 53
-        0x46, 0x00, 0x00, 0x00, // 70
-    ]]]
+    vec![vec![MATMUL_BIAS_2X2_EXPECTED_BYTES.to_vec()]]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_matmul_bias_2x2_expected_bytes_identity() {
+        let constructed = crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70]);
+        assert_eq!(constructed, MATMUL_BIAS_2X2_EXPECTED_BYTES);
+    }
 }

@@ -44,7 +44,6 @@ vyre-foundation.workspace = true
 # unless the workspace entry states a `default-features` value of its own.
 vyre-libs = { version = "0.7.2", path = "../vyre-libs", default-features = false }
 vyre-primitives = { workspace = true }
-tracing.workspace = true
 rustc-hash.workspace = true
 
 [dev-dependencies]
@@ -61,7 +60,6 @@ vyre-driver-reference = { path = "../vyre-driver-reference" }
 # composition surface the parity suites build programs from. Dev builds only,
 # the same way as the primitives oracles above.
 vyre-libs = { workspace = true, features = ["graph-dispatch"] }
-proptest.workspace = true
 
 [[test]]
 name = "optimizer_bfs_and_softmax_parity"

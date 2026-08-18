@@ -36,14 +36,14 @@ fn assert_ir_valid(name: &str, program: &Program) {
 #[test]
 fn csr_queue_delta_enqueue_emits_valid_ir() {
     let program = vyre_libs::graph::csr_queue_delta::csr_queue_delta_enqueue(
-        "active_queue",
-        "active_len",
-        "edge_offsets",
-        "edge_targets",
-        "edge_kind_mask",
-        "accumulator",
-        "next_queue",
-        "next_len",
+        "aq",
+        "al",
+        "eo",
+        "et",
+        "ekm",
+        "acc",
+        "nq",
+        "nl",
         4,           // node_count
         4,           // edge_count
         8,           // active_queue_capacity
@@ -56,14 +56,14 @@ fn csr_queue_delta_enqueue_emits_valid_ir() {
 #[test]
 fn csr_queue_split_low_forward_traverse_emits_valid_ir() {
     let program = vyre_libs::graph::csr_queue_split::csr_queue_split_low_forward_traverse(
-        "active_queue",
-        "queue_len",
-        "edge_offsets",
-        "edge_targets",
-        "edge_kind_mask",
-        "frontier_out",
-        "high_queue",
-        "high_len",
+        "aq",
+        "ql",
+        "eo",
+        "et",
+        "ekm",
+        "fo",
+        "hq",
+        "hl",
         4,           // node_count
         4,           // edge_count
         8,           // queue_capacity
@@ -88,29 +88,29 @@ fn matroid_exchange_bfs_step_emits_valid_ir() {
 }
 
 #[test]
-fn do_intervention_delete_incoming_emits_valid_ir() {
-    let program = vyre_libs::graph::do_calculus::do_intervention_delete_incoming(
+fn intervention_delete_incoming_emits_valid_ir() {
+    let program = vyre_libs::graph::do_calculus::intervention_delete_incoming(
         "adjacency",
         "intervention_mask",
         "out_adjacency",
         4,
     );
-    assert_ir_valid("do_intervention_delete_incoming", &program);
+    assert_ir_valid("intervention_delete_incoming", &program);
 }
 
 #[test]
-fn do_rule2_reverse_incoming_emits_valid_ir() {
-    // Sibling of do_intervention_delete_incoming (above) in do_calculus.rs: it has a
+fn rule2_reverse_incoming_emits_valid_ir() {
+    // Sibling of intervention_delete_incoming (above) in do_calculus.rs: it has a
     // `do_rule2_reverse_incoming_cpu` oracle but its IR PROGRAM was never run through
     // reference_eval, so its IR was never validated, the exact gap the union_find
     // find-walk/IR-shadow bugs fell through (CPU-oracle-covered, IR-unchecked).
-    let program = vyre_libs::graph::do_calculus::do_rule2_reverse_incoming(
+    let program = vyre_libs::graph::do_calculus::rule2_reverse_incoming(
         "adjacency",
         "treatment_mask",
         "out_adjacency",
         4,
     );
-    assert_ir_valid("do_rule2_reverse_incoming", &program);
+    assert_ir_valid("rule2_reverse_incoming", &program);
 }
 
 #[test]

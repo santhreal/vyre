@@ -2,7 +2,7 @@
 // parent file focused on production code.
 
 use super::*;
-use crate::ir::{BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::validate::fusion_safety::validate_fusion_alias_hazards;
 use crate::validate::self_composition::validate_self_composition;
 use proptest::prelude::*;
@@ -368,6 +368,89 @@ fn fma_location_reflects_actual_node_index() {
         }
         other => panic!("expected ValidationLocation::Operand, got: {other:?}"),
     }
+}
+
+#[test]
+fn specialized_expression_error_after_node_0_reflects_actual_node_index() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("v0", Expr::LitF32(1.0)),
+            Node::let_bind("v1", Expr::LitF32(2.0)),
+            Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::BinOp {
+                    op: BinOp::Add,
+                    left: Box::new(Expr::LitU32(1)),
+                    right: Box::new(Expr::LitF32(2.0)),
+                },
+            ),
+        ],
+    );
+    let errors = validate(&program);
+    let v088_errors: Vec<_> = errors
+        .into_iter()
+        .filter(|e| e.code().as_str() == "V088")
+        .collect();
+    assert_eq!(v088_errors.len(), 1, "expected V088 error: {v088_errors:?}");
+    match v088_errors[0].location() {
+        ValidationLocation::Expression { node, .. } => {
+            assert_eq!(*node, 2, "V088 on node 2 must report node 2, got: {node}");
+        }
+        ValidationLocation::Operand { node, .. } => {
+            assert_eq!(*node, 2, "V088 on node 2 must report node 2, got: {node}");
+        }
+        other => panic!("expected ValidationLocation::Expression or Operand, got: {other:?}"),
+    }
+}
+
+#[test]
+fn catalog_and_emitters_agree_for_v020_to_v022() {
+    use crate::validate::catalog::rules;
+    use crate::validate::expr_rules::validate_output_markers;
+    let cat_rules = rules();
+
+    let expected = [
+        (
+            "V020",
+            "Call argument count mismatches callee signature input count",
+            "Pass exactly the number of arguments declared by the op signature.",
+        ),
+        (
+            "V021",
+            "Call signature uses unknown or unsupported type spelling",
+            "Register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer.",
+        ),
+        (
+            "V022",
+            "Call argument type mismatches callee parameter type, or program declares too many outputs",
+            "Cast or rewrite the argument to match the registered op signature, and declare at most one output buffer.",
+        ),
+    ];
+    for (code, invariant, corrective_action) in expected {
+        let rule = cat_rules
+            .iter()
+            .find(|rule| rule.code == code)
+            .unwrap_or_else(|| panic!("{code} in catalog"));
+        assert_eq!(rule.phase, ValidationPhase::Expression);
+        assert_eq!(rule.invariant, invariant);
+        assert_eq!(rule.corrective_action, corrective_action);
+    }
+
+    let buffers = vec![
+        BufferDecl::output("out0", 0, DataType::F32).with_count(1),
+        BufferDecl::output("out1", 1, DataType::F32).with_count(1),
+    ];
+    let mut errors = Vec::new();
+    validate_output_markers(&buffers, &mut errors);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].code().as_str(), "V022");
+    assert_eq!(errors[0].phase(), ValidationPhase::Expression);
+    assert!(errors[0]
+        .message()
+        .contains("program declares 2 output buffers"));
 }
 
 #[test]

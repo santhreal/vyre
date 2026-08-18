@@ -57,7 +57,7 @@ impl GridShape {
     }
 
     #[inline]
-    pub(crate) const fn to_stencil_shape(&self) -> crate::builder::stencil::CellGridShape {
+    pub(crate) const fn to_stencil_shape(self) -> crate::builder::stencil::CellGridShape {
         crate::builder::stencil::CellGridShape {
             cols: self.cols,
             rows: self.rows,

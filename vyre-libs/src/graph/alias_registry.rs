@@ -120,9 +120,16 @@ pub fn register_alias_ops(registry: &mut AliasRegistry) {
 /// Build the primitive-default alias operation registry.
 #[must_use]
 pub fn default_alias_registry() -> AliasRegistry {
+    crate::telemetry::bump(&crate::telemetry::alias_registry_calls);
     let mut registry = AliasRegistry::default();
     register_alias_ops(&mut registry);
     registry
+}
+
+/// Alias for [`default_alias_registry`].
+#[must_use]
+pub fn primitive_default_alias_registry() -> AliasRegistry {
+    default_alias_registry()
 }
 
 /// Alias for [`default_alias_registry`].
@@ -133,19 +140,21 @@ pub fn build_default_registry() -> AliasRegistry {
 
 /// Look up an alias op descriptor in `registry`.
 #[must_use]
-pub fn lookup_alias_op<'a>(
-    registry: &'a AliasRegistry,
-    op_id: &str,
-) -> Option<&'a AliasOpDescriptor> {
+pub fn lookup_alias<'a>(registry: &'a AliasRegistry, op_id: &str) -> Option<&'a AliasOpDescriptor> {
+    crate::telemetry::bump(&crate::telemetry::alias_registry_calls);
     registry.get(op_id)
 }
 
 /// True when the well-known alias-union operation is registered.
 #[must_use]
 pub fn alias_union_registered(registry: &AliasRegistry) -> bool {
+    crate::telemetry::bump(&crate::telemetry::alias_registry_calls);
     registry.contains(ALIAS_UNION_OP_ID)
 }
 
+#[cfg(test)]
+#[path = "../../tests/internal/graph/dispatch/alias_registry/mod.rs"]
+mod internal_tests;
 #[cfg(test)]
 mod tests {
     use super::*;

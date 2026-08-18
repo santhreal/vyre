@@ -543,7 +543,7 @@ fn workload_fingerprint(case_id: &str, program_fingerprint: Option<[u8; 32]>) ->
     encoded
 }
 
-pub(super) fn evaluate_contract(
+pub(crate) fn evaluate_contract(
     contract: &PerformanceContract,
     metrics: &BTreeMap<String, MetricStats>,
     backend_id: &str,

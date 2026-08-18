@@ -13,8 +13,7 @@ use crate::dispatch_buffers::{
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::graph::do_calculus::{
-    do_impact_mask_from_closure, do_intervention_delete_incoming, do_rule2_reverse_incoming,
-    do_rule3_subgraph,
+    impact_mask_from_closure, intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
 };
 use crate::prelude::reachability_closure_via_into;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
@@ -91,7 +90,7 @@ fn dispatch_impact_mask_from_closure_into(
             mask.len()
         )));
     }
-    let program = do_impact_mask_from_closure("mask", "closure", "out", n);
+    let program = impact_mask_from_closure("mask", "closure", "out", n);
     let mask_bytes = (n as usize)
         .checked_mul(std::mem::size_of::<u32>())
         .ok_or_else(|| {
@@ -269,7 +268,7 @@ fn intervention_delete_incoming_via_into_with_inputs(
         out,
         "intervention_delete_incoming_via",
         "intervention_mask",
-        do_intervention_delete_incoming,
+        intervention_delete_incoming,
     )
 }
 
@@ -344,7 +343,7 @@ fn rule2_reverse_incoming_via_into_with_inputs(
         out,
         "rule2_reverse_incoming_via",
         "treatment_mask",
-        do_rule2_reverse_incoming,
+        rule2_reverse_incoming,
     )
 }
 
@@ -540,7 +539,7 @@ fn rule3_subgraph_via_into_with_inputs(
         ))
     })?;
 
-    let program = do_rule3_subgraph("adj", "keep_mask", "reduced", "kept", "kept_len", n);
+    let program = rule3_subgraph("adj", "keep_mask", "reduced", "kept", "kept_len", n);
     // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
     // input-consuming buffer in buffer order: `adj` RO (0), `keep_mask` RO (1), then the three
     // plain-ReadWrite outputs `reduced` (2, n*n), `kept` (3, n), and `kept_len` (4, 1). Each

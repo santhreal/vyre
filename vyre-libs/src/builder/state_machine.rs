@@ -17,14 +17,14 @@
 //! typically 256 (`DEFAULT_BYTE_ALPHABET_SIZE`). For LR parsers, `stride` is
 //! the number of grammar terminals or nonterminals.
 //!
-//! [`TableStateMachineComposer`] encapsulates:
+//! [`TableStateMachineComposer`](crate::builder::state_machine::TableStateMachineComposer) encapsulates:
 //! 1. Transition index and load expressions (`transition_index`, `transition_expr`).
 //! 2. State update nodes (`advance_node`, `advance_step_nodes`).
 //! 3. Sequential loops and bounded suffix replay walks (`walk_loop`, `linear_scan_body`).
 //! 4. Tiled decode-to-scan bodies with ping-pong buffering (`tiled_decode_scan_body`).
 //! 5. Host-side flat index calculators (`flat_index`, `flat_byte_index`).
 
-use vyre_foundation::ir::{Expr, Node};
+use vyre_foundation::ir::{DataType, Expr, Node};
 
 /// Default alphabet size for byte-driven DFAs (0..=255).
 pub const DEFAULT_BYTE_ALPHABET_SIZE: u32 = 256;
@@ -373,7 +373,10 @@ impl TableStateMachineComposer<'_> {
     /// Load a byte from `buffer` at `index`, masked with `& 0xFF`.
     #[must_use]
     pub fn masked_byte_load(buffer: &str, index: Expr) -> Expr {
-        Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))
+        Expr::bitand(
+            Expr::cast(DataType::U32, Expr::load(buffer, index)),
+            Expr::u32(0xFF),
+        )
     }
 
     /// Convenience helper for 256-alphabet byte transition expression.

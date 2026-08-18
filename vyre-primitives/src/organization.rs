@@ -152,8 +152,9 @@ mod tests {
     /// composition was admitted into the intrinsic crate again.
     #[test]
     fn no_composition_is_parked_in_the_intrinsic_crate() {
-        assert!(
-            COMPOSITION_FEATURES.is_empty(),
+        assert_eq!(
+            COMPOSITION_FEATURES.len(),
+            0,
             "Fix: `{COMPOSITION_FEATURES:?}` are compositions declared inside vyre-primitives; a domain that builds a Program from existing IR belongs in vyre-libs"
         );
     }

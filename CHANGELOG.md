@@ -4268,6 +4268,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   provenance gates enforce runtime path derivation across all member sources
   and test binaries, catching both `env!` and `option_env!` variants without
   waivers.
+- CI now uses compatible benchmark, nightly tool, and vendored OpenSSL
+  configuration across supported hosts. Unused crate dependencies were deleted
+  and indirect test dependencies are declared for the dependency audit.
 - The workspace cargo runner no longer exports a workstation-specific target
   directory, so hosted CI and new checkouts use their own writable Cargo
   configuration.
@@ -4354,6 +4357,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   monotonicity, and edge-count errors. The production forward validator rejects
   a nonzero first offset, and the dominator-frontier witness rejects a short
   packed seed before mutating caller output.
+- CUDA device acquisition now converts cudarc's missing-driver-library unwind
+  into an actionable backend error while preserving unrelated panics and the
+  GPU-only execution contract.
 - The CUDA e-graph device-image upload contracts build their snapshots from
   named fixtures, and `assert_span_matches_foundation` has one definition.
   `upload_layout_contracts.rs` redefined that helper identically to the
@@ -5564,6 +5570,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   was wrong.
 - Release evidence now tracks CUDA and WGPU benchmark invocations as distinct
   required producers with disjoint, exact artifact ownership.
+- Release benchmark evidence now records the optimizer-impact performance
+  contract and explicit zero-launch PTX proof metrics. Resident string-bitmap
+  batching reads back one canonical bitmap while retaining the full
+  device-resident batch, avoiding redundant PCIe output transfers.
 - The release macro benchmarks no longer time a CPU baseline that rebuilds its
   own input. `synthetic_cpu_count` regenerated every record from its index
   inside the timed region, twelve to twenty-four rotate-multiply rounds per

@@ -24,7 +24,6 @@ vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
-vyre-test-support.workspace = true
 proptest.workspace = true
 
 [build-dependencies]
@@ -32,6 +31,9 @@ proptest.workspace = true
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.cargo-machete]
+ignored = ["vyre-driver-cuda", "vyre-driver-wgpu"]
 
 [features]
 default = []

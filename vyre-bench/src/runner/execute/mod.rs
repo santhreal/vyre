@@ -12,6 +12,8 @@ mod stats;
 pub use report::print_report;
 
 use crate::api::metric::elapsed_ns;
+#[cfg(test)]
+pub(crate) use run_case::evaluate_contract;
 use run_case::run_case;
 
 use crate::api::case::{BenchContext, BenchError, Correctness, PerformanceContract};

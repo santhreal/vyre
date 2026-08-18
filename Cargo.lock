@@ -2040,6 +2040,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "openssl-src"
+version = "300.6.1+3.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2047,6 +2056,7 @@ checksum = "b47e7e6bb2c38cd930d25a23b40fa52e068c10e85f3e03a7f5ba5aaca5713695"
 dependencies = [
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -3329,7 +3339,6 @@ dependencies = [
  "vyre-megakernel",
  "vyre-runtime",
  "vyre-spec",
- "vyre-test-support",
 ]
 
 [[package]]
@@ -3349,9 +3358,6 @@ dependencies = [
  "vyre-foundation",
  "vyre-lower",
  "vyre-megakernel",
- "vyre-primitives",
- "vyre-spec",
- "vyre-test-support",
 ]
 
 [[package]]
@@ -3463,7 +3469,6 @@ dependencies = [
  "vyre-libs",
  "vyre-lower",
  "vyre-megakernel",
- "vyre-primitives",
  "vyre-test-support",
 ]
 
@@ -3520,7 +3525,6 @@ dependencies = [
  "vyre-pass-engine",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3563,7 +3567,6 @@ dependencies = [
  "vyre-lower",
  "vyre-megakernel",
  "vyre-reference",
- "vyre-spec",
 ]
 
 [[package]]
@@ -3574,7 +3577,6 @@ dependencies = [
  "bincode",
  "blake3",
  "bytemuck",
- "criterion",
  "crossbeam-channel",
  "crossbeam-queue",
  "dashmap",
@@ -3699,7 +3701,6 @@ dependencies = [
  "toml",
  "tracing",
  "vyre",
- "vyre-lower",
  "vyre-macros",
  "vyre-reference",
  "vyre-spec",
@@ -3711,13 +3712,11 @@ name = "vyre-libs"
 version = "0.7.2"
 dependencies = [
  "blake3",
- "bytemuck",
  "inventory",
  "libm",
  "naga",
  "proptest",
  "rayon",
- "regex",
  "regex-syntax",
  "rustc-hash 2.1.3",
  "serde",
@@ -3733,9 +3732,7 @@ dependencies = [
  "vyre-driver",
  "vyre-driver-cuda",
  "vyre-driver-reference",
- "vyre-driver-wgpu",
  "vyre-emit-naga",
- "vyre-emit-ptx",
  "vyre-foundation",
  "vyre-lower",
  "vyre-megakernel",
@@ -3788,7 +3785,6 @@ dependencies = [
  "quote",
  "syn 2.0.117",
  "trybuild",
- "vyre-test-support",
 ]
 
 [[package]]
@@ -3808,9 +3804,7 @@ dependencies = [
 name = "vyre-pass-engine"
 version = "0.7.2"
 dependencies = [
- "proptest",
  "rustc-hash 2.1.3",
- "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs",
@@ -3827,11 +3821,8 @@ dependencies = [
  "criterion",
  "inventory",
  "proptest",
- "vyre-driver",
- "vyre-driver-reference",
  "vyre-foundation",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3840,14 +3831,11 @@ name = "vyre-reference"
 version = "0.7.2"
 dependencies = [
  "blake3",
- "fnv",
- "hex",
  "imbl",
  "inventory",
  "libm",
  "proptest",
  "regex",
- "regex-automata",
  "rustc-hash 2.1.3",
  "smallvec",
  "vyre-foundation",
@@ -3894,7 +3882,6 @@ dependencies = [
  "vyre-foundation",
  "vyre-libs",
  "vyre-megakernel",
- "vyre-primitives",
  "vyre-test-support",
 ]
 

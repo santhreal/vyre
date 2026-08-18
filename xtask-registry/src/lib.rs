@@ -22,7 +22,7 @@ use xtask::gate::GateBehavior;
 /// Every gate this crate implements. `xtask` assigns a gate to this package by
 /// name and this table resolves it, so the two lists have to agree; the test
 /// below is what enforces that.
-pub static GATES: &[(&'static str, &'static dyn GateBehavior)] = &[
+pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
     ("compile", &compile::Compile),
     ("catalog", &docs::catalog::Catalog),
     ("error-codes", &docs::error_codes::ErrorCodes),

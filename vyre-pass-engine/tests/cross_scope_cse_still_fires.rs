@@ -43,7 +43,7 @@ fn entry_scope(program: &Program) -> Vec<Node> {
 }
 
 fn hoisted(program: &Program) -> Program {
-    let (arena, canonical) = gpu_cse_canonicals(program, &ReferenceEvalDispatcher::default())
+    let (arena, canonical) = gpu_cse_canonicals(program, &ReferenceEvalDispatcher)
         .expect("the CSE kernels run on the reference interpreter");
     apply_cross_scope_cse(program, &arena, &canonical)
 }

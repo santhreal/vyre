@@ -6,8 +6,8 @@ use crate::graph::{
     csr_backward_traverse::csr_backward_traverse,
     csr_frontier_queue::{csr_queue_forward_traverse, frontier_to_queue},
     do_calculus::{
-        do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
-        try_do_intervention_delete_incoming, try_do_rule2_reverse_incoming,
+        intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
+        try_intervention_delete_incoming, try_rule2_reverse_incoming,
     },
     dominator_frontier::{dominator_frontier, validate_csr_shape},
     exploded::{
@@ -75,47 +75,35 @@ fn try_frontier_to_queue_cpu(
 }
 
 fn csr_queue_forward_traverse_cpu(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    active: &[u32],
+    len: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    mask: &[u32],
     node_count: u32,
-    allow_mask: u32,
+    allow: u32,
 ) -> Vec<u32> {
     vyre_reference::composition_witness::csr_queue_strided_forward_witness(
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_count,
-        allow_mask,
+        active, len, offsets, targets, mask, node_count, allow,
     )
 }
 
 fn try_csr_queue_forward_traverse_cpu(
-    active_queue: &[u32],
-    queue_len: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
+    active: &[u32],
+    len: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    mask: &[u32],
     node_count: u32,
-    allow_mask: u32,
+    allow: u32,
 ) -> Result<Vec<u32>, String> {
-    for &target in edge_targets {
+    for &target in targets {
         if target >= node_count {
             return Err(format!("target {target} outside node_count {node_count}"));
         }
     }
     Ok(csr_queue_forward_traverse_cpu(
-        active_queue,
-        queue_len,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_count,
-        allow_mask,
+        active, len, offsets, targets, mask, node_count, allow,
     ))
 }
 
@@ -293,17 +281,15 @@ fn program_builders_emit_expected_structural_primitives() {
         "vyre-libs::graph::backdoor_descendants_check"
     );
     assert_eq!(
-        program_generator(&do_intervention_delete_incoming("a", "m", "out", 2)),
+        program_generator(&intervention_delete_incoming("a", "m", "out", 2)),
         "vyre-libs::graph::do_intervention_delete_incoming"
     );
     assert_eq!(
-        program_generator(&do_rule2_reverse_incoming("a", "m", "out", 2)),
+        program_generator(&rule2_reverse_incoming("a", "m", "out", 2)),
         "vyre-libs::graph::do_rule2_reverse_incoming"
     );
     assert_eq!(
-        program_generator(&do_rule3_subgraph(
-            "a", "m", "reduced", "kept", "kept_len", 2
-        )),
+        program_generator(&rule3_subgraph("a", "m", "reduced", "kept", "kept_len", 2)),
         "vyre-libs::graph::do_rule3_subgraph"
     );
     assert_eq!(
@@ -374,10 +360,10 @@ fn checked_builders_reject_bad_shapes_without_panicking() {
     assert!(try_sheaf_diffusion_step("s", "r", "d", "o", 0, 1)
         .unwrap_err()
         .contains("n_nodes > 0"));
-    assert!(try_do_intervention_delete_incoming("a", "m", "o", 0)
+    assert!(try_intervention_delete_incoming("a", "m", "o", 0)
         .unwrap_err()
         .contains("n > 0"));
-    assert!(try_do_rule2_reverse_incoming("a", "m", "o", 0)
+    assert!(try_rule2_reverse_incoming("a", "m", "o", 0)
         .unwrap_err()
         .contains("n > 0"));
 }

@@ -398,7 +398,7 @@ fn in_place_indexed_bitset_updates_match_independent_oracles() {
 #[test]
 fn bitset_registry_is_fully_covered() {
     let covered = swept_ids();
-    for operation in vyre_foundation::operation::OperationRegistry::global().iter() {
+    for operation in vyre_libs::operation_catalog::all_entries() {
         if !operation.id.starts_with("vyre-libs::bitset::") {
             continue;
         }
@@ -415,9 +415,8 @@ fn bitset_registry_is_fully_covered() {
             "Fix: bitset operation {id} is both swept here and exempted to {owner}. Drop the exemption."
         );
         assert!(
-            vyre_foundation::operation::OperationRegistry::global()
-                .get(id)
-                .is_some(),
+            vyre_libs::operation_catalog::all_entries()
+                .any(|op| op.id == *id),
             "Fix: exempted bitset operation {id} is no longer registered. Drop the exemption, or restore the registration `{owner}` proves."
         );
         let owner_path = vyre_test_support::monorepo::declaring_source_file(owner);
@@ -632,7 +631,7 @@ fn lcg_u32(seed: u32, len: usize) -> Vec<u32> {
             state = state
                 .wrapping_mul(1_664_525)
                 .wrapping_add(1_013_904_223)
-                .rotate_left((idx % 31) as u32);
+                .rotate_left(((idx + 7) % 31) as u32);
             state ^ (idx as u32).wrapping_mul(0x85EB_CA6B)
         })
         .collect()

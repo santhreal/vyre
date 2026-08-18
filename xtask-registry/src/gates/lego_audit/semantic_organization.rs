@@ -152,13 +152,13 @@ fn check_vyre_libs_file_roles(registered_sources: &BTreeSet<&str>, findings: &mu
         return;
     };
     let libs_src = root.join("vyre-libs/src");
-    if !libs_src.is_dir() {
+    if !structure_gate::source_scan::carries_rust_source(&libs_src) {
         findings.push(Finding::new(
             format!(
-                "production source root `{}` is missing or is not a directory",
+                "production source root `{}` carries no Rust source",
                 libs_src.display()
             ),
-            "restore a readable vyre-libs/src directory before judging file roles",
+            "restore readable Rust source under vyre-libs/src before judging file roles",
         ));
         return;
     }

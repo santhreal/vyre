@@ -163,14 +163,13 @@ fn check_tag_plan(requirement: &Requirement, base_dir: &Path, failures: &mut Vec
         .iter()
         .filter_map(serde_json::Value::as_str)
         .collect::<Vec<_>>();
-    for (rc, final_tag) in [(release_train::vyre_rc_tag(), release_train::vyre_tag())] {
-        let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
-        let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
-        if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {
-            failures.push(format!(
-                "requirement `version-story` release-tag-plan must list `{rc}` before `{final_tag}`"
-            ));
-        }
+    let (rc, final_tag) = (release_train::vyre_rc_tag(), release_train::vyre_tag());
+    let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
+    let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
+    if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {
+        failures.push(format!(
+            "requirement `version-story` release-tag-plan must list `{rc}` before `{final_tag}`"
+        ));
     }
     if !tag_plan
         .get("required_gate_before_tag")

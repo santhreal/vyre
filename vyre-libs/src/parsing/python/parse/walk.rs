@@ -229,10 +229,19 @@ pub(crate) fn pack_sparse_tokens(
     }
     (tok_types, tok_starts, tok_lens)
 }
-
-/// Pack a slice of u32 words into a little-endian byte vector padded to `total_words * 4` bytes.
-pub(crate) fn pad_u32_words_bytes(words: &[u32], total_words: usize) -> Vec<u8> {
-    let mut out = crate::fixture_bytes::u32_bytes(words);
-    out.resize(total_words * 4, 0);
+/// Pack an array of u32 words into a constant little-endian byte array padded with zeros.
+pub(crate) const fn pack_words_padded_bytes<const W: usize, const OUT: usize>(
+    words: [u32; W],
+) -> [u8; OUT] {
+    let mut out = [0u8; OUT];
+    let mut i = 0;
+    while i < W {
+        let b = words[i].to_le_bytes();
+        out[i * 4] = b[0];
+        out[i * 4 + 1] = b[1];
+        out[i * 4 + 2] = b[2];
+        out[i * 4 + 3] = b[3];
+        i += 1;
+    }
     out
 }

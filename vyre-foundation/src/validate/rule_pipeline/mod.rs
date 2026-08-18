@@ -478,8 +478,26 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                         }
                     }
                     for issue in &mut self.errors[first_new_error..] {
-                        if matches!(issue.location(), ValidationLocation::Program) {
-                            issue.set_location(ValidationLocation::Node(self.current_node));
+                        match issue.location() {
+                            ValidationLocation::Program => {
+                                issue.set_location(ValidationLocation::Node(self.current_node));
+                            }
+                            ValidationLocation::Expression { depth, .. } => {
+                                issue.set_location(ValidationLocation::Expression {
+                                    node: self.current_node,
+                                    depth: *depth,
+                                });
+                            }
+                            ValidationLocation::Operand { operand, .. } => {
+                                issue.set_location(ValidationLocation::Operand {
+                                    node: self.current_node,
+                                    operand: *operand,
+                                });
+                            }
+                            ValidationLocation::Node(_) => {
+                                issue.set_location(ValidationLocation::Node(self.current_node));
+                            }
+                            _ => {}
                         }
                     }
                 }

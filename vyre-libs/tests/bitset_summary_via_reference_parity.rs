@@ -6,7 +6,7 @@
 //! `vyre-primitives/tests/*` file. This is the FIRST-EVER execution of the popcount kernel through a
 //! dispatch boundary that models the real backend.
 //!
-//! Contract (audited CLEAN): per_word_popcount binds input RO(0) + out RW(1) = 2 IC, decode
+//! Contract (audited CLEAN): per_word_popcount binds input RO(0) + out WriteOnly(1) = 1 IC, decode
 //! outputs[0]. Exact integer arithmetic → BIT-EXACT (no tolerance), compared against a fully
 //! independent inline `u32::count_ones` oracle.
 
@@ -78,4 +78,25 @@ fn popcount_via_hand_checked_cases() {
         35,
         "total = 32 + 3 + 0"
     );
+}
+
+#[test]
+fn adversarial_widths_preserve_exact_reference_parity() {
+    let dispatcher = ReferenceEvalDispatcher;
+    for words in [
+        0usize, 1, 2, 7, 31, 32, 33, 63, 64, 65, 255, 256, 257, 512, 1024,
+    ] {
+        let input: Vec<u32> = (0..words)
+            .map(|i| ((i as u32).wrapping_mul(0x9E37_79B9) ^ 0x5555_AAAA))
+            .collect();
+        let want: Vec<u32> = input.iter().map(|w| w.count_ones()).collect();
+        let got = per_word_popcount_via(&dispatcher, &input)
+            .expect("per_word_popcount_via must dispatch for adversarial width");
+        assert_eq!(got, want, "words={words}");
+
+        let want_total: u64 = want.iter().map(|&c| u64::from(c)).sum();
+        let got_total = total_set_bits_via(&dispatcher, &input)
+            .expect("total_set_bits_via must dispatch for adversarial width");
+        assert_eq!(got_total, want_total, "words={words}");
+    }
 }

@@ -251,7 +251,9 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
             ]]
         }),
-        Some(crate::fixture_bytes::matmul_2x2_expected),
+        Some(|| {
+            vec![vec![crate::fixture_bytes::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]
+        }),
     )
     .with_category("math")
 }
@@ -261,7 +263,9 @@ inventory::submit! {
         "vyre-libs::math::matmul_bias_tiled",
         || matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2),
         Some(super::super::matmul_bias_2x2_fixture_inputs),
-        Some(super::super::matmul_bias_2x2_fixture_expected),
+        Some(|| {
+            vec![vec![super::super::MATMUL_BIAS_2X2_EXPECTED_BYTES.to_vec()]]
+        }),
     )
 }
 

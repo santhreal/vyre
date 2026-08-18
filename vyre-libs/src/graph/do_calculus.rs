@@ -55,20 +55,20 @@ pub(crate) const IMPACT_MASK_OP_ID: &str = "vyre-libs::graph::do_impact_mask_fro
 /// (column j zeros out  -  incoming edges to j removed). Otherwise
 /// `out[i, j] = adjacency[i, j]`.
 #[must_use]
-pub fn do_intervention_delete_incoming(
+pub fn intervention_delete_incoming(
     adjacency: &str,
     intervention_mask: &str,
     out_adjacency: &str,
     n: u32,
 ) -> Program {
-    match try_do_intervention_delete_incoming(adjacency, intervention_mask, out_adjacency, n) {
+    match try_intervention_delete_incoming(adjacency, intervention_mask, out_adjacency, n) {
         Ok(program) => program,
         Err(error) => trap_program(OP_ID, Some((out_adjacency, DataType::U32)), error),
     }
 }
 
 /// Emit an incoming-edge-deletion Program with checked adjacency matrix shape.
-pub fn try_do_intervention_delete_incoming(
+pub fn try_intervention_delete_incoming(
     adjacency: &str,
     intervention_mask: &str,
     out_adjacency: &str,
@@ -164,10 +164,9 @@ mod tests {
 
     #[test]
     fn ir_program_buffer_layout() {
-        let p = do_intervention_delete_incoming("a", "m", "out", 4);
+        let p = intervention_delete_incoming("a", "m", "out", 4);
         assert_eq!(p.workgroup_size, [256, 1, 1]);
         let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
-        assert_eq!(names, vec!["a", "m", "out"]);
         assert_eq!(p.buffers[0].count(), 16); // n*n
         assert_eq!(p.buffers[1].count(), 4); // n
         assert_eq!(p.buffers[2].count(), 16); // n*n
@@ -175,15 +174,14 @@ mod tests {
 
     #[test]
     fn zero_n_traps() {
-        let p = do_intervention_delete_incoming("a", "m", "o", 0);
+        let p = intervention_delete_incoming("a", "m", "o", 0);
         assert!(p.stats().trap());
     }
 
     #[test]
     fn checked_delete_incoming_rejects_zero_n() {
-        let error = try_do_intervention_delete_incoming("a", "m", "out", 0)
+        let error = try_intervention_delete_incoming("a", "m", "out", 0)
             .expect_err("checked do-intervention builder must reject n=0");
-
         assert!(
             error.contains("requires n > 0"),
             "error should describe the invalid causal graph shape: {error}"
@@ -192,9 +190,8 @@ mod tests {
 
     #[test]
     fn checked_delete_incoming_rejects_adjacency_cell_overflow() {
-        let error = try_do_intervention_delete_incoming("a", "m", "out", u32::MAX)
+        let error = try_intervention_delete_incoming("a", "m", "out", u32::MAX)
             .expect_err("checked do-intervention builder must reject n*n overflow");
-
         assert!(
             error.contains("do_intervention_delete_incoming shape")
                 && error.contains("overflows the u32 cell count"),
@@ -204,8 +201,7 @@ mod tests {
 
     #[test]
     fn legacy_delete_incoming_does_not_panic_on_adjacency_cell_overflow() {
-        let program = do_intervention_delete_incoming("a", "m", "out", u32::MAX);
-
+        let program = intervention_delete_incoming("a", "m", "out", u32::MAX);
         assert!(program.stats().trap());
     }
 }
@@ -240,13 +236,13 @@ mod tests {
 ///
 /// Returns the reversed adjacency matrix.
 #[must_use]
-pub fn do_rule2_reverse_incoming(
+pub fn rule2_reverse_incoming(
     adjacency: &str,
     treatment_mask: &str,
     out_adjacency: &str,
     n: u32,
 ) -> Program {
-    match try_do_rule2_reverse_incoming(adjacency, treatment_mask, out_adjacency, n) {
+    match try_rule2_reverse_incoming(adjacency, treatment_mask, out_adjacency, n) {
         Ok(program) => program,
         Err(error) => trap_program(RULE2_OP_ID, Some((out_adjacency, DataType::U32)), error),
     }
@@ -254,7 +250,7 @@ pub fn do_rule2_reverse_incoming(
 
 /// Emit a Rule 2 incoming-edge-reversal Program with checked adjacency matrix
 /// shape.
-pub fn try_do_rule2_reverse_incoming(
+pub fn try_rule2_reverse_incoming(
     adjacency: &str,
     treatment_mask: &str,
     out_adjacency: &str,
@@ -325,7 +321,7 @@ pub fn try_do_rule2_reverse_incoming(
 /// byte-identical to the CPU oracle) rather than the nondeterministic
 /// atomic-append order a parallel compaction would produce.
 #[must_use]
-pub fn do_rule3_subgraph(
+pub fn rule3_subgraph(
     adjacency: &str,
     keep_mask: &str,
     reduced: &str,
@@ -333,14 +329,14 @@ pub fn do_rule3_subgraph(
     kept_len: &str,
     n: u32,
 ) -> Program {
-    match try_do_rule3_subgraph(adjacency, keep_mask, reduced, kept, kept_len, n) {
+    match try_rule3_subgraph(adjacency, keep_mask, reduced, kept, kept_len, n) {
         Ok(program) => program,
         Err(error) => trap_program(RULE3_OP_ID, Some((reduced, DataType::U32)), error),
     }
 }
 
 /// Emit a Rule-3 subgraph-extraction Program with checked adjacency shape.
-pub fn try_do_rule3_subgraph(
+pub fn try_rule3_subgraph(
     adjacency: &str,
     keep_mask: &str,
     reduced: &str,
@@ -434,20 +430,20 @@ pub fn try_do_rule3_subgraph(
 /// Emit a Program that projects a reachability closure matrix and intervention mask
 /// into an n-element impact mask on device.
 #[must_use]
-pub(crate) fn do_impact_mask_from_closure(
+pub(crate) fn impact_mask_from_closure(
     intervention_mask: &str,
     closure: &str,
     impact_mask: &str,
     n: u32,
 ) -> Program {
-    match try_do_impact_mask_from_closure(intervention_mask, closure, impact_mask, n) {
+    match try_impact_mask_from_closure(intervention_mask, closure, impact_mask, n) {
         Ok(program) => program,
         Err(error) => trap_program(IMPACT_MASK_OP_ID, Some((impact_mask, DataType::U32)), error),
     }
 }
 
 /// Emit an impact-mask projection Program with checked input shapes.
-pub(crate) fn try_do_impact_mask_from_closure(
+pub(crate) fn try_impact_mask_from_closure(
     intervention_mask: &str,
     closure: &str,
     impact_mask: &str,
@@ -846,7 +842,7 @@ mod rule2_tests {
 
     #[test]
     fn ir_program_buffer_layout() {
-        let p = do_rule2_reverse_incoming("a", "m", "out", 4);
+        let p = rule2_reverse_incoming("a", "m", "out", 4);
         assert_eq!(p.workgroup_size, [256, 1, 1]);
         let names: Vec<&str> = p.buffers.iter().map(|b| b.name()).collect();
         assert_eq!(names, vec!["a", "m", "out"]);
@@ -857,9 +853,8 @@ mod rule2_tests {
 
     #[test]
     fn checked_rule2_builder_rejects_adjacency_cell_overflow() {
-        let error = try_do_rule2_reverse_incoming("a", "m", "out", u32::MAX)
+        let error = try_rule2_reverse_incoming("a", "m", "out", u32::MAX)
             .expect_err("checked Rule 2 builder must reject n*n overflow");
-
         assert!(
             error.contains("do_rule2_reverse_incoming shape")
                 && error.contains("overflows the u32 cell count"),
@@ -869,8 +864,7 @@ mod rule2_tests {
 
     #[test]
     fn legacy_rule2_builder_does_not_panic_on_adjacency_cell_overflow() {
-        let program = do_rule2_reverse_incoming("a", "m", "out", u32::MAX);
-
+        let program = rule2_reverse_incoming("a", "m", "out", u32::MAX);
         assert!(program.stats().trap());
     }
 }

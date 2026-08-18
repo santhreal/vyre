@@ -43,7 +43,7 @@ fn subjects<'a>(entries: &'a [(&'a str, Vec<u8>)]) -> Vec<FingerprintedOperation
     entries
         .iter()
         .map(|(id, fingerprint)| FingerprintedOperation {
-            id: *id,
+            id,
             fingerprint: fingerprint.as_slice(),
         })
         .collect()

@@ -366,7 +366,7 @@ pub fn regex_scan_program(
     build_scan_program_from_regex(patterns, input_buf, hit_buf, input_len).map(|s| s.program)
 }
 
-const EXPECTED_REGEX_SCAN_HITS_BYTES: [u8; 120_004] = [0; 120_004];
+static EXPECTED_REGEX_SCAN_HITS_BYTES: [u8; 120_004] = [0; 120_004];
 
 /// Canonical registration fixture program for regex scan.
 ///

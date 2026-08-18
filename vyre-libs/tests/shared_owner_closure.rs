@@ -21,7 +21,7 @@
 //! semantic equivalence check.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_root};
 
@@ -821,7 +821,7 @@ fn both_crate_directories_are_the_ones_this_workspace_holds() {
             root.display()
         );
     }
-    let subject = PathBuf::from(vyre_crate_directory(SUBJECT_CRATE));
+    let subject = vyre_crate_directory(SUBJECT_CRATE);
     assert!(
         subject.join("tests/shared_owner_closure.rs").is_file(),
         "Fix: {} does not hold this test file, so the walk is reading a different checkout.",

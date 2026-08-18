@@ -333,7 +333,7 @@ impl WorkspaceSnapshot {
             .collect();
 
         // 1. Created files
-        for (rel, _) in &post.files {
+        for rel in post.files.keys() {
             if !self.files.contains_key(rel) {
                 let rel_str = rel.to_string_lossy().replace('\\', "/");
                 if !allow_owned_writes {
@@ -349,7 +349,7 @@ impl WorkspaceSnapshot {
         }
 
         // 2. Deleted files
-        for (rel, _) in &self.files {
+        for rel in self.files.keys() {
             if !post.files.contains_key(rel) {
                 let rel_str = rel.to_string_lossy().replace('\\', "/");
                 if !allow_owned_writes {

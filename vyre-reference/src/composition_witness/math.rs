@@ -2586,7 +2586,7 @@ pub fn differentiable_autotune_gradient_witness_into(
     out: &mut Vec<f64>,
 ) {
     try_differentiable_autotune_gradient_witness_into(costs, temperature, neg_costs, out)
-        .expect("differentiable_autotune_gradient_witness_into failed: invalid temperature");
+        .expect("Fix: supply a finite positive temperature parameter for differentiable autotune score gradient calculation");
 }
 
 /// Differentiable autotune config score gradient.
@@ -2821,7 +2821,7 @@ pub fn iht_top_k_witness(values: &[f64], k: usize) -> (Vec<f64>, f64) {
 pub fn p2m_zeroth_moment_witness(charges: &[f64], cell_assignment: &[u32]) -> Vec<f64> {
     let mut moments = Vec::new();
     try_p2m_zeroth_moment_witness_into(charges, cell_assignment, &mut moments)
-        .expect("P2M witness inputs must have matching lengths and representable cell ids");
+        .expect("Fix: provide charges and cell assignments with matching lengths and representable cell ids");
     moments
 }
 
@@ -2905,7 +2905,7 @@ pub fn p2m_zeroth_moment_truncating_witness_into(
     moments: &mut Vec<f64>,
 ) {
     try_p2m_zeroth_moment_truncating_witness_into(charges, cell_assignment, moments)
-        .expect("P2M truncating witness failed");
+        .expect("Fix: provide representable cell ids and sufficient memory capacity for P2M moment aggregation");
 }
 
 /// Sequential P2M aggregation with historical truncation of mismatched inputs.
@@ -2931,7 +2931,7 @@ pub fn m2l_zeroth_translate_witness(source_moment: f64, distance: f64) -> f64 {
 pub fn m2l_zeroth_all_witness(cell_moments: &[f64], cell_distances: &[f64]) -> Vec<f64> {
     let mut local = Vec::new();
     try_m2l_zeroth_all_witness_into(cell_moments, cell_distances, &mut local)
-        .expect("M2L witness distance matrix must be square");
+        .expect("Fix: provide a square cell_distances matrix matching cell_moments.len() * cell_moments.len()");
     local
 }
 
@@ -3141,7 +3141,7 @@ pub fn cluster_projection_matrix_witness_into(
     out: &mut Vec<f64>,
 ) {
     try_cluster_projection_matrix_witness_into(assignments, n, k, cluster_sizes, out)
-        .expect("cluster_projection_matrix_witness_into failed");
+        .expect("Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds");
 }
 
 /// Cluster-projection matrix construction.
@@ -3192,7 +3192,7 @@ pub fn mori_zwanzig_coarsen_via_clustering_witness_into(
         projection,
         out,
     )
-    .expect("mori_zwanzig_coarsen_via_clustering_witness_into failed");
+    .expect("Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds");
 }
 
 /// Mori-Zwanzig coarsening via clustering.

@@ -148,8 +148,8 @@ fn is_single_invocation_cond(
                     Some(KernelOpKind::LocalInvocationId | KernelOpKind::GlobalInvocationId)
                 )
             };
-            (is_local_id(left) && right.map_or(false, |r| is_literal_zero(body, r)))
-                || (is_local_id(right) && left.map_or(false, |l| is_literal_zero(body, l)))
+            (is_local_id(left) && right.is_some_and(|r| is_literal_zero(body, r)))
+                || (is_local_id(right) && left.is_some_and(|l| is_literal_zero(body, l)))
         }
         _ => false,
     }

@@ -374,7 +374,7 @@ fn derive_type_facts_loop_induction_shadowing_same_name_restoration() {
         vec![BufferDecl::read_write("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![
-            Node::let_bind("i", Expr::f32(3.14)),
+            Node::let_bind("i", Expr::f32(2.5)),
             Node::Loop {
                 var: Ident::from("i"),
                 from: Expr::u32(0),

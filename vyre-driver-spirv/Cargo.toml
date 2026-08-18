@@ -33,7 +33,6 @@ default = []
 spirv-val = []
 
 [dependencies]
-vyre-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }

@@ -54,7 +54,6 @@ toml = { workspace = true }
 inventory = { workspace = true }
 hashbrown = { workspace = true }
 pcre2 = { workspace = true }
-openssl = { workspace = true }
 faer = { workspace = true }
 memchr = { workspace = true }
 rayon = { workspace = true }
@@ -64,6 +63,12 @@ rand.workspace = true
 env_logger = { workspace = true, optional = true }
 rusqlite = { workspace = true }
 core_affinity = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+openssl = { workspace = true, features = ["vendored"] }
+
+[target.'cfg(not(windows))'.dependencies]
+openssl = { workspace = true }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 vyre-driver-cuda = { workspace = true }

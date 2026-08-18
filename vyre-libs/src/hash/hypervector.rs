@@ -65,7 +65,7 @@ pub fn hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> Prog
         .with_workgroup_size([256, 1, 1])
         .add_input_storage(a, BufferAccess::ReadOnly, DataType::U32, dim_words)
         .add_input_storage(b, BufferAccess::ReadOnly, DataType::U32, dim_words)
-        .add_output_storage(out, BufferAccess::ReadWrite, DataType::U32, dim_words)
+        .add_output_storage(out, BufferAccess::WriteOnly, DataType::U32, dim_words)
         .build_pointwise(out, |i| {
             Expr::bitxor(Expr::load(a, i.clone()), Expr::load(b, i))
         })
@@ -162,7 +162,7 @@ pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: 
         vec![
             BufferDecl::storage(stacked, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(stacked_words),
-            BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32)
+            BufferDecl::storage(out, 1, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(dim_words),
         ],
         [256, 1, 1],

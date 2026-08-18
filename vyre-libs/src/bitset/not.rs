@@ -33,7 +33,7 @@ inventory::submit! {
         || bitset_not("input", "out", 1),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![to_bytes(&[0x0F0F_0F0F]), to_bytes(&[0])]]
+            vec![vec![to_bytes(&[0x0F0F_0F0F])]]
         }),
         Some(|| {
             vec![vec![EXPECTED_BITSET_NOT_OUTPUT_BYTES.to_vec()]]

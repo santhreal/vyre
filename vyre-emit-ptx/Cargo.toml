@@ -11,6 +11,9 @@ documentation = "https://docs.rs/vyre-emit-ptx"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "ptx", "cuda", "shader"]
 
+[package.metadata.cargo-machete]
+ignored = ["vyre-spec"]
+
 [lints]
 workspace = true
 

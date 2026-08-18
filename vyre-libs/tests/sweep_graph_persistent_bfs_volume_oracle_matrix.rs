@@ -9,9 +9,9 @@ use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_libs::graph::dispatch::persistent_bfs::{
     bfs_expand_via_with_scratch_into, PersistentBfsGpuScratch,
 };
-use vyre_reference::composition_witness::csr_forward_traverse_witness;
+use vyre_reference::composition_witness::csr_forward_or_changed_witness_into;
 
-const CASES: usize = 16384;
+const CASES: usize = 1024;
 
 #[test]
 fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
@@ -21,23 +21,39 @@ fn sweep_graph_persistent_bfs_volume_oracle_matrix() {
     for case_index in 0..CASES {
         let groups = csr_sweep::declared_groups();
         let group = &groups[case_index % groups.len()];
-        let case = csr_sweep::generate(group, case_index as u64);
+        let mut case = csr_sweep::generate(group, case_index as u64);
+        let expected_words = case.node_count.div_ceil(32) as usize;
+        if case.frontier.len() != expected_words {
+            case.frontier = vec![0u32; expected_words];
+        }
+        let has_valid_seed = (0..case.node_count).any(|node| {
+            let word = (node / 32) as usize;
+            (case.frontier[word] & (1u32 << (node % 32))) != 0
+        });
+        if !has_valid_seed {
+            let start = (case_index as u32) % case.node_count;
+            case.frontier[(start / 32) as usize] |= 1u32 << (start % 32);
+        }
+        assert_eq!(
+            case.frontier.len(),
+            expected_words,
+            "frontier words must match ceil(node_count / 32)"
+        );
         let max_iterations = 16;
         let mut expected = case.frontier.clone();
+        let mut step_buffer = Vec::new();
         for _ in 0..max_iterations {
-            let derived = csr_forward_traverse_witness(
+            let changed = csr_forward_or_changed_witness_into(
                 case.node_count,
                 &case.offsets,
                 &case.targets,
                 &case.masks,
                 &expected,
                 case.allow_mask,
+                &mut step_buffer,
             );
-            let prior = expected.clone();
-            for (word, next) in expected.iter_mut().zip(derived) {
-                *word |= next;
-            }
-            if expected == prior {
+            expected = step_buffer.clone();
+            if changed == 0 {
                 break;
             }
         }

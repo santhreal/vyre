@@ -35,6 +35,8 @@ mod dense_matrix;
 #[cfg(test)]
 mod fixpoint_comparison;
 mod gpu_dispatch;
+#[cfg(test)]
+mod reference_gemm;
 mod scc_decomposition;
 
 pub use gpu_dispatch::{

@@ -120,15 +120,15 @@ fn dfa_compile_zero_budget() {
 fn dfa_compile_overlapping_patterns() {
     let patterns: [&[u8]; 4] = [b"he", b"she", b"his", b"hers"];
     let dfa = dfa_compile(&patterns);
-    let mut state = 0u32;
-    let mut matches = Vec::new();
-    for &b in b"ushers" {
-        state = dfa.transitions[(state as usize) * 256 + (b as usize)];
-        let accept = dfa.accept[state as usize];
-        if accept != 0 {
-            matches.push(accept - 1);
-        }
-    }
+    let matches: Vec<u32> = b"ushers"
+        .iter()
+        .scan(0u32, |state, &byte| {
+            *state = dfa.transitions[(*state as usize) * 256 + (byte as usize)];
+            Some(dfa.accept[*state as usize])
+        })
+        .filter(|&accept| accept != 0)
+        .map(|accept| accept - 1)
+        .collect();
     assert!(matches.contains(&1), "must accept `she`");
     assert!(
         matches.contains(&0) || matches.contains(&3),

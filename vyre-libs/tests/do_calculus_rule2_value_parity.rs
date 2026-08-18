@@ -16,7 +16,7 @@
 #![cfg(feature = "graph")]
 
 use vyre_libs::graph::do_calculus::{
-    do_intervention_delete_incoming, do_rule2_reverse_incoming, do_rule3_subgraph,
+    intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
 };
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::composition_witness::{
@@ -27,7 +27,7 @@ use vyre_reference::composition_witness::{
 use vyre_reference::value::Value;
 
 fn run_ir(adjacency: &[u32], treatment_mask: &[u32], n: u32) -> Vec<u32> {
-    let program = do_rule2_reverse_incoming("adjacency", "treatment_mask", "out_adjacency", n);
+    let program = rule2_reverse_incoming("adjacency", "treatment_mask", "out_adjacency", n);
     let cells = (n * n) as usize;
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -45,7 +45,7 @@ fn run_ir(adjacency: &[u32], treatment_mask: &[u32], n: u32) -> Vec<u32> {
 
 fn run_intervention_ir(adjacency: &[u32], intervention_mask: &[u32], n: u32) -> Vec<u32> {
     let program =
-        do_intervention_delete_incoming("adjacency", "intervention_mask", "out_adjacency", n);
+        intervention_delete_incoming("adjacency", "intervention_mask", "out_adjacency", n);
     let cells = (n * n) as usize;
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -123,7 +123,7 @@ fn rule2_ir_reverses_incoming_edge_of_treated_node() {
 /// Run the Rule-3 subgraph-extraction IR and return `(reduced_kxk, kept_k, k)` truncated to the
 /// live `k × k` / `k` prefixes, exactly as the CPU oracle lays them out.
 fn run_rule3_ir(adjacency: &[u32], keep_mask: &[u32], n: u32) -> (Vec<u32>, Vec<u32>, u32) {
-    let program = do_rule3_subgraph("adjacency", "keep_mask", "reduced", "kept", "kept_len", n);
+    let program = rule3_subgraph("adjacency", "keep_mask", "reduced", "kept", "kept_len", n);
     let cells = (n * n) as usize;
     let outputs = vyre_reference::reference_eval(
         &program,

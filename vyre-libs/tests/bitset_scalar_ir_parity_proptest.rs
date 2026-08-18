@@ -30,11 +30,7 @@ fn pack(data: &[u32]) -> Value {
 
 /// Decode the sole RW `target` buffer (binding 0) from a reference_eval result.
 fn decode(outputs: &[Value]) -> Vec<u32> {
-    outputs[0]
-        .to_bytes()
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
+    vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
 }
 
 proptest! {
@@ -44,7 +40,7 @@ proptest! {
     fn bitset_zero_ir_clears_every_word(target in prop::collection::vec(any::<u32>(), 1..=64)) {
         let words = target.len() as u32;
         let program = zero::bitset_zero("target", words);
-        let outputs = vyre_reference::reference_eval(&program, &[pack(&target)])
+        let outputs = vyre_reference::reference_eval(&program, &[])
             .expect("bitset_zero reference evaluation must succeed");
         let got = decode(&outputs);
 

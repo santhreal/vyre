@@ -35,7 +35,7 @@ fn every_declared_member_resolves_from_its_own_directory() {
             row.path, owning.package
         );
         assert!(
-            workspace_root().join(&row.path).is_dir(),
+            structure_gate::source_scan::carries_rust_source(&workspace_root().join(&row.path)),
             "Fix: {REGISTRY} declares `{}` at `{}` and no such directory exists",
             row.package,
             row.path

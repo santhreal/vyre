@@ -7,13 +7,13 @@
 //! instead of silently redefining the op.
 #![cfg(feature = "hash")]
 
-use vyre_foundation::operation::OperationRegistry;
+use vyre_libs::operation_catalog::all_entries;
 use vyre_reference::value::Value;
 
 /// Evaluate a registered op over its declared inputs and pin every output byte.
 fn assert_registered_witness(id: &str, expected: Vec<Vec<Vec<u8>>>) {
-    let entry = OperationRegistry::global()
-        .get(id)
+    let entry = all_entries()
+        .find(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("missing canonical operation registration for {id}"));
     let inputs = (entry.test_inputs.expect("declared test inputs"))();
     let declared = (entry.expected_output.expect("declared expected output"))();

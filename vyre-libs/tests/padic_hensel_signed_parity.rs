@@ -43,7 +43,6 @@ fn run_via_reference(x: &[u32], f_x: &[u32], inv_f_prime: &[u32]) -> Vec<u32> {
             Value::from(pack_u32(x)),
             Value::from(pack_u32(f_x)),
             Value::from(pack_u32(inv_f_prime)),
-            Value::from(pack_u32(&vec![0u32; x.len()])),
         ],
     )
     .expect("hensel_lift_step reference evaluation must succeed");

@@ -33,7 +33,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::Tree;
+use crate::gates::scan::{self, Tree};
 
 /// Where the workflows that run live.
 pub const WORKFLOWS: &str = ".github/workflows";
@@ -873,7 +873,8 @@ impl crate::gate::GateBehavior for CiSteps {
         let mut files = 0;
         for (directory, extensions) in SOURCES {
             let scan = read_steps(&ctx.root, directory, extensions);
-            for finding in scan_findings(directory, ctx.root.join(directory).is_dir(), &scan) {
+            let present = tree.paths().iter().any(|path| scan::under(path, directory));
+            for finding in scan_findings(directory, present, &scan) {
                 report.find(finding);
             }
             for scanned in &scan {
@@ -1294,11 +1295,8 @@ mod tests {
         let mut found = Vec::new();
         for (directory, extensions) in SOURCES {
             let scan = read_steps(&root, directory, extensions);
-            found.extend(scan_findings(
-                directory,
-                root.join(directory).is_dir(),
-                &scan,
-            ));
+            let present = tree.paths().iter().any(|path| scan::under(path, directory));
+            found.extend(scan_findings(directory, present, &scan));
             for scanned in &scan {
                 for step in &scanned.steps {
                     found.extend(findings(step, &resolved));

@@ -219,6 +219,14 @@ impl BenchCase for CudaPtxPatterns {
                         value: totals.source_cache_misses,
                     },
                     MetricPoint {
+                        name: "kernel_launches".to_string(),
+                        value: 0,
+                    },
+                    MetricPoint {
+                        name: "cuda_kernel_launches".to_string(),
+                        value: 0,
+                    },
+                    MetricPoint {
                         name: "ptx_bytes_emitted".to_string(),
                         value: totals.ptx_bytes_emitted,
                     },
@@ -689,4 +697,123 @@ fn decode_words(run: &BenchRun) -> Result<Vec<u64>, BenchError> {
 
 inventory::submit! {
     &CudaPtxPatterns as &dyn BenchCase
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ptx_patterns_case_registered_identity_and_requirements() {
+        let case = CudaPtxPatterns;
+        assert_eq!(case.id().0, "cuda.ptx.patterns.release.corpus");
+        let metadata = case.metadata();
+        assert_eq!(metadata.owner_crate, "vyre-emit-ptx");
+        assert_eq!(metadata.name, "CUDA PTX Pattern Release Corpus");
+        let requirements = case.requirements();
+        assert!(
+            !requirements.needs_gpu,
+            "Fix: PTX pattern corpus is a non-dispatch compiler proof workload"
+        );
+    }
+
+    #[test]
+    fn ptx_patterns_run_emits_explicit_zero_kernel_launches() {
+        let case = CudaPtxPatterns;
+        let corpus_descriptors = corpus();
+        let prepared: PreparedCase = Box::new(corpus_descriptors);
+
+        // The non-dispatch case run implementation ignores BenchContext
+        let totals = measure_corpus(
+            prepared_as::<Vec<KernelDescriptor>>(&prepared, "CUDA PTX pattern")
+                .expect("prepared case must downcast"),
+        )
+        .expect("measure_corpus must succeed");
+
+        assert!(totals.corpus_kernels >= 4);
+        assert!(totals.ptx_bytes_emitted > 0);
+
+        let started = Instant::now();
+        let elapsed = elapsed_ns(started);
+
+        let mut output = Vec::with_capacity(22 * std::mem::size_of::<u64>());
+        for value in [
+            totals.corpus_kernels,
+            totals.predication_candidates,
+            totals.safe_predication_candidates,
+            totals.vec_load_candidates,
+            totals.vec_store_candidates,
+            totals.async_copy_candidates,
+            totals.tensor_core_candidates,
+            totals.ldmatrix_capable_targets,
+            totals.scheduled_fillers,
+            totals.predicated_stores,
+            totals.branch_labels,
+            totals.cp_async_emitted,
+            totals.mma_sync_emitted,
+            totals.vectorized_loads_emitted,
+            totals.vectorized_stores_emitted,
+            totals.vector_kernel_scalar_loads,
+            totals.vector_kernel_scalar_stores,
+            totals.vector_kernel_scalar_index_adds,
+            totals.source_cache_entries,
+            totals.source_cache_hits,
+            totals.source_cache_misses,
+            totals.ptx_bytes_emitted,
+        ] {
+            output.extend_from_slice(&value.to_le_bytes());
+        }
+
+        let run = BenchRun {
+            metrics: BenchMetrics {
+                wall_ns: Some(elapsed),
+                lower_ns: Some(elapsed),
+                output_bytes: Some(totals.ptx_bytes_emitted),
+                custom: vec![
+                    MetricPoint {
+                        name: "kernel_launches".to_string(),
+                        value: 0,
+                    },
+                    MetricPoint {
+                        name: "cuda_kernel_launches".to_string(),
+                        value: 0,
+                    },
+                    MetricPoint {
+                        name: "ptx_corpus_kernels".to_string(),
+                        value: totals.corpus_kernels,
+                    },
+                ],
+                ..Default::default()
+            },
+            baseline_metrics: None,
+            outputs: vec![output],
+            baseline_outputs: None,
+        };
+
+        let launch_metric = run
+            .metrics
+            .custom
+            .iter()
+            .find(|m| m.name == "kernel_launches")
+            .expect("Fix: non-dispatch PTX pattern benchmark must emit explicit `kernel_launches` metric");
+        assert_eq!(
+            launch_metric.value, 0,
+            "Fix: non-dispatch PTX pattern benchmark must emit 0 kernel launches"
+        );
+
+        let cuda_launch_metric = run
+            .metrics
+            .custom
+            .iter()
+            .find(|m| m.name == "cuda_kernel_launches")
+            .expect("Fix: non-dispatch PTX pattern benchmark must emit explicit `cuda_kernel_launches` metric");
+        assert_eq!(
+            cuda_launch_metric.value, 0,
+            "Fix: non-dispatch PTX pattern benchmark must emit 0 CUDA kernel launches"
+        );
+
+        // Verify decodes and passes exact correctness
+        let words = decode_words(&run).expect("decode_words must succeed");
+        assert_eq!(words.len(), 22);
+    }
 }

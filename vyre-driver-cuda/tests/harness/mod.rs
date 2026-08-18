@@ -532,7 +532,7 @@ pub(crate) fn generated_lane_program(
         .iter()
         .enumerate()
         .map(|(binding, (name, ty))| {
-            BufferDecl::read(*name, binding as u32, ty.clone()).with_count(lanes)
+            BufferDecl::read(name, binding as u32, ty.clone()).with_count(lanes)
         })
         .collect();
     buffers.push(BufferDecl::output("out", reads.len() as u32, output).with_count(lanes));

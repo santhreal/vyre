@@ -63,7 +63,7 @@ static OPS: CaseOps<HashtableProbePrepared> = CaseOps {
     verify: verify_exact,
     program: referenced_program::<HashtableProbePrepared>,
     fingerprint: None,
-    bytes_touched: bytes_touched,
+    bytes_touched,
 };
 
 static CASE: HarnessCase<HashtableProbePrepared> = HarnessCase {

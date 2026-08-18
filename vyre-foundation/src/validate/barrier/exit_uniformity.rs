@@ -147,8 +147,9 @@ fn analyze_exit_node(
             let before = state.clone();
             let mut loop_entry_state = before.clone();
             let mut accumulated_proof = ExitProof::NONE;
+            let mut converged = false;
 
-            loop {
+            for _ in 0..16 {
                 let mut body_state = loop_entry_state.clone();
                 body_state.scope.insert(
                     var.clone(),
@@ -165,14 +166,25 @@ fn analyze_exit_node(
                 body_state.scope.remove(var.as_str());
                 let next_entry_state = merge_exit_states(loop_entry_state.clone(), body_state);
                 if next_entry_state == loop_entry_state {
+                    converged = true;
                     break;
                 }
                 loop_entry_state = next_entry_state;
             }
 
+            if !converged {
+                accumulated_proof.all_collective = false;
+            }
+
             let mut final_state = merge_exit_states(before, loop_entry_state);
-            if !bounds_uniform || !path_uniform {
+            if !bounds_uniform || !path_uniform || !converged {
                 final_state.loads_settled = false;
+                if !converged {
+                    final_state.unknown_write = true;
+                    for binding in final_state.scope.values_mut() {
+                        binding.uniform = false;
+                    }
+                }
             }
             *state = final_state;
             accumulated_proof

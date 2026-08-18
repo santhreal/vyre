@@ -6,10 +6,11 @@ mod ir_shape;
 use ir_shape::{contains_invocation_id, contains_loop, grid_sync_barrier_count};
 
 use proptest::prelude::*;
+use vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 use vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 use vyre_reference::composition_witness::inclusive_prefix_sum_witness as reference_inclusive_prefix;
 
-const BLOCK_LANES: u32 = 1024;
+const BLOCK_LANES: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
 
 fn independent_wrapping_prefix(values: &[u32]) -> Vec<u32> {
     let mut acc = 0_u32;
@@ -85,7 +86,7 @@ proptest! {
         prop_assert_eq!(
             guarded_scratch_words,
             vec![BLOCK_LANES, BLOCK_LANES],
-            "guarded internal block-total scan must allocate full-block scratch for fused 1024-lane launches"
+            "guarded internal block-total scan must allocate full-block scratch for fused portable-width launches"
         );
         prop_assert!(has_partials);
         prop_assert!(has_block_totals);

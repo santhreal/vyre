@@ -139,14 +139,12 @@ pub(in crate::pattern::classic_ac) fn suffix3_bloom_bit_index_expr(suffix: Expr)
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
-    use crate::pattern::classic_ac::test_dispatch_and_decode::{
-        ac_dfa_table_inputs, u32_input, with_reference_dispatch_lanes,
-    };
     use crate::pattern::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
-        classic_ac_compile, classic_ac_scan_counts, CLASSIC_AC_SUFFIX2_MASK_WORDS,
+        classic_ac_compile, classic_ac_scan_counts,
+        test_dispatch_and_decode::{ac_dfa_table_inputs, u32_input, with_reference_dispatch_lanes},
+        CLASSIC_AC_SUFFIX2_MASK_WORDS,
     };
-
     #[test]
     fn suffix3_bloom_marks_inserted_short_and_long_pattern_suffixes() {
         let patterns: [&[u8]; 4] = [b"z", b"ab", b"token", b"BEGIN"];
@@ -236,9 +234,9 @@ mod tests {
             &mask_cs, b'c', b'A', b't'
         ));
 
-        for &c in &[b'c', b'C'] {
-            for &a in &[b'a', b'A'] {
-                for &t in &[b't', b'T'] {
+        for &c in b"cC" {
+            for &a in b"aA" {
+                for &t in b"tT" {
                     assert!(
                         classic_ac_suffix3_bloom_contains(&mask_ci, c, a, t),
                         "candidate triple ({}, {}, {}) must be admitted in CI mode",

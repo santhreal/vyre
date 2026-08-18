@@ -121,7 +121,7 @@ representation = []
 # its catalog does not contain hands consumers unresolvable programs.
 "builder-ops" = []
 logical = ["bitset"]
-rule = ["dep:regex"]
+rule = []
 
 # Compiler self-use composition domains, migrated out of the GPU pass engine
 # crate. Each gates one module tree; `all-solvers` turns on the set.
@@ -217,12 +217,10 @@ serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 regex-syntax = { workspace = true, optional = true }
-regex = { workspace = true, optional = true }
 libm.workspace = true
 rustc-hash.workspace = true
 blake3.workspace = true
 rayon.workspace = true
-bytemuck.workspace = true
 
 [dev-dependencies]
 vyre = { path = "../vyre" }
@@ -232,14 +230,11 @@ vyre = { path = "../vyre" }
 vyre-primitives = { path = "../vyre-primitives", features = ["hardware"], default-features = false }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
-# integration tests/benches assert against these crates' public APIs
-vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
 # The live-device parity modules in `bitset::any` and `label::resolve_family`
 # dispatch through the CUDA backend. Dev-dep only, so the composition library
 # names no concrete backend in a production table.
 vyre-driver-cuda = { path = "../vyre-driver-cuda" }
 vyre-lower = { path = "../vyre-lower" }
-vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 vyre-driver = { path = "../vyre-driver" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true

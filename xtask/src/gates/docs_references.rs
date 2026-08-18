@@ -428,7 +428,7 @@ fn segment_targets(segment: &str) -> Vec<String> {
 
 /// The destination a link target names, without its title or angle brackets.
 fn link_target(raw: &str) -> String {
-    let destination = raw.trim().split_whitespace().next().unwrap_or("");
+    let destination = raw.split_whitespace().next().unwrap_or("");
     destination
         .trim_start_matches('<')
         .trim_end_matches('>')

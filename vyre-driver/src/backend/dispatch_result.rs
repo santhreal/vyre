@@ -36,8 +36,16 @@ impl BatchOutputs {
     /// satisfied, so a batch too large for the host fails before any device
     /// buffer is mapped.
     pub fn try_reserve(&mut self, rows: usize, bytes: usize) -> Result<(), TryReserveError> {
-        let row_capacity = self.row_ends.len().saturating_add(rows);
-        let byte_capacity = self.bytes.len().saturating_add(bytes);
+        let row_capacity = self
+            .row_ends
+            .len()
+            .checked_add(rows)
+            .ok_or_else(|| self.row_ends.try_reserve_exact(usize::MAX).unwrap_err())?;
+        let byte_capacity = self
+            .bytes
+            .len()
+            .checked_add(bytes)
+            .ok_or_else(|| self.bytes.try_reserve_exact(usize::MAX).unwrap_err())?;
         crate::allocation::try_reserve_vec_to_capacity(&mut self.row_ends, row_capacity)?;
         crate::allocation::try_reserve_vec_to_capacity(&mut self.bytes, byte_capacity)
     }
@@ -390,6 +398,115 @@ mod tests {
     }
 
     #[test]
+    fn try_reserve_treats_increments_as_additional_capacity_not_absolute_target() {
+        let mut batch = BatchOutputs::default();
+        // Pre-fill some data so len and capacity are nonzero.
+        batch.push_row(&[1, 2, 3, 4, 5]);
+        batch.push_row(&[6, 7, 8, 9, 10]);
+        assert_eq!(batch.len(), 2);
+        assert_eq!(batch.total_bytes(), 10);
+
+        // Ensure initial capacity is at least 4 rows and 20 bytes (greater than current len).
+        batch
+            .try_reserve(2, 10)
+            .expect("initial reservation must succeed");
+        assert!(batch.row_ends.capacity() >= 4);
+        assert!(batch.bytes.capacity() >= 20);
+
+        // Reserving 3 additional rows and 15 additional bytes must target at least
+        // current_len (2) + 3 = 5 rows and current_bytes (10) + 15 = 25 bytes, NOT
+        // absolute target 3 rows / 15 bytes (which would be smaller than existing capacity 4 / 20).
+        batch
+            .try_reserve(3, 15)
+            .expect("additional reservation on nonempty batch must succeed");
+        assert!(
+            batch.row_ends.capacity() >= 5,
+            "row capacity {} must be at least current len (2) + requested (3) = 5",
+            batch.row_ends.capacity()
+        );
+        assert!(
+            batch.bytes.capacity() >= 25,
+            "byte capacity {} must be at least current len (10) + requested (15) = 25",
+            batch.bytes.capacity()
+        );
+
+        let row_ends_ptr = batch.row_ends.as_ptr();
+        let bytes_ptr = batch.bytes.as_ptr();
+
+        // Pushing 3 additional rows of 5 bytes each (15 bytes total) must not reallocate.
+        batch.push_row(&[11, 12, 13, 14, 15]);
+        batch.push_row(&[16, 17, 18, 19, 20]);
+        batch.push_row(&[21, 22, 23, 24, 25]);
+
+        assert_eq!(batch.len(), 5);
+        assert_eq!(batch.total_bytes(), 25);
+        assert_eq!(
+            batch.row_ends.as_ptr(),
+            row_ends_ptr,
+            "pushing within reserved additional capacity must not reallocate row_ends"
+        );
+        assert_eq!(
+            batch.bytes.as_ptr(),
+            bytes_ptr,
+            "pushing within reserved additional capacity must not reallocate bytes"
+        );
+    }
+
+    #[test]
+    fn try_reserve_multiple_incremental_reservations_on_nonempty_batch() {
+        let mut batch = BatchOutputs::default();
+        batch.push_row(&[1, 2, 3, 4]);
+        batch.push_row(&[5, 6, 7, 8]);
+        assert_eq!(batch.len(), 2);
+        assert_eq!(batch.total_bytes(), 8);
+
+        // First incremental reservation: +2 rows, +8 bytes.
+        batch
+            .try_reserve(2, 8)
+            .expect("first incremental reservation must succeed");
+        assert!(batch.row_ends.capacity() >= 4);
+        assert!(batch.bytes.capacity() >= 16);
+
+        let row_ptr_1 = batch.row_ends.as_ptr();
+        let byte_ptr_1 = batch.bytes.as_ptr();
+        batch.push_row(&[9, 10, 11, 12]);
+        batch.push_row(&[13, 14, 15, 16]);
+        assert_eq!(batch.len(), 4);
+        assert_eq!(batch.total_bytes(), 16);
+        assert_eq!(batch.row_ends.as_ptr(), row_ptr_1);
+        assert_eq!(batch.bytes.as_ptr(), byte_ptr_1);
+
+        // Second incremental reservation: +3 rows, +12 bytes.
+        batch
+            .try_reserve(3, 12)
+            .expect("second incremental reservation must succeed");
+        assert!(batch.row_ends.capacity() >= 7);
+        assert!(batch.bytes.capacity() >= 28);
+
+        let row_ptr_2 = batch.row_ends.as_ptr();
+        let byte_ptr_2 = batch.bytes.as_ptr();
+        batch.push_row(&[17, 18, 19, 20]);
+        batch.push_row(&[21, 22, 23, 24]);
+        batch.push_row(&[25, 26, 27, 28]);
+        assert_eq!(batch.len(), 7);
+        assert_eq!(batch.total_bytes(), 28);
+        assert_eq!(batch.row_ends.as_ptr(), row_ptr_2);
+        assert_eq!(batch.bytes.as_ptr(), byte_ptr_2);
+
+        // Verify all rows read back correctly.
+        for i in 0..7 {
+            let expected_start = (i * 4 + 1) as u8;
+            let expected = [
+                expected_start,
+                expected_start + 1,
+                expected_start + 2,
+                expected_start + 3,
+            ];
+            assert_eq!(batch.row(i), Some(&expected[..]));
+        }
+    }
+
+    #[test]
     fn try_reserve_overflow_and_failure_behavior() {
         let mut batch = BatchOutputs::default();
 
@@ -412,6 +529,9 @@ mod tests {
         assert_eq!(batch.len(), 1);
         assert_eq!(batch.total_bytes(), 3);
 
+        // Exact arithmetic overflow boundaries on non-empty batch:
+        // current len is 1, so usize::MAX - 1 + 1 = usize::MAX (does not overflow usize addition),
+        // but allocation size will still fail.
         assert!(
             batch.try_reserve(usize::MAX - 1, 0).is_err(),
             "reserving saturating row count must fail"
@@ -420,6 +540,8 @@ mod tests {
             batch.try_reserve(0, usize::MAX - 1).is_err(),
             "reserving saturating byte count must fail"
         );
+
+        // Checked arithmetic overflow: current_len (1) + usize::MAX overflows checked_add.
         assert!(
             batch.try_reserve(usize::MAX, 0).is_err(),
             "reserving overflowing row count on nonempty batch must fail"
@@ -429,7 +551,19 @@ mod tests {
             "reserving overflowing byte count on nonempty batch must fail"
         );
 
-        // State remains intact after failed reservation.
+        // Exact boundary for checked_add overflow: usize::MAX - current_len + 1.
+        let row_overflow_boundary = usize::MAX - batch.len() + 1;
+        assert!(
+            batch.try_reserve(row_overflow_boundary, 0).is_err(),
+            "exact checked_add overflow boundary for rows must fail"
+        );
+        let byte_overflow_boundary = usize::MAX - batch.total_bytes() + 1;
+        assert!(
+            batch.try_reserve(0, byte_overflow_boundary).is_err(),
+            "exact checked_add overflow boundary for bytes must fail"
+        );
+
+        // State remains intact after failed reservations.
         assert_eq!(batch.len(), 1);
         assert_eq!(batch.total_bytes(), 3);
         assert_eq!(batch.row(0), Some(&[1, 2, 3][..]));

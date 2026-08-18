@@ -146,6 +146,7 @@ impl AtomicReduceKind {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn reference_reduce(self, values: &[u32]) -> u32 {
         match self {
             Self::Sum => values.iter().copied().fold(0u32, |a, b| a.wrapping_add(b)),

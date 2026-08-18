@@ -303,3 +303,82 @@ fn doubly_nested_loop_divergent_inner_bounds_emits_v055() {
         "doubly nested loop with inner divergent bounds must trigger V055: {errors:?}"
     );
 }
+
+/// A nested loop after the last barrier where the return guard only matches on a later iteration
+/// after loop-carried lane-dependent state has been assigned must emit V055.
+#[test]
+fn nested_loop_later_iteration_divergent_return_emits_v055() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            barrier(),
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(0),
+            },
+            Node::Loop {
+                var: "inner".into(),
+                from: Expr::u32(0),
+                to: Expr::u32(4),
+                body: vec![
+                    Node::If {
+                        cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
+                        then: vec![Node::Return],
+                        otherwise: Vec::new(),
+                    },
+                    Node::Assign {
+                        name: "x".into(),
+                        value: Expr::InvocationId { axis: 0 },
+                    },
+                ],
+            },
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.iter().any(|error| error.code().as_str() == "V055"),
+        "nested loop reaching divergent return on later iteration must trigger V055: {errors:?}"
+    );
+}
+
+/// A doubly-nested loop after the last barrier where lane-dependent state assigned in the inner
+/// loop causes an outer or inner return guard to diverge on a later iteration must emit V055.
+#[test]
+fn doubly_nested_loop_later_iteration_divergent_return_emits_v055() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            barrier(),
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(0),
+            },
+            Node::Loop {
+                var: "outer".into(),
+                from: Expr::u32(0),
+                to: Expr::u32(3),
+                body: vec![
+                    Node::Loop {
+                        var: "inner".into(),
+                        from: Expr::u32(0),
+                        to: Expr::u32(3),
+                        body: vec![Node::If {
+                            cond: Expr::eq(Expr::var("x"), Expr::u32(2)),
+                            then: vec![Node::Return],
+                            otherwise: Vec::new(),
+                        }],
+                    },
+                    Node::Assign {
+                        name: "x".into(),
+                        value: Expr::add(Expr::var("x"), Expr::InvocationId { axis: 0 }),
+                    },
+                ],
+            },
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.iter().any(|error| error.code().as_str() == "V055"),
+        "doubly nested loop reaching divergent return on later iteration must trigger V055: {errors:?}"
+    );
+}

@@ -287,11 +287,11 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
 // Registration fixtures. The conformance harness feeds these to every family
 // member, so they live here rather than being retyped per file.
 // ---------------------------------------------------------------------------
-const FORWARD_REACH_EXPECTED_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
-const DOMINANCE_EXPECTED_BYTES: [u8; 4] = [0x0E, 0x00, 0x00, 0x00];
-const DATAFLOW_HIT_REACH_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
-const DATAFLOW_HIT_SINK_BYTES: [u8; 4] = [0x02, 0x00, 0x00, 0x00];
-const DATAFLOW_HIT_SCALAR_BYTES: [u8; 4] = [0x01, 0x00, 0x00, 0x00];
+pub(crate) const FORWARD_REACH_EXPECTED_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+pub(crate) const DOMINANCE_EXPECTED_BYTES: [u8; 4] = [0x0E, 0x00, 0x00, 0x00];
+pub(crate) const DATAFLOW_HIT_REACH_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+pub(crate) const DATAFLOW_HIT_SINK_BYTES: [u8; 4] = [0x02, 0x00, 0x00, 0x00];
+pub(crate) const DATAFLOW_HIT_SCALAR_BYTES: [u8; 4] = [0x01, 0x00, 0x00, 0x00];
 
 /// Linear chain `0 → 1 → 2 → 3` over ASSIGNMENT edges, frontier seeded at {0}.
 /// `fout` seeds as the accumulator so the convergence lens grows monotonically.
@@ -309,6 +309,7 @@ pub(crate) fn forward_reach_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 
 /// One forward hop from {0} writes {1} into the accumulator. A no-op that
 /// leaves the accumulator at {0} fails this oracle.
+#[cfg(test)]
 pub(crate) fn forward_reach_fixture_expected() -> Vec<Vec<Vec<u8>>> {
     vec![vec![FORWARD_REACH_EXPECTED_BYTES.to_vec()]]
 }
@@ -327,6 +328,7 @@ pub(crate) fn dominance_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 /// One backward hop from {3} lights up nodes 1 and 2; the seed survives.
+#[cfg(test)]
 pub(crate) fn dominance_fixture_expected() -> Vec<Vec<Vec<u8>>> {
     vec![vec![DOMINANCE_EXPECTED_BYTES.to_vec()]]
 }
@@ -348,6 +350,7 @@ pub(crate) fn dataflow_hit_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 /// Reach grows to {0, 1}, the sink at {1} is hit, the witness reads 1.
+#[cfg(test)]
 pub(crate) fn dataflow_hit_fixture_expected() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
         DATAFLOW_HIT_REACH_BYTES.to_vec(),

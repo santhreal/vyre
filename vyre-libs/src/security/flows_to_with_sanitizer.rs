@@ -244,13 +244,20 @@ pub(crate) fn flows_to_with_sanitizer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES: [u8; 4] = [1, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES: [u8; 4] = [3, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES: [u8; 4] = [3, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES: [u8; 4] = [2, 0, 0, 0];
+pub(crate) const EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES: [u8; 4] = [1, 0, 0, 0];
+
+#[cfg(test)]
 pub(crate) fn flows_to_with_sanitizer_fixture_expected() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        vec![1, 0, 0, 0], // clean = {0}
-        vec![3, 0, 0, 0], // reach = {0, 1}
-        vec![3, 0, 0, 0], // alive = {0, 1}
-        vec![2, 0, 0, 0], // hits = {1}
-        vec![1, 0, 0, 0], // out_scalar = 1
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES.to_vec(),
+        EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
     ]]
 }
 
@@ -262,6 +269,20 @@ mod tests {
         AnalysisSourceSpan, FactId, FactKind, SourceToSinkFindingRequest,
     };
     use crate::security::flow_composition::linear_dataflow;
+
+    #[test]
+    fn test_flows_to_with_sanitizer_expected_bytes_identity() {
+        assert_eq!(
+            flows_to_with_sanitizer_fixture_expected(),
+            vec![vec![
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES.to_vec(),
+                EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
+            ]]
+        );
+    }
 
     #[test]
     fn sanitizer_flow_contract_labels_one_step_and_external_fixpoint_distinctly() {

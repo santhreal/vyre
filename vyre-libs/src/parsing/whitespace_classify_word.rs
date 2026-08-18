@@ -223,6 +223,11 @@ pub(crate) const fn is_structural_whitespace(byte: u8) -> bool {
 pub(crate) const fn pack_bytes_le(b0: u8, b1: u8, b2: u8, b3: u8) -> u32 {
     (b0 as u32) | ((b1 as u32) << 8) | ((b2 as u32) << 16) | ((b3 as u32) << 24)
 }
+const EXPECTED_WHITESPACE_CLASSIFY_WORD_OUTPUT_BYTES: [u8; 1024] = {
+    let mut bytes = [0u8; 1024];
+    bytes[0] = 11;
+    bytes
+};
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -237,11 +242,7 @@ inventory::submit! {
                 to_bytes(&[0; 256]),             // whitespace_mask_out
             ]]
         }),
-        Some(|| {
-            let mut expected = vec![0u32; 256];
-            expected[0] = 11;
-            vec![vec![crate::fixture_bytes::u32_bytes(&expected)]]
-        }),
+        Some(|| vec![vec![EXPECTED_WHITESPACE_CLASSIFY_WORD_OUTPUT_BYTES.to_vec()]]),
     )
 }
 

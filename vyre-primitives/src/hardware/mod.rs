@@ -410,6 +410,7 @@ where
     )
 }
 
+#[cfg(test)]
 pub(crate) fn inverse_sqrt_f32_ref(x: f32) -> f32 {
     let safe = if x.is_finite() && x > f32::MIN_POSITIVE {
         x

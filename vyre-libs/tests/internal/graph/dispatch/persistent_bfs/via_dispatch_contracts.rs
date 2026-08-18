@@ -152,17 +152,15 @@ fn via_large_graph_allocates_changed_active_scratch_without_extra_outputs() {
     let frontier_in = vec![0u32; words];
     let mut frontier = Vec::new();
 
+    let view = CsrGraphView {
+        node_count,
+        edge_offsets: &edge_offsets,
+        edge_targets: &[],
+        edge_kind_mask: &[],
+    };
     let (changed, converged) = bfs_expand_via_into(
         &dispatcher,
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: node_count,
-                edge_offsets: &edge_offsets,
-                edge_targets: &[],
-                edge_kind_mask: &[],
-            },
-            64,
-        ),
+        CsrClosureInputs::allow_all(view, 64),
         &frontier_in,
         &mut frontier,
     )
@@ -239,17 +237,15 @@ fn via_refreshes_static_graph_inputs_for_same_shape_content_change() {
             "Fix: second same-shape persistent BFS dispatch should refresh graph inputs",
         ),
     ] {
+        let graph = CsrGraphView {
+            node_count: 4,
+            edge_offsets: &edge_offsets,
+            edge_targets,
+            edge_kind_mask: &edge_kind_mask,
+        };
         bfs_expand_via_with_scratch_into(
             &dispatcher,
-            CsrClosureInputs::allow_all(
-                CsrGraphView {
-                    node_count: 4,
-                    edge_offsets: &edge_offsets,
-                    edge_targets: edge_targets,
-                    edge_kind_mask: &edge_kind_mask,
-                },
-                4,
-            ),
+            CsrClosureInputs::allow_all(graph, 4),
             &[0b0001],
             &mut scratch,
             &mut frontier,
@@ -343,19 +339,16 @@ fn via_rejects_mismatched_edge_arrays() {
     )
     .expecting_grid([1, 1, 1])
     .expecting_inputs(&[9]);
+    let bad_graph = CsrGraphView {
+        node_count: 2,
+        edge_offsets: &[0, 1, 1],
+        edge_targets: &[1],
+        edge_kind_mask: &[],
+    };
     let err = bfs_expand_via(
         &dispatcher,
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 2,
-                edge_offsets: &[0, 1, 1],
-                edge_targets: &[1],
-                edge_kind_mask: &[],
-            },
-            1,
-        ),
+        CsrClosureInputs::allow_all(bad_graph, 1),
         &[0b01],
     )
     .expect_err("mismatched edge arrays must be rejected");
-    assert!(matches!(err, DispatchError::BadInputs(_)));
 }

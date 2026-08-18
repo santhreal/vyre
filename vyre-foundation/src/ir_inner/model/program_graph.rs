@@ -248,7 +248,7 @@ impl ProgramGraph {
         runtime_counts: &BTreeMap<String, u64>,
     ) -> Result<Self, ProgramGraphError> {
         let node_name = node_name.into();
-        for (buffer_name, _) in runtime_counts {
+        for buffer_name in runtime_counts.keys() {
             let Some(buffer) = program.buffer(buffer_name) else {
                 return Err(ProgramGraphError::MissingBuffer {
                     node: node_name,

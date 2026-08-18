@@ -538,25 +538,7 @@ fn linked_backend_sources_honor_feature_boundary() {
         "reference backend is always linked"
     );
 
-    #[cfg(not(feature = "gpu"))]
-    {
-        for &declared in vyre_registry_link::backend::DECLARED_SOURCES {
-            if declared == "vyre-driver-reference" {
-                assert!(
-                    sources.contains(&declared),
-                    "reference backend {declared} must be linked in portable/no-default build"
-                );
-            } else {
-                assert!(
-                    !sources.contains(&declared),
-                    "vyre-conform without gpu feature must not link concrete driver {declared}"
-                );
-            }
-        }
-    }
-
-    #[cfg(feature = "gpu")]
-    {
+    if cfg!(feature = "gpu") {
         assert!(
             sources.contains(&"vyre-driver-cuda"),
             "vyre-conform with gpu feature must link cuda driver"
@@ -573,6 +555,20 @@ fn linked_backend_sources_honor_feature_boundary() {
             !sources.contains(&"vyre-driver-spirv"),
             "vyre-conform gpu feature does not link spirv driver"
         );
+    } else {
+        for &declared in vyre_registry_link::backend::DECLARED_SOURCES {
+            if declared == "vyre-driver-reference" {
+                assert!(
+                    sources.contains(&declared),
+                    "reference backend {declared} must be linked in portable/no-default build"
+                );
+            } else {
+                assert!(
+                    !sources.contains(&declared),
+                    "vyre-conform without gpu feature must not link concrete driver {declared}"
+                );
+            }
+        }
     }
 }
 

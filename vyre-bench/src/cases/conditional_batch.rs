@@ -67,7 +67,7 @@ static OPS: CaseOps<ConditionalPrepared> = CaseOps {
     verify: verify_fired_pairs,
     program: conditional_program,
     fingerprint: None,
-    bytes_touched: bytes_touched,
+    bytes_touched,
 };
 
 pub(crate) static CONDITIONAL_BATCH: HarnessCase<ConditionalPrepared> = HarnessCase {

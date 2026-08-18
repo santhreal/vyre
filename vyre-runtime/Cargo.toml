@@ -25,11 +25,8 @@ subgroup-ops = []
 # Named `self-substrate-adapters` until the crate it was named for,
 # vyre-self-substrate, became vyre-pass-engine; the feature never depended on
 # that crate, so the name described nothing.
-# The buffer and extent records the vyre-libs builders take are vyre-primitives
-# types, so the planner surface that forwards to them names that crate directly.
 libs-compositions = [
     "dep:vyre-libs",
-    "dep:vyre-primitives",
     "vyre-libs/analysis",
     "vyre-libs/encoding",
     "vyre-libs/solvers",
@@ -45,7 +42,6 @@ uring-cmd-nvme = []
 [dependencies]
 vyre-driver.workspace = true
 vyre-libs = { workspace = true, optional = true }
-vyre-primitives = { workspace = true, optional = true }
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
 thiserror.workspace = true

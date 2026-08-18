@@ -261,12 +261,22 @@ pub(crate) fn generate(group: &CsrSweepGroup, seed: u64) -> CsrSweepCase {
                     frontier[(node / 32) as usize] |= 1u32 << (node % 32);
                 }
             }
+            if frontier.iter().all(|&w| w == 0) {
+                let node = rng.range(node_count);
+                frontier[(node / 32) as usize] |= 1u32 << (node % 32);
+            }
         }
         FrontierSeeding::QuarterWithPaddedTail => {
             for node in 0..node_count {
                 if rng.next_u32() & 3 == 0 {
                     frontier[(node / 32) as usize] |= 1u32 << (node % 32);
                 }
+            }
+            let has_valid = (0..node_count)
+                .any(|node| (frontier[(node / 32) as usize] & (1u32 << (node % 32))) != 0);
+            if !has_valid {
+                let node = rng.range(node_count);
+                frontier[(node / 32) as usize] |= 1u32 << (node % 32);
             }
             let used = node_count % 32;
             if used != 0 {

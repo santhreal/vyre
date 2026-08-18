@@ -1006,7 +1006,7 @@ The `findings` column is the count with the injection applied, given the pin in
 | `unification` | Add `BufferAccess::infer(` to a file under `vyre-runtime/src/resident_work_queue`. | 0 to 1 |
 | `unification` | Rename the directory `vyre-foundation/src/execution_plan` and update its `mod` declaration. | 0 to 1, reported as a path that does not exist rather than as a clean row |
 | `evidence-paths` | In any artifact under `release/evidence`, change one cited path to a filename that does not exist but keeps a tree extension. | 18 to 19 |
-| `evidence-paths` | Add `"manifest": "target/debug/build.rs"` to an artifact object, with `target/` gitignored. | 18 to 19, in the gitignored class rather than the missing class |
+| `evidence-paths` | Add `"manifest": "target/debug/build.rs"` to an artifact object, with the target directory gitignored. | 18 to 19, in the gitignored class rather than the missing class |
 | `evidence-paths` | Change a cited path to `1.2.0`. | stays 18; a version string is not a citation |
 | `docs-coupling` | Delete the `covers` key from the `docs/reference/wire-format.md` page row. | 0 to 1 |
 | `docs-coupling` | Change one `covers` entry to a path the tree does not hold. | 0 to 1 |

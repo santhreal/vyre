@@ -255,6 +255,30 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
             )
         })
         .collect::<std::collections::BTreeMap<_, _>>();
+    let matrix_family_required = matrix["families"]
+        .as_array()
+        .expect("Fix: release workload matrix must list families.")
+        .iter()
+        .map(|family| {
+            (
+                json_str(family, "id").to_owned(),
+                family["required"].as_bool().unwrap_or(true),
+            )
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let matrix_family_baseline_required = matrix["families"]
+        .as_array()
+        .expect("Fix: release workload matrix must list families.")
+        .iter()
+        .map(|family| {
+            (
+                json_str(family, "id").to_owned(),
+                family["requires_cpu_sota_baseline"]
+                    .as_bool()
+                    .unwrap_or(true),
+            )
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
     assert_eq!(
         suite["schema_version"], 3,
         "Fix: CUDA release benchmark suite evidence must use digest-bound schema v3."
@@ -294,6 +318,16 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
         let family_matrix_speedup = *matrix_family_speedups.get(family_id).unwrap_or_else(|| {
             panic!("Fix: CUDA suite family `{family_id}` is absent from release-workload-matrix.")
         });
+        let family_is_required = *matrix_family_required.get(family_id).unwrap_or_else(|| {
+            panic!("Fix: CUDA suite family `{family_id}` is absent from release-workload-matrix.")
+        });
+        let family_requires_baseline = *matrix_family_baseline_required
+            .get(family_id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: CUDA suite family `{family_id}` is absent from release-workload-matrix."
+                )
+            });
         assert!(
             artifacts
                 .iter()
@@ -336,10 +370,15 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
                         == json_usize(status, "cpu_sota_100x_contract_cases"),
                 "Fix: CUDA workload artifact `{path}` must pass every required CPU-SOTA 100x contract case."
             );
-        } else {
+        } else if family_requires_baseline {
             assert!(
                 family_matrix_speedup >= 10.0,
                 "Fix: CUDA workload artifact `{path}` must map to a matrix CPU-SOTA contract of at least 10x."
+            );
+        } else {
+            assert_eq!(
+                family_matrix_speedup, 0.0,
+                "Fix: CUDA workload artifact `{path}` without a CPU-SOTA baseline must have null/zero matrix speedup."
             );
         }
         assert!(
@@ -390,48 +429,68 @@ fn cuda_release_suite_artifact_proves_real_gpu_macro_workloads() {
                 "Fix: `{path}` contains a non-CUDA case."
             );
             assert_eq!(
-                case["workload_class"], "Macro",
-                "Fix: `{path}` must prove macro workloads, not primitive-only microbenchmarks."
-            );
-            assert_eq!(
                 case["needs_gpu"], true,
                 "Fix: `{path}` release cases must require GPU execution."
             );
-            assert!(
-                case["min_input_bytes"].as_u64().unwrap_or(0) >= 512 * 1024,
-                "Fix: `{path}` release cases must use at least 512 KiB input."
-            );
-            assert!(
-                case["performance"]["contract_passed"]
-                    .as_bool()
-                    .unwrap_or(false),
-                "Fix: `{path}` benchmark case failed its performance contract."
-            );
-            let min_cuda_cpu_sota_speedup = cuda_cpu_sota_min_speedup(case);
-            assert!(
-                min_cuda_cpu_sota_speedup >= family_matrix_speedup,
-                "Fix: `{path}` case contract must be at least as strong as release-workload-matrix family `{family_id}`."
-            );
-            assert!(
-                case["performance"]["speedup_x"].as_f64().unwrap_or(0.0)
-                    >= min_cuda_cpu_sota_speedup,
-                "Fix: `{path}` benchmark case must prove its CUDA CPU-SOTA speedup contract."
-            );
-            if requires_cpu_sota_100x {
-                assert!(
-                    min_cuda_cpu_sota_speedup >= 100.0,
-                    "Fix: `{path}` is marked 100x-required but its CUDA CPU-SOTA contract is weaker."
+            if family_is_required && family_requires_baseline {
+                assert_eq!(
+                    case["workload_class"], "Macro",
+                    "Fix: `{path}` must prove macro workloads, not primitive-only microbenchmarks."
                 );
-            } else {
+                assert!(
+                    case["min_input_bytes"].as_u64().unwrap_or(0) >= 512 * 1024,
+                    "Fix: `{path}` release cases must use at least 512 KiB input."
+                );
+                assert!(
+                    case["performance"]["contract_passed"]
+                        .as_bool()
+                        .unwrap_or(false),
+                    "Fix: `{path}` benchmark case failed its performance contract."
+                );
+                let min_cuda_cpu_sota_speedup = cuda_cpu_sota_min_speedup(case);
                 assert!(
                     min_cuda_cpu_sota_speedup >= family_matrix_speedup,
-                    "Fix: `{path}` non-required release contract is weaker than release-workload-matrix family `{family_id}`."
+                    "Fix: `{path}` case contract must be at least as strong as release-workload-matrix family `{family_id}`."
+                );
+                assert!(
+                    case["performance"]["speedup_x"].as_f64().unwrap_or(0.0)
+                        >= min_cuda_cpu_sota_speedup,
+                    "Fix: `{path}` benchmark case must prove its CUDA CPU-SOTA speedup contract."
+                );
+                if requires_cpu_sota_100x {
+                    assert!(
+                        min_cuda_cpu_sota_speedup >= 100.0,
+                        "Fix: `{path}` is marked 100x-required but its CUDA CPU-SOTA contract is weaker."
+                    );
+                } else {
+                    assert!(
+                        min_cuda_cpu_sota_speedup >= family_matrix_speedup,
+                        "Fix: `{path}` non-required release contract is weaker than release-workload-matrix family `{family_id}`."
+                    );
+                }
+                assert!(
+                    case["performance"]["speedup_x"].as_f64().unwrap_or(0.0) >= 25.0,
+                    "Fix: `{path}` benchmark case must prove at least the non-100x release floor."
+                );
+            } else if family_is_required {
+                if let Some(performance) = case.get("performance").filter(|p| !p.is_null()) {
+                    assert!(
+                        performance["contract_passed"].as_bool().unwrap_or(false),
+                        "Fix: `{path}` benchmark case failed its performance contract."
+                    );
+                    let min_cuda_cpu_sota_speedup = cuda_cpu_sota_min_speedup(case);
+                    assert!(
+                        performance["speedup_x"].as_f64().unwrap_or(0.0)
+                            >= min_cuda_cpu_sota_speedup,
+                        "Fix: `{path}` benchmark case must prove its CUDA speedup contract."
+                    );
+                }
+            } else if let Some(performance) = case.get("performance").filter(|p| !p.is_null()) {
+                assert!(
+                    performance["contract_passed"].as_bool().unwrap_or(false),
+                    "Fix: `{path}` benchmark case failed its performance contract."
                 );
             }
-            assert!(
-                case["performance"]["speedup_x"].as_f64().unwrap_or(0.0) >= 25.0,
-                "Fix: `{path}` benchmark case must prove at least the non-100x release floor."
-            );
             assert!(
                 case["metrics"]["wall_ns"]["samples"].as_u64().unwrap_or(0) >= 30,
                 "Fix: `{path}` benchmark case must contain at least 30 wall-clock samples."

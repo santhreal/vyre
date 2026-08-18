@@ -672,8 +672,7 @@ fn every_owner_call_names_a_function_in_the_traversal_surface() {
             while let Some(offset) = source[cursor..].find(&declaration) {
                 let start = cursor + offset;
                 cursor = start + declaration.len();
-                if !source[cursor..]
-                    .as_bytes()
+                if !source.as_bytes()[cursor..]
                     .first()
                     .copied()
                     .is_some_and(is_word_byte)

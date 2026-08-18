@@ -737,7 +737,7 @@ fn without_test_modules(text: &str) -> String {
         let semicolon = tail.find(';');
         let block_open = tail.find('{');
         if let Some(semicolon) = semicolon {
-            if block_open.map_or(true, |block_open| semicolon < block_open) {
+            if block_open.is_none_or(|block_open| semicolon < block_open) {
                 rest = &tail[semicolon + 1..];
                 continue;
             }

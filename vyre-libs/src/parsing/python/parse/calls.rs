@@ -1,4 +1,4 @@
-use super::walk::{pack_sparse_tokens, pad_u32_words_bytes, DottedName, TokenPass};
+use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words};
 use crate::parsing::python::{CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS};
 use vyre_foundation::ir::{Expr, Node, Program};
@@ -227,6 +227,11 @@ pub fn python312_extract_calls(
     pass.program(buffers, body)
 }
 
+const EXPECTED_CALLS_RECORDS: [u8; 448] = pack_words_padded_bytes([6, 3, 9, 13, 0, 1, 1]);
+const EXPECTED_CALLS_COUNTS: [u8; 4] = 7u32.to_le_bytes();
+const EXPECTED_CALLS_KWARGS: [u8; 128] = pack_words_padded_bytes([10, 1]);
+const EXPECTED_CALLS_KW_COUNTS: [u8; 4] = 2u32.to_le_bytes();
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -235,10 +240,10 @@ inventory::submit! {
         ),
         Some(call_fixture_inputs),
         Some(|| vec![vec![
-            pad_u32_words_bytes(&[6, 3, 9, 13, 0, 1, 1], 112),
-            crate::fixture_bytes::u32_bytes(&[7]),
-            pad_u32_words_bytes(&[10, 1], 32),
-            crate::fixture_bytes::u32_bytes(&[2]),
+            EXPECTED_CALLS_RECORDS.to_vec(),
+            EXPECTED_CALLS_COUNTS.to_vec(),
+            EXPECTED_CALLS_KWARGS.to_vec(),
+            EXPECTED_CALLS_KW_COUNTS.to_vec(),
         ]]),
     )
     .with_category("parsing")

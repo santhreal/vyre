@@ -1,4 +1,4 @@
-use super::walk::{pack_sparse_tokens, pad_u32_words_bytes, DottedName, TokenPass};
+use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, load_u32, search_next_token, search_next_token_into, store_words,
 };
@@ -180,14 +180,17 @@ pub fn python312_extract_decorators(
     .build_record_program(out_records, out_counts, DECORATOR_RECORD_WORDS, body)
 }
 
+const EXPECTED_DECORATOR_RECORDS: [u8; 384] = pack_words_padded_bytes([1, 1, 2, 13, 1, 3]);
+const EXPECTED_DECORATOR_COUNTS: [u8; 4] = 6u32.to_le_bytes();
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || python312_extract_decorators("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(decorator_fixture_inputs),
         Some(|| vec![vec![
-            pad_u32_words_bytes(&[1, 1, 2, 13, 1, 3], 96),
-            crate::fixture_bytes::u32_bytes(&[6]),
+            EXPECTED_DECORATOR_RECORDS.to_vec(),
+            EXPECTED_DECORATOR_COUNTS.to_vec(),
         ]]),
     )
     .with_category("parsing")

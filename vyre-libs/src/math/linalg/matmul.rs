@@ -451,7 +451,9 @@ inventory::submit! {
         OP_ID_BIAS,
         || matmul_bias("a", "b", "bias", "out", 2, 2, 2),
         Some(super::matmul_bias_2x2_fixture_inputs),
-        Some(super::matmul_bias_2x2_fixture_expected),
+        Some(|| {
+            vec![vec![super::MATMUL_BIAS_2X2_EXPECTED_BYTES.to_vec()]]
+        }),
     )
     .with_category("math")
 }

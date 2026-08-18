@@ -1,6 +1,8 @@
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, Correctness};
 use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::cases::harness::{program_payload, CaseOps, HarnessCase, WorkloadDescription};
+use crate::cases::harness::{
+    program_payload, CaseOps, ContractDescription, HarnessCase, WorkloadDescription,
+};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 static WORKLOAD: WorkloadDescription = WorkloadDescription {
@@ -8,6 +10,12 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     name: "Optimizer Impact Analysis",
     summary: "Measures GPU speedup from CSE and constant folding",
     tags: &["compute", "optimizer"],
+    contract: Some(ContractDescription {
+        primitive: "canonical semantic Program optimization",
+        baseline_crate: "vyre-bench",
+        baseline_name: "the same Program submitted without semantic optimization",
+        min_speedup_x: 1.0,
+    }),
     ..WorkloadDescription::BASE
 };
 
@@ -159,4 +167,79 @@ fn verify(run: &BenchRun) -> Result<Correctness, BenchError> {
 
 inventory::submit! {
     &CASE as &'static dyn BenchCase
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::metric::MetricStats;
+    use crate::runner::evaluate_contract;
+    use std::collections::BTreeMap;
+
+    fn stats(p50: u64) -> MetricStats {
+        MetricStats::point(p50, p50 as f64, 0.0, 30)
+    }
+
+    #[test]
+    fn harness_case_keeps_its_registered_identity_and_contract() {
+        assert_eq!(CASE.id().0, "foundation.optimizer.impact");
+        let contract = CASE
+            .performance_contract()
+            .expect("Fix: optimizer impact workload must declare an explicit performance contract");
+
+        assert_eq!(
+            contract.primitive,
+            "canonical semantic Program optimization"
+        );
+        assert_eq!(contract.baselines.len(), 1);
+        let baseline = &contract.baselines[0];
+        assert_eq!(baseline.crate_name, "vyre-bench");
+        assert_eq!(
+            baseline.name,
+            "the same Program submitted without semantic optimization"
+        );
+        assert_eq!(baseline.min_speedup_x, 1.0);
+
+        for backend in ["cuda", "wgpu"] {
+            assert!(
+                baseline.backend_ids.iter().any(|b| b == backend),
+                "Fix: optimizer impact performance contract must apply to `{backend}`"
+            );
+        }
+    }
+
+    #[test]
+    fn contract_evaluation_passes_on_speedup_and_fails_on_regression() {
+        let contract = CASE
+            .performance_contract()
+            .expect("Fix: optimizer impact workload must declare an explicit performance contract");
+
+        for backend in ["cuda", "wgpu"] {
+            let mut metrics = BTreeMap::new();
+            metrics.insert("wall_ns".to_string(), stats(10_000_000));
+            metrics.insert("baseline_wall_ns".to_string(), stats(11_000_000));
+
+            let evaluation = evaluate_contract(&contract, &metrics, backend);
+            assert!(
+                evaluation.contract_passed,
+                "Fix: contract must pass when optimized runtime achieves >= 1.0x speedup on `{backend}`; violations: {:?}",
+                evaluation.violations
+            );
+            assert!(
+                evaluation.speedup_x.is_some_and(|s| s >= 1.0),
+                "Fix: speedup must be at least 1.0x on `{backend}`"
+            );
+
+            // Regressed case: optimized wall_ns is slower than baseline_wall_ns
+            let mut regressed_metrics = BTreeMap::new();
+            regressed_metrics.insert("wall_ns".to_string(), stats(12_000_000));
+            regressed_metrics.insert("baseline_wall_ns".to_string(), stats(10_000_000));
+
+            let regressed_eval = evaluate_contract(&contract, &regressed_metrics, backend);
+            assert!(
+                !regressed_eval.contract_passed,
+                "Fix: contract must fail on `{backend}` when optimized runtime is slower than baseline"
+            );
+        }
+    }
 }

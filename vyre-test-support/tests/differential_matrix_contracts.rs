@@ -19,7 +19,7 @@ fn differential_matrix_evaluates_exact_and_approximate() {
         )],
     );
 
-    let input_bytes = vec![5u32.to_le_bytes().to_vec()];
+    let input_bytes = [5u32.to_le_bytes().to_vec()];
     let backend_output = vec![15u32.to_le_bytes().to_vec()];
 
     let decision = evaluate_differential(

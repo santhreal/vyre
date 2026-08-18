@@ -201,9 +201,7 @@ fn try_collect_chain(
 
             if next_kind == kind && next_slot == slot {
                 let next_index_op_id = next_op.operands.get(1).copied().unwrap_or(u32::MAX);
-                let Some(next_index_expr) = indices.get(&next_index_op_id).copied() else {
-                    return None;
-                };
+                let next_index_expr = indices.get(&next_index_op_id).copied()?;
 
                 // Same base and strictly unit-stride consecutive offset.
                 if next_index_expr.base_result == start_index_expr.base_result

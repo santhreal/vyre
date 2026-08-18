@@ -243,10 +243,8 @@ fn tested_packages(ctx: &GateCtx, report: &mut Report) -> Result<Vec<String>, Ga
             report.find(Finding::in_file(
                 crate::gates::crate_registry::REGISTRY,
                 format!("no crate declares layer `{layer}`, so this gate would test nothing"),
-                format!(
-                    "declare the layer on the crate that owns the contract, or name the layer it \
-                     was renamed to in `TESTED_LAYERS`"
-                ),
+                "declare the layer on the crate that owns the contract, or name the layer it \
+                 was renamed to in `TESTED_LAYERS`",
             ));
         }
         packages.append(&mut in_layer);

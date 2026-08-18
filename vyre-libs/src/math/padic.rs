@@ -37,7 +37,7 @@ pub fn hensel_lift_step(x: &str, f_x: &str, inv_f_prime: &str, out: &str, n: u32
         .add_input_storage(x, BufferAccess::ReadOnly, DataType::U32, n)
         .add_input_storage(f_x, BufferAccess::ReadOnly, DataType::U32, n)
         .add_input_storage(inv_f_prime, BufferAccess::ReadOnly, DataType::U32, n)
-        .add_output_storage(out, BufferAccess::ReadWrite, DataType::U32, n)
+        .add_output_storage(out, BufferAccess::WriteOnly, DataType::U32, n)
         .build_pointwise(out, |i| {
             Expr::sub(
                 Expr::load(x, i.clone()),
@@ -60,7 +60,6 @@ inventory::submit! {
                 to_bytes(&[to_fixed(2.0), to_fixed(3.0), to_fixed(5.0), to_fixed(7.0)]),
                 to_bytes(&[to_fixed(0.1), to_fixed(0.2), to_fixed(-0.1), to_fixed(0.0)]),
                 to_bytes(&[to_fixed(1.0), to_fixed(0.5), to_fixed(2.0), to_fixed(1.0)]),
-                to_bytes(&[0, 0, 0, 0]),
             ]]
         }),
         Some(|| {

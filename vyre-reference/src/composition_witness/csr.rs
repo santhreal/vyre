@@ -25,7 +25,7 @@ pub fn csr_bfs_witness(
         return distances;
     }
     assert!(
-        row_offsets.len() >= node_count + 1,
+        row_offsets.len() > node_count,
         "row_offsets must have at least node_count + 1 entries"
     );
 

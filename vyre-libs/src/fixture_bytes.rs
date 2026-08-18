@@ -2,9 +2,17 @@ pub(crate) fn u32_bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }
 
+pub(crate) const MATMUL_2X2_EXPECTED_BYTES: [u8; 16] = [
+    0x13, 0x00, 0x00, 0x00, // 19
+    0x16, 0x00, 0x00, 0x00, // 22
+    0x2b, 0x00, 0x00, 0x00, // 43
+    0x32, 0x00, 0x00, 0x00, // 50
+];
+
+#[cfg(test)]
 #[must_use]
 pub(crate) fn matmul_2x2_expected() -> Vec<Vec<Vec<u8>>> {
-    vec![vec![u32_bytes(&[19, 22, 43, 50])]]
+    vec![vec![MATMUL_2X2_EXPECTED_BYTES.to_vec()]]
 }
 
 pub(crate) fn f32_bytes(values: &[f32]) -> Vec<u8> {
@@ -50,6 +58,12 @@ pub(crate) fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_matmul_2x2_expected_bytes_identity() {
+        let constructed = u32_bytes(&[19, 22, 43, 50]);
+        assert_eq!(constructed, MATMUL_2X2_EXPECTED_BYTES);
+    }
 
     #[test]
     fn test_round_trip() {

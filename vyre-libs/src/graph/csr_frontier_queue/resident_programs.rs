@@ -25,6 +25,10 @@ use super::scratch::{
     ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
 
+#[cfg(test)]
+#[path = "../../../tests/internal/graph/dispatch/csr_frontier_queue_programs/mod.rs"]
+mod tests;
+
 // Resident buffer names. Every site binds these handles in this order, so the
 // names live here once instead of as string literals at three call sites.
 const ACTIVE_QUEUE: &str = "active_queue";

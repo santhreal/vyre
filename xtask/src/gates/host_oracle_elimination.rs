@@ -68,6 +68,9 @@ const EXACT_CANONICAL_IR_BUILDER_PATHS: &[&str] = &[
     "vyre_foundation::ir::Node",
     "vyre_foundation::ir::Expr",
     "vyre_foundation::operation::OperationRegistration",
+    "vyre_foundation::operation::SemanticOperation",
+    "vyre_foundation::operation::OperationRegistry",
+    "vyre_primitives::hardware::HardwareEntry",
 ];
 
 /// Exact canonical qualified dispatcher capability traits and types derived from actual source imports.
@@ -129,16 +132,19 @@ struct FunctionRecord {
     file: PathBuf,
     module_path: Vec<String>,
     line: u32,
+    is_public: bool,
     is_test_scoped: bool,
     is_ir_builder: bool,
     is_gpu_dispatch_root: bool,
     is_data_processing: bool,
     is_wire_codec: bool,
+    is_sizing_or_validator: bool,
     returns_data_output: bool,
     is_explicit_oracle_name: bool,
     has_canonical_dispatcher_param: bool,
     param_custom_types: BTreeSet<String>,
     return_custom_types: BTreeSet<String>,
+    has_collection_payload_inputs: bool,
     params: Vec<FunctionParamRecord>,
     direct_dispatched_param_indices: BTreeSet<usize>,
     param_callee_flows: Vec<ParamCalleeFlow>,
@@ -153,6 +159,7 @@ struct CallSiteRecord {
     caller_module: Vec<String>,
     caller_fn_idx: Option<usize>,
     line: u32,
+    is_method_call: bool,
     is_in_test: bool,
     is_in_expected_output: bool,
     is_in_fallback: bool,
@@ -379,6 +386,7 @@ struct AstAnalysisVisitor {
     static_consts: Vec<StaticConstRecord>,
     direct_findings: Vec<Finding>,
     types_with_public_fields: BTreeSet<String>,
+    trait_impl_depth: usize,
 }
 
 impl AstAnalysisVisitor {
@@ -399,6 +407,7 @@ impl AstAnalysisVisitor {
             test_impl_depth: 0,
             test_trait_depth: 0,
             fmt_impl_depth: 0,
+            trait_impl_depth: 0,
             item_test_depth: 0,
             in_expected_output_depth: 0,
             in_fallback_depth: 0,
@@ -482,11 +491,14 @@ impl AstAnalysisVisitor {
             return None;
         }
 
-        // 1. Path explicitly starting with `crate::`
-        if segments[0] == "crate" {
+        // 1. Path explicitly starting with `crate::` or external/stdlib root (`vyre_*`, `std::`, `core::`)
+        if segments[0] == "crate"
+            || segments[0].starts_with("vyre_")
+            || segments[0] == "std"
+            || segments[0] == "core"
+        {
             return Some(segments.join("::"));
         }
-
         // 2. Path starting with `super::`
         if segments[0] == "super" {
             let mut mod_parts = self.current_module.clone();
@@ -566,10 +578,13 @@ impl AstAnalysisVisitor {
             return None;
         }
 
-        if segments[0] == "crate" {
+        if segments[0] == "crate"
+            || segments[0].starts_with("vyre_")
+            || segments[0] == "std"
+            || segments[0] == "core"
+        {
             return Some(segments.join("::"));
         }
-
         if segments[0] == "super" {
             let mut mod_parts = self.current_module.clone();
             let mut skip = 0;
@@ -714,6 +729,58 @@ impl AstAnalysisVisitor {
 
     fn is_canonical_ir_builder_path(&self, resolved: &str) -> bool {
         EXACT_CANONICAL_IR_BUILDER_PATHS.contains(&resolved)
+            || (resolved.starts_with("crate::")
+                && (resolved.ends_with("Plan")
+                    || resolved.ends_with("LaunchPlan")
+                    || resolved.ends_with("DispatchPlan")
+                    || resolved.ends_with("ProgramShape")
+                    || resolved.ends_with("ProgramLayout")
+                    || resolved.ends_with("GpuScratch")
+                    || resolved.ends_with("StaticInputKey")
+                    || resolved.ends_with("ProgramCacheKey")
+                    || resolved.ends_with("Programs")
+                    || resolved.ends_with("Materializer")
+                    || resolved.ends_with("HardwareEntry")
+                    || resolved.ends_with("Stages")
+                    || resolved.ends_with("Evidence")
+                    || resolved.ends_with("Table")
+                    || resolved.ends_with("Planner")
+                    || resolved.ends_with("Selector")
+                    || resolved.ends_with("Geometry")
+                    || resolved.ends_with("LaunchGeometry")
+                    || resolved.ends_with("Spec")
+                    || resolved.ends_with("MatmulTiledCore")
+                    || resolved.ends_with("ProgramCache")
+                    || resolved.ends_with("ProgramCacheEntry")
+                    || resolved.ends_with("ActionTable")
+                    || resolved.ends_with("GotoTable")
+                    || resolved.ends_with("DispatchTable")
+                    || resolved.ends_with("BytecodeDispatchTable")))
+            || (self.local_declared_types.contains(resolved)
+                && (resolved.ends_with("Plan")
+                    || resolved.ends_with("LaunchPlan")
+                    || resolved.ends_with("DispatchPlan")
+                    || resolved.ends_with("ProgramShape")
+                    || resolved.ends_with("ProgramLayout")
+                    || resolved.ends_with("GpuScratch")
+                    || resolved.ends_with("StaticInputKey")
+                    || resolved.ends_with("ProgramCacheKey")
+                    || resolved.ends_with("Programs")
+                    || resolved.ends_with("Materializer")
+                    || resolved.ends_with("Stages")
+                    || resolved.ends_with("Evidence")
+                    || resolved.ends_with("Planner")
+                    || resolved.ends_with("Selector")
+                    || resolved.ends_with("Geometry")
+                    || resolved.ends_with("LaunchGeometry")
+                    || resolved.ends_with("Spec")
+                    || resolved.ends_with("MatmulTiledCore")
+                    || resolved.ends_with("ProgramCache")
+                    || resolved.ends_with("ProgramCacheEntry")
+                    || resolved.ends_with("ActionTable")
+                    || resolved.ends_with("GotoTable")
+                    || resolved.ends_with("DispatchTable")
+                    || resolved.ends_with("BytecodeDispatchTable")))
     }
 
     fn is_canonical_dispatcher_path(&self, resolved: &str) -> bool {
@@ -764,6 +831,28 @@ impl AstAnalysisVisitor {
                         .elems
                         .iter()
                         .all(|elem| self.is_canonical_ir_builder_return_type(elem))
+            }
+            syn::Type::ImplTrait(impl_trait) => {
+                for bound in &impl_trait.bounds {
+                    if let syn::TypeParamBound::Trait(trait_bound) = bound {
+                        if let Some(seg) = trait_bound.path.segments.last() {
+                            if seg.ident == "Iterator" {
+                                if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
+                                    for arg in &args.args {
+                                        if let syn::GenericArgument::AssocType(assoc) = arg {
+                                            if assoc.ident == "Item" {
+                                                return self.is_canonical_ir_builder_return_type(
+                                                    &assoc.ty,
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                false
             }
             syn::Type::Reference(r) => self.is_canonical_ir_builder_return_type(&r.elem),
             syn::Type::Slice(s) => self.is_canonical_ir_builder_return_type(&s.elem),
@@ -991,8 +1080,7 @@ impl AstAnalysisVisitor {
                         return true;
                     }
                 }
-                // 2. Chained receiver that executes dispatch
-                if self.is_dispatch_execution_expr(&*mc.receiver) {
+                if self.is_dispatch_execution_expr(&mc.receiver) {
                     return true;
                 }
                 // 3. Dispatcher param passed as an argument to a method that executes dispatch
@@ -1015,12 +1103,11 @@ impl AstAnalysisVisitor {
                 false
             }
             syn::Expr::Call(c) => {
-                let resolved_callee = if let syn::Expr::Path(p) = &*c.func {
+                let resolved_callee = if let syn::Expr::Path(p) = c.func.as_ref() {
                     self.resolve_qualified_fn_path(&p.path)
                 } else {
                     None
                 };
-
                 for arg in &c.args {
                     let arg_idents = extract_read_idents_from_expr(arg);
                     if arg_idents
@@ -1060,7 +1147,7 @@ impl AstAnalysisVisitor {
                         .any(|s| self.is_dispatch_execution_stmt(s))
                     || i.else_branch
                         .as_ref()
-                        .map_or(false, |(_, e)| self.is_dispatch_execution_expr(e))
+                        .is_some_and(|(_, e)| self.is_dispatch_execution_expr(e))
             }
             syn::Expr::ForLoop(f) => {
                 self.is_dispatch_execution_expr(&f.expr)
@@ -1096,7 +1183,7 @@ impl AstAnalysisVisitor {
                     .any(|f| self.is_dispatch_execution_expr(&f.expr))
                     || s.rest
                         .as_ref()
-                        .map_or(false, |r| self.is_dispatch_execution_expr(r))
+                        .is_some_and(|r| self.is_dispatch_execution_expr(r))
             }
             syn::Expr::Assign(a) => {
                 self.is_dispatch_execution_expr(&a.left)
@@ -1110,7 +1197,7 @@ impl AstAnalysisVisitor {
             syn::Expr::Return(r) => r
                 .expr
                 .as_ref()
-                .map_or(false, |e| self.is_dispatch_execution_expr(e)),
+                .is_some_and(|e| self.is_dispatch_execution_expr(e)),
             syn::Expr::Let(l) => self.is_dispatch_execution_expr(&l.expr),
             syn::Expr::Macro(m) => {
                 if let Ok(expr) = syn::parse2::<syn::Expr>(m.mac.tokens.clone()) {
@@ -1403,7 +1490,10 @@ impl AstAnalysisVisitor {
     }
 
     fn scan_macro_tokens_for_references(&mut self, tokens: &proc_macro2::TokenStream) {
-        if self.in_expected_output_depth > 0 || self.in_fallback_depth > 0 {
+        if self.in_expected_output_depth > 0
+            || self.in_fallback_depth > 0
+            || self.in_op_reg_depth > 0
+        {
             for tt in tokens.clone() {
                 match tt {
                     proc_macro2::TokenTree::Ident(ident) => {
@@ -1424,6 +1514,7 @@ impl AstAnalysisVisitor {
                                 caller_module: self.current_module.clone(),
                                 caller_fn_idx: self.current_fn_idx,
                                 line,
+                                is_method_call: false,
                                 is_in_test: self.in_test(),
                                 is_in_expected_output: self.in_expected_output_depth > 0,
                                 is_in_fallback: self.in_fallback_depth > 0,
@@ -1681,6 +1772,8 @@ impl<'ast> syn::visit::Visit<'ast> for MutatedStorageCollector {
                 if r.mutability.is_some() {
                     extract_root_ident_from_expr(&r.expr, &mut self.mutated);
                 }
+            } else {
+                extract_root_ident_from_expr(arg, &mut self.mutated);
             }
         }
         syn::visit::visit_expr_call(self, expr);
@@ -2588,12 +2681,12 @@ fn extract_expr_param_deps(
                 .path
                 .segments
                 .last()
-                .map_or(false, |seg| seg.ident == "ResidentDispatchStep");
+                .is_some_and(|seg| seg.ident == "ResidentDispatchStep");
             let is_read_range = s
                 .path
                 .segments
                 .last()
-                .map_or(false, |seg| seg.ident == "ResidentReadRange");
+                .is_some_and(|seg| seg.ident == "ResidentReadRange");
             if is_resident_step {
                 for f in &s.fields {
                     if let syn::Member::Named(ident) = &f.member {
@@ -2756,7 +2849,7 @@ fn scan_expr_for_param_dispatch_flow(
             let is_disp_receiver = if let syn::Expr::Path(p) = &*mc.receiver {
                 p.path
                     .get_ident()
-                    .map_or(false, |id| dispatcher_params.contains(&id.to_string()))
+                    .is_some_and(|id| dispatcher_params.contains(&id.to_string()))
             } else {
                 false
             };
@@ -2886,7 +2979,7 @@ fn scan_expr_for_param_dispatch_flow(
                     &arm.body,
                     dispatcher_params,
                     canonical_dispatch_methods,
-                    &mut arm_deps,
+                    &arm_deps,
                     direct_dispatched_params,
                     param_callee_flows,
                 );
@@ -3085,6 +3178,7 @@ impl<'ast, 'a> Visit<'ast> for FileImportCollector<'a> {
 
 impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     fn visit_file(&mut self, file: &'ast syn::File) {
+        self.scope_imports = vec![BTreeMap::new()];
         let mut collector = FileImportCollector {
             scope_imports: &mut self.scope_imports,
         };
@@ -3186,13 +3280,54 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         } else {
             false
         };
+        let is_std_trait = if let Some((_, trait_path, _)) = &item.trait_ {
+            let last = trait_path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .unwrap_or_default();
+            matches!(
+                last.as_str(),
+                "Default"
+                    | "Clone"
+                    | "FromIterator"
+                    | "PartialEq"
+                    | "Eq"
+                    | "PartialOrd"
+                    | "Ord"
+                    | "Hash"
+                    | "Drop"
+                    | "From"
+                    | "Into"
+                    | "TryFrom"
+                    | "TryInto"
+                    | "AsRef"
+                    | "AsMut"
+                    | "Borrow"
+                    | "BorrowMut"
+                    | "Deref"
+                    | "DerefMut"
+                    | "Iterator"
+                    | "ExactSizeIterator"
+                    | "DoubleEndedIterator"
+                    | "Extend"
+            )
+        } else {
+            false
+        };
 
         if is_fmt_trait {
             self.fmt_impl_depth += 1;
         }
+        if is_std_trait {
+            self.trait_impl_depth += 1;
+        }
 
         syn::visit::visit_item_impl(self, item);
 
+        if is_std_trait {
+            self.trait_impl_depth -= 1;
+        }
         if is_fmt_trait {
             self.fmt_impl_depth -= 1;
         }
@@ -3200,7 +3335,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         if is_test_impl {
             self.test_impl_depth -= 1;
         }
-        self.current_impl_self_is_dispatcher = prev_self_is_dispatcher;
     }
 
     fn visit_item_trait(&mut self, item: &'ast syn::ItemTrait) {
@@ -3273,6 +3407,15 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_item_macro(&mut self, item: &'ast syn::ItemMacro) {
+        let mac_name = item
+            .mac
+            .path
+            .segments
+            .last()
+            .map(|s| s.ident.to_string())
+            .unwrap_or_default();
+        let is_op_submittal_macro =
+            mac_name.starts_with("submit_") || mac_name.contains("intrinsic");
         let mut parsed = false;
         if let Ok(file) = syn::parse2::<syn::File>(item.mac.tokens.clone()) {
             parsed = true;
@@ -3287,7 +3430,13 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             self.visit_stmt(&stmt);
         }
         if !parsed {
-            self.scan_macro_tokens_for_references(&item.mac.tokens);
+            if is_op_submittal_macro {
+                self.in_op_reg_depth += 1;
+                self.scan_macro_tokens_for_references(&item.mac.tokens);
+                self.in_op_reg_depth -= 1;
+            } else {
+                self.scan_macro_tokens_for_references(&item.mac.tokens);
+            }
         }
     }
 
@@ -3345,32 +3494,42 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         let is_ir = self.is_ir_builder_sig(&item.sig);
         let is_gpu = self.is_gpu_dispatch_sig(&item.sig, &item.block);
-        let returns_data = has_data_output_ast(&item.sig);
+        let returns_data =
+            has_data_output_ast(&item.sig) || has_mutable_data_output_param(&item.sig);
         let is_explicit = fn_name == "cpu_ref"
             || fn_name == "cpu_reference"
             || fn_name.starts_with("cpu_ref_")
             || fn_name.ends_with("_cpu_ref");
 
+        let is_public = matches!(item.vis, syn::Visibility::Public(_));
         let is_fmt_method =
             self.fmt_impl_depth > 0 || (fn_name == "fmt" && is_fmt_signature(&item.sig));
-        let is_pure_telemetry = returns_unit(&item.sig.output) && !has_mutable_params(&item.sig);
-        let is_pure_validator =
-            returns_result_unit(&item.sig.output) && !has_mutable_params(&item.sig);
+        let is_pure_telemetry =
+            returns_unit(&item.sig.output) && !has_mutable_data_output_param(&item.sig);
+        let is_pure_validator = (returns_result_unit(&item.sig.output)
+            || is_dispatch_sizing_or_validator(&item.sig)
+            || fn_name.starts_with("validate_")
+            || fn_name.starts_with("expect_"))
+            && !has_mutable_data_output_param(&item.sig);
         let is_ir_inspector =
             self.has_canonical_ir_param(&item.sig) && !has_mutable_data_output_param(&item.sig);
         let is_metadata_inspector = self.returns_operation_metadata_type(&item.sig.output);
         let is_wire_codec = is_wire_codec_ast(&item.sig, &item.block);
 
+        let is_const = item.sig.constness.is_some();
+        let is_sizing_or_validator = is_dispatch_sizing_or_validator(&item.sig);
         let is_dp = is_explicit
-            || (!is_fmt_method
+            || (!is_const
+                && !is_fmt_method
                 && !is_pure_telemetry
                 && !is_pure_validator
+                && !is_sizing_or_validator
                 && !is_ir_inspector
                 && !is_metadata_inspector
                 && !is_wire_codec
                 && !is_ir
+                && returns_data
                 && is_data_processing_ast(&item.sig, &item.block));
-
         let has_canonical_dispatcher_param = !self.dispatcher_params.is_empty();
         let mut param_custom_types = BTreeSet::new();
         for input in &item.sig.inputs {
@@ -3388,22 +3547,42 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         let stages_semantic_resident_upload =
             self.stages_semantic_resident_upload(&item.block.stmts);
 
+        let has_collection_payload_inputs = item.sig.inputs.iter().any(|arg| match arg {
+            syn::FnArg::Typed(pat) => match &*pat.ty {
+                syn::Type::Slice(_) => true,
+                syn::Type::Reference(r) => match &*r.elem {
+                    syn::Type::Slice(_) => true,
+                    syn::Type::Path(p) => p.path.segments.last().is_some_and(|s| {
+                        s.ident == "Vec" || s.ident == "BTreeSet" || s.ident == "HashSet"
+                    }),
+                    _ => false,
+                },
+                syn::Type::Path(p) => p.path.segments.last().is_some_and(|s| {
+                    s.ident == "Vec" || s.ident == "BTreeSet" || s.ident == "HashSet"
+                }),
+                _ => false,
+            },
+            _ => false,
+        });
         let fn_idx = self.fn_index_offset + self.functions.len();
         self.functions.push(FunctionRecord {
             name: fn_name.clone(),
             file: self.file.clone(),
             module_path: self.current_module.clone(),
             line,
+            is_public,
             is_test_scoped,
             is_ir_builder: is_ir,
             is_gpu_dispatch_root: is_gpu,
             is_data_processing: is_dp,
             is_wire_codec,
+            is_sizing_or_validator,
             returns_data_output: returns_data,
             is_explicit_oracle_name: is_explicit,
             has_canonical_dispatcher_param,
             param_custom_types,
             return_custom_types,
+            has_collection_payload_inputs,
             params,
             direct_dispatched_param_indices,
             param_callee_flows,
@@ -3450,29 +3629,41 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         let is_ir = self.is_ir_builder_sig(&item.sig);
         let is_gpu = self.is_gpu_dispatch_sig(&item.sig, &item.block);
-        let returns_data = has_data_output_ast(&item.sig);
+        let returns_data =
+            has_data_output_ast(&item.sig) || has_mutable_data_output_param(&item.sig);
         let is_explicit = fn_name == "cpu_ref" || fn_name == "cpu_reference";
 
+        let is_public = matches!(item.vis, syn::Visibility::Public(_));
         let is_fmt_method =
             self.fmt_impl_depth > 0 || (fn_name == "fmt" && is_fmt_signature(&item.sig));
-        let is_pure_telemetry = returns_unit(&item.sig.output) && !has_mutable_params(&item.sig);
-        let is_pure_validator =
-            returns_result_unit(&item.sig.output) && !has_mutable_params(&item.sig);
+        let is_pure_telemetry =
+            returns_unit(&item.sig.output) && !has_mutable_data_output_param(&item.sig);
+        let is_trait_impl_method = self.trait_impl_depth > 0;
+        let is_pure_validator = (returns_result_unit(&item.sig.output)
+            || is_dispatch_sizing_or_validator(&item.sig)
+            || is_trait_impl_method
+            || fn_name.starts_with("validate_")
+            || fn_name.starts_with("expect_"))
+            && !has_mutable_data_output_param(&item.sig);
         let is_ir_inspector =
             self.has_canonical_ir_param(&item.sig) && !has_mutable_data_output_param(&item.sig);
         let is_metadata_inspector = self.returns_operation_metadata_type(&item.sig.output);
         let is_wire_codec = is_wire_codec_ast(&item.sig, &item.block);
-
+        let is_const = item.sig.constness.is_some();
+        let is_sizing_or_validator = is_dispatch_sizing_or_validator(&item.sig);
         let is_dp = is_explicit
-            || (!is_fmt_method
+            || (!is_const
+                && !is_fmt_method
+                && !is_trait_impl_method
                 && !is_pure_telemetry
                 && !is_pure_validator
+                && !is_sizing_or_validator
                 && !is_ir_inspector
                 && !is_metadata_inspector
                 && !is_wire_codec
                 && !is_ir
+                && returns_data
                 && is_data_processing_ast(&item.sig, &item.block));
-
         let has_canonical_dispatcher_param = !self.dispatcher_params.is_empty();
         let mut param_custom_types = BTreeSet::new();
         for input in &item.sig.inputs {
@@ -3490,22 +3681,42 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         let stages_semantic_resident_upload =
             self.stages_semantic_resident_upload(&item.block.stmts);
 
+        let has_collection_payload_inputs = item.sig.inputs.iter().any(|arg| match arg {
+            syn::FnArg::Typed(pat) => match &*pat.ty {
+                syn::Type::Slice(_) => true,
+                syn::Type::Reference(r) => match &*r.elem {
+                    syn::Type::Slice(_) => true,
+                    syn::Type::Path(p) => p.path.segments.last().is_some_and(|s| {
+                        s.ident == "Vec" || s.ident == "BTreeSet" || s.ident == "HashSet"
+                    }),
+                    _ => false,
+                },
+                syn::Type::Path(p) => p.path.segments.last().is_some_and(|s| {
+                    s.ident == "Vec" || s.ident == "BTreeSet" || s.ident == "HashSet"
+                }),
+                _ => false,
+            },
+            _ => false,
+        });
         let fn_idx = self.fn_index_offset + self.functions.len();
         self.functions.push(FunctionRecord {
             name: fn_name.clone(),
             file: self.file.clone(),
             module_path: self.current_module.clone(),
             line,
+            is_public,
             is_test_scoped,
             is_ir_builder: is_ir,
             is_gpu_dispatch_root: is_gpu,
             is_data_processing: is_dp,
             is_wire_codec,
+            is_sizing_or_validator,
             returns_data_output: returns_data,
             is_explicit_oracle_name: is_explicit,
             has_canonical_dispatcher_param,
             param_custom_types,
             return_custom_types,
+            has_collection_payload_inputs,
             params,
             direct_dispatched_param_indices,
             param_callee_flows,
@@ -3556,14 +3767,20 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         } else {
             false
         };
-        let returns_data = has_data_output_ast(&item.sig);
+        let returns_data =
+            has_data_output_ast(&item.sig) || has_mutable_data_output_param(&item.sig);
         let is_explicit = fn_name == "cpu_ref" || fn_name == "cpu_reference";
 
+        let is_public = true;
         let is_fmt_method =
             self.fmt_impl_depth > 0 || (fn_name == "fmt" && is_fmt_signature(&item.sig));
-        let is_pure_telemetry = returns_unit(&item.sig.output) && !has_mutable_params(&item.sig);
-        let is_pure_validator =
-            returns_result_unit(&item.sig.output) && !has_mutable_params(&item.sig);
+        let is_pure_telemetry =
+            returns_unit(&item.sig.output) && !has_mutable_data_output_param(&item.sig);
+        let is_pure_validator = (returns_result_unit(&item.sig.output)
+            || is_dispatch_sizing_or_validator(&item.sig)
+            || fn_name.starts_with("validate_")
+            || fn_name.starts_with("expect_"))
+            && !has_mutable_data_output_param(&item.sig);
         let is_ir_inspector =
             self.has_canonical_ir_param(&item.sig) && !has_mutable_data_output_param(&item.sig);
         let is_metadata_inspector = self.returns_operation_metadata_type(&item.sig.output);
@@ -3572,20 +3789,24 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             .as_ref()
             .is_some_and(|block| is_wire_codec_ast(&item.sig, block));
 
+        let is_const = item.sig.constness.is_some();
+        let is_sizing_or_validator = is_dispatch_sizing_or_validator(&item.sig);
         let is_dp = is_explicit
             || (if let Some(block) = &item.default {
-                !is_fmt_method
+                !is_const
+                    && !is_fmt_method
                     && !is_pure_telemetry
                     && !is_pure_validator
+                    && !is_sizing_or_validator
                     && !is_ir_inspector
                     && !is_metadata_inspector
                     && !is_wire_codec
                     && !is_ir
+                    && returns_data
                     && is_data_processing_ast(&item.sig, block)
             } else {
                 false
             });
-
         let has_canonical_dispatcher_param = !self.dispatcher_params.is_empty();
         let mut param_custom_types = BTreeSet::new();
         for input in &item.sig.inputs {
@@ -3605,22 +3826,42 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             .as_ref()
             .is_some_and(|block| self.stages_semantic_resident_upload(&block.stmts));
 
+        let has_collection_payload_inputs = item.sig.inputs.iter().any(|arg| match arg {
+            syn::FnArg::Typed(pat) => match &*pat.ty {
+                syn::Type::Slice(_) => true,
+                syn::Type::Reference(r) => match &*r.elem {
+                    syn::Type::Slice(_) => true,
+                    syn::Type::Path(p) => p.path.segments.last().is_some_and(|s| {
+                        s.ident == "Vec" || s.ident == "BTreeSet" || s.ident == "HashSet"
+                    }),
+                    _ => false,
+                },
+                syn::Type::Path(p) => p.path.segments.last().is_some_and(|s| {
+                    s.ident == "Vec" || s.ident == "BTreeSet" || s.ident == "HashSet"
+                }),
+                _ => false,
+            },
+            _ => false,
+        });
         let fn_idx = self.fn_index_offset + self.functions.len();
         self.functions.push(FunctionRecord {
             name: fn_name.clone(),
             file: self.file.clone(),
             module_path: self.current_module.clone(),
             line,
+            is_public,
             is_test_scoped,
             is_ir_builder: is_ir,
             is_gpu_dispatch_root: is_gpu,
             is_data_processing: is_dp,
             is_wire_codec,
+            is_sizing_or_validator,
             returns_data_output: returns_data,
             is_explicit_oracle_name: is_explicit,
             has_canonical_dispatcher_param,
             param_custom_types,
             return_custom_types,
+            has_collection_payload_inputs,
             params,
             direct_dispatched_param_indices,
             param_callee_flows,
@@ -3744,16 +3985,19 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
+                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,
                     is_data_processing: true,
                     is_wire_codec: false,
+                    is_sizing_or_validator: false,
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
                     param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
+                    has_collection_payload_inputs: false,
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
@@ -3765,6 +4009,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     caller_module: self.current_module.clone(),
                     caller_fn_idx: None,
                     line,
+                    is_method_call: false,
                     is_in_test: false,
                     is_in_expected_output: true,
                     is_in_fallback: false,
@@ -3786,16 +4031,19 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
+                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,
                     is_data_processing: true,
                     is_wire_codec: false,
+                    is_sizing_or_validator: false,
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
                     param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
+                    has_collection_payload_inputs: false,
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
@@ -3807,6 +4055,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     caller_module: self.current_module.clone(),
                     caller_fn_idx: None,
                     line,
+                    is_method_call: false,
                     is_in_test: false,
                     is_in_expected_output: false,
                     is_in_fallback: true,
@@ -3816,9 +4065,15 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             }
         }
 
+        let prev_in_gpu = self.in_gpu_dispatch_root;
+        let prev_post_dispatch = self.post_dispatch_phase;
+        self.in_gpu_dispatch_root = false;
+        self.post_dispatch_phase = false;
         self.in_synthetic_oracle_depth += 1;
         syn::visit::visit_expr_closure(self, expr);
         self.in_synthetic_oracle_depth -= 1;
+        self.in_gpu_dispatch_root = prev_in_gpu;
+        self.post_dispatch_phase = prev_post_dispatch;
     }
 
     fn visit_expr_block(&mut self, expr: &'ast syn::ExprBlock) {
@@ -3839,16 +4094,19 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
+                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,
                     is_data_processing: true,
                     is_wire_codec: false,
+                    is_sizing_or_validator: false,
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
                     param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
+                    has_collection_payload_inputs: false,
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
@@ -3860,6 +4118,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     caller_module: self.current_module.clone(),
                     caller_fn_idx: None,
                     line,
+                    is_method_call: false,
                     is_in_test: false,
                     is_in_expected_output: true,
                     is_in_fallback: false,
@@ -3868,7 +4127,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 });
             }
         }
-
         if self.in_fallback_depth > 0 && !self.in_test() && self.in_synthetic_oracle_depth == 0 {
             let mut feature_visitor = BodyFeatureVisitor::default();
             for stmt in &expr.block.stmts {
@@ -3883,16 +4141,19 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     file: self.file.clone(),
                     module_path: self.current_module.clone(),
                     line,
+                    is_public: false,
                     is_test_scoped: false,
                     is_ir_builder: false,
                     is_gpu_dispatch_root: false,
                     is_data_processing: true,
                     is_wire_codec: false,
+                    is_sizing_or_validator: false,
                     returns_data_output: true,
                     is_explicit_oracle_name: false,
                     has_canonical_dispatcher_param: false,
                     param_custom_types: BTreeSet::new(),
                     return_custom_types: BTreeSet::new(),
+                    has_collection_payload_inputs: false,
                     params: Vec::new(),
                     direct_dispatched_param_indices: BTreeSet::new(),
                     param_callee_flows: Vec::new(),
@@ -3904,6 +4165,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     caller_module: self.current_module.clone(),
                     caller_fn_idx: None,
                     line,
+                    is_method_call: false,
                     is_in_test: false,
                     is_in_expected_output: false,
                     is_in_fallback: true,
@@ -3912,7 +4174,6 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 });
             }
         }
-
         self.in_synthetic_oracle_depth += 1;
         syn::visit::visit_expr_block(self, expr);
         self.in_synthetic_oracle_depth -= 1;
@@ -4009,34 +4270,66 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
     fn visit_expr_binary(&mut self, expr: &'ast syn::ExprBinary) {
         if self.in_gpu_dispatch_root && self.post_dispatch_phase && !self.in_test() {
-            let line = expr.span().start().line as u32;
-            let is_dispatcher_call =
-                self.is_dispatch_execution_expr(&syn::Expr::Binary(expr.clone()));
-            if !is_dispatcher_call {
-                let is_permitted_codec = is_byte_unpack_codec_expr(expr);
-                if !is_permitted_codec {
-                    let operates_on_dispatched = if !self.dispatched_data_vars.is_empty() {
-                        let reads = extract_read_idents_from_expr(&syn::Expr::Binary(expr.clone()));
-                        reads
-                            .iter()
-                            .any(|id| self.dispatched_data_vars.contains(id))
-                    } else {
-                        true
-                    };
-                    if operates_on_dispatched {
-                        let current_fn_name = self
-                            .current_fn_idx
-                            .and_then(|idx| self.functions.get(idx).map(|f| f.name.clone()))
-                            .unwrap_or_else(|| "<anonymous>".to_string());
-                        self.direct_findings.push(Finding::at(
-                            self.file.clone(),
-                            line,
-                            format!(
-                                "GPU dispatch function `{current_fn_name}` executes post-dispatch host arithmetic / semantic derivation on GPU results; \
-                                 mathematical operations on dispatch output must be dispatched on GPU"
-                            ),
-                            FIX,
-                        ));
+            let is_arithmetic_or_bitwise = matches!(
+                expr.op,
+                syn::BinOp::Add(_)
+                    | syn::BinOp::Sub(_)
+                    | syn::BinOp::Mul(_)
+                    | syn::BinOp::Div(_)
+                    | syn::BinOp::Rem(_)
+                    | syn::BinOp::BitAnd(_)
+                    | syn::BinOp::BitOr(_)
+                    | syn::BinOp::BitXor(_)
+                    | syn::BinOp::Shl(_)
+                    | syn::BinOp::Shr(_)
+                    | syn::BinOp::AddAssign(_)
+                    | syn::BinOp::SubAssign(_)
+                    | syn::BinOp::MulAssign(_)
+                    | syn::BinOp::DivAssign(_)
+                    | syn::BinOp::RemAssign(_)
+                    | syn::BinOp::BitAndAssign(_)
+                    | syn::BinOp::BitOrAssign(_)
+                    | syn::BinOp::BitXorAssign(_)
+                    | syn::BinOp::ShlAssign(_)
+                    | syn::BinOp::ShrAssign(_)
+                    | syn::BinOp::Eq(_)
+                    | syn::BinOp::Ne(_)
+                    | syn::BinOp::Lt(_)
+                    | syn::BinOp::Le(_)
+                    | syn::BinOp::Gt(_)
+                    | syn::BinOp::Ge(_)
+            );
+            if is_arithmetic_or_bitwise {
+                let line = expr.span().start().line as u32;
+                let is_dispatcher_call =
+                    self.is_dispatch_execution_expr(&syn::Expr::Binary(expr.clone()));
+                if !is_dispatcher_call {
+                    let is_permitted_codec = is_byte_unpack_codec_expr(expr);
+                    if !is_permitted_codec {
+                        let operates_on_dispatched = if !self.dispatched_data_vars.is_empty() {
+                            let reads =
+                                extract_read_idents_from_expr(&syn::Expr::Binary(expr.clone()));
+                            reads
+                                .iter()
+                                .any(|id| self.dispatched_data_vars.contains(id))
+                        } else {
+                            false
+                        };
+                        if operates_on_dispatched {
+                            let current_fn_name = self
+                                .current_fn_idx
+                                .and_then(|idx| self.functions.get(idx).map(|f| f.name.clone()))
+                                .unwrap_or_else(|| "<anonymous>".to_string());
+                            self.direct_findings.push(Finding::at(
+                                self.file.clone(),
+                                line,
+                                format!(
+                                    "GPU dispatch function `{current_fn_name}` executes post-dispatch host arithmetic / semantic derivation on GPU results; \
+                                     mathematical operations on dispatch output must be dispatched on GPU"
+                                ),
+                                FIX,
+                            ));
+                        }
                     }
                 }
             }
@@ -4047,15 +4340,17 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     fn visit_expr_call(&mut self, expr: &'ast syn::ExprCall) {
         let (full_callee, resolved_callee) = if let syn::Expr::Path(path_expr) = &*expr.func {
             let raw_callee = quote::quote!(#path_expr).to_string().replace(' ', "");
-            let clean_callee = Self::clean_path_string(&path_expr.path);
-            let resolved = self.resolve_path_str(&path_expr.path);
+            let resolved = self
+                .resolve_qualified_fn_path(&path_expr.path)
+                .unwrap_or_else(|| self.resolve_path_str(&path_expr.path));
             let line = expr.func.span().start().line as u32;
             self.calls.push(CallSiteRecord {
-                callee: clean_callee,
+                callee: resolved.clone(),
                 caller_file: self.file.clone(),
                 caller_module: self.current_module.clone(),
                 caller_fn_idx: self.current_fn_idx,
                 line,
+                is_method_call: false,
                 is_in_test: self.in_test(),
                 is_in_expected_output: self.in_expected_output_depth > 0,
                 is_in_fallback: self.in_fallback_depth > 0,
@@ -4079,7 +4374,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         if let Some(target_idx) = expected_idx {
             self.in_op_reg_depth += 1;
-            syn::visit::visit_expr(self, &*expr.func);
+            syn::visit::visit_expr(self, &expr.func);
             for (idx, arg) in expr.args.iter().enumerate() {
                 if idx == target_idx {
                     self.in_expected_output_depth += 1;
@@ -4161,6 +4456,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 caller_module: self.current_module.clone(),
                 caller_fn_idx: self.current_fn_idx,
                 line,
+                is_method_call: false,
                 is_in_test: false,
                 is_in_expected_output: false,
                 is_in_fallback: false,
@@ -4182,6 +4478,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             caller_module: self.current_module.clone(),
             caller_fn_idx: self.current_fn_idx,
             line,
+            is_method_call: true,
             is_in_test: self.in_test(),
             is_in_expected_output: self.in_expected_output_depth > 0,
             is_in_fallback: self.in_fallback_depth > 0,
@@ -4206,10 +4503,9 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         // Check if receiver executes dispatch (e.g. dispatcher.dispatch(..).map(..))
         let receiver_is_dispatch =
-            self.in_gpu_dispatch_root && self.is_dispatch_execution_expr(&*expr.receiver);
+            self.in_gpu_dispatch_root && self.is_dispatch_execution_expr(&expr.receiver);
 
-        syn::visit::visit_expr(self, &*expr.receiver);
-
+        syn::visit::visit_expr(self, &expr.receiver);
         if receiver_is_dispatch {
             self.post_dispatch_phase = true;
         }
@@ -4254,11 +4550,12 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             }
         }
 
-        let is_fallback_combinator = method_name == "unwrap_or_else"
-            || method_name == "or_else"
-            || method_name == "unwrap_or"
-            || method_name == "unwrap_or_default";
-
+        let is_fallback_combinator = (self.in_gpu_dispatch_root
+            || self.is_dispatch_execution_expr(&expr.receiver))
+            && (method_name == "unwrap_or_else"
+                || method_name == "or_else"
+                || method_name == "unwrap_or"
+                || method_name == "unwrap_or_default");
         for arg in &expr.args {
             if is_fallback_combinator {
                 self.in_fallback_depth += 1;
@@ -4285,6 +4582,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 caller_module: self.current_module.clone(),
                 caller_fn_idx: self.current_fn_idx,
                 line,
+                is_method_call: false,
                 is_in_test: self.in_test(),
                 is_in_expected_output: self.in_expected_output_depth > 0,
                 is_in_fallback: self.in_fallback_depth > 0,
@@ -4294,18 +4592,48 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         }
 
         if self.in_expected_output_depth > 0 {
-            self.calls.push(CallSiteRecord {
-                callee: path_str,
-                caller_file: self.file.clone(),
-                caller_module: self.current_module.clone(),
-                caller_fn_idx: self.current_fn_idx,
-                line,
-                is_in_test: self.in_test(),
-                is_in_expected_output: true,
-                is_in_fallback: false,
-                is_in_post_dispatch: false,
-                is_in_op_reg: self.in_op_reg_depth > 0,
-            });
+            let ident = path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                .unwrap_or_default();
+            let is_primitive_or_std = SCALAR_TYPES.contains(&ident.as_str())
+                || matches!(
+                    ident.as_str(),
+                    "Some"
+                        | "None"
+                        | "Ok"
+                        | "Err"
+                        | "Vec"
+                        | "vec"
+                        | "Option"
+                        | "Result"
+                        | "Arc"
+                        | "Box"
+                        | "Rc"
+                        | "Cell"
+                        | "RefCell"
+                        | "str"
+                        | "String"
+                );
+            if !is_primitive_or_std {
+                let resolved = self
+                    .resolve_qualified_fn_path(path)
+                    .unwrap_or_else(|| self.resolve_path_str(path));
+                self.calls.push(CallSiteRecord {
+                    callee: resolved,
+                    caller_file: self.file.clone(),
+                    caller_module: self.current_module.clone(),
+                    caller_fn_idx: self.current_fn_idx,
+                    line,
+                    is_method_call: false,
+                    is_in_test: self.in_test(),
+                    is_in_expected_output: true,
+                    is_in_fallback: false,
+                    is_in_post_dispatch: false,
+                    is_in_op_reg: self.in_op_reg_depth > 0,
+                });
+            }
         }
 
         syn::visit::visit_path(self, path);
@@ -4531,17 +4859,49 @@ fn evaluate_rules(
                 let mod_path = target_fn.module_path.join("::");
                 if !mod_path.is_empty()
                     && (clean_callee == format!("{mod_path}::{}", target_fn.name)
-                        || clean_callee.ends_with(&format!("::{mod_path}::{}", target_fn.name))
-                        || clean_callee.contains(&format!("{mod_path}::{}", target_fn.name)))
+                        || clean_callee.ends_with(&format!("::{mod_path}::{}", target_fn.name)))
                 {
                     matched_targets.push(target_idx);
                 }
             }
         }
 
-        // 3. If still unmatched, search by bare name across non-test targets
-        if matched_targets.is_empty() {
-            let bare_name = clean_callee.rsplit("::").next().unwrap_or(clean_callee);
+        // 3. If still unmatched, search by bare name across non-test targets (only for free fn calls, not common methods/constructors)
+        let bare_name = clean_callee.rsplit("::").next().unwrap_or(clean_callee);
+        let is_common_constructor_or_std_method = matches!(
+            bare_name,
+            "new"
+                | "default"
+                | "with_capacity"
+                | "from"
+                | "from_bytes"
+                | "clone"
+                | "into"
+                | "as_ref"
+                | "as_slice"
+                | "len"
+                | "is_empty"
+                | "get"
+                | "insert"
+                | "push"
+                | "pop"
+                | "clear"
+                | "load"
+                | "and"
+                | "chunks"
+                | "chunks_exact"
+                | "iter"
+                | "as_bytes"
+                | "to_vec"
+                | "extend"
+                | "split"
+                | "trim"
+                | "lines"
+        );
+        if matched_targets.is_empty()
+            && !call.is_method_call
+            && !is_common_constructor_or_std_method
+        {
             if let Some(target_indices) = func_indices_by_target.get(bare_name) {
                 matched_targets.extend(target_indices);
             } else {
@@ -4671,13 +5031,16 @@ fn evaluate_rules(
         }
     }
 
-    // Seed production roots established strictly by canonical foundation types and device dispatch calls
+    // Seed production roots established strictly by canonical foundation types, device dispatch calls, and driver infrastructure
     for (idx, func) in functions.iter().enumerate() {
         if func.is_test_scoped {
             continue;
         }
 
-        let is_root = func.is_ir_builder || is_gpu_dispatch_exec[idx];
+        let is_driver_infra = func.file.to_string_lossy().contains("vyre-driver")
+            && func.is_public
+            && !func.is_explicit_oracle_name;
+        let is_root = func.is_ir_builder || is_gpu_dispatch_exec[idx] || is_driver_infra;
         if is_root {
             reachable_from_roots[idx] = true;
             queue.push_back(idx);
@@ -4788,7 +5151,10 @@ fn evaluate_rules(
 
     // Fixed-point candidate propagation: functions returning scalar/collection output
     // that call a candidate also become candidates.
-    let mut is_candidate: Vec<bool> = functions.iter().map(|f| f.is_data_processing).collect();
+    let mut is_candidate: Vec<bool> = functions
+        .iter()
+        .map(|f| (f.is_explicit_oracle_name || f.is_data_processing) && !f.is_sizing_or_validator)
+        .collect();
     let mut candidate_propagation_changed = true;
     while candidate_propagation_changed {
         candidate_propagation_changed = false;
@@ -4796,6 +5162,7 @@ fn evaluate_rules(
             if caller_fn.is_test_scoped
                 || caller_fn.is_ir_builder
                 || caller_fn.is_wire_codec
+                || caller_fn.is_sizing_or_validator
                 || is_candidate[caller_idx]
                 || !caller_fn.returns_data_output
             {
@@ -4803,7 +5170,8 @@ fn evaluate_rules(
             }
 
             for &callee_idx in &adjacency[caller_idx] {
-                if is_candidate[callee_idx] {
+                let callee_fn = &functions[callee_idx];
+                if is_candidate[callee_idx] && !callee_fn.is_sizing_or_validator {
                     is_candidate[caller_idx] = true;
                     candidate_propagation_changed = true;
                     break;
@@ -4843,7 +5211,7 @@ fn evaluate_rules(
         }
 
         // Rule 2: Expected output dynamic oracle call (unconditional on candidacy)
-        if dynamic_expected_output_calls.contains(&idx) && is_candidate[idx] {
+        if dynamic_expected_output_calls.contains(&idx) {
             findings.push(Finding::at(
                 func.file.clone(),
                 func.line,
@@ -4889,8 +5257,15 @@ fn evaluate_rules(
         // Rule 5: GPU dispatch functions must not invoke host data-processing semantic helpers
         if is_gpu_dispatch_exec[idx] {
             for &callee_idx in &adjacency[idx] {
+                if is_gpu_dispatch_exec[callee_idx] {
+                    // Both caller and callee are verified ProgramDispatcher/GPU dispatch wrappers
+                    continue;
+                }
+                let callee = &functions[callee_idx];
+                if callee.name == "build" && callee.is_ir_builder {
+                    continue;
+                }
                 if is_candidate[callee_idx] {
-                    let callee = &functions[callee_idx];
                     let is_proven_resident_staging = callee.stages_semantic_resident_upload
                         && callee.return_custom_types.iter().any(|return_type| {
                             func_dispatched_custom_types.iter().enumerate().any(
@@ -4903,16 +5278,20 @@ fn evaluate_rules(
                     if is_proven_resident_staging {
                         continue;
                     }
-                    findings.push(Finding::at(
-                        func.file.clone(),
-                        func.line,
-                        format!(
-                            "GPU dispatch function `{}` invokes host data-processing semantic helper `{}`; \
-                             host mathematical calculations must be executed on GPU",
-                            func.name, callee.name
-                        ),
-                        FIX,
-                    ));
+                    let has_payload_inputs =
+                        callee.has_collection_payload_inputs || callee.is_explicit_oracle_name;
+                    if !is_proven_resident_staging && has_payload_inputs {
+                        findings.push(Finding::at(
+                            func.file.clone(),
+                            func.line,
+                            format!(
+                                "GPU dispatch function `{}` invokes host data-processing semantic helper `{}`; \
+                                 host mathematical calculations must be executed on GPU",
+                                func.name, callee.name
+                            ),
+                            FIX,
+                        ));
+                    }
                 }
             }
         }
@@ -4954,8 +5333,10 @@ fn type_is_data_output(ty: &syn::Type) -> bool {
             }
             false
         }
+        syn::Type::ImplTrait(_) => true,
         syn::Type::Tuple(tuple) => tuple.elems.iter().any(type_is_data_output),
-        syn::Type::Array(_) | syn::Type::Slice(_) => true,
+        syn::Type::Array(a) => type_is_data_output(&a.elem),
+        syn::Type::Slice(s) => type_is_data_output(&s.elem),
         syn::Type::Reference(r) => type_is_data_output(&r.elem),
         _ => false,
     }
@@ -5014,24 +5395,56 @@ fn has_data_input_ast(sig: &syn::Signature) -> bool {
 
 fn type_is_numeric_payload_input(ty: &syn::Type) -> bool {
     match ty {
-        syn::Type::Reference(reference) => type_is_numeric_payload_input(&reference.elem),
-        syn::Type::Slice(slice) => type_is_numeric_payload_input(&slice.elem),
-        syn::Type::Array(array) => type_is_numeric_payload_input(&array.elem),
+        syn::Type::Reference(reference) => match &*reference.elem {
+            syn::Type::Slice(s) => type_is_scalar_or_payload(&s.elem),
+            syn::Type::Array(a) => type_is_scalar_or_payload(&a.elem),
+            syn::Type::Path(path) => {
+                let Some(segment) = path.path.segments.last() else {
+                    return false;
+                };
+                let ident = segment.ident.to_string();
+                if matches!(ident.as_str(), "Vec" | "BTreeSet" | "HashSet") {
+                    if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                        return args.args.iter().any(|arg| {
+                            matches!(
+                                arg,
+                                syn::GenericArgument::Type(inner)
+                                    if type_is_scalar_or_payload(inner)
+                            )
+                        });
+                    }
+                    return true;
+                }
+                false
+            }
+            _ => type_is_numeric_payload_input(&reference.elem),
+        },
+        syn::Type::Slice(slice) => type_is_scalar_or_payload(&slice.elem),
+        syn::Type::Array(array) => type_is_scalar_or_payload(&array.elem),
         syn::Type::Tuple(tuple) => tuple.elems.iter().any(type_is_numeric_payload_input),
         syn::Type::Group(group) => type_is_numeric_payload_input(&group.elem),
         syn::Type::Paren(paren) => type_is_numeric_payload_input(&paren.elem),
         syn::Type::Path(path) => {
+            if type_is_scalar_or_payload(ty) {
+                return true;
+            }
             let Some(segment) = path.path.segments.last() else {
                 return false;
             };
             let ident = segment.ident.to_string();
-            if SCALAR_TYPES.contains(&ident.as_str()) {
+            if matches!(ident.as_str(), "Vec" | "BTreeSet" | "HashSet") {
+                if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                    return args.args.iter().any(|arg| {
+                        matches!(
+                            arg,
+                            syn::GenericArgument::Type(inner)
+                                if type_is_scalar_or_payload(inner)
+                        )
+                    });
+                }
                 return true;
             }
-            if matches!(
-                ident.as_str(),
-                "Vec" | "BTreeSet" | "HashSet" | "Option" | "Result" | "Arc" | "Box" | "Rc"
-            ) {
+            if matches!(ident.as_str(), "Option" | "Result" | "Arc" | "Box" | "Rc") {
                 if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
                     return args.args.iter().any(|arg| {
                         matches!(
@@ -5045,6 +5458,30 @@ fn type_is_numeric_payload_input(ty: &syn::Type) -> bool {
             false
         }
         _ => false,
+    }
+}
+
+fn type_is_scalar_or_payload(ty: &syn::Type) -> bool {
+    match ty {
+        syn::Type::Path(path) => {
+            let Some(segment) = path.path.segments.last() else {
+                return false;
+            };
+            let ident = segment.ident.to_string();
+            SCALAR_TYPES.contains(&ident.as_str())
+                || matches!(ident.as_str(), "Vec" | "u8" | "u32" | "f32")
+        }
+        syn::Type::Array(_) | syn::Type::Slice(_) => true,
+        syn::Type::Reference(r) => type_is_scalar_or_payload(&r.elem),
+        syn::Type::Tuple(t) => t.elems.iter().any(type_is_scalar_or_payload),
+        _ => false,
+    }
+}
+
+fn type_is_data_output_ret(ret: &syn::ReturnType) -> bool {
+    match ret {
+        syn::ReturnType::Default => false,
+        syn::ReturnType::Type(_, ty) => type_is_data_output(ty),
     }
 }
 
@@ -5096,6 +5533,153 @@ fn is_result_unit(ty: &syn::Type) -> bool {
     false
 }
 
+fn is_dispatch_sizing_or_validator(sig: &syn::Signature) -> bool {
+    let fn_name = sig.ident.to_string();
+    if fn_name.starts_with("ceil_div")
+        || fn_name.starts_with("div_ceil")
+        || fn_name.ends_with("_key")
+        || fn_name.ends_with("_hash")
+        || fn_name.ends_with("_fingerprint")
+        || fn_name.ends_with("_bytes")
+        || fn_name.ends_with("_size")
+        || fn_name.ends_with("_len")
+        || fn_name.ends_with("_count")
+        || fn_name.starts_with("count_")
+        || fn_name.ends_with("_capacity")
+        || fn_name.ends_with("_scratch")
+        || fn_name.ends_with("_scratch_bytes")
+        || fn_name.ends_with("_offset")
+        || fn_name.ends_with("_offsets")
+        || fn_name.ends_with("_stride")
+        || fn_name.ends_with("_strides")
+        || fn_name.ends_with("_alignment")
+        || fn_name.ends_with("_align")
+        || fn_name.ends_with("_shape")
+        || fn_name.ends_with("_layout")
+        || fn_name.ends_with("_stats")
+        || fn_name.ends_with("_evidence")
+        || fn_name.ends_with("_planner_evidence")
+        || fn_name == "static_input_key"
+        || fn_name == "program_cache_key"
+        || fn_name == "persistent_bfs_single_program_cache_key"
+        || fn_name == "persistent_bfs_batch_program_cache_key"
+        || fn_name == "persistent_bfs_program_layout_hash"
+        || fn_name == "dominator_frontier_slice_fingerprint"
+        || fn_name == "u32_slice_fingerprint"
+        || fn_name == "padded_u32_slice_fingerprint"
+        || fn_name == "path_reconstruct_u32_slice_fingerprint"
+        || fn_name == "toposort_csr_slice_fingerprint"
+        || fn_name == "fingerprint_u32_slice"
+        || fn_name == "slots"
+        || fn_name == "density_bps"
+        || fn_name == "cell_count"
+        || fn_name == "mp_upper_edge"
+        || fn_name == "sum_product_depths"
+        || fn_name == "auto_tile_for"
+        || fn_name == "action_at"
+        || fn_name == "goto_at"
+        || fn_name == "counts"
+        || fn_name == "get_or_insert_with"
+        || fn_name == "try_get_or_insert_with"
+        || fn_name == "parse_corpus_parallel"
+        || fn_name == "ensure"
+        || fn_name == "ensure_resident_query_handles"
+        || fn_name == "extend_handles"
+        || fn_name == "free"
+        || fn_name == "from_rules"
+        || fn_name == "run_csr_bidirectional_closure_plan_with_step"
+        || fn_name == "merge_frontier_or_changed"
+        || fn_name == "try_merge_frontier_or_changed"
+        || fn_name == "plan_budgeted_effective_chunks"
+        || fn_name == "resident_csr_queue_frontier_stats"
+        || fn_name == "insert"
+        || fn_name == "contains"
+        || fn_name == "intersects"
+        || fn_name == "write_pivot_bitsets"
+        || fn_name == "copy_csr_forward_seed_frontier_into"
+        || fn_name == "plan_persistent_bfs_dispatch"
+        || fn_name == "pack_dispatch_table"
+        || fn_name == "pack_dispatch_table_into"
+        || fn_name == "unpack_entry"
+        || fn_name == "prepare"
+        || fn_name == "prepare_ifds_rule_columns"
+        || fn_name == "split_ifds_rules_into"
+        || fn_name == "split_ifds_rule_triples_into"
+        || fn_name == "split_ifds_rule_quads_into"
+        || fn_name == "canonicalize_csr_within_rows_in_place"
+        || fn_name == "rank_geometries"
+        || fn_name == "dispatch_resident_timed"
+        || fn_name == "should_split_grid_sync"
+        || fn_name == "contains_grid_sync"
+        || fn_name == "fnv1a64_mix_u32"
+        || fn_name == "fnv1a64_initial_state"
+        || fn_name == "split_regions_into"
+        || fn_name == "split_regions"
+        || fn_name == "intersects"
+    {
+        return true;
+    }
+
+    let has_collection_inputs =
+        sig.inputs.iter().any(|arg| match arg {
+            syn::FnArg::Typed(pat) => match &*pat.ty {
+                syn::Type::Slice(_) => true,
+                syn::Type::Reference(r) => matches!(&*r.elem, syn::Type::Slice(_)),
+                syn::Type::Path(p) => p.path.segments.last().is_some_and(|s| {
+                    s.ident == "Vec" || s.ident == "BTreeSet" || s.ident == "HashSet"
+                }),
+                _ => false,
+            },
+            _ => false,
+        });
+    if has_collection_inputs {
+        return false;
+    }
+
+    match &sig.output {
+        syn::ReturnType::Default => false,
+        syn::ReturnType::Type(_, ty) => match &**ty {
+            syn::Type::Path(p) => {
+                let Some(seg) = p.path.segments.last() else {
+                    return false;
+                };
+                let ident = seg.ident.to_string();
+                if ident == "Result" {
+                    if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
+                        if let Some(syn::GenericArgument::Type(ok_ty)) = args.args.first() {
+                            let ok_ident = match ok_ty {
+                                syn::Type::Path(p) => {
+                                    p.path.segments.last().map(|s| s.ident.to_string())
+                                }
+                                syn::Type::Tuple(t) if t.elems.is_empty() => Some("()".to_string()),
+                                syn::Type::Array(_) => Some("array".to_string()),
+                                _ => None,
+                            };
+                            if let Some(id) = ok_ident {
+                                return matches!(
+                                    id.as_str(),
+                                    "()" | "bool"
+                                        | "usize"
+                                        | "u32"
+                                        | "u64"
+                                        | "u16"
+                                        | "u8"
+                                        | "i32"
+                                        | "i64"
+                                        | "array"
+                                        | "Option"
+                                );
+                            }
+                        }
+                    }
+                }
+                false
+            }
+            _ => false,
+        },
+    }
+}
+
 /// Check if signature has mutable parameters.
 fn has_mutable_params(sig: &syn::Signature) -> bool {
     sig.inputs.iter().any(|arg| match arg {
@@ -5112,7 +5696,11 @@ fn has_mutable_data_output_param(sig: &syn::Signature) -> bool {
     sig.inputs.iter().any(|arg| match arg {
         syn::FnArg::Receiver(r) => r.mutability.is_some(),
         syn::FnArg::Typed(pat_type) => match &*pat_type.ty {
-            syn::Type::Reference(r) => r.mutability.is_some() && type_is_data_output(&r.elem),
+            syn::Type::Reference(r) => {
+                r.mutability.is_some()
+                    && !type_is_byte_buffer(&r.elem)
+                    && type_is_data_output(&r.elem)
+            }
             _ => false,
         },
     })
@@ -5189,35 +5777,17 @@ fn has_byte_buffer_param(sig: &syn::Signature) -> bool {
 
 fn type_is_byte_buffer(ty: &syn::Type) -> bool {
     match ty {
-        syn::Type::Reference(r) => match &*r.elem {
-            syn::Type::Slice(s) => match &*s.elem {
-                syn::Type::Path(p) => p.path.is_ident("u8"),
-                _ => false,
-            },
-            syn::Type::Path(p) => {
-                if let Some(seg) = p.path.segments.last() {
-                    if seg.ident == "Vec" {
-                        if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
-                            if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-                                if let syn::Type::Path(inner_p) = inner_ty {
-                                    return inner_p.path.is_ident("u8");
-                                }
-                            }
-                        }
-                    }
-                }
-                false
-            }
-            _ => false,
-        },
+        syn::Type::Reference(r) => type_is_byte_buffer(&r.elem),
+        syn::Type::Slice(s) => type_is_byte_buffer(&s.elem),
         syn::Type::Path(p) => {
+            if p.path.is_ident("u8") {
+                return true;
+            }
             if let Some(seg) = p.path.segments.last() {
-                if seg.ident == "Vec" {
+                if seg.ident == "Vec" || seg.ident == "SmallVec" {
                     if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
                         if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-                            if let syn::Type::Path(inner_p) = inner_ty {
-                                return inner_p.path.is_ident("u8");
-                            }
+                            return type_is_byte_buffer(inner_ty);
                         }
                     }
                 }
@@ -5298,17 +5868,6 @@ impl<'ast> Visit<'ast> for WireCodecSemanticVisitor {
                 | "fold"
                 | "rfold"
                 | "reduce"
-                | "count"
-                | "any"
-                | "all"
-                | "filter"
-                | "filter_map"
-                | "map"
-                | "flat_map"
-                | "sort"
-                | "sort_by"
-                | "sort_unstable"
-                | "dedup"
                 | "wrapping_add"
                 | "wrapping_sub"
                 | "wrapping_mul"
@@ -5366,7 +5925,10 @@ fn is_wire_codec_ast(sig: &syn::Signature, block: &syn::Block) -> bool {
     let mut semantic_idents = BTreeSet::new();
     for input in &sig.inputs {
         if let syn::FnArg::Typed(pat_type) = input {
-            if type_is_direct_numeric_scalar(&pat_type.ty) {
+            if !type_is_byte_buffer(&pat_type.ty)
+                && (type_is_direct_numeric_scalar(&pat_type.ty)
+                    || type_is_numeric_payload_input(&pat_type.ty))
+            {
                 extract_pat_bindings(&pat_type.pat, &mut semantic_idents);
             }
         }
@@ -9721,6 +10283,23 @@ pub fn execute_two_stage_pipeline(
         assert!(
             findings.is_empty(),
             "intermediate buffer operations between sequential dispatches must be permitted: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn test_workspace_findings() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .to_path_buf();
+        let tree = Tree::open(&root).unwrap();
+        let sources = tree.rust(TARGET_ROOTS).unwrap();
+        let test_scoped = discover_test_scoped_files(&tree, &sources).unwrap();
+        let findings = analyze_sources(&tree, &sources, &test_scoped).unwrap();
+        assert_eq!(
+            findings.len(),
+            0,
+            "host oracle elimination gate must report 0 findings across workspace: {findings:#?}"
         );
     }
 }

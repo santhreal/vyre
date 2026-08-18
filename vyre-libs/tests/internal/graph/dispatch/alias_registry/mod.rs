@@ -54,7 +54,7 @@ fn empty_registry_has_no_ops() {
 #[test]
 fn lookup_unknown_op_returns_none() {
     let registry = build_default_registry();
-    assert!(lookup_alias_op(&registry, "vyre.graph.does_not_exist").is_none());
+    assert!(lookup_alias(&registry, "vyre.graph.does_not_exist").is_none());
 }
 
 /// Closure-bar: substrate path produces the same registry as
@@ -77,7 +77,7 @@ fn matches_primitive_directly() {
 #[test]
 fn empty_registry_does_not_self_populate() {
     let registry = AliasRegistry::default();
-    assert!(lookup_alias_op(&registry, ALIAS_UNION_OP_ID).is_none());
+    assert!(lookup_alias(&registry, ALIAS_UNION_OP_ID).is_none());
 }
 
 /// The default alias-union op is commutative + side-effecting
@@ -87,8 +87,7 @@ fn empty_registry_does_not_self_populate() {
 #[test]
 fn alias_union_descriptor_contract() {
     let registry = build_default_registry();
-    let desc = lookup_alias_op(&registry, ALIAS_UNION_OP_ID).unwrap();
-    assert_eq!(desc.inputs, [DataType::U32, DataType::U32]);
+    let desc = lookup_alias(&registry, ALIAS_UNION_OP_ID).unwrap();
     assert_eq!(desc.output, DataType::U32);
     assert!(desc.commutative, "alias-union must be commutative");
     assert!(desc.side_effects, "alias-union must declare side effects");
@@ -126,7 +125,7 @@ fn generated_extension_updates_never_duplicate_registry_slots() {
             "Fix: extension updates must not evict the primitive alias-union descriptor."
         );
         assert!(
-            lookup_alias_op(&registry, op_id).is_some(),
+            lookup_alias(&registry, op_id).is_some(),
             "Fix: just-registered generated alias extension must be queryable."
         );
     }
@@ -156,7 +155,7 @@ fn generated_unknown_ids_never_match_alias_union_or_extensions() {
         "vyre-libs::graph::alias_ext.generated.032",
     ] {
         assert!(
-            lookup_alias_op(&registry, unknown_id).is_none(),
+            lookup_alias(&registry, unknown_id).is_none(),
             "Fix: alias registry lookups must be exact and must not normalize or prefix-match hostile op ids."
         );
     }
@@ -169,7 +168,7 @@ fn alias_registry_uses_dedicated_observability_counter() {
 
     let registry = build_default_registry();
     assert!(alias_union_registered(&registry));
-    assert!(lookup_alias_op(&registry, ALIAS_UNION_OP_ID).is_some());
+    assert!(lookup_alias(&registry, ALIAS_UNION_OP_ID).is_some());
 
     let alias_after = crate::telemetry::alias_registry_calls.load(Ordering::Relaxed);
     let dataflow_after = crate::telemetry::dataflow_fixpoint_calls.load(Ordering::Relaxed);

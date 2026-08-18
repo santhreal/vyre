@@ -219,7 +219,7 @@ inventory::submit! {
             fixture_u32(&[1, 2, 3, 4]),
             fixture_u32(&[5, 6, 7, 8]),
         ]]),
-        Some(crate::fixture_bytes::matmul_2x2_expected),
+        Some(|| vec![vec![crate::fixture_bytes::MATMUL_2X2_EXPECTED_BYTES.to_vec()]]),
     )
     .with_laws(&["distributive"])
 }

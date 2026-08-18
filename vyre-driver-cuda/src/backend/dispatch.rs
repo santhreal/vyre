@@ -1408,12 +1408,7 @@ impl ModuleGlobalsLease {
     ) -> Result<T, BackendError> {
         // SAFETY: the caller owns `stream` across the launch sequence this lease
         // covers, so it outlives the memset enqueued here.
-        let reset = unsafe { self.enqueue_trap_reset(stream) };
-        if let Err(error) = reset {
-            // The gate is freed by dropping the lease. Nothing was launched, so
-            // there is nothing to synchronize or read back.
-            return Err(error);
-        }
+        unsafe { self.enqueue_trap_reset(stream) }?;
         let launched = launch(&self);
         self.release_after_launch(stream, label)?;
         launched
@@ -1443,12 +1438,7 @@ impl ModuleGlobalsLease {
     ) -> Result<(T, Self), BackendError> {
         // SAFETY: the caller owns `stream` across the launch sequence this lease
         // covers, so it outlives the memset enqueued here.
-        let reset = unsafe { self.enqueue_trap_reset(stream) };
-        if let Err(error) = reset {
-            // The gate is freed by dropping the lease. Nothing was launched, so
-            // there is nothing to synchronize or read back.
-            return Err(error);
-        }
+        unsafe { self.enqueue_trap_reset(stream) }?;
         match launch(&self) {
             Ok(value) => Ok((value, self)),
             Err(error) => {

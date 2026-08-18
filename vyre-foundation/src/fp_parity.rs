@@ -530,12 +530,12 @@ mod output_ulp_tests {
         let one = vec![f32_bytes([1.0, 1.0])];
         assert_eq!(max_output_ulp(&program, &one, &[]), None);
         assert_eq!(
-            max_output_ulp(&program, &one, &vec![vec![0u8; 4]]),
+            max_output_ulp(&program, &one, &[vec![0u8; 4]]),
             None,
             "a length-mismatched slot is not a distance"
         );
         assert_eq!(
-            max_output_ulp(&program, &vec![vec![0u8; 6]], &vec![vec![0u8; 6]]),
+            max_output_ulp(&program, &[vec![0u8; 6]], &[vec![0u8; 6]]),
             None,
             "an F32 slot that is not a whole number of f32 values is not a distance"
         );

@@ -111,13 +111,13 @@ inventory::submit! {
     .with_category("security")
 }
 macro_rules! reach_flow_entry {
-    ($op_id:expr, $build:expr, $inputs_fn:expr, $expected_fn:expr) => {
+    ($op_id:expr, $build:expr, $inputs_fn:expr, $expected_bytes:expr) => {
         inventory::submit! {
             OperationRegistration::library(
                 $op_id,
                 $build,
                 Some($inputs_fn),
-                Some($expected_fn),
+                Some(|| vec![vec![$expected_bytes.to_vec()]]),
             )
             .with_category("security")
         }
@@ -138,7 +138,7 @@ reach_flow_entry!(
         "fout"
     ),
     super::flow_composition::forward_reach_fixture_inputs,
-    super::flow_composition::forward_reach_fixture_expected
+    super::flow_composition::FORWARD_REACH_EXPECTED_BYTES
 );
 
 reach_flow_entry!(
@@ -149,7 +149,7 @@ reach_flow_entry!(
         "fout"
     ),
     super::flow_composition::forward_reach_fixture_inputs,
-    super::flow_composition::forward_reach_fixture_expected
+    super::flow_composition::FORWARD_REACH_EXPECTED_BYTES
 );
 
 reach_flow_entry!(
@@ -160,7 +160,7 @@ reach_flow_entry!(
         "fout"
     ),
     super::flow_composition::dominance_fixture_inputs,
-    super::flow_composition::dominance_fixture_expected
+    super::flow_composition::DOMINANCE_EXPECTED_BYTES
 );
 
 reach_flow_entry!(
@@ -171,7 +171,7 @@ reach_flow_entry!(
         "fout"
     ),
     super::flow_composition::dominance_fixture_inputs,
-    super::flow_composition::dominance_fixture_expected
+    super::flow_composition::DOMINANCE_EXPECTED_BYTES
 );
 
 inventory::submit! {
@@ -179,7 +179,13 @@ inventory::submit! {
         super::flows_to_to_sink::OP_ID,
         || super::flows_to_to_sink::flows_to_to_sink(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "sink", "reach", "hits", "out_scalar"),
         Some(super::flow_composition::dataflow_hit_fixture_inputs),
-        Some(super::flow_composition::dataflow_hit_fixture_expected),
+        Some(|| {
+            vec![vec![
+                super::flow_composition::DATAFLOW_HIT_REACH_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HIT_SINK_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
+            ]]
+        }),
     )
     .with_category("security")
 }
@@ -189,7 +195,13 @@ inventory::submit! {
         super::taint_pollution::OP_ID,
         || super::taint_pollution::taint_pollution(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar"),
         Some(super::flow_composition::dataflow_hit_fixture_inputs),
-        Some(super::flow_composition::dataflow_hit_fixture_expected),
+        Some(|| {
+            vec![vec![
+                super::flow_composition::DATAFLOW_HIT_REACH_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HIT_SINK_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
+            ]]
+        }),
     )
     .with_category("security")
 }
@@ -199,7 +211,7 @@ inventory::submit! {
         super::sanitized_by::OP_ID,
         || super::sanitized_by::sanitized_by(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "fin", "san", "fout"),
         Some(super::sanitized_by::sanitized_by_fixture_inputs),
-        Some(super::sanitized_by::sanitized_by_fixture_expected),
+        Some(|| vec![vec![super::sanitized_by::EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("security")
 }
@@ -216,7 +228,15 @@ inventory::submit! {
         super::flows_to_with_sanitizer::OP_ID,
         || super::flows_to_with_sanitizer::flows_to_with_sanitizer(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar"),
         Some(super::flows_to_with_sanitizer::flows_to_with_sanitizer_fixture_inputs),
-        Some(super::flows_to_with_sanitizer::flows_to_with_sanitizer_fixture_expected),
+        Some(|| {
+            vec![vec![
+                super::flows_to_with_sanitizer::EXPECTED_FLOWS_TO_WITH_SANITIZER_CLEAN_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_FLOWS_TO_WITH_SANITIZER_REACH_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_FLOWS_TO_WITH_SANITIZER_ALIVE_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_FLOWS_TO_WITH_SANITIZER_HITS_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
+            ]]
+        }),
     )
     .with_category("security")
 }

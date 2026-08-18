@@ -31,7 +31,7 @@
 //! splits the dispatch into three kernel launches at the GridSync
 //! barriers when the backend doesn't support cooperative groups.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{tag_program, trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{
@@ -100,7 +100,8 @@ pub fn multi_block_prefix_scan_sum_u32_with_block_lanes(
     block_lanes: u32,
 ) -> Program {
     match try_multi_block_prefix_scan_sum_u32_with_block_lanes(input, output, n, block_lanes) {
-        Ok(program) => program,
+        Ok(program) if program.entry().is_empty() => program,
+        Ok(program) => tag_program(OP_ID_INCLUSIVE_SUM, program),
         Err(error) => trap_program(OP_ID_INCLUSIVE_SUM, Some((output, DataType::U32)), error),
     }
 }

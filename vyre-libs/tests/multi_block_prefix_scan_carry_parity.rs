@@ -18,10 +18,10 @@
 #![cfg(feature = "reduce")]
 #![forbid(unsafe_code)]
 
-use vyre_foundation::ir::Program;
+use vyre_foundation::ir::{Program, PORTABLE_WORKGROUP_INVOCATIONS};
 use vyre_libs::reduce::multi_block_prefix_scan;
 
-const BLOCK_LANES: u32 = 1024;
+const BLOCK_LANES: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::composition_witness::{
     exclusive_prefix_sum_witness, inclusive_prefix_sum_witness,

@@ -481,4 +481,120 @@ mod tests {
             report.errors
         );
     }
+
+    #[test]
+    fn repeated_sibling_lets_rejected_with_multiple_v032_under_allow_shadowing() {
+        let nodes = vec![
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(1),
+            },
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(2),
+            },
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(3),
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        let v032_count = report
+            .errors
+            .iter()
+            .filter(|e| e.code().as_str() == "V032")
+            .count();
+        assert_eq!(
+            v032_count, 2,
+            "three sibling let bindings in the same region must emit two V032 errors even when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
+
+    #[test]
+    fn nested_region_repeated_sibling_lets_rejected_under_allow_shadowing() {
+        let nodes = vec![
+            Node::If {
+                cond: Expr::bool(true),
+                then: vec![
+                    Node::Let {
+                        name: "y".into(),
+                        value: Expr::u32(10),
+                    },
+                    Node::Let {
+                        name: "y".into(),
+                        value: Expr::u32(20),
+                    },
+                ],
+                otherwise: vec![Node::Block(vec![
+                    Node::Let {
+                        name: "z".into(),
+                        value: Expr::u32(30),
+                    },
+                    Node::Let {
+                        name: "z".into(),
+                        value: Expr::u32(40),
+                    },
+                ])],
+            },
+            Node::Loop {
+                var: "i".into(),
+                from: Expr::u32(0),
+                to: Expr::u32(2),
+                body: vec![
+                    Node::Let {
+                        name: "w".into(),
+                        value: Expr::u32(50),
+                    },
+                    Node::Let {
+                        name: "w".into(),
+                        value: Expr::u32(60),
+                    },
+                ],
+            },
+        ];
+        let buffers: BufferTable<'_> = FxHashMap::default();
+        let mut scope: Scope = FxHashMap::default();
+        let mut limits = LimitState::default();
+        let mut report = ValidationReport::default();
+        let options = ValidationOptions::default().with_shadowing(true);
+
+        validate_nodes(
+            &nodes,
+            &buffers,
+            &mut scope,
+            false,
+            0,
+            &mut limits,
+            options,
+            &mut report,
+        );
+
+        let v032_count = report
+            .errors
+            .iter()
+            .filter(|e| e.code().as_str() == "V032")
+            .count();
+        assert_eq!(
+            v032_count, 3,
+            "each nested region with duplicate sibling lets must emit V032 even when allow_shadowing is true: {:?}",
+            report.errors
+        );
+    }
 }

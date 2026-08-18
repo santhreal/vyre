@@ -137,7 +137,7 @@ pub(super) fn bin_op_match_body_with_cse() -> Vec<Node> {
     body.extend(
         OPERATOR_FLAGS
             .iter()
-            .map(|(name, tag)| operator_flag(*name, *tag)),
+            .map(|(name, tag)| operator_flag(name, *tag)),
     );
     body.extend(
         EQUAL_OPERAND_RULES
@@ -165,7 +165,7 @@ pub(super) fn bin_op_match_body_with_cse() -> Vec<Node> {
         CANCELLATION_RULES
             .iter()
             .map(|(flag, inner_tag, inner_canonical, action)| {
-                left_child_cancellation(*flag, *inner_tag, *inner_canonical, *action)
+                left_child_cancellation(flag, *inner_tag, inner_canonical, *action)
             }),
     );
     body.extend(LITERAL_RULES.iter().map(step_node));

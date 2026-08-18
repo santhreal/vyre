@@ -43,7 +43,7 @@ pub fn sanitized_by(
     tag_program(OP_ID, traverse)
 }
 
-const EXPECTED_SANITIZED_BY_OUTPUT_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
+pub(crate) const EXPECTED_SANITIZED_BY_OUTPUT_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
 
 pub(crate) fn sanitized_by_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
@@ -58,6 +58,7 @@ pub(crate) fn sanitized_by_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     ]]
 }
 
+#[cfg(test)]
 pub(crate) fn sanitized_by_fixture_expected() -> Vec<Vec<Vec<u8>>> {
     vec![vec![EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]
 }
@@ -66,6 +67,12 @@ pub(crate) fn sanitized_by_fixture_expected() -> Vec<Vec<Vec<u8>>> {
 mod tests {
     use super::*;
     use crate::predicate::edge_kind;
+
+    #[test]
+    fn test_sanitized_by_expected_bytes_identity() {
+        let constructed = crate::fixture_bytes::u32_bytes(&[3]);
+        assert_eq!(constructed, EXPECTED_SANITIZED_BY_OUTPUT_BYTES);
+    }
 
     #[test]
     fn sanitized_by_declares_sanitizer_buffer() {

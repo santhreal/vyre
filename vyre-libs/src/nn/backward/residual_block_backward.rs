@@ -23,8 +23,8 @@ pub fn residual_block_backward(
     ElementwiseComposer::new(OP_ID, n)
         .add_input(grad_out, DataType::F32, n)
         .add_output(grad_x, DataType::F32, n)
-        .add_output_storage(grad_attn, BufferAccess::ReadWrite, DataType::F32, n)
-        .add_output_storage(grad_mlp, BufferAccess::ReadWrite, DataType::F32, n)
+        .add_output_storage(grad_attn, BufferAccess::WriteOnly, DataType::F32, n)
+        .add_output_storage(grad_mlp, BufferAccess::WriteOnly, DataType::F32, n)
         .build_pointwise_multi(&[grad_x, grad_attn, grad_mlp], |i| {
             let dy = Expr::load(grad_out, i);
             vec![dy.clone(), dy.clone(), dy]
@@ -43,8 +43,6 @@ inventory::submit! {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),
-                vec![0u8; 4 * 4], // grad_attn
-                vec![0u8; 4 * 4], // grad_mlp
             ]]
         }),
         Some(|| {
@@ -71,15 +69,8 @@ mod tests {
     fn reference_outputs_all_residual_gradient_liveouts() {
         let program = residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4);
         let expected = f32_bytes(&[1.0, 2.0, 3.0, 4.0]);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(expected.clone()),
-                Value::from(vec![0_u8; 16]),
-                Value::from(vec![0_u8; 16]),
-            ],
-        )
-        .expect("Fix: residual_block_backward must satisfy the one-output plus ReadWrite live-out IR contract.");
+        let outputs = vyre_reference::reference_eval(&program, &[Value::from(expected.clone())])
+            .expect("Fix: residual_block_backward must return all backend-allocated gradients.");
 
         assert_eq!(outputs.len(), 3);
         assert_eq!(outputs[0].to_bytes(), expected);

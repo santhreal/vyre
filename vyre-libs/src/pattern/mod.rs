@@ -69,10 +69,9 @@ pub use region::{
 };
 
 #[cfg(feature = "pattern-dfa")]
-pub use dfa::{
-    aho_corasick, aho_corasick_bounded, aho_corasick_program_from_dfa_wire, cooperative_dfa_scan,
-    cooperative_dfa_scan_body_with_store,
-};
+pub use dfa::aho_corasick;
+#[cfg(feature = "pattern-dfa")]
+pub use dfa::{cooperative_dfa_scan, cooperative_dfa_scan_body_with_store};
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub use fused_region_evidence::{
     fused_region_evidence_program, FusedRegionEvidence, FUSED_EVIDENCE_ADMISSION_BINDING,
@@ -85,8 +84,6 @@ pub use hit_buffer::{
     emit_hit_then_compact_with_layout, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
     HIT_BUFFER_OVERFLOW_COUNT,
 };
-#[cfg(feature = "pattern-nfa")]
-pub use nfa::REGEX_SCAN_OP_ID;
 pub use post_process::{PostProcessError, PostProcessedMatch};
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub use regex_anchored_window::{

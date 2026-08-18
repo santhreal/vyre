@@ -26,7 +26,7 @@ pub fn ln_scale_backward(
         .add_input(scale, DataType::F32, n)
         .add_input(grad_out, DataType::F32, n)
         .add_output(grad_x, DataType::F32, n)
-        .add_output_storage(grad_scale, BufferAccess::ReadWrite, DataType::F32, n)
+        .add_output_storage(grad_scale, BufferAccess::WriteOnly, DataType::F32, n)
         .build_pointwise_multi(&[grad_x, grad_scale], |i| {
             let x = Expr::load(input, i.clone());
             let s = Expr::load(scale, i.clone());
@@ -52,7 +52,6 @@ inventory::submit! {
                 to_f32(&[1.0, 2.0, 3.0, 4.0]),  // input
                 to_f32(&[0.5, 2.0, 1.0, 0.1]),  // scale
                 to_f32(&[1.0, 1.0, 1.0, 1.0]),  // grad_out
-                vec![0u8; 4 * 4],                 // grad_scale
             ]]
         }),
         Some(|| {
@@ -83,10 +82,9 @@ mod tests {
                 Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
                 Value::from(f32_bytes(&[0.5, 2.0, 1.0, 0.1])),
                 Value::from(f32_bytes(&[1.0, 1.0, 1.0, 1.0])),
-                Value::from(vec![0_u8; 16]),
             ],
         )
-        .expect("Fix: ln_scale_backward must satisfy the one-output plus ReadWrite live-out IR contract.");
+        .expect("Fix: ln_scale_backward must return both backend-allocated gradients.");
 
         assert_eq!(outputs.len(), 2);
         assert_eq!(outputs[0].to_bytes(), f32_bytes(&[0.5, 2.0, 1.0, 0.1]));
