@@ -12,8 +12,8 @@ use vyre_foundation::program_dispatch::{
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
-    csr_queue_strided_forward_traverse_cpu,
 };
+use vyre_reference::composition_witness::csr_queue_strided_forward_witness as csr_queue_strided_forward_traverse_cpu;
 
 #[test]
 fn cuda_csr_queue_strided_forward_matches_cpu_on_skewed_row() {

@@ -7,8 +7,12 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::graph::functorial::{functor_apply, functor_apply_cpu};
-use vyre_libs::graph::matroid::{matroid_exchange_bfs_step, matroid_exchange_bfs_step_cpu};
+use vyre_libs::graph::functorial::functor_apply;
+use vyre_libs::graph::matroid::matroid_exchange_bfs_step;
+use vyre_reference::composition_witness::{
+    functor_apply_witness as functor_apply_cpu,
+    matroid_exchange_bfs_step_witness as matroid_exchange_bfs_step_cpu,
+};
 
 fn run_functor(source: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
     let n = source.len() as u32;

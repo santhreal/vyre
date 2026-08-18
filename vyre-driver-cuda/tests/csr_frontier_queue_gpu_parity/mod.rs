@@ -22,11 +22,14 @@ use vyre_foundation::program_dispatch::{
 };
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse, csr_queue_forward_traverse_cpu, frontier_to_queue,
-    frontier_to_queue_cpu, frontier_to_queue_parallel,
+    csr_queue_forward_traverse, frontier_to_queue, frontier_to_queue_parallel,
 };
 use vyre_libs::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_enqueue_cpu, csr_queue_delta_strided_enqueue,
+    csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
+};
+use vyre_reference::composition_witness::{
+    csr_queue_strided_forward_witness as csr_queue_forward_traverse_cpu,
+    frontier_to_queue_witness as frontier_to_queue_cpu,
 };
 use vyre_libs::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
@@ -37,6 +40,50 @@ use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGra
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
     resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
+
+#[allow(clippy::too_many_arguments)]
+fn csr_queue_delta_enqueue_cpu(
+    active_queue: &[u32],
+    active_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    accumulator: &[u32],
+    node_count: u32,
+    next_queue_capacity: usize,
+    allow_mask: u32,
+) -> (Vec<u32>, Vec<u32>, u32) {
+    let take = (active_len as usize).min(active_queue.len());
+    let mut acc = accumulator.to_vec();
+    let mut discoveries = Vec::new();
+    for &src in &active_queue[..take] {
+        if src >= node_count {
+            continue;
+        }
+        let start = edge_offsets.get(src as usize).copied().unwrap_or(0) as usize;
+        let end = edge_offsets
+            .get(src as usize + 1)
+            .copied()
+            .unwrap_or(start as u32) as usize;
+        for edge in start..end {
+            if edge_kind_mask.get(edge).copied().unwrap_or(0) & allow_mask == 0 {
+                continue;
+            }
+            let dst = edge_targets.get(edge).copied().unwrap_or(u32::MAX);
+            if dst < node_count {
+                let word = (dst / 32) as usize;
+                let bit = 1_u32 << (dst % 32);
+                if word < acc.len() && (acc[word] & bit) == 0 {
+                    acc[word] |= bit;
+                    discoveries.push(dst);
+                }
+            }
+        }
+    }
+    let total_discoveries = discoveries.len() as u32;
+    let next_queue: Vec<u32> = discoveries.into_iter().take(next_queue_capacity).collect();
+    (acc, next_queue, total_discoveries)
+}
 
 const fn csr_queue_delta_strided_dispatch_grid(active_queue_capacity: u32) -> [u32; 3] {
     let source_slots = if active_queue_capacity == 0 {

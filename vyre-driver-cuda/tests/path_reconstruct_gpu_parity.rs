@@ -58,7 +58,7 @@ fn cuda_reconstruct_paths_batched() {
         let (expected_scratch, expected_len) = path_reconstruct_witness(&parent, t, max_depth);
         let lo = i * max_depth as usize;
         let hi = lo + max_depth as usize;
-        assert_eq!(lens[i], cpu_len, "len divergence at target {t}");
+        assert_eq!(lens[i], expected_len, "len divergence at target {t}");
         assert_eq!(
             &paths[lo..hi],
             &expected_scratch[..],

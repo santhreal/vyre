@@ -31,7 +31,7 @@ use vyre_test_support::pass_programs::{
 
 fn assert_dce_matches_cpu_oracle_cuda(entry: Vec<Node>) {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     let oracle_in = wrapped(entry.clone());
     let test_in = wrapped(entry);
@@ -85,7 +85,7 @@ fn cuda_dce_loop_with_induction_var() {
 #[test]
 fn cuda_const_fold_two_plus_three_yields_lit_five() {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -102,7 +102,7 @@ fn cuda_const_fold_two_plus_three_yields_lit_five() {
 #[test]
 fn cuda_const_fold_chained_arithmetic() {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -116,7 +116,7 @@ fn cuda_const_fold_chained_arithmetic() {
 #[test]
 fn cuda_const_fold_bitwise_ops() {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -133,7 +133,7 @@ fn cuda_const_fold_bitwise_ops() {
 #[test]
 fn cuda_const_fold_unfoldable_var_passes_through() {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
 
     let p = wrapped(vec![Node::let_bind(
         "x",
@@ -153,7 +153,7 @@ fn cuda_const_fold_unfoldable_var_passes_through() {
 /// rewrite the case owes.
 fn assert_canonicalize_case(label: &str) {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let case = canonicalize_case(label);
     let canon = gpu_canonicalize(case.input(), &dispatcher).expect("dispatches");
     assert_canonicalized("cuda", case, &canon);
@@ -180,7 +180,7 @@ fn cuda_canonicalize_non_commutative_div_unchanged() {
 /// body the case owes.
 fn assert_pipeline_case(label: &str) {
     let backend = live_backend();
-    let dispatcher = CudaProgramDispatcher { backend: &backend };
+    let dispatcher = CudaProgramDispatcher::new(&backend);
     let case = pipeline_case(label);
 
     let p = gpu_canonicalize(case.input(), &dispatcher).expect("canonicalize dispatches");

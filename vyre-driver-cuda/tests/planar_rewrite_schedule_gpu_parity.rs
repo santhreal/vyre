@@ -7,9 +7,8 @@ mod harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
-use vyre_libs::parsing::planar_rewrite::{
-    planar_rewrite_schedule, reference_planar_rewrite_schedule,
-};
+use vyre_libs::parsing::planar_rewrite::planar_rewrite_schedule;
+use vyre_reference::composition_witness::planar_rewrite_schedule_witness as reference_planar_rewrite_schedule;
 
 fn run_planar(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
     let cells = (h * w) as usize;

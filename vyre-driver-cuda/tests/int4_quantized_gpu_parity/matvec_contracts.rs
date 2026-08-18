@@ -1,8 +1,9 @@
 use super::*;
 
-use vyre_libs::math::quantized::{
-    i4x8_batched_matvec_f32_scaled, i4x8_batched_matvec_f32_scaled_cpu, i4x8_matvec_f32_scaled,
-    i4x8_matvec_f32_scaled_cpu,
+use vyre_libs::math::quantized::{i4x8_batched_matvec_f32_scaled, i4x8_matvec_f32_scaled};
+use vyre_reference::composition_witness::{
+    i4x8_batched_matvec_f32_scaled_witness as i4x8_batched_matvec_f32_scaled_cpu,
+    i4x8_matvec_f32_scaled_witness as i4x8_matvec_f32_scaled_cpu,
 };
 
 #[test]
