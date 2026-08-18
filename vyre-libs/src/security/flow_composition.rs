@@ -454,6 +454,25 @@ pub(crate) fn diamond_dominance_tree() -> (u32, Vec<u32>, Vec<u32>, Vec<u32>) {
         vec![edge_kind::DOMINANCE; 4],
     )
 }
+#[cfg(test)]
+pub(crate) fn assert_non_degenerate_bitset_shape(
+    program: &Program,
+    buffer_name: &str,
+    min_count: u32,
+) {
+    let buf = program
+        .buffers()
+        .iter()
+        .find(|b| b.name() == buffer_name)
+        .unwrap_or_else(|| panic!("Fix: {buffer_name} buffer must be present"));
+    assert!(
+        buf.count >= min_count,
+        "bitset_words({}) suggests degenerate shape; expected count >= {}",
+        buf.count,
+        min_count
+    );
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -503,31 +522,26 @@ mod tests {
     #[test]
     fn parameterized_sanitized_builder_matches_public_wrapper() {
         let shape = ProgramGraphShape::new(4, 3);
+        let (src, snk, san, cln, rch, alv, hts, out) = (
+            "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar",
+        );
         let expected = crate::security::flows_to_with_sanitizer::flows_to_with_sanitizer(
-            shape,
-            "source",
-            "sink",
-            "sanitizer",
-            "clean",
-            "reach",
-            "alive",
-            "hits",
-            "out_scalar",
+            shape, src, snk, san, cln, rch, alv, hts, out,
         );
         let actual = security_flow_program(SecurityFlowOptions::sanitized_hit(
             crate::security::flows_to_with_sanitizer::OP_ID,
             shape,
-            "source",
-            "reach",
+            src,
+            rch,
             SanitizerProjection {
-                sanitizer: "sanitizer",
-                clean: "clean",
-                alive: "alive",
+                sanitizer: san,
+                clean: cln,
+                alive: alv,
             },
             SinkProjection {
-                sink: "sink",
-                hits: "hits",
-                out_scalar: "out_scalar",
+                sink: snk,
+                hits: hts,
+                out_scalar: out,
             },
         ));
 

@@ -9,8 +9,7 @@ use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::{
-    dominance_fixture_expected, dominance_fixture_inputs, security_flow_program, FlowPredicate,
-    SecurityFlowOptions, FLOW_MAX_ITERATIONS,
+    security_flow_program, FlowPredicate, SecurityFlowOptions,
 };
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::dominance_predecessors";
@@ -50,22 +49,6 @@ pub(crate) fn cpu_dominator_sets(
     vyre_reference::composition_witness::idoms_to_dominator_sets_witness(&idoms, num_nodes)
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        OP_ID,
-        || dominance_predecessors(ProgramGraphShape::new(4, 4), "fin", "fout"),
-        Some(dominance_fixture_inputs),
-        Some(dominance_fixture_expected),
-    )
-    .with_category("security")
-}
-
-inventory::submit! {
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: FLOW_MAX_ITERATIONS,
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -107,16 +90,15 @@ mod tests {
     }
 
     #[test]
-    fn dominance_predecessor_step_reaches_immediate_ancestors() {
+    fn dominance_predecessors_step_reaches_immediate_ancestors() {
         let (node_count, offsets, targets, masks) = diamond_dominance_tree();
-        let frontier_in = vec![0b1000]; // {3}
         let out = cpu_ref(
             node_count,
             &offsets,
             &targets,
             &masks,
-            &frontier_in,
-            edge_kind::DOMINANCE,
+            &[0b1000],
+            edge_kind::DOMINANCE | edge_kind::BLOCK_MEMBER,
         );
         assert_eq!(out[0], 0b0110, "backward from 3 must reach 1 and 2");
     }

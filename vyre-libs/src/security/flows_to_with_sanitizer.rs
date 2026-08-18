@@ -224,63 +224,36 @@ pub fn flows_to_with_sanitizer(
     ))
 }
 
-/// CPU oracle: full one-step semantic for differential testing
-/// against the GPU emit.
-#[must_use]
 #[cfg(test)]
-pub(crate) fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    source: &[u32],
-    sink: &[u32],
-    sanitizer: &[u32],
-) -> u32 {
-    sanitized_dataflow_hit_cpu_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        source,
-        sink,
-        sanitizer,
-    )
+pub(crate) use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref as cpu_ref;
+
+pub(crate) fn flows_to_with_sanitizer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    let to_bytes = vyre_primitives::wire::pack_u32_slice;
+    vec![vec![
+        to_bytes(&[0b0001]),              // source = {0}
+        to_bytes(&[0b0000]),              // sanitizer = {}
+        to_bytes(&[0, 0, 0, 0]),          // pg_nodes
+        to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets
+        to_bytes(&[1, 2, 3]),             // pg_edge_targets
+        to_bytes(&[
+            edge_kind::ASSIGNMENT,
+            edge_kind::ASSIGNMENT,
+            edge_kind::ASSIGNMENT,
+        ]),                               // pg_edge_kind_mask
+        to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+        to_bytes(&[0b0001]),              // reach = {0}
+        to_bytes(&[0b0010]),              // sink = {1}
+    ]]
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        OP_ID,
-        || flows_to_with_sanitizer(ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar"),
-        Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![
-                to_bytes(&[0b0001]),              // source = {0}
-                to_bytes(&[0b0000]),              // sanitizer = {}
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets
-                to_bytes(&[1, 2, 3]),             // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // pg_edge_kind_mask
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b0001]),              // reach = {0}
-                to_bytes(&[0b0010]),              // sink = {1}
-            ]]
-        }),
-        Some(|| {
-            vec![vec![
-                vec![1, 0, 0, 0], // clean = {0}
-                vec![3, 0, 0, 0], // reach = {0, 1}
-                vec![3, 0, 0, 0], // alive = {0, 1}
-                vec![2, 0, 0, 0], // hits = {1}
-                vec![1, 0, 0, 0], // out_scalar = 1
-            ]]
-        }),
-    )
-    .with_category("security")
+pub(crate) fn flows_to_with_sanitizer_fixture_expected() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![
+        vec![1, 0, 0, 0], // clean = {0}
+        vec![3, 0, 0, 0], // reach = {0, 1}
+        vec![3, 0, 0, 0], // alive = {0, 1}
+        vec![2, 0, 0, 0], // hits = {1}
+        vec![1, 0, 0, 0], // out_scalar = 1
+    ]]
 }
 
 #[cfg(test)]

@@ -1293,6 +1293,11 @@ mod tests {
         assert!(predict_impact_observation_form(&[], &[], 0).is_empty());
     }
 
+    fn assert_mock_dispatch_contract(inputs: &[Vec<u8>], grid_override: Option<[u32; 3]>, expected_len: usize) {
+        assert_eq!(grid_override, Some([1, 1, 1]));
+        assert_eq!(inputs.len(), expected_len);
+    }
+
     struct InterventionDispatcher;
 
     impl ProgramDispatcher for InterventionDispatcher {
@@ -1302,9 +1307,7 @@ mod tests {
             inputs: &[Vec<u8>],
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
-            assert_eq!(inputs.len(), 3);
+            assert_mock_dispatch_contract(inputs, grid_override, 3);
             let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();
@@ -1344,13 +1347,10 @@ mod tests {
             inputs: &[Vec<u8>],
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            // Real-backend contract: adj RO, mask RO, out plain-RW (zero-init slot) = 3 inputs.
-            assert_eq!(inputs.len(), 3);
+            assert_mock_dispatch_contract(inputs, grid_override, 3);
             let adj = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let mask = crate::dispatch_buffers::read_u32s(&inputs[1]);
             let n = mask.len();
-            assert_eq!(adj.len(), n * n);
             let mut out = vec![0u32; n * n];
             for row in 0..n {
                 for col in 0..n {

@@ -211,16 +211,8 @@ macro_rules! define_tag_family_predicate {
                 vyre_foundation::operation::OperationRegistration::library(
                     OP_ID,
                     || $function("tags", "nodeset", 4),
-                    Some(|| {
-                        let to_bytes = crate::predicate::inventory_u32_le_bytes;
-                        vec![vec![
-                            to_bytes($fixture_tags),
-                            to_bytes(&[0]),
-                        ]]
-                    }),
-                    Some(|| {
-                        vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
-                    }),
+                    Some(|| crate::predicate::traversal::tag_family_fixture_inputs($fixture_tags)),
+                    Some(|| crate::predicate::traversal::single_output_fixture_expected(&EXPECTED_REGISTRATION_BYTES)),
                 )
             }
 
@@ -278,21 +270,8 @@ macro_rules! define_fixed_forward_edge_predicate {
                 vyre_foundation::operation::OperationRegistration::library(
                     OP_ID,
                     || $function(ProgramGraphShape::new(4, $edge_count), "fin", "fout"),
-                    Some(|| {
-                        let b = crate::predicate::inventory_u32_le_bytes;
-                        vec![vec![
-                            b(&[2, 1, 1, 1]),
-                            b($fixture_edge_offsets),
-                            b($fixture_edge_targets),
-                            b($fixture_edge_masks),
-                            b(&[0, 0, 0, 0]),
-                            b(&[0b0001]),
-                            b(&[0]),
-                        ]]
-                    }),
-                    Some(|| {
-                        vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
-                    }),
+                    Some(|| crate::predicate::traversal::forward_edge_fixture_inputs($fixture_edge_offsets, $fixture_edge_targets, $fixture_edge_masks)),
+                    Some(|| crate::predicate::traversal::single_output_fixture_expected(&EXPECTED_REGISTRATION_BYTES)),
                 )
             }
 

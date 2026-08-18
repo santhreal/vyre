@@ -152,15 +152,16 @@ mod tests {
 
     #[test]
     fn file_size_condition_family_builds_unique_programs() {
-        let programs = [
-            (file_size_eq::OP_ID, file_size_eq::FileSizeEq::program()),
-            (file_size_gt::OP_ID, file_size_gt::FileSizeGt::program()),
-            (file_size_gte::OP_ID, file_size_gte::FileSizeGte::program()),
-            (file_size_lt::OP_ID, file_size_lt::FileSizeLt::program()),
-            (file_size_lte::OP_ID, file_size_lte::FileSizeLte::program()),
-            (file_size_ne::OP_ID, file_size_ne::FileSizeNe::program()),
+        let cases: &[(&str, fn() -> vyre_foundation::ir::Program)] = &[
+            (file_size_eq::OP_ID, file_size_eq::FileSizeEq::program),
+            (file_size_gt::OP_ID, file_size_gt::FileSizeGt::program),
+            (file_size_gte::OP_ID, file_size_gte::FileSizeGte::program),
+            (file_size_lt::OP_ID, file_size_lt::FileSizeLt::program),
+            (file_size_lte::OP_ID, file_size_lte::FileSizeLte::program),
+            (file_size_ne::OP_ID, file_size_ne::FileSizeNe::program),
         ];
-        for (op_id, program) in programs {
+        for &(op_id, build_fn) in cases {
+            let program = build_fn();
             assert!(
                 !program.entry().is_empty(),
                 "Fix: generated file-size condition `{op_id}` must emit a non-empty rule program"

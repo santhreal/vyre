@@ -6,7 +6,7 @@
 macro_rules! define_synthesized_logical_binary {
     ($module:ident, $function:ident, $op_id:literal, $expr:expr, $expected:expr, $expected_bytes:expr, $doc:literal) => {
         pub(crate) mod $module {
-            use super::wrap::build_logical_binary;
+            use crate::builder::elementwise::u32_elementwise_binary;
             use vyre_foundation::ir::Program;
 
             const OP_ID: &str = $op_id;
@@ -15,7 +15,7 @@ macro_rules! define_synthesized_logical_binary {
             /// Build the synthesized logical binary operation.
             #[must_use]
             pub fn $function(a: &str, b: &str, out: &str, size: u32) -> Program {
-                build_logical_binary(OP_ID, a, b, out, size, $expr)
+                u32_elementwise_binary(OP_ID, a, b, out, size, $expr)
             }
 
             inventory::submit! {
@@ -64,7 +64,6 @@ define_synthesized_logical_binary!(
     ],
     "Bitwise NOR."
 );
-mod wrap;
 
 #[cfg(test)]
 mod tests {

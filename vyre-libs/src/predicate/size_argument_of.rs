@@ -35,16 +35,12 @@ pub fn size_argument_of(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::Node;
+    use crate::predicate::traversal::assert_region_op_id;
 
     #[test]
-    fn preserves_wrapper_op_id() {
+    fn size_argument_of_preserves_region_generator() {
         let program = size_argument_of(ProgramGraphShape::new(4, 2), "fin", "fout");
-        let generator = match &program.entry[0] {
-            Node::Region { generator, .. } => generator.to_string(),
-            other => panic!("Fix: size_argument_of must build a Region entry, got {other:?}."),
-        };
-        assert_eq!(generator, OP_ID);
+        assert_region_op_id(&program, OP_ID, "size_argument_of");
     }
 }
 
