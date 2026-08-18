@@ -60,6 +60,12 @@ pub(super) fn ptx_source_cache_key_from_program_identity(
         u64::from(subgroup_size),
         &[
             PTX_LOWERING_CONTRACT,
+            // The label states which lowering decisions the cached text
+            // assumes; the digest states which emitter build wrote it. Only the
+            // digest changes without anyone editing it, so the label alone
+            // leaves an emitter fix answered by PTX the previous emitter wrote,
+            // including the copy this cache already put on disk.
+            vyre_emit_ptx::LOWERING_DIGEST.as_bytes(),
             &normalized_digest,
             &vsa_bytes,
             &dispatch_policy_digest,

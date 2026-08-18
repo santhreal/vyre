@@ -14,6 +14,15 @@ pub mod patterns;
 pub mod program;
 pub use error::EmitError;
 
+/// Digest of this emitter's source, stamped in at build time.
+///
+/// A pipeline cache keyed on the program and a hand-edited lowering label
+/// cannot see that the emitter changed: the key stays the same and a stale
+/// compiled pipeline answers for a fixed lowering. Mixing this into the key
+/// ties every cached artifact to the emitter that produced it, whether or not
+/// the label was edited.
+pub const LOWERING_DIGEST: &str = env!("VYRE_NAGA_LOWERING_DIGEST");
+
 
 /// Stable diagnostic row emitted when binding a lowered Vyre operation into a
 /// Naga module.

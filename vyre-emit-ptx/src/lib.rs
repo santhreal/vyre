@@ -63,6 +63,15 @@ use vyre_lower::KernelDescriptor;
 pub use error::EmitError;
 pub use target::{ComputeCapability, PtxEmitOptions};
 
+/// Digest of this emitter's source, stamped in at build time.
+///
+/// A PTX cache keyed on the program and a hand-edited lowering label cannot see
+/// that the emitter changed: the key stays the same and stale PTX, in memory or
+/// on disk, answers for a fixed lowering. Mixing this into the key ties every
+/// cached artifact to the emitter that produced it, whether or not the label was
+/// edited.
+pub const LOWERING_DIGEST: &str = env!("VYRE_PTX_LOWERING_DIGEST");
+
 
 /// Module-scope symbol holding the trap record for one loaded module.
 ///
