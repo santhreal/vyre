@@ -1,9 +1,8 @@
-use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 use crate::pattern::CompiledDfa;
 
-use super::count_scan_nodes;
+use super::{count_scan_nodes, wrap_count_program};
 
 /// Number of u32 words in the 65,536-bit two-byte AC suffix mask.
 pub const CLASSIC_AC_SUFFIX2_MASK_WORDS: usize = 2048;
@@ -55,13 +54,10 @@ fn classic_ac_bounded_count_suffix2_prefilter_program(
         BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32).with_count(1),
     );
     buffers.push(BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1));
-    Program::wrapped(
+    wrap_count_program(
+        "vyre-libs::matching::classic_ac_bounded_count_suffix2_prefilter",
         buffers,
-        [128, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::matching::classic_ac_bounded_count_suffix2_prefilter",
-            body,
-        )],
+        body,
     )
 }
 

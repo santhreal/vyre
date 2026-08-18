@@ -1,4 +1,4 @@
-use super::walk::{pack_sparse_tokens, DottedName, TokenPass};
+use super::walk::{pack_sparse_tokens, pad_u32_words_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, find_matching_delimiter_into, load_u32, search_next_token,
     search_next_token_into, search_prev_token, store_words,
@@ -16,22 +16,6 @@ const STRUCTURE_OP_ID: &str = "vyre-libs::parsing::python312_extract_structure";
 const IMPORTS_OP_ID: &str = "vyre-libs::parsing::python312_extract_imports";
 const WITH_BLOCKS_OP_ID: &str = "vyre-libs::parsing::python312_extract_with_blocks";
 
-fn line_index_pass<'a>(
-    op_id: &'a str,
-    tok_types: &'a str,
-    tok_starts: &'a str,
-    tok_lens: &'a str,
-    haystack_len: u32,
-) -> TokenPass<'a> {
-    TokenPass {
-        op_id,
-        child_op_id: crate::text::LINE_INDEX_OP_ID,
-        tok_types,
-        tok_starts,
-        tok_lens,
-        haystack_len,
-    }
-}
 
 /// Extract `def`, `async def`, and `class` declarations.
 #[must_use]
@@ -194,16 +178,14 @@ pub fn python312_extract_structure(
         .collect(),
     ));
 
-    let pass = line_index_pass(
+    TokenPass::with_line_index(
         STRUCTURE_OP_ID,
         tok_types,
         tok_starts,
         tok_lens,
         haystack_len,
-    );
-    let mut buffers = pass.token_buffers();
-    buffers.extend(pass.record_buffers(out_records, out_counts, 3, DEF_RECORD_WORDS));
-    pass.program(buffers, body)
+    )
+    .build_record_program(out_records, out_counts, DEF_RECORD_WORDS, body)
 }
 
 /// Extract `import` and `from ... import ...` statements.
@@ -297,10 +279,8 @@ pub fn python312_extract_imports(
             .collect(),
     ));
 
-    let pass = line_index_pass(IMPORTS_OP_ID, tok_types, tok_starts, tok_lens, haystack_len);
-    let mut buffers = pass.token_buffers();
-    buffers.extend(pass.record_buffers(out_records, out_counts, 3, IMPORT_RECORD_WORDS));
-    pass.program(buffers, body)
+    TokenPass::with_line_index(IMPORTS_OP_ID, tok_types, tok_starts, tok_lens, haystack_len)
+        .build_record_program(out_records, out_counts, IMPORT_RECORD_WORDS, body)
 }
 
 /// Extract `with` / `async with` headers.
@@ -413,67 +393,15 @@ pub fn python312_extract_with_blocks(
             .collect(),
     ));
 
-    let pass = line_index_pass(
+    TokenPass::with_line_index(
         WITH_BLOCKS_OP_ID,
         tok_types,
         tok_starts,
         tok_lens,
         haystack_len,
-    );
-    let mut buffers = pass.token_buffers();
-    buffers.extend(pass.record_buffers(out_records, out_counts, 3, WITH_RECORD_WORDS));
-    pass.program(buffers, body)
+    )
+    .build_record_program(out_records, out_counts, WITH_RECORD_WORDS, body)
 }
-
-const EXPECTED_STRUCTURE_RECORDS_BYTES: [u8; 384] = [
-    1, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
-const EXPECTED_DEF_COUNTS_BYTES: [u8; 4] = [6, 0, 0, 0];
-
-const EXPECTED_IMPORTS_RECORDS_BYTES: [u8; 384] = [
-    1, 0, 0, 0, 7, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0,
-];
-const EXPECTED_IMPORT_COUNTS_BYTES: [u8; 4] = [6, 0, 0, 0];
-
-const EXPECTED_WITH_RECORDS_BYTES: [u8; 384] = [
-    11, 0, 0, 0, 3, 0, 0, 0, 6, 0, 0, 0, 14, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0,
-];
-const EXPECTED_WITH_COUNTS_BYTES: [u8; 4] = [6, 0, 0, 0];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -481,8 +409,8 @@ inventory::submit! {
         || python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(structure_fixture_inputs),
         Some(|| vec![vec![
-            EXPECTED_STRUCTURE_RECORDS_BYTES.to_vec(),
-            EXPECTED_DEF_COUNTS_BYTES.to_vec(),
+            pad_u32_words_bytes(&[1, 4, 1, 5, 6, 7], 96),
+            crate::fixture_bytes::u32_bytes(&[6]),
         ]]),
     )
     .with_category("parsing")
@@ -494,8 +422,8 @@ inventory::submit! {
         || python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(import_fixture_inputs),
         Some(|| vec![vec![
-            EXPECTED_IMPORTS_RECORDS_BYTES.to_vec(),
-            EXPECTED_IMPORT_COUNTS_BYTES.to_vec(),
+            pad_u32_words_bytes(&[1, 7, 2, 0, 7, u32::MAX], 96),
+            crate::fixture_bytes::u32_bytes(&[6]),
         ]]),
     )
     .with_category("parsing")
@@ -507,8 +435,8 @@ inventory::submit! {
         || python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         Some(with_fixture_inputs),
         Some(|| vec![vec![
-            EXPECTED_WITH_RECORDS_BYTES.to_vec(),
-            EXPECTED_WITH_COUNTS_BYTES.to_vec(),
+            pad_u32_words_bytes(&[11, 3, 6, 14, 1], 96),
+            crate::fixture_bytes::u32_bytes(&[6]),
         ]]),
     )
     .with_category("parsing")

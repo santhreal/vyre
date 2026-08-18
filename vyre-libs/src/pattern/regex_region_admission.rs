@@ -113,6 +113,12 @@ pub(crate) struct AnchoredRegionWalk<'a> {
     pub log2_max_regions: u32,
 }
 
+impl<'a> AnchoredRegionWalk<'a> {
+    pub(crate) fn walk_body(self, emit_loop: Node) -> Vec<Node> {
+        anchored_region_walk_body(self, emit_loop)
+    }
+}
+
 /// One invocation per haystack byte `i`: find the region owning
 /// `i + region_base`, then replay the ANCHORED DFA forward over
 /// `[i, min(i + max_pattern_len, haystack_len))`, running `emit_loop` after each
@@ -217,20 +223,18 @@ pub fn regex_admission_by_region_program(
         output_records,
         vec![presence_bit_write_node(presence, Some("rs_base"))],
     );
-    let walk_body = anchored_region_walk_body(
-        AnchoredRegionWalk {
-            haystack,
-            transitions,
-            output_offsets,
-            region_starts,
-            region_base,
-            haystack_len,
-            presence_words,
-            max_pattern_len,
-            log2_max_regions,
-        },
-        emit_loop,
-    );
+    let walk_body = AnchoredRegionWalk {
+        haystack,
+        transitions,
+        output_offsets,
+        region_starts,
+        region_base,
+        haystack_len,
+        presence_words,
+        max_pattern_len,
+        log2_max_regions,
+    }
+    .walk_body(emit_loop);
     let mut buffers = regex_region_scan_common_buffers(
         haystack,
         transitions,
@@ -260,22 +264,22 @@ pub fn regex_admission_by_region_program(
 }
 
 #[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::pattern::haystack::pack_haystack_u32;
     use crate::pattern::regex_dfa::build_regex_dfa_pipeline;
     use vyre_primitives::wire::pack_u32_slice;
 
-    const MAX_MATCHES: u32 = 4096;
-    const MAX_DFA_STATES: usize = 16_384;
+    pub(crate) const MAX_MATCHES: u32 = 4096;
+    pub(crate) const MAX_DFA_STATES: usize = 16_384;
 
-    fn dfa_for(patterns: &[&str]) -> CompiledDfa {
+    pub(crate) fn dfa_for(patterns: &[&str]) -> CompiledDfa {
         build_regex_dfa_pipeline(patterns, MAX_MATCHES, MAX_DFA_STATES)
             .expect("Fix: test patterns must compile to an anchored regex DFA")
             .dfa
     }
 
-    fn presence_bit(bitmap: &[u32], region: usize, words: usize, pid: u32) -> bool {
+    pub(crate) fn presence_bit(bitmap: &[u32], region: usize, words: usize, pid: u32) -> bool {
         (bitmap[region * words + (pid >> 5) as usize] >> (pid & 31)) & 1 == 1
     }
 

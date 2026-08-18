@@ -1,4 +1,4 @@
-use super::walk::{pack_sparse_tokens, DottedName, TokenPass};
+use super::walk::{pack_sparse_tokens, pad_u32_words_bytes, DottedName, TokenPass};
 use super::{find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words};
 use crate::parsing::python::{CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS};
 use vyre_foundation::ir::{Expr, Node, Program};
@@ -227,33 +227,6 @@ pub fn python312_extract_calls(
     pass.program(buffers, body)
 }
 
-const EXPECTED_CALLS_RECORDS_BYTES: [u8; 448] = [
-    6, 0, 0, 0, 3, 0, 0, 0, 9, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0,
-];
-const EXPECTED_CALL_COUNTS_BYTES: [u8; 4] = [7, 0, 0, 0];
-const EXPECTED_KWARGS_RECORDS_BYTES: [u8; 128] = [
-    10, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0,
-];
-const EXPECTED_KW_COUNTS_BYTES: [u8; 4] = [2, 0, 0, 0];
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
@@ -262,10 +235,10 @@ inventory::submit! {
         ),
         Some(call_fixture_inputs),
         Some(|| vec![vec![
-            EXPECTED_CALLS_RECORDS_BYTES.to_vec(),
-            EXPECTED_CALL_COUNTS_BYTES.to_vec(),
-            EXPECTED_KWARGS_RECORDS_BYTES.to_vec(),
-            EXPECTED_KW_COUNTS_BYTES.to_vec(),
+            pad_u32_words_bytes(&[6, 3, 9, 13, 0, 1, 1], 112),
+            crate::fixture_bytes::u32_bytes(&[7]),
+            pad_u32_words_bytes(&[10, 1], 32),
+            crate::fixture_bytes::u32_bytes(&[2]),
         ]]),
     )
     .with_category("parsing")

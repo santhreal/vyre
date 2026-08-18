@@ -155,7 +155,19 @@ pub(in crate::pattern) fn suffix3_prefilter_match_nodes(
     )]
 }
 
-fn count_suffix2_prefilter_buffers(
+pub(in crate::pattern::classic_ac) fn wrap_count_program(
+    region_name: &'static str,
+    buffers: Vec<BufferDecl>,
+    body: Vec<Node>,
+) -> Program {
+    Program::wrapped(
+        buffers,
+        [128, 1, 1],
+        vec![wrap_anonymous_region(region_name, body)],
+    )
+}
+
+pub(in crate::pattern::classic_ac) fn count_suffix2_prefilter_buffers(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -209,7 +221,8 @@ fn classic_ac_bounded_count_program(
         ),
     ];
 
-    Program::wrapped(
+    wrap_count_program(
+        "vyre-libs::matching::classic_ac_bounded_count",
         vec![
             BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
             BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
@@ -220,11 +233,7 @@ fn classic_ac_bounded_count_program(
                 .with_count(1),
             BufferDecl::read_write(match_count, 4, DataType::U32).with_count(1),
         ],
-        [128, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::matching::classic_ac_bounded_count",
-            body,
-        )],
+        body,
     )
 }
 
@@ -255,7 +264,8 @@ fn classic_ac_bounded_count_prefilter_program(
     );
     let body = candidate_end_gate_nodes(haystack, haystack_len, candidate_end_mask, scan_nodes);
 
-    Program::wrapped(
+    wrap_count_program(
+        "vyre-libs::matching::classic_ac_bounded_count_prefilter",
         vec![
             BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
             BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
@@ -268,11 +278,7 @@ fn classic_ac_bounded_count_prefilter_program(
                 .with_count(1),
             BufferDecl::read_write(match_count, 5, DataType::U32).with_count(1),
         ],
-        [128, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::matching::classic_ac_bounded_count_prefilter",
-            body,
-        )],
+        body,
     )
 }
 

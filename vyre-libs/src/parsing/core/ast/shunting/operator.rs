@@ -195,19 +195,7 @@ mod tests {
                     stack.push(lane);
                 }
                 Expr::SubgroupReduce { value, .. } => stack.push(value),
-                Expr::LitU32(_)
-                | Expr::LitI32(_)
-                | Expr::LitF32(_)
-                | Expr::LitBool(_)
-                | Expr::Var(_)
-                | Expr::BufLen { .. }
-                | Expr::InvocationId { .. }
-                | Expr::WorkgroupId { .. }
-                | Expr::LocalId { .. }
-                | Expr::SubgroupLocalId
-                | Expr::SubgroupSize
-                | Expr::Opaque(_)
-                | _ => {}
+                _ => {}
             }
         }
         count

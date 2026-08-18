@@ -116,3 +116,19 @@ pub(crate) fn decode_match_triples(
         .map(|chunk| (chunk[0], chunk[1], chunk[2]))
         .collect()
 }
+
+/// Reference evaluation of an AC bounded-ranges program and assertions against expected match triples.
+pub(crate) fn evaluate_and_assert_ranges_matches(
+    program: &Program,
+    inputs: &[Value],
+    expected: &[(u32, u32, u32)],
+) {
+    let outputs = vyre_reference::reference_eval(program, inputs).expect(
+        "Fix: AC bounded-ranges program should evaluate in reference backend.",
+    );
+    let mut decoded = decode_match_triples(&outputs);
+    decoded.sort_unstable();
+    let mut expected_sorted = expected.to_vec();
+    expected_sorted.sort_unstable();
+    assert_eq!(decoded, expected_sorted);
+}
