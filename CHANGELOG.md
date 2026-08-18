@@ -4692,6 +4692,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The unsafe-surface budget follows the relocated scheduler fixture, and the
   named adversarial suite now executes a real overflow-boundary contract
   instead of a vacuous smoke assertion.
+- The persistent-fixpoint routing guard is now declared as a blocking
+  structural source contract.
 - The shared gate fixture checkout states the corrective action when a
   temporary directory or git is unavailable, and the recorded backend
   feature-marker matrix matches what the tree produces.
