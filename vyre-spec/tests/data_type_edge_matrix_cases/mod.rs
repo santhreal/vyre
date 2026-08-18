@@ -5,6 +5,38 @@ use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint, TypeId};
 
 use crate::spec_variants::{QUANTIZED_STORAGE_TYPES, SCALAR_LEAF_TYPES};
 
+/// Assert a wire tag falls within the frozen builtin range 0x01..=0x1F.
+pub(crate) fn assert_valid_builtin_tag(tag: u8, display: impl std::fmt::Display) {
+    assert!(
+        (0x01..=0x1F).contains(&tag),
+        "Fix: builtin wire tag for {display} drifted outside the frozen range: {tag:#04x}."
+    );
+}
+
+/// Assert that a quantized data type's layout metrics match its underlying storage type.
+pub(crate) fn assert_quantized_layout_matches_storage(ty: &DataType, storage: &DataType) {
+    assert_eq!(
+        ty.min_bytes(),
+        storage.min_bytes(),
+        "Fix: {ty} min width drifted."
+    );
+    assert_eq!(
+        ty.max_bytes(),
+        storage.max_bytes(),
+        "Fix: {ty} max width drifted."
+    );
+    assert_eq!(
+        ty.size_bytes(),
+        storage.size_bytes(),
+        "Fix: {ty} byte size drifted."
+    );
+    assert_eq!(
+        ty.bit_width(),
+        storage.bit_width(),
+        "Fix: {ty} bit width drifted."
+    );
+}
+
 /// Assert the size/bit-width/tag layout invariants hold for one generated type.
 pub(crate) fn assert_layout_invariants(idx: usize, ty: &DataType) {
     let display = ty.to_string();
@@ -49,9 +81,9 @@ pub(crate) fn assert_layout_invariants(idx: usize, ty: &DataType) {
             "Fix: generated opaque type #{idx} must remain outside the builtin tag space."
         );
     } else if let Some(tag) = ty.builtin_wire_tag() {
-        assert!(
-            (0x01..=0x1F).contains(&tag),
-            "Fix: generated builtin type #{idx} ({display}) has invalid tag {tag:#04x}."
+        assert_valid_builtin_tag(
+            tag,
+            format_args!("generated builtin type #{idx} ({display})"),
         );
     }
 }
@@ -116,17 +148,7 @@ pub(crate) fn generated_edge_types() -> Vec<DataType> {
         }
     }
 
-    for storage in quantized_storage_types() {
-        for scale in quantization_scales() {
-            for zero_point in quantization_zero_points() {
-                cases.push(DataType::Quantized {
-                    storage: Box::new(storage.clone()),
-                    scale: scale.clone(),
-                    zero_point: zero_point.clone(),
-                });
-            }
-        }
-    }
+    cases.extend(quantized_edge_types());
 
     let first_order = cases.clone();
     for ty in first_order {
@@ -175,6 +197,23 @@ pub(crate) fn quantized_storage_types() -> Vec<DataType> {
     QUANTIZED_STORAGE_TYPES.to_vec()
 }
 
+/// All generated combinations of quantized storage types, scales, and zero points.
+pub(crate) fn quantized_edge_types() -> Vec<DataType> {
+    let mut cases = Vec::new();
+    for storage in quantized_storage_types() {
+        for scale in quantization_scales() {
+            for zero_point in quantization_zero_points() {
+                cases.push(DataType::Quantized {
+                    storage: Box::new(storage.clone()),
+                    scale: scale.clone(),
+                    zero_point: zero_point.clone(),
+                });
+            }
+        }
+    }
+    cases
+}
+
 /// Representative quantization scale modes (per-tensor, per-channel, per-group).
 pub(crate) fn quantization_scales() -> Vec<QuantizationScale> {
     vec![
@@ -212,25 +251,9 @@ pub(crate) fn quantization_zero_points() -> Vec<QuantizationZeroPoint> {
 
 /// One representative type per builtin wire tag, to exercise tag coverage.
 pub(crate) fn builtin_wire_tag_representatives() -> Vec<DataType> {
-    vec![
-        DataType::U32,
-        DataType::I32,
-        DataType::U64,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bool,
-        DataType::Bytes,
+    let mut representatives = SCALAR_LEAF_TYPES.to_vec();
+    representatives.extend([
         DataType::Array { element_size: 4 },
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Tensor,
-        DataType::U8,
-        DataType::U16,
-        DataType::I8,
-        DataType::I16,
-        DataType::I64,
         DataType::Handle(TypeId(7)),
         DataType::Vec {
             element: Box::new(DataType::U32),
@@ -251,11 +274,6 @@ pub(crate) fn builtin_wire_tag_representatives() -> Vec<DataType> {
             block_rows: 2,
             block_cols: 4,
         },
-        DataType::F8E4M3,
-        DataType::F8E5M2,
-        DataType::I4,
-        DataType::FP4,
-        DataType::NF4,
         DataType::DeviceMesh {
             axes: [2, 4].as_slice().into(),
         },
@@ -264,7 +282,8 @@ pub(crate) fn builtin_wire_tag_representatives() -> Vec<DataType> {
             scale: QuantizationScale::PerTensor,
             zero_point: QuantizationZeroPoint::Absent,
         },
-    ]
+    ]);
+    representatives
 }
 
 /// Deterministically derive a unique extension name for the given index.

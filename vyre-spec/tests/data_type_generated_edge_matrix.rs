@@ -16,9 +16,9 @@ mod data_type_edge_matrix_cases;
 mod spec_variants;
 
 use data_type_edge_matrix_cases::{
-    assert_layout_invariants, assert_serde_round_trip, builtin_wire_tag_representatives,
-    generated_edge_types, generated_extension_name, quantization_scales, quantization_zero_points,
-    quantized_storage_types,
+    assert_layout_invariants, assert_quantized_layout_matches_storage, assert_serde_round_trip,
+    assert_valid_builtin_tag, builtin_wire_tag_representatives, generated_edge_types,
+    generated_extension_name, quantized_edge_types,
 };
 
 #[test]
@@ -40,51 +40,24 @@ fn generated_data_type_edge_matrix_preserves_layout_invariants() {
 fn generated_quantized_sidecar_matrix_is_storage_derived() {
     let mut checked = 0usize;
 
-    for storage in quantized_storage_types() {
+    for ty in quantized_edge_types() {
+        let DataType::Quantized { storage, .. } = &ty else {
+            continue;
+        };
         assert!(
             storage.is_quantized_storage(),
             "Fix: storage candidate {storage} must remain accepted by the quantized contract."
         );
-
-        for scale in quantization_scales() {
-            for zero_point in quantization_zero_points() {
-                let ty = DataType::Quantized {
-                    storage: Box::new(storage.clone()),
-                    scale: scale.clone(),
-                    zero_point: zero_point.clone(),
-                };
-
-                assert!(
-                    ty.is_quantized(),
-                    "Fix: {ty} must advertise quantized metadata."
-                );
-                assert_eq!(
-                    ty.min_bytes(),
-                    storage.min_bytes(),
-                    "Fix: {ty} min width drifted."
-                );
-                assert_eq!(
-                    ty.max_bytes(),
-                    storage.max_bytes(),
-                    "Fix: {ty} max width drifted."
-                );
-                assert_eq!(
-                    ty.size_bytes(),
-                    storage.size_bytes(),
-                    "Fix: {ty} byte size drifted."
-                );
-                assert_eq!(
-                    ty.bit_width(),
-                    storage.bit_width(),
-                    "Fix: {ty} bit width drifted."
-                );
-                assert!(
-                    !ty.is_float_family(),
-                    "Fix: quantized values must not be classified as strict float even when storage is {storage}."
-                );
-                checked += 1;
-            }
-        }
+        assert!(
+            ty.is_quantized(),
+            "Fix: {ty} must advertise quantized metadata."
+        );
+        assert_quantized_layout_matches_storage(&ty, storage);
+        assert!(
+            !ty.is_float_family(),
+            "Fix: quantized values must not be classified as strict float even when storage is {storage}."
+        );
+        checked += 1;
     }
 
     assert!(
@@ -136,26 +109,7 @@ fn packed_size_bytes_handles_sub_byte_quantized_storage_without_waste() {
 
 #[test]
 fn layout_validation_rejects_constructible_but_invalid_type_metadata() {
-    let valid = [
-        DataType::Vec {
-            element: Box::new(DataType::U32),
-            count: 4,
-        },
-        DataType::SparseBsr {
-            element: Box::new(DataType::F32),
-            block_rows: 2,
-            block_cols: 4,
-        },
-        DataType::DeviceMesh {
-            axes: [2, 4].as_slice().into(),
-        },
-        DataType::Quantized {
-            storage: Box::new(DataType::I4),
-            scale: QuantizationScale::PerGroup { group_size: 128 },
-            zero_point: QuantizationZeroPoint::Absent,
-        },
-    ];
-    for ty in valid {
+    for ty in builtin_wire_tag_representatives() {
         ty.validate_layout()
             .unwrap_or_else(|err| panic!("Fix: valid layout {ty} was rejected: {err}"));
     }
@@ -239,10 +193,7 @@ fn builtin_data_type_wire_tags_are_unique_and_gapless() {
         let tag = ty
             .builtin_wire_tag()
             .unwrap_or_else(|| panic!("Fix: builtin representative {ty} must have a wire tag."));
-        assert!(
-            (0x01..=0x1F).contains(&tag),
-            "Fix: builtin wire tag for {ty} drifted outside the frozen range: {tag:#04x}."
-        );
+        assert_valid_builtin_tag(tag, &ty);
         assert!(
             seen.insert(tag),
             "Fix: builtin wire tag {tag:#04x} is assigned to more than one representative."

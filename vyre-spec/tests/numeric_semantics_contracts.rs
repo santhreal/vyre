@@ -1,5 +1,9 @@
 //! Exhaustive and boundary contract tests for the versioned numeric semantics table.
 
+#[path = "spec_variants/mod.rs"]
+mod spec_variants;
+
+use spec_variants::SCALAR_LEAF_TYPES;
 use vyre_spec::*;
 
 #[test]
@@ -9,30 +13,14 @@ fn schema_version_is_current() {
 
 #[test]
 fn all_scalar_types_have_valid_numeric_semantics() {
-    let scalar_types = [
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::U64,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::I4,
-        DataType::FP4,
-        DataType::NF4,
-        DataType::F8E4M3,
-        DataType::F8E5M2,
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Bool,
-    ];
-
-    for dtype in scalar_types {
-        let sem = numeric_semantics_for(&dtype);
-        assert_eq!(sem.datatype, dtype);
+    for dtype in SCALAR_LEAF_TYPES.iter().filter(|d| {
+        !matches!(
+            d,
+            DataType::Vec2U32 | DataType::Vec4U32 | DataType::Bytes | DataType::Tensor
+        )
+    }) {
+        let sem = numeric_semantics_for(dtype);
+        assert_eq!(&sem.datatype, dtype);
         assert!(sem.min_finite <= sem.max_finite);
         assert!(sem.bit_width.is_some());
     }
