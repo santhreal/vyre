@@ -36,7 +36,6 @@ fn backend() -> CudaBackend {
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.")
 }
 
-
 fn cooperative() -> DispatchConfig {
     let mut config = DispatchConfig::default();
     config.cooperative = true;

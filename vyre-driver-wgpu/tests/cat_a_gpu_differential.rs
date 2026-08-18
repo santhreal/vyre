@@ -324,9 +324,7 @@ fn diff_flash_attention_regression() {
 
 #[test]
 fn diff_ast_cse_structural_hash_primitive_regression() {
-    run_entry_diff(&entry_by_id(
-        "vyre-libs::parsing::ast_cse_structural_hash",
-    ));
+    run_entry_diff(&entry_by_id("vyre-libs::parsing::ast_cse_structural_hash"));
 }
 
 #[test]

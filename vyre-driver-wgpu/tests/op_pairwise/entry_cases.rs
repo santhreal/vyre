@@ -468,7 +468,6 @@ fn run_gpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String
         .map_err(|e| format!("GPU dispatch error: {e}"))
 }
 
-
 fn f32_matches_with_tolerance(cpu_bits: u32, gpu_bits: u32, tolerance: u32) -> bool {
     let cpu = f32::from_bits(cpu_bits);
     let gpu = f32::from_bits(gpu_bits);

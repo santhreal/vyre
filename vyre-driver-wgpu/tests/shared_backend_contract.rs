@@ -10,7 +10,6 @@ use harness::selected_adapter;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
-
 #[test]
 fn shared_backend_reuses_single_backend_instance() {
     let first = WgpuBackend::shared().expect("Fix: shared backend requires a configured GPU");

@@ -372,7 +372,10 @@ pub fn judge_committed_run(run: &serde_json::Value, subject: &str, failures: &mu
         .and_then(serde_json::Value::as_array)
         .map_or(&[][..], Vec::as_slice);
     for record in records {
-        if !COMMANDS.iter().any(|cmd| record_matches_args(record, cmd.args)) {
+        if !COMMANDS
+            .iter()
+            .any(|cmd| record_matches_args(record, cmd.args))
+        {
             let label = record
                 .get("args")
                 .and_then(serde_json::Value::as_array)
@@ -498,10 +501,7 @@ fn judge_committed_command(
             ));
         }
         let Some(status) = statuses.iter().find(|status| {
-            status
-                .get("path")
-                .and_then(serde_json::Value::as_str)
-                == Some(*expected)
+            status.get("path").and_then(serde_json::Value::as_str) == Some(*expected)
         }) else {
             failures.push(format!(
                 "{subject} release-evidence-run generator `{label}` has no artifact status for `{expected}`"
@@ -1279,18 +1279,22 @@ mod tests {
     #[test]
     fn committed_run_rejects_unexpected_unowned_generator_command() {
         let mut run = clean_committed_run();
-        run["commands"].as_array_mut().unwrap().push(serde_json::json!({
-            "args": ["unregistered-command", "--flag"],
-            "required": true,
-            "mode": COMMAND_MODE_SPAWNED,
-            "expected_artifacts": [],
-            "artifact_statuses": []
-        }));
+        run["commands"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "args": ["unregistered-command", "--flag"],
+                "required": true,
+                "mode": COMMAND_MODE_SPAWNED,
+                "expected_artifacts": [],
+                "artifact_statuses": []
+            }));
         let failures = judge(&run);
         assert!(
             failures
                 .iter()
-                .any(|f| f.contains("carries unexpected generator `xtask unregistered-command --flag`")),
+                .any(|f| f
+                    .contains("carries unexpected generator `xtask unregistered-command --flag`")),
             "{failures:?}"
         );
     }
@@ -1314,9 +1318,9 @@ mod tests {
             "{failures:?}"
         );
         assert!(
-            failures
-                .iter()
-                .any(|f| f.contains("has no artifact status for `release/evidence/version/version-matrix.json`")),
+            failures.iter().any(|f| f.contains(
+                "has no artifact status for `release/evidence/version/version-matrix.json`"
+            )),
             "{failures:?}"
         );
     }
@@ -1341,7 +1345,10 @@ mod tests {
         let registry = expected_artifacts::build_expected_artifact_registry(commands);
         let bytes = serde_json::to_vec_pretty(&registry).unwrap();
         let blockers = expected_artifacts::expected_artifact_registry_blockers(&bytes);
-        assert!(blockers.is_empty(), "disjoint artifact ownership failed: {blockers:?}");
+        assert!(
+            blockers.is_empty(),
+            "disjoint artifact ownership failed: {blockers:?}"
+        );
         assert_eq!(registry.command_count, 16);
         assert_eq!(registry.artifact_count, 74);
     }

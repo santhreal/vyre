@@ -15,16 +15,8 @@ fn cpu_interval_merge(
     mins_b: &[u32],
     maxs_b: &[u32],
 ) -> (Vec<u32>, Vec<u32>) {
-    let mins = mins_a
-        .iter()
-        .zip(mins_b)
-        .map(|(&a, &b)| a.min(b))
-        .collect();
-    let maxs = maxs_a
-        .iter()
-        .zip(maxs_b)
-        .map(|(&a, &b)| a.max(b))
-        .collect();
+    let mins = mins_a.iter().zip(mins_b).map(|(&a, &b)| a.min(b)).collect();
+    let maxs = maxs_a.iter().zip(maxs_b).map(|(&a, &b)| a.max(b)).collect();
     (mins, maxs)
 }
 

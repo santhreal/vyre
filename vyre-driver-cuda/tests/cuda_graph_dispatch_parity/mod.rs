@@ -25,7 +25,6 @@ use vyre_driver::{BackendError, DispatchConfig};
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-
 fn bool_not_program() -> Program {
     Program::wrapped(
         vec![

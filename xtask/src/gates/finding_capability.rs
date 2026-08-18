@@ -881,10 +881,12 @@ impl xtask::gate::GateBehavior for OperationSchemaGate {
         let names: BTreeSet<String> = sites.into_iter().map(|(name, _)| name).collect();
         assert_eq!(
             names,
-            BTreeSet::from(["bench-crossback".to_string(), "operation-schema".to_string()])
+            BTreeSet::from([
+                "bench-crossback".to_string(),
+                "operation-schema".to_string()
+            ])
         );
     }
-
 
     /// WHY: a rule one call away from its finding is the common shape, and the
     /// walk has to follow it or every ratchet gate reads as unfailable. A helper

@@ -255,8 +255,8 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 mod tests {
     use std::fs;
 
-    use xtask::gate::GateBehavior;
     use super::*;
+    use xtask::gate::GateBehavior;
 
     /// A comparison gate must not accept mutation authority it cannot use.
     #[test]
@@ -271,9 +271,13 @@ mod tests {
     fn gate_behavior_rejects_write_flag() {
         let mut context = GateCtx::new(PathBuf::from("."), vec![]);
         context.write = true;
-        let report = BenchReleaseGate.run(&context).expect("gate runs cleanly to report findings");
+        let report = BenchReleaseGate
+            .run(&context)
+            .expect("gate runs cleanly to report findings");
         assert!(
-            report.findings.iter().any(|f| f.message.contains("bench-release is comparison-only and rejects --write")),
+            report.findings.iter().any(|f| f
+                .message
+                .contains("bench-release is comparison-only and rejects --write")),
             "Fix: bench-release must reject write mode when passed in GateCtx"
         );
     }

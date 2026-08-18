@@ -28,7 +28,6 @@ pub(crate) fn pack_nodes(nodes: &[u32], node_count: u32) -> Vec<u32> {
     words
 }
 
-
 /// Acquire the live CUDA backend required by release-path GPU tests.
 pub(crate) fn live_dispatcher() -> CudaBackend {
     CudaBackend::acquire().expect(

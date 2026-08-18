@@ -7,8 +7,8 @@
 //! each case's performance contract must have a baseline that applies to it,
 //! since a contract written for another backend proves nothing here.
 
-use std::path::Path;
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use serde_json::Value;
 
@@ -347,11 +347,29 @@ mod tests {
 
     #[test]
     fn expected_backend_for_suite_evidence_rejects_non_boundary_matches() {
-        assert_eq!(expected_backend_for_suite_evidence("cuda-release-suite.json"), Some("cuda"));
-        assert_eq!(expected_backend_for_suite_evidence("evidence/benchmarks/cuda-release-suite.json"), Some("cuda"));
-        assert_eq!(expected_backend_for_suite_evidence("mock-cuda-release-suite.json"), None);
-        assert_eq!(expected_backend_for_suite_evidence("wgpu-fallback-suite.json"), Some("wgpu"));
-        assert_eq!(expected_backend_for_suite_evidence("evidence/benchmarks/wgpu-fallback-suite.json"), Some("wgpu"));
-        assert_eq!(expected_backend_for_suite_evidence("not-wgpu-fallback-suite.json"), None);
+        assert_eq!(
+            expected_backend_for_suite_evidence("cuda-release-suite.json"),
+            Some("cuda")
+        );
+        assert_eq!(
+            expected_backend_for_suite_evidence("evidence/benchmarks/cuda-release-suite.json"),
+            Some("cuda")
+        );
+        assert_eq!(
+            expected_backend_for_suite_evidence("mock-cuda-release-suite.json"),
+            None
+        );
+        assert_eq!(
+            expected_backend_for_suite_evidence("wgpu-fallback-suite.json"),
+            Some("wgpu")
+        );
+        assert_eq!(
+            expected_backend_for_suite_evidence("evidence/benchmarks/wgpu-fallback-suite.json"),
+            Some("wgpu")
+        );
+        assert_eq!(
+            expected_backend_for_suite_evidence("not-wgpu-fallback-suite.json"),
+            None
+        );
     }
 }

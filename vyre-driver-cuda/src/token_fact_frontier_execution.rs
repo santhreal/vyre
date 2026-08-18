@@ -1266,7 +1266,6 @@ mod tests {
         edges
     }
 
-
     fn device() -> CudaMegakernelDeviceKey {
         CudaMegakernelDeviceKey {
             sm_major: 12,

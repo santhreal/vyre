@@ -67,7 +67,6 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
     (compile_time, output)
 }
 
-
 fn assert_outputs_within_tolerance(
     op_id: &str,
     tolerance: u32,

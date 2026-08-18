@@ -22,7 +22,6 @@ use vyre_driver::DispatchConfig;
 
 const LANES: u32 = 32;
 
-
 /// `out[gid] = subgroup_reduce(op, in[gid])` over a single 32-lane subgroup.
 /// `in` is read-only (NOT a result), so `out` is `outputs[0]`.
 fn subgroup_reduce_program(reduce: fn(Expr) -> Expr, dtype: DataType) -> Program {

@@ -122,7 +122,10 @@ fn file_backed_modules(text: &str) -> Vec<&str> {
         };
         if let Some(name) = rest.strip_prefix("mod ") {
             let name = name.trim();
-            if !has_path_override && !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            if !has_path_override
+                && !name.is_empty()
+                && name.chars().all(|c| c.is_alphanumeric() || c == '_')
+            {
                 out.push(name);
             }
         }
@@ -657,7 +660,9 @@ fn every_routed_convergence_op_registers_with_the_routing_contract() {
             if let Some(text) = by_path.get(*candidate) {
                 text.contains("assert_routes_on_dispatch_span")
                     && (*candidate == path.as_str() || text.contains(op))
-            } else if let Ok(text) = std::fs::read_to_string(vyre_crate_directory(SUBJECT_CRATE).join(candidate)) {
+            } else if let Ok(text) =
+                std::fs::read_to_string(vyre_crate_directory(SUBJECT_CRATE).join(candidate))
+            {
                 text.contains("assert_routes_on_dispatch_span")
                     && (*candidate == path.as_str() || text.contains(op))
             } else {

@@ -115,7 +115,6 @@ pub fn plan_cuda_megakernel_execution(
     )
 }
 
-
 // Inline: covers `dispatch_cost_ns`, `frontier_density`, `readback_bytes`, which no integration
 // test can name.
 #[cfg(test)]
@@ -168,5 +167,4 @@ mod tests {
             }
         );
     }
-
 }

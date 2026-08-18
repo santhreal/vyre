@@ -16,7 +16,6 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
-
 // ------------------------------------------------------------------
 // 1. subgroup_ops must match enabled_features/live BackendValidationCapabilities
 // ------------------------------------------------------------------

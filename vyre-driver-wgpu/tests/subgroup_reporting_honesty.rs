@@ -13,7 +13,6 @@ use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
-
 // ------------------------------------------------------------------
 // 1. Not hardcoded false on capable hardware
 // ------------------------------------------------------------------

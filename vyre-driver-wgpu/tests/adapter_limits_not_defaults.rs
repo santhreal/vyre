@@ -13,7 +13,6 @@ use harness::{selected_adapter, shared_live_backend as live_backend};
 
 use vyre_driver::VyreBackend;
 
-
 // ------------------------------------------------------------------
 // 1. Limits must not be conservative defaults
 // ------------------------------------------------------------------

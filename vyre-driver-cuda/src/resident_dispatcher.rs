@@ -871,7 +871,6 @@ impl<'a> ProgramDispatcher for CudaProgramDispatcher<'a> {
             .map_err(|e| DispatchError::BackendError(e.to_string()))
     }
 
-
     fn upload_resident_many_sequence_read_many_into(
         &self,
         uploads: &[(u64, &[u8])],

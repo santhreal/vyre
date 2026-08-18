@@ -27,7 +27,6 @@ use vyre_driver_cuda::CudaBackend;
 /// Repeated dispatches measured after the cache is warm.
 const LAUNCHES: u64 = 4;
 
-
 #[test]
 fn a_warm_launch_charges_the_module_cache_exactly_once() {
     let backend = CudaBackend::acquire()

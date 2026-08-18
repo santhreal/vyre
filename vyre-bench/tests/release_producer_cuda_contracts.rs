@@ -18,11 +18,9 @@ fn quantified_condition_loops_matches_reference_evaluation() {
     // Verify across varied record counts that quantified condition loops case builds
     // and matches the reference interpreter output bytes exactly.
     for records in [1, 2, 7, 16, 32, 64, 128, 256] {
-        let case = build_release_macro_case_for_records(
-            "release.quantified_condition_loops.1m",
-            records,
-        )
-        .expect("Fix: quantified condition loops case must build for test record count.");
+        let case =
+            build_release_macro_case_for_records("release.quantified_condition_loops.1m", records)
+                .expect("Fix: quantified condition loops case must build for test record count.");
 
         let values: Vec<Value> = case.inputs.iter().cloned().map(Value::from).collect();
         let ref_outputs: Vec<Vec<u8>> = reference_eval(&case.program, &values)

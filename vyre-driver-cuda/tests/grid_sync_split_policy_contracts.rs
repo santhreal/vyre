@@ -148,7 +148,6 @@ fn backend() -> CudaBackend {
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.")
 }
 
-
 /// Launch limits for this device, so a test can resolve the workgroup the driver
 /// will actually plan.
 fn launch_limits(backend: &CudaBackend) -> LaunchGeometryLimits {

@@ -8,7 +8,6 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::{BackendValidationCapabilities, ValidationOptions};
 
-
 fn subgroup_pipeline_compiles(backend: &WgpuBackend) -> bool {
     let wgsl = r#"
 @group(0) @binding(0) var<storage, read> input: array<u32>;

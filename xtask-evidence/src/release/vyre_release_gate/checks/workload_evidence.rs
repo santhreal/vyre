@@ -26,12 +26,9 @@ pub(crate) fn first_json_evidence_with_path(
     suffix: &str,
     failures: &mut Vec<String>,
 ) -> Option<(PathBuf, serde_json::Value)> {
-    let evidence = requirement
-        .evidence
-        .iter()
-        .find(|path| {
-            Path::new(path).ends_with(Path::new(suffix)) && !path.starts_with("cargo_full ")
-        });
+    let evidence = requirement.evidence.iter().find(|path| {
+        Path::new(path).ends_with(Path::new(suffix)) && !path.starts_with("cargo_full ")
+    });
     let Some(evidence) = evidence else {
         failures.push(format!(
             "requirement `{}` needs JSON evidence ending in `{suffix}`",

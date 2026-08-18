@@ -12,9 +12,9 @@ mod harness;
 
 use harness::{with_live_backend, CudaProgramDispatcher};
 use vyre_libs::graph::dispatch::persistent_bfs::{
-    bfs_expand_resident_graph_batch_with_scratch_into,
-    bfs_expand_resident_graph_with_scratch_into, bfs_expand_via,
-    upload_resident_bfs_graph, PersistentBfsPlanCacheSnapshot, PersistentBfsResidentScratch,
+    bfs_expand_resident_graph_batch_with_scratch_into, bfs_expand_resident_graph_with_scratch_into,
+    bfs_expand_via, upload_resident_bfs_graph, PersistentBfsPlanCacheSnapshot,
+    PersistentBfsResidentScratch,
 };
 use vyre_reference::composition_witness::{
     csr_persistent_closure_detailed_witness, CsrPersistentClosureWitness,
