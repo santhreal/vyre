@@ -8,8 +8,7 @@ use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, SlotCount};
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelDescriptor, KernelOpKind,
-    LiteralValue, MemoryClass,
+    BindingSlot, BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass,
 };
 
 fn empty_desc() -> KernelDescriptor {
@@ -17,12 +16,7 @@ fn empty_desc() -> KernelDescriptor {
 }
 
 fn empty_desc_with_workgroup(id: &str, x: u32) -> KernelDescriptor {
-    KernelDescriptor {
-        id: id.into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(x, 1, 1),
-        body: body().build(),
-    }
+    descriptor(id).dispatch(x, 1, 1).build()
 }
 
 fn u32_output_slot(slot: u32) -> BindingSlot {
