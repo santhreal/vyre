@@ -19,8 +19,7 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_dispatches_boundary_batches() {
     let row_scales = [0.125, 0.25, 0.5, 0.75];
     let batch_scales = [0.25, 0.375, 0.625];
 
-    let (scores, indices) = i4x8_batched_matmul_top1_f32_scaled_via(
-        &QuantizedBatchedMatmulTop1Dispatcher,
+    let (scores, indices) = run_batched_matmul_top1_via(
         &weights,
         &activations,
         &row_scales,
@@ -97,18 +96,5 @@ fn i4x8_batched_matmul_top1_f32_scaled_via_reuses_cached_program_for_same_shape(
 
 #[test]
 fn i4x8_batched_matmul_top1_f32_scaled_via_rejects_shape_errors_before_dispatch() {
-    assert_rejects_batched_shape_errors(
-        |weights, activations, row_scales, batch_scales, batch, rows, cols| {
-            i4x8_batched_matmul_top1_f32_scaled_via(
-                &QuantizedBatchedMatmulTop1Dispatcher,
-                weights,
-                activations,
-                row_scales,
-                batch_scales,
-                batch,
-                rows,
-                cols,
-            )
-        },
-    );
+    assert_rejects_batched_shape_errors(run_batched_matmul_top1_via);
 }

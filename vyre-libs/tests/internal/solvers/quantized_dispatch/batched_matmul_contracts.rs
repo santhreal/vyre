@@ -17,8 +17,7 @@ fn i4x8_batched_matmul_f32_scaled_via_dispatches_boundary_batches() {
     let row_scales = [0.125, 0.25, 0.5];
     let batch_scales = [0.25, 0.375];
 
-    let out = i4x8_batched_matmul_f32_scaled_via(
-        &QuantizedBatchedMatmulDispatcher,
+    let out = run_batched_matmul_via(
         &weights,
         &activations,
         &row_scales,
@@ -90,18 +89,5 @@ fn i4x8_batched_matmul_f32_scaled_via_reuses_cached_program_for_same_shape() {
 
 #[test]
 fn i4x8_batched_matmul_f32_scaled_via_rejects_shape_errors_before_dispatch() {
-    assert_rejects_batched_shape_errors(
-        |weights, activations, row_scales, batch_scales, batch, rows, cols| {
-            i4x8_batched_matmul_f32_scaled_via(
-                &QuantizedBatchedMatmulDispatcher,
-                weights,
-                activations,
-                row_scales,
-                batch_scales,
-                batch,
-                rows,
-                cols,
-            )
-        },
-    );
+    assert_rejects_batched_shape_errors(run_batched_matmul_via);
 }

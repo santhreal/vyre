@@ -267,5 +267,180 @@ pub(crate) fn queue_forward_oracle(
     }
     out
 }
+
+#[cfg(all(feature = "math-kernels", feature = "graph"))]
+pub(crate) fn matroid_intersection_eval(
+    exchange_adj: &[u32],
+    sources: &[u32],
+    sinks: &[u32],
+    set_x: &[u32],
+    n: u32,
+    max_augmentations: u32,
+    min_dispatch: u32,
+) -> Vec<u32> {
+    use vyre_libs::math::matroid_intersection_full::matroid_intersection_full;
+    use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+    let program = matroid_intersection_full(
+        "exchange_adj",
+        "sources",
+        "sinks",
+        "set_x",
+        "parent",
+        "frontier",
+        "next_frontier",
+        "visited",
+        "any_change",
+        "path_out",
+        "path_len",
+        n,
+        max_augmentations,
+    );
+    let zeros_n = vec![0u32; n as usize];
+    let zero1 = vec![0u32];
+    let outputs = vyre_reference::reference_eval_with_dispatch(
+        &program,
+        &[
+            Value::from(pack(exchange_adj)),
+            Value::from(pack(sources)),
+            Value::from(pack(sinks)),
+            Value::from(pack(set_x)),
+            Value::from(pack(&zeros_n)),
+            Value::from(pack(&zeros_n)),
+            Value::from(pack(&zeros_n)),
+            Value::from(pack(&zeros_n)),
+            Value::from(pack(&zero1)),
+            Value::from(pack(&zeros_n)),
+            Value::from(pack(&zero1)),
+            Value::from(pack(&zero1)),
+        ],
+        min_dispatch,
+    )
+    .expect("matroid_intersection_full reference evaluation must succeed");
+    let index = vyre_reference::output_index(&program, "set_x")
+        .expect("matroid_intersection_full must declare output set_x");
+    unpack(&outputs[index].to_bytes())[..n as usize].to_vec()
+}
+
+#[cfg(feature = "nn-attention")]
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn execute_causal_gqa(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    batch: u32,
+    query_heads: u32,
+    kv_heads: u32,
+    query_len: u32,
+    kv_len: u32,
+    dim: u32,
+    offset: u32,
+) -> Vec<f32> {
+    let program = vyre_libs::nn::attention::gqa_attention_causal(
+        "q",
+        "k",
+        "v",
+        "output",
+        batch,
+        query_heads,
+        kv_heads,
+        query_len,
+        kv_len,
+        dim,
+        offset,
+    )
+    .expect("Fix: valid causal GQA fixture must build");
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[
+            Value::from(f32_bytes(q)),
+            Value::from(f32_bytes(k)),
+            Value::from(f32_bytes(v)),
+            Value::from(vec![0; q.len() * 4]),
+        ],
+    )
+    .expect("Fix: causal GQA must execute");
+    f32_words_of(&outputs[0])
+}
+
+#[cfg(feature = "nn-attention")]
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn execute_causal_gqa_typed(
+    q: &[f32],
+    k: &[f32],
+    v: &[f32],
+    batch: u32,
+    query_heads: u32,
+    kv_heads: u32,
+    query_len: u32,
+    kv_len: u32,
+    dim: u32,
+    offset: u32,
+    dtype: vyre::ir::DataType,
+) -> Vec<u16> {
+    let program = vyre_libs::nn::attention::gqa_attention_causal_typed(
+        "q",
+        "k",
+        "v",
+        "output",
+        batch,
+        query_heads,
+        kv_heads,
+        query_len,
+        kv_len,
+        dim,
+        offset,
+        dtype,
+    )
+    .expect("Fix: valid BF16 causal GQA must build");
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[
+            Value::from(bf16_bytes(q)),
+            Value::from(bf16_bytes(k)),
+            Value::from(bf16_bytes(v)),
+            Value::from(vec![0; q.len() * std::mem::size_of::<u16>()]),
+        ],
+    )
+    .expect("Fix: BF16 causal GQA must execute");
+    u16_words_of(&outputs[0])
+}
+
+#[cfg(feature = "nn-attention")]
+pub(crate) fn default_gated_delta_spec(
+    sequence: u32,
+    key_heads: u32,
+    value_heads: u32,
+    key_dim: u32,
+    value_dim: u32,
+    dtype: vyre::ir::DataType,
+) -> vyre_libs::nn::attention::GatedDeltaSpec<'static> {
+    vyre_libs::nn::attention::GatedDeltaSpec {
+        query: "query",
+        key: "key",
+        value: "value",
+        decay_log: "decay",
+        beta_logits: "beta",
+        state_input: "state.in",
+        output: "output",
+        state_output: "state.out",
+        batch: 1,
+        sequence,
+        key_heads,
+        value_heads,
+        key_dim,
+        value_dim,
+        eps: 0.0,
+        dtype,
+    }
+}
+
+pub(crate) fn signed_fixed_16_16(state: &mut u32) -> u32 {
+    let raw = next_u32(state) & 0x0001_FFFF;
+    if raw & 0x0001_0000 != 0 {
+        0xFFFF_0000 | (raw & 0x0000_FFFF)
+    } else {
+        raw & 0x0000_FFFF
+    }
+}
 #[cfg(feature = "go-parser")]
 pub(crate) mod go;

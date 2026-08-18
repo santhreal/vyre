@@ -15,6 +15,25 @@ fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> 3
     (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
 }
+fn linear_inputs<'a>(
+    off: &'a [u32],
+    tgt: &'a [u32],
+    msk: &'a [u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> CsrClosureInputs<'a> {
+    CsrClosureInputs {
+        graph: CsrGraphView {
+            node_count: 4,
+            edge_offsets: off,
+            edge_targets: tgt,
+            edge_kind_mask: msk,
+        },
+        allow_mask,
+        max_iters,
+    }
+}
+
 
 /// Runs the changed-flag closure over [`linear_graph`] seeded at node 0 with every edge kind
 /// allowed. The contracts below vary the dispatcher and the iteration budget; the graph itself is
@@ -26,16 +45,7 @@ fn linear_closure(
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu(
         dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters,
-        },
+        linear_inputs(&off, &tgt, &msk, 0xFFFF_FFFF, max_iters),
         &[0b0001],
     )
 }
@@ -49,16 +59,7 @@ fn linear_closure_into(
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu_into(
         dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters,
-        },
+        linear_inputs(&off, &tgt, &msk, 0xFFFF_FFFF, max_iters),
         &[0b0001],
         frontier,
     )
@@ -77,16 +78,7 @@ fn linear_closure_with_scratch(
     let (off, tgt, msk) = linear_graph();
     forward_closure_via_change_flag_gpu_with_scratch_into(
         dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            allow_mask,
-            max_iters,
-        },
+        linear_inputs(&off, &tgt, &msk, allow_mask, max_iters),
         seed,
         scratch,
         frontier,

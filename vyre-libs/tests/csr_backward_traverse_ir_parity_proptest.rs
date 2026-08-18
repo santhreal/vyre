@@ -14,7 +14,7 @@
 #![cfg(feature = "graph")]
 
 mod graph_sweep_fixtures;
-use graph_sweep_fixtures::{bitset_words, frontier_step_out};
+use graph_sweep_fixtures::{bitset_words, gpu_step};
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 
@@ -22,25 +22,6 @@ use proptest::prelude::*;
 use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;
 use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 
-/// Drive the real reverse-step IR and return the `frontier_out` word bitset.
-fn gpu_backward_step(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    frontier_step_out(
-        csr_backward_traverse,
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-    )
-}
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(2000))]
@@ -54,7 +35,7 @@ proptest! {
             csr_sweep::generate(csr_sweep::group("multi_source_restricted_kinds"), seed)
                 .into_parts();
         let expected = cpu_ref(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
-        let got = gpu_backward_step(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
+        let got = gpu_step(csr_backward_traverse, node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
         prop_assert_eq!(
             got, expected,
             "reverse-step IR diverged from cpu_ref: node_count={}, offsets={:?}, targets={:?}, allow_mask={:#x}",
@@ -78,7 +59,7 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
     let expected = cpu_ref(4, &offsets, &targets, &[1, 1, 1, 1], &frontier, 0xFFFF_FFFF);
     assert_eq!(expected, vec![0b0110u32], "cpu_ref: nodes 1,2 pull from 3");
     assert_eq!(
-        gpu_backward_step(4, &offsets, &targets, &[1, 1, 1, 1], &frontier, 0xFFFF_FFFF),
+        gpu_step(csr_backward_traverse, 4, &offsets, &targets, &[1, 1, 1, 1], &frontier, 0xFFFF_FFFF),
         expected,
         "inventory witness pull must match"
     );
@@ -110,13 +91,14 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
     );
     assert_eq!(expected[2] & 1, 1, "cpu_ref: node 64 pulls from active 0");
     assert_eq!(
-        gpu_backward_step(
+        gpu_step(
+            csr_backward_traverse,
             node_count,
             &offsets,
             &targets,
             &kind_mask,
             &frontier,
-            0xFFFF_FFFF
+            0xFFFF_FFFF,
         ),
         expected,
         "word-seam src mark must match"
@@ -131,13 +113,13 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
     let dropped = cpu_ref(2, &offsets, &targets, &kind_mask, &frontier, 1 << 4);
     assert_eq!(dropped, vec![0u32], "cpu_ref: mask mismatch pulls nothing");
     assert_eq!(
-        gpu_backward_step(2, &offsets, &targets, &kind_mask, &frontier, 1 << 4),
+        gpu_step(csr_backward_traverse, 2, &offsets, &targets, &kind_mask, &frontier, 1 << 4),
         dropped
     );
     let fired = cpu_ref(2, &offsets, &targets, &kind_mask, &frontier, 1 << 2);
     assert_eq!(fired, vec![0b01u32], "cpu_ref: matching mask pulls node 0");
     assert_eq!(
-        gpu_backward_step(2, &offsets, &targets, &kind_mask, &frontier, 1 << 2),
+        gpu_step(csr_backward_traverse, 2, &offsets, &targets, &kind_mask, &frontier, 1 << 2),
         fired
     );
 }

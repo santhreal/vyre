@@ -23,17 +23,9 @@
 //!    sink is a length-0 path).
 #![cfg(all(feature = "math-kernels", feature = "graph"))]
 
-use vyre_libs::math::matroid_intersection_full::matroid_intersection_full;
-use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
+mod wire_words;
 use vyre_reference::composition_witness::matroid_intersection_augmentation_witness as cpu_ref;
-use vyre_reference::value::Value;
-
-fn next_u32(state: &mut u32) -> u32 {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-    *state
-}
+use wire_words::{matroid_intersection_eval, next_u32};
 
 /// Run one augmentation of the IR and return the updated `set_x`. `min_dispatch` forces a grid
 /// FLOOR: passing a value above `n` proves the lane-0 guard holds the result invariant to how many
@@ -46,51 +38,9 @@ fn run_ir_dispatch(
     n: u32,
     min_dispatch: u32,
 ) -> Vec<u32> {
-    let program = matroid_intersection_full(
-        "exchange_adj",
-        "sources",
-        "sinks",
-        "set_x",
-        "parent",
-        "frontier",
-        "next_frontier",
-        "visited",
-        "any_change",
-        "path_out",
-        "path_len",
-        n,
-        1, // max_augmentations = 1, matching cpu_ref's single Edmonds augmentation
-    );
-    let zeros_n = vec![0u32; n as usize];
-    let zero1 = vec![0u32];
-    // Buffer declaration order: exchange_adj(0), sources(1), sinks(2), set_x(3), parent(4),
-    // frontier(5), next_frontier(6), visited(7), any_change(8), path_out(9), path_len(10),
-    // target_node_buf(11, builder-internal). All scratch/output seeded to zero.
-    let outputs = vyre_reference::reference_eval_with_dispatch(
-        &program,
-        &[
-            Value::from(pack(exchange_adj)),
-            Value::from(pack(sources)),
-            Value::from(pack(sinks)),
-            Value::from(pack(set_x)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zero1)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zero1)),
-            Value::from(pack(&zero1)),
-        ],
-        min_dispatch,
-    )
-    .expect("matroid_intersection_full reference evaluation must succeed");
-    let index = vyre_reference::output_index(&program, "set_x")
-        .expect("Fix: matroid_intersection_full must declare output `set_x`");
-    unpack(&outputs[index].to_bytes())[..n as usize].to_vec()
+    matroid_intersection_eval(exchange_adj, sources, sinks, set_x, n, 1, min_dispatch)
 }
 
-/// Run one augmentation at the default (buffer-inferred) grid.
 fn run_ir(exchange_adj: &[u32], sources: &[u32], sinks: &[u32], set_x: &[u32], n: u32) -> Vec<u32> {
     run_ir_dispatch(exchange_adj, sources, sinks, set_x, n, 0)
 }

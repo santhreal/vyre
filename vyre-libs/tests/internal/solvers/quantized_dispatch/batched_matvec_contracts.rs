@@ -19,8 +19,7 @@ fn i4x8_batched_matvec_f32_scaled_via_dispatches_boundary_batches() {
     ];
     let row_scales = [0.125, 0.25, 0.5];
 
-    let out = i4x8_batched_matvec_f32_scaled_via(
-        &QuantizedBatchedMatvecDispatcher,
+    let out = run_batched_matvec_via(
         &weights,
         &x_batches,
         &row_scales,

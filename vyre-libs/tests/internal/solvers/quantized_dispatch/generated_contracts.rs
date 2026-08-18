@@ -122,8 +122,7 @@ pub(super) fn generated_quantized_wrappers_match_oracles_across_boundary_shapes(
             .into_iter()
             .map(|value| value.abs() + 0.125)
             .collect::<Vec<_>>();
-        let actual = i4x8_batched_matvec_f32_scaled_via(
-            &QuantizedBatchedMatvecDispatcher,
+        let actual = run_batched_matvec_via(
             &weights,
             &x_batches,
             &row_scales,
@@ -178,8 +177,7 @@ pub(super) fn generated_quantized_wrappers_match_oracles_across_boundary_shapes(
             .map(|value| value.abs() + 0.25)
             .collect::<Vec<_>>();
 
-        let actual = i4x8_batched_matmul_f32_scaled_via(
-            &QuantizedBatchedMatmulDispatcher,
+        let actual = run_batched_matmul_via(
             &weights,
             &activations,
             &row_scales,
@@ -210,8 +208,7 @@ pub(super) fn generated_quantized_wrappers_match_oracles_across_boundary_shapes(
             "batched matmul batch={batch} rows={rows} cols={cols}"
         );
 
-        let (scores, indices) = i4x8_batched_matmul_top1_f32_scaled_via(
-            &QuantizedBatchedMatmulTop1Dispatcher,
+        let (scores, indices) = run_batched_matmul_top1_via(
             &weights,
             &activations,
             &row_scales,

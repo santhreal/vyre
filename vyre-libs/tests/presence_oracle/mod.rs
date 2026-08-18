@@ -180,6 +180,13 @@ pub fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
         .map(|_| ALPHABET[rng.below(ALPHABET.len() as u32) as usize])
         .collect()
 }
+#[must_use]
+pub fn random_haystack_unbounded(rng: &mut Lcg) -> Vec<u8> {
+    let len = rng.below(160);
+    (0..len)
+        .map(|_| ALPHABET[rng.below(ALPHABET.len() as u32) as usize])
+        .collect()
+}
 
 #[must_use]
 pub fn random_region_starts(rng: &mut Lcg, haystack_len: usize) -> Vec<u32> {
