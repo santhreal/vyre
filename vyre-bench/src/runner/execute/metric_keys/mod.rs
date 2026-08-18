@@ -37,6 +37,7 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
     }
 
     match (prefix, name) {
+        ("", "kernel_launches") => Some("kernel_launches"),
         ("", "flop_count") => Some("flop_count"),
         ("", "reduction_small_count") => Some("reduction_small_count"),
         ("", "reduction_large_count") => Some("reduction_large_count"),

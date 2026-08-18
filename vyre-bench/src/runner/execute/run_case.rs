@@ -795,6 +795,18 @@ mod tests {
         assert_eq!(metrics["kernel_launches"].p50, 1);
     }
 
+    /// WHY: an explicit zero identifies compiler-only evidence. It is a real
+    /// observation, unlike a zero backend counter that means telemetry is absent.
+    #[test]
+    fn explicit_zero_launch_metric_bypasses_single_submission_fallback() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("kernel_launches".to_string(), stats(0));
+
+        normalize_release_evidence_metrics(&mut metrics, "cuda");
+
+        assert_eq!(metrics["kernel_launches"].p50, 0);
+    }
+
     #[test]
     fn release_metrics_keep_single_launch_fallback_when_backend_has_no_counter() {
         let mut metrics = BTreeMap::new();

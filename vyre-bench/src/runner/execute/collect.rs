@@ -350,4 +350,23 @@ mod tests {
             );
         }
     }
+    /// WHY: a non-dispatch evidence case reports an explicit zero launch count.
+    /// Dropping zero here makes release normalization invent one launch.
+    #[test]
+    fn collect_custom_metrics_preserves_explicit_zero_kernel_launches() {
+        use super::collect_custom_metrics;
+
+        let metrics = BenchMetrics {
+            custom: vec![MetricPoint {
+                name: "kernel_launches".to_string(),
+                value: 0,
+            }],
+            ..Default::default()
+        };
+        let mut samples = BTreeMap::new();
+
+        collect_custom_metrics("", &metrics, &mut samples);
+
+        assert_eq!(samples.get("kernel_launches"), Some(&vec![0]));
+    }
 }
