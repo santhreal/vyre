@@ -11,7 +11,15 @@
 
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_reference::composition_witness::pack_i4x8_witness as pack_i4x8_cpu;
+use vyre_reference::composition_witness::{
+    i4x8_batched_matmul_f32_scaled_witness as i4x8_batched_matmul_f32_scaled_cpu,
+    i4x8_batched_matmul_top1_f32_scaled_witness as i4x8_batched_matmul_top1_f32_scaled_cpu,
+    i4x8_batched_matvec_f32_scaled_witness as i4x8_batched_matvec_f32_scaled_cpu,
+    i4x8_dot_f32_scaled_witness as i4x8_dot_f32_scaled_cpu,
+    i4x8_dot_i32_witness as i4x8_dot_i32_cpu,
+    i4x8_matvec_f32_scaled_witness as i4x8_matvec_f32_scaled_cpu,
+    pack_i4x8_witness as pack_i4x8_cpu,
+};
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_i32_le_bytes_all, pack_f32_slice, pack_u32_slice,
 };
@@ -99,13 +107,13 @@ fn cycled_rows(pattern: &[i32], count: u32, lanes: u32, stride: usize) -> Vec<Ve
 fn pack_i4_matrix_rows(rows: &[Vec<i32>]) -> Vec<u32> {
     let cols = rows.first().map_or(0, Vec::len);
     let words_per_row = cols.div_ceil(8);
-    let mut out = Vec::with_capacity(rows.len() * words_per_row);
-    for row in rows {
-        let mut packed = pack_i4x8_cpu(row);
-        packed.resize(words_per_row, 0);
-        out.extend_from_slice(&packed);
-    }
-    out
+    rows.iter()
+        .flat_map(|row| {
+            let mut packed = pack_i4x8_cpu(row);
+            packed.resize(words_per_row, 0);
+            packed
+        })
+        .collect()
 }
 
 /// Row scales the fixed-shape contracts bind, one distinct power-of-two-exact
@@ -246,6 +254,252 @@ fn generated_i4_rows(rows: u32, cols: u32, seed: u32) -> Vec<Vec<i32>> {
 
 fn f32_bits(values: &[f32]) -> Vec<u32> {
     values.iter().map(|value| value.to_bits()).collect()
+}
+
+fn dispatch_i4_dot_i32(backend: &CudaBackend, lhs: &[u32], rhs: &[u32], lane_count: u32) -> i32 {
+    let program = vyre_libs::math::quantized::i4x8_dot_i32("lhs", "rhs", "out", lane_count);
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[pack_u32_slice(lhs), pack_u32_slice(rhs)],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: CUDA INT4 i32 dot dispatch failed.");
+    read_i32(&outputs[0])
+}
+
+fn dispatch_i4_dot_f32_scaled(
+    backend: &CudaBackend,
+    lhs: &[u32],
+    rhs: &[u32],
+    lhs_scale: f32,
+    rhs_scale: f32,
+    lane_count: u32,
+) -> f32 {
+    let program = vyre_libs::math::quantized::i4x8_dot_f32_scaled(
+        "lhs", "rhs", "lhs_scale", "rhs_scale", "out", lane_count,
+    );
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[
+                pack_u32_slice(lhs),
+                pack_u32_slice(rhs),
+                pack_f32_slice(&[lhs_scale]),
+                pack_f32_slice(&[rhs_scale]),
+            ],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: CUDA INT4 scaled dot dispatch failed.");
+    read_f32(&outputs[0])
+}
+
+fn dispatch_i4_matvec_f32_scaled(
+    backend: &CudaBackend,
+    weights_packed: &[u32],
+    x: &[f32],
+    scales: &[f32],
+    rows: u32,
+    cols: u32,
+) -> Vec<f32> {
+    let program = vyre_libs::math::quantized::i4x8_matvec_f32_scaled(
+        "weights", "x", "scales", "out", rows, cols,
+    );
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[
+                pack_u32_slice(weights_packed),
+                pack_f32_slice(x),
+                pack_f32_slice(scales),
+            ],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: CUDA INT4 scaled matvec dispatch failed.");
+    read_f32_lanes(&outputs[0], rows as usize)
+}
+
+fn dispatch_i4_batched_matvec_f32_scaled(
+    backend: &CudaBackend,
+    weights_packed: &[u32],
+    x_batches: &[f32],
+    scales: &[f32],
+    batch: u32,
+    rows: u32,
+    cols: u32,
+) -> Vec<f32> {
+    let program = vyre_libs::math::quantized::i4x8_batched_matvec_f32_scaled(
+        "weights", "x", "scales", "out", batch, rows, cols,
+    );
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[
+                pack_u32_slice(weights_packed),
+                pack_f32_slice(x_batches),
+                pack_f32_slice(scales),
+            ],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: CUDA INT4 batched matvec dispatch failed.");
+    read_f32_lanes(&outputs[0], (batch * rows) as usize)
+}
+
+fn dispatch_i4_batched_matmul_f32_scaled(
+    backend: &CudaBackend,
+    inputs: &BatchedMatmulInputs,
+    batch: u32,
+    rows: u32,
+    cols: u32,
+) -> Vec<f32> {
+    let program = vyre_libs::math::quantized::i4x8_batched_matmul_f32_scaled(
+        "weights", "activations", "row_scales", "batch_scales", "out", batch, rows, cols,
+    );
+    let outputs = backend
+        .dispatch(&program, &inputs.bindings(), &DispatchConfig::default())
+        .expect("Fix: CUDA INT4 batched matmul dispatch failed.");
+    read_f32_lanes(&outputs[0], (batch * rows) as usize)
+}
+
+fn dispatch_i4_batched_matmul_top1_f32_scaled(
+    backend: &CudaBackend,
+    inputs: &BatchedMatmulInputs,
+    batch: u32,
+    rows: u32,
+    cols: u32,
+) -> (Vec<f32>, Vec<u32>) {
+    let program = vyre_libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled(
+        "weights", "activations", "row_scales", "batch_scales", "out", batch, rows, cols,
+    );
+    let outputs = backend
+        .dispatch(&program, &inputs.bindings(), &DispatchConfig::default())
+        .expect("Fix: CUDA INT4 batched matmul top1 dispatch failed.");
+    split_top1(&outputs[0], batch)
+}
+fn assert_batched_matmul_parity(
+    backend: &CudaBackend,
+    inputs: &BatchedMatmulInputs,
+    batch: u32,
+    rows: u32,
+    cols: u32,
+    context: &str,
+) {
+    let actual = dispatch_i4_batched_matmul_f32_scaled(backend, inputs, batch, rows, cols);
+    let expected = i4x8_batched_matmul_f32_scaled_cpu(
+        &inputs.weights_packed,
+        &inputs.activations_packed,
+        &inputs.row_scales,
+        &inputs.batch_scales,
+        batch,
+        rows,
+        cols,
+    );
+    assert_eq!(
+        f32_bits(&actual),
+        f32_bits(&expected),
+        "{context} batch={batch} rows={rows} cols={cols}"
+    );
+}
+
+fn assert_batched_matmul_top1_parity(
+    backend: &CudaBackend,
+    inputs: &BatchedMatmulInputs,
+    batch: u32,
+    rows: u32,
+    cols: u32,
+    context: &str,
+) {
+    let (actual_scores, actual_indices) =
+        dispatch_i4_batched_matmul_top1_f32_scaled(backend, inputs, batch, rows, cols);
+    let (expected_scores, expected_indices) = i4x8_batched_matmul_top1_f32_scaled_cpu(
+        &inputs.weights_packed,
+        &inputs.activations_packed,
+        &inputs.row_scales,
+        &inputs.batch_scales,
+        batch,
+        rows,
+        cols,
+    );
+    assert_eq!(
+        f32_bits(&actual_scores),
+        f32_bits(&expected_scores),
+        "{context} score batch={batch} rows={rows} cols={cols}"
+    );
+    assert_eq!(
+        actual_indices, expected_indices,
+        "{context} index batch={batch} rows={rows} cols={cols}"
+    );
+}
+
+fn assert_batched_matvec_parity(
+    backend: &CudaBackend,
+    weights_packed: &[u32],
+    x_batches: &[f32],
+    scales: &[f32],
+    shape: (u32, u32, u32),
+    context: &str,
+) {
+    let (batch, rows, cols) = shape;
+    let actual = dispatch_i4_batched_matvec_f32_scaled(
+        backend,
+        weights_packed,
+        x_batches,
+        scales,
+        batch,
+        rows,
+        cols,
+    );
+    let expected = i4x8_batched_matvec_f32_scaled_cpu(
+        weights_packed,
+        x_batches,
+        scales,
+        batch,
+        rows,
+        cols,
+    );
+    assert_eq!(
+        f32_bits(&actual),
+        f32_bits(&expected),
+        "{context} batch={batch} rows={rows} cols={cols}"
+    );
+}
+
+fn assert_matvec_parity(
+    backend: &CudaBackend,
+    weights_packed: &[u32],
+    x: &[f32],
+    scales: &[f32],
+    rows: u32,
+    cols: u32,
+    context: &str,
+) {
+    let actual = dispatch_i4_matvec_f32_scaled(backend, weights_packed, x, scales, rows, cols);
+    let expected = i4x8_matvec_f32_scaled_cpu(weights_packed, x, scales, rows, cols);
+    assert_eq!(
+        f32_bits(&actual),
+        f32_bits(&expected),
+        "{context} rows={rows} cols={cols}"
+    );
+}
+
+fn assert_dot_f32_scaled_parity(
+    backend: &CudaBackend,
+    lhs: &[u32],
+    rhs: &[u32],
+    lhs_scale: f32,
+    rhs_scale: f32,
+    lane_count: u32,
+    context: &str,
+) {
+    let actual =
+        dispatch_i4_dot_f32_scaled(backend, lhs, rhs, lhs_scale, rhs_scale, lane_count);
+    let expected =
+        i4x8_dot_f32_scaled_cpu(lhs, rhs, lhs_scale, rhs_scale, lane_count);
+    assert_eq!(
+        actual.to_bits(),
+        expected.to_bits(),
+        "{context} lane_count={lane_count}"
+    );
 }
 
 mod batched_matmul_contracts;

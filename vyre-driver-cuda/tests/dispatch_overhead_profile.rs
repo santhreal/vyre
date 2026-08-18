@@ -10,7 +10,6 @@ mod harness;
 use harness::no_op_program;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
 fn cuda_steady_state_phase_attribution() {

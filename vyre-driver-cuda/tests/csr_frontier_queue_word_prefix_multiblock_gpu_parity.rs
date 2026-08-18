@@ -4,7 +4,7 @@
 
 mod harness;
 
-use harness::{bytes_u32, live_backend};
+use harness::{bytes_u32, live_backend, mix32_value, set_frontier_node};
 use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_libs::bitset::bitset_words;
 use vyre_reference::composition_witness::{
@@ -212,35 +212,23 @@ fn generated_csr_graph(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 
 fn generated_frontier(node_count: u32, case_index: u32) -> Vec<u32> {
     let mut frontier = vec![0_u32; bitset_words(node_count) as usize];
-    let salt = mix32(case_index ^ node_count.rotate_left(11));
+    let salt = mix32_value(case_index ^ node_count.rotate_left(11));
     let period = 23 + (case_index % 37);
     for node in 0..node_count {
-        let h = mix32(node.wrapping_mul(0x85eb_ca6b) ^ salt);
+        let h = mix32_value(node.wrapping_mul(0x85eb_ca6b) ^ salt);
         if h % period == 0 {
-            set_node(&mut frontier, node);
+            set_frontier_node(&mut frontier, node);
         }
     }
-    set_node(&mut frontier, salt % node_count);
+    set_frontier_node(&mut frontier, salt % node_count);
     if case_index % 19 == 0 {
-        set_node(&mut frontier, 0);
+        set_frontier_node(&mut frontier, 0);
     }
     if case_index % 23 == 0 {
-        set_node(&mut frontier, 32_768);
+        set_frontier_node(&mut frontier, 32_768);
     }
     if case_index % 29 == 0 {
-        set_node(&mut frontier, node_count - 1);
+        set_frontier_node(&mut frontier, node_count - 1);
     }
     frontier
-}
-
-fn set_node(frontier: &mut [u32], node: u32) {
-    frontier[node as usize / 32] |= 1_u32 << (node & 31);
-}
-
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7feb_352d);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846c_a68b);
-    value ^ (value >> 16)
 }

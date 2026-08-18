@@ -5,8 +5,11 @@
 
 mod harness;
 
-use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::ir::{BufferAccess, DataType, Program};
+use harness::{
+    bytes_to_u32_per_lane, bytes_u32, find_output_buffer_index, is_required_input_buffer,
+    u32_bytes, with_live_backend,
+};
+use vyre::ir::{DataType, Program};
 use vyre_driver::DispatchConfig;
 use vyre_libs::pattern::{
     bracket_match, bracket_match_dispatch_grid, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN,
@@ -17,10 +20,6 @@ use vyre_reference::composition_witness::{
     bracket_match_witness as reference_bracket_match, char_class_witness as reference_char_class,
 };
 
-fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {
-    source.iter().map(|&b| b as u32).collect()
-}
-
 fn inputs_for_char_class_program(
     program: &Program,
     source: &[u8],
@@ -29,46 +28,19 @@ fn inputs_for_char_class_program(
     program
         .buffers()
         .iter()
-        .filter_map(|buffer| {
-            let backend_allocated = buffer.is_output() || buffer.is_pipeline_live_out();
-            let needs_input = matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-            ) && !backend_allocated
-                && buffer.access() != BufferAccess::Workgroup;
-            if !needs_input {
-                return None;
-            }
-            match buffer.name() {
-                "source" => match buffer.element() {
-                    DataType::U8 => Some(source.to_vec()),
-                    DataType::U32 => Some(u32_bytes(&bytes_to_u32_per_lane(source))),
-                    other => {
-                        panic!("Fix: CUDA char-class source must be U8 or U32, got {other:?}")
-                    }
-                },
-                "table" => Some(u32_bytes(table)),
-                other => panic!("Fix: unexpected CUDA char-class input buffer `{other}`"),
-            }
+        .filter(|buffer| is_required_input_buffer(buffer))
+        .map(|buffer| match buffer.name() {
+            "source" => match buffer.element() {
+                DataType::U8 => source.to_vec(),
+                DataType::U32 => u32_bytes(&bytes_to_u32_per_lane(source)),
+                other => panic!("Fix: CUDA char-class source must be U8 or U32, got {other:?}"),
+            },
+            "table" => u32_bytes(table),
+            other => panic!("Fix: unexpected CUDA char-class input buffer `{other}`"),
         })
         .collect()
 }
 
-fn output_index(program: &Program, name: &str) -> usize {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.is_output()
-                || buffer.is_pipeline_live_out()
-                || matches!(
-                    buffer.access(),
-                    BufferAccess::ReadWrite | BufferAccess::WriteOnly
-                )
-        })
-        .position(|buffer| buffer.name() == name)
-        .expect("Fix: CUDA char-class output buffer must be declared")
-}
 
 fn run_char_class_program(
     program: Program,
@@ -79,7 +51,7 @@ fn run_char_class_program(
     let inputs = inputs_for_char_class_program(&program, source, table);
     let mut config = DispatchConfig::default();
     config.grid_override = Some(vyre_primitives::lane_grid(source.len() as u32, 256));
-    let classified_index = output_index(&program, "classified");
+    let classified_index = find_output_buffer_index(&program, "classified");
     let outputs = with_live_backend(case_name, |backend| {
         backend
             .dispatch(&program, &inputs, &config)

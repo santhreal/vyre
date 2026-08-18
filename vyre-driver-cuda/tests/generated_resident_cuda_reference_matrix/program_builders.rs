@@ -134,26 +134,11 @@ pub(crate) fn resident_f32_classify_program(case: &F32ClassifyCase) -> Program {
 /// read-write binding the atomic updates in place, and the result the matrix
 /// checks is the accumulator itself.
 pub(crate) fn resident_atomic_reduction_program(case: &ResidentAtomicCase) -> Program {
-    let idx = Expr::var("idx");
-    let bucket = Expr::bitand(idx.clone(), Expr::u32(BUCKET_MASK));
-    let value = Expr::load("values", idx.clone());
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("acc", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(LANE_COUNT as u32),
-            BufferDecl::read("values", 1, DataType::U32).with_count(LANE_COUNT as u32),
-        ],
-        [WORKGROUP_SIZE_X, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(LANE_COUNT as u32)),
-                vec![Node::let_bind(
-                    "old_value",
-                    (case.build)("acc", bucket, value),
-                )],
-            ),
-        ],
+    harness::build_atomic_reduction_program(
+        LANE_COUNT as u32,
+        WORKGROUP_SIZE_X,
+        BUCKET_MASK,
+        case.build,
     )
 }
 

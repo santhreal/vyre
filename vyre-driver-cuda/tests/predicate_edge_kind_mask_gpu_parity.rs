@@ -5,7 +5,7 @@
 
 mod harness;
 
-use harness::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, csr_traversal_inputs, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
@@ -22,8 +22,6 @@ fn run_edge(
     allow_mask: u32,
 ) -> Vec<u32> {
     let words = node_count.div_ceil(32).max(1);
-    let pg_nodes = vec![0u32; node_count as usize];
-    let pg_node_tags = vec![0u32; node_count as usize];
     let edge_count = edge_targets.len() as u32;
     let program = edge(
         ProgramGraphShape::new(node_count, edge_count.max(1)),
@@ -31,15 +29,13 @@ fn run_edge(
         "frontier_out",
         allow_mask,
     );
-    let inputs: Vec<Vec<u8>> = vec![
-        u32_bytes(&pg_nodes),
-        u32_bytes(edge_offsets),
-        u32_bytes(edge_targets),
-        u32_bytes(edge_kind_mask),
-        u32_bytes(&pg_node_tags),
-        u32_bytes(frontier),
-        vec![0u8; words as usize * 4],
-    ];
+    let inputs = csr_traversal_inputs(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier,
+    );
     let mut config = DispatchConfig::default();
     config.grid_override = Some(csr_forward_traverse_dispatch_grid(node_count));
     let outputs = with_live_backend("predicate edge batch", |backend| {

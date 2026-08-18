@@ -117,20 +117,7 @@ fn ptx_emits_u32_to_f32_cast() {
 
 #[test]
 fn ptx_declares_shared_memory() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::workgroup("scratch", 16, DataType::U32),
-            BufferDecl::output("out", 0, DataType::U32).with_count(1),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::store("scratch", Expr::u32(0), Expr::u32(7)),
-            Node::Barrier {
-                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
-            },
-            Node::store("out", Expr::u32(0), Expr::load("scratch", Expr::u32(0))),
-        ],
-    );
+    let program = shared_memory_smoke_program([64, 1, 1]);
     let secondary_text =
         program_to_ptx(&program, &default_config()).expect("Fix: shared memory must lower to PTX.");
     assert!(

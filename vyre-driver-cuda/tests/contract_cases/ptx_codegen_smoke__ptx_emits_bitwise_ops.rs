@@ -17,19 +17,7 @@ fn ptx_emits_bitwise_ops() {
         ("shl", Expr::shl(Expr::gid_x(), Expr::u32(2)), "shl.b32"),
         ("shr", Expr::shr(Expr::gid_x(), Expr::u32(2)), "shr.u32"),
     ];
-    for (name, expr, expected_insn) in ops {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), expr)],
-        );
-        let secondary_text = program_to_ptx(&program, &default_config())
-            .unwrap_or_else(|e| panic!("Fix: {name} must lower to PTX: {e}"));
-        assert!(
-            secondary_text.contains(expected_insn),
-            "Fix: {name} must emit {expected_insn}."
-        );
-    }
+    assert_ptx_emits_expr_insns(&ops);
 }
 
 #[test]
@@ -364,19 +352,7 @@ fn ptx_emits_integer_subgroup_ops() {
             "redux.sync.add.u32",
         ),
     ];
-    for (name, expr, expected_insn) in ops {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), expr)],
-        );
-        let secondary_text = program_to_ptx(&program, &default_config())
-            .unwrap_or_else(|e| panic!("Fix: {name} must lower to PTX: {e}"));
-        assert!(
-            secondary_text.contains("activemask.b32") && secondary_text.contains(expected_insn),
-            "Fix: {name} must emit active-mask guarded {expected_insn}."
-        );
-    }
+    assert_ptx_emits_active_mask_subgroup_insns(&ops);
 }
 
 #[test]
