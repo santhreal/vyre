@@ -1,16 +1,16 @@
 {
-  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=false",
+  "source_fingerprint": "git:f7531aecea5a6a1270eb3cec465a72da335f5304:dirty=false",
   "schema_version": 4,
   "backend_id": "cpu-ref",
   "command": "cargo_full run -p vyre-conform --release --bin vyre-conform -- dispatch --backend cpu-ref --ops all",
   "stdout_diagnostics": [],
-  "total_pairs": 338,
-  "distinct_op_count": 338,
-  "catalog_required_op_count": 338,
-  "catalog_covered_op_count": 338,
+  "total_pairs": 339,
+  "distinct_op_count": 339,
+  "catalog_required_op_count": 339,
+  "catalog_covered_op_count": 339,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1014,
-  "supported_release_backend_row_count": 1014,
+  "release_backend_row_count": 1017,
+  "supported_release_backend_row_count": 1017,
   "release_backend_rows": [
     "vyre-primitives::hardware::bit_reverse_u32:reference:supported",
     "vyre-primitives::hardware::bit_reverse_u32:cuda:supported",
@@ -258,6 +258,9 @@
     "vyre-libs::hash::sparse_fft_bin_hash:reference:supported",
     "vyre-libs::hash::sparse_fft_bin_hash:cuda:supported",
     "vyre-libs::hash::sparse_fft_bin_hash:wgpu:supported",
+    "vyre-libs::label::nodeset_filter:reference:supported",
+    "vyre-libs::label::nodeset_filter:cuda:supported",
+    "vyre-libs::label::nodeset_filter:wgpu:supported",
     "vyre-libs::label::resolve_family:reference:supported",
     "vyre-libs::label::resolve_family:cuda:supported",
     "vyre-libs::label::resolve_family:wgpu:supported",
@@ -282,27 +285,6 @@
     "vyre-libs::logical::nor:reference:supported",
     "vyre-libs::logical::nor:cuda:supported",
     "vyre-libs::logical::nor:wgpu:supported",
-    "vyre-libs::matching::aho_corasick:reference:supported",
-    "vyre-libs::matching::aho_corasick:cuda:supported",
-    "vyre-libs::matching::aho_corasick:wgpu:supported",
-    "vyre-libs::matching::bracket_match:reference:supported",
-    "vyre-libs::matching::bracket_match:cuda:supported",
-    "vyre-libs::matching::bracket_match:wgpu:supported",
-    "vyre-libs::matching::compact_hits:reference:supported",
-    "vyre-libs::matching::compact_hits:cuda:supported",
-    "vyre-libs::matching::compact_hits:wgpu:supported",
-    "vyre-libs::matching::cooperative_dfa:reference:supported",
-    "vyre-libs::matching::cooperative_dfa:cuda:supported",
-    "vyre-libs::matching::cooperative_dfa:wgpu:supported",
-    "vyre-libs::matching::emit_hit:reference:supported",
-    "vyre-libs::matching::emit_hit:cuda:supported",
-    "vyre-libs::matching::emit_hit:wgpu:supported",
-    "vyre-libs::matching::regex_dfa:reference:supported",
-    "vyre-libs::matching::regex_dfa:cuda:supported",
-    "vyre-libs::matching::regex_dfa:wgpu:supported",
-    "vyre-libs::matching::regex_scan:reference:supported",
-    "vyre-libs::matching::regex_scan:cuda:supported",
-    "vyre-libs::matching::regex_scan:wgpu:supported",
     "vyre-libs::math::algebra::bool_semiring_matmul:reference:supported",
     "vyre-libs::math::algebra::bool_semiring_matmul:cuda:supported",
     "vyre-libs::math::algebra::bool_semiring_matmul:wgpu:supported",
@@ -768,6 +750,30 @@
     "vyre-libs::parsing::whitespace_classify_word:reference:supported",
     "vyre-libs::parsing::whitespace_classify_word:cuda:supported",
     "vyre-libs::parsing::whitespace_classify_word:wgpu:supported",
+    "vyre-libs::pattern::aho_corasick:reference:supported",
+    "vyre-libs::pattern::aho_corasick:cuda:supported",
+    "vyre-libs::pattern::aho_corasick:wgpu:supported",
+    "vyre-libs::pattern::bracket_match:reference:supported",
+    "vyre-libs::pattern::bracket_match:cuda:supported",
+    "vyre-libs::pattern::bracket_match:wgpu:supported",
+    "vyre-libs::pattern::compact_hits:reference:supported",
+    "vyre-libs::pattern::compact_hits:cuda:supported",
+    "vyre-libs::pattern::compact_hits:wgpu:supported",
+    "vyre-libs::pattern::cooperative_dfa:reference:supported",
+    "vyre-libs::pattern::cooperative_dfa:cuda:supported",
+    "vyre-libs::pattern::cooperative_dfa:wgpu:supported",
+    "vyre-libs::pattern::emit_hit:reference:supported",
+    "vyre-libs::pattern::emit_hit:cuda:supported",
+    "vyre-libs::pattern::emit_hit:wgpu:supported",
+    "vyre-libs::pattern::regex_dfa:reference:supported",
+    "vyre-libs::pattern::regex_dfa:cuda:supported",
+    "vyre-libs::pattern::regex_dfa:wgpu:supported",
+    "vyre-libs::pattern::regex_scan:reference:supported",
+    "vyre-libs::pattern::regex_scan:cuda:supported",
+    "vyre-libs::pattern::regex_scan:wgpu:supported",
+    "vyre-libs::pattern::substring_search:reference:supported",
+    "vyre-libs::pattern::substring_search:cuda:supported",
+    "vyre-libs::pattern::substring_search:wgpu:supported",
     "vyre-libs::predicate::arg_of:reference:supported",
     "vyre-libs::predicate::arg_of:cuda:supported",
     "vyre-libs::predicate::arg_of:wgpu:supported",
@@ -903,9 +909,6 @@
     "vyre-libs::representation::unpack_4bit_f32:reference:supported",
     "vyre-libs::representation::unpack_4bit_f32:cuda:supported",
     "vyre-libs::representation::unpack_4bit_f32:wgpu:supported",
-    "vyre-libs::scan::substring_search:reference:supported",
-    "vyre-libs::scan::substring_search:cuda:supported",
-    "vyre-libs::scan::substring_search:wgpu:supported",
     "vyre-libs::security::aliases_dataflow:reference:supported",
     "vyre-libs::security::aliases_dataflow:cuda:supported",
     "vyre-libs::security::aliases_dataflow:wgpu:supported",
@@ -1031,11 +1034,11 @@
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
-  "passed_pairs": 338,
+  "passed_pairs": 339,
   "failed_pairs": 0,
   "duplicate_op_ids": [],
   "diff_schema_version": 1,
-  "diff_summary_count": 338,
+  "diff_summary_count": 339,
   "diff_summary_errors": [],
   "diff_summaries": [
     {
@@ -1769,6 +1772,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::label::nodeset_filter",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:86428d53f54dd2bcd0dc7fff056f59d3c2b2750cfdc5ab5e227afc18b849e906",
+      "output_digest": "vyre-conform-output-envelope-v1:0f516f6a77508c34d4602320fadfced489b74792de84df73a3ceab82fbace707",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::label::resolve_family",
       "backend_id": "cpu-ref",
       "input_digest": "vyre-conform-input-envelope-v1:023e52bf5fef5a43a7fd7c58a3644344a1fae6f203ef10368602416a3629a08a",
@@ -1843,76 +1856,6 @@
       "backend_id": "cpu-ref",
       "input_digest": "vyre-conform-input-envelope-v1:1c072bc2ac1600aaa2cb9de847170b428f7887038da303868dae77956d3564f7",
       "output_digest": "vyre-conform-output-envelope-v1:aef5217d951d8c76ce4ed8b63c6caef018b9b2879afcd447411207f6ae935219",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::matching::aho_corasick",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:c41f70947d8b837490d6cd3850b3567abe0f7ba41a5f6ec10b67e8ffbe008ac3",
-      "output_digest": "vyre-conform-output-envelope-v1:5d615c52c9b1674e6259c94a7cf9cd9bf5c0e3afc2af077c38abb4c09476d990",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::matching::bracket_match",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:6d3382bf6bcb0bfc7c0aee2a62e2a7ff68e366da860d6fd3eabe7f62649f4dd4",
-      "output_digest": "vyre-conform-output-envelope-v1:d42cceac16a72df04b032968e2b20aec7e93943c2ef00754a9a6cc5819e151d7",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::matching::compact_hits",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:27a86665b211eaec9d191676afaac7b8c264723751dceb0b8572a5cabd4f0246",
-      "output_digest": "vyre-conform-output-envelope-v1:022adcfa20b9515567a202da10e7968d714f44660ec081a0b79151f9649049fd",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::matching::cooperative_dfa",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:a593c5474128a0c14042046515f37d83ba530830fd3dbd36be2889442dc6b260",
-      "output_digest": "vyre-conform-output-envelope-v1:0852abe654a017ffb11fc27a2d4fd2f3f29f97f4e3b093119bd95cbd0ca579af",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::matching::emit_hit",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:9726a8c8be275aa034ea8e11734ef12ef25a36861f73d3d63cc3f9829a294e7b",
-      "output_digest": "vyre-conform-output-envelope-v1:179663c30497fd51a54108a0d9f7efad522525759ced78790ea222a300448812",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::matching::regex_dfa",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:05de974b4d726175cc01746a4c95208b528d19335535fa2b29037a32805dbe91",
-      "output_digest": "vyre-conform-output-envelope-v1:3a42d0fa4e07827cf2097635f749b9b11930751724e697008b65f25401cca1fc",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::matching::regex_scan",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:7a37a5084de16fb941dedc786e36eea4624def6a2dec86f2a6ba3155c6d09f05",
-      "output_digest": "vyre-conform-output-envelope-v1:343a5eb434368ef46049b447d47f0859d5247347026807d478ca4d9e0514234a",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -3469,6 +3412,86 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::pattern::aho_corasick",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:fe0c444345c744a426437dcccb45efc7871b1d1de14168564ab8cb31babed913",
+      "output_digest": "vyre-conform-output-envelope-v1:de2f11944a10a1f68b5eee1268effd28b3949063c0f45b5779424ce226d9cf07",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::pattern::bracket_match",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:4b14c9a7666841e9d2f3dee92205ffae09d4b870bead709f96a0c6536ca31969",
+      "output_digest": "vyre-conform-output-envelope-v1:6176719dad87e42a0e8d8f46f58e4b3fb14fb096a0508b1598659d23da1dede6",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::pattern::compact_hits",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:1f7f1c5a39e3dabf0f763af7f47fcfc0c8f11540abf06098de565f8596dcbd0f",
+      "output_digest": "vyre-conform-output-envelope-v1:3540f743426081649c272ba5d7d6a288e464e26fb5fb33b7237caa6dc97922a7",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::pattern::cooperative_dfa",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:3cdf7f61018a8a93c386fa23698e3bb9aef141dd93018c0c3119d3875fd73bdc",
+      "output_digest": "vyre-conform-output-envelope-v1:b591e636400af56a49ada39414bc71c5bac00c715d6b87d3397ee8306adeab5a",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::pattern::emit_hit",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:cce4d9f09e47d1ee5f54116d6c6c2c64f6e0d765951f04d5d1863dc2049ecfbd",
+      "output_digest": "vyre-conform-output-envelope-v1:91855fcd85965165238ffa5a183c801e5065b2df64040d66e434dc47528ede01",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::pattern::regex_dfa",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:277f6eb0975944f278588dd9e90e61be8504368d4f60f0ba4dbe3dd403a8272e",
+      "output_digest": "vyre-conform-output-envelope-v1:fa0d1c5c597b869a623c857e31f27e1355b97edd4d7f3c22484fc26fe4f7399a",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::pattern::regex_scan",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:6cb25fd94314fab7c10a1af9d9c07e2a64c9a48f5e140dafeefb9d772ab3a002",
+      "output_digest": "vyre-conform-output-envelope-v1:28c7e3e462c6692c3e888d715fac79d82fbdf7de00be62b7743dc6ba16b52823",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::pattern::substring_search",
+      "backend_id": "cpu-ref",
+      "input_digest": "vyre-conform-input-envelope-v1:c905c2d05df4fef487cff805f5a70a4b4416c11ad6de4e9cef6c2b6350382e2d",
+      "output_digest": "vyre-conform-output-envelope-v1:b13129e00302fd5c625df981b4cbc53e3d5e92c96c8a0e48bdbf61be40204137",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::predicate::arg_of",
       "backend_id": "cpu-ref",
       "input_digest": "vyre-conform-input-envelope-v1:1671d63d03c98115c3183730c878390e81bf28d42bc838019c2db4cdff3da2bf",
@@ -3913,16 +3936,6 @@
       "backend_id": "cpu-ref",
       "input_digest": "vyre-conform-input-envelope-v1:63933494aa345cb730808d410874c10a3a8a7f472f9b553b23aa977f8f539efb",
       "output_digest": "vyre-conform-output-envelope-v1:36d4be6c59250dfdae036e5829c1f6c81d2550c13d7451ccab90676033152be6",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::scan::substring_search",
-      "backend_id": "cpu-ref",
-      "input_digest": "vyre-conform-input-envelope-v1:e57df20d46bac509e0cd9632cc1d64c5c928023491254d8dedd9be7e9094db2a",
-      "output_digest": "vyre-conform-output-envelope-v1:b6b6e36bd6d6362b6a46b4580505e894a8f42ae7a2bc7a244c596c8fd47dd006",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -4859,6 +4872,12 @@
       "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
     },
     {
+      "op_id": "vyre-libs::label::nodeset_filter",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
       "op_id": "vyre-libs::label::resolve_family",
       "backend_id": "cpu-ref",
       "passed": true,
@@ -4902,48 +4921,6 @@
     },
     {
       "op_id": "vyre-libs::logical::nor",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::matching::aho_corasick",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::matching::bracket_match",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::matching::compact_hits",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::matching::cooperative_dfa",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::matching::emit_hit",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::matching::regex_dfa",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::matching::regex_scan",
       "backend_id": "cpu-ref",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
@@ -5879,6 +5856,54 @@
       "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
     },
     {
+      "op_id": "vyre-libs::pattern::aho_corasick",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
+      "op_id": "vyre-libs::pattern::bracket_match",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
+      "op_id": "vyre-libs::pattern::compact_hits",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
+      "op_id": "vyre-libs::pattern::cooperative_dfa",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
+      "op_id": "vyre-libs::pattern::emit_hit",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
+      "op_id": "vyre-libs::pattern::regex_dfa",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
+      "op_id": "vyre-libs::pattern::regex_scan",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
+      "op_id": "vyre-libs::pattern::substring_search",
+      "backend_id": "cpu-ref",
+      "passed": true,
+      "message": "2 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
+    },
+    {
       "op_id": "vyre-libs::predicate::arg_of",
       "backend_id": "cpu-ref",
       "passed": true,
@@ -6147,12 +6172,6 @@
       "backend_id": "cpu-ref",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
-    },
-    {
-      "op_id": "vyre-libs::scan::substring_search",
-      "backend_id": "cpu-ref",
-      "passed": true,
-      "message": "2 witness case(s) matched vyre-reference through backend dispatch of the neutral program"
     },
     {
       "op_id": "vyre-libs::security::aliases_dataflow",

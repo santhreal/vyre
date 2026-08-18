@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:7c0e8ec1bac18699c231f5dc4782314c6b18168e:dirty=true:worktree=37d2ffa17cd132f2f74eb6ca58cbc46bdce3b634aa756d93d83ad6af55010095",
+  "source_fingerprint": "git:e686bc9b48e352c3da6863059c59aac18d756348:dirty=false",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -257,7 +257,7 @@
     },
     {
       "path": "vyre-libs/src/pattern/classic_ac/bounded_ranges/mod.rs",
-      "line": 323,
+      "line": 333,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
@@ -299,13 +299,13 @@
     },
     {
       "path": "vyre-libs/src/pattern/regex_compile/mod.rs",
-      "line": 381,
+      "line": 378,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: canonical fixture regex scan must compile\")"
     },
     {
       "path": "vyre-libs/src/pattern/regex_compile/mod.rs",
-      "line": 391,
+      "line": 388,
       "pattern": "documented_panic_contract",
       "text": "compile_regex_set(&[\"[a-z]+\"]).expect(\"Fix: canonical fixture regex scan must compile\");"
     },
@@ -685,7 +685,7 @@
       "path": "vyre-reference/src/composition_witness/math.rs",
       "line": 2589,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"differentiable_autotune_gradient_witness_into failed: invalid temperature\");"
+      "text": ".expect(\"Fix: supply a finite positive temperature parameter for differentiable autotune score gradient calculation\");"
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
@@ -697,19 +697,19 @@
       "path": "vyre-reference/src/composition_witness/math.rs",
       "line": 2824,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"P2M witness inputs must have matching lengths and representable cell ids\");"
+      "text": ".expect(\"Fix: provide charges and cell assignments with matching lengths and representable cell ids\");"
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
       "line": 2908,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"P2M truncating witness failed\");"
+      "text": ".expect(\"Fix: provide representable cell ids and sufficient memory capacity for P2M moment aggregation\");"
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
       "line": 2934,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"M2L witness distance matrix must be square\");"
+      "text": ".expect(\"Fix: provide a square cell_distances matrix matching cell_moments.len() * cell_moments.len()\");"
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
@@ -721,13 +721,13 @@
       "path": "vyre-reference/src/composition_witness/math.rs",
       "line": 3144,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"cluster_projection_matrix_witness_into failed\");"
+      "text": ".expect(\"Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds\");"
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
       "line": 3195,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"mori_zwanzig_coarsen_via_clustering_witness_into failed\");"
+      "text": ".expect(\"Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds\");"
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
@@ -773,7 +773,7 @@
     },
     {
       "path": "vyre-reference/src/composition_witness/csr.rs",
-      "line": 298,
+      "line": 319,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: reserve at least seed.len() capacity in current and next ping-pong buffers\")"
     },
@@ -785,19 +785,19 @@
     },
     {
       "path": "vyre-reference/src/composition_witness/graph.rs",
-      "line": 1483,
+      "line": 1489,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"invalid d-DNNF witness input: {error}\"))"
     },
     {
       "path": "vyre-reference/src/composition_witness/graph.rs",
-      "line": 1585,
+      "line": 1591,
       "pattern": "documented_panic_contract",
       "text": "let expected_adj = element_count.checked_mul(element_count).expect("
     },
     {
       "path": "vyre-reference/src/composition_witness/graph.rs",
-      "line": 2049,
+      "line": 2084,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|err| panic!(\"tensor_flow_forward_witness failed: {err}\"))"
     },
@@ -941,13 +941,13 @@
     },
     {
       "path": "vyre-lower/src/rewrites/vector_memory.rs",
-      "line": 349,
+      "line": 347,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: vector chain candidate must contain at least one operation\");"
     },
     {
       "path": "vyre-lower/src/rewrites/vector_memory.rs",
-      "line": 353,
+      "line": 351,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: vector chain candidate must contain at least one operation\");"
     },
@@ -1085,7 +1085,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1452,
+      "line": 1453,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },

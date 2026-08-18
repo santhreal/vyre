@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:1ea2d8a1750f3c84630c26fe559e74afc50f8672:dirty=true:worktree=c41a612ba9d6932606df2e73cc15f037ecb5cfe873417d2bbfd476c122494159",
+  "source_fingerprint": "git:e686bc9b48e352c3da6863059c59aac18d756348:dirty=false",
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -29,7 +29,7 @@
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
   "release_suite_case_count": 22,
-  "cpu_sota_contract_count": 30,
+  "cpu_sota_contract_count": 31,
   "cpu_sota_100x_contract_count": 14,
   "cpu_sota_100x_contract_cases": [
     "conditions.yara_like.eval.1m",
@@ -469,14 +469,23 @@
       "bench_target_ids": [
         "release.optimization.foundation_optimizer_impact"
       ],
-      "cpu_sota_contracts": [],
+      "cpu_sota_contracts": [
+        "foundation.optimizer.impact => the same Program submitted without semantic optimization 1x"
+      ],
       "cpu_sota_100x_cases": [],
-      "cpu_sota_baseline_names": [],
-      "cpu_sota_baseline_crates": [],
-      "cpu_sota_backend_ids": [],
-      "fair_cpu_sota_baseline_count": 0,
+      "cpu_sota_baseline_names": [
+        "the same Program submitted without semantic optimization"
+      ],
+      "cpu_sota_baseline_crates": [
+        "vyre-bench"
+      ],
+      "cpu_sota_backend_ids": [
+        "cuda",
+        "wgpu"
+      ],
+      "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
-      "max_cpu_sota_min_speedup_x": null
+      "max_cpu_sota_min_speedup_x": 1.0
     },
     {
       "id": "sparse-output-compaction",

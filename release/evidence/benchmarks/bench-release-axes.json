@@ -1,16 +1,17 @@
 {
   "schema_version": 1,
-  "warm_us_per_file": 4.997,
-  "cold_pipeline_build_ms": 1.794762,
-  "gbs_scan_throughput": 846.479,
+  "warm_us_per_file": 3.012,
+  "cold_pipeline_build_ms": 1.21711,
+  "gbs_scan_throughput": 3531.88,
   "ulp_drift_max": 0,
-  "max_vram_mib": 32607,
+  "max_vram_mib": 24564,
   "source_artifacts": [
     "release/evidence/benchmarks/workload-01-condition-eval.json",
     "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
     "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
     "release/evidence/benchmarks/workload-04-metadata-conditions.json",
     "release/evidence/benchmarks/workload-05-entropy-window.json",
+    "release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
     "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
     "release/evidence/benchmarks/workload-08-ifds-witness.json",
     "release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
@@ -20,12 +21,8 @@
     "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
     "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
     "release/evidence/benchmarks/workload-15-adaptive-routing.json",
-    "release/evidence/benchmarks/workload-16-quantized-linear.json"
+    "release/evidence/benchmarks/workload-16-quantized-linear.json",
+    "release/evidence/benchmarks/workload-17-egraph-saturation.json"
   ],
-  "blockers": [
-    "CUDA release axis artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` has nonzero or missing summary.failed",
-    "CUDA release axis artifact `release/evidence/benchmarks/workload-17-egraph-saturation.json` has nonzero or missing summary.failed",
-    "cuda-release-suite artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` is absent from bench-release-axes source_artifacts",
-    "cuda-release-suite artifact `release/evidence/benchmarks/workload-17-egraph-saturation.json` is absent from bench-release-axes source_artifacts"
-  ]
+  "blockers": []
 }

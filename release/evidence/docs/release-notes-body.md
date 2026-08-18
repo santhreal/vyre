@@ -3996,7 +3996,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   canonical identity instead of backend descriptor position, excludes
   backend-allocated read-write outputs from prior host inputs, and rejects
   conformance fixture byte lengths that disagree with the canonical Program ABI
-  before device measurement.
+  before device measurement. Write-complete elementwise, hypervector, p-adic,
+  and backward-gradient outputs are declared write-only, so callers submit only
+  source buffers.
 - Two rewrites that enumerated `Node` themselves reached fewer operands than
   the analysis that fed them. Cross-scope CSE recorded occurrences inside the
   offset and size of an asynchronous copy and the address of a trap, but its
@@ -4264,6 +4266,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   provenance gates enforce runtime path derivation across all member sources
   and test binaries, catching both `env!` and `option_env!` variants without
   waivers.
+- CI now uses compatible benchmark, nightly tool, and vendored OpenSSL
+  configuration across supported hosts. Unused crate dependencies were deleted
+  and indirect test dependencies are declared for the dependency audit.
 - The workspace cargo runner no longer exports a workstation-specific target
   directory, so hosted CI and new checkouts use their own writable Cargo
   configuration.
@@ -4350,6 +4355,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   monotonicity, and edge-count errors. The production forward validator rejects
   a nonzero first offset, and the dominator-frontier witness rejects a short
   packed seed before mutating caller output.
+- CUDA device acquisition now converts cudarc's missing-driver-library unwind
+  into an actionable backend error while preserving unrelated panics and the
+  GPU-only execution contract.
 - The CUDA e-graph device-image upload contracts build their snapshots from
   named fixtures, and `assert_span_matches_foundation` has one definition.
   `upload_layout_contracts.rs` redefined that helper identically to the
@@ -5560,6 +5568,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   was wrong.
 - Release evidence now tracks CUDA and WGPU benchmark invocations as distinct
   required producers with disjoint, exact artifact ownership.
+- Release benchmark evidence now records the optimizer-impact performance
+  contract and explicit zero-launch PTX proof metrics. The smoke-runtime gate
+  measures all 30 harness-owned release-profile samples instead of setup,
+  environment probes, or one-time artifact preparation. Resident string-bitmap
+  batching reads back one canonical bitmap while retaining the full
+  device-resident batch, avoiding redundant PCIe output transfers.
 - The release macro benchmarks no longer time a CPU baseline that rebuilds its
   own input. `synthetic_cpu_count` regenerated every record from its index
   inside the timed region, twelve to twenty-four rotate-multiply rounds per
@@ -5646,6 +5660,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   normalize them per logical item. String bitmap scatter uses subgroup ballots
   to materialize 16 independent output rows in one resident dispatch, with
   exact CPU-oracle parity.
+- Resident value-returning dispatch helpers now preserve backend upload,
+  kernel, and readback fusion instead of adding separate host synchronization
+  boundaries.
 - Ring occupancy sums report an overflowing slot count instead of saturating to
   a plausible total, so a launch recommendation over an impossible decoded ring
   now fails with that reason instead of running on ratios derived from a
