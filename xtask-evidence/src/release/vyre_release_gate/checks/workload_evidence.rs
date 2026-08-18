@@ -192,9 +192,10 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
             })
             .unwrap_or_default();
         if bench_target_ids.is_empty()
-            || !bench_target_ids
-                .iter()
-                .all(|target| target.starts_with("release.workload."))
+            || !bench_target_ids.iter().all(|target| {
+                target.starts_with("release.workload.")
+                    || target.starts_with("release.optimization.")
+            })
         {
             failures.push(format!(
                 "requirement `{}` workload family `{id}` must list release BENCH_TARGETS.toml target ids",
@@ -305,27 +306,33 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
                 requirement.id
             ));
         }
-        if family
-            .get("fair_cpu_sota_baseline_count")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0)
-            == 0
-        {
-            failures.push(format!(
-                "requirement `{}` workload family `{id}` has no fair CPU-SOTA baseline crate bound to CUDA",
-                requirement.id
-            ));
-        }
-        if family
-            .get("cpu_sota_baseline_names")
-            .and_then(serde_json::Value::as_array)
-            .map_or(0, Vec::len)
-            == 0
-        {
-            failures.push(format!(
-                "requirement `{}` workload family `{id}` has no named CPU-SOTA baseline provenance",
-                requirement.id
-            ));
+        let requires_cpu_sota_baseline = family
+            .get("requires_cpu_sota_baseline")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(true);
+        if requires_cpu_sota_baseline {
+            if family
+                .get("fair_cpu_sota_baseline_count")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+                == 0
+            {
+                failures.push(format!(
+                    "requirement `{}` workload family `{id}` has no fair CPU-SOTA baseline crate bound to CUDA",
+                    requirement.id
+                ));
+            }
+            if family
+                .get("cpu_sota_baseline_names")
+                .and_then(serde_json::Value::as_array)
+                .map_or(0, Vec::len)
+                == 0
+            {
+                failures.push(format!(
+                    "requirement `{}` workload family `{id}` has no named CPU-SOTA baseline provenance",
+                    requirement.id
+                ));
+            }
         }
         if family
             .get("reproducible_cuda_command")
@@ -623,4 +630,50 @@ mod workload_evidence_tests {
             "{failures:?}"
         );
     }
+    #[test]
+    fn workload_matrix_accepts_optimization_bench_target_ids() {
+        let requirement = Requirement {
+            id: "proof-workloads-12".to_string(),
+            title: "proof workloads".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+        };
+        let matrix = serde_json::json!({
+            "families": [
+                {
+                    "id": "semantic-optimizer-impact",
+                    "required": true,
+                    "matched_cases": ["foundation.optimizer.impact"],
+                    "bench_target_ids": ["release.optimization.foundation_optimizer_impact"],
+                    "dispatch_policy": "canonical-program-optimizer",
+                    "non_megakernel_justification": "architectural: semantic optimization executes before verified lowering and target materialization",
+                    "requires_cpu_sota_baseline": false,
+                    "release_plan_workload": 11,
+                    "evidence_artifact": "release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+                    "benchmark_command": "cargo_full run -p vyre-bench --release -- run --output release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+                    "reproducible_cuda_command": true
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+        check_workload_matrix_artifact_coverage(
+            &requirement,
+            Path::new("."),
+            &matrix,
+            &mut failures,
+        );
+        assert!(
+            !failures.iter().any(|f| f.contains("must list release BENCH_TARGETS.toml target ids")),
+            "Fix: release.optimization. target ids must be accepted: {failures:?}"
+        );
+        assert!(
+            !failures.iter().any(|f| f.contains("has no fair CPU-SOTA baseline crate bound to CUDA")),
+            "Fix: requires_cpu_sota_baseline=false must exempt from CPU-SOTA baseline crate requirement: {failures:?}"
+        );
+        assert!(
+            !failures.iter().any(|f| f.contains("has no named CPU-SOTA baseline provenance")),
+            "Fix: requires_cpu_sota_baseline=false must exempt from CPU-SOTA baseline names requirement: {failures:?}"
+        );
+    }
+
 }

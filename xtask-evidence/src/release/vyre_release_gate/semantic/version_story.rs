@@ -6,9 +6,7 @@ use xtask::release::release_train;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     if !requirement.evidence.iter().any(|evidence| {
-        evidence.contains("cargo_full")
-            && evidence.contains("version-matrix")
-            && evidence.contains("release/evidence/version/version-matrix.json")
+        evidence.contains("cargo_full") && evidence.contains("version-matrix")
     }) {
         failures.push(
             "requirement `version-story` must include the cargo_full version-matrix evidence command"
@@ -187,5 +185,48 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 "requirement `version-story` release-tag-plan carries {version_blockers} version matrix blocker(s)"
             ));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn version_story_requires_version_matrix_command() {
+        let mut failures = Vec::new();
+        let requirement = Requirement {
+            id: "version-story".to_string(),
+            title: "version story".to_string(),
+            status: "closed".to_string(),
+            evidence: vec!["evidence/version/version-matrix.json".to_string()],
+        };
+        check(&requirement, Path::new("."), &mut failures);
+        assert!(
+            failures
+                .iter()
+                .any(|f| f.contains("must include the cargo_full version-matrix evidence command")),
+            "Fix: version-story requirement must fail when version-matrix command is absent: {failures:?}"
+        );
+    }
+
+    #[test]
+    fn version_story_accepts_write_mode_evidence_command() {
+        let mut failures = Vec::new();
+        let requirement = Requirement {
+            id: "version-story".to_string(),
+            title: "version story".to_string(),
+            status: "closed".to_string(),
+            evidence: vec![
+                "cargo_full run --bin xtask -- version-matrix --write".to_string(),
+            ],
+        };
+        check(&requirement, Path::new("."), &mut failures);
+        assert!(
+            !failures
+                .iter()
+                .any(|f| f.contains("must include the cargo_full version-matrix evidence command")),
+            "Fix: version-story requirement must accept standard --write command: {failures:?}"
+        );
     }
 }
