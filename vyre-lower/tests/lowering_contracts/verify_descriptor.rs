@@ -1,6 +1,6 @@
 //! Descriptor verification entry-point contracts.
 
-use vyre_lower::descriptor_builder::lit;
+use vyre_lower::descriptor_builder::{body, descriptor, lit};
 use vyre_lower::*;
 
 #[test]
@@ -22,16 +22,7 @@ fn valid_input_returns_descriptor_directly() {
 #[test]
 fn invalid_input_returns_input_failure() {
     // Descriptor with zero workgroup_size dim  -  caught by verify.
-    let desc = KernelDescriptor {
-        id: "bad".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(0, 1, 1),
-        body: KernelBody {
-            ops: vec![],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let desc = descriptor("bad").dispatch(0, 1, 1).body(body()).build();
     let r = verify_descriptor(&desc);
     assert!(matches!(r, Err(VerifyFailure::Input(_))));
 }
@@ -112,16 +103,7 @@ fn full_report_format_long_includes_all_sections() {
 
 #[test]
 fn full_report_records_verify_fix_text_for_bad_descriptor() {
-    let desc = KernelDescriptor {
-        id: "bad".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(0, 1, 1),
-        body: KernelBody {
-            ops: vec![],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let desc = descriptor("bad").dispatch(0, 1, 1).body(body()).build();
     let report = full_report(&desc);
     assert_eq!(report.descriptor_id, "bad");
     assert_eq!(report.verify_status(), "FAIL");
@@ -138,16 +120,7 @@ fn full_report_records_verify_fix_text_for_bad_descriptor() {
 
 #[test]
 fn errors_accessor_yields_underlying() {
-    let desc = KernelDescriptor {
-        id: "bad".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(0, 1, 1),
-        body: KernelBody {
-            ops: vec![],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let desc = descriptor("bad").dispatch(0, 1, 1).body(body()).build();
     let f = verify_descriptor(&desc).unwrap_err();
     assert_ne!(f.errors().len(), 0);
 }

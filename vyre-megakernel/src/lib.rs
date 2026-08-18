@@ -38,6 +38,9 @@ mod search;
 mod select;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
 pub(crate) mod target;
+#[cfg(test)]
+#[path = "../tests/graph_fixtures/mod.rs"]
+mod graph_fixtures;
 
 pub use compile::{compile, compile_measured, FinalistEvaluator};
 pub use device_facts::DeviceFacts;

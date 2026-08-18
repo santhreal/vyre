@@ -43,69 +43,36 @@ pub fn apply_lowering_rewrites(desc: &KernelDescriptor) -> KernelDescriptor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::descriptor_builder::lit;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelOp,
-        KernelOpKind, LiteralValue, MemoryClass,
-    };
+    use crate::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+    use crate::{BindingSlot, BindingVisibility, KernelOpKind, LiteralValue, MemoryClass};
     use vyre_foundation::ir::{BinOp, DataType};
 
     #[test]
     fn apply_lowering_rewrites_executes_pipeline_and_verifies() {
-        let desc = KernelDescriptor {
-            id: "full_pipeline_test".into(),
-            bindings: BindingLayout {
-                slots: vec![
-                    BindingSlot {
-                        slot: 0,
-                        name: "readonly_table".into(),
-                        element_type: DataType::F32,
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        element_count: Some(128),
-                    },
-                    BindingSlot {
-                        slot: 1,
-                        name: "output".into(),
-                        element_type: DataType::F32,
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadWrite,
-                        element_count: Some(128),
-                    },
-                ],
-            },
-            dispatch: Dispatch {
-                workgroup_size: [64, 1, 1],
-            },
-            body: KernelBody {
-                ops: vec![
-                    lit(0, 0), // index 0 (result 0)
-                    lit(0, 1), // dead literal (result 1)
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![2, 3],
-                        result: Some(4),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![1, 0, 4],
-                        result: None,
-                    },
-                ],
-                literals: vec![LiteralValue::U32(0)],
-                child_bodies: vec![],
-            },
-        };
+        let desc = descriptor("full_pipeline_test")
+            .slot(BindingSlot {
+                slot: 0,
+                name: "readonly_table".into(),
+                element_type: DataType::F32,
+                memory_class: MemoryClass::Global,
+                visibility: BindingVisibility::ReadOnly,
+                element_count: Some(128),
+            })
+            .slot(global_rw(1, DataType::F32, "output"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .literals([LiteralValue::U32(0)])
+                    .ops([
+                        lit(0, 0), // index 0 (result 0)
+                        lit(0, 1), // dead literal (result 1)
+                        op(KernelOpKind::LoadGlobal, [0, 0], 2),
+                        op(KernelOpKind::LoadGlobal, [0, 0], 3),
+                        op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
+                        effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+                    ]),
+            )
+            .build();
 
         let result = apply_lowering_rewrites(&desc);
 

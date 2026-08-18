@@ -350,28 +350,15 @@ mod tests {
             "peel must materialize then++rest at i = 0, then loop rest over 1..N"
         );
 
-        // The remainder loop must start at i = 1 and keep `rest` with the
-        // induction variable (search through the Block nesting the rewrite adds).
-        fn find_loop(nodes: &[Node]) -> Option<(&Expr, &[Node])> {
-            for n in nodes {
-                match n {
-                    Node::Loop { from, body, .. } => return Some((from, body)),
-                    Node::Block(b) => {
-                        if let Some(x) = find_loop(b) {
-                            return Some(x);
-                        }
-                    }
-                    Node::Region { body, .. } => {
-                        if let Some(x) = find_loop(body) {
-                            return Some(x);
-                        }
-                    }
-                    _ => {}
+        let mut loop_found = None;
+        crate::visit::for_each_node(&body, |n: &Node| {
+            if let Node::Loop { from, body, .. } = n {
+                if loop_found.is_none() {
+                    loop_found = Some((from, body.as_slice()));
                 }
             }
-            None
-        }
-        let (from, lbody) = find_loop(&body).expect("remainder loop present");
+        });
+        let (from, lbody) = loop_found.expect("remainder loop present");
         assert_eq!(from, &Expr::u32(1), "remainder loop starts at i = 1");
         assert_eq!(
             store_pairs(lbody),

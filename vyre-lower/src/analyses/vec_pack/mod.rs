@@ -125,12 +125,12 @@ fn detect_chains_in_body(body: &KernelBody, report: &mut VecPackReport) {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct IndexExpr {
-    base_result: Option<u32>,
-    offset: u32,
+pub(crate) struct IndexExpr {
+    pub(crate) base_result: Option<u32>,
+    pub(crate) offset: u32,
 }
 
-fn index_expr_by_result(body: &KernelBody) -> FxHashMap<u32, IndexExpr> {
+pub(crate) fn index_expr_by_result(body: &KernelBody) -> FxHashMap<u32, IndexExpr> {
     let mut out = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
     for op in &body.ops {
         let Some(result) = op.result else {
@@ -151,22 +151,30 @@ fn index_expr_by_result(body: &KernelBody) -> FxHashMap<u32, IndexExpr> {
     out
 }
 
-fn literal_index_expr(op: &KernelOp, body: &KernelBody) -> Option<IndexExpr> {
+pub(crate) fn literal_index_expr(op: &KernelOp, body: &KernelBody) -> Option<IndexExpr> {
     if !matches!(op.kind, KernelOpKind::Literal) {
         return None;
     }
     let pool_idx = *op.operands.first()?;
-    let LiteralValue::U32(value) = body.literals.get(pool_idx as usize)? else {
-        return None;
+    let value = match body.literals.get(pool_idx as usize)? {
+        LiteralValue::U32(val) => *val,
+        LiteralValue::I32(val) if *val >= 0 => *val as u32,
+        _ => return None,
     };
     Some(IndexExpr {
         base_result: None,
-        offset: *value,
+        offset: value,
     })
 }
 
-fn add_index_expr(op: &KernelOp, indices: &FxHashMap<u32, IndexExpr>) -> Option<IndexExpr> {
-    if !matches!(op.kind, KernelOpKind::BinOpKind(BinOp::Add)) {
+pub(crate) fn add_index_expr(
+    op: &KernelOp,
+    indices: &FxHashMap<u32, IndexExpr>,
+) -> Option<IndexExpr> {
+    if !matches!(
+        op.kind,
+        KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd)
+    ) {
         return None;
     }
     let lhs = indices.get(op.operands.first()?)?;

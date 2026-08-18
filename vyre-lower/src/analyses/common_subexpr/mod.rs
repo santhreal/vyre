@@ -118,22 +118,17 @@ fn walk_ops(body: &KernelBody, buckets: &mut FxHashMap<OpKey, Vec<usize>>, next_
 }
 
 fn is_eligible(kind: &KernelOpKind) -> bool {
-    matches!(
-        kind,
-        KernelOpKind::Literal
-            | KernelOpKind::LocalInvocationId
-            | KernelOpKind::GlobalInvocationId
-            | KernelOpKind::WorkgroupId
-            | KernelOpKind::SubgroupLocalId
-            | KernelOpKind::SubgroupSize
-            | KernelOpKind::BinOpKind(_)
-            | KernelOpKind::UnOpKind(_)
-            | KernelOpKind::Fma
-            | KernelOpKind::Select
-            | KernelOpKind::Cast { .. }
-            | KernelOpKind::BufferLength
-            | KernelOpKind::ExtractLane { .. }
-    )
+    crate::op_facts::is_ambient_or_literal(kind)
+        || matches!(
+            kind,
+            KernelOpKind::BinOpKind(_)
+                | KernelOpKind::UnOpKind(_)
+                | KernelOpKind::Fma
+                | KernelOpKind::Select
+                | KernelOpKind::Cast { .. }
+                | KernelOpKind::BufferLength
+                | KernelOpKind::ExtractLane { .. }
+        )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

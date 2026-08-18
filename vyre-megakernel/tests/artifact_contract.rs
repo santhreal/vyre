@@ -1107,19 +1107,9 @@ fn artifact_body_tampering_is_detected() {
 #[test]
 fn entry_abi_inputs_and_outputs_preserve_program_buffer_order_despite_port_reordering() {
     let mut graph = ProgramGraph::new();
-    let val_x = graph
-        .add_external_value(
-            "x",
-            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
-        )
-        .unwrap();
-    let val_y = graph
-        .add_external_value(
-            "y",
-            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
-        )
-        .unwrap();
-
+    let in_contract = contract(BufferAccess::ReadOnly, ValueLifetime::Invocation);
+    let val_x = graph.add_external_value("x", in_contract.clone()).unwrap();
+    let val_y = graph.add_external_value("y", in_contract).unwrap();
     let program = Program::wrapped(
         vec![
             BufferDecl::storage("first", 0, BufferAccess::ReadOnly, DataType::U32),

@@ -331,19 +331,9 @@ pub fn try_chebyshev_filter_witness(
     k_steps: u32,
 ) -> Result<Vec<f32>, String> {
     let mut out = Vec::new();
-    let mut t_prev = Vec::new();
-    let mut t_curr = Vec::new();
-    let mut t_next = Vec::new();
     try_chebyshev_filter_witness_into(
-        laplacian,
-        signal,
-        coefficients,
-        n,
-        k_steps,
-        &mut out,
-        &mut t_prev,
-        &mut t_curr,
-        &mut t_next,
+        laplacian, signal, coefficients, n, k_steps,
+        &mut out, &mut Vec::new(), &mut Vec::new(), &mut Vec::new(),
     )?;
     Ok(out)
 }
@@ -357,22 +347,7 @@ pub fn chebyshev_filter_witness(
     n: u32,
     k_steps: u32,
 ) -> Vec<f32> {
-    let mut out = Vec::new();
-    let mut t_prev = Vec::new();
-    let mut t_curr = Vec::new();
-    let mut t_next = Vec::new();
-    chebyshev_filter_witness_into(
-        laplacian,
-        signal,
-        coefficients,
-        n,
-        k_steps,
-        &mut out,
-        &mut t_prev,
-        &mut t_curr,
-        &mut t_next,
-    );
-    out
+    try_chebyshev_filter_witness(laplacian, signal, coefficients, n, k_steps).unwrap_or_default()
 }
 
 /// Sequential per-block Gauss-Jordan inverse witness without pivoting using caller-provided scratch buffers.
@@ -2194,22 +2169,9 @@ pub fn try_sinkhorn_iterate_witness(
     n: u32,
     max_iterations: u32,
 ) -> Result<(Vec<u32>, Vec<u32>, u32), String> {
-    let mut u = Vec::new();
-    let mut v = Vec::new();
-    let mut u_old = Vec::new();
+    let (mut u, mut v, mut u_old) = (Vec::new(), Vec::new(), Vec::new());
     let iters = try_sinkhorn_iterate_witness_into(
-        k,
-        k_t,
-        a,
-        b,
-        u_init,
-        v_init,
-        m,
-        n,
-        max_iterations,
-        &mut u,
-        &mut v,
-        &mut u_old,
+        k, k_t, a, b, u_init, v_init, m, n, max_iterations, &mut u, &mut v, &mut u_old,
     )?;
     Ok((u, v, iters))
 }
@@ -2462,16 +2424,9 @@ pub fn sum_product_evaluate_witness(
     leaf_values: &[f64],
     topological_order: &[u32],
 ) -> Vec<f64> {
-    let mut output = Vec::with_capacity(kinds.len());
+    let mut output = Vec::new();
     sum_product_evaluate_witness_into(
-        kinds,
-        child_offsets,
-        child_counts,
-        children,
-        weights,
-        leaf_values,
-        topological_order,
-        &mut output,
+        kinds, child_offsets, child_counts, children, weights, leaf_values, topological_order, &mut output,
     );
     output
 }
@@ -3653,11 +3608,10 @@ pub fn try_sinkhorn_iterate_f64_witness_into(
     v_out: &mut Vec<f64>,
     u_old: &mut Vec<f64>,
 ) -> Result<u32, String> {
-    let m = a.len();
-    let n = b.len();
-    if k.len() != m * n || tolerance <= 0.0 || !tolerance.is_finite() {
+    let (m, n) = (a.len(), b.len());
+    if k.len() != m * n || !(tolerance > 0.0 && tolerance.is_finite()) {
         return Err(format!(
-            "sinkhorn_iterate_f64 requires k.len()==a.len()*b.len() and finite positive tolerance, got k={}, m={m}, n={n}, tolerance={tolerance}.",
+            "invalid sinkhorn parameters: k.len={}, m={m}, n={n}, tol={tolerance}",
             k.len()
         ));
     }
@@ -3707,18 +3661,9 @@ pub fn try_sinkhorn_iterate_f64_witness(
     tolerance: f64,
     max_iterations: u32,
 ) -> Result<(Vec<f64>, Vec<f64>, u32), String> {
-    let mut u = Vec::new();
-    let mut v = Vec::new();
-    let mut u_old = Vec::new();
+    let (mut u, mut v, mut u_old) = (Vec::new(), Vec::new(), Vec::new());
     let iters = try_sinkhorn_iterate_f64_witness_into(
-        k,
-        a,
-        b,
-        tolerance,
-        max_iterations,
-        &mut u,
-        &mut v,
-        &mut u_old,
+        k, a, b, tolerance, max_iterations, &mut u, &mut v, &mut u_old,
     )?;
     Ok((u, v, iters))
 }
@@ -4273,9 +4218,16 @@ pub fn score_denoise_step_witness(
     beta: f64,
     sigma: f64,
 ) -> Vec<f64> {
-    let mut out = Vec::new();
-    score_denoise_step_witness_into(x, score, noise, alpha, beta, sigma, &mut out);
-    out
+    (0..x.len())
+        .map(|i| {
+            let (xv, sv, zv) = (
+                x[i],
+                score.get(i).copied().unwrap_or(0.0),
+                noise.get(i).copied().unwrap_or(0.0),
+            );
+            alpha * xv + beta * sv + sigma * zv
+        })
+        .collect()
 }
 
 /// Sequential greedy tensor network contraction order witness.
@@ -4352,26 +4304,24 @@ pub fn is_psd_matrix_witness(matrix: &[f64], n: u32) -> bool {
 
 /// Sequential Modified Gram-Schmidt orthogonalization witness into caller-owned storage.
 pub fn modified_gram_schmidt_witness_into(y: &[f64], m: u32, l: u32, q: &mut Vec<f64>) {
-    let m = m as usize;
-    let l = l as usize;
-    let mut cols = vec![vec![0.0; m]; l];
-    for j in 0..l {
-        for i in 0..m {
-            cols[j][i] = y.get(i * l + j).copied().unwrap_or(0.0);
-        }
+    let (m, l) = (m as usize, l as usize);
+    let mut cols = vec![0.0_f64; m * l];
+    for (idx, slot) in cols.iter_mut().enumerate() {
+        let (j, i) = (idx / m, idx % m);
+        *slot = y.get(i * l + j).copied().unwrap_or(0.0);
     }
     for j in 0..l {
-        let norm_sq: f64 = cols[j].iter().map(|&v| v * v).sum();
-        let norm = norm_sq.sqrt();
+        let norm = cols[j * m..(j + 1) * m].iter().map(|&v| v * v).sum::<f64>().sqrt();
         if norm > 1e-12 {
+            let inv_norm = 1.0 / norm;
             for i in 0..m {
-                cols[j][i] /= norm;
+                cols[j * m + i] *= inv_norm;
             }
         }
         for k in (j + 1)..l {
-            let dot: f64 = (0..m).map(|i| cols[j][i] * cols[k][i]).sum();
+            let dot: f64 = (0..m).map(|i| cols[j * m + i] * cols[k * m + i]).sum();
             for i in 0..m {
-                cols[k][i] -= dot * cols[j][i];
+                cols[k * m + i] -= dot * cols[j * m + i];
             }
         }
     }
@@ -4379,7 +4329,7 @@ pub fn modified_gram_schmidt_witness_into(y: &[f64], m: u32, l: u32, q: &mut Vec
     q.reserve(m * l);
     for i in 0..m {
         for j in 0..l {
-            q.push(cols[j][i]);
+            q.push(cols[j * m + i]);
         }
     }
 }
@@ -4458,24 +4408,17 @@ pub fn rms_norm_linear_witness(
         normalized.len(),
         n
     );
-    let inv_scale =
-        1.0_f32 / ((normalized.iter().map(|v| v * v).sum::<f32>() / (n as f32)) + eps).sqrt();
-    let mut output = bias.to_vec();
-    for j in 0..out_dim as usize {
-        let mut acc = output.get(j).copied().unwrap_or(0.0);
-        for k in 0..in_dim as usize {
-            let in_val = input.get(k).copied().unwrap_or(0.0);
-            let w_val = weights
-                .get(k * out_dim as usize + j)
-                .copied()
-                .unwrap_or(0.0);
-            acc += in_val * inv_scale * w_val;
-        }
-        if j < output.len() {
-            output[j] = acc;
-        }
-    }
-    output
+    let inv_scale = 1.0_f32 / ((normalized.iter().map(|&v| v * v).sum::<f32>() / (n as f32)) + eps).sqrt();
+    let (out_dim, in_dim) = (out_dim as usize, in_dim as usize);
+    (0..out_dim)
+        .map(|j| {
+            let b = bias.get(j).copied().unwrap_or(0.0);
+            let dot: f32 = (0..in_dim)
+                .map(|k| input.get(k).copied().unwrap_or(0.0) * weights.get(k * out_dim + j).copied().unwrap_or(0.0))
+                .sum();
+            b + dot * inv_scale
+        })
+        .collect()
 }
 
 /// Sequential zero-padded 3x3 im2col patch reshape witness writing into caller storage.

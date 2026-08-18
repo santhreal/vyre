@@ -1,5 +1,6 @@
 #[cfg(feature = "subgroup-ops")]
 use super::super::invocation::HashmapInvocationSnapshot;
+use super::eval_to_index;
 use super::super::{
     eval_expr,
     invocation::HashmapInvocation,
@@ -93,20 +94,10 @@ pub(crate) fn step_nodes_frame<'a>(
                 scoped: true,
             });
         }
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => {
-            let from_value = eval_expr (from , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { ReferenceError::new("loop lower bound cannot be represented as u32. Fix: use an in-range unsigned loop bound.") }) ? ;
-            let to_value = eval_expr (to , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { ReferenceError::new("loop upper bound cannot be represented as u32. Fix: use an in-range unsigned loop bound.") }) ? ;
-            invocation.frames.push(Frame::Loop {
-                var,
-                next: from_value,
-                to: to_value,
-                body,
-            });
+        Node::Loop { var, from, to, body } => {
+            let from_value = eval_to_index(from, "loop lower bound", invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+            let to_value = eval_to_index(to, "loop upper bound", invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+            invocation.frames.push(Frame::Loop { var, next: from_value, to: to_value, body });
         }
         Node::Return => {
             invocation.frames.clear();
@@ -134,60 +125,21 @@ pub(crate) fn step_nodes_frame<'a>(
             })?;
             eval_indirect_dispatch(count_buffer, count_offset, memory)?;
         }
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => {
-            let transfer = eval_async_load(
-                source,
-                destination,
-                offset,
-                size,
-                invocation,
-                memory,
-                #[cfg(feature = "subgroup-ops")]
-                snapshots,
-            )?;
+        Node::AsyncLoad { source, destination, offset, size, tag } => {
+            let transfer = eval_async_load(source, destination, offset, size, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
             invocation.begin_async(tag, transfer)?;
         }
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => {
-            let transfer = eval_async_store(
-                source,
-                destination,
-                offset,
-                size,
-                invocation,
-                memory,
-                #[cfg(feature = "subgroup-ops")]
-                snapshots,
-            )?;
+        Node::AsyncStore { source, destination, offset, size, tag } => {
+            let transfer = eval_async_store(source, destination, offset, size, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
             invocation.begin_async(tag, transfer)?;
         }
         Node::AsyncWait { tag } => {
             apply_async_transfer(invocation.finish_async(tag)?, memory)?;
         }
         Node::Trap { address, tag } => {
-            let address = eval_expr(
-                address,
-                invocation,
-                memory,
-                #[cfg(feature = "subgroup-ops")]
-                snapshots,
-            )?
-            .try_as_u32()
-            .ok_or_else(|| {
-                ReferenceError::new(format!(
-                    "reference trap `{tag}` address is not a u32. Fix: pass a scalar u32 trap address."
-                ))
+            let addr_val = eval_expr(address, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+            let address = addr_val.try_as_u32().ok_or_else(|| {
+                ReferenceError::new(format!("reference trap `{tag}` address is not a u32. Fix: pass a scalar u32 trap address."))
             })?;
             return Err(ReferenceError::new(format!(
                 "reference dispatch trapped: address={address}, tag=`{tag}`. Fix: handle the trap condition or route this Program through a backend/runtime with replay support."
@@ -249,26 +201,13 @@ pub(crate) fn step_nodes_frame<'a>(
                 .locals
                 .bind(name.as_str(), Value::Array(elements))?;
         }
-        Node::TileLoad {
-            tile,
-            tile_type,
-            buffer,
-            origin,
-            layout,
-        } => {
+        Node::TileLoad { tile, tile_type, buffer, origin, layout } => {
             let mut origin_coords = Vec::with_capacity(origin.len());
             for expr in origin {
-                let v = eval_expr(
-                    expr,
-                    invocation,
-                    memory,
-                    #[cfg(feature = "subgroup-ops")]
-                    snapshots,
-                )?;
-                let coord = v.try_as_u32().ok_or_else(|| {
+                let v = eval_expr(expr, invocation, memory, #[cfg(feature = "subgroup-ops")] snapshots)?;
+                origin_coords.push(v.try_as_u32().ok_or_else(|| {
                     ReferenceError::new("tile load origin coord must be u32".to_string())
-                })?;
-                origin_coords.push(coord);
+                })?);
             }
             let target = buffer_mut(memory, buffer.as_str())?;
             let elements =
@@ -353,15 +292,13 @@ pub(crate) fn step_nodes_frame<'a>(
                 let val = invocation.locals.local(input.as_str()).ok_or_else(|| {
                     ReferenceError::new(format!("tile input `{input}` not found"))
                 })?;
-                let elems = match &val {
-                    Value::Array(e) => e.clone(),
-                    s => vec![s.clone()],
+                let elems = match val {
+                    Value::Array(e) => e,
+                    s => vec![s],
                 };
                 max_len = max_len.max(elems.len());
+                saved_inputs.push(Value::Array(elems.clone()));
                 input_arrays.push(elems);
-                saved_inputs.push(val);
-            }
-            for input in inputs {
                 invocation.locals.remove(input.as_str());
             }
             let mut out_elems = Vec::with_capacity(max_len);

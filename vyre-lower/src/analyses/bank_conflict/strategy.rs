@@ -9,6 +9,7 @@
 
 use super::report::{BankConflictKind, ConflictSeverity};
 use serde::{Deserialize, Serialize};
+use crate::analyses::gcd_u32;
 
 /// Physical and execution geometry for target shared-memory banks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -17,7 +18,7 @@ pub struct TargetBankGeometry {
     pub bank_count: u32,
     /// Width of each bank in bytes (typically 4 bytes = 32 bits).
     pub bank_width_bytes: u32,
-    /// Subgroup (warp/wavefront) size in lanes (e.g. 32 on NVIDIA, 32 or 64 on AMD).
+    /// Subgroup (execution wave) size in lanes (e.g. 32 or 64 lanes).
     pub subgroup_lanes: u32,
     /// Native instruction access width in bytes (e.g. 4 for f32/u32, 8 for f64/v2, 16 for v4).
     pub instruction_word_bytes: u32,
@@ -264,14 +265,6 @@ fn classify_phase_conflict(stride: u32, bank_count: u32, active_threads: u32) ->
     }
 }
 
-fn gcd_u32(mut a: u32, mut b: u32) -> u32 {
-    while b != 0 {
-        let t = b;
-        b = a % b;
-        a = t;
-    }
-    a
-}
 
 fn severity_rank(sev: ConflictSeverity) -> u32 {
     match sev {

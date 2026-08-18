@@ -7,14 +7,11 @@ use vyre_reference::{reference_eval, value::Value};
 use wire_words::{bytes_to_u32, u32_bytes};
 
 fn copy_program(node: Node, count: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(count),
-            BufferDecl::output("out", 1, DataType::U32).with_count(count),
-        ],
-        [64, 1, 1],
-        vec![node],
-    )
+    let buffers = vec![
+        BufferDecl::read("input", 0, DataType::U32).with_count(count),
+        BufferDecl::output("out", 1, DataType::U32).with_count(count),
+    ];
+    Program::wrapped(buffers, [64, 1, 1], vec![node])
 }
 
 fn identity_program(node: Node, count: u32) -> Program {
@@ -103,19 +100,9 @@ proptest! {
     #[test]
     fn reference_executes_world_copy_collectives(values in proptest::collection::vec(any::<u32>(), 1..256), reduce in any::<bool>()) {
         let count = values.len() as u32;
-        let node = if reduce {
-            Node::ReduceScatter {
-                input: "input".into(),
-                output: "out".into(),
-                op: CollectiveOp::Sum,
-                group: CommGroup::WORLD,
-            }
-        } else {
-            Node::AllGather {
-                input: "input".into(),
-                output: "out".into(),
-                group: CommGroup::WORLD,
-            }
+        let node = match reduce {
+            true => Node::ReduceScatter { input: "input".into(), output: "out".into(), op: CollectiveOp::Sum, group: CommGroup::WORLD },
+            false => Node::AllGather { input: "input".into(), output: "out".into(), group: CommGroup::WORLD },
         };
         let program = copy_program(node, count);
         let outputs = reference_eval(&program, &[Value::from(u32_bytes(&values))])

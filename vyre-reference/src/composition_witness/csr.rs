@@ -115,16 +115,9 @@ pub fn csr_forward_traverse_witness(
     frontier: &[u32],
     allow_mask: u32,
 ) -> Vec<u32> {
-    let words = (node_count as usize).div_ceil(32);
-    let mut out = Vec::with_capacity(words);
+    let mut out = Vec::new();
     csr_forward_traverse_witness_into(
-        node_count,
-        row_offsets,
-        col_indices,
-        edge_kind_mask,
-        frontier,
-        allow_mask,
-        &mut out,
+        node_count, row_offsets, col_indices, edge_kind_mask, frontier, allow_mask, &mut out,
     );
     out
 }
@@ -635,15 +628,9 @@ pub fn csr_forward_or_changed_witness(
     frontier: &[u32],
     allow_mask: u32,
 ) -> (Vec<u32>, u32) {
-    let mut output = Vec::with_capacity(((node_count as usize).div_ceil(32)).max(1));
+    let mut output = Vec::new();
     let changed = csr_forward_or_changed_witness_into(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier,
-        allow_mask,
-        &mut output,
+        node_count, edge_offsets, edge_targets, edge_kind_mask, frontier, allow_mask, &mut output,
     );
     (output, changed)
 }

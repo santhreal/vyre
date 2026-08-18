@@ -87,23 +87,18 @@ fn emit_with_dependencies(
 }
 
 fn is_pure_movable(kind: &KernelOpKind) -> bool {
-    matches!(
-        kind,
-        KernelOpKind::Literal
-            | KernelOpKind::LocalInvocationId
-            | KernelOpKind::GlobalInvocationId
-            | KernelOpKind::WorkgroupId
-            | KernelOpKind::SubgroupLocalId
-            | KernelOpKind::SubgroupSize
-            | KernelOpKind::LoopIndex { .. }
-            | KernelOpKind::BufferLength
-            | KernelOpKind::Copy
-            | KernelOpKind::BinOpKind(_)
-            | KernelOpKind::UnOpKind(_)
-            | KernelOpKind::Fma
-            | KernelOpKind::Select
-            | KernelOpKind::Cast { .. }
-    )
+    crate::op_facts::is_ambient_or_literal(kind)
+        || matches!(
+            kind,
+            KernelOpKind::LoopIndex { .. }
+                | KernelOpKind::BufferLength
+                | KernelOpKind::Copy
+                | KernelOpKind::BinOpKind(_)
+                | KernelOpKind::UnOpKind(_)
+                | KernelOpKind::Fma
+                | KernelOpKind::Select
+                | KernelOpKind::Cast { .. }
+        )
 }
 
 #[cfg(test)]

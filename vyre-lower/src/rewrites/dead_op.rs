@@ -50,45 +50,26 @@ fn collect_referenced_results(body: &KernelBody, referenced: &mut FxHashSet<u32>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::descriptor_builder::lit;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelOp, KernelOpKind,
-        LiteralValue, MemoryClass,
-    };
+    use crate::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+    use crate::{KernelOpKind, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
 
     #[test]
     fn unreferenced_pure_op_is_stripped() {
-        let desc = KernelDescriptor {
-            id: "dead_op_test".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    name: "out".into(),
-                    element_type: DataType::U32,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    element_count: Some(64),
-                }],
-            },
-            dispatch: Dispatch {
-                workgroup_size: [64, 1, 1],
-            },
-            body: KernelBody {
-                ops: vec![
-                    lit(0, 0), // result 0, used by store
-                    lit(0, 1), // result 1, dead!
-                    lit(0, 2), // result 2, dead!
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 0], // slot 0, index 0, value 0
-                        result: None,
-                    },
-                ],
-                literals: vec![LiteralValue::U32(42)],
-                child_bodies: vec![],
-            },
-        };
+        let desc = descriptor("dead_op_test")
+            .slot(global_rw(0, DataType::U32, "out"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .literals([LiteralValue::U32(42)])
+                    .ops([
+                        lit(0, 0), // result 0, used by store
+                        lit(0, 1), // result 1, dead!
+                        lit(0, 2), // result 2, dead!
+                        effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
+                    ]),
+            )
+            .build();
 
         let rewritten = rewrite_dead_ops(&desc);
 
@@ -100,39 +81,19 @@ mod tests {
 
     #[test]
     fn effectful_op_without_result_is_preserved() {
-        let desc = KernelDescriptor {
-            id: "effectful_test".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    name: "out".into(),
-                    element_type: DataType::U32,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    element_count: Some(64),
-                }],
-            },
-            dispatch: Dispatch {
-                workgroup_size: [64, 1, 1],
-            },
-            body: KernelBody {
-                ops: vec![
-                    lit(0, 0),
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 0],
-                        result: None,
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Return,
-                        operands: vec![],
-                        result: None,
-                    },
-                ],
-                literals: vec![LiteralValue::U32(0)],
-                child_bodies: vec![],
-            },
-        };
+        let desc = descriptor("effectful_test")
+            .slot(global_rw(0, DataType::U32, "out"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .literals([LiteralValue::U32(0)])
+                    .ops([
+                        lit(0, 0),
+                        effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
+                        effect(KernelOpKind::Return, []),
+                    ]),
+            )
+            .build();
 
         let rewritten = rewrite_dead_ops(&desc);
         assert_eq!(rewritten.body.ops.len(), 3);
@@ -140,97 +101,50 @@ mod tests {
 
     #[test]
     fn referenced_pure_op_is_preserved() {
-        let desc = KernelDescriptor {
-            id: "used_pure_test".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    name: "out".into(),
-                    element_type: DataType::U32,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    element_count: Some(64),
-                }],
-            },
-            dispatch: Dispatch {
-                workgroup_size: [64, 1, 1],
-            },
-            body: KernelBody {
-                ops: vec![
-                    lit(0, 0),
-                    lit(0, 1),
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 2],
-                        result: None,
-                    },
-                ],
-                literals: vec![LiteralValue::U32(10)],
-                child_bodies: vec![],
-            },
-        };
+        let desc = descriptor("used_pure_test")
+            .slot(global_rw(0, DataType::U32, "out"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .literals([LiteralValue::U32(10)])
+                    .ops([
+                        lit(0, 0),
+                        lit(0, 1),
+                        op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
+                        effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                    ]),
+            )
+            .build();
 
         let rewritten = rewrite_dead_ops(&desc);
         assert_eq!(rewritten.body.ops.len(), 4);
     }
     #[test]
     fn child_body_dead_ops_stripped_while_preserving_cross_body_references() {
-        let desc = KernelDescriptor {
-            id: "child_body_dead_op_test".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    name: "out".into(),
-                    element_type: DataType::U32,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    element_count: Some(64),
-                }],
-            },
-            dispatch: Dispatch {
-                workgroup_size: [64, 1, 1],
-            },
-            body: KernelBody {
-                ops: vec![
-                    lit(0, 0), // parent result 0 (used in child)
-                    lit(0, 1), // parent result 1 (dead in parent)
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThenElse,
-                        operands: vec![0, 0, 1], // cond 0, then 0, else 1
-                        result: None,
-                    },
-                ],
-                literals: vec![LiteralValue::U32(1)],
-                child_bodies: vec![
-                    KernelBody {
-                        ops: vec![
-                            lit(0, 2), // child result 2 (dead in child)
-                            KernelOp {
-                                kind: KernelOpKind::StoreGlobal,
-                                operands: vec![0, 0, 0], // uses parent result 0
-                                result: None,
-                            },
-                        ],
-                        literals: vec![LiteralValue::U32(2)],
-                        child_bodies: vec![],
-                    },
-                    KernelBody {
-                        ops: vec![KernelOp {
-                            kind: KernelOpKind::StoreGlobal,
-                            operands: vec![0, 0, 0],
-                            result: None,
-                        }],
-                        literals: vec![],
-                        child_bodies: vec![],
-                    },
-                ],
-            },
-        };
+        let desc = descriptor("child_body_dead_op_test")
+            .slot(global_rw(0, DataType::U32, "out"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .literals([LiteralValue::U32(1)])
+                    .ops([
+                        lit(0, 0),
+                        lit(0, 1),
+                        effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]),
+                    ])
+                    .child(
+                        body()
+                            .literals([LiteralValue::U32(2)])
+                            .ops([
+                                lit(0, 2),
+                                effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
+                            ]),
+                    )
+                    .child(
+                        body().ops([effect(KernelOpKind::StoreGlobal, [0, 0, 0])]),
+                    ),
+            )
+            .build();
 
         let rewritten = rewrite_dead_ops(&desc);
 

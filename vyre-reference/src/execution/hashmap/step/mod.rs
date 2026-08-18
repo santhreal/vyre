@@ -82,15 +82,9 @@ fn step(
 }
 
 pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, ReferenceError> {
-    values
-        .get(axis as usize)
-        .copied()
-        .map(Value::U32)
-        .ok_or_else(|| {
-            ReferenceError::new(format!(
-                "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
-            ))
-        })
+    (axis < 3)
+        .then(|| Value::U32(values[axis as usize]))
+        .ok_or_else(|| ReferenceError::new(format!("invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2.")))
 }
 
 pub(crate) fn eval_to_index(

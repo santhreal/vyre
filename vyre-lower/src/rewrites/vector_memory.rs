@@ -12,6 +12,7 @@ use vyre_foundation::ir::{BinOp, DataType};
 use crate::analyses::alias_facts::AliasFactSet;
 use crate::analyses::child_body_operands;
 use crate::op_facts::kernel_op_kind_is_dce_pure;
+use crate::analyses::vec_pack::{index_expr_by_result, IndexExpr};
 use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass};
 
@@ -419,11 +420,6 @@ fn apply_vector_chain(
 
 // ---------- Alignment & Index Facts ----------
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct IndexExpr {
-    base_result: Option<u32>,
-    offset: u32,
-}
 
 fn is_proven_aligned(body: &KernelBody, expr: IndexExpr, width: u32) -> bool {
     if width == 0 || (width != 2 && width != 4) {
@@ -502,63 +498,6 @@ fn literal_u32_value(body: &KernelBody, result_id: u32) -> Option<u32> {
     }
 }
 
-fn index_expr_by_result(body: &KernelBody) -> FxHashMap<u32, IndexExpr> {
-    let mut out = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-    for op in &body.ops {
-        let Some(result) = op.result else {
-            continue;
-        };
-        if let Some(expr) = literal_index_expr(op, body).or_else(|| add_index_expr(op, &out)) {
-            out.insert(result, expr);
-        } else {
-            out.insert(
-                result,
-                IndexExpr {
-                    base_result: Some(result),
-                    offset: 0,
-                },
-            );
-        }
-    }
-    out
-}
-
-fn literal_index_expr(op: &KernelOp, body: &KernelBody) -> Option<IndexExpr> {
-    if !matches!(op.kind, KernelOpKind::Literal) {
-        return None;
-    }
-    let pool_idx = *op.operands.first()?;
-    let value = match body.literals.get(pool_idx as usize)? {
-        LiteralValue::U32(val) => *val,
-        LiteralValue::I32(val) if *val >= 0 => *val as u32,
-        _ => return None,
-    };
-    Some(IndexExpr {
-        base_result: None,
-        offset: value,
-    })
-}
-
-fn add_index_expr(op: &KernelOp, indices: &FxHashMap<u32, IndexExpr>) -> Option<IndexExpr> {
-    if !matches!(
-        op.kind,
-        KernelOpKind::BinOpKind(BinOp::Add | BinOp::WrappingAdd)
-    ) {
-        return None;
-    }
-    let lhs = indices.get(op.operands.first()?)?;
-    let rhs = indices.get(op.operands.get(1)?)?;
-    let base_result = match (lhs.base_result, rhs.base_result) {
-        (None, None) => None,
-        (Some(base), None) | (None, Some(base)) => Some(base),
-        (Some(lhs_base), Some(rhs_base)) if lhs_base == rhs_base => Some(lhs_base),
-        (Some(_), Some(_)) => return None,
-    };
-    Some(IndexExpr {
-        base_result,
-        offset: lhs.offset.checked_add(rhs.offset)?,
-    })
-}
 
 #[cfg(test)]
 mod tests {
@@ -668,9 +607,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn aligned_vec2_store_chain_is_canonicalized() {
-        let desc = descriptor("test_vec2_store")
+    fn test_store_descriptor(with_barrier: bool) -> KernelDescriptor {
+        let mut ops = vec![
+            lit(0, 0),
+            lit(1, 1),
+            lit(2, 2),
+            lit(3, 3),
+            effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+        ];
+        if with_barrier {
+            ops.push(effect(
+                KernelOpKind::Barrier {
+                    ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
+                },
+                [],
+            ));
+        }
+        ops.push(effect(KernelOpKind::StoreGlobal, [0, 1, 3]));
+        descriptor("test_store")
             .slot(global_rw(0, DataType::U32, "out"))
             .dispatch(64, 1, 1)
             .body(
@@ -681,17 +635,14 @@ mod tests {
                         LiteralValue::U32(42),
                         LiteralValue::U32(43),
                     ])
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        lit(2, 2),
-                        lit(3, 3),
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
-                        effect(KernelOpKind::StoreGlobal, [0, 1, 3]),
-                    ]),
+                    .ops(ops),
             )
-            .build();
+            .build()
+    }
 
+    #[test]
+    fn aligned_vec2_store_chain_is_canonicalized() {
+        let desc = test_store_descriptor(false);
         let rewritten = rewrite_vector_memory(&desc);
         assert_eq!(rewritten.body.ops.len(), 5);
         assert_eq!(
@@ -703,34 +654,7 @@ mod tests {
 
     #[test]
     fn barrier_fence_breaks_vector_chain() {
-        let desc = descriptor("test_fence")
-            .slot(global_rw(0, DataType::U32, "out"))
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .literals([
-                        LiteralValue::U32(0),
-                        LiteralValue::U32(1),
-                        LiteralValue::U32(42),
-                        LiteralValue::U32(43),
-                    ])
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        lit(2, 2),
-                        lit(3, 3),
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
-                        effect(
-                            KernelOpKind::Barrier {
-                                ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
-                            },
-                            [],
-                        ),
-                        effect(KernelOpKind::StoreGlobal, [0, 1, 3]),
-                    ]),
-            )
-            .build();
-
+        let desc = test_store_descriptor(true);
         let rewritten = rewrite_vector_memory(&desc);
         assert_eq!(rewritten, desc);
     }

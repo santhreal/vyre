@@ -148,14 +148,12 @@ impl<'a> HashmapInvocation<'a> {
         self.returned || self.frames.is_empty()
     }
 
-    pub(crate) fn begin_async(
-        &mut self,
-        tag: &str,
-        transfer: AsyncTransfer,
-    ) -> Result<(), ReferenceError> {
+    #[inline]
+    pub(crate) fn begin_async(&mut self, tag: &str, transfer: AsyncTransfer) -> Result<(), ReferenceError> {
         self.pending_async.begin(tag, transfer)
     }
 
+    #[inline]
     pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
         self.pending_async.finish(tag)
     }
@@ -175,34 +173,29 @@ pub(crate) fn create_invocations<'a>(
     entry: &'a [Node],
 ) -> Result<Vec<HashmapInvocation<'a>>, ReferenceError> {
     let [sx, sy, sz] = program.workgroup_size();
-    let invocation_count = sx
-        .checked_mul(sy)
-        .and_then(|count| count.checked_mul(sz))
-        .ok_or_else(|| {
-            ReferenceError::new("workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.")
-        })?;
-    let mut invocations = Vec::with_capacity(usize::try_from(invocation_count).map_err(|_| {
+    let total = sx.checked_mul(sy).and_then(|c| c.checked_mul(sz)).ok_or_else(|| {
+        ReferenceError::new("workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.")
+    })?;
+    let cap = usize::try_from(total).map_err(|_| {
         ReferenceError::new("workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.")
-    })?);
-    let global_dim = |wgid: u32, size: u32, local: u32| {
-        wgid . checked_mul (size) . and_then (| base | base . checked_add (local)) . ok_or_else (| | { ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.") })
-    };
+    })?;
+    let mut invocations = Vec::with_capacity(cap);
     for z in 0..sz {
+        let gz = workgroup[2].checked_mul(sz).and_then(|b| b.checked_add(z)).ok_or_else(|| {
+            ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.")
+        })?;
         for y in 0..sy {
+            let gy = workgroup[1].checked_mul(sy).and_then(|b| b.checked_add(y)).ok_or_else(|| {
+                ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.")
+            })?;
             for x in 0..sx {
-                let local = [x, y, z];
-                let global = [
-                    global_dim(workgroup[0], sx, x)?,
-                    global_dim(workgroup[1], sy, y)?,
-                    global_dim(workgroup[2], sz, z)?,
-                ];
+                let gx = workgroup[0].checked_mul(sx).and_then(|b| b.checked_add(x)).ok_or_else(|| {
+                    ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.")
+                })?;
+                let idx = invocations.len() as u32;
                 invocations.push(HashmapInvocation::new(
-                    InvocationIds {
-                        global,
-                        workgroup,
-                        local,
-                    },
-                    invocations.len() as u32,
+                    InvocationIds { global: [gx, gy, gz], workgroup, local: [x, y, z] },
+                    idx,
                     entry,
                 ));
             }

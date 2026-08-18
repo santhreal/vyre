@@ -727,15 +727,11 @@ fn eval_atomic(
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
-    match (op, expected) {
-        (AtomicOp::CompareExchange, None) => {
-            return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
-        }
-        (AtomicOp::CompareExchange, Some(_)) => {}
-        (_, Some(_)) => {
-            return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
-        }
-        (_, None) => {}
+    if op == AtomicOp::CompareExchange && expected.is_none() {
+        return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
+    }
+    if op != AtomicOp::CompareExchange && expected.is_some() {
+        return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
     }
     let idx = eval_to_index(
         index,

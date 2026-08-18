@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use super::gcd_u32;
 
 /// Dimension extent representation for static, symbolic, and dynamic shapes.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -462,13 +463,4 @@ impl AffineAccessMap {
         let element_bytes = total_elements.checked_mul(self.element_size_bytes as i64)?;
         self.offset_bytes.checked_add(element_bytes)
     }
-}
-
-fn gcd_u32(mut a: u32, mut b: u32) -> u32 {
-    while b != 0 {
-        let t = b;
-        b = a % b;
-        a = t;
-    }
-    a
 }

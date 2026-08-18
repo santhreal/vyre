@@ -16,7 +16,6 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{GraphInput, GraphOutput, ProgramGraph, ValueContract, ValueLifetime};
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
     compile, Artifact, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget,
@@ -25,8 +24,9 @@ use vyre_megakernel::{
 
 #[path = "graph_fixtures/mod.rs"]
 mod graph_fixtures;
-use graph_fixtures::{invocation_contract, producer_consumer_pair};
-use vyre_test_support::pass_programs::copy_program;
+use graph_fixtures::{
+    asymmetric_join_graph, independent_two_arm_graph, raw_conflict_two_arm_graph,
+};
 
 fn facts() -> ExternalFacts {
     ExternalFacts::new(Digest([0x77; 32]), BTreeMap::from([("items".into(), 64)]))
@@ -38,132 +38,6 @@ fn device_default() -> DeviceFacts {
         .with_compute_units(8)
         .with_concurrent_queues(4)
         .with_launch_costs(4224, 1000)
-}
-
-/// Independent two-arm graph: two parallel copy operations reading separate inputs and writing separate outputs.
-fn independent_two_arm_graph() -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let in_a = graph
-        .add_external_value("in_a", invocation_contract())
-        .unwrap();
-    let in_b = graph
-        .add_external_value("in_b", invocation_contract())
-        .unwrap();
-
-    graph
-        .add_node(
-            "arm_a",
-            copy_program("in_a", "out_a"),
-            vec![GraphInput {
-                buffer: "in_a".into(),
-                value: in_a,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out_a".into(),
-                name: "out_a".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-
-    graph
-        .add_node(
-            "arm_b",
-            copy_program("in_b", "out_b"),
-            vec![GraphInput {
-                buffer: "in_b".into(),
-                value: in_b,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out_b".into(),
-                name: "out_b".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-
-    graph
-}
-
-/// RAW conflicting two-arm graph: arm B reads the intermediate output of arm A within the same graph.
-fn raw_conflict_two_arm_graph() -> ProgramGraph {
-    producer_consumer_pair(
-        copy_program("input", "intermediate"),
-        copy_program("intermediate", "output"),
-    )
-}
-
-/// Asymmetric join graph: Node 0 feeds Node 1 and Node 2.
-fn asymmetric_join_graph() -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let in0 = graph
-        .add_external_value("in0", invocation_contract())
-        .unwrap();
-    let (_, out0) = graph
-        .add_node(
-            "n0",
-            copy_program("in0", "out0"),
-            vec![GraphInput {
-                buffer: "in0".into(),
-                value: in0,
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out0".into(),
-                name: "out0".into(),
-                contract: invocation_contract(),
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    graph
-        .add_node(
-            "n1",
-            copy_program("in1", "out1"),
-            vec![GraphInput {
-                buffer: "in1".into(),
-                value: out0[0],
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out1".into(),
-                name: "out1".into(),
-                contract: invocation_contract(),
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    graph
-        .add_node(
-            "n2",
-            copy_program("in2", "out2"),
-            vec![GraphInput {
-                buffer: "in2".into(),
-                value: out0[0],
-                contract: invocation_contract(),
-            }],
-            vec![GraphOutput {
-                buffer: "out2".into(),
-                name: "out2".into(),
-                contract: ValueContract {
-                    lifetime: ValueLifetime::Output,
-                    ..invocation_contract()
-                },
-                retained_successor_of: None,
-            }],
-        )
-        .unwrap();
-    graph
 }
 
 // ============================================================================
