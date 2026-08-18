@@ -97,26 +97,26 @@ construction for the stated byte counts, not the transfer.
 
 `cargo bench -p vyre-foundation --bench optimizer_pipeline`
 
-Measured from the source committed with this section on 2026-08-18, on the
-machine in the header. `optimize()` is the host IR pipeline every compile runs
-before any backend lowering, so these are compile latency, not device time.
+Measured at commit 1c104c0852 on 2026-08-18, on the machine in the header.
+`optimize()` is the host IR pipeline every compile runs before any backend
+lowering, so these are compile latency, not device time.
 
 | bench | median |
 | --- | --- |
-| optimizer/pipeline/corpus/scalar-algebra | 26.758 us |
-| optimizer/pipeline/corpus/strength-reduction | 33.818 us |
-| optimizer/pipeline/corpus/fusion-cse | 46.494 us |
-| optimizer/pipeline/corpus/dead-code | 34.529 us |
-| optimizer/pipeline/corpus/memory-dataflow | 33.322 us |
-| optimizer/pipeline/corpus/loop-transform | 32.575 us |
-| optimizer/pipeline/corpus/control-flow | 31.436 us |
-| optimizer/pipeline/corpus/canonicalization | 30.488 us |
-| optimizer/pipeline/kernel_wide/16 | 293.09 us |
-| optimizer/pipeline/kernel_wide/64 | 934.30 us |
-| optimizer/pipeline/kernel_loop_nest/4x8 | 75.722 us |
+| optimizer/pipeline/corpus/scalar-algebra | 25.704 us |
+| optimizer/pipeline/corpus/strength-reduction | 32.684 us |
+| optimizer/pipeline/corpus/fusion-cse | 43.253 us |
+| optimizer/pipeline/corpus/dead-code | 31.261 us |
+| optimizer/pipeline/corpus/memory-dataflow | 32.914 us |
+| optimizer/pipeline/corpus/loop-transform | 32.554 us |
+| optimizer/pipeline/corpus/control-flow | 29.312 us |
+| optimizer/pipeline/corpus/canonicalization | 28.233 us |
+| optimizer/pipeline/kernel_wide/16 | 267.29 us |
+| optimizer/pipeline/kernel_wide/64 | 921.47 us |
+| optimizer/pipeline/kernel_loop_nest/4x8 | 75.503 us |
 
 Each `corpus/<family>` row optimizes one deterministic program from that
 semantic family; Criterion prepares the cloned input outside the measured
 iteration. The two `kernel_wide` rows scale straight-line arithmetic depth, so
 the difference between them is rewrite work rather than per-pass fixed cost:
-4x the depth costs 3.19x the time.
+4x the depth costs 3.45x the time.
