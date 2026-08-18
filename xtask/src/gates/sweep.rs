@@ -849,7 +849,6 @@ mod tests {
         assert!(selection(&["--subset".to_string(), "nope".to_string()]).is_err());
     }
 
-
     /// WHY: every script this campaign deletes is named by the workflow that
     /// used to run it. A step pointing at a script the checkout no longer
     /// carries fails at run time under a step name that still reads as

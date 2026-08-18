@@ -214,7 +214,9 @@ impl crate::gate::GateBehavior for CiRequired {
 
             let text = tree.read(&path)?;
             report.findings.extend(trigger_findings(&path, &text));
-            report.findings.extend(baseline_comparison_findings(&path, &text));
+            report
+                .findings
+                .extend(baseline_comparison_findings(&path, &text));
 
             let jobs = jobs(&text);
             for (line, context) in &section.contexts {

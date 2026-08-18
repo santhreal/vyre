@@ -663,7 +663,9 @@ mod workload_evidence_tests {
             &mut failures,
         );
         assert!(
-            !failures.iter().any(|f| f.contains("must list release BENCH_TARGETS.toml target ids")),
+            !failures
+                .iter()
+                .any(|f| f.contains("must list release BENCH_TARGETS.toml target ids")),
             "Fix: release.optimization. target ids must be accepted: {failures:?}"
         );
         assert!(
@@ -675,5 +677,4 @@ mod workload_evidence_tests {
             "Fix: requires_cpu_sota_baseline=false must exempt from CPU-SOTA baseline names requirement: {failures:?}"
         );
     }
-
 }
