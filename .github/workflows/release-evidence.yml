@@ -27,7 +27,6 @@ jobs:
 
       - name: Backend and workload evidence
         run: |
-          ./cargo_full run -p xtask -- backend-matrix --write
           ./cargo_full run -p xtask -- release-workload-matrix --write
           ./cargo_full run -p xtask -- op-matrix --write
 
@@ -49,6 +48,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: Backend hardware evidence
+        run: ./cargo_full run -p xtask -- backend-matrix --write
 
       - name: Backend conformance artifacts
         run: ./cargo_full run -p xtask -- release-conformance --write
