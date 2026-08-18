@@ -120,7 +120,13 @@ fn default_supported_ops_contains_every_async_transfer_node() {
 #[test]
 fn node_op_id_async_store_is_stable() {
     assert_eq!(
-        node_op_id(&Node::async_store("src", "dst", Expr::u32(0), Expr::u32(4), "tag")),
+        node_op_id(&Node::async_store(
+            "src",
+            "dst",
+            Expr::u32(0),
+            Expr::u32(4),
+            "tag"
+        )),
         "vyre.node.async_store"
     );
 }

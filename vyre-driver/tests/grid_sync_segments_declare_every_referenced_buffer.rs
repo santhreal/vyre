@@ -76,8 +76,13 @@ fn program_declaring_every_referenced_buffer(nodes: Vec<Node>) -> Program {
             if name.as_str() == "out" {
                 return BufferDecl::output(name.as_str(), binding, DataType::U32).with_count(4);
             }
-            BufferDecl::storage(name.as_str(), binding, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4)
+            BufferDecl::storage(
+                name.as_str(),
+                binding,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(4)
         })
         .collect();
     Program::wrapped(buffers, [1, 1, 1], body)

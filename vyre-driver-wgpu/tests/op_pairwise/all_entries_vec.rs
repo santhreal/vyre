@@ -497,7 +497,12 @@ pub(crate) fn try_compose(a: &UnifiedEntry, b: &UnifiedEntry) -> Result<Composit
     let a_writable: Vec<&BufferDecl> = prog_a
         .buffers()
         .iter()
-        .filter(|buf| matches!(buf.access(), BufferAccess::ReadWrite | BufferAccess::WriteOnly))
+        .filter(|buf| {
+            matches!(
+                buf.access(),
+                BufferAccess::ReadWrite | BufferAccess::WriteOnly
+            )
+        })
         .collect();
     if a_writable.is_empty() {
         return Err(format!(

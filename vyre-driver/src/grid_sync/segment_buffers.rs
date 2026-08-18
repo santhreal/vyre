@@ -129,8 +129,7 @@ fn rewrite_segment_buffers_for_host_split(
         source.buffers().len(),
         "grid-sync segment write set",
     )?;
-    let complete =
-        collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes);
+    let complete = collect_segment_buffer_targets(entry_sequence(segment), &mut reads, &mut writes);
     if !complete {
         // An extension node names buffers no walk can enumerate. Dropping a
         // declaration the segment still references produces a segment program

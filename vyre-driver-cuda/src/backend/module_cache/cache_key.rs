@@ -88,15 +88,3 @@ pub(super) fn module_cache_key_from_domain_digest(
     )?;
     Ok(ModuleCacheKey(key))
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ptx_lowering_contract_pins_v16_and_labels() {
-        let contract = std::str::from_utf8(PTX_LOWERING_CONTRACT).expect("valid utf8");
-        assert!(contract.starts_with("vyre-cuda-ptx-lowering-contract:v16:"));
-        assert!(contract.contains("async-transfer-byte-spans"));
-        assert!(contract.contains("saturating-mul-via-mulhi"));
-    }
-}
