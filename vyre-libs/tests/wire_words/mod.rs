@@ -137,6 +137,77 @@ pub(crate) fn hostile_bytes(seed: u32) -> Vec<u8> {
     v
 }
 
+/// Advance a 64-bit splitmix state.
+pub(crate) fn mix64(mut value: u64) -> u64 {
+    value ^= value >> 30;
+    value = value.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    value ^= value >> 27;
+    value = value.wrapping_mul(0x94d0_49bb_1331_11eb);
+    value ^ (value >> 31)
+}
+#[cfg(feature = "graph")]
+pub(crate) fn toposort(
+    node_count: u32,
+    edges: &[(u32, u32)],
+) -> Result<Vec<u32>, vyre_libs::graph::toposort::ToposortError> {
+    for (edge_idx, &(from, to)) in edges.iter().enumerate() {
+        if from >= node_count {
+            return Err(vyre_libs::graph::toposort::ToposortError::UnknownNode {
+                edge: edge_idx,
+                node: from,
+            });
+        }
+        if to >= node_count {
+            return Err(vyre_libs::graph::toposort::ToposortError::UnknownNode {
+                edge: edge_idx,
+                node: to,
+            });
+        }
+    }
+    vyre_reference::composition_witness::toposort_witness(node_count, edges).map_err(|err| {
+        if let Some(rest) = err.strip_prefix("Cycle detected involving node ") {
+            if let Ok(node) = rest.parse::<u32>() {
+                return vyre_libs::graph::toposort::ToposortError::Cycle { node };
+            }
+        }
+        vyre_libs::graph::toposort::ToposortError::InconsistentState { message: err }
+    })
+}
+
+pub(crate) fn prefix_scan_cpu_ref(
+    input: &[u32],
+    kind: vyre_libs::math::prefix_scan::ScanKind,
+) -> Vec<u32> {
+    match kind {
+        vyre_libs::math::prefix_scan::ScanKind::InclusiveSum => {
+            vyre_reference::composition_witness::inclusive_prefix_sum_witness(input)
+        }
+        vyre_libs::math::prefix_scan::ScanKind::ExclusiveSum => {
+            vyre_reference::composition_witness::exclusive_prefix_sum_witness(input)
+        }
+    }
+}
+
+#[cfg(feature = "pattern")]
+pub(crate) fn reference_dedup_regions(
+    regions: Vec<vyre_libs::pattern::RegionTriple>,
+) -> Vec<vyre_libs::pattern::RegionTriple> {
+    let input: Vec<(u32, u32, u32)> = regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
+    let deduped = vyre_reference::composition_witness::dedup_regions_witness(input);
+    deduped
+        .into_iter()
+        .map(|(pid, start, end)| vyre_libs::pattern::RegionTriple::new(pid, start, end))
+        .collect()
+}
+
+#[cfg(feature = "pattern")]
+pub(crate) fn reference_dedup_regions_in_place(
+    regions: &mut Vec<vyre_libs::pattern::RegionTriple>,
+) {
+    let deduped = reference_dedup_regions(std::mem::take(regions));
+    *regions = deduped;
+}
+
 /// Advance a 32-bit xorshift state and return next u32.
 pub(crate) fn next_u32(state: &mut u32) -> u32 {
     *state ^= *state << 13;
@@ -145,6 +216,7 @@ pub(crate) fn next_u32(state: &mut u32) -> u32 {
     *state
 }
 
+#[cfg(feature = "nn-attention")]
 /// Helper for building standard test KvCacheAppendSpec.
 pub(crate) fn kv_cache_append_test_spec<'a>(
     batch: u32,

@@ -20,13 +20,9 @@
 //!
 //! Both paths produce the same IR.
 
-use crate::builder::reduction::{ReductionComposer, ReductionPhase};
-use crate::builder::{
-    check_same_shape, check_tensors, checked_element_count, strided_accumulate_child,
-    strided_writeback_child, BuildOptions,
-};
+use crate::builder::reduction::ReductionComposer;
+use crate::builder::{check_same_shape, check_tensors, checked_element_count, BuildOptions};
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
-use crate::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use vyre_foundation::composition::{trap_program, wrap_region};
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
@@ -127,110 +123,7 @@ fn softmax_tiled_program(
     workgroup: [u32; 3],
     generator: &'static str,
 ) -> Program {
-    let tile = workgroup[0].max(1);
-    let chunks = n.div_ceil(tile);
-    let max_pass = ReductionPhase {
-        accumulate: strided_accumulate_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            "local_max",
-            Expr::f32(f32::MIN),
-            "softmax_scratch",
-            |idx, acc| {
-                let loaded = Expr::load(input, idx);
-                Expr::select(
-                    Expr::BinOp {
-                        op: BinOp::Gt,
-                        left: Box::new(loaded.clone()),
-                        right: Box::new(acc.clone()),
-                    },
-                    loaded,
-                    acc,
-                )
-            },
-        ),
-        reductions: vec![workgroup_tree::max_f32_child(
-            OP_ID,
-            tile,
-            "softmax_scratch",
-            WorkgroupReductionScope::FirstWorkgroup,
-        )],
-        publish: vec![Node::Store {
-            buffer: "softmax_max".into(),
-            index: Expr::u32(0),
-            value: Expr::load("softmax_scratch", Expr::u32(0)),
-        }],
-    };
-    // The sum pass reuses `softmax_scratch`, so it publishes nothing: the
-    // writeback reads the reduced sum straight out of scratch slot zero.
-    let sum_pass = ReductionPhase {
-        accumulate: strided_accumulate_child(
-            OP_ID,
-            tile,
-            chunks,
-            n,
-            "local_sum",
-            Expr::f32(0.0),
-            "softmax_scratch",
-            |idx, acc| {
-                Expr::add(
-                    acc,
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(Expr::BinOp {
-                            op: BinOp::Sub,
-                            left: Box::new(Expr::load(input, idx)),
-                            right: Box::new(Expr::load("softmax_max", Expr::u32(0))),
-                        }),
-                    },
-                )
-            },
-        ),
-        reductions: vec![workgroup_tree::sum_f32_child(
-            OP_ID,
-            tile,
-            "softmax_scratch",
-            WorkgroupReductionScope::FirstWorkgroup,
-        )],
-        publish: Vec::new(),
-    };
-    ReductionComposer::new(
-        generator,
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::workgroup("softmax_scratch", tile, DataType::F32),
-            BufferDecl::workgroup("softmax_max", 1, DataType::F32),
-            BufferDecl::output(output, 1, DataType::F32).with_count(n),
-        ],
-        workgroup,
-    )
-    .with_phases([max_pass, sum_pass])
-    .with_writeback(strided_writeback_child(
-        OP_ID,
-        tile,
-        chunks,
-        n,
-        output,
-        vec![
-            Node::let_bind("sum_val", Expr::load("softmax_scratch", Expr::u32(0))),
-            Node::let_bind("max_val", Expr::load("softmax_max", Expr::u32(0))),
-        ],
-        |idx| Expr::BinOp {
-            op: BinOp::Div,
-            left: Box::new(Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(Expr::BinOp {
-                    op: BinOp::Sub,
-                    left: Box::new(Expr::load(input, idx)),
-                    right: Box::new(Expr::var("max_val")),
-                }),
-            }),
-            right: Box::new(Expr::var("sum_val")),
-        },
-    ))
-    .build()
+    ReductionComposer::tiled_softmax(generator, input, output, n, workgroup)
 }
 
 fn softmax_reference_program(

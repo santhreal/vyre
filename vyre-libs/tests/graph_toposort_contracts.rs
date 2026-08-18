@@ -1,11 +1,14 @@
 //! Contracts for both topological-sort oracles and the emitted program.
 
+mod wire_words;
+use wire_words::toposort;
+
 use vyre_libs::graph::toposort::{
     toposort_program, validate_toposort_csr_inputs, validate_toposort_csr_order, ToposortCsrError,
     ToposortCsrLayout, ToposortError,
 };
 use vyre_reference::composition_witness::{
-    toposort_csr_with_scratch_into_witness, toposort_csr_witness, toposort_witness,
+    toposort_csr_with_scratch_into_witness, toposort_csr_witness,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -18,25 +21,6 @@ impl ToposortCsrScratch {
     fn new() -> Self {
         Self::default()
     }
-}
-
-fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, ToposortError> {
-    for (edge, &(from, to)) in edges.iter().enumerate() {
-        if from >= node_count {
-            return Err(ToposortError::UnknownNode { edge, node: from });
-        }
-        if to >= node_count {
-            return Err(ToposortError::UnknownNode { edge, node: to });
-        }
-    }
-    toposort_witness(node_count, edges).map_err(|err| {
-        if let Some(rest) = err.strip_prefix("Cycle detected involving node ") {
-            if let Ok(node) = rest.parse::<u32>() {
-                return ToposortError::Cycle { node };
-            }
-        }
-        ToposortError::InconsistentState { message: err }
-    })
 }
 
 fn toposort_csr(

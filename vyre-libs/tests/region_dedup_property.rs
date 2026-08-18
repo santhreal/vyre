@@ -14,30 +14,11 @@
 
 #![cfg(feature = "pattern")]
 
+mod wire_words;
+use wire_words::{reference_dedup_regions, reference_dedup_regions_in_place};
+
 use proptest::prelude::*;
 use vyre_libs::pattern::RegionTriple;
-use vyre_reference::composition_witness::{dedup_regions_witness, dedup_regions_witness_in_place};
-
-fn reference_dedup_regions_in_place(regions: &mut Vec<RegionTriple>) {
-    let mut tuples: Vec<(u32, u32, u32)> =
-        regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
-    dedup_regions_witness_in_place(&mut tuples);
-    regions.clear();
-    regions.extend(
-        tuples
-            .into_iter()
-            .map(|(pid, start, end)| RegionTriple::new(pid, start, end)),
-    );
-}
-
-fn reference_dedup_regions(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    let tuples: Vec<(u32, u32, u32)> = input.iter().map(|r| (r.pid, r.start, r.end)).collect();
-    let deduped = dedup_regions_witness(tuples);
-    deduped
-        .into_iter()
-        .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
-        .collect()
-}
 
 fn arb_triple() -> impl Strategy<Value = RegionTriple> {
     (0u32..=7, 0u32..=255, 0u32..=32)

@@ -12,21 +12,14 @@
 
 #![cfg(feature = "math-kernels")]
 
+mod wire_words;
+use wire_words::prefix_scan_cpu_ref as cpu_ref;
+
 use std::collections::HashMap;
 
 use vyre_foundation::ir::{BinOp, BufferAccess, Expr, Node, Program};
 use vyre_foundation::visit::child_bodies;
 use vyre_libs::math::prefix_scan::{prefix_scan, ScanKind};
-fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> {
-    match kind {
-        ScanKind::InclusiveSum => {
-            vyre_reference::composition_witness::inclusive_prefix_sum_witness(input)
-        }
-        ScanKind::ExclusiveSum => {
-            vyre_reference::composition_witness::exclusive_prefix_sum_witness(input)
-        }
-    }
-}
 use vyre_reference::value::Value;
 
 /// Every `n` the contract has a distinct shape for: the degenerate sizes, both

@@ -3,18 +3,11 @@
 
 #![cfg(feature = "pattern")]
 
+mod wire_words;
+use wire_words::reference_dedup_regions;
+
 use vyre_libs::pattern::{dedup_regions_flag_program, RegionTriple};
-use vyre_reference::composition_witness::{
-    dedup_regions_survivor_flags_witness, dedup_regions_witness,
-};
-fn reference_dedup_regions(input: Vec<RegionTriple>) -> Vec<RegionTriple> {
-    let tuples: Vec<(u32, u32, u32)> = input.iter().map(|r| (r.pid, r.start, r.end)).collect();
-    let deduped = dedup_regions_witness(tuples);
-    deduped
-        .into_iter()
-        .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
-        .collect()
-}
+use vyre_reference::composition_witness::dedup_regions_survivor_flags_witness;
 
 fn reference_flags(sorted: &[RegionTriple]) -> Vec<u32> {
     let tuples: Vec<(u32, u32, u32)> = sorted.iter().map(|r| (r.pid, r.start, r.end)).collect();
