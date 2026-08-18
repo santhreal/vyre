@@ -208,14 +208,10 @@ mod tests {
 
             try_rk4_step_cpu_into(&y, &k1, &k2, &k3, &k4, h, &mut out).unwrap();
 
-            for i in 0..n {
-                let expected = y[i] + (h / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
-                assert!(
-                    approx_eq(out[i], expected),
-                    "case {case} idx {i}: expected {expected}, got {}",
-                    out[i]
-                );
-            }
+            let expected: Vec<f64> = (0..n)
+                .map(|i| y[i] + (h / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]))
+                .collect();
+            crate::math::assert_slices_approx_eq(case, &out[..n], &expected, approx_eq);
         }
     }
 

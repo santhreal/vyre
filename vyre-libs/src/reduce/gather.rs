@@ -40,14 +40,7 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || gather("src", "indices", "dst", 4),
-        Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![
-                to_bytes(&[10, 20, 30, 40]),
-                to_bytes(&[3, 0, 2, 1]),
-                to_bytes(&[0, 0, 0, 0]),
-            ]]
-        }),
+        Some(super::indexed_move::indexed_move_4element_fixture_inputs),
         Some(|| {
             vec![vec![vec![
                 0x28, 0x00, 0x00, 0x00, // 40

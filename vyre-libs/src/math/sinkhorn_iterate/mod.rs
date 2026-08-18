@@ -215,20 +215,7 @@ pub(crate) fn sinkhorn_iterate_f64(
     tolerance: f64,
     max_iterations: u32,
 ) -> (Vec<f64>, Vec<f64>, u32) {
-    let mut u = Vec::new();
-    let mut v = Vec::new();
-    let mut u_old = Vec::new();
-    let iters = sinkhorn_iterate_f64_into(
-        k,
-        a,
-        b,
-        tolerance,
-        max_iterations,
-        &mut u,
-        &mut v,
-        &mut u_old,
-    );
-    (u, v, iters)
+    try_sinkhorn_iterate_f64(k, a, b, tolerance, max_iterations).unwrap()
 }
 
 #[cfg(test)]

@@ -3,11 +3,9 @@
 //! Category-A composition with a workgroup-tiled sum reduction.
 
 use crate::builder::reduction::ReductionComposer;
-#[cfg(test)]
-use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::Program;
 #[cfg(test)]
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 const OP_ID: &str = "vyre-libs::math::reduce_mean";
 #[cfg(test)]
@@ -63,14 +61,7 @@ fn reduce_mean_reference_program(input: &str, output: &str, n: u32) -> Program {
         },
     ];
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 1, DataType::F32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![wrap_anonymous_region(REFERENCE_OP_ID, body)],
-    )
+    super::wrap_unary_f32_scalar_program(REFERENCE_OP_ID, input, output, n, body)
 }
 
 inventory::submit! {

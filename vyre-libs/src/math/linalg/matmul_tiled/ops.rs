@@ -77,35 +77,11 @@ impl MatmulTiledCore {
     }
 
     fn build(self) -> Result<Program, TensorRefError> {
-        let m = if self.a.shape.len() == 2 {
-            self.a.shape[0]
-        } else {
-            0
-        };
-        let k = if self.a.shape.len() == 2 {
-            self.a.shape[1]
-        } else {
-            0
-        };
-        let n = if self.b.shape.len() == 2 {
-            self.b.shape[1]
-        } else {
-            0
-        };
-
-        let mut composer = ContractionComposer::tiled_2d(
+        let (m, k, n) = super::super::matmul_2d_dims(&self.a, &self.b);
+        let composer = ContractionComposer::tiled_2d(
             self.op_id, self.a, self.b, self.bias, self.out, m, k, n, self.tile,
         );
-        if let Some(workgroup) = self.options.workgroup_size {
-            composer = composer.with_workgroup_size(workgroup);
-        }
-        if let Some(generator) = self.options.region_generator {
-            composer = composer.with_region_generator(generator);
-        }
-        if let Some(tenant_id) = self.options.tenant_id {
-            composer = composer.with_tenant_id(tenant_id);
-        }
-        composer.build()
+        super::super::apply_contraction_options(composer, &self.options).build()
     }
 }
 
@@ -275,14 +251,7 @@ inventory::submit! {
                 crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
             ]]
         }),
-        Some(|| {
-            vec![vec![vec![
-                0x13, 0x00, 0x00, 0x00, // 19
-                0x16, 0x00, 0x00, 0x00, // 22
-                0x2b, 0x00, 0x00, 0x00, // 43
-                0x32, 0x00, 0x00, 0x00, // 50
-            ]]]
-        }),
+        Some(super::super::matmul_2x2_fixture_expected),
     )
     .with_category("math")
 }
@@ -291,23 +260,9 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         "vyre-libs::math::matmul_bias_tiled",
         || matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2),
-        Some(|| {
-            vec![vec![
-                crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
-                crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
-                crate::fixture_bytes::u32_bytes(&[10, 20]),
-            ]]
-        }),
-        Some(|| {
-            vec![vec![vec![
-                0x1d, 0x00, 0x00, 0x00, // 29
-                0x2a, 0x00, 0x00, 0x00, // 42
-                0x35, 0x00, 0x00, 0x00, // 53
-                0x46, 0x00, 0x00, 0x00, // 70
-            ]]]
-        }),
+        Some(super::super::matmul_bias_2x2_fixture_inputs),
+        Some(super::super::matmul_bias_2x2_fixture_expected),
     )
-    .with_category("math")
 }
 
 #[cfg(test)]

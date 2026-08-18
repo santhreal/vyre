@@ -53,6 +53,19 @@ where
 }
 
 #[cfg(test)]
+#[must_use]
+pub(crate) fn dummy_compiled_dfa() -> crate::pattern::CompiledDfa {
+    crate::pattern::CompiledDfa {
+        transitions: vec![0; 256],
+        accept: vec![0],
+        state_count: 1,
+        max_pattern_len: 0,
+        output_offsets: vec![0, 0],
+        output_records: vec![],
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

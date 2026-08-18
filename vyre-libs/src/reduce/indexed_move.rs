@@ -94,6 +94,16 @@ pub(crate) fn indexed_move_program(
     )
 }
 
+#[must_use]
+pub(crate) fn indexed_move_4element_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+    vec![vec![
+        to_bytes(&[10, 20, 30, 40]),
+        to_bytes(&[3, 0, 2, 1]),
+        to_bytes(&[0, 0, 0, 0]),
+    ]]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

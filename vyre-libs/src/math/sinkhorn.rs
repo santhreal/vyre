@@ -116,23 +116,6 @@ fn sinkhorn_iter_cpu(
         .expect("sinkhorn_iter_cpu failed: invalid Sinkhorn shape");
 }
 
-/// CPU reference using caller-owned temporary vectors.
-#[allow(clippy::too_many_arguments)]
-#[cfg(test)]
-fn sinkhorn_iter_cpu_into(
-    k: &[f64],
-    a: &[f64],
-    b: &[f64],
-    u: &mut [f64],
-    v: &mut [f64],
-    m: u32,
-    n: u32,
-    kv: &mut Vec<f64>,
-    ktu: &mut Vec<f64>,
-) {
-    try_sinkhorn_iter_cpu_into(k, a, b, u, v, m, n, kv, ktu)
-        .expect("sinkhorn_iter_cpu_into failed: invalid Sinkhorn shape");
-}
 
 /// Fallible CPU reference using caller-owned temporary vectors.
 #[allow(clippy::too_many_arguments)]
@@ -226,10 +209,10 @@ mod tests {
         let mut kv = Vec::new();
         let mut ktu = Vec::new();
 
-        sinkhorn_iter_cpu_into(&k, &a, &b, &mut u, &mut v, 2, 2, &mut kv, &mut ktu);
+        try_sinkhorn_iter_cpu_into(&k, &a, &b, &mut u, &mut v, 2, 2, &mut kv, &mut ktu).unwrap();
         let kv_ptr = kv.as_ptr();
         let ktu_ptr = ktu.as_ptr();
-        sinkhorn_iter_cpu_into(&k, &a, &b, &mut u, &mut v, 2, 2, &mut kv, &mut ktu);
+        try_sinkhorn_iter_cpu_into(&k, &a, &b, &mut u, &mut v, 2, 2, &mut kv, &mut ktu).unwrap();
 
         assert_eq!(kv.as_ptr(), kv_ptr);
         assert_eq!(ktu.as_ptr(), ktu_ptr);
@@ -302,7 +285,7 @@ mod tests {
         let mut v = vec![1.0];
         let mut kv = Vec::new();
         let mut ktu = Vec::new();
-        sinkhorn_iter_cpu_into(&[1.0], &[], &[], &mut u, &mut v, 2, 2, &mut kv, &mut ktu);
+        try_sinkhorn_iter_cpu_into(&[1.0], &[], &[], &mut u, &mut v, 2, 2, &mut kv, &mut ktu).unwrap();
         assert_eq!(u.len(), 1);
         assert_eq!(v.len(), 1);
     }

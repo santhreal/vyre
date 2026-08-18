@@ -231,19 +231,7 @@ mod tests {
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated IHT top-k CPU oracle should evaluate");
             let (expected, expected_threshold) = independent_iht_top_k(&z, k);
 
-            assert_eq!(out.len(), expected.len(), "case {case}: output length");
-            for idx in 0..out.len() {
-                if expected[idx].is_nan() {
-                    assert!(out[idx].is_nan(), "case {case} idx {idx}: expected NaN");
-                } else {
-                    assert!(
-                        approx_eq(out[idx], expected[idx]),
-                        "case {case} idx {idx}: expected {}, got {}",
-                        expected[idx],
-                        out[idx]
-                    );
-                }
-            }
+            crate::math::assert_slices_approx_eq(case, &out, &expected, approx_eq);
             if expected_threshold.is_nan() {
                 assert!(
                     actual_threshold.is_nan(),

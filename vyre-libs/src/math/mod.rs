@@ -89,6 +89,38 @@ fn invalid_f32_reduction_program(
     )
 }
 
+#[must_use]
+pub(crate) fn trap_f32_output_program(
+    op_id: &'static str,
+    output: &str,
+    error: String,
+) -> vyre_foundation::ir::Program {
+    vyre_foundation::composition::trap_program(
+        op_id,
+        Some((output, vyre_foundation::ir::DataType::F32)),
+        error,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn wrap_unary_f32_scalar_program(
+    op_id: &'static str,
+    input: &str,
+    output: &str,
+    n: u32,
+    body: Vec<vyre_foundation::ir::Node>,
+) -> vyre_foundation::ir::Program {
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+            BufferDecl::output(output, 1, DataType::F32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![vyre_foundation::composition::wrap_anonymous_region(op_id, body)],
+    )
+}
+
 #[cfg(feature = "math-dialect")]
 pub use atomic::{
     atomic_add_u32, atomic_and_u32, atomic_compare_exchange_u32, atomic_exchange_u32,
@@ -135,6 +167,55 @@ pub(crate) fn wrap_fixpoint_program(
             inner.entry().to_vec(),
         )],
     )
+}
+
+#[cfg(test)]
+pub(crate) fn assert_trapping_region_on_zero(program: &vyre_foundation::ir::Program, msg: &str) {
+    use vyre_foundation::ir::Node;
+    assert!(
+        program.entry().iter().any(|node| matches!(
+            node,
+            Node::Region { body, .. } if body.iter().any(|inner| matches!(inner, Node::Trap { .. }))
+        )),
+        "{msg}"
+    );
+}
+
+#[cfg(test)]
+pub(crate) fn assert_local_id_0_bound(program: &vyre_foundation::ir::Program, msg: &str) {
+    use vyre_foundation::ir::{Expr, Node};
+    use vyre_foundation::visit::any_descendant;
+    let has_local_binding = program.entry().iter().any(|node| {
+        any_descendant(node, &mut |inner| match inner {
+            Node::Let { name, value } => {
+                name == "local" && matches!(value, Expr::LocalId { axis: 0 })
+            }
+            _ => false,
+        })
+    });
+    assert!(has_local_binding, "{msg}");
+}
+
+#[cfg(test)]
+pub(crate) fn assert_slices_approx_eq(
+    case: usize,
+    actual: &[f64],
+    expected: &[f64],
+    approx_eq: impl Fn(f64, f64) -> bool,
+) {
+    assert_eq!(actual.len(), expected.len(), "case {case}: output length");
+    for idx in 0..actual.len() {
+        if expected[idx].is_nan() {
+            assert!(actual[idx].is_nan(), "case {case} idx {idx}: expected NaN");
+        } else {
+            assert!(
+                approx_eq(actual[idx], expected[idx]),
+                "case {case} idx {idx}: expected {}, got {}",
+                expected[idx],
+                actual[idx]
+            );
+        }
+    }
 }
 
 /// 1D separable convolution (domain-neutral: blur, signal processing, audio).

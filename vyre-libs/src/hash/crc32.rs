@@ -240,18 +240,7 @@ fn gf2_matrix_square(square: &mut [u32; 32], matrix: &[u32; 32]) {
 /// the bit loop.
 #[must_use]
 pub fn crc32_program(input: &str, out: &str, n: u32) -> Program {
-    let body = vec![wrap_anonymous_region(
-        CRC32_OP_ID,
-        crc32_body(input, out, n),
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        body,
-    )
+    super::wrap_unary_scalar_hash_program(CRC32_OP_ID, input, out, n, crc32_body(input, out, n))
 }
 
 /// Build a Program that emits CRC-32 chunk summaries in parallel.

@@ -73,13 +73,8 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
-            weighted_sum_fma_f32("weights", "values", "output", 4).unwrap_or_else(|error| {
-                trap_program(
-                    OP_ID,
-                    Some(("output", DataType::F32)),
-                    error,
-                )
-            })
+            weighted_sum_fma_f32("weights", "values", "output", 4)
+                .unwrap_or_else(|error| super::trap_f32_output_program(OP_ID, "output", error))
         },
         Some(|| {
             let weights = crate::fixture_bytes::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);

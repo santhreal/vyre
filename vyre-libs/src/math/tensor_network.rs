@@ -226,15 +226,7 @@ mod tests {
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated tensor-network CPU oracle should evaluate");
             let expected = independent_pair_contract(&a, &b, m, k, n);
 
-            assert_eq!(out.len(), expected.len(), "case {case}: output length");
-            for idx in 0..out.len() {
-                assert!(
-                    approx_eq(out[idx], expected[idx]),
-                    "case {case} idx {idx}: expected {}, got {}",
-                    expected[idx],
-                    out[idx]
-                );
-            }
+            crate::math::assert_slices_approx_eq(case, &out, &expected, approx_eq);
         }
     }
 
