@@ -163,8 +163,7 @@ fn analyze_exit_node(
                     analyze_exit_sequence(body, &mut body_state, path_uniform && bounds_uniform);
                 accumulated_proof.merge(proof);
                 body_state.scope.remove(var.as_str());
-                let next_entry_state =
-                    merge_exit_states(loop_entry_state.clone(), body_state);
+                let next_entry_state = merge_exit_states(loop_entry_state.clone(), body_state);
                 if next_entry_state == loop_entry_state {
                     break;
                 }

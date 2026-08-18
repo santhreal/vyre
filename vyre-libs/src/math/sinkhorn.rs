@@ -116,7 +116,6 @@ fn sinkhorn_iter_cpu(
         .expect("sinkhorn_iter_cpu failed: invalid Sinkhorn shape");
 }
 
-
 /// Fallible CPU reference using caller-owned temporary vectors.
 #[allow(clippy::too_many_arguments)]
 #[cfg(test)]
@@ -285,7 +284,8 @@ mod tests {
         let mut v = vec![1.0];
         let mut kv = Vec::new();
         let mut ktu = Vec::new();
-        try_sinkhorn_iter_cpu_into(&[1.0], &[], &[], &mut u, &mut v, 2, 2, &mut kv, &mut ktu).unwrap();
+        try_sinkhorn_iter_cpu_into(&[1.0], &[], &[], &mut u, &mut v, 2, 2, &mut kv, &mut ktu)
+            .unwrap();
         assert_eq!(u.len(), 1);
         assert_eq!(v.len(), 1);
     }

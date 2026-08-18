@@ -3,8 +3,8 @@
 #![forbid(unsafe_code)]
 
 mod wire_words;
-use wire_words::{bf16_word, execute_causal_gqa_typed};
 use vyre_libs::nn::attention::gqa_attention_causal_typed;
+use wire_words::{bf16_word, execute_causal_gqa_typed};
 
 use vyre::ir::DataType;
 

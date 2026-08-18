@@ -24,7 +24,6 @@ use proptest::prelude::*;
 use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_reference::composition_witness::csr_forward_traverse_witness as cpu_ref;
 
-
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(2000))]
 

@@ -21,9 +21,9 @@
 
 mod gate_fixtures;
 
-use gate_fixtures::overfire_grid;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
+use vyre_test_support::overfire_grid;
 
 /// Rotations exercised on top of forward and reversed order. Offsets that land inside a
 /// 32-lane subgroup, on its last lane, and past a 64-lane workgroup, so a lane window

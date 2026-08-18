@@ -16,7 +16,6 @@
 mod harness;
 use harness::{byte_stream_input_bytes, dispatch_single_u32_output, u32_bytes};
 
-use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::hash::adler32::adler32_program;
 use vyre_reference::composition_witness::multi_hash_witness;

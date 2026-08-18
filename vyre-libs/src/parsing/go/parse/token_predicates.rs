@@ -140,7 +140,7 @@ pub(super) fn emit_span_record_nodes(
             Expr::atomic_add(
                 out_counts,
                 Expr::u32(0),
-                Expr::u32(crate::parsing::go::GO_SPAN_RECORD_WORDS),
+                Expr::u32(super::structure::GO_SPAN_RECORD_WORDS),
             ),
         ),
         Node::store(

@@ -135,10 +135,8 @@ pub fn try_compile(patterns: &[&str]) -> Result<NfaPlan, NfaCompileError> {
     reserve_vec(&mut accept_states, patterns.len(), "accept state")?;
     let mut accept_state_ids = Vec::new();
     reserve_vec(&mut accept_state_ids, patterns.len(), "accept state id")?;
-    let accept_start_anchored =
-        init_flags_vec(patterns.len(), "accept start-anchor flag", false)?;
-    let accept_end_anchored =
-        init_flags_vec(patterns.len(), "accept end-anchor flag", false)?;
+    let accept_start_anchored = init_flags_vec(patterns.len(), "accept start-anchor flag", false)?;
+    let accept_end_anchored = init_flags_vec(patterns.len(), "accept end-anchor flag", false)?;
     let mut next_state: u32 = 1;
     for (pid, p) in patterns.iter().enumerate() {
         let pid = u32::try_from(pid).map_err(|_| NfaCompileError::PatternCountOverflow {

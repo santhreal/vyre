@@ -12,7 +12,6 @@ mod harness;
 use harness::{selected_adapter, shared_live_backend as live_backend};
 
 use vyre_driver::VyreBackend;
-use vyre_driver_wgpu::WgpuBackend;
 
 // ------------------------------------------------------------------
 // 1. max_workgroup_size must come from adapter limits

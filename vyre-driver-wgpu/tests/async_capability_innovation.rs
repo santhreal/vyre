@@ -10,8 +10,8 @@
 
 mod harness;
 use harness::{
-    add_one_expected, add_one_input, add_one_program, assert_non_cpu_backend,
-    long_running_program, shared_live_backend as live_backend,
+    add_one_expected, add_one_input, add_one_program, assert_non_cpu_backend, long_running_program,
+    shared_live_backend as live_backend,
 };
 
 use std::time::{Duration, Instant};
@@ -193,7 +193,6 @@ fn bf16_rejected_at_capability_gate_before_lowering() {
 // ------------------------------------------------------------------
 // 4. Async dispatch / pending dispatch is NOT synchronous under the hood
 // ------------------------------------------------------------------
-
 
 #[test]
 fn async_dispatch_does_not_block_on_gpu_execution() {

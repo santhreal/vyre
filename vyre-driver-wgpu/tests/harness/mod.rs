@@ -232,10 +232,7 @@ pub(crate) fn assert_actionable_error<T: std::fmt::Debug>(
 ) {
     let err = result.as_ref().unwrap_err();
     let text = err.to_string();
-    assert!(
-        text.contains("Fix:"),
-        "Fix: {msg}. Got: {text}"
-    );
+    assert!(text.contains("Fix:"), "Fix: {msg}. Got: {text}");
 }
 
 /// Standard subgroup probe WGSL shader using subgroup builtins.
@@ -304,7 +301,9 @@ pub(crate) fn cat_a_dispatch_config(program: &Program) -> DispatchConfig {
     let max_writable_count = program
         .buffers()
         .iter()
-        .filter(|decl| matches!(decl.access(), vyre::ir::BufferAccess::ReadWrite) || decl.is_output())
+        .filter(|decl| {
+            matches!(decl.access(), vyre::ir::BufferAccess::ReadWrite) || decl.is_output()
+        })
         .map(|decl| u64::from(decl.count()))
         .max()
         .unwrap_or(1);

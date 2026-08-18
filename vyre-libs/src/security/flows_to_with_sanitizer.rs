@@ -35,8 +35,6 @@ use vyre_spec::{analysis::AnalysisFactKind, soundness::Soundness};
 #[cfg(test)]
 use vyre_spec::soundness::{validate_dynamic_pipeline, PrecisionContract};
 
-#[cfg(test)]
-use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref;
 use crate::security::flow_composition::{
     security_flow_program, SanitizerProjection, SecurityFlowOptions, SinkProjection,
 };
@@ -230,19 +228,19 @@ pub(crate) use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref
 pub(crate) fn flows_to_with_sanitizer_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     let to_bytes = vyre_primitives::wire::pack_u32_slice;
     vec![vec![
-        to_bytes(&[0b0001]),              // source = {0}
-        to_bytes(&[0b0000]),              // sanitizer = {}
-        to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-        to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets
-        to_bytes(&[1, 2, 3]),             // pg_edge_targets
+        to_bytes(&[0b0001]),        // source = {0}
+        to_bytes(&[0b0000]),        // sanitizer = {}
+        to_bytes(&[0, 0, 0, 0]),    // pg_nodes
+        to_bytes(&[0, 1, 2, 3, 3]), // pg_edge_offsets
+        to_bytes(&[1, 2, 3]),       // pg_edge_targets
         to_bytes(&[
             edge_kind::ASSIGNMENT,
             edge_kind::ASSIGNMENT,
             edge_kind::ASSIGNMENT,
-        ]),                               // pg_edge_kind_mask
-        to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-        to_bytes(&[0b0001]),              // reach = {0}
-        to_bytes(&[0b0010]),              // sink = {1}
+        ]), // pg_edge_kind_mask
+        to_bytes(&[0, 0, 0, 0]),    // pg_node_tags
+        to_bytes(&[0b0001]),        // reach = {0}
+        to_bytes(&[0b0010]),        // sink = {1}
     ]]
 }
 

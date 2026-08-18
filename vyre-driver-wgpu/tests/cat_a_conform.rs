@@ -5,8 +5,7 @@ use harness::cat_a_dispatch_config;
 
 use std::sync::OnceLock;
 
-use vyre::ir::{BufferAccess, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::operation::SemanticOperation;
@@ -65,7 +64,6 @@ fn assert_gpu_matches_fixture(id: &'static str) {
         assert_outputs_match(&entry, tolerance, &outputs, expected_outputs, case_index);
     }
 }
-
 
 fn assert_outputs_match(
     entry: &SemanticOperation,

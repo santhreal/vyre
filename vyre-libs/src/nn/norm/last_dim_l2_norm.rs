@@ -1,8 +1,8 @@
 //! Last-dimension L2 normalization with float32 accumulation.
 
+use super::row_norm::row_sum_squares_body;
 use thiserror::Error;
 use vyre_foundation::composition::wrap_anonymous_region;
-use super::row_norm::row_sum_squares_body;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program, UnOp};
 
 const OP_ID: &str = "vyre-libs::nn::last_dim_l2_norm";

@@ -10,7 +10,6 @@ mod harness;
 use harness::{selected_adapter, shared_live_backend as live_backend, SUBGROUP_PROBE_WGSL};
 
 use vyre_driver::VyreBackend;
-use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
 // ------------------------------------------------------------------
@@ -98,7 +97,9 @@ fn subgroup_pipeline_compiles_when_capability_reported_true() {
     }
 
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        backend.dispatch_wgsl(SUBGROUP_PROBE_WGSL, &[0; 4], 4, 32).is_ok()
+        backend
+            .dispatch_wgsl(SUBGROUP_PROBE_WGSL, &[0; 4], 4, 32)
+            .is_ok()
     }));
     assert!(
         result.unwrap_or(false),

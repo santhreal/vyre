@@ -82,11 +82,7 @@ fn val_005_bool_ordered_comparisons_are_rejected_while_equality_is_accepted() {
             left: Box::new(Expr::bool(true)),
             right: Box::new(Expr::bool(false)),
         };
-        assert_rejected(
-            bool_ordered,
-            DataType::Bool,
-            "ordered comparison",
-        );
+        assert_rejected(bool_ordered, DataType::Bool, "ordered comparison");
 
         let bool_mismatched = Expr::BinOp {
             op,
@@ -164,7 +160,8 @@ fn val_006_static_integer_division_by_zero_is_rejected_while_float_is_accepted()
 #[test]
 fn val_007_subgroup_backend_capabilities_resolution() {
     use crate::validate::{
-        validate_with_options, BackendCapabilities, BackendValidationCapabilities, ValidationOptions,
+        validate_with_options, BackendCapabilities, BackendValidationCapabilities,
+        ValidationOptions,
     };
 
     struct SubgroupGpu;
@@ -196,7 +193,11 @@ fn val_007_subgroup_backend_capabilities_resolution() {
     let prog = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::subgroup_add(Expr::u32(1)))],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::subgroup_add(Expr::u32(1)),
+        )],
     );
 
     // 1. Backend trait with subgroup support -> accepted
@@ -324,7 +325,7 @@ fn val_008_wrapping_ops_and_mul_high_operand_rejections() {
     };
     let prog = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)],
-         [1, 1, 1],
+        [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), mul_high_valid)],
     );
     let errors = validate(&prog);
@@ -378,7 +379,11 @@ fn val_009_all_specialized_location_variants_convert_to_diagnostics() {
     assert_eq!(loc_expr.graph_node, Some(5));
     assert_eq!(loc_expr.operand_idx, Some(3));
 
-    let loc_op = ValidationLocation::Operand { node: 8, operand: 1 }.diagnostic_location();
+    let loc_op = ValidationLocation::Operand {
+        node: 8,
+        operand: 1,
+    }
+    .diagnostic_location();
     assert_eq!(loc_op.op_id, "program.expression");
     assert_eq!(loc_op.graph_node, Some(8));
     assert_eq!(loc_op.operand_idx, Some(1));

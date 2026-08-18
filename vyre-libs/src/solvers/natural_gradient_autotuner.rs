@@ -403,10 +403,7 @@ mod tests {
         )
         .unwrap();
 
-        crate::solvers::test_helpers::assert_input_pointers_preserved(
-            &input_ptrs,
-            &scratch.inputs,
-        );
+        crate::solvers::test_helpers::assert_input_pointers_preserved(&input_ptrs, &scratch.inputs);
     }
 
     #[test]

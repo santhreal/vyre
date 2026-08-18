@@ -95,7 +95,6 @@ pub fn flows_to_alias_only(
     ))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

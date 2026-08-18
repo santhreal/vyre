@@ -335,7 +335,9 @@ mod tests {
             grid: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             if grid != Some([1, 1, 1]) || inputs.len() != 3 {
-                return Err(DispatchError::BadInputs("compose dispatch shape mismatch".into()));
+                return Err(DispatchError::BadInputs(
+                    "compose dispatch shape mismatch".into(),
+                ));
             }
             let f = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let g = crate::dispatch_buffers::read_u32s(&inputs[1]);

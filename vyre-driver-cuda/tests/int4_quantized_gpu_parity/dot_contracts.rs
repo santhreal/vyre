@@ -1,6 +1,5 @@
 use super::*;
 
-
 /// Fixed-pattern packed operands for one dot lane count.
 fn patterned_dot_operands(lane_count: u32) -> (Vec<u32>, Vec<u32>) {
     let lhs = cycled_rows(&WEIGHT_PATTERN, 1, lane_count, 0);

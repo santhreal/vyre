@@ -123,9 +123,8 @@ pub(crate) fn evaluate_and_assert_ranges_matches(
     inputs: &[Value],
     expected: &[(u32, u32, u32)],
 ) {
-    let outputs = vyre_reference::reference_eval(program, inputs).expect(
-        "Fix: AC bounded-ranges program should evaluate in reference backend.",
-    );
+    let outputs = vyre_reference::reference_eval(program, inputs)
+        .expect("Fix: AC bounded-ranges program should evaluate in reference backend.");
     let mut decoded = decode_match_triples(&outputs);
     decoded.sort_unstable();
     let mut expected_sorted = expected.to_vec();

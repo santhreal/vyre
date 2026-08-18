@@ -41,7 +41,6 @@ fn inputs_for_char_class_program(
         .collect()
 }
 
-
 fn run_char_class_program(
     program: Program,
     source: &[u8],

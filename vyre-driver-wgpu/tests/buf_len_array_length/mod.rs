@@ -31,7 +31,7 @@ fn backend() -> &'static WgpuBackend {
     })
 }
 
-pub(super) fn wrapped_storage_program(body: Node) -> Program {
+fn wrapped_storage_program(body: Node) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
@@ -42,7 +42,7 @@ pub(super) fn wrapped_storage_program(body: Node) -> Program {
     )
 }
 
-pub(super) fn triple_nested_region(inner_body: Vec<Node>, label_stem: &str) -> Node {
+fn triple_nested_region(inner_body: Vec<Node>, label_stem: &str) -> Node {
     let mid = Node::Region {
         generator: Ident::from(format!("vyre-primitives::test::{label_stem}_inner")),
         source_region: None,

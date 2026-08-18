@@ -99,7 +99,14 @@ fn i32_to_i64_sign_extends_high_word_on_gpu() {
         expected, I32_TO_I64_EXPECTED,
         "reference i32->i64 sign-extension drifted"
     );
-    assert_widening_contract(&backend, DataType::I32, DataType::I64, &words, &expected, "i32->i64");
+    assert_widening_contract(
+        &backend,
+        DataType::I32,
+        DataType::I64,
+        &words,
+        &expected,
+        "i32->i64",
+    );
 }
 
 #[test]
@@ -113,7 +120,14 @@ fn i32_to_u64_sign_extends_high_word_on_gpu() {
         expected[0], 0xFFFF_FFFF_FFFF_FFF9,
         "reference i32->u64 sign-extension drifted (-7 must carry the high word)"
     );
-    assert_widening_contract(&backend, DataType::I32, DataType::U64, &words, &expected, "i32->u64");
+    assert_widening_contract(
+        &backend,
+        DataType::I32,
+        DataType::U64,
+        &words,
+        &expected,
+        "i32->u64",
+    );
 }
 
 #[test]
@@ -126,5 +140,12 @@ fn u32_to_u64_zero_extends_high_word_on_gpu() {
         expected[0], 0x0000_0000_FFFF_FFFF,
         "reference u32->u64 zero-extension drifted"
     );
-    assert_widening_contract(&backend, DataType::U32, DataType::U64, &words, &expected, "u32->u64");
+    assert_widening_contract(
+        &backend,
+        DataType::U32,
+        DataType::U64,
+        &words,
+        &expected,
+        "u32->u64",
+    );
 }

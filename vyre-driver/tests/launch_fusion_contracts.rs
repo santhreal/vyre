@@ -185,6 +185,8 @@ fn stage(
 }
 
 fn next_u64(state: &mut u64) -> u64 {
-    *state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+    *state = state
+        .wrapping_mul(6_364_136_223_846_793_005)
+        .wrapping_add(1);
     *state
 }

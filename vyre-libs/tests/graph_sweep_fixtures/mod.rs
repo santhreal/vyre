@@ -112,7 +112,6 @@ pub(crate) struct GeneratedCsr {
 }
 
 pub(crate) fn generated_frontier_words(node_count: u32, seed: u64) -> Vec<u32> {
-
     let words = bitset_words(node_count);
     let mut frontier = Vec::with_capacity(words);
     for word in 0..words {
@@ -131,7 +130,6 @@ pub(crate) fn generated_frontier_words(node_count: u32, seed: u64) -> Vec<u32> {
 }
 
 pub(crate) fn generated_csr(node_count: u32, seed: u64) -> GeneratedCsr {
-
     let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
     let mut edge_targets = Vec::new();
     let mut edge_kind_mask = Vec::new();

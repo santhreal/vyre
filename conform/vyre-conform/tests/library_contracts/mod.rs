@@ -8,7 +8,12 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 pub(crate) fn scratch_readwrite_program() -> Program {
     Program::wrapped(
-        vec![BufferDecl::storage("scratch", 0, BufferAccess::ReadWrite, DataType::U32)],
+        vec![BufferDecl::storage(
+            "scratch",
+            0,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )],
         [1, 1, 1],
         Vec::<Node>::new(),
     )

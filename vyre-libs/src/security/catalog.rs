@@ -132,28 +132,44 @@ macro_rules! reach_flow_entry {
 
 reach_flow_entry!(
     super::flows_to::OP_ID,
-    || super::flows_to::flows_to(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "fin", "fout"),
+    || super::flows_to::flows_to(
+        crate::graph::program_graph::ProgramGraphShape::new(4, 3),
+        "fin",
+        "fout"
+    ),
     super::flow_composition::forward_reach_fixture_inputs,
     super::flow_composition::forward_reach_fixture_expected
 );
 
 reach_flow_entry!(
     super::taint_flow::OP_ID,
-    || super::taint_flow::taint_flow(crate::graph::program_graph::ProgramGraphShape::new(4, 3), "fin", "fout"),
+    || super::taint_flow::taint_flow(
+        crate::graph::program_graph::ProgramGraphShape::new(4, 3),
+        "fin",
+        "fout"
+    ),
     super::flow_composition::forward_reach_fixture_inputs,
     super::flow_composition::forward_reach_fixture_expected
 );
 
 reach_flow_entry!(
     super::bounded_by_comparison::OP_ID,
-    || super::bounded_by_comparison::bounded_by_comparison(crate::graph::program_graph::ProgramGraphShape::new(4, 4), "fin", "fout"),
+    || super::bounded_by_comparison::bounded_by_comparison(
+        crate::graph::program_graph::ProgramGraphShape::new(4, 4),
+        "fin",
+        "fout"
+    ),
     super::flow_composition::dominance_fixture_inputs,
     super::flow_composition::dominance_fixture_expected
 );
 
 reach_flow_entry!(
     super::dominance_predecessors::OP_ID,
-    || super::dominance_predecessors::dominance_predecessors(crate::graph::program_graph::ProgramGraphShape::new(4, 4), "fin", "fout"),
+    || super::dominance_predecessors::dominance_predecessors(
+        crate::graph::program_graph::ProgramGraphShape::new(4, 4),
+        "fin",
+        "fout"
+    ),
     super::flow_composition::dominance_fixture_inputs,
     super::flow_composition::dominance_fixture_expected
 );

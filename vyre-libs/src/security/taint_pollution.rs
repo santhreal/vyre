@@ -48,7 +48,6 @@ impl vyre_spec::soundness::SoundnessTagged for TaintPollution {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

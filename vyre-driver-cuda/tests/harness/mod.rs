@@ -130,7 +130,6 @@ pub(crate) fn build_atomic_reduction_program(
     )
 }
 
-
 /// Acquire the live CUDA backend required by release-path GPU tests.
 pub(crate) fn live_dispatcher() -> CudaBackend {
     CudaBackend::acquire().expect(

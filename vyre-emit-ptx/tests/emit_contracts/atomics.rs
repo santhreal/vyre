@@ -1,6 +1,6 @@
 //! Test: atomics.
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, shared_rw};
+use vyre_lower::descriptor_builder::{body, descriptor, global_rw, lit, op, shared_rw};
 
 /// The shared-memory variant: `slot 0` is a 256-element workgroup bin array.
 fn shared_atomic_kernel(atomic_op: AtomicOp) -> KernelDescriptor {

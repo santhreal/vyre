@@ -27,7 +27,6 @@ use vyre_reference::composition_witness::{
     classic_ac_candidate_suffix3_bloom_words_witness,
 };
 
-
 fn presence_bit(bitmap: &[u32], pattern_id: u32) -> bool {
     let w = (pattern_id >> 5) as usize;
     let b = pattern_id & 31;

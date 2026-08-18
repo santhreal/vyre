@@ -425,9 +425,9 @@ pub const fn adaptive_node_dispatch_grid(node_count: u32) -> [u32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::mix32;
     use crate::graph::adaptive_traverse::mode_selection::should_use_dense;
     use crate::graph::adaptive_traverse::test_graphs::build_dense_adj;
+    use crate::graph::mix32;
 
     #[test]
     fn adaptive_layout_validation_accepts_valid_csr_and_dense_rows() {
@@ -657,5 +657,4 @@ mod tests {
         assert_eq!(plan.mode, AdaptiveTraversalMode::SparseQueue);
         assert!(!plan.frontier.work.has_active_bits);
     }
-
 }

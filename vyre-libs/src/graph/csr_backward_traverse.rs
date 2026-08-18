@@ -63,8 +63,7 @@ inventory::submit! {
 
 #[cfg(test)]
 pub(crate) use crate::graph::csr_frontier_step::{
-    csr_backward_traverse_cpu_ref as cpu_ref,
-    csr_backward_traverse_cpu_ref_into as cpu_ref_into,
+    csr_backward_traverse_cpu_ref as cpu_ref, csr_backward_traverse_cpu_ref_into as cpu_ref_into,
 };
 
 #[cfg(test)]

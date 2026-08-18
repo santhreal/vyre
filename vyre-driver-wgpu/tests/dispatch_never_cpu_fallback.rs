@@ -7,7 +7,9 @@
 //! - `WgpuBackend::acquire()` fails when only CPU adapters are available
 
 mod harness;
-use harness::{acquire_live_backend as live_backend, assert_actionable_error, assert_non_cpu_backend};
+use harness::{
+    acquire_live_backend as live_backend, assert_actionable_error, assert_non_cpu_backend,
+};
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -37,7 +39,6 @@ fn successful_acquisition_means_non_cpu_adapter() {
     let backend = live_backend();
     assert_non_cpu_backend(&backend);
 }
-
 
 // ------------------------------------------------------------------
 // 2. Dispatch latency is GPU-consistent

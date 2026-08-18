@@ -3,9 +3,7 @@
 #![cfg(feature = "graph")]
 
 mod graph_sweep_fixtures;
-use graph_sweep_fixtures::{
-    active_nodes, generated_csr, generated_frontier_words, max_row_degree,
-};
+use graph_sweep_fixtures::{active_nodes, generated_csr, generated_frontier_words, max_row_degree};
 mod wire_words;
 use wire_words::queue_forward_oracle;
 
@@ -15,7 +13,6 @@ use vyre_libs::graph::csr_frontier_queue::{validate_csr_queue_graph, CsrQueueGra
 use vyre_reference::composition_witness::{
     csr_queue_strided_forward_witness, frontier_to_queue_witness,
 };
-
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -190,4 +187,3 @@ proptest! {
         }
     }
 }
-

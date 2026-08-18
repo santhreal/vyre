@@ -17,8 +17,8 @@
 
 mod gate_fixtures;
 
-use gate_fixtures::overfire_grid;
 use vyre_reference::value::Value;
+use vyre_test_support::overfire_grid;
 
 #[test]
 fn every_registered_primitive_is_oob_clean_on_its_fixtures() {

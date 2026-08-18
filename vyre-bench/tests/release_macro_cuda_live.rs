@@ -9,7 +9,6 @@ use vyre_driver_cuda::CudaBackend;
 const REDUCED_RECORDS: u32 = 512;
 const RELEASE_MACRO_CASES: usize = 10;
 
-
 fn output_summary(bytes: &[u8]) -> String {
     let first_words = bytes
         .chunks_exact(4)

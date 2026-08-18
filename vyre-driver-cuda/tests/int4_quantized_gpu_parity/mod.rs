@@ -11,6 +11,9 @@
 
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_primitives::wire::{
+    decode_f32_le_bytes_all, decode_i32_le_bytes_all, pack_f32_slice, pack_u32_slice,
+};
 use vyre_reference::composition_witness::{
     i4x8_batched_matmul_f32_scaled_witness as i4x8_batched_matmul_f32_scaled_cpu,
     i4x8_batched_matmul_top1_f32_scaled_witness as i4x8_batched_matmul_top1_f32_scaled_cpu,
@@ -20,10 +23,6 @@ use vyre_reference::composition_witness::{
     i4x8_matvec_f32_scaled_witness as i4x8_matvec_f32_scaled_cpu,
     pack_i4x8_witness as pack_i4x8_cpu,
 };
-use vyre_primitives::wire::{
-    decode_f32_le_bytes_all, decode_i32_le_bytes_all, pack_f32_slice, pack_u32_slice,
-};
-use vyre_reference::composition_witness::pack_i4x8_witness as pack_i4x8_cpu;
 
 /// Signed INT4 lane pattern the fixed-shape contracts cycle for weights and for
 /// the left dot operand. Spans both nibble extremes so a sign-extension defect
@@ -278,7 +277,12 @@ fn dispatch_i4_dot_f32_scaled(
     lane_count: u32,
 ) -> f32 {
     let program = vyre_libs::math::quantized::i4x8_dot_f32_scaled(
-        "lhs", "rhs", "lhs_scale", "rhs_scale", "out", lane_count,
+        "lhs",
+        "rhs",
+        "lhs_scale",
+        "rhs_scale",
+        "out",
+        lane_count,
     );
     let outputs = backend
         .dispatch(
@@ -354,7 +358,14 @@ fn dispatch_i4_batched_matmul_f32_scaled(
     cols: u32,
 ) -> Vec<f32> {
     let program = vyre_libs::math::quantized::i4x8_batched_matmul_f32_scaled(
-        "weights", "activations", "row_scales", "batch_scales", "out", batch, rows, cols,
+        "weights",
+        "activations",
+        "row_scales",
+        "batch_scales",
+        "out",
+        batch,
+        rows,
+        cols,
     );
     let outputs = backend
         .dispatch(&program, &inputs.bindings(), &DispatchConfig::default())
@@ -370,7 +381,14 @@ fn dispatch_i4_batched_matmul_top1_f32_scaled(
     cols: u32,
 ) -> (Vec<f32>, Vec<u32>) {
     let program = vyre_libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled(
-        "weights", "activations", "row_scales", "batch_scales", "out", batch, rows, cols,
+        "weights",
+        "activations",
+        "row_scales",
+        "batch_scales",
+        "out",
+        batch,
+        rows,
+        cols,
     );
     let outputs = backend
         .dispatch(&program, &inputs.bindings(), &DispatchConfig::default())
@@ -450,14 +468,8 @@ fn assert_batched_matvec_parity(
         rows,
         cols,
     );
-    let expected = i4x8_batched_matvec_f32_scaled_cpu(
-        weights_packed,
-        x_batches,
-        scales,
-        batch,
-        rows,
-        cols,
-    );
+    let expected =
+        i4x8_batched_matvec_f32_scaled_cpu(weights_packed, x_batches, scales, batch, rows, cols);
     assert_eq!(
         f32_bits(&actual),
         f32_bits(&expected),
@@ -492,10 +504,8 @@ fn assert_dot_f32_scaled_parity(
     lane_count: u32,
     context: &str,
 ) {
-    let actual =
-        dispatch_i4_dot_f32_scaled(backend, lhs, rhs, lhs_scale, rhs_scale, lane_count);
-    let expected =
-        i4x8_dot_f32_scaled_cpu(lhs, rhs, lhs_scale, rhs_scale, lane_count);
+    let actual = dispatch_i4_dot_f32_scaled(backend, lhs, rhs, lhs_scale, rhs_scale, lane_count);
+    let expected = i4x8_dot_f32_scaled_cpu(lhs, rhs, lhs_scale, rhs_scale, lane_count);
     assert_eq!(
         actual.to_bits(),
         expected.to_bits(),

@@ -1,8 +1,8 @@
 //! RMS normalization followed by learned scale and a SiLU gate.
 
+use super::row_norm::row_sum_squares_body;
 use thiserror::Error;
 use vyre_foundation::composition::wrap_anonymous_region;
-use super::row_norm::row_sum_squares_body;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program, UnOp};
 
 const OP_ID: &str = "vyre-libs::nn::gated_rms_norm";

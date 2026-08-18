@@ -18,7 +18,7 @@
 //! buffers in row-major layout; kernel is length-9 F32 in
 //! row-major layout (`kernel[ky*3 + kx]`).
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::builder::stencil::stencil_3x3_taps;

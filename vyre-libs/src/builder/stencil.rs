@@ -485,10 +485,7 @@ pub fn blend_channel_coverage(fg_c: Expr, bg_c: Expr, cov: Expr, inv_cov: Expr) 
 pub fn avg4_channel(c0: Expr, c1: Expr, c2: Expr, c3: Expr) -> Expr {
     Expr::shr(
         Expr::add(
-            Expr::add(
-                Expr::add(c0, c1),
-                Expr::add(c2, c3),
-            ),
+            Expr::add(Expr::add(c0, c1), Expr::add(c2, c3)),
             Expr::u32(2),
         ),
         Expr::u32(2),

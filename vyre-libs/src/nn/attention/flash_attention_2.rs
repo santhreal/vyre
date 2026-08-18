@@ -85,7 +85,7 @@ mod tests {
         let tile_size = 4_u32;
         let elements = (seq_len * head_dim) as usize;
 
-        let (q, k, v) = super::synth_qkv_fixtures(elements);
+        let (q, k, v) = super::super::synth_qkv_fixtures(elements);
 
         let actual = run_program(
             flash_attention_2("q", "k", "v", "out", seq_len, head_dim, tile_size),

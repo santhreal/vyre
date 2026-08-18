@@ -60,7 +60,11 @@ fn dispatch(backend: &WgpuBackend, program: &Program, ps: &[(i32, i32)]) -> Vec<
     let outputs = backend
         .dispatch_borrowed(
             program,
-            &[zero_bytes.as_slice(), u32_bytes(&a_words).as_slice(), u32_bytes(&b_words).as_slice()],
+            &[
+                zero_bytes.as_slice(),
+                u32_bytes(&a_words).as_slice(),
+                u32_bytes(&b_words).as_slice(),
+            ],
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the signed int-op contract.");

@@ -34,7 +34,6 @@ fn linear_inputs<'a>(
     }
 }
 
-
 /// Runs the changed-flag closure over [`linear_graph`] seeded at node 0 with every edge kind
 /// allowed. The contracts below vary the dispatcher and the iteration budget; the graph itself is
 /// incidental to them.

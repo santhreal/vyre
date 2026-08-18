@@ -16,7 +16,6 @@ const STRUCTURE_OP_ID: &str = "vyre-libs::parsing::python312_extract_structure";
 const IMPORTS_OP_ID: &str = "vyre-libs::parsing::python312_extract_imports";
 const WITH_BLOCKS_OP_ID: &str = "vyre-libs::parsing::python312_extract_with_blocks";
 
-
 /// Extract `def`, `async def`, and `class` declarations.
 #[must_use]
 pub fn python312_extract_structure(

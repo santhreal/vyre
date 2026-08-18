@@ -26,8 +26,16 @@ fn execute(
     key_dim: u32,
     value_dim: u32,
 ) -> (Vec<f32>, Vec<f32>) {
-    let spec = default_gated_delta_spec(sequence, key_heads, value_heads, key_dim, value_dim, DataType::F32);
-    let program = recurrent_gated_delta(&spec).expect("Fix: valid recurrent delta fixture must build");
+    let spec = default_gated_delta_spec(
+        sequence,
+        key_heads,
+        value_heads,
+        key_dim,
+        value_dim,
+        DataType::F32,
+    );
+    let program =
+        recurrent_gated_delta(&spec).expect("Fix: valid recurrent delta fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[

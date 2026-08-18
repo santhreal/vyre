@@ -939,9 +939,7 @@ impl<'a> CsrTraversalComposer<'a> {
         ));
 
         let t = Expr::InvocationId { axis: 0 };
-        let mut body = vec![
-            Node::let_bind("src", t.clone()),
-        ];
+        let mut body = vec![Node::let_bind("src", t.clone())];
         body.extend(self.emit_backward_scan(Expr::var("src"), frontier_in, frontier_out, Vec::new));
 
         Program::wrapped(
@@ -958,18 +956,13 @@ impl<'a> CsrTraversalComposer<'a> {
     #[must_use]
     pub fn build_parallel_backward_or_changed(&self, frontier_out: &str, changed: &str) -> Program {
         let src = Expr::InvocationId { axis: 0 };
-        let body = self.emit_backward_scan_full(
-            src.clone(),
-            frontier_out,
-            frontier_out,
-            Vec::new,
-            || {
+        let body =
+            self.emit_backward_scan_full(src.clone(), frontier_out, frontier_out, Vec::new, || {
                 vec![Node::let_bind(
                     "_changed",
                     Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
                 )]
-            },
-        );
+            });
 
         let mut buffers = csr_read_only_buffers(self.node_count, self.edge_count);
         csr_push_frontier_changed_buffers(&mut buffers, frontier_out, changed, self.node_count);

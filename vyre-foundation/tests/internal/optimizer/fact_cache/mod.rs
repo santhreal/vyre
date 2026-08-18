@@ -439,7 +439,10 @@ fn derive_type_facts_nested_blocks_and_regions_restoration() {
                 Node::let_bind("inner_block_dep", Expr::add(Expr::var("x"), Expr::u32(1))),
                 Node::let_bind("block_only", Expr::u32(20)),
             ]),
-            Node::let_bind("post_block_x_dep", Expr::add(Expr::var("x"), Expr::f32(2.0))),
+            Node::let_bind(
+                "post_block_x_dep",
+                Expr::add(Expr::var("x"), Expr::f32(2.0)),
+            ),
             Node::Region {
                 generator: "test_region".into(),
                 source_region: None,
@@ -449,7 +452,10 @@ fn derive_type_facts_nested_blocks_and_regions_restoration() {
                     Node::let_bind("region_only", Expr::u32(40)),
                 ]),
             },
-            Node::let_bind("post_region_x_dep", Expr::add(Expr::var("x"), Expr::f32(3.0))),
+            Node::let_bind(
+                "post_region_x_dep",
+                Expr::add(Expr::var("x"), Expr::f32(3.0)),
+            ),
         ],
     );
 
@@ -562,12 +568,18 @@ fn derive_type_facts_tile_elementwise_inputs_and_restoration() {
                 "out_tile",
                 vec!["outer_elem".into(), "in_b".into()],
                 vec![
-                    Node::let_bind("body_dep_a", Expr::add(Expr::var("outer_elem"), Expr::f32(1.0))),
+                    Node::let_bind(
+                        "body_dep_a",
+                        Expr::add(Expr::var("outer_elem"), Expr::f32(1.0)),
+                    ),
                     Node::let_bind("body_dep_b", Expr::mul(Expr::var("in_b"), Expr::f32(2.0))),
                     Node::let_bind("elem_local", Expr::f32(3.0)),
                 ],
             ),
-            Node::let_bind("post_tile_dep", Expr::add(Expr::var("outer_elem"), Expr::u32(1))),
+            Node::let_bind(
+                "post_tile_dep",
+                Expr::add(Expr::var("outer_elem"), Expr::u32(1)),
+            ),
         ],
     );
 

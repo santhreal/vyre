@@ -9,37 +9,44 @@ use std::sync::Arc;
 use vyre_foundation::ir::{BufferDecl, DataType, Ident};
 use vyre_foundation::ir::{Expr, ExprNode, Node, Program};
 
-struct OpaqueAtomicExpr;
+macro_rules! opaque_expr_fixture {
+    ($name:ident, $kind:literal, $fingerprint_byte:literal) => {
+        #[derive(Debug)]
+        struct $name;
 
-impl std::fmt::Debug for OpaqueAtomicExpr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "OpaqueAtomicExpr")
-    }
+        impl ExprNode for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+
+            fn debug_identity(&self) -> &str {
+                $kind
+            }
+
+            fn result_type(&self) -> Option<DataType> {
+                Some(DataType::U32)
+            }
+
+            fn cse_safe(&self) -> bool {
+                true
+            }
+
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                [$fingerprint_byte; 32]
+            }
+
+            fn validate_extension(&self) -> Result<(), String> {
+                Ok(())
+            }
+
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+        }
+    };
 }
 
-impl ExprNode for OpaqueAtomicExpr {
-    fn extension_kind(&self) -> &'static str {
-        "test::scan::opaque-atomic"
-    }
-    fn debug_identity(&self) -> &str {
-        "test::scan::opaque-atomic"
-    }
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-    fn cse_safe(&self) -> bool {
-        true
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0x42; 32]
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+opaque_expr_fixture!(OpaqueAtomicExpr, "test::scan::opaque-atomic", 0x42);
 
 struct OpaqueAtomicExprScanner;
 
@@ -70,31 +77,7 @@ inventory::submit! {
     }
 }
 
-#[derive(Debug)]
-struct OpaqueUnknownExpr;
-impl ExprNode for OpaqueUnknownExpr {
-    fn extension_kind(&self) -> &'static str {
-        "test::scan::opaque-unknown"
-    }
-    fn debug_identity(&self) -> &str {
-        "test::scan::opaque-unknown"
-    }
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-    fn cse_safe(&self) -> bool {
-        true
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [0x99; 32]
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+opaque_expr_fixture!(OpaqueUnknownExpr, "test::scan::opaque-unknown", 0x99);
 
 #[test]
 fn atomic_scan_collects_targets_from_opaque_expr_extensions() {

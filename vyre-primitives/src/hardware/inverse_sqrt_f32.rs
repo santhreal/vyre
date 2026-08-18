@@ -77,7 +77,13 @@ mod tests {
     use crate::hardware::{inverse_sqrt_f32_ref, lcg_f32, run_program};
 
     fn test_cpu_ref(input: &[f32]) -> Vec<u8> {
-        pack_f32(&input.iter().copied().map(inverse_sqrt_f32_ref).collect::<Vec<_>>())
+        pack_f32(
+            &input
+                .iter()
+                .copied()
+                .map(inverse_sqrt_f32_ref)
+                .collect::<Vec<_>>(),
+        )
     }
     fn assert_case(input: &[f32]) {
         let n = input.len() as u32;

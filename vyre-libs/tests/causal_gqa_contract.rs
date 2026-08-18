@@ -3,9 +3,8 @@
 #![forbid(unsafe_code)]
 
 mod wire_words;
-use wire_words::execute_causal_gqa as execute;
 use vyre_libs::nn::attention::gqa_attention_causal;
-
+use wire_words::execute_causal_gqa as execute;
 
 /// Proves prompt token zero cannot receive probability mass from a future value.
 #[test]

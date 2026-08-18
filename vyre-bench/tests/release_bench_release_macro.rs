@@ -11,7 +11,6 @@ const GENERATED_RECORD_COUNTS: u32 = 128;
 const RELEASE_MACRO_CASES: usize = 10;
 const GENERATED_ORACLE_CASES: usize = GENERATED_RECORD_COUNTS as usize * RELEASE_MACRO_CASES;
 
-
 fn reference_outputs(
     case: &vyre_bench::cases::release_workloads::ReleaseMacroGeneratedCase,
 ) -> Vec<Vec<u8>> {

@@ -81,7 +81,11 @@ fn run(backend: &WgpuBackend, program: &Program, ps: &[(i32, i32)]) -> Vec<i32> 
     let outputs = backend
         .dispatch_borrowed(
             program,
-            &[zero_bytes.as_slice(), a_bytes.as_slice(), b_bytes.as_slice()],
+            &[
+                zero_bytes.as_slice(),
+                a_bytes.as_slice(),
+                b_bytes.as_slice(),
+            ],
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the signed modulo contract.");

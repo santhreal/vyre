@@ -21,10 +21,8 @@ fn dispatch_hex(input: &[u8]) -> Vec<u32> {
     let decoded_words = hex_decoded_capacity(input.len() as u32);
     let program = hex_decode("input", "output", input.len() as u32);
     let grid = [decoded_words.div_ceil(hex_lanes()).max(1), 1, 1];
-    let config = DispatchConfig {
-        grid_override: Some(grid),
-        ..Default::default()
-    };
+    let mut config = DispatchConfig::default();
+    config.grid_override = Some(grid);
     let ascii_words: Vec<u32> = input.iter().map(|&b| u32::from(b)).collect();
     let outputs = backend
         .dispatch(

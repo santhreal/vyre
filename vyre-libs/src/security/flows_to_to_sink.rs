@@ -69,7 +69,6 @@ pub fn flows_to_to_sink(
     ))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

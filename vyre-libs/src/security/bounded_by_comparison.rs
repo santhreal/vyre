@@ -38,7 +38,6 @@ pub fn bounded_by_comparison(
     ))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

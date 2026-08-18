@@ -10,8 +10,10 @@ use vyre_primitives::wire::pack_u32_slice as bytes_u32;
 /// read-write buffer. Good enough to exercise the byte-identity
 /// pipeline without leaning on a specific feature gate.
 fn copy_first_program() -> Program {
-    let in_buf = BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4);
-    let out_buf = BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1);
+    let in_buf =
+        BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4);
+    let out_buf =
+        BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1);
     let copy_node = Node::store("output", Expr::u32(0), Expr::load("input", Expr::u32(0)));
     Program::wrapped(vec![in_buf, out_buf], [1, 1, 1], vec![copy_node])
 }

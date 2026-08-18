@@ -1,6 +1,5 @@
 use super::*;
 
-
 #[test]
 fn cuda_dispatch_matches_packed_int4_scaled_matvec_oracle() {
     let backend = cuda_backend();

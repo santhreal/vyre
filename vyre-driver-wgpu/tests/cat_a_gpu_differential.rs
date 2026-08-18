@@ -38,7 +38,7 @@ use harness::{cat_a_dispatch_config, f32_to_ordered};
 use std::sync::OnceLock;
 
 use vyre::ir::BufferAccess;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity::effective_tolerance;
 use vyre_foundation::ir::Program;

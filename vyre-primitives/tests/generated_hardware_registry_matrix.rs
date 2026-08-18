@@ -66,7 +66,6 @@ fn hardware_entries() -> BTreeMap<&'static str, SemanticOperation> {
         .collect()
 }
 
-
 #[test]
 fn generated_hardware_registry_shapes_match_declared_surface() {
     let entries = hardware_entries();

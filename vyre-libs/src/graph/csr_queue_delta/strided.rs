@@ -197,5 +197,4 @@ mod tests {
 
         assert!(capped_cases > CASES * 9 / 10);
     }
-
 }

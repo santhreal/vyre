@@ -140,7 +140,7 @@ mod tests {
         let s = 9_u32;
         let d = 7_u32;
         let elements = (s * d) as usize;
-        let (q, k, v) = super::synth_qkv_fixtures(elements);
+        let (q, k, v) = super::super::synth_qkv_fixtures(elements);
         let run = |program: Program| {
             crate::nn::attention::eval_qkv_program(
                 &program,

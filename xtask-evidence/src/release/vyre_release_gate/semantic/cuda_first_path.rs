@@ -61,7 +61,6 @@ fn check_release_axes_source_artifacts(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::report_fixture::gpu_memory_environment;
 
     #[test]
     fn cuda_first_axes_counts_only_usable_source_artifacts() {

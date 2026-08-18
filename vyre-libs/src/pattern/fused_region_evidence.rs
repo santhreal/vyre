@@ -268,7 +268,7 @@ mod tests {
 
         let words = regex_admission_presence_words(patterns.len() as u32) as usize;
         let bit = |bm: &[u32], r: usize, pid: u32| {
-            super::regex_region_admission::tests::presence_bit(bm, r, words, pid)
+            crate::pattern::regex_region_admission::tests::presence_bit(bm, r, words, pid)
         };
         // presence: all four in their regions.
         assert!(bit(&ev.presence, 0, 0) && bit(&ev.presence, 0, 1));

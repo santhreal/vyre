@@ -10,7 +10,9 @@ use vyre_foundation::validate::{BackendValidationCapabilities, ValidationOptions
 
 fn subgroup_pipeline_compiles(backend: &WgpuBackend) -> bool {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        backend.dispatch_wgsl(SUBGROUP_PROBE_WGSL, &[0; 4], 4, 32).is_ok()
+        backend
+            .dispatch_wgsl(SUBGROUP_PROBE_WGSL, &[0; 4], 4, 32)
+            .is_ok()
     }))
     .unwrap_or(false)
 }

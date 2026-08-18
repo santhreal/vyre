@@ -35,7 +35,6 @@ use vyre_reference::composition_witness::{
     classic_ac_candidate_suffix3_bloom_words_witness,
 };
 
-
 const MAX_MATCHES: u32 = 4096;
 fn decode_triples(count_words: &[u32], match_words: &[u32]) -> BTreeSet<(u32, u32, u32)> {
     let count = *count_words.first().unwrap_or(&0) as usize;

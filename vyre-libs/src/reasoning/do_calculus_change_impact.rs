@@ -1293,7 +1293,11 @@ mod tests {
         assert!(predict_impact_observation_form(&[], &[], 0).is_empty());
     }
 
-    fn assert_mock_dispatch_contract(inputs: &[Vec<u8>], grid_override: Option<[u32; 3]>, expected_len: usize) {
+    fn assert_mock_dispatch_contract(
+        inputs: &[Vec<u8>],
+        grid_override: Option<[u32; 3]>,
+        expected_len: usize,
+    ) {
         assert_eq!(grid_override, Some([1, 1, 1]));
         assert_eq!(inputs.len(), expected_len);
     }

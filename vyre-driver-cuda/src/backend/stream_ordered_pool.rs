@@ -369,12 +369,14 @@ mod tests {
             reserved_after_realloc, reserved_after_free,
             "re-allocating a just-freed same-size block must reuse the reserved memory, not grow the pool's OS reservation (before={reserved_after_free}, after={reserved_after_realloc})"
         );
-        pool.free_async(ptr2, stream.raw()).expect("free second allocation");
+        pool.free_async(ptr2, stream.raw())
+            .expect("free second allocation");
         stream.synchronize().expect("final sync");
         // Trimming configures the pool's release threshold down to min_keep_bytes
         // and requests the driver to release unneeded reservation.
         assert_eq!(
-            pool.release_threshold().expect("query release threshold before trim"),
+            pool.release_threshold()
+                .expect("query release threshold before trim"),
             RETAIN_ALL_FREED_BYTES,
             "pool must retain all freed bytes by default before trim"
         );

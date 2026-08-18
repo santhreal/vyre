@@ -24,9 +24,18 @@ impl U32Witness {
     /// Enumerate the canonical u32 witness set.
     pub fn enumerate() -> Vec<u32> {
         const BOUNDARY: [u32; 12] = [
-            0, 1, 2, 3, u32::MAX, u32::MAX - 1,
-            0x8000_0000, 0x7FFF_FFFF, 0xAAAA_AAAA, 0x5555_5555,
-            0xDEAD_BEEF, 0xCAFE_F00D,
+            0,
+            1,
+            2,
+            3,
+            u32::MAX,
+            u32::MAX - 1,
+            0x8000_0000,
+            0x7FFF_FFFF,
+            0xAAAA_AAAA,
+            0x5555_5555,
+            0xDEAD_BEEF,
+            0xCAFE_F00D,
         ];
         let mut out = BOUNDARY.to_vec();
         let seed = *blake3::hash(b"u32-witness-v1").as_bytes();

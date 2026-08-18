@@ -129,7 +129,9 @@ impl TypeFactCtx {
                 Node::Block(nodes) => {
                     self.infer_scoped_nodes(nodes);
                 }
-                Node::Region { generator, body, .. } => {
+                Node::Region {
+                    generator, body, ..
+                } => {
                     if generator.as_str() == Program::ROOT_REGION_GENERATOR {
                         self.infer_nodes_types(body);
                     } else {

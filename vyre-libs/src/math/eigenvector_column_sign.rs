@@ -174,7 +174,10 @@ mod tests {
     #[test]
     fn zero_order_is_rejected() {
         let program = eigenvector_column_sign("evec", 0);
-        crate::math::assert_trapping_region_on_zero(&program, "Fix: n = 0 must produce a trapping Program.");
+        crate::math::assert_trapping_region_on_zero(
+            &program,
+            "Fix: n = 0 must produce a trapping Program.",
+        );
     }
 
     #[test]

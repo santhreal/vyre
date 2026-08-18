@@ -14,7 +14,7 @@
 //! The decision substrate lives beside this primitive once the
 //! profiling hooks are wired.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

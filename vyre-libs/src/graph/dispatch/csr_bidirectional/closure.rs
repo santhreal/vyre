@@ -86,9 +86,10 @@ pub fn bidirectional_closure_via_with_scratch_into(
         next,
         DispatchError::BadInputs,
         |curr, nxt| {
-            let cached = program_cache.get_or_insert_with(program_key, || CachedBidirectionalProgram {
-                program: plan.program(),
-            });
+            let cached =
+                program_cache.get_or_insert_with(program_key, || CachedBidirectionalProgram {
+                    program: plan.program(),
+                });
             refresh_bidirectional_step_inputs(
                 dispatch_inputs,
                 static_input_key,

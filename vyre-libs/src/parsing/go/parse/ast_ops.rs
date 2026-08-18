@@ -1,7 +1,6 @@
-use crate::parsing::go::parse::structure::GO_SPAN_RECORD_WORDS;
 use crate::parsing::go::parse::token_predicates::{
     emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_chan_keyword,
-    token_is_keyword, token_is_receive_leading_keyword, token_len, token_start, token_type_eq,
+    token_is_keyword, token_is_receive_leading_keyword, token_type_eq,
 };
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -97,11 +96,7 @@ fn go_extract_keyword_calls(
         t.clone(),
         num_tokens.clone(),
         keyword,
-        token_type_eq(
-            tok_types,
-            Expr::add(t, Expr::u32(1)),
-            TOK_IDENTIFIER,
-        ),
+        token_type_eq(tok_types, Expr::add(t, Expr::u32(1)), TOK_IDENTIFIER),
         out_calls,
         out_counts,
         "call_idx",
@@ -169,15 +164,7 @@ pub fn go_extract_channel_sends(
                     ),
                 ),
             ),
-            vec![
-            emit_span_record_nodes(
-                tok_starts,
-                tok_lens,
-                out_ops,
-                out_counts,
-                "send_idx",
-                t,
-            ),
+            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "send_idx", t),
         )],
     )];
 
@@ -249,15 +236,7 @@ pub fn go_extract_channel_receives(
                     Expr::not(preceded_by_operand),
                 ),
             ),
-            vec![
-            emit_span_record_nodes(
-                tok_starts,
-                tok_lens,
-                out_ops,
-                out_counts,
-                "recv_idx",
-                next,
-            ),
+            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "recv_idx", next),
         )],
     )];
 
@@ -311,14 +290,8 @@ pub fn go_extract_channel_creations(
                     ),
                 ),
             ),
-            emit_span_record_nodes(
-                tok_starts,
-                tok_lens,
-                out_ops,
-                out_counts,
-                "create_idx",
-                t,
-            ),
+            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "create_idx", t),
+        )],
     )];
     go_extract_span_program(
         tok_types,

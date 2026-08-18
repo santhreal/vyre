@@ -73,7 +73,6 @@ fn shared_memory_smoke_program(workgroup_size: [u32; 3]) -> Program {
     )
 }
 
-
 #[path = "contract_cases/ptx_codegen_smoke__base64_decode_ptx_compiles_with_ptxas.rs"]
 mod ptx_codegen_smoke_base64_decode_ptx_compiles_with_ptxas;
 #[path = "contract_cases/ptx_codegen_smoke__ptx_emits_bitwise_ops.rs"]

@@ -476,7 +476,10 @@ where
     let program = build("input", "out", n.max(1));
     let outputs = run_program(
         &program,
-        vec![crate::wire::pack_u32_slice(input), vec![0u8; (n.max(1) * 4) as usize]],
+        vec![
+            crate::wire::pack_u32_slice(input),
+            vec![0u8; (n.max(1) * 4) as usize],
+        ],
     );
     assert_eq!(outputs, vec![crate::wire::pack_u32_slice(expected)]);
 }

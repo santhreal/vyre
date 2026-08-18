@@ -208,7 +208,9 @@ pub(crate) fn validate_binop_operands(
                         "ordered comparison `{op:?}` received operands of type `bool`; ordered comparisons require numeric types (u32, i32, f32)"
                     ), "cast boolean operands to U32 or use Eq/Ne for boolean comparison.".to_string()));
                 }
-            } else if matches!(left_ty, Some(DataType::Bool)) || matches!(right_ty, Some(DataType::Bool)) {
+            } else if matches!(left_ty, Some(DataType::Bool))
+                || matches!(right_ty, Some(DataType::Bool))
+            {
                 errors.push(err("V096", ValidationPhase::Type, ValidationLocation::Program, format!(
                     "ordered comparison `{op:?}` received operands of type `bool`; ordered comparisons require numeric types (u32, i32, f32)"
                 ), "cast boolean operands to U32 or use Eq/Ne for boolean comparison.".to_string()));

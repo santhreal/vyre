@@ -240,11 +240,11 @@ pub fn push_frontier_changed_buffers(
 pub fn sample_program_graph_wire_buffers() -> Vec<Vec<u8>> {
     let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
     vec![
-        to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-        to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
-        to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
-        to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
-        to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+        to_bytes(&[0, 0, 0, 0]),    // pg_nodes
+        to_bytes(&[0, 2, 3, 4, 4]), // pg_edge_offsets
+        to_bytes(&[1, 2, 3, 3]),    // pg_edge_targets
+        to_bytes(&[1, 1, 1, 1]),    // pg_edge_kind_mask
+        to_bytes(&[0, 0, 0, 0]),    // pg_node_tags
     ]
 }
 
@@ -444,7 +444,6 @@ mod tests {
             "error should describe the graph shape overflow: {message}"
         );
     }
-
 
     #[test]
     fn validate_rejects_oob_edge_target() {

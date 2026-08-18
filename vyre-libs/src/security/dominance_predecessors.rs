@@ -49,7 +49,6 @@ pub(crate) fn cpu_dominator_sets(
     vyre_reference::composition_witness::idoms_to_dominator_sets_witness(&idoms, num_nodes)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

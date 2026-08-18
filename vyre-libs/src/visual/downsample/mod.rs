@@ -86,11 +86,7 @@ pub fn downsample_2x(input: &str, output: &str, width: u32, height: u32) -> Prog
                 // Write output.
                 Node::let_bind(
                     "oidx",
-                    crate::builder::stencil::flat_index(
-                        Expr::var("oy"),
-                        out_w,
-                        Expr::var("ox"),
-                    ),
+                    crate::builder::stencil::flat_index(Expr::var("oy"), out_w, Expr::var("ox")),
                 ),
                 Node::store(output, Expr::var("oidx"), Expr::var("packed")),
             ]

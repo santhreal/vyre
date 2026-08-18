@@ -22,8 +22,10 @@ pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 /// well defined rather than dependent on the active mask of a divergent branch.
 #[must_use]
 pub fn subgroup_ballot(cond_input: &str, out: &str, n: u32) -> Program {
-    crate::hardware::subgroup_unary_u32_program(OP_ID, cond_input, out, n, |pred| Expr::SubgroupBallot {
-        cond: Box::new(Expr::eq(pred, Expr::u32(1))),
+    crate::hardware::subgroup_unary_u32_program(OP_ID, cond_input, out, n, |pred| {
+        Expr::SubgroupBallot {
+            cond: Box::new(Expr::eq(pred, Expr::u32(1))),
+        }
     })
 }
 

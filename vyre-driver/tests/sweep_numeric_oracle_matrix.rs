@@ -10,7 +10,6 @@ use vyre_driver::numeric::{
     checked_dim_product_u32, checked_dim_product_u64, compose_basis_points_u32,
     ratio_basis_points_u64, ratio_basis_points_u64_wide, ratio_parts_per_million_u64,
     scale_u64_by_basis_points_floor_min, scale_u64_by_basis_points_round_clamped,
-    BASIS_POINTS_DENOMINATOR,
 };
 
 const NUMERIC_CASES: u32 = 512;
@@ -183,7 +182,11 @@ fn oracle_scale_u64_by_basis_points_round_clamped(
     if scale_bps == 0 {
         return zero_scale_value;
     }
-    let effective_bps = if max_scale_bps > 0 { scale_bps.min(max_scale_bps) } else { scale_bps };
+    let effective_bps = if max_scale_bps > 0 {
+        scale_bps.min(max_scale_bps)
+    } else {
+        scale_bps
+    };
     let num = u128::from(base) * u128::from(effective_bps) + 5_000;
     u64::try_from(num / 10_000).unwrap_or(u64::MAX)
 }
@@ -199,7 +202,9 @@ fn oracle_checked_ceil_div_u64(value: u64, divisor: u64) -> Option<u64> {
     } else if value == 0 {
         Some(0)
     } else {
-        value.checked_sub(1).and_then(|v| (v / divisor).checked_add(1))
+        value
+            .checked_sub(1)
+            .and_then(|v| (v / divisor).checked_add(1))
     }
 }
 

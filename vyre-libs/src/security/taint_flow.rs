@@ -31,7 +31,6 @@ pub fn taint_flow(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &st
     ))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

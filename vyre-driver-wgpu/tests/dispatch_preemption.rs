@@ -1,3 +1,5 @@
+//! Cancellation deadline and post-cancellation device usability contracts.
+
 mod harness;
 use harness::long_running_program;
 

@@ -473,7 +473,6 @@ pub(crate) fn assert_non_degenerate_bitset_shape(
     );
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -523,7 +522,14 @@ mod tests {
     fn parameterized_sanitized_builder_matches_public_wrapper() {
         let shape = ProgramGraphShape::new(4, 3);
         let (src, snk, san, cln, rch, alv, hts, out) = (
-            "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar",
+            "source",
+            "sink",
+            "sanitizer",
+            "clean",
+            "reach",
+            "alive",
+            "hits",
+            "out_scalar",
         );
         let expected = crate::security::flows_to_with_sanitizer::flows_to_with_sanitizer(
             shape, src, snk, san, cln, rch, alv, hts, out,

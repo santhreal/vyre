@@ -5,7 +5,6 @@
 //! and the dominator-tree oracle helper that used to sit here moved with the
 //! composition domains they serve, to `vyre-libs/tests/common/mod.rs`.
 
-pub(crate) use vyre_test_support::overfire_grid;
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;

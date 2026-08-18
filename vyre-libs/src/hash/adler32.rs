@@ -6,9 +6,7 @@
 //! `input[i]` packs one byte per u32 slot in the low 8 bits; high bits are
 //! ignored by construction.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Largest prime smaller than 2^16 used by Adler-32.
 pub const ADLER32_MOD: u32 = 65_521;

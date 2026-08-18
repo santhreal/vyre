@@ -117,7 +117,9 @@ pub(crate) fn wrap_unary_f32_scalar_program(
             BufferDecl::output(output, 1, DataType::F32).with_count(1),
         ],
         [1, 1, 1],
-        vec![vyre_foundation::composition::wrap_anonymous_region(op_id, body)],
+        vec![vyre_foundation::composition::wrap_anonymous_region(
+            op_id, body,
+        )],
     )
 }
 

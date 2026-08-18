@@ -1137,7 +1137,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn missing_seed_word_fails_loudly() {
         let previous_hook = std::panic::take_hook();

@@ -194,6 +194,7 @@ pub fn go_extract_packages_and_imports(
                                                 "import_idx",
                                                 Expr::var("scan"),
                                             ),
+                                        ),
                                         Node::if_then(
                                             token_type_eq(tok_types, Expr::var("scan"), TOK_RPAREN),
                                             vec![Node::assign("import_done", Expr::u32(1))],
