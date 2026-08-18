@@ -133,18 +133,25 @@ pub(crate) fn validate_binop_operands(
         }
         // Bitwise and wrapping integer arithmetic: target-text `&` / `|` / `^` / WrappingAdd / WrappingSub require integer operands of the same type.
         BinOp::BitAnd | BinOp::BitOr | BinOp::BitXor | BinOp::WrappingAdd | BinOp::WrappingSub => {
-            if let (Some(l), Some(r)) = (&left_ty, &right_ty) {
+            if let Some(l) = &left_ty {
                 if !matches!(l, DataType::U32 | DataType::I32) {
                     errors.push(err("V091", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` left operand has type `{l}`; legal integer set is `u32` or `i32`"
                     ), "cast the left operand to U32 or I32.".to_string()));
                 }
+            }
+            if let Some(r) = &right_ty {
                 if !matches!(r, DataType::U32 | DataType::I32) {
                     errors.push(err("V092", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` right operand has type `{r}`; legal integer set is `u32` or `i32`"
                     ), "cast the right operand to U32 or I32.".to_string()));
                 }
-                if l != r {
+            }
+            if let (Some(l), Some(r)) = (&left_ty, &right_ty) {
+                if matches!(l, DataType::U32 | DataType::I32)
+                    && matches!(r, DataType::U32 | DataType::I32)
+                    && l != r
+                {
                     errors.push(err("V093", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "binary operation `{op:?}` operands have mismatched integer types: left=`{l}`, right=`{r}`. Integer operands must match and belong to `u32` or `i32`"
                     ), "cast both operands to the same integer type.".to_string()));
@@ -201,6 +208,10 @@ pub(crate) fn validate_binop_operands(
                         "ordered comparison `{op:?}` received operands of type `bool`; ordered comparisons require numeric types (u32, i32, f32)"
                     ), "cast boolean operands to U32 or use Eq/Ne for boolean comparison.".to_string()));
                 }
+            } else if matches!(left_ty, Some(DataType::Bool)) || matches!(right_ty, Some(DataType::Bool)) {
+                errors.push(err("V096", ValidationPhase::Type, ValidationLocation::Program, format!(
+                    "ordered comparison `{op:?}` received operands of type `bool`; ordered comparisons require numeric types (u32, i32, f32)"
+                ), "cast boolean operands to U32 or use Eq/Ne for boolean comparison.".to_string()));
             }
         }
         BinOp::Shuffle | BinOp::Ballot | BinOp::WaveReduce | BinOp::WaveBroadcast => {

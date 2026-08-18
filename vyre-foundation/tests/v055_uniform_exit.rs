@@ -155,3 +155,59 @@ fn atomic_exit_condition_is_rejected() {
 
     assert_eq!(v055_messages(&program).len(), 1);
 }
+
+/// A nested loop with divergent bounds modifying a variable before a guarded exit emits V055.
+#[test]
+fn nested_loop_divergent_bounds_rejects_post_barrier_exit() {
+    let program = program(vec![
+        barrier(MemoryOrdering::SeqCst),
+        Node::Let {
+            name: "x".into(),
+            value: Expr::u32(0),
+        },
+        Node::Loop {
+            var: "inner".into(),
+            from: Expr::u32(0),
+            to: Expr::InvocationId { axis: 0 },
+            body: vec![Node::Assign {
+                name: "x".into(),
+                value: Expr::u32(1),
+            }],
+        },
+        guarded_return(Expr::eq(Expr::var("x"), Expr::u32(1))),
+    ]);
+
+    assert_eq!(
+        v055_messages(&program).len(),
+        1,
+        "nested loop with divergent bounds must taint post-barrier return guard"
+    );
+}
+
+/// A purely uniform nested loop modifying state across iterations is accepted.
+#[test]
+fn nested_loop_uniform_iterations_accepts_post_barrier_exit() {
+    let program = program(vec![
+        barrier(MemoryOrdering::SeqCst),
+        Node::Let {
+            name: "x".into(),
+            value: Expr::u32(0),
+        },
+        Node::Loop {
+            var: "inner".into(),
+            from: Expr::u32(0),
+            to: Expr::u32(4),
+            body: vec![Node::Assign {
+                name: "x".into(),
+                value: Expr::add(Expr::var("x"), Expr::u32(1)),
+            }],
+        },
+        guarded_return(Expr::eq(Expr::var("x"), Expr::u32(4))),
+    ]);
+
+    assert_eq!(
+        v055_messages(&program),
+        Vec::<String>::new(),
+        "uniform nested loop must be accepted for post-barrier exit"
+    );
+}

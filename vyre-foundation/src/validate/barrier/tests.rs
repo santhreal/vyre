@@ -192,3 +192,114 @@ fn nested_loop_purely_uniform_exit_is_accepted() {
         "purely uniform nested loop exit must be accepted without V055: {errors:?}"
     );
 }
+
+/// A nested loop with divergent bounds makes modified variables divergent after the loop.
+#[test]
+fn nested_loop_divergent_bounds_modifying_variable_emits_v055() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            barrier(),
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(0),
+            },
+            Node::Loop {
+                var: "inner".into(),
+                from: Expr::u32(0),
+                to: Expr::InvocationId { axis: 0 },
+                body: vec![Node::Assign {
+                    name: "x".into(),
+                    value: Expr::u32(1),
+                }],
+            },
+            Node::If {
+                cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
+                then: vec![Node::Return],
+                otherwise: Vec::new(),
+            },
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.iter().any(|error| error.code().as_str() == "V055"),
+        "nested loop with divergent bounds must taint modified variable as divergent: {errors:?}"
+    );
+}
+
+/// A nested loop with divergent inner branch makes modified variable divergent after the loop.
+#[test]
+fn nested_loop_divergent_inner_branch_modifying_variable_emits_v055() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            barrier(),
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(0),
+            },
+            Node::Loop {
+                var: "inner".into(),
+                from: Expr::u32(0),
+                to: Expr::u32(4),
+                body: vec![Node::If {
+                    cond: Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+                    then: vec![Node::Assign {
+                        name: "x".into(),
+                        value: Expr::u32(1),
+                    }],
+                    otherwise: Vec::new(),
+                }],
+            },
+            Node::If {
+                cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
+                then: vec![Node::Return],
+                otherwise: Vec::new(),
+            },
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.iter().any(|error| error.code().as_str() == "V055"),
+        "nested loop with divergent inner branch modifying variable must trigger V055: {errors:?}"
+    );
+}
+
+/// A doubly-nested loop with inner divergent bounds triggers V055 for outer exit.
+#[test]
+fn doubly_nested_loop_divergent_inner_bounds_emits_v055() {
+    let mut errors = Vec::new();
+    check_loop_back_edge(
+        &[
+            barrier(),
+            Node::Let {
+                name: "x".into(),
+                value: Expr::u32(0),
+            },
+            Node::Loop {
+                var: "mid".into(),
+                from: Expr::u32(0),
+                to: Expr::u32(2),
+                body: vec![Node::Loop {
+                    var: "inner".into(),
+                    from: Expr::u32(0),
+                    to: Expr::InvocationId { axis: 0 },
+                    body: vec![Node::Assign {
+                        name: "x".into(),
+                        value: Expr::u32(1),
+                    }],
+                }],
+            },
+            Node::If {
+                cond: Expr::eq(Expr::var("x"), Expr::u32(1)),
+                then: vec![Node::Return],
+                otherwise: Vec::new(),
+            },
+        ],
+        &mut errors,
+    );
+    assert!(
+        errors.iter().any(|error| error.code().as_str() == "V055"),
+        "doubly nested loop with inner divergent bounds must trigger V055: {errors:?}"
+    );
+}
