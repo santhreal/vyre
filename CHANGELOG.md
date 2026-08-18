@@ -4000,7 +4000,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   canonical identity instead of backend descriptor position, excludes
   backend-allocated read-write outputs from prior host inputs, and rejects
   conformance fixture byte lengths that disagree with the canonical Program ABI
-  before device measurement.
+  before device measurement. Write-complete elementwise, hypervector, p-adic,
+  and backward-gradient outputs are declared write-only, so callers submit only
+  source buffers.
 - Two rewrites that enumerated `Node` themselves reached fewer operands than
   the analysis that fed them. Cross-scope CSE recorded occurrences inside the
   offset and size of an asynchronous copy and the address of a trap, but its
