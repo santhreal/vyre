@@ -7,12 +7,12 @@ mod harness;
 use harness::{bytes_u32, live_backend};
 use vyre_driver_cuda::{CudaBackend, CudaProgramDispatcher};
 use vyre_libs::bitset::bitset_words;
+use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
+    resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
+};
 use vyre_reference::composition_witness::{
     csr_queue_strided_forward_witness as csr_queue_forward_traverse_cpu,
     frontier_to_queue_witness as frontier_to_queue_cpu,
-};
-use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
-    resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
 };
 
 const NODE_COUNT: u32 = 32_897;

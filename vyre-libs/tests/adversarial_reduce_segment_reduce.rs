@@ -73,7 +73,10 @@ fn segment_reduce_fallible_error_classification_contracts() {
         err_non_mono.contains("monotonic segment offsets"),
         "expected non-monotonic error class, got `{err_non_mono}`"
     );
-    assert_eq!(out, snapshot, "output buffer must not be mutated on failure");
+    assert_eq!(
+        out, snapshot,
+        "output buffer must not be mutated on failure"
+    );
 
     // Out-of-bounds offset (monotonic start <= end, but end > input.len()) must return malformed error
     let err_oob = try_reference_segment_reduce_sum_into(&[1, 2, 3], &[0, 4], &mut out)
@@ -82,7 +85,10 @@ fn segment_reduce_fallible_error_classification_contracts() {
         err_oob.contains("malformed segment offsets"),
         "expected malformed segment error class, got `{err_oob}`"
     );
-    assert_eq!(out, snapshot, "output buffer must not be mutated on failure");
+    assert_eq!(
+        out, snapshot,
+        "output buffer must not be mutated on failure"
+    );
 
     // Single out-of-bounds offset
     let err_single_oob = try_reference_segment_reduce_sum_into(&[1, 2, 3], &[5], &mut out)
@@ -91,7 +97,10 @@ fn segment_reduce_fallible_error_classification_contracts() {
         err_single_oob.contains("malformed segment offsets"),
         "expected malformed segment error class, got `{err_single_oob}`"
     );
-    assert_eq!(out, snapshot, "output buffer must not be mutated on failure");
+    assert_eq!(
+        out, snapshot,
+        "output buffer must not be mutated on failure"
+    );
 
     // Valid case populates output and clears previous values
     try_reference_segment_reduce_sum_into(&[10, 20, 30], &[0, 2, 3], &mut out)

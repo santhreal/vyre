@@ -249,7 +249,6 @@ fn max_row_degree(edge_offsets: &[u32]) -> u32 {
         .unwrap_or(0)
 }
 
-
 fn frontier_has_node(frontier: &[u32], node: u32) -> bool {
     frontier[node as usize / 32] & (1u32 << (node & 31)) != 0
 }

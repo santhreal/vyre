@@ -24,13 +24,7 @@ use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_frontier_queue::{
     csr_queue_forward_traverse, frontier_to_queue, frontier_to_queue_parallel,
 };
-use vyre_libs::graph::csr_queue_delta::{
-    csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue,
-};
-use vyre_reference::composition_witness::{
-    csr_queue_strided_forward_witness as csr_queue_forward_traverse_cpu,
-    frontier_to_queue_witness as frontier_to_queue_cpu,
-};
+use vyre_libs::graph::csr_queue_delta::{csr_queue_delta_enqueue, csr_queue_delta_strided_enqueue};
 use vyre_libs::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD;
 use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
     resident_csr_queue_batch_budgeted_into, resident_csr_queue_batch_into,
@@ -39,6 +33,10 @@ use vyre_libs::graph::dispatch::csr_frontier_queue_batch_resident::{
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph;
 use vyre_libs::graph::dispatch::csr_frontier_queue_resident::{
     resident_csr_queue_query_into, upload_resident_csr_queue_graph, ResidentCsrQueueScratch,
+};
+use vyre_reference::composition_witness::{
+    csr_queue_strided_forward_witness as csr_queue_forward_traverse_cpu,
+    frontier_to_queue_witness as frontier_to_queue_cpu,
 };
 
 #[allow(clippy::too_many_arguments)]

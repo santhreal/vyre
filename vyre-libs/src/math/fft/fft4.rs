@@ -165,9 +165,9 @@ inventory::submit! {
 
 #[cfg(test)]
 mod tests {
+    use super::super::complex_length::naive_dft;
     use super::*;
     use crate::fixture_bytes::{decode_f32, f32_bytes};
-    use super::super::complex_length::naive_dft;
     use vyre_reference::value::Value;
 
     fn run(input: &[f32]) -> Vec<f32> {

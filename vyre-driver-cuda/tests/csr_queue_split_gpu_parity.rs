@@ -13,10 +13,10 @@ use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_queue_split::{
     csr_queue_split_low_dispatch_grid, csr_queue_split_low_forward_traverse,
 };
-use vyre_reference::composition_witness::csr_queue_split_low_forward_witness;
 use vyre_libs::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, csr_queue_strided_forward_traverse,
 };
+use vyre_reference::composition_witness::csr_queue_split_low_forward_witness;
 
 #[test]
 fn cuda_resident_csr_queue_split_low_then_high_matches_scalar_on_overflowing_hubs() {

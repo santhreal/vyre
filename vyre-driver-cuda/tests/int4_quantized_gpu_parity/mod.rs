@@ -11,10 +11,10 @@
 
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_reference::composition_witness::pack_i4x8_witness as pack_i4x8_cpu;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_i32_le_bytes_all, pack_f32_slice, pack_u32_slice,
 };
+use vyre_reference::composition_witness::pack_i4x8_witness as pack_i4x8_cpu;
 
 /// Signed INT4 lane pattern the fixed-shape contracts cycle for weights and for
 /// the left dot operand. Spans both nibble extremes so a sign-extension defect
