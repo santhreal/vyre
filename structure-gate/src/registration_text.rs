@@ -68,7 +68,61 @@ pub fn parse_registrations(text: &str) -> Vec<(String, Option<String>)> {
         }
         rest = after;
     }
+    parse_named_intrinsic_macros(text, &consts, &mut found);
+    parse_positional_intrinsic_macros(text, &consts, &mut found);
     found
+}
+
+/// Read hardware registration helpers whose operation id is a named argument.
+///
+/// These invocations are source-level definition sites even though the
+/// `OperationRegistration` constructor is expanded from their macro bodies.
+fn parse_named_intrinsic_macros(
+    text: &str,
+    consts: &BTreeMap<String, String>,
+    found: &mut Vec<(String, Option<String>)>,
+) {
+    for macro_name in ["submit_hardware_intrinsic", "submit_intrinsic_operation"] {
+        let needle = format!("{macro_name}!");
+        let mut rest = text;
+        while let Some(start) = rest.find(&needle) {
+            let after_name = &rest[start + needle.len()..];
+            let Some(open) = after_name.find('{') else {
+                break;
+            };
+            let body = &after_name[open..];
+            let end = struct_literal_end(body);
+            let block = &body[..end];
+            if let Some(id) = field_value(block, "id").and_then(|raw| resolve_id(raw, consts)) {
+                found.push((id, Some("Intrinsic".to_string())));
+            }
+            rest = &body[end..];
+        }
+    }
+}
+
+/// Read hardware definition helpers whose second positional argument is the id.
+fn parse_positional_intrinsic_macros(
+    text: &str,
+    consts: &BTreeMap<String, String>,
+    found: &mut Vec<(String, Option<String>)>,
+) {
+    for macro_name in [
+        "define_unary_u32_hardware_intrinsic",
+        "define_barrier_u32_hardware_intrinsic",
+    ] {
+        let needle = format!("{macro_name}!");
+        let mut rest = text;
+        while let Some(start) = rest.find(&needle) {
+            let after_name = &rest[start + macro_name.len()..];
+            if let Some(id) =
+                nth_argument(after_name, "!(", 1).and_then(|raw| resolve_id(raw, consts))
+            {
+                found.push((id, Some("Intrinsic".to_string())));
+            }
+            rest = &after_name[1..];
+        }
+    }
 }
 
 /// First argument of a constructor call, as written.
@@ -313,6 +367,44 @@ fn registration() -> OperationRegistration {
                 "vyre-primitives::hardware::fma_f32".to_string(),
                 Some("Intrinsic".to_string())
             )]
+        );
+    }
+
+    /// Registration helpers hide the constructor in their macro body. The
+    /// source registry must still assign each invocation to its defining crate,
+    /// while an unrelated macro carrying an `id` field remains only a mention.
+    #[test]
+    fn hardware_registration_macro_ids_are_parsed_without_broad_macro_matching() {
+        let parsed = parse_registrations(
+            r#"
+const FMA_ID: &str = "vyre-primitives::hardware::fma_f32";
+submit_hardware_intrinsic! {
+    id: FMA_ID,
+    signature: F32_TERNARY_SIGNATURE,
+}
+define_unary_u32_hardware_intrinsic!(
+    bit_reverse_u32,
+    "vyre-primitives::hardware::bit_reverse_u32",
+    Expr::reverse_bits,
+);
+documentation_entry! {
+    id: "vyre-primitives::hardware::not_a_registration",
+}
+"#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![
+                (
+                    "vyre-primitives::hardware::fma_f32".to_string(),
+                    Some("Intrinsic".to_string())
+                ),
+                (
+                    "vyre-primitives::hardware::bit_reverse_u32".to_string(),
+                    Some("Intrinsic".to_string())
+                ),
+            ]
         );
     }
 

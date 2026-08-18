@@ -106,14 +106,10 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
                 path: site_path,
                 features,
             };
-            let declared: BTreeSet<String> = if text.contains("OperationRegistration") {
-                parse_registrations(&text)
-                    .into_iter()
-                    .map(|(id, _)| id)
-                    .collect()
-            } else {
-                BTreeSet::new()
-            };
+            let declared: BTreeSet<String> = parse_registrations(&text)
+                .into_iter()
+                .map(|(id, _)| id)
+                .collect();
             if !declared.is_empty() {
                 registering.insert(member.name.clone());
             }
