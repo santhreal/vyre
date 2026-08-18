@@ -1,15 +1,11 @@
 use super::super::*;
 use crate::graph::program_graph::ProgramGraphShape;
 
-#[test]
-fn parallel_batch_global_program_uses_one_changed_flag() {
-    let program = csr_forward_or_changed_parallel_batch_global(
-        ProgramGraphShape::new(65, 4),
-        "frontiers",
-        "changed",
-        0xFFFF_FFFF,
-        3,
-    );
+fn assert_batch_buffers(
+    program: &vyre_foundation::ir::Program,
+    expected_frontiers: u32,
+    expected_changed: u32,
+) {
     assert_eq!(
         program.workgroup_size,
         CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
@@ -24,8 +20,20 @@ fn parallel_batch_global_program_uses_one_changed_flag() {
         .iter()
         .find(|buffer| buffer.name() == "changed")
         .expect("Fix: changed buffer must exist");
-    assert_eq!(frontier.count(), 9);
-    assert_eq!(changed.count(), 1);
+    assert_eq!(frontier.count(), expected_frontiers);
+    assert_eq!(changed.count(), expected_changed);
+}
+
+#[test]
+fn parallel_batch_global_program_uses_one_changed_flag() {
+    let program = csr_forward_or_changed_parallel_batch_global(
+        ProgramGraphShape::new(65, 4),
+        "frontiers",
+        "changed",
+        0xFFFF_FFFF,
+        3,
+    );
+    assert_batch_buffers(&program, 9, 1);
 }
 
 #[test]
@@ -39,22 +47,7 @@ fn parallel_batch_global_slot_program_uses_changed_history_buffer() {
         5,
         8,
     );
-    assert_eq!(
-        program.workgroup_size,
-        CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE
-    );
-    let frontier = program
-        .buffers
-        .iter()
-        .find(|buffer| buffer.name() == "frontiers")
-        .expect("Fix: frontiers buffer must exist");
-    let changed = program
-        .buffers
-        .iter()
-        .find(|buffer| buffer.name() == "changed")
-        .expect("Fix: changed buffer must exist");
-    assert_eq!(frontier.count(), 9);
-    assert_eq!(changed.count(), 8);
+    assert_batch_buffers(&program, 9, 8);
 }
 
 #[test]

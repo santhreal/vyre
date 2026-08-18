@@ -124,27 +124,33 @@ mod tests {
     use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
+    fn eval_variance_reduction(program: Program, input: &[f32]) -> f32 {
+        let outputs = vyre_reference::reference_eval(
+            &program,
+            &[
+                Value::from(f32_bytes(input)),
+                Value::from(vec![0u8; core::mem::size_of::<f32>()]),
+            ],
+        )
+        .expect("Fix: reduce_variance program must execute in the reference interpreter.");
+        decode_one(&outputs[0].to_bytes())
+    }
+
+    fn sample_input(n: u32) -> Vec<f32> {
+        (0..n)
+            .map(|i| ((i as f32) * 0.019).sin() * 4.0 + (i % 7) as f32)
+            .collect()
+    }
+
     #[test]
     fn tiled_reduce_variance_matches_scalar_reference_across_multiple_tiles() {
         let n = 777_u32;
-        let input = (0..n)
-            .map(|i| ((i as f32) * 0.019).sin() * 4.0 + (i % 7) as f32)
-            .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; core::mem::size_of::<f32>()]),
-                ],
-            )
-            .expect("Fix: reduce_variance program must execute in the reference interpreter.");
-            decode_one(&outputs[0].to_bytes())
-        };
-        let actual = run(reduce_variance("input", "output", n));
-        let expected = run(reduce_variance_reference_program(
-            "input", "output", n, false,
-        ));
+        let input = sample_input(n);
+        let actual = eval_variance_reduction(reduce_variance("input", "output", n), &input);
+        let expected = eval_variance_reduction(
+            reduce_variance_reference_program("input", "output", n, false),
+            &input,
+        );
         assert!(
             (actual - expected).abs() <= 1.0e-4,
             "reduce_variance mismatch: tiled={actual:?} reference={expected:?}"
@@ -154,22 +160,15 @@ mod tests {
     #[test]
     fn bessel_correction_changes_result_by_expected_ratio() {
         let n = 777_u32;
-        let input = (0..n)
-            .map(|i| ((i as f32) * 0.019).sin() * 4.0 + (i % 7) as f32)
-            .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; core::mem::size_of::<f32>()]),
-                ],
-            )
-            .expect("Fix: reduce_variance program must execute in the reference interpreter.");
-            decode_one(&outputs[0].to_bytes())
-        };
-        let pop = run(try_reduce_variance("input", "output", n, false).unwrap());
-        let sample = run(try_reduce_variance("input", "output", n, true).unwrap());
+        let input = sample_input(n);
+        let pop = eval_variance_reduction(
+            try_reduce_variance("input", "output", n, false).unwrap(),
+            &input,
+        );
+        let sample = eval_variance_reduction(
+            try_reduce_variance("input", "output", n, true).unwrap(),
+            &input,
+        );
         let expected_ratio = n as f32 / (n - 1) as f32;
         let actual_ratio = sample / pop;
         assert!(
