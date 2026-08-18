@@ -34,8 +34,6 @@ Out of this crate, into:
   compilation and immutable artifact contracts. Built when: always.
 - `vyre-pass-engine` over the `pass-engine` seam, public: optimizer pass
   execution as dispatched Vyre Programs. Built when: always.
-- `vyre-spec` over the `specification` seam, private: stable cross-engine
-  schemas and operation definitions. Built when: always.
 
 Into this crate, from:
 
@@ -47,7 +45,7 @@ Into this crate, from:
 ## Direction that may not reverse
 
 `vyre-libs`, `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-lower`,
-`vyre-megakernel`, `vyre-pass-engine`, `vyre-spec` must never depend on
+`vyre-megakernel`, and `vyre-pass-engine` must never depend on
 `vyre-driver-cuda`. The edge is one way: a cycle back into this crate makes the
 two crates one crate that cannot be built, reviewed or published apart.
 

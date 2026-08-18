@@ -23,8 +23,6 @@ Out of this crate, into:
 
 - `vyre-libs` over the `product-libraries` seam, private: composition trees the
   megakernel planner plans against. Built when: always.
-- `vyre-primitives` over the `primitive-library` seam, public: buffer and
-  extent records the planner's forwarded builders take. Built when: always.
 - `vyre-driver` over the `backend-contract` seam, public: backend-neutral
   target, materialization, submission, and completion contracts. Built when:
   always.
@@ -42,8 +40,8 @@ Into this crate, from:
 
 ## Direction that may not reverse
 
-`vyre-libs`, `vyre-primitives`, `vyre-driver`, `vyre-foundation`,
-`vyre-megakernel` must never depend on `vyre-runtime`. The edge is one way: a
+`vyre-libs`, `vyre-driver`, `vyre-foundation`, and `vyre-megakernel` must
+never depend on `vyre-runtime`. The edge is one way: a
 cycle back into this crate makes the two crates one crate that cannot be built,
 reviewed or published apart.
 

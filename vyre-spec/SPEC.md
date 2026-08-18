@@ -21,17 +21,13 @@ This crate depends on no other workspace member.
 Into this crate, from:
 
 - `vyre` over the `specification` seam, private.
-- `vyre-aot` over the `specification` seam, private.
 - `vyre-bench` over the `specification` seam, private.
 - `vyre-conform` over the `specification` seam, private.
 - `vyre-conform-spec` over the `specification` seam, private.
 - `vyre-driver` over the `specification` seam, public.
-- `vyre-driver-cuda` over the `specification` seam, private.
-- `vyre-driver-spirv` over the `specification` seam, private.
 - `vyre-driver-wgpu` over the `specification` seam, public.
 - `vyre-foundation` over the `specification` seam, public.
 - `vyre-libs` over the `specification` seam, public.
-- `vyre-primitives` over the `specification` seam, private.
 - `vyre-reference` over the `specification` seam, public.
 - `vyre-test-support` over the `specification` seam, private.
 - `xtask-registry` over the `specification` seam, private.

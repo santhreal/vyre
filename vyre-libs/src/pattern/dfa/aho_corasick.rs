@@ -1,10 +1,10 @@
-//! Aho-Corasick multi-pattern scanner (companion to [`dfa_compile`]).
+//! Aho-Corasick multi-pattern scanner (companion to [`crate::pattern::dfa_compile`]).
 //!
-//! Consumes a transition table built by [`super::dfa_compile`] and
+//! Consumes a transition table built by [`crate::pattern::dfa_compile`] and
 //! scans `haystack` for any of the compiled patterns. Emits `1` at
 //! `matches[i]` whenever the automaton accepts at position `i`.
 //!
-//! Layout assumptions (see `dfa_compile::CompiledDfa`):
+//! Layout assumptions (see [`crate::pattern::CompiledDfa`]):
 //!
 //! ```text
 //! transitions[state * 256 + byte] = next_state

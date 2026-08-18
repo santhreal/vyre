@@ -5573,7 +5573,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Release evidence now tracks CUDA and WGPU benchmark invocations as distinct
   required producers with disjoint, exact artifact ownership.
 - Release benchmark evidence now records the optimizer-impact performance
-  contract and explicit zero-launch PTX proof metrics. Resident string-bitmap
+  contract and explicit zero-launch PTX proof metrics. The smoke-runtime gate
+  measures all 30 harness-owned release-profile samples instead of setup,
+  environment probes, or one-time artifact preparation. Resident string-bitmap
   batching reads back one canonical bitmap while retaining the full
   device-resident batch, avoiding redundant PCIe output transfers.
 - The release macro benchmarks no longer time a CPU baseline that rebuilds its

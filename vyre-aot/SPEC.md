@@ -26,17 +26,13 @@ Out of this crate, into:
   always.
 - `vyre-megakernel` over the `megakernel-compiler` seam, public: whole-graph
   compilation and immutable artifact contracts. Built when: always.
-- `vyre-primitives` over the `primitive-library` seam, private: reusable
-  semantic Program builders. Built when: always.
-- `vyre-spec` over the `specification` seam, private: stable cross-engine
-  schemas and operation definitions. Built when: always.
 
 No workspace member depends on this crate.
 
 ## Direction that may not reverse
 
-`vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`,
-`vyre-spec` must never depend on `vyre-aot`. The edge is one way: a cycle back
+`vyre-driver`, `vyre-foundation`, `vyre-megakernel` must never depend on
+`vyre-aot`. The edge is one way: a cycle back
 into this crate makes the two crates one crate that cannot be built, reviewed
 or published apart.
 

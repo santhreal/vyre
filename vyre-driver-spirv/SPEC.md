@@ -30,8 +30,6 @@ Out of this crate, into:
   representation lowering. Built when: always.
 - `vyre-megakernel` over the `megakernel-compiler` seam, private: whole-graph
   compilation and immutable artifact contracts. Built when: always.
-- `vyre-spec` over the `specification` seam, private: stable cross-engine
-  schemas and operation definitions. Built when: always.
 
 Into this crate, from:
 
@@ -39,8 +37,8 @@ Into this crate, from:
 
 ## Direction that may not reverse
 
-`vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`,
-`vyre-megakernel`, `vyre-spec` must never depend on `vyre-driver-spirv`. The
+`vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, and
+`vyre-megakernel` must never depend on `vyre-driver-spirv`. The
 edge is one way: a cycle back into this crate makes the two crates one crate
 that cannot be built, reviewed or published apart.
 

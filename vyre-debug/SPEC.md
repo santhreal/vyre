@@ -29,15 +29,13 @@ Out of this crate, into:
   builders. Built when: always.
 - `vyre-lower` over the `lowering` seam, public: verified backend-neutral
   representation lowering. Built when: always.
-- `vyre-primitives` over the `primitive-library` seam, private: reusable
-  semantic Program builders. Built when: always.
 
 No workspace member depends on this crate.
 
 ## Direction that may not reverse
 
-`vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`,
-`vyre-primitives` must never depend on `vyre-debug`. The edge is one way: a
+`vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, and `vyre-lower`
+must never depend on `vyre-debug`. The edge is one way: a
 cycle back into this crate makes the two crates one crate that cannot be built,
 reviewed or published apart.
 
