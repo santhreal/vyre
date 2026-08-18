@@ -107,6 +107,28 @@ fn verify_certificate_signature(parsed: &Value) {
         .expect("Fix: certificate Ed25519 signature must verify over the canonical body");
 }
 
+fn merge_shards(
+    merged: &std::path::Path,
+    shard_a: &std::path::Path,
+    shard_b: &std::path::Path,
+) -> Value {
+    let status = Command::new(conform_binary())
+        .args(["merge", "--out"])
+        .arg(merged)
+        .arg(shard_a)
+        .arg(shard_b)
+        .status()
+        .expect("Fix: the built vyre-conform binary must launch");
+    assert!(
+        status.success(),
+        "Fix: merge must accept signed certificate shards"
+    );
+
+    let merged_json =
+        std::fs::read_to_string(merged).expect("Fix: merge must write a readable artifact");
+    serde_json::from_str(&merged_json).expect("Fix: merged artifact must be valid JSON")
+}
+
 mod gpu_certificate_contracts;
 mod merge_contracts;
 mod prove_failure_contracts;

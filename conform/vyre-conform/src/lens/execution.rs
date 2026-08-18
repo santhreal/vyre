@@ -2,7 +2,7 @@
 //! registered backend, and the dispatch shape both sides agree on.
 
 use vyre_driver::{BackendError, BackendRegistration, DispatchConfig};
-use vyre_foundation::ir::{BufferAccess, Program};
+use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 use vyre_reference::ReferenceError;
 
@@ -21,43 +21,7 @@ pub fn run_cpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, Re
 /// single workgroup covers every writable element, because the fixture path
 /// dispatches exactly one.
 pub fn dispatch_config_for(program: &Program) -> Result<DispatchConfig, String> {
-    let mut config = DispatchConfig::default();
-    let workgroup = program.workgroup_size();
-    for (axis, size) in workgroup.into_iter().enumerate() {
-        if size == 0 {
-            return Err(format!(
-                "workgroup_size[{axis}] is 0. Fix: parity dispatch requires every workgroup dimension to be >= 1 before backend dispatch."
-            ));
-        }
-    }
-    if workgroup[1] == 1 && workgroup[2] == 1 {
-        return Ok(config);
-    }
-
-    let lanes = u64::from(workgroup[0])
-        .checked_mul(u64::from(workgroup[1]))
-        .and_then(|lanes| lanes.checked_mul(u64::from(workgroup[2])))
-        .ok_or_else(|| {
-            format!(
-                "workgroup_size {workgroup:?} overflows u64 lane accounting. Fix: use a valid backend workgroup shape."
-            )
-        })?;
-    let max_writable_count = program
-        .buffers()
-        .iter()
-        .filter(|decl| matches!(decl.access(), BufferAccess::ReadWrite) || decl.is_output())
-        .map(|decl| u64::from(decl.count()))
-        .max()
-        .unwrap_or(1);
-
-    if max_writable_count > lanes {
-        return Err(format!(
-            "non-1D workgroup_size {workgroup:?} has {lanes} lanes but the largest writable buffer has {max_writable_count} elements. Fix: register an explicit dispatch grid for this op instead of relying on the one-workgroup parity fixture path."
-        ));
-    }
-
-    config.grid_override = Some([1, 1, 1]);
-    Ok(config)
+    crate::dispatch_grid::config_for_program(program)
 }
 
 /// What went wrong inside one iteration of an iterative lens.

@@ -3,7 +3,8 @@ use std::time::Instant;
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};
 use crate::api::metric::{elapsed_ns, BenchMetrics};
 use crate::api::resident::{
-    dispatch_program_timed, input_bytes_total, ResidentInputSet, TransferAccounting,
+    dispatch_program_timed, input_bytes_total, transfer_accounting_with_resident_reset,
+    ResidentInputSet, TransferAccounting,
 };
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::reference_sample::timed_reference;
@@ -281,16 +282,12 @@ fn closure_transfer_accounting(
     resident_used: bool,
     resident_reset_bytes: u64,
 ) -> TransferAccounting {
-    let bytes_read = if resident_used {
-        resident_reset_bytes
-    } else {
-        input_bytes_total
-    };
-    TransferAccounting {
-        bytes_touched: bytes_read.saturating_add(output_bytes_total),
-        bytes_read,
-        bytes_written: output_bytes_total,
-    }
+    transfer_accounting_with_resident_reset(
+        input_bytes_total,
+        output_bytes_total,
+        resident_used,
+        resident_reset_bytes,
+    )
 }
 
 struct ClosureSequenceRun {

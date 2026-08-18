@@ -1,9 +1,7 @@
 //! Live CUDA validation for generated compiler-grade release macro workloads.
 
-use vyre::ir::BufferAccess;
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,
-    ReleaseMacroGeneratedCase,
 };
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
@@ -11,18 +9,6 @@ use vyre_driver_cuda::CudaBackend;
 const REDUCED_RECORDS: u32 = 512;
 const RELEASE_MACRO_CASES: usize = 10;
 
-fn dispatch_input_buffer_count(case: &ReleaseMacroGeneratedCase) -> usize {
-    case.program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::Uniform
-            ) || matches!(buffer.access(), BufferAccess::ReadWrite) && !buffer.is_output
-        })
-        .count()
-}
 
 fn output_summary(bytes: &[u8]) -> String {
     let first_words = bytes
@@ -49,7 +35,7 @@ fn reduced_release_macro_workloads_match_cpu_oracles_on_live_cuda() {
             .expect("Fix: every advertised release macro spec must build a generated case.");
         assert_eq!(
             case.inputs.len(),
-            dispatch_input_buffer_count(&case),
+            case.dispatch_input_buffer_count(),
             "Fix: generated release macro dispatch inputs must match non-write-only buffers for {}.",
             case.spec.id
         );

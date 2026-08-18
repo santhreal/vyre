@@ -10,18 +10,10 @@ use vyre_primitives::wire::pack_u32_slice as bytes_u32;
 /// read-write buffer. Good enough to exercise the byte-identity
 /// pipeline without leaning on a specific feature gate.
 fn copy_first_program() -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
-            BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "output",
-            Expr::u32(0),
-            Expr::load("input", Expr::u32(0)),
-        )],
-    )
+    let in_buf = BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4);
+    let out_buf = BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1);
+    let copy_node = Node::store("output", Expr::u32(0), Expr::load("input", Expr::u32(0)));
+    Program::wrapped(vec![in_buf, out_buf], [1, 1, 1], vec![copy_node])
 }
 
 fn output_first_copy_program() -> Program {
@@ -171,16 +163,7 @@ fn bundle_reference_verifier_accepts_logical_witness_order_after_output_buffer()
 
 #[test]
 fn bundle_cert_rejects_omitted_runtime_sized_read_write_witness() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage(
-            "scratch",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
-        [1, 1, 1],
-        Vec::<Node>::new(),
-    );
+    let program = super::scratch_readwrite_program();
     let corpus = vec![ConformanceCase {
         name: "missing-runtime-scratch".into(),
         inputs: Vec::new(),

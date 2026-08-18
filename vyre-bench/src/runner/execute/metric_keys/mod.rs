@@ -592,9 +592,23 @@ pub(super) fn metric_key(prefix: &'static str, name: &str) -> Option<&'static st
     }
 }
 
+pub(crate) const SYNTHETIC_COUNT_METRIC_NAMES: &[&str] = &[
+    "condition_records",
+    "quantified_records",
+    "scatter_records",
+    "aggregation_records",
+    "entropy_records",
+    "alias_records",
+    "ifds_records",
+    "ast_nodes",
+    "queued_records",
+    "rewrite_records",
+    "callgraph_witness_digest",
+];
+
 #[cfg(test)]
 mod tests {
-    use super::custom_metric_key;
+    use super::{custom_metric_key, SYNTHETIC_COUNT_METRIC_NAMES};
 
     #[test]
     fn custom_metric_key_keeps_cuda_ptx_source_cache_visible() {
@@ -700,22 +714,7 @@ mod tests {
     /// discarded and the metric never appeared in the JSON artifact.
     #[test]
     fn synthetic_count_workload_metric_names_are_collectable() {
-        // These map 1:1 to SyntheticCountWorkload::metric_name in families.rs.
-        let names = [
-            "condition_records",
-            "quantified_records",
-            "scatter_records",
-            "aggregation_records",
-            "entropy_records",
-            "alias_records",
-            "ifds_records",
-            "ast_nodes",
-            "queued_records",
-            "rewrite_records",
-            // CallgraphReachabilityStep emits this in release_workloads.rs.
-            "callgraph_witness_digest",
-        ];
-        for name in names {
+        for &name in SYNTHETIC_COUNT_METRIC_NAMES {
             assert_eq!(
                 custom_metric_key("", name),
                 Some(name),

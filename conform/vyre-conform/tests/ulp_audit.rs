@@ -39,15 +39,17 @@ impl UnifiedEntry {
 }
 
 fn all_entries() -> Vec<UnifiedEntry> {
-    vyre_registry_link::operation::live_operation_registry()
-        .iter()
-        .map(|entry| UnifiedEntry {
+    let registry = vyre_registry_link::operation::live_operation_registry();
+    let mut entries = Vec::with_capacity(registry.iter().len());
+    for entry in registry.iter() {
+        entries.push(UnifiedEntry {
             id: entry.id,
             build: entry.build,
             test_inputs: entry.test_inputs,
             expected_output: entry.expected_output,
-        })
-        .collect()
+        });
+    }
+    entries
 }
 
 fn run_cpu_from_slices<'a>(
@@ -136,25 +138,10 @@ fn adversarial_value_requires_ulp(value: f32) -> bool {
 }
 
 fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
-    let selected = std::env::var("VYRE_BACKEND")
-        .ok()
-        .filter(|value| !value.trim().is_empty());
-    vyre_registry_link::backend::live_backend_registry()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| {
-            // The reference oracle is what the audit compares against, so
-            // auditing it against itself would measure zero ULP for every op.
-            !registration.reference_oracle
-                && vyre_driver::backend_dispatches(registration.id).expect("valid backend registry")
-                && selected
-                    .as_deref()
-                    .is_none_or(|backend| registration.id == backend)
-        })
-        .expect(
-            "Fix: a dispatch-capable backend must be registered for ULP audit. \
-             Link a concrete driver crate into the test binary.",
-        )
+    vyre_conform::production::live_test_backend().expect(
+        "Fix: a dispatch-capable backend must be registered for ULP audit. \
+         Link a concrete driver crate into the test binary.",
+    )
 }
 
 // ULP audit dispatches every registered op through a real dispatch-capable

@@ -7,7 +7,6 @@ use crate::cases::queue_closure_oracle::{
 use crate::cases::skewed_graph::{
     skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
 };
-use vyre_reference::composition_witness::frontier_to_queue_witness_into;
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
 pub(super) const CSR_ALLOW_MASK: u32 = 0b0111;
@@ -176,31 +175,13 @@ pub(super) fn materialize_skewed_csr_active_queue(
     queue_capacity: usize,
     context: &str,
 ) -> Result<Vec<u32>, BenchError> {
-    let expected = u32::try_from(fixture.stats.active_sources).map_err(|_| {
-        BenchError::EnvironmentInvalid(format!(
-            "{context} active source count {} exceeds u32 indexing. Fix: split the sparse graph frontier.",
-            fixture.stats.active_sources
-        ))
-    })?;
-    let mut active_queue = Vec::new();
-    let seen = frontier_to_queue_witness_into(
+    crate::cases::skewed_graph::materialize_active_frontier_queue(
         &fixture.frontier_in,
         fixture.stats.node_count,
+        fixture.stats.active_sources,
         queue_capacity,
-        &mut active_queue,
-    );
-    if seen != expected {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "{context} counted {seen} active sources but fixture stats recorded {}. Fix: rebuild frontier stats from the same bitset.",
-            fixture.stats.active_sources
-        )));
-    }
-    if active_queue.len() < expected as usize {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "{context} queue_capacity {queue_capacity} cannot hold {expected} active sources. Fix: increase queue capacity.",
-        )));
-    }
-    Ok(active_queue)
+        context,
+    )
 }
 
 pub(super) fn skewed_csr_queue_closure_inputs(

@@ -46,3 +46,31 @@ pub(crate) fn sparse_queue_capacity(
         ))
     })
 }
+
+/// Materialize an active source queue from a packed frontier bitset.
+pub(crate) fn materialize_active_frontier_queue(
+    frontier_in: &[u32],
+    node_count: u32,
+    active_sources: u64,
+    queue_capacity: usize,
+    context: &str,
+) -> Result<Vec<u32>, BenchError> {
+    let mut active_queue = Vec::new();
+    let expected = u32::try_from(active_sources).map_err(|_| {
+        BenchError::EnvironmentInvalid(format!(
+            "{context} active source count {active_sources} exceeds u32 indexing. Fix: split the frontier."
+        ))
+    })?;
+    let seen = vyre_reference::composition_witness::frontier_to_queue_witness_into(
+        frontier_in,
+        node_count,
+        queue_capacity,
+        &mut active_queue,
+    );
+    if seen != expected || active_queue.len() < expected as usize {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "{context} queue_capacity {queue_capacity} cannot hold {expected} active sources. Fix: increase queue capacity."
+        )));
+    }
+    Ok(active_queue)
+}
