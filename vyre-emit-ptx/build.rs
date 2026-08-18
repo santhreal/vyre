@@ -54,8 +54,8 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<(String, PathBuf)>) {
     let entries = std::fs::read_dir(dir)
         .unwrap_or_else(|error| fail(format!("failed to read {}: {error}", dir.display())));
     for entry in entries {
-        let entry =
-            entry.unwrap_or_else(|error| fail(format!("failed to read {}: {error}", dir.display())));
+        let entry = entry
+            .unwrap_or_else(|error| fail(format!("failed to read {}: {error}", dir.display())));
         let path = entry.path();
         let kind = entry
             .file_type()

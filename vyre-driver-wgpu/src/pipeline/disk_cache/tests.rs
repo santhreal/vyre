@@ -86,7 +86,6 @@ mod cache_key_contracts {
         );
     }
 
-
     #[test]
     fn content_digest_rejects_corrupted_payload() {
         use std::io::Write;

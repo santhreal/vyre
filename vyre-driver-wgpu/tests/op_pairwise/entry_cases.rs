@@ -1,6 +1,7 @@
 use super::all_entries_vec::*;
 use super::harness::f32_to_ordered;
 use proptest::prelude::*;
+use std::collections::BTreeMap;
 use std::sync::LazyLock;
 use vyre::ir::DataType;
 use vyre::ir::{BufferAccess, BufferDecl, Program};
@@ -562,14 +563,204 @@ fn tolerates_rounding(element: &DataType) -> bool {
     )
 }
 
-fn assert_outputs_equal(
+/// The names of the buffers `reference_eval` hands back, in the order it hands
+/// them back.
+fn output_names(program: &Program) -> Vec<String> {
+    program
+        .buffers()
+        .iter()
+        .filter(|decl| vyre_reference::is_reference_output(decl))
+        .map(|decl| decl.name().to_owned())
+        .collect()
+}
+
+/// The name op_b's buffer carries inside the fused program.
+fn fused_name(comp: &Composition, name: &str) -> String {
+    comp.b_renames
+        .iter()
+        .find(|(from, _)| from == name)
+        .map_or_else(|| name.to_owned(), |(_, to)| to.clone())
+}
+
+/// One executed composition and both arms' results.
+struct CompositionRun<'a> {
+    comp: &'a Composition,
+    op_a: &'a str,
+    op_b: &'a str,
+    /// op_b's own witness case, needed to rebuild op_b's inputs without op_a.
+    b_case: &'a [Vec<u8>],
+    cpu: &'a [Vec<u8>],
+    gpu: &'a [Vec<u8>],
+}
+
+impl CompositionRun<'_> {
+    /// op_b evaluated by the reference on the intermediate the device actually
+    /// produced, keyed by the name each output carries in the fused program.
+    ///
+    /// # WHY
+    ///
+    /// A fused `a -> b` runs as one program, so the device's op_a output is the
+    /// device's op_b input. op_a is allowed to drift: a transcendental carries a
+    /// budget, and an elementary op carries a few ULP. op_b is then free to
+    /// amplify that admissible drift, and a cancelling reduction does exactly
+    /// that. `gqa_attention -> tensor_train_decompose` measured 1 ULP on op_a's
+    /// `out`, 3 ULP on `rem`, and 642 ULP on `tt_ata`, the Gram matrix built
+    /// from them, which no per-operation ULP budget can bound and no emitter
+    /// change can remove.
+    ///
+    /// Re-running op_b against the device's own intermediate separates the two
+    /// effects: op_a's drift is charged to op_a, and op_b answers for its own
+    /// arithmetic at its own declared tolerance. Nothing here widens a budget.
+    ///
+    /// This is only sound while op_b treats the pipe as read-only. If op_b
+    /// writes it, the value read back after the dispatch is not the value op_b
+    /// consumed, and the attribution is refused rather than guessed.
+    fn stage_b_reference(&self) -> Result<BTreeMap<String, Vec<u8>>, String> {
+        let comp = self.comp;
+        let pipe_in_b = comp
+            .b_renames
+            .iter()
+            .find(|(_, to)| *to == comp.wired_name)
+            .map_or_else(|| comp.wired_name.clone(), |(from, _)| from.clone());
+        let decl = comp
+            .prog_b
+            .buffer(&pipe_in_b)
+            .ok_or_else(|| format!("op_b declares no buffer `{pipe_in_b}`"))?;
+        if !matches!(
+            decl.access(),
+            BufferAccess::ReadOnly | BufferAccess::Uniform
+        ) {
+            return Err(format!(
+                "op_b declares the piped buffer `{pipe_in_b}` as {:?}, so the readback is not the value it consumed",
+                decl.access()
+            ));
+        }
+
+        let fused_outputs = output_names(&comp.program);
+        let device_pipe = fused_outputs
+            .iter()
+            .position(|name| *name == comp.wired_name)
+            .and_then(|index| self.gpu.get(index))
+            .ok_or_else(|| {
+                format!(
+                    "the fused program does not hand back the piped buffer `{}`",
+                    comp.wired_name
+                )
+            })?;
+
+        let fixtures: std::collections::HashMap<String, Vec<u8>> =
+            witness_by_name(&comp.prog_b, self.b_case)
+                .into_iter()
+                .collect();
+        let inputs: Vec<Vec<u8>> = comp
+            .prog_b
+            .buffers()
+            .iter()
+            .filter(|buf| needs_input(buf))
+            .map(|buf| {
+                if buf.name() == pipe_in_b {
+                    device_pipe.clone()
+                } else {
+                    fixtures
+                        .get(buf.name())
+                        .cloned()
+                        .unwrap_or_else(|| zero_placeholder(buf))
+                }
+            })
+            .collect();
+
+        let outputs = try_run_reference(self.op_a, self.op_b, &comp.prog_b, &inputs)?;
+        Ok(output_names(&comp.prog_b)
+            .into_iter()
+            .map(|name| fused_name(comp, &name))
+            .zip(outputs)
+            .collect())
+    }
+
+    fn assert_outputs_equal(&self, tolerance: u32, elements: &[DataType]) {
+        let (op_a, op_b, cpu, gpu) = (self.op_a, self.op_b, self.cpu, self.gpu);
+        let Err(divergence) = compare_outputs(op_a, op_b, tolerance, elements, cpu, gpu) else {
+            return;
+        };
+
+        let names = output_names(&self.comp.program);
+        let staged = self.stage_b_reference().unwrap_or_else(|reason| {
+            panic!(
+                "Fix: {}, and the divergence cannot be attributed to a stage: {reason}",
+                divergence.report(op_a, op_b, &names)
+            )
+        });
+        let b_tolerance = fp_parity::effective_tolerance(op_b, &self.comp.prog_b);
+
+        for (buf_idx, name) in names.iter().enumerate() {
+            let one = buf_idx..=buf_idx;
+            let result = match staged.get(name) {
+                // op_b produced this buffer: charge op_b for the distance from
+                // the reference evaluated on the intermediate the device fed it.
+                Some(bytes) => compare_outputs(
+                    op_a,
+                    op_b,
+                    b_tolerance,
+                    &elements[one.clone()],
+                    std::slice::from_ref(bytes),
+                    &gpu[one],
+                ),
+                // op_a produced it, so nothing upstream can explain a divergence.
+                None => compare_outputs(
+                    op_a,
+                    op_b,
+                    tolerance,
+                    &elements[one.clone()],
+                    &cpu[one.clone()],
+                    &gpu[one],
+                ),
+            };
+            if let Err(local) = result {
+                let charged = if staged.contains_key(name) {
+                    format!("{op_b} exceeded its own {b_tolerance}-ULP tolerance against the reference run on the intermediate the device produced")
+                } else {
+                    format!("{op_a} exceeded the {tolerance}-ULP composition tolerance")
+                };
+                panic!(
+                    "Fix: buffer #{buf_idx} ({name}) lane {} diverged: {charged}. reference bits=0x{:08x} GPU bits=0x{:08x}",
+                    local.lane, local.reference_bits, local.gpu_bits
+                );
+            }
+        }
+    }
+}
+
+/// The first lane whose device value lies outside the tolerance.
+struct Divergence {
+    buf_idx: usize,
+    lane: usize,
+    reference_bits: u32,
+    gpu_bits: u32,
+    tolerance: u32,
+}
+
+impl Divergence {
+    fn report(&self, op_a: &str, op_b: &str, names: &[String]) -> String {
+        let name = names.get(self.buf_idx).map_or("?", String::as_str);
+        format!(
+            "{op_a} -> {op_b}: buffer #{} ({name}) lane {} diverged above the {}-ULP or scale-aware floating tolerance, CPU bits=0x{:08x} GPU bits=0x{:08x}",
+            self.buf_idx, self.lane, self.tolerance, self.reference_bits, self.gpu_bits
+        )
+    }
+}
+
+/// Compare a reference result against a device result buffer by buffer.
+///
+/// Shape and exactness are contracts and assert here. A floating divergence is
+/// returned instead, because a composed run can still attribute it to a stage.
+fn compare_outputs(
     op_a: &str,
     op_b: &str,
     tolerance: u32,
     elements: &[DataType],
     cpu: &[Vec<u8>],
     gpu: &[Vec<u8>],
-) {
+) -> Result<(), Divergence> {
     assert_eq!(
         cpu.len(),
         gpu.len(),
@@ -609,23 +800,47 @@ fn assert_outputs_equal(
                     c_buf, g_buf
                 );
             }
-        } else {
-            assert_eq!(
-                c_buf.len() % 4,
-                0,
-                "Fix: {op_a} -> {op_b}: tolerance-based compare requires f32-aligned bytes"
-            );
-            for (lane, (c_word, g_word)) in
-                c_buf.chunks_exact(4).zip(g_buf.chunks_exact(4)).enumerate()
-            {
-                let c_bits = u32::from_le_bytes(c_word.try_into().unwrap());
-                let g_bits = u32::from_le_bytes(g_word.try_into().unwrap());
-                assert!(
-                    f32_matches_with_tolerance(c_bits, g_bits, tolerance),
-                    "Fix: {op_a} -> {op_b}: buffer #{buf_idx} lane {lane} diverged above the {tolerance}-ULP or scale-aware floating tolerance. CPU bits=0x{c_bits:08x} GPU bits=0x{g_bits:08x}"
-                );
+            continue;
+        }
+
+        assert_eq!(
+            c_buf.len() % 4,
+            0,
+            "Fix: {op_a} -> {op_b}: tolerance-based compare requires f32-aligned bytes"
+        );
+        for (lane, (c_word, g_word)) in c_buf.chunks_exact(4).zip(g_buf.chunks_exact(4)).enumerate()
+        {
+            let reference_bits = u32::from_le_bytes(c_word.try_into().unwrap());
+            let gpu_bits = u32::from_le_bytes(g_word.try_into().unwrap());
+            if !f32_matches_with_tolerance(reference_bits, gpu_bits, tolerance) {
+                return Err(Divergence {
+                    buf_idx,
+                    lane,
+                    reference_bits,
+                    gpu_bits,
+                    tolerance,
+                });
             }
         }
+    }
+    Ok(())
+}
+
+/// Panic on any divergence, with no stage attribution.
+///
+/// Used where the two arms are not a device and a fused composition: an
+/// optimizer pass compared against the reference has no upstream stage to
+/// charge, so every lane must match the composition tolerance outright.
+fn assert_outputs_equal(
+    op_a: &str,
+    op_b: &str,
+    tolerance: u32,
+    elements: &[DataType],
+    cpu: &[Vec<u8>],
+    gpu: &[Vec<u8>],
+) {
+    if let Err(divergence) = compare_outputs(op_a, op_b, tolerance, elements, cpu, gpu) {
+        panic!("Fix: {}", divergence.report(op_a, op_b, &[]));
     }
 }
 
@@ -704,14 +919,15 @@ proptest! {
 
         let tolerance = fp_parity::effective_tolerance(a.id, composed)
             .max(fp_parity::effective_tolerance(b.id, composed));
-        assert_outputs_equal(
-            a.id,
-            b.id,
-            tolerance,
-            &output_elements(composed),
-            &cpu,
-            &gpu,
-        );
+        CompositionRun {
+            comp: &comp,
+            op_a: a.id,
+            op_b: b.id,
+            b_case,
+            cpu: &cpu,
+            gpu: &gpu,
+        }
+        .assert_outputs_equal(tolerance, &output_elements(composed));
     }
 }
 
@@ -789,14 +1005,15 @@ proptest! {
                         });
                         let tolerance = fp_parity::effective_tolerance(a.id, composed)
                             .max(fp_parity::effective_tolerance(b.id, composed));
-                        assert_outputs_equal(
-                            a.id,
-                            b.id,
-                            tolerance,
-                            &output_elements(composed),
-                            &cpu,
-                            &gpu,
-                        );
+                        CompositionRun {
+                            comp: &comp,
+                            op_a: a.id,
+                            op_b: b.id,
+                            b_case,
+                            cpu: &cpu,
+                            gpu: &gpu,
+                        }
+                        .assert_outputs_equal(tolerance, &output_elements(composed));
                     }
                     Err(reason) => {
                         assert!(
@@ -905,3 +1122,4 @@ fn a_self_exclusive_parser_is_not_piped_into_itself() {
         "Fix: the refusal must name the self-exclusivity contract: {reason}"
     );
 }
+

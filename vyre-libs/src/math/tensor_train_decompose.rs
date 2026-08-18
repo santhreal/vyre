@@ -126,18 +126,25 @@ pub fn tensor_train_decompose_step(
                     Expr::u32(m),
                     vec![Node::assign(
                         "tt_gacc",
-                        Expr::add(
-                            Expr::var("tt_gacc"),
-                            Expr::mul(
-                                Expr::load(
-                                    input_matrix,
-                                    tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_ca")),
-                                ),
-                                Expr::load(
-                                    input_matrix,
-                                    tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_cb")),
-                                ),
+                        // Stated as one fused multiply-add, not a multiply feeding
+                        // an add. Written unfused, the reference takes two
+                        // roundings per row and a device is free to take one, and
+                        // the Gram matrix of a cancelling column pair amplifies
+                        // that: `gqa_attention -> tensor_train_decompose` measured
+                        // 503 ULP on `tt_ata` against the reference run on the
+                        // device's own intermediate, four times this operation's
+                        // budget. `Expr::fma` fixes one rounding on the reference,
+                        // the naga emitter and the PTX emitter alike.
+                        Expr::fma(
+                            Expr::load(
+                                input_matrix,
+                                tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_ca")),
                             ),
+                            Expr::load(
+                                input_matrix,
+                                tt_idx(Expr::var("tt_grow"), n, Expr::var("tt_cb")),
+                            ),
+                            Expr::var("tt_gacc"),
                         ),
                     )],
                 ),

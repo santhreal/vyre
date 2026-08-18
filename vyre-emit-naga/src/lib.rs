@@ -23,7 +23,6 @@ pub use error::EmitError;
 /// the label was edited.
 pub const LOWERING_DIGEST: &str = env!("VYRE_NAGA_LOWERING_DIGEST");
 
-
 /// Stable diagnostic row emitted when binding a lowered Vyre operation into a
 /// Naga module.
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

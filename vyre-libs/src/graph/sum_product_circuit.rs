@@ -142,6 +142,8 @@ pub fn try_sum_product_evaluate(
             weights,
             leaf_values,
             out,
+            // The single-pass form has no depth array to check against.
+            None,
         ),
     )];
 
@@ -179,12 +181,57 @@ fn sum_product_pass_body(
     weights: &str,
     leaf_values: &str,
     out: &str,
+    depths: Option<&str>,
 ) -> Vec<Node> {
     let t = Expr::InvocationId { axis: 0 };
-    vec![
+    let mut body = vec![
         Node::let_bind("kind", Expr::load(kinds, t.clone())),
         Node::let_bind("co", Expr::load(child_offsets, t.clone())),
         Node::let_bind("cc", Expr::load(child_counts, t.clone())),
+    ];
+    // A wave is only a topological order while every child sits at a strictly
+    // smaller depth. Fed a `depths` array that does not describe the circuit,
+    // an internal node reads a child the same wave is still writing, and the
+    // two arms answer differently rather than wrongly: the reference walks
+    // lanes in order and sees the child's new value, a device runs them at once
+    // and sees the old one. Composition made that reachable from a registered
+    // op, `quest_zero_fill -> sum_product_evaluate_leveled` piping an all-zero
+    // buffer into `depths`, where the reference produced 5.0 for a node the
+    // device left at 0. Trap instead, so an out-of-contract depth array is
+    // refused by both arms rather than answered by neither.
+    if let Some(depths) = depths {
+        body.push(Node::if_then(
+            Expr::ne(Expr::var("kind"), Expr::u32(KIND_LEAF)),
+            vec![
+                Node::let_bind("spc_depth", Expr::load(depths, t.clone())),
+                Node::loop_for(
+                    "spc_child_k",
+                    Expr::u32(0),
+                    Expr::var("cc"),
+                    vec![
+                        Node::let_bind(
+                            "spc_child",
+                            Expr::load(
+                                children,
+                                Expr::add(Expr::var("co"), Expr::var("spc_child_k")),
+                            ),
+                        ),
+                        Node::if_then(
+                            Expr::ge(
+                                Expr::load(depths, Expr::var("spc_child")),
+                                Expr::var("spc_depth"),
+                            ),
+                            vec![Node::trap(
+                                Expr::var("spc_child"),
+                                "sum-product-depth-not-topological",
+                            )],
+                        ),
+                    ],
+                ),
+            ],
+        ));
+    }
+    body.extend([
         // Leaf: out = leaf_values[t]
         Node::if_then(
             Expr::eq(Expr::var("kind"), Expr::u32(KIND_LEAF)),
@@ -254,7 +301,8 @@ fn sum_product_pass_body(
                 Node::store(out, t.clone(), Expr::var("acc_prod")),
             ],
         ),
-    ]
+    ]);
+    body
 }
 
 /// Depth-ordered sum-product evaluation that is correct at ANY DAG depth.
@@ -343,6 +391,7 @@ pub fn try_sum_product_evaluate_leveled(
         weights,
         leaf_values,
         out,
+        Some(depths),
     );
     let extra_buffers = vec![
         BufferDecl::storage(kinds, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n_nodes),

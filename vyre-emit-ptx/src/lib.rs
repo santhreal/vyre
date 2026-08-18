@@ -72,7 +72,6 @@ pub use target::{ComputeCapability, PtxEmitOptions};
 /// edited.
 pub const LOWERING_DIGEST: &str = env!("VYRE_PTX_LOWERING_DIGEST");
 
-
 /// Module-scope symbol holding the trap record for one loaded module.
 ///
 /// [`vyre_lower::TRAP_SIDECAR_WORDS`] u32 words: word 0 is the claim flag (CAS 0

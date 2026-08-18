@@ -111,6 +111,18 @@ pub fn newton_schulz_y_step(y_curr: &str, yzy: &str, y_next: &str, n: u32) -> Pr
 }
 
 /// Emit the fused f32 Newton-Schulz quintic polynomial for each matrix cell.
+///
+/// One step is `p(x) = x (3.4445 + x² (-4.7750 + 2.0315 x²))`, stated as two
+/// explicit [`Expr::fma`] nodes rather than five multiplies and two adds. The
+/// shape is load-bearing twice over. It is four operations instead of seven per
+/// step, so the kernel does less work per cell. And it leaves no
+/// multiply-followed-by-add for a backend to contract: `a*b + c` written as two
+/// operations may be fused into one rounding by the device and is not by the
+/// reference, which over five chained steps amplified into a 46 ULP disagreement
+/// on the composition `givens_rotate_pair -> newton_schulz_poly5_f32` while each
+/// individual step stayed inside the elementary window. An `Fma` node states the
+/// single rounding, and the reference, the naga emitter and the PTX emitter all
+/// answer it with one fused instruction.
 #[must_use]
 pub fn newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols: u32) -> Program {
     let total = rows * cols;
@@ -119,25 +131,19 @@ pub fn newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols: u32) ->
     for step in 0..5 {
         let x = Expr::var(format!("x{step}"));
         let x2 = format!("x{step}_2");
-        let x3 = format!("x{step}_3");
-        let x5 = format!("x{step}_5");
+        let inner = format!("x{step}_inner");
+        let outer = format!("x{step}_outer");
         let next = format!("x{}", step + 1);
         iter_body.push(Node::let_bind(&x2, Expr::mul(x.clone(), x.clone())));
-        iter_body.push(Node::let_bind(&x3, Expr::mul(Expr::var(&x2), x.clone())));
         iter_body.push(Node::let_bind(
-            &x5,
-            Expr::mul(Expr::var(&x3), Expr::var(&x2)),
+            &inner,
+            Expr::fma(Expr::f32(2.0315), Expr::var(&x2), Expr::f32(-4.7750)),
         ));
         iter_body.push(Node::let_bind(
-            &next,
-            Expr::add(
-                Expr::add(
-                    Expr::mul(Expr::f32(3.4445), x),
-                    Expr::mul(Expr::f32(-4.7750), Expr::var(&x3)),
-                ),
-                Expr::mul(Expr::f32(2.0315), Expr::var(&x5)),
-            ),
+            &outer,
+            Expr::fma(Expr::var(&x2), Expr::var(&inner), Expr::f32(3.4445)),
         ));
+        iter_body.push(Node::let_bind(&next, Expr::mul(x, Expr::var(&outer))));
     }
     iter_body.push(Node::Store {
         buffer: output.into(),
@@ -173,10 +179,10 @@ inventory::submit! {
         ]]),
         Some(|| {
             vec![vec![vec![
-                0x34, 0xeb, 0x36, 0x3f, // 0.7145264
-                0xb2, 0xf3, 0x43, 0x3f, // 0.76543725
-                0xfc, 0xf9, 0x85, 0x3f, // 1.0466914
-                0xa8, 0x49, 0x32, 0x3f, // 0.6964364
+                0x30, 0xeb, 0x36, 0x3f, // 0.71452618
+                0xc6, 0xf3, 0x43, 0x3f, // 0.76543844
+                0x07, 0xfa, 0x85, 0x3f, // 1.0466927
+                0xaa, 0x49, 0x32, 0x3f, // 0.69643652
             ]]]
         }),
     )
