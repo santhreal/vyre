@@ -49,6 +49,13 @@ where
         .build()
         .map_err(|e| format!("Fix: {op_name} build failed: {e}"))
 }
+pub(super) fn linear_fused_4x4_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    let f32_bytes = vyre_primitives::wire::pack_f32_slice;
+    let x = f32_bytes(&(0..4).map(|i| i as f32).collect::<Vec<_>>());
+    let w = f32_bytes(&(0..16).map(|i| i as f32).collect::<Vec<_>>());
+    let bias = f32_bytes(&[0.0, 0.0, 0.0, 0.0]);
+    vec![vec![x, w, bias]]
+}
 
 #[cfg(test)]
 mod tests {

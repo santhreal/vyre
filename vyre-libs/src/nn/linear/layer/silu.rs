@@ -19,7 +19,7 @@
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};
 
-use super::fused_activation::linear_fused_activation;
+use super::fused_activation::{linear_fused_4x4_fixture_inputs, linear_fused_activation};
 use crate::nn::activation::silu::silu_expr;
 
 const OP_ID: &str = "vyre-libs::nn::linear_silu";
@@ -67,13 +67,7 @@ inventory::submit! {
                 )
             })
         },
-        Some(|| {
-            let f32_bytes = vyre_primitives::wire::pack_f32_slice;
-            let x = f32_bytes(&(0..4).map(|i| i as f32).collect::<Vec<_>>());
-            let w = f32_bytes(&(0..16).map(|i| i as f32).collect::<Vec<_>>());
-            let bias = f32_bytes(&[0.0, 0.0, 0.0, 0.0]);
-            vec![vec![x, w, bias]]
-        }),
+        Some(linear_fused_4x4_fixture_inputs),
         Some(|| {
             vec![vec![EXPECTED_LINEAR_SILU_OUTPUT_BYTES.to_vec()]]
         }),

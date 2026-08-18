@@ -216,12 +216,7 @@ mod tests {
 
         let final_p =
             crate::test_parity_oracles::wrap_program_sequence(&[&p1, &p2, &p3], [256, 1, 1]);
-        let region_count = final_p
-            .entry()
-            .iter()
-            .filter(|n| matches!(n, vyre_foundation::ir::Node::Region { .. }))
-            .count();
-        assert!(region_count >= 3);
+        crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 
     #[test]
@@ -303,9 +298,9 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
-            input_capacities
+        crate::solvers::test_helpers::assert_scratch_capacities_preserved(
+            &scratch.inputs,
+            &input_capacities,
         );
         assert_eq!(out.capacity(), out_capacity);
         assert_eq!(out, vec![0.5, 0.0, 0.0, 0.25]);

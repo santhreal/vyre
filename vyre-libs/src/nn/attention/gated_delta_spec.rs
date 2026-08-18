@@ -480,3 +480,19 @@ pub(super) fn scaled_query(
         Expr::var("query_scale"),
     )
 }
+/// One query-state product term for attention accumulation.
+pub(super) fn query_state_product(
+    query: &str,
+    state_buf: &str,
+    sequence: u32,
+    key_heads: u32,
+    key_dim: u32,
+    token: Expr,
+    key_index: Expr,
+    state_index: Expr,
+) -> Expr {
+    Expr::mul(
+        scaled_query(query, sequence, key_heads, key_dim, token, key_index),
+        Expr::load(state_buf, state_index),
+    )
+}

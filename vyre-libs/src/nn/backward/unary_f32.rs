@@ -53,3 +53,23 @@ mod tests {
         assert_eq!(cases, 2_049);
     }
 }
+#[cfg(test)]
+pub(super) fn eval_unary_f32_backward(
+    program: &Program,
+    input: &[f32],
+    grad_out: &[f32],
+    error_msg: &'static str,
+) -> Vec<f32> {
+    let n = input.len();
+    assert_eq!(n, grad_out.len());
+    let outputs = vyre_reference::reference_eval(
+        program,
+        &[
+            vyre_reference::value::Value::from(vyre_primitives::wire::pack_f32_slice(input)),
+            vyre_reference::value::Value::from(vyre_primitives::wire::pack_f32_slice(grad_out)),
+            vyre_reference::value::Value::from(vec![0u8; n * core::mem::size_of::<f32>()]),
+        ],
+    )
+    .expect(error_msg);
+    vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes())
+}

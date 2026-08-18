@@ -603,11 +603,9 @@ mod tests {
         )
         .unwrap();
 
-        for (before, after) in input_ptrs
-            .iter()
-            .zip(scratch.inputs.iter().map(Vec::as_ptr))
-        {
-            assert_eq!(*before, after);
-        }
+        crate::solvers::test_helpers::assert_input_pointers_preserved(
+            &input_ptrs,
+            &scratch.inputs,
+        );
     }
 }

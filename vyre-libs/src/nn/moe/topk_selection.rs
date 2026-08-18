@@ -149,3 +149,11 @@ mod tests {
         assert_eq!(checked, 2_049);
     }
 }
+#[cfg(test)]
+pub(super) fn u32_from_bytes(bytes: &[u8]) -> Vec<u32> {
+    vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
+}
+#[cfg(test)]
+pub(super) fn f32_from_bytes(bytes: &[u8]) -> Vec<f32> {
+    vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
+}

@@ -140,15 +140,7 @@ mod tests {
         let s = 9_u32;
         let d = 7_u32;
         let elements = (s * d) as usize;
-        let q: Vec<f32> = (0..elements)
-            .map(|i| ((i as f32) * 0.13).sin() - 0.5)
-            .collect();
-        let k: Vec<f32> = (0..elements)
-            .map(|i| ((i as f32) * 0.07).cos() + 0.25)
-            .collect();
-        let v: Vec<f32> = (0..elements)
-            .map(|i| ((i as f32) * 0.19).sin() * 2.0)
-            .collect();
+        let (q, k, v) = super::synth_qkv_fixtures(elements);
         let run = |program: Program| {
             crate::nn::attention::eval_qkv_program(
                 &program,

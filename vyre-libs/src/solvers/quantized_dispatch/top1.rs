@@ -102,11 +102,13 @@ pub fn i4x8_batched_matmul_top1_f32_scaled_via_with_scratch_into(
     // SINGLE `batch*2` f32 buffer SPLIT into two halves: `out[b]=best_score_b` for the first `batch`
     // words, then `out[batch+b]=cast(f32, best_index_b)` for the next `batch` (see
     // quantized/programs.rs (the kernel stores scores and indices into one `out` buffer)).
-    ensure_input_slots(inputs, 4);
-    write_u32_slice_le_bytes(&mut inputs[0], weights_packed);
-    write_u32_slice_le_bytes(&mut inputs[1], activation_batches_packed);
-    write_f32_slice_le_bytes(&mut inputs[2], row_scales);
-    write_f32_slice_le_bytes(&mut inputs[3], batch_scales);
+    write_packed_batched_matmul_inputs(
+        inputs,
+        weights_packed,
+        activation_batches_packed,
+        row_scales,
+        batch_scales,
+    );
 
     let outputs =
         dispatcher.dispatch(program, &inputs[..4], Some([ceil_div_u32(batch, 64), 1, 1]))?;

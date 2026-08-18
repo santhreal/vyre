@@ -87,3 +87,16 @@ pub(crate) fn eval_qkv_program(
     .unwrap_or_else(|err| panic!("{on_failure} ({err:?})"));
     decode_f32(&outputs[0].to_bytes())
 }
+#[cfg(test)]
+pub(crate) fn synth_qkv_fixtures(elements: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
+    let q: Vec<f32> = (0..elements)
+        .map(|i| ((i as f32) * 0.13).sin() - 0.5)
+        .collect();
+    let k: Vec<f32> = (0..elements)
+        .map(|i| ((i as f32) * 0.07).cos() + 0.25)
+        .collect();
+    let v: Vec<f32> = (0..elements)
+        .map(|i| ((i as f32) * 0.19).sin() * 2.0)
+        .collect();
+    (q, k, v)
+}

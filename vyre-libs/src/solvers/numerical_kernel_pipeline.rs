@@ -214,51 +214,10 @@ mod tests {
         .unwrap_or_else(|error| panic!("{error}"));
     }
 
-    fn reference_sinkhorn_f64(
-        k: &[f64],
-        a: &[f64],
-        b: &[f64],
-        tolerance: f64,
-        max_iterations: u32,
-    ) -> (Vec<f64>, Vec<f64>, u32) {
-        let mut u = Vec::new();
-        let mut v = Vec::new();
-        let mut u_old = Vec::new();
-        let iters = reference_sinkhorn_f64_into(
-            k,
-            a,
-            b,
-            tolerance,
-            max_iterations,
-            &mut u,
-            &mut v,
-            &mut u_old,
-        );
-        (u, v, iters)
-    }
-
-    fn reference_sinkhorn_f64_into(
-        k: &[f64],
-        a: &[f64],
-        b: &[f64],
-        tolerance: f64,
-        max_iterations: u32,
-        u: &mut Vec<f64>,
-        v: &mut Vec<f64>,
-        u_old: &mut Vec<f64>,
-    ) -> u32 {
-        vyre_reference::composition_witness::try_sinkhorn_iterate_f64_witness_into(
-            k,
-            a,
-            b,
-            tolerance,
-            max_iterations,
-            u,
-            v,
-            u_old,
-        )
-        .unwrap_or_else(|error| panic!("{error}"))
-    }
+    use crate::math::sinkhorn_iterate::{
+        sinkhorn_iterate_f64 as reference_sinkhorn_f64,
+        sinkhorn_iterate_f64_into as reference_sinkhorn_f64_into,
+    };
 
     fn reference_sinkhorn_row_residual(k: &[f64], u: &[f64], v: &[f64], a: &[f64]) -> f64 {
         vyre_reference::composition_witness::sinkhorn_row_residual_witness(k, u, v, a)

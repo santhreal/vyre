@@ -425,9 +425,7 @@ mod tests {
     ) {
         let mut kv = Vec::new();
         let mut ktu = Vec::new();
-        vyre_reference::composition_witness::sinkhorn_iter_f64_in_place_witness_into(
-            k, a, b, u, v, m, n, &mut kv, &mut ktu,
-        );
+        reference_sinkhorn_iter_into(k, a, b, u, v, m, n, &mut kv, &mut ktu);
     }
 
     fn reference_sinkhorn_iter_into(
@@ -469,11 +467,10 @@ mod tests {
         k: u32,
         semiring: Semiring,
     ) -> Vec<u32> {
-        vyre_reference::composition_witness::semiring_gemm_witness(
-            a, b, m as usize, n as usize, k as usize, semiring,
-        )
+        let mut c = Vec::new();
+        reference_semiring_gemm_into(a, b, m, n, k, semiring, &mut c);
+        c
     }
-
     fn reference_semiring_gemm_into(
         a: &[u32],
         b: &[u32],

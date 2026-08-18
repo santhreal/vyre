@@ -54,24 +54,21 @@ pub fn recurrent_gated_delta(
     spec: &GatedDeltaSpec<'_>,
 ) -> Result<Program, RecurrentGatedDeltaError> {
     let counts = spec.counts()?;
-    let GatedDeltaSpec {
-        query,
-        key,
-        value,
-        decay_log,
-        beta_logits,
-        state_input,
-        output,
-        state_output,
-        sequence,
-        key_heads,
-        value_heads,
-        key_dim,
-        value_dim,
-        eps,
-        ref dtype,
-        ..
-    } = *spec;
+    let query = spec.query;
+    let key = spec.key;
+    let value = spec.value;
+    let decay_log = spec.decay_log;
+    let beta_logits = spec.beta_logits;
+    let state_input = spec.state_input;
+    let output = spec.output;
+    let state_output = spec.state_output;
+    let sequence = spec.sequence;
+    let key_heads = spec.key_heads;
+    let value_heads = spec.value_heads;
+    let key_dim = spec.key_dim;
+    let value_dim = spec.value_dim;
+    let eps = spec.eps;
+    let dtype = &spec.dtype;
 
     let state_index = |key_index: Expr, value_index: Expr| {
         gated_delta_spec::state_index(key_dim, value_dim, key_index, value_index)
@@ -184,19 +181,15 @@ pub fn recurrent_gated_delta(
                     "attention_output",
                     Expr::add(
                         Expr::var("attention_output"),
-                        Expr::mul(
-                            gated_delta_spec::scaled_query(
-                                query,
-                                sequence,
-                                key_heads,
-                                key_dim,
-                                Expr::var("token"),
-                                Expr::var("key_index"),
-                            ),
-                            Expr::load(
-                                state_output,
-                                state_index(Expr::var("key_index"), Expr::var("value_index")),
-                            ),
+                        gated_delta_spec::query_state_product(
+                            query,
+                            state_output,
+                            sequence,
+                            key_heads,
+                            key_dim,
+                            Expr::var("token"),
+                            Expr::var("key_index"),
+                            state_index(Expr::var("key_index"), Expr::var("value_index")),
                         ),
                     ),
                 )],

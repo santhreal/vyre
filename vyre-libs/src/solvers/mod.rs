@@ -22,3 +22,27 @@ pub mod sinkhorn_full_clustering;
 pub mod tensor_network_fusion_order;
 pub mod tensor_train_chain_fusion;
 pub mod tensor_train_compression;
+#[cfg(test)]
+pub(crate) mod test_helpers {
+    use vyre_foundation::ir::{Node, Program};
+
+    pub fn assert_input_pointers_preserved(before: &[*const u8], after: &[Vec<u8>]) {
+        for (b, a) in before.iter().zip(after.iter().map(Vec::as_ptr)) {
+            assert_eq!(*b, a);
+        }
+    }
+
+    pub fn assert_scratch_capacities_preserved(scratch_inputs: &[Vec<u8>], expected: &[usize]) {
+        let caps: Vec<usize> = scratch_inputs.iter().map(Vec::capacity).collect();
+        assert_eq!(caps, expected);
+    }
+
+    pub fn assert_min_region_count(program: &Program, min_count: usize) {
+        let region_count = program
+            .entry()
+            .iter()
+            .filter(|n| matches!(n, Node::Region { .. }))
+            .count();
+        assert!(region_count >= min_count);
+    }
+}

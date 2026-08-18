@@ -15,7 +15,9 @@ use crate::math::quantized::{
     i4x8_batched_matvec_f32_scaled, i4x8_dot_f32_scaled, i4x8_matvec_f32_scaled, unpack_i4x8,
 };
 use crate::plumbing::host::program_cache::ProgramCache;
-use shapes::{expect_one_output, validate_batched_packed_matmul_shape};
+use shapes::{
+    expect_one_output, validate_batched_packed_matmul_shape, write_packed_batched_matmul_inputs,
+};
 use vyre_foundation::ir::Program;
 
 #[cfg(test)]

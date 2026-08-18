@@ -124,11 +124,8 @@ inventory::submit! {
 
 #[cfg(test)]
 mod tests {
+    use super::super::approx_eq;
     use super::*;
-
-    fn approx_eq(a: f64, b: f64) -> bool {
-        (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
-    }
 
     fn tfn_scalar_mix_cpu(
         features: &[f64],
