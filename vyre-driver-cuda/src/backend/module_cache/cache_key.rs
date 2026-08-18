@@ -7,7 +7,7 @@ use vyre_foundation::ir::Program;
 use crate::backend::dispatch_phase_probe as probe;
 
 pub(super) const PTX_LOWERING_CONTRACT: &[u8] =
-    b"vyre-cuda-ptx-lowering-contract:v14:ssa-carrier-snapshots+f32-canonical+select-pred-normalization+bool-cast-boundary+f32-bool-nan-truthiness+bool-numeric-materialization+bool-memory-word-abi+f32-ne-unordered+masked-integer-shifts+no-mutable-loop-unroll+full-workgroup-entry+bounded-full-workgroup-stores+child-captured-producer-liveness+single-mad-dual-mul-liveness";
+    b"vyre-cuda-ptx-lowering-contract:v15:ssa-carrier-snapshots+f32-canonical+select-pred-normalization+bool-cast-boundary+f32-bool-nan-truthiness+bool-numeric-materialization+bool-memory-word-abi+f32-ne-unordered+masked-integer-shifts+no-mutable-loop-unroll+full-workgroup-entry+bounded-full-workgroup-stores+child-captured-producer-liveness+single-mad-dual-mul-liveness";
 pub(super) const CUDA_PTX_SOURCE_FROM_PROGRAM_DOMAIN: &[u8] =
     b"vyre.cuda.ptx-source-cache.program.v1";
 pub(super) const CUDA_MODULE_FROM_PTX_SOURCE_KEY_DOMAIN: &[u8] =

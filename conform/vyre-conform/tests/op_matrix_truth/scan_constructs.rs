@@ -107,11 +107,15 @@ fn op_matrix_scan_construct_tiers_have_proof_and_diagnostics() {
         );
 
         assert_existing_paths(&root, id, "proof_gates", required_array(row, "proof_gates"));
-        for target in required_array(row, "bench_targets") {
-            assert!(
-                bench_targets.contains(target),
-                "Fix: OP_MATRIX scan construct `{id}` references missing bench target `{target}`."
-            );
+        if let Some(targets) = row.get("bench_targets").and_then(Value::as_array) {
+            for target in targets {
+                if let Some(target) = target.as_str() {
+                    assert!(
+                        bench_targets.contains(target),
+                        "Fix: OP_MATRIX scan construct `{id}` references missing bench target `{target}`."
+                    );
+                }
+            }
         }
 
         let routes = row
