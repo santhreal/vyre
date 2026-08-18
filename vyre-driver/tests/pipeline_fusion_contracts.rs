@@ -9,10 +9,7 @@ use vyre_driver::pipeline_fusion::{
 };
 
 fn summary(reads: &[u32], writes: &[u32]) -> ArmBindingSummary {
-    ArmBindingSummary {
-        reads: reads.iter().copied().collect(),
-        writes: writes.iter().copied().collect(),
-    }
+    ArmBindingSummary::from_slices(reads, writes)
 }
 
 #[test]

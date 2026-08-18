@@ -1,5 +1,8 @@
 //! Focused 5090 conform checks for Cat-A fixture-bearing ops.
 
+mod harness;
+use harness::cat_a_dispatch_config;
+
 use std::sync::OnceLock;
 
 use vyre::ir::{BufferAccess, Program};
@@ -8,7 +11,6 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_libs::operation_catalog::all_entries;
-
 fn backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
     BACKEND.get_or_init(|| {
@@ -32,7 +34,7 @@ fn assert_gpu_matches_fixture(id: &'static str) {
     let program = entry
         .program()
         .unwrap_or_else(|| panic!("Fix: fixture-bearing operation `{id}` must provide a program"));
-    let config = dispatch_config_for_fixture(&program);
+    let config = cat_a_dispatch_config(&program);
     let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
     let expected = (entry
         .expected_output
@@ -64,30 +66,6 @@ fn assert_gpu_matches_fixture(id: &'static str) {
     }
 }
 
-fn dispatch_config_for_fixture(program: &Program) -> DispatchConfig {
-    let mut config = DispatchConfig::default();
-    let workgroup = program.workgroup_size();
-    if workgroup[1] == 1 && workgroup[2] == 1 {
-        return config;
-    }
-
-    let lanes = u64::from(workgroup[0])
-        .saturating_mul(u64::from(workgroup[1]))
-        .saturating_mul(u64::from(workgroup[2]));
-    let max_writable_count = program
-        .buffers()
-        .iter()
-        .filter(|decl| matches!(decl.access(), BufferAccess::ReadWrite) || decl.is_output())
-        .map(|decl| u64::from(decl.count()))
-        .max()
-        .unwrap_or(1);
-    assert!(
-        max_writable_count <= lanes,
-        "Fix: Cat-A fixture with non-1D workgroup_size {workgroup:?} needs explicit multi-workgroup grid; {max_writable_count} writable elements exceed {lanes} lanes"
-    );
-    config.grid_override = Some([1, 1, 1]);
-    config
-}
 
 fn assert_outputs_match(
     entry: &SemanticOperation,

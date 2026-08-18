@@ -85,6 +85,15 @@ impl ArmBindingSummary {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Build an arm summary from read and write slot slices.
+    #[must_use]
+    pub fn from_slices(reads: &[u32], writes: &[u32]) -> Self {
+        Self {
+            reads: reads.iter().copied().collect(),
+            writes: writes.iter().copied().collect(),
+        }
+    }
 }
 
 impl Default for ArmBindingSummary {

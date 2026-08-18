@@ -31,6 +31,35 @@ fn backend() -> &'static WgpuBackend {
     })
 }
 
+pub(super) fn wrapped_storage_program(body: Node) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![body],
+    )
+}
+
+pub(super) fn triple_nested_region(inner_body: Vec<Node>, label_stem: &str) -> Node {
+    let mid = Node::Region {
+        generator: Ident::from(format!("vyre-primitives::test::{label_stem}_inner")),
+        source_region: None,
+        body: Arc::new(inner_body),
+    };
+    let outer = Node::Region {
+        generator: Ident::from(format!("vyre-primitives::test::{label_stem}_mid")),
+        source_region: Some(Ident::from(format!("vyre-libs::test::{label_stem}_outer"))),
+        body: Arc::new(vec![mid]),
+    };
+    Node::Region {
+        generator: Ident::from(format!("vyre-libs::test::{label_stem}_outer")),
+        source_region: None,
+        body: Arc::new(vec![outer]),
+    }
+}
+
 /// Build a Program whose body writes `buf_len(input)` to `out[0]`.
 /// `input` is declared without a static count, so the lowering uses
 /// `naga::ArrayLength` to read the bound buffer's element count at

@@ -13,12 +13,11 @@ fn one_store_kernel() -> KernelDescriptor {
         .dispatch(64, 1, 1)
         .body(
             body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                ])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1]))
+                .literal(LiteralValue::U32(0))
+                .literal(LiteralValue::U32(7)),
         )
         .build()
 }

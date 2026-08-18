@@ -12,10 +12,6 @@ use vyre_libs::decode::hex::{
 };
 use vyre_reference::composition_witness::hex_decode_packed_witness as hex_decode_reference_packed;
 
-fn ascii_lanes(input: &[u8]) -> Vec<u32> {
-    input.iter().map(|byte| u32::from(*byte)).collect()
-}
-
 fn hex_lanes() -> u32 {
     HEX_WORKGROUP_SIZE[0]
 }
@@ -24,13 +20,17 @@ fn dispatch_hex(input: &[u8]) -> Vec<u32> {
     let backend = live_backend();
     let decoded_words = hex_decoded_capacity(input.len() as u32);
     let program = hex_decode("input", "output", input.len() as u32);
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some([decoded_words.div_ceil(hex_lanes()).max(1), 1, 1]);
+    let grid = [decoded_words.div_ceil(hex_lanes()).max(1), 1, 1];
+    let config = DispatchConfig {
+        grid_override: Some(grid),
+        ..Default::default()
+    };
+    let ascii_words: Vec<u32> = input.iter().map(|&b| u32::from(b)).collect();
     let outputs = backend
         .dispatch(
             &program,
             &[
-                u32_bytes(&ascii_lanes(input)),
+                u32_bytes(&ascii_words),
                 u32_bytes(hex_decode_table().as_ref()),
             ],
             &config,

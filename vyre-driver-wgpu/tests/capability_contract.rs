@@ -1,7 +1,7 @@
 //! Capability contract tests for the live wgpu backend.
 
 mod harness;
-use harness::{selected_adapter, shared_live_backend as live_backend};
+use harness::{selected_adapter, shared_live_backend as live_backend, SUBGROUP_PROBE_WGSL};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
@@ -9,28 +9,8 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::{BackendValidationCapabilities, ValidationOptions};
 
 fn subgroup_pipeline_compiles(backend: &WgpuBackend) -> bool {
-    let wgsl = r#"
-@group(0) @binding(0) var<storage, read> input: array<u32>;
-@group(0) @binding(1) var<storage, read_write> output: array<u32>;
-@group(1) @binding(2) var<uniform> params: vec4<u32>;
-
-@compute @workgroup_size(32)
-fn main(
-    @builtin(global_invocation_id) gid: vec3<u32>,
-    @builtin(subgroup_invocation_id) lane: u32,
-    @builtin(subgroup_size) width: u32,
-) {
-    if (params.x == 4294967295u) {
-        return;
-    }
-    let seed = input[0];
-    if (gid.x == 0u) {
-        output[0] = seed + subgroupAdd(select(1u, 0u, lane >= width));
-    }
-}
-"#;
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        backend.dispatch_wgsl(wgsl, &[0; 4], 4, 32).is_ok()
+        backend.dispatch_wgsl(SUBGROUP_PROBE_WGSL, &[0; 4], 4, 32).is_ok()
     }))
     .unwrap_or(false)
 }

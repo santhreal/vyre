@@ -8,29 +8,28 @@ fn deep_region_wrapped_buf_len_program() -> Program {
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
     )];
-    let mid = Node::Region {
-        generator: Ident::from("vyre-primitives::test::buf_len_inner"),
-        source_region: None,
-        body: Arc::new(inner),
-    };
-    let outer = Node::Region {
-        generator: Ident::from("vyre-primitives::test::buf_len_mid"),
-        source_region: Some(Ident::from("vyre-libs::test::buf_len_outer")),
-        body: Arc::new(vec![mid]),
-    };
-    let body = Node::Region {
-        generator: Ident::from("vyre-libs::test::buf_len_outer"),
-        source_region: None,
-        body: Arc::new(vec![outer]),
-    };
-    Program::wrapped(
+    let body = triple_nested_region(inner, "buf_len");
+    wrapped_storage_program(body)
+}
+
+fn loop_counting_buf_len_program() -> Program {
+    let body = Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
+            Node::let_bind("seen", Expr::u32(0)),
+            Node::loop_for(
+                "i",
+                Expr::u32(0),
+                Expr::buf_len("input"),
+                vec![Node::assign(
+                    "seen",
+                    Expr::add(Expr::var("seen"), Expr::u32(1)),
+                )],
+            ),
+            Node::store("out", Expr::u32(0), Expr::var("seen")),
         ],
-        [1, 1, 1],
-        vec![body],
-    )
+    );
+    wrapped_storage_program(body)
 }
 
 fn loop_counting_buf_len_program() -> Program {

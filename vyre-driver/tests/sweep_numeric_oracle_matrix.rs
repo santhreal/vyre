@@ -147,43 +147,31 @@ fn oracle_ratio_basis_points_u64_wide(part: u64, whole: u64, denominator_zero_va
     if whole == 0 {
         return denominator_zero_value;
     }
-    let value = (u128::from(part) * u128::from(BASIS_POINTS_DENOMINATOR)) / u128::from(whole);
-    if value > u128::from(u64::MAX) {
-        return u64::MAX;
-    }
-    value as u64
+    let wide = (u128::from(part) * 10_000) / u128::from(whole);
+    u64::try_from(wide).unwrap_or(u64::MAX)
 }
 
 fn oracle_ratio_basis_points_u64(part: u64, whole: u64, denominator_zero_value: u32) -> u32 {
     let wide = oracle_ratio_basis_points_u64_wide(part, whole, u64::from(denominator_zero_value));
-    if wide > u64::from(u32::MAX) {
-        return u32::MAX;
-    }
-    wide as u32
+    u32::try_from(wide).unwrap_or(u32::MAX)
 }
 
 fn oracle_ratio_parts_per_million_u64(part: u64, whole: u64, denominator_zero_value: u32) -> u32 {
     if whole == 0 {
         return denominator_zero_value;
     }
-    let value = (u128::from(part) * 1_000_000) / u128::from(whole);
-    if value > u128::from(u32::MAX) {
-        return u32::MAX;
-    }
-    value as u32
+    let wide = (u128::from(part) * 1_000_000) / u128::from(whole);
+    u32::try_from(wide).unwrap_or(u32::MAX)
 }
 
 fn oracle_compose_basis_points_u32(left: u32, right: u32) -> u32 {
-    let value = (u128::from(left) * u128::from(right)) / u128::from(BASIS_POINTS_DENOMINATOR);
-    if value > u128::from(u32::MAX) {
-        return u32::MAX;
-    }
-    value as u32
+    let wide = (u128::from(left) * u128::from(right)) / 10_000;
+    u32::try_from(wide).unwrap_or(u32::MAX)
 }
 
 fn oracle_checked_compose_basis_points_u64(left: u64, right: u64) -> Option<u64> {
-    let value = (u128::from(left) * u128::from(right)) / u128::from(BASIS_POINTS_DENOMINATOR);
-    u64::try_from(value).ok()
+    let wide = (u128::from(left) * u128::from(right)) / 10_000;
+    u64::try_from(wide).ok()
 }
 
 fn oracle_scale_u64_by_basis_points_round_clamped(
@@ -195,35 +183,24 @@ fn oracle_scale_u64_by_basis_points_round_clamped(
     if scale_bps == 0 {
         return zero_scale_value;
     }
-    let clamped = if max_scale_bps == 0 {
-        scale_bps
-    } else {
-        scale_bps.min(max_scale_bps)
-    };
-    let value = (u128::from(base) * u128::from(clamped) + u128::from(BASIS_POINTS_DENOMINATOR / 2))
-        / u128::from(BASIS_POINTS_DENOMINATOR);
-    if value > u128::from(u64::MAX) {
-        return u64::MAX;
-    }
-    value as u64
+    let effective_bps = if max_scale_bps > 0 { scale_bps.min(max_scale_bps) } else { scale_bps };
+    let num = u128::from(base) * u128::from(effective_bps) + 5_000;
+    u64::try_from(num / 10_000).unwrap_or(u64::MAX)
 }
 
 fn oracle_scale_u64_by_basis_points_floor_min(base: u64, scale_bps: u32, min_value: u64) -> u64 {
-    let value = (u128::from(base) * u128::from(scale_bps)) / u128::from(BASIS_POINTS_DENOMINATOR);
-    if value > u128::from(u64::MAX) {
-        return u64::MAX;
-    }
-    (value as u64).max(min_value)
+    let wide = (u128::from(base) * u128::from(scale_bps)) / 10_000;
+    u64::try_from(wide).unwrap_or(u64::MAX).max(min_value)
 }
 
 fn oracle_checked_ceil_div_u64(value: u64, divisor: u64) -> Option<u64> {
     if divisor == 0 {
-        return None;
+        None
+    } else if value == 0 {
+        Some(0)
+    } else {
+        value.checked_sub(1).and_then(|v| (v / divisor).checked_add(1))
     }
-    if value == 0 {
-        return Some(0);
-    }
-    ((value - 1) / divisor).checked_add(1)
 }
 
 fn oracle_align_up_u64(value: u64, alignment: u64, min_value: u64) -> Option<u64> {
