@@ -88,6 +88,8 @@ impl xtask::gate::GateBehavior for WhatsSimilar {
                 cli.top_n,
                 cli.min_score,
                 cli.duplicate_report_json.as_ref(),
+                &ctx.root,
+                ctx.write,
             )?,
             Mode::All => run_all_pairs_query(
                 &mut report,
@@ -95,6 +97,8 @@ impl xtask::gate::GateBehavior for WhatsSimilar {
                 cli.top_n,
                 cli.min_score,
                 cli.duplicate_report_json.as_ref(),
+                &ctx.root,
+                ctx.write,
             )?,
         }
         Ok(report)

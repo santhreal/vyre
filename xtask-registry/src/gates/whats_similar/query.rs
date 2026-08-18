@@ -1,11 +1,12 @@
 //! The two scans this gate runs: one operation against the registry, or every
 //! registered pair against each other.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use xtask::artifact_gate::{settle, Generated};
 use xtask::gate::{Finding, GateError, Report};
 use xtask::gates::dedup_report::{
-    duplicate_report_generator_command, structural_similarity, write_duplicate_report_json,
+    duplicate_report_generator_command, structural_similarity, DuplicateFamilyReport,
 };
 
 use crate::gates::lego_audit::{OpInfo, MIN_COMPARABLE_FINGERPRINT_BYTES};
@@ -100,6 +101,24 @@ fn duplicate_finding(left: &str, right: &str, score: f64) -> Finding {
     )
 }
 
+fn settle_duplicate_report(
+    report: &mut Report,
+    root: &Path,
+    write: bool,
+    path: &Path,
+    duplicates: &DuplicateFamilyReport,
+) {
+    match Generated::json(path, duplicates) {
+        Ok(generated) => {
+            report.produced(path);
+            for finding in settle(root, "whats-similar", &[generated], write) {
+                report.find(finding);
+            }
+        }
+        Err(finding) => report.find(finding),
+    }
+}
+
 pub(super) fn run_target_query(
     report: &mut Report,
     ops: &[OpInfo],
@@ -107,6 +126,8 @@ pub(super) fn run_target_query(
     top_n: usize,
     min_score: f64,
     duplicate_report_json: Option<&PathBuf>,
+    root: &Path,
+    write: bool,
 ) -> Result<(), GateError> {
     let target = match ops.iter().find(|o| o.id == op_id) {
         Some(op) => op,
@@ -145,15 +166,7 @@ pub(super) fn run_target_query(
             path,
         );
         let duplicates = target_duplicate_report(target, &scored, &generator_command);
-        if let Err(error) = write_duplicate_report_json(path, &duplicates) {
-            return Err(GateError::new(
-                format!(
-                    "could not write the duplicate family report `{}`: {error}",
-                    path.display()
-                ),
-                "pass a writable path after --duplicate-report-json",
-            ));
-        }
+        settle_duplicate_report(report, root, write, path, &duplicates);
     }
 
     report.note(format!("whats-similar: target `{}` (tier={}, own_nodes={}, composed_nodes={}, fingerprint={} bytes)",
@@ -213,6 +226,8 @@ pub(super) fn run_all_pairs_query(
     top_n: usize,
     min_score: f64,
     duplicate_report_json: Option<&PathBuf>,
+    root: &Path,
+    write: bool,
 ) -> Result<(), GateError> {
     let eligible: Vec<&OpInfo> = ops
         .iter()
@@ -254,15 +269,7 @@ pub(super) fn run_all_pairs_query(
     if let Some(path) = duplicate_report_json {
         let generator_command = duplicate_report_generator_command("whats-similar --all", path);
         let duplicates = all_pairs_duplicate_report(&pairs, &generator_command);
-        if let Err(error) = write_duplicate_report_json(path, &duplicates) {
-            return Err(GateError::new(
-                format!(
-                    "could not write the duplicate family report `{}`: {error}",
-                    path.display()
-                ),
-                "pass a writable path after --duplicate-report-json",
-            ));
-        }
+        settle_duplicate_report(report, root, write, path, &duplicates);
     }
 
     report.note(format!("whats-similar: scanned {} registered ops for all-pairs duplicate candidates (min={:.2}, top={})",
@@ -332,8 +339,11 @@ pub(super) fn run_all_pairs_query(
 
 #[cfg(test)]
 mod tests {
-    use super::{skip_class_findings, SkipClass};
+    use std::fs;
+
+    use super::{settle_duplicate_report, skip_class_findings, SkipClass};
     use xtask::gate::Report;
+    use xtask::gates::dedup_report::duplicate_family_report;
 
     /// `SkipClass` and `skip_class_findings` are private to this module and the
     /// all-pairs scan that calls them needs the whole registered operation set,
@@ -351,6 +361,31 @@ mod tests {
             }],
         );
         report
+    }
+
+    /// Comparison mode must derive and compare the report without writing it;
+    /// write mode must install those exact derived bytes.
+    #[test]
+    fn duplicate_report_respects_write_authority() {
+        let root = tempfile::tempdir().unwrap();
+        let path = std::path::Path::new("report.json");
+        let duplicates = duplicate_family_report(
+            "xtask whats-similar --all --duplicate-report-json report.json",
+            "registered-op-ir-shape",
+            Vec::new(),
+        );
+
+        let mut comparison = Report::clean();
+        settle_duplicate_report(&mut comparison, root.path(), false, path, &duplicates);
+        assert_eq!(comparison.count(), 1);
+        assert!(!root.path().join(path).exists());
+
+        let mut writer = Report::clean();
+        settle_duplicate_report(&mut writer, root.path(), true, path, &duplicates);
+        assert_eq!(writer.count(), 0);
+        assert!(fs::read_to_string(root.path().join(path))
+            .unwrap()
+            .contains("\"family_count\": 0"));
     }
 
     /// A class that grew past its measured ceiling is a finding naming both

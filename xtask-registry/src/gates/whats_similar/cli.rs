@@ -31,6 +31,7 @@ pub(super) fn parse_args(args: &[String]) -> Result<Cli, String> {
     let mut iter = args.iter().skip(2);
     while let Some(a) = iter.next() {
         match a.as_str() {
+            "--write" => {}
             "--all" => {
                 all = true;
             }
@@ -162,6 +163,18 @@ mod tests {
                 "release/evidence/dedup/registered-op-duplicates.json"
             ))
         );
+    }
+
+    #[test]
+    fn parse_accepts_write_authority() {
+        let args = vec![
+            "xtask".to_string(),
+            "whats-similar".to_string(),
+            "--all".to_string(),
+            "--write".to_string(),
+        ];
+        let cli = parse_args(&args).unwrap();
+        assert_eq!(cli.mode, Mode::All);
     }
 
     #[test]
