@@ -3,8 +3,6 @@
 //! Applies brightness, contrast, saturate, and invert in sequence.
 //! All math is integer fixed-point 16.16. Category A  -  pure IR.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::filter_chain";
@@ -44,62 +42,49 @@ pub fn filter_chain(
         )]
     };
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(pixels, 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(count),
-        ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![wrap_child_region(
-                crate::visual::packed_rgba_map::OP_ID,
-                Ident::from(OP_ID),
-                vec![
-                    Node::let_bind("idx", Expr::gid_x()),
-                    Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(count)), {
-                        let mut body = vec![
-                            Node::let_bind("pixel", Expr::load(pixels, Expr::var("idx"))),
-                            // Unpack RGBA.
-                            Node::let_bind(
-                                "r",
-                                crate::builder::stencil::unpack_channel("pixel", 0),
-                            ),
-                            Node::let_bind(
-                                "g",
-                                crate::builder::stencil::unpack_channel("pixel", 8),
-                            ),
-                            Node::let_bind(
-                                "b",
-                                crate::builder::stencil::unpack_channel("pixel", 16),
-                            ),
-                            Node::let_bind(
-                                "a",
-                                crate::builder::stencil::unpack_channel("pixel", 24),
-                            ),
-                            // 1. Brightness: channel = channel * brightness >> 16
-                            Node::assign(
-                                "r",
-                                super::fixed_mul_16_16_unsigned_expr(
-                                    Expr::var("r"),
-                                    Expr::u32(br_fp),
-                                ),
-                            ),
-                            Node::assign(
-                                "g",
-                                super::fixed_mul_16_16_unsigned_expr(
-                                    Expr::var("g"),
-                                    Expr::u32(br_fp),
-                                ),
-                            ),
-                            Node::assign(
-                                "b",
-                                super::fixed_mul_16_16_unsigned_expr(
-                                    Expr::var("b"),
-                                    Expr::u32(br_fp),
-                                ),
-                            ),
-                        ];
+    let mut body = vec![
+        Node::let_bind("pixel", Expr::load(pixels, Expr::var("idx"))),
+        // Unpack RGBA.
+        Node::let_bind(
+            "r",
+            crate::builder::stencil::unpack_channel("pixel", 0),
+        ),
+        Node::let_bind(
+            "g",
+            crate::builder::stencil::unpack_channel("pixel", 8),
+        ),
+        Node::let_bind(
+            "b",
+            crate::builder::stencil::unpack_channel("pixel", 16),
+        ),
+        Node::let_bind(
+            "a",
+            crate::builder::stencil::unpack_channel("pixel", 24),
+        ),
+        // 1. Brightness: channel = channel * brightness >> 16
+        Node::assign(
+            "r",
+            super::fixed_mul_16_16_unsigned_expr(
+                Expr::var("r"),
+                Expr::u32(br_fp),
+            ),
+        ),
+        Node::assign(
+            "g",
+            super::fixed_mul_16_16_unsigned_expr(
+                Expr::var("g"),
+                Expr::u32(br_fp),
+            ),
+        ),
+        Node::assign(
+            "b",
+            super::fixed_mul_16_16_unsigned_expr(
+                Expr::var("b"),
+                Expr::u32(br_fp),
+            ),
+        ),
+    ];
+
                         body.extend(clamp255("r"));
                         body.extend(clamp255("g"));
                         body.extend(clamp255("b"));
@@ -242,19 +227,17 @@ pub fn filter_chain(
                         // Pack and write.
                         body.push(Node::let_bind(
                             "out",
-                            crate::builder::stencil::pack_rgba(
-                                Expr::var("r"),
-                                Expr::var("g"),
-                                Expr::var("b"),
-                                Expr::var("a"),
-                            ),
+                            crate::builder::stencil::pack_rgba_named("r", "g", "b", "a"),
                         ));
                         body.push(Node::store(pixels, Expr::var("idx"), Expr::var("out")));
-                        body
-                    }),
-                ],
-            )],
-        )],
+    crate::visual::packed_rgba_map::build_pixel_pipeline(
+        OP_ID,
+        vec![
+            BufferDecl::storage(pixels, 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(count),
+        ],
+        count,
+        body,
     )
 }
 

@@ -4,8 +4,8 @@
 //! share the same execution shape: one invocation reads or derives one
 //! packed `u32` RGBA pixel and writes one packed `u32` pixel.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Stable Tier 2.5 op id.
@@ -40,6 +40,30 @@ pub fn packed_rgba_map(input: &str, output: &str, count: u32) -> Program {
         ],
         [256, 1, 1],
         vec![packed_rgba_map_node(input, output, count)],
+    )
+}
+
+/// Build a standard packed-RGBA visual compute program with nested child region.
+pub(crate) fn build_pixel_pipeline(
+    op_id: &'static str,
+    buffers: Vec<BufferDecl>,
+    pixel_count: u32,
+    body: Vec<Node>,
+) -> Program {
+    Program::wrapped(
+        buffers,
+        super::PIXEL_WORKGROUP_SIZE,
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![wrap_child_region(
+                OP_ID,
+                Ident::from(op_id),
+                vec![
+                    Node::let_bind("idx", Expr::gid_x()),
+                    Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(pixel_count)), body),
+                ],
+            )],
+        )],
     )
 }
 

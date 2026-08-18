@@ -11,8 +11,6 @@
 //! the Tier 2.5 `packed_rgba_map` shape. No new IR variant, no target
 //! lowering.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::cell_grid";
@@ -37,53 +35,55 @@ impl GridShape {
     /// Pixels across the whole surface.
     #[must_use]
     pub const fn width(&self) -> u32 {
-        self.cols * self.cell_width
+        self.to_stencil_shape().width()
     }
 
     /// Pixels down the whole surface.
     #[must_use]
     pub const fn height(&self) -> u32 {
-        self.rows * self.cell_height
+        self.to_stencil_shape().height()
     }
 
     /// Cells in the grid.
     #[must_use]
     pub const fn cell_count(&self) -> u32 {
-        self.cols * self.rows
+        self.to_stencil_shape().cell_count()
     }
 
     /// Pixels in the surface.
     #[must_use]
     pub const fn pixel_count(&self) -> u32 {
-        self.width() * self.height()
+        self.to_stencil_shape().pixel_count()
     }
-    /// Validate dimensions and overflow bounds.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `cols` or `rows` is 0, if `cell_width` or `cell_height` is 0,
-    /// or if any dimension multiplication overflows `u32`.
-    pub(super) fn validated(self) -> Self {
-        let _ = crate::builder::stencil::CellGridShape {
+
+    #[inline]
+    pub(crate) const fn to_stencil_shape(&self) -> crate::builder::stencil::CellGridShape {
+        crate::builder::stencil::CellGridShape {
             cols: self.cols,
             rows: self.rows,
             cell_width: self.cell_width,
             cell_height: self.cell_height,
         }
-        .validated();
+    }
+
+    /// Validate dimensions and overflow bounds.
+    pub(super) fn validated(self) -> Self {
+        let _ = self.to_stencil_shape().validated();
         self
     }
 }
+
+impl From<GridShape> for crate::builder::stencil::CellGridShape {
+    fn from(shape: GridShape) -> Self {
+        shape.to_stencil_shape()
+    }
+}
+
 /// Bind `y`, `x`, `col`, `row` and `cell` for the pixel already bound as
 /// `idx`. Shared by every op that expands a cell grid, so the mapping cannot
 /// drift between them.
 pub(super) fn cell_lookup_nodes(shape: GridShape) -> Vec<Node> {
-    crate::builder::stencil::cell_lookup_nodes(crate::builder::stencil::CellGridShape {
-        cols: shape.cols,
-        rows: shape.rows,
-        cell_width: shape.cell_width,
-        cell_height: shape.cell_height,
-    })
+    crate::builder::stencil::cell_lookup_nodes(shape.to_stencil_shape())
 }
 
 /// Build a Program that fills `output` with one packed RGBA pixel per pixel of
@@ -100,33 +100,23 @@ pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
     let shape = shape.validated();
     let pixels = shape.pixel_count();
 
-    Program::wrapped(
+    let mut body = cell_lookup_nodes(shape);
+    body.push(Node::let_bind(
+        "colour",
+        Expr::load(cells, Expr::var("cell")),
+    ));
+    body.push(Node::store(output, Expr::var("idx"), Expr::var("colour")));
+
+    crate::visual::packed_rgba_map::build_pixel_pipeline(
+        OP_ID,
         vec![
             BufferDecl::storage(cells, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(shape.cell_count()),
             BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(pixels),
         ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![wrap_child_region(
-                crate::visual::packed_rgba_map::OP_ID,
-                Ident::from(OP_ID),
-                vec![
-                    Node::let_bind("idx", Expr::gid_x()),
-                    Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(pixels)), {
-                        let mut body = cell_lookup_nodes(shape);
-                        body.push(Node::let_bind(
-                            "colour",
-                            Expr::load(cells, Expr::var("cell")),
-                        ));
-                        body.push(Node::store(output, Expr::var("idx"), Expr::var("colour")));
-                        body
-                    }),
-                ],
-            )],
-        )],
+        pixels,
+        body,
     )
 }
 

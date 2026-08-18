@@ -247,45 +247,8 @@ pub fn try_csr_read_only_buffers(
     node_count: u32,
     edge_count: u32,
 ) -> Result<Vec<BufferDecl>, String> {
-    let offset_count = checked_csr_offset_count(node_count, "CSR")?;
-    let physical_edge_count = edge_count.max(1);
-    Ok(vec![
-        BufferDecl::storage(
-            NAME_NODES,
-            BINDING_NODES,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(node_count.max(1)),
-        BufferDecl::storage(
-            NAME_EDGE_OFFSETS,
-            BINDING_EDGE_OFFSETS,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(offset_count),
-        BufferDecl::storage(
-            NAME_EDGE_TARGETS,
-            BINDING_EDGE_TARGETS,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(physical_edge_count),
-        BufferDecl::storage(
-            NAME_EDGE_KIND_MASK,
-            BINDING_EDGE_KIND_MASK,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(physical_edge_count),
-        BufferDecl::storage(
-            NAME_NODE_TAGS,
-            BINDING_NODE_TAGS,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(node_count.max(1)),
-    ])
+    let _ = checked_csr_offset_count(node_count, "CSR")?;
+    Ok(csr_read_only_buffers(node_count, edge_count))
 }
 
 /// Construct a packed frontier bitset buffer declaration.
@@ -777,6 +740,19 @@ impl<'a> CsrTraversalComposer<'a> {
         frontier_out: &str,
         on_hit: impl Fn() -> Vec<Node>,
     ) -> Vec<Node> {
+        self.emit_backward_scan_full(src, frontier_in, frontier_out, on_hit, Vec::new)
+    }
+
+    /// Emit one backward CSR traversal pass for candidate node `src` with custom bit-set actions.
+    #[must_use]
+    pub fn emit_backward_scan_full(
+        &self,
+        src: Expr,
+        frontier_in: &str,
+        frontier_out: &str,
+        on_hit: impl Fn() -> Vec<Node>,
+        on_new_bit: impl Fn() -> Vec<Node>,
+    ) -> Vec<Node> {
         let name = |n: &str| self.local_name(n);
         let edge_start = name("edge_start");
         let edge_end = name("edge_end");
@@ -858,7 +834,7 @@ impl<'a> CsrTraversalComposer<'a> {
                         value: "_prev",
                     },
                     |word| word,
-                    Vec::new(),
+                    on_new_bit(),
                 ),
             ),
         ]
@@ -965,76 +941,8 @@ impl<'a> CsrTraversalComposer<'a> {
         let t = Expr::InvocationId { axis: 0 };
         let mut body = vec![
             Node::let_bind("src", t.clone()),
-            Node::let_bind("hit", Expr::u32(0)),
         ];
-        body.extend(vec![
-            Node::let_bind(
-                "edge_start",
-                Expr::load(self.buffers.offsets, Expr::var("src")),
-            ),
-            Node::let_bind(
-                "edge_end",
-                Expr::load(
-                    self.buffers.offsets,
-                    Expr::add(Expr::var("src"), Expr::u32(1)),
-                ),
-            ),
-            Node::loop_for(
-                "e",
-                Expr::var("edge_start"),
-                Expr::var("edge_end"),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("hit"), Expr::u32(0)),
-                    vec![
-                        Node::let_bind(
-                            "kind_mask",
-                            Expr::load(
-                                self.buffers.edge_kind_mask.unwrap_or(NAME_EDGE_KIND_MASK),
-                                Expr::var("e"),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::ne(
-                                Expr::bitand(Expr::var("kind_mask"), Expr::u32(self.allow_mask)),
-                                Expr::u32(0),
-                            ),
-                            vec![
-                                Node::let_bind(
-                                    "dst",
-                                    Expr::load(self.buffers.targets, Expr::var("e")),
-                                ),
-                                Node::if_then(
-                                    Expr::lt(Expr::var("dst"), Expr::u32(self.node_count)),
-                                    when_bit_set(
-                                        frontier_in,
-                                        &Expr::var("dst"),
-                                        None,
-                                        "dst_word",
-                                        "dst_bit",
-                                        |word| word,
-                                        vec![Node::assign("hit", Expr::u32(1))],
-                                    ),
-                                ),
-                            ],
-                        ),
-                    ],
-                )],
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("hit"), Expr::u32(1)),
-                set_bit(
-                    frontier_out,
-                    &Expr::var("src"),
-                    BitAccess {
-                        word: "src_word_idx",
-                        mask: "src_bit",
-                        value: "_prev",
-                    },
-                    |word| word,
-                    Vec::new(),
-                ),
-            ),
-        ]);
+        body.extend(self.emit_backward_scan(Expr::var("src"), frontier_in, frontier_out, Vec::new));
 
         Program::wrapped(
             buffers,
@@ -1050,72 +958,18 @@ impl<'a> CsrTraversalComposer<'a> {
     #[must_use]
     pub fn build_parallel_backward_or_changed(&self, frontier_out: &str, changed: &str) -> Program {
         let src = Expr::InvocationId { axis: 0 };
-        let body = vec![
-            Node::let_bind("edge_start", Expr::load(self.buffers.offsets, src.clone())),
-            Node::let_bind(
-                "edge_end",
-                Expr::load(self.buffers.offsets, Expr::add(src.clone(), Expr::u32(1))),
-            ),
-            Node::let_bind("hit", Expr::u32(0)),
-            Node::loop_for(
-                "e",
-                Expr::var("edge_start"),
-                Expr::var("edge_end"),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("hit"), Expr::u32(0)),
-                    vec![
-                        Node::let_bind(
-                            "kind_mask",
-                            Expr::load(
-                                self.buffers.edge_kind_mask.unwrap_or(NAME_EDGE_KIND_MASK),
-                                Expr::var("e"),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::ne(
-                                Expr::bitand(Expr::var("kind_mask"), Expr::u32(self.allow_mask)),
-                                Expr::u32(0),
-                            ),
-                            vec![
-                                Node::let_bind(
-                                    "dst",
-                                    Expr::load(self.buffers.targets, Expr::var("e")),
-                                ),
-                                Node::if_then(
-                                    Expr::lt(Expr::var("dst"), Expr::u32(self.node_count)),
-                                    when_bit_set(
-                                        frontier_out,
-                                        &Expr::var("dst"),
-                                        None,
-                                        "dst_word",
-                                        "dst_bit",
-                                        |word| word,
-                                        vec![Node::assign("hit", Expr::u32(1))],
-                                    ),
-                                ),
-                            ],
-                        ),
-                    ],
-                )],
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("hit"), Expr::u32(1)),
-                set_bit(
-                    frontier_out,
-                    &src,
-                    BitAccess {
-                        word: "src_word_idx",
-                        mask: "src_bit",
-                        value: "old",
-                    },
-                    |word| word,
-                    vec![Node::let_bind(
-                        "_changed",
-                        Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
-                    )],
-                ),
-            ),
-        ];
+        let body = self.emit_backward_scan_full(
+            src.clone(),
+            frontier_out,
+            frontier_out,
+            Vec::new,
+            || {
+                vec![Node::let_bind(
+                    "_changed",
+                    Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
+                )]
+            },
+        );
 
         let mut buffers = csr_read_only_buffers(self.node_count, self.edge_count);
         csr_push_frontier_changed_buffers(&mut buffers, frontier_out, changed, self.node_count);

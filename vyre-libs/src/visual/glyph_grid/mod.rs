@@ -14,8 +14,6 @@
 //!
 //! [`cell_grid_fill`]: crate::visual::cell_grid::cell_grid_fill
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::cell_grid::{cell_lookup_nodes, GridShape};
@@ -80,7 +78,63 @@ pub fn glyph_grid_blend(
     let pixels = shape.pixel_count();
     let cells = shape.cell_count();
 
-    Program::wrapped(
+    let mut body = cell_lookup_nodes(shape);
+    // Position within the cell, reusing the column and row
+    // the lookup already resolved.
+    body.push(Node::let_bind(
+        "px",
+        Expr::sub(
+            Expr::var("x"),
+            Expr::mul(Expr::var("col"), Expr::u32(shape.cell_width)),
+        ),
+    ));
+    body.push(Node::let_bind(
+        "py",
+        Expr::sub(
+            Expr::var("y"),
+            Expr::mul(Expr::var("row"), Expr::u32(shape.cell_height)),
+        ),
+    ));
+    body.push(Node::let_bind(
+        "glyph",
+        Expr::load(glyphs, Expr::var("cell")),
+    ));
+    // The atlas is glyph major, so a glyph's texels are
+    // contiguous and a cell reads one cache line's worth
+    // of them rather than striding the whole atlas.
+    body.push(Node::let_bind(
+        "texel",
+        Expr::add(
+            Expr::mul(Expr::var("glyph"), Expr::u32(cell_area)),
+            crate::builder::stencil::flat_index(
+                Expr::var("py"),
+                shape.cell_width,
+                Expr::var("px"),
+            ),
+        ),
+    ));
+    body.push(Node::let_bind(
+        "cov",
+        Expr::bitand(Expr::load(atlas, Expr::var("texel")), Expr::u32(0xFF)),
+    ));
+    body.push(Node::let_bind(
+        "inv_cov",
+        Expr::sub(Expr::u32(255), Expr::var("cov")),
+    ));
+    body.push(Node::let_bind("fg_px", Expr::load(fg, Expr::var("cell"))));
+    body.push(Node::let_bind("bg_px", Expr::load(bg, Expr::var("cell"))));
+    body.push(Node::let_bind("out_r", blend_channel(0)));
+    body.push(Node::let_bind("out_g", blend_channel(8)));
+    body.push(Node::let_bind("out_b", blend_channel(16)));
+    body.push(Node::let_bind("out_a", blend_channel(24)));
+    body.push(Node::let_bind(
+        "packed",
+        crate::builder::stencil::pack_rgba_named("out_r", "out_g", "out_b", "out_a"),
+    ));
+    body.push(Node::store(output, Expr::var("idx"), Expr::var("packed")));
+
+    crate::visual::packed_rgba_map::build_pixel_pipeline(
+        OP_ID,
         vec![
             BufferDecl::storage(glyphs, 0, BufferAccess::ReadOnly, DataType::U32).with_count(cells),
             BufferDecl::storage(fg, 1, BufferAccess::ReadOnly, DataType::U32).with_count(cells),
@@ -90,79 +144,8 @@ pub fn glyph_grid_blend(
             BufferDecl::storage(output, 4, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(pixels),
         ],
-        super::PIXEL_WORKGROUP_SIZE,
-        vec![wrap_anonymous_region(
-            OP_ID,
-            vec![wrap_child_region(
-                crate::visual::packed_rgba_map::OP_ID,
-                Ident::from(OP_ID),
-                vec![
-                    Node::let_bind("idx", Expr::gid_x()),
-                    Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(pixels)), {
-                        let mut body = cell_lookup_nodes(shape);
-                        // Position within the cell, reusing the column and row
-                        // the lookup already resolved.
-                        body.push(Node::let_bind(
-                            "px",
-                            Expr::sub(
-                                Expr::var("x"),
-                                Expr::mul(Expr::var("col"), Expr::u32(shape.cell_width)),
-                            ),
-                        ));
-                        body.push(Node::let_bind(
-                            "py",
-                            Expr::sub(
-                                Expr::var("y"),
-                                Expr::mul(Expr::var("row"), Expr::u32(shape.cell_height)),
-                            ),
-                        ));
-                        body.push(Node::let_bind(
-                            "glyph",
-                            Expr::load(glyphs, Expr::var("cell")),
-                        ));
-                        // The atlas is glyph major, so a glyph's texels are
-                        // contiguous and a cell reads one cache line's worth
-                        // of them rather than striding the whole atlas.
-                        body.push(Node::let_bind(
-                            "texel",
-                            Expr::add(
-                                Expr::mul(Expr::var("glyph"), Expr::u32(cell_area)),
-                                crate::builder::stencil::flat_index(
-                                    Expr::var("py"),
-                                    shape.cell_width,
-                                    Expr::var("px"),
-                                ),
-                            ),
-                        ));
-                        body.push(Node::let_bind(
-                            "cov",
-                            Expr::bitand(Expr::load(atlas, Expr::var("texel")), Expr::u32(0xFF)),
-                        ));
-                        body.push(Node::let_bind(
-                            "inv_cov",
-                            Expr::sub(Expr::u32(255), Expr::var("cov")),
-                        ));
-                        body.push(Node::let_bind("fg_px", Expr::load(fg, Expr::var("cell"))));
-                        body.push(Node::let_bind("bg_px", Expr::load(bg, Expr::var("cell"))));
-                        body.push(Node::let_bind("out_r", blend_channel(0)));
-                        body.push(Node::let_bind("out_g", blend_channel(8)));
-                        body.push(Node::let_bind("out_b", blend_channel(16)));
-                        body.push(Node::let_bind("out_a", blend_channel(24)));
-                        body.push(Node::let_bind(
-                            "packed",
-                            crate::builder::stencil::pack_rgba(
-                                Expr::var("out_r"),
-                                Expr::var("out_g"),
-                                Expr::var("out_b"),
-                                Expr::var("out_a"),
-                            ),
-                        ));
-                        body.push(Node::store(output, Expr::var("idx"), Expr::var("packed")));
-                        body
-                    }),
-                ],
-            )],
-        )],
+        pixels,
+        body,
     )
 }
 
