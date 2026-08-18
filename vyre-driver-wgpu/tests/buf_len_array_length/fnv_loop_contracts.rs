@@ -34,29 +34,8 @@ fn fnv1a64_shaped_count_program() -> Program {
             Node::store("out", Expr::u32(0), Expr::var("n")),
         ],
     )];
-    let mid = Node::Region {
-        generator: Ident::from("vyre-primitives::test::fnv_shape_inner"),
-        source_region: None,
-        body: Arc::new(inner),
-    };
-    let outer = Node::Region {
-        generator: Ident::from("vyre-primitives::test::fnv_shape_mid"),
-        source_region: Some(Ident::from("vyre-libs::test::fnv_shape_outer")),
-        body: Arc::new(vec![mid]),
-    };
-    let body = Node::Region {
-        generator: Ident::from("vyre-libs::test::fnv_shape_outer"),
-        source_region: None,
-        body: Arc::new(vec![outer]),
-    };
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![body],
-    )
+    let body = triple_nested_region(inner, "fnv_shape");
+    wrapped_storage_program(body)
 }
 
 #[test]

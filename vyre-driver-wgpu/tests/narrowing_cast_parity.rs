@@ -28,20 +28,19 @@ use vyre_test_support::cast_parity::{NarrowingCase, NARROWING_CASES, NARROWING_I
 /// narrowing cast produced rather than what a byte-element store would have
 /// masked it to.
 fn run(backend: &WgpuBackend, narrow: DataType, wide: DataType) -> Vec<u32> {
-    let ins = NARROWING_INPUTS;
-    let buffers = vec![ParityInput::u32_words("input", &ins)];
-    let count = ins.len() as u32;
-    let program = elementwise_program(wide.clone(), &buffers, count, &|loads| {
+    let inputs = NARROWING_INPUTS;
+    let buffers = vec![ParityInput::u32_words("input", &inputs)];
+    let program = elementwise_program(wide.clone(), &buffers, inputs.len() as u32, &|loads| {
         Expr::cast(wide.clone(), Expr::cast(narrow.clone(), loads[0].clone()))
     });
-    let bytes = dispatch_single_output(
-        &|program, inputs| backend.dispatch_borrowed(program, inputs, &DispatchConfig::default()),
+    let raw = dispatch_single_output(
+        &|prog, in_bufs| backend.dispatch_borrowed(prog, in_bufs, &DispatchConfig::default()),
         &program,
         &buffers,
-        ins.len() * 4,
-        "narrowing-cast parity",
+        inputs.len() * 4,
+        "wgpu narrowing-cast parity",
     );
-    u32_words(&bytes)
+    u32_words(&raw)
 }
 
 /// Every narrowing cast the matrix declares must truncate and re-extend on the

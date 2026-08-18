@@ -16,7 +16,7 @@
 //! `vyre-primitives/tests/adversarial_hash.rs`).
 
 mod harness;
-use harness::u32_bytes;
+use harness::{byte_stream_input_bytes, dispatch_single_u32_output, u32_bytes};
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -31,31 +31,14 @@ fn reference_fnv1a32(bytes: &[u8]) -> u32 {
 fn gpu_fnv1a32(backend: &WgpuBackend, bytes: &[u8]) -> u32 {
     let n = bytes.len() as u32;
     let program = fnv1a32_program("input", "out", n);
-    let input_words: Vec<u32> = bytes.iter().map(|&b| u32::from(b)).collect();
-    let input_b = u32_bytes(&input_words);
+    let input_b = byte_stream_input_bytes(bytes);
     let out_init = u32_bytes(&[0u32]);
-
-    // Binding order: 0 = input (RO U32), 1 = out (ReadWrite/output U32). The
-    // readback returns the output buffer(s), so outputs[0] is the hash.
-    let outputs = backend
-        .dispatch_borrowed(
-            &program,
-            &[input_b.as_slice(), out_init.as_slice()],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: WGPU must dispatch the FNV-1a32 loop program.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "fnv1a32_program exposes one output (out); got {}",
-        outputs.len()
-    );
-    let words: Vec<u32> = outputs[0]
-        .chunks_exact(4)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect();
-    assert_eq!(words.len(), 1, "out is a single u32 hash");
-    words[0]
+    dispatch_single_u32_output(
+        backend,
+        &program,
+        &[input_b.as_slice(), out_init.as_slice()],
+        "Fix: WGPU must dispatch the FNV-1a32 loop program.",
+    )
 }
 
 fn check(backend: &WgpuBackend, bytes: &[u8], label: &str) {

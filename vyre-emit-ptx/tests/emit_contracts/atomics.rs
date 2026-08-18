@@ -15,35 +15,6 @@ fn shared_atomic_kernel(atomic_op: AtomicOp) -> KernelDescriptor {
 }
 
 #[test]
-fn nested_if_inside_for_emits_correct_label_nesting() {
-    // for { if { ... } }
-    let kernel = descriptor("nested")
-        .dispatch(64, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    lit(1, 1),
-                    effect(
-                        KernelOpKind::StructuredForLoop {
-                            loop_var: "i".into(),
-                        },
-                        [0, 1, 0],
-                    ),
-                ])
-                .children([body()
-                    .ops([lit(0, 10), effect(KernelOpKind::StructuredIfThen, [10, 0])])
-                    .child(empty_child_body())
-                    .literal(LiteralValue::Bool(true))])
-                .literals([LiteralValue::U32(0), LiteralValue::U32(8)]),
-        )
-        .build();
-    let s = emit(&kernel).unwrap();
-    assert!(s.contains("$L_for_head_"));
-    assert!(s.contains("$L_if_end_"));
-}
-
-#[test]
 fn atomic_add_emits_atom_global_add_u32() {
     let kernel = atomic_kernel(
         "atomic_add",

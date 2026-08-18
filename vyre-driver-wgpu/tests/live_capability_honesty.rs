@@ -9,8 +9,10 @@
 #![allow(clippy::assertions_on_constants)]
 
 mod harness;
-use harness::{add_one_program, selected_adapter, shared_live_backend as live_backend};
-
+use harness::{
+    add_one_program, assert_actionable_error, assert_non_cpu_backend, selected_adapter,
+    shared_live_backend as live_backend,
+};
 use std::time::Instant;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -282,17 +284,7 @@ fn async_dispatch_ready_state_is_observable_for_non_trivial_work() {
 #[test]
 fn acquisition_never_returns_cpu_adapter() {
     let backend = live_backend();
-    let info = backend.adapter_info();
-    assert!(
-        !matches!(
-            info.device_type,
-            wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
-        ),
-        "Fix: WgpuBackend must never silently fall back to a CPU adapter. \
-         Adapter `{}` has type {:?}.",
-        info.name,
-        info.device_type
-    );
+    assert_non_cpu_backend(&backend);
 }
 
 #[test]
@@ -303,17 +295,10 @@ fn acquire_fails_when_only_cpu_adapters_are_available() {
         let result = WgpuBackend::acquire();
         assert!(
             result.is_err(),
-            "Fix: WgpuBackend::acquire() must fail when only CPU/Other adapters \
-             are available, rather than falling back to CPU execution."
+            "Fix: WgpuBackend::acquire() must fail when only CPU/Other adapters are available, rather than falling back to CPU execution."
         );
-        let err = result.unwrap_err();
-        let text = err.to_string();
-        assert!(
-            text.contains("Fix:"),
-            "Fix: CPU-only rejection error must be actionable. Got: {text}"
-        );
+        assert_actionable_error(&result, "CPU-only rejection error must be actionable");
     }
-    // If a real GPU exists, this test passes trivially.
 }
 
 #[test]
@@ -327,18 +312,9 @@ fn new_also_rejects_cpu_fallback() {
             "Fix: WgpuBackend::new() must fail when only CPU/Other adapters are available."
         );
     }
-    // If a real GPU exists, verify the acquired adapter is not CPU.
     if has_real_gpu {
         let backend = WgpuBackend::new()
             .expect("Fix: WgpuBackend::new() must acquire a real GPU when one is present.");
-        let info = backend.adapter_info();
-        assert!(
-            !matches!(
-                info.device_type,
-                wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
-            ),
-            "Fix: WgpuBackend::new() must never return a CPU adapter. Got {:?}",
-            info.device_type
-        );
+        assert_non_cpu_backend(&backend);
     }
 }

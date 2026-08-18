@@ -75,13 +75,13 @@ fn div_program(n: u32) -> Program {
 }
 
 fn run(backend: &WgpuBackend, program: &Program, ps: &[(i32, i32)]) -> Vec<i32> {
-    let a = u32_bytes(&ps.iter().map(|&(a, _)| a as u32).collect::<Vec<_>>());
-    let b = u32_bytes(&ps.iter().map(|&(_, b)| b as u32).collect::<Vec<_>>());
-    let out_init = u32_bytes(&vec![0u32; ps.len()]);
+    let a_bytes = u32_bytes(&ps.iter().map(|&(a, _)| a as u32).collect::<Vec<_>>());
+    let b_bytes = u32_bytes(&ps.iter().map(|&(_, b)| b as u32).collect::<Vec<_>>());
+    let zero_bytes = u32_bytes(&vec![0u32; ps.len()]);
     let outputs = backend
         .dispatch_borrowed(
             program,
-            &[out_init.as_slice(), a.as_slice(), b.as_slice()],
+            &[zero_bytes.as_slice(), a_bytes.as_slice(), b_bytes.as_slice()],
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the signed modulo contract.");

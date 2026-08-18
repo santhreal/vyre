@@ -112,10 +112,8 @@ fn capacity_overflow_uses_shared_policy_wording() {
 }
 
 fn next_u64(state: &mut u64) -> u64 {
-    let mut x = *state;
-    x ^= x << 13;
-    x ^= x >> 7;
-    x ^= x << 17;
-    *state = x;
-    x
+    *state ^= *state << 13;
+    *state ^= *state >> 7;
+    *state ^= *state << 17;
+    *state
 }

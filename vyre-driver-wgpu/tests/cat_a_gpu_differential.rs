@@ -34,7 +34,7 @@
 
 #![allow(deprecated)]
 mod harness;
-use harness::f32_to_ordered;
+use harness::{cat_a_dispatch_config, f32_to_ordered};
 use std::sync::OnceLock;
 
 use vyre::ir::BufferAccess;
@@ -139,35 +139,10 @@ fn map_inputs_for_lowered(
     lowered_inputs
 }
 fn run_gpu(lowered: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    let config = dispatch_config_for(lowered);
+    let config = cat_a_dispatch_config(lowered);
     backend()
         .dispatch(lowered, &inputs, &config)
         .expect("5090 must execute Cat-A op")
-}
-
-fn dispatch_config_for(program: &Program) -> DispatchConfig {
-    let mut config = DispatchConfig::default();
-    let workgroup = program.workgroup_size();
-    if workgroup[1] == 1 && workgroup[2] == 1 {
-        return config;
-    }
-
-    let lanes = u64::from(workgroup[0])
-        .saturating_mul(u64::from(workgroup[1]))
-        .saturating_mul(u64::from(workgroup[2]));
-    let max_writable_count = program
-        .buffers()
-        .iter()
-        .filter(|decl| matches!(decl.access(), BufferAccess::ReadWrite) || decl.is_output())
-        .map(|decl| u64::from(decl.count()))
-        .max()
-        .unwrap_or(1);
-    assert!(
-        max_writable_count <= lanes,
-        "Fix: non-1D Cat-A program needs explicit multi-workgroup grid; workgroup={workgroup:?}, lanes={lanes}, writable={max_writable_count}"
-    );
-    config.grid_override = Some([1, 1, 1]);
-    config
 }
 
 /// Assert CPU and GPU paths agree byte-for-byte on `program` given the
@@ -290,21 +265,7 @@ fn run_primitive_entry_diff(entry: &vyre_foundation::operation::SemanticOperatio
 }
 
 fn missing_capability_reason(program: &vyre::ir::Program) -> Option<String> {
-    let required = vyre_foundation::program_caps::scan(program);
-    let backend = backend();
-    // Use the boolean capability queries from the frozen VyreBackend trait.
-    let check = vyre_foundation::program_caps::check_backend_capabilities(
-        backend.id(),
-        backend.supports_subgroup_ops(),
-        backend.supports_f16(),
-        backend.supports_bf16(),
-        backend.supports_indirect_dispatch(),
-        true,
-        backend.supports_distributed_collectives(),
-        backend.max_workgroup_size(),
-        &required,
-    );
-    check.err().map(|missing| missing.to_string())
+    harness::every_op_random_inputs::missing_capability_reason(backend(), program)
 }
 
 #[test]

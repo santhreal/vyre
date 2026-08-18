@@ -185,10 +185,6 @@ fn stage(
 }
 
 fn next_u64(state: &mut u64) -> u64 {
-    let mut x = *state;
-    x ^= x << 13;
-    x ^= x >> 7;
-    x ^= x << 17;
-    *state = x;
-    x
+    *state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+    *state
 }

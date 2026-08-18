@@ -210,3 +210,129 @@ pub(crate) fn assert_pending_dispatch_from_wgpu_is_object_safe() {
     let expected = add_one_expected(1024);
     assert_eq!(outputs, vec![expected]);
 }
+
+/// Assert that the backend is bound to a real hardware GPU, never a CPU fallback.
+pub(crate) fn assert_non_cpu_backend(backend: &WgpuBackend) {
+    let info = backend.adapter_info();
+    assert!(
+        !matches!(
+            info.device_type,
+            wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
+        ),
+        "Fix: WgpuBackend must never silently fall back to a CPU adapter. Adapter `{}` has type {:?}.",
+        info.name,
+        info.device_type
+    );
+}
+
+/// Assert that an error result contains an actionable `Fix:` message.
+pub(crate) fn assert_actionable_error<T: std::fmt::Debug>(
+    result: &Result<T, vyre_driver::BackendError>,
+    msg: &str,
+) {
+    let err = result.as_ref().unwrap_err();
+    let text = err.to_string();
+    assert!(
+        text.contains("Fix:"),
+        "Fix: {msg}. Got: {text}"
+    );
+}
+
+/// Standard subgroup probe WGSL shader using subgroup builtins.
+pub(crate) const SUBGROUP_PROBE_WGSL: &str = r#"
+@group(0) @binding(0) var<storage, read> input: array<u32>;
+@group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@group(1) @binding(2) var<uniform> params: vec4<u32>;
+
+@compute @workgroup_size(32)
+fn main(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+    @builtin(subgroup_invocation_id) lane: u32,
+    @builtin(subgroup_size) width: u32,
+) {
+    if (params.x == 4294967295u) {
+        return;
+    }
+    let seed = input[0];
+    if (gid.x == 0u) {
+        output[0] = seed + subgroupAdd(select(1u, 0u, lane >= width));
+    }
+}
+"#;
+
+/// Build a long-running program that requires measurable execution time.
+pub(crate) fn long_running_program() -> Program {
+    const OUTPUT_WORDS: u32 = 16 * 1024 * 1024;
+    let mut body = Vec::with_capacity(515);
+    body.push(Node::let_bind("idx", Expr::gid_x()));
+    body.push(Node::let_bind("acc", Expr::var("idx")));
+    for round in 0..512u32 {
+        body.push(Node::assign(
+            "acc",
+            Expr::bitxor(
+                Expr::mul(Expr::var("acc"), Expr::u32(1_664_525)),
+                Expr::add(
+                    Expr::var("idx"),
+                    Expr::u32(1_013_904_223u32.wrapping_add(round)),
+                ),
+            ),
+        ));
+    }
+    body.push(Node::if_then(
+        Expr::lt(Expr::var("idx"), Expr::buf_len("out")),
+        vec![Node::store("out", Expr::var("idx"), Expr::var("acc"))],
+    ));
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)
+            .with_count(OUTPUT_WORDS)
+            .with_output_byte_range(0..4)],
+        [256, 1, 1],
+        body,
+    )
+}
+
+/// Compute a 1D grid dispatch override for multi-dimensional workgroups in Cat-A fixtures.
+pub(crate) fn cat_a_dispatch_config(program: &Program) -> DispatchConfig {
+    let mut config = DispatchConfig::default();
+    let workgroup = program.workgroup_size();
+    if workgroup[1] == 1 && workgroup[2] == 1 {
+        return config;
+    }
+    let lanes = u64::from(workgroup[0])
+        .saturating_mul(u64::from(workgroup[1]))
+        .saturating_mul(u64::from(workgroup[2]));
+    let max_writable_count = program
+        .buffers()
+        .iter()
+        .filter(|decl| matches!(decl.access(), vyre::ir::BufferAccess::ReadWrite) || decl.is_output())
+        .map(|decl| u64::from(decl.count()))
+        .max()
+        .unwrap_or(1);
+    assert!(
+        max_writable_count <= lanes,
+        "Fix: non-1D Cat-A program needs explicit multi-workgroup grid; workgroup={workgroup:?}, lanes={lanes}, writable={max_writable_count}"
+    );
+    config.grid_override = Some([1, 1, 1]);
+    config
+}
+
+/// Pack a slice of bytes into little-endian u32 words.
+pub(crate) fn byte_stream_input_bytes(bytes: &[u8]) -> Vec<u8> {
+    let words: Vec<u32> = bytes.iter().map(|&b| u32::from(b)).collect();
+    u32_bytes(&words)
+}
+
+/// Dispatch a program and extract its single u32 scalar output.
+pub(crate) fn dispatch_single_u32_output(
+    backend: &WgpuBackend,
+    program: &Program,
+    inputs: &[&[u8]],
+    fix_msg: &str,
+) -> u32 {
+    let outputs = backend
+        .dispatch_borrowed(program, inputs, &DispatchConfig::default())
+        .expect(fix_msg);
+    assert_eq!(outputs.len(), 1, "expected 1 output buffer");
+    assert!(outputs[0].len() >= 4, "expected at least 4-byte output");
+    u32::from_le_bytes([outputs[0][0], outputs[0][1], outputs[0][2], outputs[0][3]])
+}

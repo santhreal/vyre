@@ -7,7 +7,7 @@
 //! - `WgpuBackend::acquire()` fails when only CPU adapters are available
 
 mod harness;
-use harness::acquire_live_backend as live_backend;
+use harness::{acquire_live_backend as live_backend, assert_actionable_error, assert_non_cpu_backend};
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -28,30 +28,16 @@ fn acquisition_fails_when_only_cpu_adapters_exist() {
             result.is_err(),
             "Fix: WgpuBackend::acquire must fail when only CPU/Other adapters are available"
         );
-        let err = result.unwrap_err();
-        let text = err.to_string();
-        assert!(
-            text.contains("Fix:"),
-            "Fix: CPU-only rejection error must be actionable. Got: {text}"
-        );
+        assert_actionable_error(&result, "CPU-only rejection error must be actionable");
     }
 }
 
 #[test]
 fn successful_acquisition_means_non_cpu_adapter() {
     let backend = live_backend();
-    let info = backend.adapter_info();
-    assert!(
-        !matches!(
-            info.device_type,
-            wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
-        ),
-        "Fix: WgpuBackend must never silently fall back to a CPU adapter. \
-         Adapter `{}` has type {:?}.",
-        info.name,
-        info.device_type
-    );
+    assert_non_cpu_backend(&backend);
 }
+
 
 // ------------------------------------------------------------------
 // 2. Dispatch latency is GPU-consistent

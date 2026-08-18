@@ -10,7 +10,8 @@
 
 mod harness;
 use harness::{
-    add_one_expected, add_one_input, add_one_program, shared_live_backend as live_backend,
+    add_one_expected, add_one_input, add_one_program, assert_non_cpu_backend,
+    long_running_program, shared_live_backend as live_backend,
 };
 
 use std::time::{Duration, Instant};
@@ -26,18 +27,7 @@ use vyre_foundation::validate::BackendValidationCapabilities;
 #[test]
 fn live_gpu_required_no_cpu_fallback() {
     let backend = live_backend();
-
-    let info = backend.adapter_info();
-    assert!(
-        !matches!(
-            info.device_type,
-            wgpu::DeviceType::Cpu | wgpu::DeviceType::Other
-        ),
-        "Fix: WgpuBackend must never silently fall back to a CPU adapter. \
-         Adapter `{}` has type {:?}.",
-        info.name,
-        info.device_type
-    );
+    assert_non_cpu_backend(&backend);
 }
 
 #[test]
@@ -204,36 +194,6 @@ fn bf16_rejected_at_capability_gate_before_lowering() {
 // 4. Async dispatch / pending dispatch is NOT synchronous under the hood
 // ------------------------------------------------------------------
 
-/// Build a program that takes measurably longer on the GPU than on the host.
-fn long_running_program() -> Program {
-    const OUTPUT_WORDS: u32 = 2 * 1024 * 1024;
-    let mut body = Vec::with_capacity(260);
-    body.push(Node::let_bind("idx", Expr::gid_x()));
-    body.push(Node::let_bind("acc", Expr::var("idx")));
-    for round in 0..128u32 {
-        body.push(Node::assign(
-            "acc",
-            Expr::bitxor(
-                Expr::mul(Expr::var("acc"), Expr::u32(1_664_525)),
-                Expr::add(
-                    Expr::var("idx"),
-                    Expr::u32(1_013_904_223u32.wrapping_add(round)),
-                ),
-            ),
-        ));
-    }
-    body.push(Node::if_then(
-        Expr::lt(Expr::var("idx"), Expr::buf_len("out")),
-        vec![Node::store("out", Expr::var("idx"), Expr::var("acc"))],
-    ));
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32)
-            .with_count(OUTPUT_WORDS)
-            .with_output_byte_range(0..4)],
-        [256, 1, 1],
-        body,
-    )
-}
 
 #[test]
 fn async_dispatch_does_not_block_on_gpu_execution() {
