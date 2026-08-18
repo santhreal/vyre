@@ -167,3 +167,102 @@ fn shape_mismatch_fails_loud() {
     // state a GPU-vs-CPU parity assertion would accept as a match (Law 10/6).
     let _ = sinkhorn_iterate_f64(&[1.0, 2.0], &[1.0, 1.0], &[1.0, 1.0], 1e-6, 10);
 }
+
+#[test]
+#[should_panic(expected = "Sinkhorn iterate CPU reference failed")]
+fn negative_tolerance_fails_loud() {
+    let _ = sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], -1e-6, 10);
+}
+
+#[test]
+#[should_panic(expected = "Sinkhorn iterate CPU reference failed")]
+fn nan_tolerance_fails_loud() {
+    let _ = sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], f64::NAN, 10);
+}
+
+#[test]
+#[should_panic(expected = "Sinkhorn iterate CPU reference failed")]
+fn infinite_tolerance_fails_loud() {
+    let _ = sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], f64::INFINITY, 10);
+}
+
+#[test]
+#[should_panic(expected = "Sinkhorn iterate CPU reference failed")]
+fn f64_into_zero_tolerance_fails_loud() {
+    let mut u = Vec::new();
+    let mut v = Vec::new();
+    let mut old = Vec::new();
+    let _ = sinkhorn_iterate_f64_into(
+        &[1.0],
+        &[1.0],
+        &[1.0],
+        0.0,
+        10,
+        &mut u,
+        &mut v,
+        &mut old,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Sinkhorn iterate CPU reference failed")]
+fn f64_into_shape_mismatch_fails_loud() {
+    let mut u = Vec::new();
+    let mut v = Vec::new();
+    let mut old = Vec::new();
+    let _ = sinkhorn_iterate_f64_into(
+        &[1.0, 2.0],
+        &[1.0, 1.0],
+        &[1.0, 1.0],
+        1e-6,
+        10,
+        &mut u,
+        &mut v,
+        &mut old,
+    );
+}
+
+#[test]
+fn f64_try_path_rejects_non_positive_or_non_finite_tolerance() {
+    let err_zero = try_sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], 0.0, 10).unwrap_err();
+    assert!(err_zero.contains("finite positive tolerance"), "{err_zero}");
+
+    let err_neg = try_sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], -1.0, 10).unwrap_err();
+    assert!(err_neg.contains("finite positive tolerance"), "{err_neg}");
+
+    let err_nan = try_sinkhorn_iterate_f64(&[1.0], &[1.0], &[1.0], f64::NAN, 10).unwrap_err();
+    assert!(err_nan.contains("finite positive tolerance"), "{err_nan}");
+}
+
+#[test]
+fn f64_try_into_rejects_invalid_inputs() {
+    let mut u = Vec::new();
+    let mut v = Vec::new();
+    let mut old = Vec::new();
+
+    let err_shape = try_sinkhorn_iterate_f64_into(
+        &[1.0, 2.0],
+        &[1.0, 1.0],
+        &[1.0, 1.0],
+        1e-6,
+        10,
+        &mut u,
+        &mut v,
+        &mut old,
+    )
+    .unwrap_err();
+    assert!(err_shape.contains("k.len()==a.len()*b.len()"), "{err_shape}");
+
+    let err_zero = try_sinkhorn_iterate_f64_into(
+        &[1.0],
+        &[1.0],
+        &[1.0],
+        0.0,
+        10,
+        &mut u,
+        &mut v,
+        &mut old,
+    )
+    .unwrap_err();
+    assert!(err_zero.contains("finite positive tolerance"), "{err_zero}");
+}

@@ -215,7 +215,10 @@ pub(crate) fn sinkhorn_iterate_f64(
     tolerance: f64,
     max_iterations: u32,
 ) -> (Vec<f64>, Vec<f64>, u32) {
-    try_sinkhorn_iterate_f64(k, a, b, tolerance, max_iterations).unwrap()
+    match try_sinkhorn_iterate_f64(k, a, b, tolerance, max_iterations) {
+        Ok(result) => result,
+        Err(error) => panic!("Sinkhorn iterate CPU reference failed: {error}"),
+    }
 }
 
 #[cfg(test)]
@@ -256,7 +259,7 @@ pub(crate) fn sinkhorn_iterate_f64_into(
 ) -> u32 {
     match try_sinkhorn_iterate_f64_into(k, a, b, tolerance, max_iterations, u, v, u_old) {
         Ok(iters) => iters,
-        Err(error) => panic!("vyre-primitives Sinkhorn iterate CPU reference failed: {error}"),
+        Err(error) => panic!("Sinkhorn iterate CPU reference failed: {error}"),
     }
 }
 
