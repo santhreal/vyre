@@ -95,7 +95,7 @@ The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 
 ## Hardware requirements
 
-Backend-neutral runtime tests are host-capable. Device integration tests require the selected concrete backend and treat unavailable requested hardware as an error.
+Backend-neutral runtime tests are host-capable. Device integration tests require the selected concrete backend on the execution host (axiomexec) and treat unavailable requested hardware as an error.
 
 ## Evidence outputs
 

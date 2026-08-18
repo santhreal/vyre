@@ -534,19 +534,7 @@ mod tests {
         write_benchmark_artifact(
             dir.path(),
             "release/evidence/benchmarks/wgpu-condition.json",
-            serde_json::json!({
-                "selected_backend": "wgpu",
-                "source_fingerprint": current_test_source_fingerprint(dir.path()),
-                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "metrics": reusable_timing_metrics()
-                    }
-                ]
-            }),
+            reusable_wgpu_condition_artifact(&current_test_source_fingerprint(dir.path()), None),
         );
 
         assert!(
@@ -568,20 +556,10 @@ mod tests {
         write_benchmark_artifact(
             dir.path(),
             "release/evidence/benchmarks/wgpu-source-tree.json",
-            serde_json::json!({
-                "selected_backend": "wgpu",
-                "source_fingerprint": "git:stale:dirty=false",
-                "source_tree_fingerprint": current_test_source_tree_fingerprint(dir.path()),
-                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "cases": [
-                    {
-                        "id": "release.condition_eval.1m",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "metrics": reusable_timing_metrics()
-                    }
-                ]
-            }),
+            reusable_wgpu_condition_artifact(
+                "git:stale:dirty=false",
+                Some(&current_test_source_tree_fingerprint(dir.path())),
+            ),
         );
 
         assert!(
@@ -1048,6 +1026,32 @@ mod tests {
                 }
             ]
         })
+    }
+
+    fn reusable_wgpu_condition_artifact(
+        source_fingerprint: &str,
+        source_tree_fingerprint: Option<&str>,
+    ) -> Value {
+        let mut artifact = serde_json::json!({
+            "selected_backend": "wgpu",
+            "source_fingerprint": source_fingerprint,
+            "environment": {
+                "build_profile": "release"
+            },
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+            "cases": [
+                {
+                    "id": "release.condition_eval.1m",
+                    "backend_id": "wgpu",
+                    "status": "pass",
+                    "metrics": reusable_timing_metrics()
+                }
+            ]
+        });
+        if let Some(source_tree_fingerprint) = source_tree_fingerprint {
+            artifact["source_tree_fingerprint"] = serde_json::json!(source_tree_fingerprint);
+        }
+        artifact
     }
 
     fn write_benchmark_artifact(workspace_root: &Path, relative: &str, value: Value) {

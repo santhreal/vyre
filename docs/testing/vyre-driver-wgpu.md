@@ -141,7 +141,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 
 ## Hardware requirements
 
-You need a supported physical GPU adapter for device dispatch and ignored physical-adapter tests. A requested adapter that cannot initialize is an error.
+You need a supported physical GPU adapter on the execution host (axiomexec) for device dispatch and ignored physical-adapter tests. A requested adapter that cannot initialize is an error.
 
 ## Evidence outputs
 
@@ -150,6 +150,6 @@ You need a supported physical GPU adapter for device dispatch and ignored physic
 
 ## Skips and failures
 
-The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host. Backend initialization failures must remain visible.
+The default command omits only tests marked `#[ignore]`. Run the ignored-test command on a configured GPU host (axiomexec). Backend initialization failures must remain visible.
 
 A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.

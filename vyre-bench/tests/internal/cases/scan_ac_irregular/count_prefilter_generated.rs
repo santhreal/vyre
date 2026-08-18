@@ -6,28 +6,14 @@ use super::super::PATTERNS;
 use crate::cases::mix32;
 use vyre_libs::pattern::classic_ac::classic_ac_compile;
 use vyre_primitives::wire::pack_u32_slice;
-use vyre_reference::composition_witness::{
-    classic_ac_candidate_end_byte_mask_words_witness,
-    classic_ac_candidate_suffix2_mask_words_witness,
-    classic_ac_candidate_suffix3_bloom_words_witness, classic_ac_scan_counts_witness,
-};
+use vyre_reference::composition_witness::classic_ac_scan_counts_witness;
 
 #[test]
 fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
     const CASES: u32 = 10_000;
 
     let ac = classic_ac_compile(PATTERNS);
-    let candidate_mask = classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    let (candidate_mask, suffix2_mask, suffix3_bloom) = super::super::scan_ac_candidate_masks(&ac);
     let mut total_lanes = 0_u64;
     let mut total_candidate_lanes = 0_u64;
     let mut total_suffix2_lanes = 0_u64;
@@ -160,17 +146,7 @@ fn suffix3_prefilter_cuts_generated_suffix2_noise() {
     const CASES: u32 = 10_000;
 
     let ac = classic_ac_compile(PATTERNS);
-    let candidate_mask = classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    let (candidate_mask, suffix2_mask, suffix3_bloom) = super::super::scan_ac_candidate_masks(&ac);
     let mut total_suffix2_lanes = 0_u64;
     let mut total_suffix3_lanes = 0_u64;
 
@@ -210,17 +186,7 @@ fn bounded_ranges_prefilter_inputs_keep_all_generated_hits_and_skip_noise() {
 
     let ac = classic_ac_compile(PATTERNS);
     let pattern_lengths = pattern_lengths().expect("fixture pattern lengths must fit u32");
-    let candidate_mask = classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    let (candidate_mask, suffix2_mask, suffix3_bloom) = super::super::scan_ac_candidate_masks(&ac);
     let mut total_lanes = 0_u64;
     let mut total_candidate_lanes = 0_u64;
     let mut total_suffix3_lanes = 0_u64;

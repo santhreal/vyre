@@ -187,7 +187,7 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 
 ## Hardware requirements
 
-You need an NVIDIA GPU and a working CUDA driver for device, dispatch, graph, and ignored physical-adapter tests. Probe failure is a configuration failure, not a skip.
+You need an NVIDIA GPU and a working CUDA driver on the execution host (axiomexec) for device, dispatch, graph, and ignored physical-adapter tests. Probe failure is a configuration failure, not a skip.
 
 ## Evidence outputs
 
@@ -197,6 +197,6 @@ You need an NVIDIA GPU and a working CUDA driver for device, dispatch, graph, an
 
 ## Skips and failures
 
-The default command omits only tests marked `#[ignore]`. Run the ignored-test command on an NVIDIA host. An ignored hardware test must fail if CUDA was requested but cannot be acquired.
+The default command omits only tests marked `#[ignore]`. Run the ignored-test command on the designated GPU host (axiomexec). An ignored hardware test must fail if CUDA was requested but cannot be acquired.
 
 A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.

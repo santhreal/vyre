@@ -16745,7 +16745,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -16871,7 +16872,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -16970,7 +16972,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17084,7 +17087,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17174,7 +17178,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17273,7 +17278,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17402,7 +17408,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17519,7 +17526,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17636,7 +17644,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17736,7 +17745,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17867,7 +17877,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -17953,7 +17964,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18052,7 +18064,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18190,7 +18203,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18300,7 +18314,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18386,7 +18401,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18476,7 +18492,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18575,7 +18592,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18680,6 +18698,7 @@
         "nn-linear",
         "nn-norm",
         "nn-attention",
+        "nn-kernels",
         "nn-linear-4bit"
       ],
       "oracle": {
@@ -18798,6 +18817,7 @@
         "nn-linear",
         "nn-norm",
         "nn-attention",
+        "nn-kernels",
         "nn-linear-4bit"
       ],
       "oracle": {
@@ -18897,7 +18917,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -18996,7 +19017,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19113,7 +19135,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19231,7 +19254,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19312,7 +19336,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19402,7 +19427,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19528,7 +19554,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19637,7 +19664,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19736,7 +19764,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19853,7 +19882,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -19971,6 +20001,7 @@
         "nn-linear",
         "nn-norm",
         "nn-attention",
+        "nn-kernels",
         "nn-moe"
       ],
       "oracle": {
@@ -20097,6 +20128,7 @@
         "nn-linear",
         "nn-norm",
         "nn-attention",
+        "nn-kernels",
         "nn-moe"
       ],
       "oracle": {
@@ -20217,6 +20249,7 @@
         "nn-linear",
         "nn-norm",
         "nn-attention",
+        "nn-kernels",
         "nn-moe"
       ],
       "oracle": {
@@ -20321,7 +20354,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20425,7 +20459,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20524,7 +20559,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20614,7 +20650,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20704,7 +20741,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20794,7 +20832,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20875,7 +20914,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -20947,7 +20987,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21028,7 +21069,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21118,7 +21160,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21217,7 +21260,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21316,7 +21360,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21439,7 +21484,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21529,7 +21575,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21610,7 +21657,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21709,7 +21757,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21822,7 +21871,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -21921,7 +21971,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22055,6 +22106,7 @@
         "nn-linear",
         "nn-norm",
         "nn-attention",
+        "nn-kernels",
         "nn-moe"
       ],
       "oracle": {
@@ -22145,7 +22197,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22245,6 +22298,7 @@
         "nn-linear",
         "nn-norm",
         "nn-attention",
+        "nn-kernels",
         "nn-moe"
       ],
       "oracle": {
@@ -22440,7 +22494,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22521,7 +22576,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22625,7 +22681,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22724,7 +22781,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -22805,7 +22863,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25476,7 +25535,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25571,7 +25631,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25652,7 +25713,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25760,7 +25822,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25873,7 +25936,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -25977,7 +26041,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26090,7 +26155,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26185,7 +26251,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26289,7 +26356,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26375,7 +26443,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26479,7 +26548,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26565,7 +26635,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,
@@ -26655,7 +26726,8 @@
         "nn-activation",
         "nn-linear",
         "nn-norm",
-        "nn-attention"
+        "nn-attention",
+        "nn-kernels"
       ],
       "oracle": {
         "reference_eval": true,

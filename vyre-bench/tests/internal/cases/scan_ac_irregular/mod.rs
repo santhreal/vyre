@@ -19,11 +19,6 @@ use vyre_libs::pattern::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
 };
 use vyre_primitives::wire::pack_u32_slice;
-use vyre_reference::composition_witness::{
-    classic_ac_candidate_end_byte_mask_words_witness,
-    classic_ac_candidate_suffix2_mask_words_witness,
-    classic_ac_candidate_suffix3_bloom_words_witness,
-};
 
 mod count_prefilter_generated;
 
@@ -175,17 +170,8 @@ fn bounded_ranges_program_reference_eval_matches_cpu_oracle() {
     let pattern_lengths = pattern_lengths().unwrap();
     let mut expected = cpu_bounded_range_matches(&ac, &pattern_lengths, &haystack);
     expected.sort_unstable();
-    let candidate_end_mask = classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    let (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom) =
+        super::scan_ac_candidate_masks(&ac);
     let program = try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
         &ac.dfa,
         pattern_lengths.len() as u32,

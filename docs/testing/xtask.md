@@ -45,7 +45,7 @@ This crate declares no Cargo features.
 
 ## Hardware requirements
 
-Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend and must fail on an unavailable requested device.
+Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend on the execution host (axiomexec) and must fail on an unavailable requested device.
 
 ## Evidence outputs
 

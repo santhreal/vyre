@@ -64,7 +64,7 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 
 ## Hardware requirements
 
-Builder and reference suites are host-capable. Concrete backend parity tests require the selected device and fail visibly when unavailable.
+Builder and reference suites are host-capable. Concrete backend parity tests require the selected device on the execution host (axiomexec) and fail visibly when unavailable.
 
 ## Evidence outputs
 

@@ -3,6 +3,7 @@
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use super::builder::{build_linear_bias_store_tail, build_linear_loop_accumulation};
 use crate::nn::rms::{inverse_rms_expr, square_expr};
 use crate::plumbing::operand::tensor_ref::TensorRefError;
 
@@ -86,35 +87,21 @@ pub fn try_rms_norm_linear(
         },
     ];
 
+    let dot_term = Expr::mul(
+        Expr::mul(Expr::load(input, k.clone()), Expr::var("scale")),
+        Expr::load(
+            w,
+            Expr::add(
+                Expr::mul(k.clone(), Expr::u32(out_dim)),
+                global_lane.clone(),
+            ),
+        ),
+    );
     let output_lane = vec![
         Node::let_bind("acc", Expr::f32(0.0)),
         Node::let_bind("scale", Expr::load("inv_rms", Expr::u32(0))),
-        Node::loop_for(
-            "k",
-            Expr::u32(0),
-            Expr::u32(in_dim),
-            vec![Node::assign(
-                "acc",
-                Expr::add(
-                    Expr::var("acc"),
-                    Expr::mul(
-                        Expr::mul(Expr::load(input, k.clone()), Expr::var("scale")),
-                        Expr::load(
-                            w,
-                            Expr::add(
-                                Expr::mul(k.clone(), Expr::u32(out_dim)),
-                                global_lane.clone(),
-                            ),
-                        ),
-                    ),
-                ),
-            )],
-        ),
-        Node::Store {
-            buffer: out.into(),
-            index: global_lane.clone(),
-            value: Expr::add(Expr::var("acc"), Expr::load(b, global_lane.clone())),
-        },
+        build_linear_loop_accumulation("k", in_dim, "acc", dot_term),
+        build_linear_bias_store_tail(out, global_lane.clone(), "acc", b, global_lane.clone()),
     ];
 
     Ok(Program::wrapped(

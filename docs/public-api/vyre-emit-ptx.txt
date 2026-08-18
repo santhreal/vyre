@@ -20,6 +20,8 @@ pub const fn vyre_emit_ptx::ComputeCapability::supports_async_copy(&self) -> boo
 pub const fn vyre_emit_ptx::ComputeCapability::supports_ldmatrix(&self) -> bool
 pub const fn vyre_emit_ptx::ComputeCapability::supports_wmma_bf16(&self) -> bool
 pub const fn vyre_emit_ptx::ComputeCapability::supports_wmma_f16(&self) -> bool
+pub const vyre_emit_ptx::ComputeCapability::SM_100: Self
+pub const vyre_emit_ptx::ComputeCapability::SM_120: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_70: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_75: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_80: Self

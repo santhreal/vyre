@@ -172,27 +172,9 @@ pub(crate) fn check_benchmark_cuda_environment_provenance(
         .get("gpu_devices")
         .and_then(serde_json::Value::as_array);
     let qualifying_gpu = gpu_devices.and_then(|devices| {
-        devices.iter().find(|device| {
-            device
-                .get("name")
-                .and_then(serde_json::Value::as_str)
-                .is_some_and(|name| !name.trim().is_empty())
-                && device
-                    .get("memory_total_mib")
-                    .and_then(serde_json::Value::as_u64)
-                    .is_some_and(|mib| mib >= 16 * 1024)
-                && matches!(
-                    (
-                        device
-                            .get("compute_capability_major")
-                            .and_then(serde_json::Value::as_u64),
-                        device
-                            .get("compute_capability_minor")
-                            .and_then(serde_json::Value::as_u64),
-                    ),
-                    (Some(major), Some(minor)) if (major, minor) >= (8, 0)
-                )
-        })
+        devices
+            .iter()
+            .find(|device| is_qualifying_gpu_device(device))
     });
     if gpu_devices.is_none_or(|devices| devices.is_empty()) {
         failures.push(format!(
@@ -1390,18 +1372,8 @@ mod tests {
             "nvidia_driver_version": "580.0",
             "nvidia_cuda_version": "13.0",
             "gpu_devices": [
-                {
-                    "name": "sub-floor-device",
-                    "memory_total_mib": 8192,
-                    "compute_capability_major": 6,
-                    "compute_capability_minor": 1
-                },
-                {
-                    "name": "qualifying-device",
-                    "memory_total_mib": 24576,
-                    "compute_capability_major": 8,
-                    "compute_capability_minor": 9
-                }
+                mock_sub_floor_gpu_device(),
+                mock_qualifying_gpu_device(),
             ]
         });
         let mut failures = Vec::new();
@@ -1428,12 +1400,7 @@ mod tests {
         let environment = serde_json::json!({
             "host_cpu_model": "test CPU",
             "gpu_devices": [
-                {
-                    "name": "sub-floor-device",
-                    "memory_total_mib": 8192,
-                    "compute_capability_major": 6,
-                    "compute_capability_minor": 1
-                }
+                mock_sub_floor_gpu_device(),
             ]
         });
         let mut failures = Vec::new();

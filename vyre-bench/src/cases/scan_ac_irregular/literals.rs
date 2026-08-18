@@ -4,9 +4,8 @@
 //! cardinality-only kernel. Both take their sample through [`super::sample`].
 
 use crate::api::case::{
-    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
-    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
-    WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
+    BenchRun, Correctness, PerformanceContract, PreparedCase,
 };
 use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
@@ -19,11 +18,6 @@ use vyre_libs::pattern::classic_ac::{
 };
 use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
-use vyre_reference::composition_witness::{
-    classic_ac_candidate_end_byte_mask_words_witness,
-    classic_ac_candidate_suffix2_mask_words_witness,
-    classic_ac_candidate_suffix3_bloom_words_witness,
-};
 
 use super::baseline::cpu_aho_overlapping_matches;
 use super::haystack::{build_irregular_haystack, pattern_lengths};
@@ -36,7 +30,7 @@ use super::sample::{
     dispatch_reset_then_scan, scan_bench_run, take_scan_sample, ResetThenScan, ScanSample,
 };
 use super::{
-    count, CANDIDATE_END_MASK_INPUT_INDEX, CANDIDATE_SUFFIX2_MASK_INPUT_INDEX,
+    CANDIDATE_END_MASK_INPUT_INDEX, CANDIDATE_SUFFIX2_MASK_INPUT_INDEX,
     CANDIDATE_SUFFIX3_BLOOM_INPUT_INDEX, HAYSTACK_BYTES, MAX_MATCHES, PATTERNS, SUITES,
 };
 
@@ -81,24 +75,12 @@ impl BenchCase for ScanAcIrregularLiterals {
     }
 
     fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Aho-Corasick Irregular Literal Scan 4M".to_string(),
-            description: "Packed-byte AC bounded-ranges scan over unaligned, varied-length security/parser literals in a noisy 4 MiB haystack".to_string(),
-            tags: vec![
-                "scan".to_string(),
-                "pattern".to_string(),
-                "dfa".to_string(),
-                "aho-corasick".to_string(),
-                "packed-byte".to_string(),
-                "irregular".to_string(),
-                "release".to_string(),
-            ],
-            layer: BenchLayer::Libs,
-            workload: WorkloadClass::Macro,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-libs".to_string(),
-        }
+        super::scan_ac_metadata(
+            self.id(),
+            "Aho-Corasick Irregular Literal Scan 4M",
+            "Packed-byte AC bounded-ranges scan over unaligned, varied-length security/parser literals in a noisy 4 MiB haystack",
+            false,
+        )
     }
 
     fn suites(&self) -> &'static [SuiteKind] {
@@ -106,17 +88,7 @@ impl BenchCase for ScanAcIrregularLiterals {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some(32 * 1024 * 1024),
-            min_input_bytes: Some(HAYSTACK_BYTES as u64),
-            feature_set: vec![
-                "pattern-dfa".to_string(),
-                "packed-byte".to_string(),
-                "aho-corasick".to_string(),
-            ],
-        }
+        super::scan_ac_requirements()
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -238,17 +210,8 @@ pub(super) fn prepare_scan_ac_irregular(
     let (haystack, planted_matches) = build_irregular_haystack(HAYSTACK_BYTES);
     let ac = classic_ac_compile(PATTERNS);
     let pattern_lengths = pattern_lengths()?;
-    let candidate_end_mask = classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    let (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom) =
+        super::scan_ac_candidate_masks(&ac);
     let reset_program = u32_counter_reset_program("match_count");
 
     let baseline_start = std::time::Instant::now();
@@ -295,30 +258,15 @@ pub(super) fn prepare_scan_ac_irregular(
         pack_u32_slice(&[expected_match_count]),
         encode_match_triples(&expected_matches),
     ];
-    let stats = ScanAcStats {
-        haystack_bytes: HAYSTACK_BYTES as u32,
-        packed_haystack_words: HAYSTACK_BYTES.div_ceil(4) as u32,
-        patterns: PATTERNS.len() as u32,
-        dfa_states: ac.dfa.state_count,
-        max_pattern_len: ac.dfa.max_pattern_len,
-        output_records: ac.dfa.output_records.len() as u32,
-        expected_matches: expected_match_count,
-        max_matches: MAX_MATCHES,
+    let stats = ScanAcStats::from_fixture_and_masks(
+        &haystack,
         planted_matches,
-        candidate_end_bytes: count::candidate_end_byte_count(&candidate_end_mask),
-        candidate_end_lanes: count::candidate_end_lane_count(&haystack, &candidate_end_mask),
-        candidate_suffix2_lanes: count::candidate_suffix2_lane_count(
-            &haystack,
-            &candidate_end_mask,
-            &candidate_suffix2_mask,
-        ),
-        candidate_suffix3_lanes: count::candidate_suffix3_lane_count(
-            &haystack,
-            &candidate_end_mask,
-            &candidate_suffix2_mask,
-            &candidate_suffix3_bloom,
-        ),
-    };
+        expected_match_count,
+        &ac,
+        &candidate_end_mask,
+        &candidate_suffix2_mask,
+        &candidate_suffix3_bloom,
+    );
 
     Ok(ScanAcIrregularPrepared {
         program,

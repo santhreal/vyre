@@ -14,17 +14,13 @@ use vyre_libs::pattern::classic_ac::{
 };
 use vyre_libs::pattern::pack_haystack_u32;
 use vyre_primitives::wire::pack_u32_slice;
-use vyre_reference::composition_witness::{
-    classic_ac_candidate_end_byte_mask_words_witness,
-    classic_ac_candidate_suffix2_mask_words_witness,
-    classic_ac_candidate_suffix3_bloom_words_witness, classic_ac_suffix3_bloom_contains_witness,
-};
+use vyre_reference::composition_witness::classic_ac_suffix3_bloom_contains_witness;
 
 use super::baseline::cpu_aho_overlapping_matches;
 use super::haystack::{build_irregular_haystack, pattern_lengths};
 use super::metrics::{scan_ac_count_metric_points, ScanAcStats};
 use super::sample::{dispatch_reset_then_scan, scan_bench_run, take_scan_sample, ResetThenScan};
-use super::{HAYSTACK_BYTES, MAX_MATCHES, PATTERNS, SUITES};
+use super::{HAYSTACK_BYTES, PATTERNS, SUITES};
 
 const COUNT_CANDIDATE_END_MASK_INPUT_INDEX: usize = 3;
 const COUNT_CANDIDATE_SUFFIX2_MASK_INPUT_INDEX: usize = 4;
@@ -78,18 +74,9 @@ impl BenchCase for ScanAcIrregularCount {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some(32 * 1024 * 1024),
-            min_input_bytes: Some(HAYSTACK_BYTES as u64),
-            feature_set: vec![
-                "pattern-dfa".to_string(),
-                "packed-byte".to_string(),
-                "aho-corasick".to_string(),
-                "count-only".to_string(),
-            ],
-        }
+        let mut req = super::scan_ac_requirements();
+        req.feature_set.push("count-only".to_string());
+        req
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -198,17 +185,8 @@ pub(super) fn prepare_scan_ac_irregular_count(
     let baseline_start = Instant::now();
     let expected_match_count = cpu_aho_overlapping_matches(PATTERNS, &haystack)?.len() as u32;
     let baseline_wall_ns = elapsed_ns(baseline_start);
-    let candidate_end_mask = classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    let (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom) =
+        super::scan_ac_candidate_masks(&ac);
     let program = build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa);
     let inputs = scan_ac_count_inputs_with_masks(
         &ac,
@@ -222,30 +200,15 @@ pub(super) fn prepare_scan_ac_irregular_count(
         .map(|ctx| ResidentInputSet::upload_optional(ctx, &inputs, "irregular AC count"))
         .transpose()?
         .flatten();
-    let stats = ScanAcStats {
-        haystack_bytes: HAYSTACK_BYTES as u32,
-        packed_haystack_words: HAYSTACK_BYTES.div_ceil(4) as u32,
-        patterns: PATTERNS.len() as u32,
-        dfa_states: ac.dfa.state_count,
-        max_pattern_len: ac.dfa.max_pattern_len,
-        output_records: ac.dfa.output_records.len() as u32,
-        expected_matches: expected_match_count,
-        max_matches: MAX_MATCHES,
+    let stats = ScanAcStats::from_fixture_and_masks(
+        &haystack,
         planted_matches,
-        candidate_end_bytes: candidate_end_byte_count(&candidate_end_mask),
-        candidate_end_lanes: candidate_end_lane_count(&haystack, &candidate_end_mask),
-        candidate_suffix2_lanes: candidate_suffix2_lane_count(
-            &haystack,
-            &candidate_end_mask,
-            &candidate_suffix2_mask,
-        ),
-        candidate_suffix3_lanes: candidate_suffix3_lane_count(
-            &haystack,
-            &candidate_end_mask,
-            &candidate_suffix2_mask,
-            &candidate_suffix3_bloom,
-        ),
-    };
+        expected_match_count,
+        &ac,
+        &candidate_end_mask,
+        &candidate_suffix2_mask,
+        &candidate_suffix3_bloom,
+    );
     if stats.max_pattern_len != pattern_lengths.iter().copied().max().unwrap_or_default() {
         return Err(BenchError::EnvironmentInvalid(
             "irregular AC count DFA max pattern length disagreed with fixture pattern lengths. Fix: rebuild the DFA and count program from the same pattern set."
@@ -266,17 +229,8 @@ pub(super) fn prepare_scan_ac_irregular_count(
 }
 
 pub(super) fn scan_ac_count_inputs(ac: &ClassicAcAutomaton, haystack: &[u8]) -> Vec<Vec<u8>> {
-    let candidate_end_mask = classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix2_mask = classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix3_bloom = classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
+    let (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom) =
+        super::scan_ac_candidate_masks(ac);
     scan_ac_count_inputs_with_masks(
         ac,
         haystack,

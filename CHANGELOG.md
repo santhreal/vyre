@@ -3879,6 +3879,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   nine-parameter builder and its too_many_arguments allow are gone, as are
   three further allows on Scallop provenance dispatch entry points that were
   already under the argument threshold.
+- The adaptive sparse traversal branch now tests source activity in the input
+  frontier while writing discovered vertices to the output frontier. The
+  previous composer used the zero-initialized output as both probe and
+  destination, so sparse, resident, and past-first-workgroup traversals emitted
+  no reachable vertices on real CUDA devices.
 - The one-implementation rule for target-payload admission recognizes the
   descriptor form. Every concrete backend now routes through
   `TargetDescriptor::admit_modules`, which calls the shared `admit` and decodes
@@ -4106,6 +4111,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   undeclared feature could never be enabled and whose engine dependency does
   not exist in this workspace. Benchmark feature guards now have a manifest
   agreement gate, so a hidden undeclared case cannot recur.
+- Benchmark source-tree fingerprints now exclude `DEDUP_PLAN.md` with the other
+  operator-only control files and treat the Unix and Windows workspace Cargo
+  launchers identically. Proof-checklist edits and platform-specific launcher
+  changes no longer invalidate measurements when no runtime, compiler,
+  benchmark, or release-policy source changed.
 - `BinOp::result_class` is the one answer to what a binary operator's result
   type is, and `BinOp::takes_numeric_operands` is derived from it.
   `validate::typecheck` asked that question twice and wrote its own operator
@@ -4338,6 +4348,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every sibling CSR module gives those two names. A call repointed from a
   sibling module fed the scalar where the per-edge array belonged. Both
   parameters now carry the tree-wide role names.
+- CSR witnesses now accept the documented empty-offset shorthand only when
+  every edge buffer is empty, preserve the source distance for empty-edge BFS,
+  and reject malformed tensor-flow tables with distinct length, start-offset,
+  monotonicity, and edge-count errors. The production forward validator rejects
+  a nonzero first offset, and the dominator-frontier witness rejects a short
+  packed seed before mutating caller output.
 - The CUDA e-graph device-image upload contracts build their snapshots from
   named fixtures, and `assert_span_matches_foundation` has one definition.
   `upload_layout_contracts.rs` redefined that helper identically to the
@@ -4779,6 +4795,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Testing guides are now generated for all 36 workspace members from Cargo
   features and targets plus maintained hardware, evidence, skip, and failure
   metadata. The documentation gate rejects missing, orphaned, or stale guides.
+- GPU routing, conformance, and release evidence now select hardware by
+  reported capabilities rather than a product name. Benchmark reuse and release
+  validation inspect every device in a multi-GPU inventory, reject missing or
+  sub-floor device provenance, fail on incomplete measured samples, and require
+  exact telemetry-table entries instead of guessing memory bandwidth from a
+  partial product name.
 - The `graph-dispatch` feature now enables the `encoding` domain that owns its
   GPU reduction-metric dispatchers. A production `vyre-driver-cuda` build no
   longer fails when motif existence and participation adapters import reduction
@@ -4964,6 +4986,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Loop-invariant hoisting moves a load out of a loop only when the header
   proves the body runs, so a read is never issued for an iteration space that
   may be empty.
+- The line-index reference witness now returns one zero-based line number per
+  input byte, including an empty result for empty input, instead of returning
+  byte offsets for line starts. Packed-byte and word-backed line-index programs
+  now share the same adversarial parity oracle.
 - Loop fusion no longer skips a fusable pair after a refusal. When two adjacent
   loops could not be fused, the walk advanced its cursor by two instead of one,
   so the pair formed by the second loop and its successor was never considered;
@@ -5467,6 +5493,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   that flattens a small region into its parent sequence re-wraps it in a
   `Node::Block` on a name collision, and that is sound only while a region
   body's bindings die at the region boundary.
+- Operation registration scans now parse consolidated intrinsic macros and
+  ignore delimiters, registration names, and constants inside Rust strings, raw
+  strings, characters, attributes, nested comments, and Unicode identifiers
+  containing canonical token text. Moved test-oracle waivers name their current
+  paths, and body walkers use the exhaustive shared child-body owner.
 - Every reader of the operation registry and the backend registry reads it
   through `vyre-registry-link`, which references a real symbol in each
   submitting crate and asserts that each linked source reached the registry. An
@@ -5624,6 +5655,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now fails with that reason instead of running on ratios derived from a
   saturated total, and autotune cost selection carries the empty candidate set
   in its return type instead of a debug assertion absent from release builds.
+- RMS-normalized linear contractions now scale each input before accumulation,
+  add bias after the contraction, and use local invocation identity for every
+  workgroup's shared inverse-RMS initialization. Multi-workgroup output shapes
+  and adversarial magnitudes now match the reference witness within the
+  registered two-ULP contract.
 - The root README now derives every workspace crate's publication and support
   status from manifests and maintained metadata. Operation tier counts come
   from the canonical operation schema, backend claims come from executable
@@ -5721,6 +5757,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The registered shunting-yard operation now records the identifier node kind
   and four-word next offset produced by its canonical one-token statement
   fixture.
+- The f64 Sinkhorn adapters now preserve canonical constructor error context.
+  The convenience entry point reports the failing CPU reference operation, and
+  the caller-storage adapter no longer attributes validation failures to an
+  unrelated crate.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
 - The `vyre-primitives::hardware::subgroup_add` intrinsic performed no subgroup
@@ -6066,6 +6106,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   WGPU workload artifacts.
 - The registered-operation similarity gate now owns one fixed comparison-safe
   report and qualifies structural matches with canonical semantic identity.
+- Windows checkouts now provide `cargo_full.cmd` with the same compiler and
+  nested-Cargo runner contract as the Unix workspace wrapper, while nested gate
+  commands resolve a directly executable Cargo binary instead of attempting to
+  launch a batch file through `CreateProcess`.
 - The framing module doc in vyre-foundation named the envelope tag VIR0 in two
   places while the constant beside it is VYRE, so a reader inspecting a blob
   byte by byte compared against a tag no encoder has written.

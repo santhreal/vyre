@@ -62,7 +62,11 @@ pub(super) fn scan_ac_requirements() -> crate::api::case::BenchRequirements {
         needs_network: false,
         min_vram_bytes: Some(32 * 1024 * 1024),
         min_input_bytes: Some(HAYSTACK_BYTES as u64),
-        feature_set: Vec::new(),
+        feature_set: vec![
+            "pattern-dfa".to_string(),
+            "packed-byte".to_string(),
+            "aho-corasick".to_string(),
+        ],
     }
 }
 

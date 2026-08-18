@@ -101,7 +101,7 @@ The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
 
 ## Hardware requirements
 
-Benchmark unit tests are host-capable. Release measurements require the backend and device named by the benchmark command; probe failure invalidates the run.
+Benchmark unit tests are host-capable. Release measurements require the backend and device named by the benchmark command on the execution host (axiomexec); probe failure invalidates the run.
 
 ## Evidence outputs
 
@@ -111,6 +111,6 @@ Benchmark unit tests are host-capable. Release measurements require the backend 
 
 ## Skips and failures
 
-Ignored physical benchmarks are absent from the default test command. A release benchmark command must execute its requested device and preserve raw samples; it cannot report a synthetic or skipped result.
+Ignored physical benchmarks are absent from the default test command. A release benchmark command must execute its requested device on the execution host (axiomexec) and preserve raw samples; it cannot report a synthetic or skipped result.
 
 A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.

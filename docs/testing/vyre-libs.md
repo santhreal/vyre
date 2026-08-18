@@ -615,7 +615,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 
 ## Hardware requirements
 
-Reference and builder suites are host-capable. Tests that request concrete backend parity require that device and fail visibly when unavailable.
+Reference and builder suites are host-capable. Tests that request concrete backend parity require that device on the execution host (axiomexec) and fail visibly when unavailable.
 
 ## Evidence outputs
 

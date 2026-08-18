@@ -68,6 +68,20 @@ impl RecordedDevice {
     }
 }
 
+fn recorded_device_json(
+    name: &str,
+    memory_total_mib: usize,
+    compute_capability_major: usize,
+    compute_capability_minor: usize,
+) -> Value {
+    serde_json::json!({
+        "name": name,
+        "memory_total_mib": memory_total_mib,
+        "compute_capability_major": compute_capability_major,
+        "compute_capability_minor": compute_capability_minor,
+    })
+}
+
 /// WHY: a release sweep selects one qualifying device from a complete probe.
 /// Requiring the probe itself to contain one row rejects valid multi-GPU hosts.
 #[test]
@@ -76,18 +90,8 @@ fn recorded_device_matches_any_member_of_environment_inventory() {
         "nvidia_driver_version": "580.173.02",
         "nvidia_cuda_version": "13.0",
         "gpu_devices": [
-            {
-                "name": "sub-floor-device",
-                "memory_total_mib": 8192,
-                "compute_capability_major": 6,
-                "compute_capability_minor": 1
-            },
-            {
-                "name": "qualifying-device",
-                "memory_total_mib": 24564,
-                "compute_capability_major": 8,
-                "compute_capability_minor": 9
-            }
+            recorded_device_json("sub-floor-device", 8192, 6, 1),
+            recorded_device_json("qualifying-device", 24564, 8, 9),
         ]
     });
     let selected = RecordedDevice {

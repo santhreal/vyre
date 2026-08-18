@@ -66,7 +66,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 
 ## Hardware requirements
 
-Cross-backend certificates require every selected physical backend. Missing selected hardware is a failed conformance run.
+Cross-backend certificates require every selected physical backend on the execution host (axiomexec). Missing selected hardware is a failed conformance run.
 
 ## Evidence outputs
 
@@ -75,6 +75,6 @@ Cross-backend certificates require every selected physical backend. Missing sele
 
 ## Skips and failures
 
-The default command omits tests marked `#[ignore]`. The ignored command is the explicit physical-backend run and cannot silently skip a selected backend.
+The default command omits tests marked `#[ignore]`. The ignored command is the explicit physical-backend run on the execution host (axiomexec) and cannot silently skip a selected backend.
 
 A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.

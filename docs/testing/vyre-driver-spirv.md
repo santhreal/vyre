@@ -48,7 +48,7 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 
 ## Hardware requirements
 
-The default suite validates lowering without a device. Physical Vulkan-style execution tests require a compatible adapter and must report acquisition failure.
+The default suite validates lowering without a device. Physical Vulkan-style execution tests require a compatible adapter on the execution host (axiomexec) and must report acquisition failure.
 
 ## Evidence outputs
 

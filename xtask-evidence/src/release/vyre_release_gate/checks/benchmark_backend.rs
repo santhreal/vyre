@@ -521,18 +521,8 @@ mod benchmark_backend_tests {
                 "nvidia_driver_version": "580.0",
                 "nvidia_cuda_version": "13.0",
                 "nvidia_smi_device_details": [
-                    {
-                        "name": "sub-floor-device",
-                        "memory_total_mib": 8192,
-                        "compute_capability_major": 6,
-                        "compute_capability_minor": 1
-                    },
-                    {
-                        "name": "qualifying-device",
-                        "memory_total_mib": 24576,
-                        "compute_capability_major": 8,
-                        "compute_capability_minor": 9
-                    }
+                    mock_sub_floor_gpu_device(),
+                    mock_qualifying_gpu_device(),
                 ]
             }
         });
@@ -553,12 +543,7 @@ mod benchmark_backend_tests {
                 "nvidia_driver_version": "580.0",
                 "nvidia_cuda_version": "13.0",
                 "nvidia_smi_device_details": [
-                    {
-                        "name": "sub-floor-device",
-                        "memory_total_mib": 8192,
-                        "compute_capability_major": 6,
-                        "compute_capability_minor": 1
-                    }
+                    mock_sub_floor_gpu_device(),
                 ]
             }
         });
@@ -672,25 +657,7 @@ pub(crate) fn check_backend_gpu_probe(
         .get("gpu_probe")
         .and_then(|probe| probe.get("nvidia_smi_device_details"))
         .and_then(serde_json::Value::as_array)
-        .is_some_and(|devices| {
-            devices.iter().any(|device| {
-                device
-                    .get("memory_total_mib")
-                    .and_then(serde_json::Value::as_u64)
-                    .is_some_and(|mib| mib >= 16 * 1024)
-                    && matches!(
-                        (
-                            device
-                                .get("compute_capability_major")
-                                .and_then(serde_json::Value::as_u64),
-                            device
-                                .get("compute_capability_minor")
-                                .and_then(serde_json::Value::as_u64),
-                        ),
-                        (Some(major), Some(minor)) if (major, minor) >= (8, 0)
-                    )
-            })
-        });
+        .is_some_and(|devices| devices.iter().any(is_qualifying_gpu_device));
     if !release_floor_device {
         failures.push(format!(
             "requirement `{requirement_id}` backend matrix gpu_probe.nvidia_smi_device_details must include a CUDA GPU with >=16384 MiB VRAM and compute capability >=8.0"

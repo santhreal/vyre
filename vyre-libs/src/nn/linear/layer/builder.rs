@@ -1,7 +1,7 @@
 //! Linear builder + the canonical `linear()` Cat-A constructor.
 
 use vyre_foundation::composition::tag_program;
-use vyre_foundation::ir::{DataType, Program};
+use vyre_foundation::ir::{DataType, Expr, Node, Program};
 
 use crate::builder::gemm::ContractionComposer;
 use crate::prelude::MatmulBias;
@@ -338,4 +338,31 @@ fn build_linear_program(
         options.region_generator.unwrap_or(LINEAR_OP_ID),
         program,
     ))
+}
+pub(super) fn build_linear_loop_accumulation(
+    loop_var: &str,
+    dim: u32,
+    acc_var: &str,
+    term: Expr,
+) -> Node {
+    Node::loop_for(
+        loop_var,
+        Expr::u32(0),
+        Expr::u32(dim),
+        vec![Node::assign(acc_var, Expr::add(Expr::var(acc_var), term))],
+    )
+}
+
+pub(super) fn build_linear_bias_store_tail(
+    out_buffer: &str,
+    out_index: Expr,
+    acc_var: &str,
+    bias_buffer: &str,
+    bias_index: Expr,
+) -> Node {
+    Node::Store {
+        buffer: out_buffer.into(),
+        index: out_index,
+        value: Expr::add(Expr::var(acc_var), Expr::load(bias_buffer, bias_index)),
+    }
 }
