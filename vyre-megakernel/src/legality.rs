@@ -440,13 +440,11 @@ fn pins_workgroup_geometry(program: &Program) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::graph_fixtures::{independent_two_arm_graph, two_arm_graph};
     use std::collections::BTreeMap;
-    use vyre_foundation::ir::{
-        BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
-    };
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
     use vyre_foundation::validate::BackendCapabilities;
     use vyre_test_support::pass_programs::copy_program;
-    use crate::graph_fixtures::{independent_two_arm_graph, two_arm_graph};
 
     use super::*;
     use crate::facts::derive as derive_planning_facts;
@@ -523,7 +521,6 @@ mod tests {
             .with_spatial_partitioning(true)
             .with_cooperative_launch(true)
     }
-
 
     #[test]
     fn test_insufficient_concurrent_queues() {

@@ -58,6 +58,22 @@ pub(crate) fn eval_binop_i32(op: BinOp, a: i32, b: i32) -> Value {
     })
 }
 
+pub(crate) fn assert_binop_i32_err(op: BinOp, a: i32, b: i32, msg: &str) {
+    let program = empty_program();
+    let expr = Expr::BinOp {
+        op,
+        left: Box::new(Expr::i32(a)),
+        right: Box::new(Expr::i32(b)),
+    };
+    let result = eval_expr::eval(
+        &expr,
+        &mut zero_invocation(&program),
+        &mut Memory::empty(),
+        &program,
+    );
+    assert!(result.is_err(), "{msg}");
+}
+
 pub(crate) fn eval_binop_f32(op: BinOp, a: f32, b: f32) -> Value {
     eval_expr_value(&Expr::BinOp {
         op,
@@ -99,12 +115,10 @@ pub(crate) fn float_bits(value: Value) -> u32 {
 /// collapses to the canonical quiet NaN, any subnormal flushes to its signed
 /// zero.
 pub(crate) fn canonical_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        f32::from_bits(0x7FC0_0000)
-    } else if value.is_subnormal() {
-        f32::from_bits(value.to_bits() & 0x8000_0000)
-    } else {
-        value
+    match value.classify() {
+        std::num::FpCategory::Nan => f32::from_bits(0x7FC0_0000),
+        std::num::FpCategory::Subnormal => f32::from_bits(value.to_bits() & 0x8000_0000),
+        _ => value,
     }
 }
 

@@ -5,9 +5,9 @@
 //! during descriptor analysis, preserving bounds, alias, element-size, and
 //! alignment evidence through lowering without assuming compile-time Rust generic dimensions.
 
+use super::gcd_u32;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use super::gcd_u32;
 
 /// Dimension extent representation for static, symbolic, and dynamic shapes.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

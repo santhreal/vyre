@@ -66,6 +66,49 @@ fn validate_csr_inputs(
     );
     (node_count, node_count.div_ceil(32))
 }
+fn prepare_output_buffer(out: &mut Vec<u32>, words: usize) {
+    if out.capacity() < words {
+        out.reserve(words.saturating_sub(out.len()));
+    }
+    out.clear();
+    out.resize(words, 0);
+}
+
+fn prepare_copied_buffer(out: &mut Vec<u32>, words: usize, src: &[u32]) {
+    if out.capacity() < words {
+        out.reserve(words.saturating_sub(out.len()));
+    }
+    out.clear();
+    out.extend_from_slice(src);
+    if out.len() < words {
+        out.resize(words, 0);
+    }
+}
+
+fn for_each_active_edge(
+    node_count: u32,
+    row_offsets: &[u32],
+    col_indices: &[u32],
+    edge_kind_mask: &[u32],
+    allow_mask: u32,
+    mut f: impl FnMut(usize, usize),
+) -> (usize, usize) {
+    let (node_count, words) =
+        validate_csr_inputs(node_count, row_offsets, col_indices, edge_kind_mask);
+    for source in 0..node_count {
+        let start = row_offsets[source] as usize;
+        let end = row_offsets[source + 1] as usize;
+        for edge in start..end {
+            if edge_kind_mask[edge] & allow_mask != 0 {
+                let destination = col_indices[edge] as usize;
+                if destination < node_count {
+                    f(source, destination);
+                }
+            }
+        }
+    }
+    (node_count, words)
+}
 
 /// Sequential mathematical witness for one-step forward traversal over CSR graph writing into caller storage.
 pub fn csr_forward_traverse_witness_into(
@@ -77,32 +120,23 @@ pub fn csr_forward_traverse_witness_into(
     allow_mask: u32,
     out: &mut Vec<u32>,
 ) {
-    let (node_count, words) =
-        validate_csr_inputs(node_count, row_offsets, col_indices, edge_kind_mask);
-    if out.capacity() < words {
-        out.reserve(words.saturating_sub(out.len()));
-    }
-    out.clear();
-    out.resize(words, 0_u32);
-    for source in 0..node_count {
-        let source_active = frontier
-            .get(source / 32)
-            .is_some_and(|word| word & (1 << (source % 32)) != 0);
-        if !source_active {
-            continue;
-        }
-        let start = row_offsets[source] as usize;
-        let end = row_offsets[source + 1] as usize;
-        for edge in start..end {
-            if edge_kind_mask[edge] & allow_mask == 0 {
-                continue;
+    let (_, words) = validate_csr_inputs(node_count, row_offsets, col_indices, edge_kind_mask);
+    prepare_output_buffer(out, words);
+    for_each_active_edge(
+        node_count,
+        row_offsets,
+        col_indices,
+        edge_kind_mask,
+        allow_mask,
+        |src, dst| {
+            if frontier
+                .get(src / 32)
+                .is_some_and(|w| w & (1 << (src % 32)) != 0)
+            {
+                out[dst / 32] |= 1 << (dst % 32);
             }
-            let destination = col_indices[edge] as usize;
-            if destination < node_count {
-                out[destination / 32] |= 1 << (destination % 32);
-            }
-        }
-    }
+        },
+    );
 }
 
 /// Sequential mathematical witness for one-step forward traversal over CSR graph.
@@ -117,7 +151,13 @@ pub fn csr_forward_traverse_witness(
 ) -> Vec<u32> {
     let mut out = Vec::new();
     csr_forward_traverse_witness_into(
-        node_count, row_offsets, col_indices, edge_kind_mask, frontier, allow_mask, &mut out,
+        node_count,
+        row_offsets,
+        col_indices,
+        edge_kind_mask,
+        frontier,
+        allow_mask,
+        &mut out,
     );
     out
 }
@@ -132,30 +172,23 @@ pub fn csr_backward_traverse_witness_into(
     allow_mask: u32,
     out: &mut Vec<u32>,
 ) {
-    let (node_count, words) =
-        validate_csr_inputs(node_count, row_offsets, col_indices, edge_kind_mask);
-    if out.capacity() < words {
-        out.reserve(words.saturating_sub(out.len()));
-    }
-    out.clear();
-    out.resize(words, 0_u32);
-    for source in 0..node_count {
-        let start = row_offsets[source] as usize;
-        let end = row_offsets[source + 1] as usize;
-        let reaches_active = (start..end).any(|edge| {
-            if edge_kind_mask[edge] & allow_mask == 0 {
-                return false;
+    let (_, words) = validate_csr_inputs(node_count, row_offsets, col_indices, edge_kind_mask);
+    prepare_output_buffer(out, words);
+    for_each_active_edge(
+        node_count,
+        row_offsets,
+        col_indices,
+        edge_kind_mask,
+        allow_mask,
+        |src, dst| {
+            if frontier
+                .get(dst / 32)
+                .is_some_and(|w| w & (1 << (dst % 32)) != 0)
+            {
+                out[src / 32] |= 1 << (src % 32);
             }
-            let destination = col_indices[edge] as usize;
-            destination < node_count
-                && frontier
-                    .get(destination / 32)
-                    .is_some_and(|word| word & (1 << (destination % 32)) != 0)
-        });
-        if reaches_active {
-            out[source / 32] |= 1 << (source % 32);
-        }
-    }
+        },
+    );
 }
 
 /// Sequential mathematical witness for one reverse CSR frontier step.
@@ -253,7 +286,7 @@ where
     F: FnMut(&[u32], &mut [u32]),
 {
     try_persistent_fixpoint_into_witness(seed, max_iterations, step, current, next)
-        .expect("persistent_fixpoint_into_witness scratch reservation failed")
+        .expect("Fix: reserve at least seed.len() capacity in current and next ping-pong buffers")
 }
 
 /// Sequential mathematical witness for resolve family / nodeset filtering.
@@ -309,44 +342,30 @@ pub fn csr_closure_with_step_hook_witness(
         edge_offsets.len() > node_count as usize,
         "complete CSR offset table"
     );
+    let mut next = current.clone();
     for _ in 0..max_iters {
-        let mut next = current.clone();
         let mut changed = false;
-        for src in 0..node_count {
-            let src_word = (src / 32) as usize;
-            let src_bit = 1u32 << (src % 32);
-            if (current[src_word] & src_bit) == 0 {
-                continue;
-            }
-            let start = edge_offsets[src as usize] as usize;
-            let end = (edge_offsets[src as usize + 1] as usize)
-                .min(edge_targets.len())
-                .min(edge_kind_mask.len());
-            if start >= end {
-                continue;
-            }
-            for edge in start..end {
-                if (edge_kind_mask[edge] & allow_mask) == 0 {
-                    continue;
+        for_each_active_edge(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            allow_mask,
+            |src, dst| {
+                if current[src / 32] & (1 << (src % 32)) != 0 {
+                    let old = next[dst / 32];
+                    next[dst / 32] |= 1 << (dst % 32);
+                    if next[dst / 32] != old {
+                        changed = true;
+                    }
                 }
-                let dst = edge_targets[edge];
-                if dst >= node_count {
-                    continue;
-                }
-                let dst_word = (dst / 32) as usize;
-                let dst_bit = 1u32 << (dst % 32);
-                let old = next[dst_word];
-                next[dst_word] |= dst_bit;
-                if next[dst_word] != old {
-                    changed = true;
-                }
-            }
-        }
+            },
+        );
         if !changed {
             break;
         }
         step_hook(&next);
-        current = next;
+        current = next.clone();
     }
     current
 }
@@ -365,12 +384,7 @@ pub fn csr_persistent_closure_witness_with_scratch_into(
     step_scratch: &mut Vec<u32>,
 ) -> u32 {
     let (_, words) = validate_csr_inputs(node_count, edge_offsets, edge_targets, edge_kind_mask);
-    if frontier_out.capacity() < words {
-        frontier_out.reserve(words.saturating_sub(frontier_out.len()));
-    }
-    frontier_out.clear();
-    frontier_out.extend_from_slice(frontier_in);
-    frontier_out.resize(words, 0);
+    prepare_copied_buffer(frontier_out, words, frontier_in);
 
     let mut changed = 0;
     if edge_offsets.is_empty() || max_iterations == 0 {
@@ -571,25 +585,14 @@ pub fn csr_forward_or_changed_witness_into(
     allow_mask: u32,
     output: &mut Vec<u32>,
 ) -> u32 {
-    let node_count = node_count as usize;
-    let words = (node_count.div_ceil(32)).max(1);
-    if output.capacity() < words {
-        output.reserve(words.saturating_sub(output.len()));
-    }
-    output.clear();
-    output.extend_from_slice(frontier);
-    output.resize(words, 0);
+    let (node_count_u, words) =
+        validate_csr_inputs(node_count, edge_offsets, edge_targets, edge_kind_mask);
+    prepare_copied_buffer(output, words.max(1), frontier);
     if edge_offsets.is_empty() {
         return 0;
     }
-    assert!(edge_offsets.len() > node_count, "complete CSR offset table");
-    let edge_count = edge_offsets[node_count] as usize;
-    assert!(
-        edge_targets.len() >= edge_count && edge_kind_mask.len() >= edge_count,
-        "complete CSR edge buffers"
-    );
     let mut changed = 0;
-    for source in 0..node_count {
+    for source in 0..node_count_u {
         if output[source / 32] & (1 << (source % 32)) == 0 {
             continue;
         }
@@ -597,20 +600,16 @@ pub fn csr_forward_or_changed_witness_into(
         let end = (edge_offsets[source + 1] as usize)
             .min(edge_targets.len())
             .min(edge_kind_mask.len());
-        if start >= end {
-            continue;
-        }
         for edge in start..end {
-            if edge_kind_mask[edge] & allow_mask == 0 {
-                continue;
-            }
-            let destination = edge_targets[edge] as usize;
-            if destination < node_count {
-                let bit = 1 << (destination % 32);
-                let word = &mut output[destination / 32];
-                if *word & bit == 0 {
-                    *word |= bit;
-                    changed = 1;
+            if edge_kind_mask[edge] & allow_mask != 0 {
+                let dst = edge_targets[edge] as usize;
+                if dst < node_count_u {
+                    let bit = 1 << (dst % 32);
+                    let word = &mut output[dst / 32];
+                    if *word & bit == 0 {
+                        *word |= bit;
+                        changed = 1;
+                    }
                 }
             }
         }
@@ -630,7 +629,13 @@ pub fn csr_forward_or_changed_witness(
 ) -> (Vec<u32>, u32) {
     let mut output = Vec::new();
     let changed = csr_forward_or_changed_witness_into(
-        node_count, edge_offsets, edge_targets, edge_kind_mask, frontier, allow_mask, &mut output,
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier,
+        allow_mask,
+        &mut output,
     );
     (output, changed)
 }
@@ -650,19 +655,8 @@ pub fn csr_forward_or_changed_closure_with_step_hook_witness_into(
     next: &mut Vec<u32>,
 ) {
     let words = ((node_count as usize).div_ceil(32)).max(1);
-    if current.capacity() < words {
-        current.reserve(words.saturating_sub(current.len()));
-    }
-    current.clear();
-    current.extend_from_slice(seed);
-    if current.len() < words {
-        current.resize(words, 0);
-    }
-    if next.capacity() < words {
-        next.reserve(words.saturating_sub(next.len()));
-    }
-    next.clear();
-    next.resize(words, 0);
+    prepare_copied_buffer(current, words, seed);
+    prepare_output_buffer(next, words);
     if edge_offsets.is_empty() || max_iterations == 0 {
         return;
     }
@@ -804,11 +798,7 @@ pub fn csr_queue_strided_forward_witness_into(
     frontier: &mut Vec<u32>,
 ) {
     let words = (node_count as usize).div_ceil(32);
-    if frontier.capacity() < words {
-        frontier.reserve(words.saturating_sub(frontier.len()));
-    }
-    frontier.clear();
-    frontier.resize(words, 0);
+    prepare_output_buffer(frontier, words);
     for &source in active_queue.iter().take(queue_len as usize) {
         if source >= node_count {
             continue;
@@ -952,11 +942,7 @@ pub fn csr_bidirectional_step_witness_into(
 ) {
     let (node_count_usize, words) =
         validate_csr_inputs(node_count, edge_offsets, edge_targets, edge_kind_masks);
-    if out.capacity() < words {
-        out.reserve(words.saturating_sub(out.len()));
-    }
-    out.clear();
-    out.resize(words, 0_u32);
+    prepare_output_buffer(out, words);
 
     for source in 0..node_count_usize {
         let source_active = frontier
@@ -1094,20 +1080,8 @@ pub fn csr_bidirectional_closure_witness_into(
 ) {
     let (_, words) = validate_csr_inputs(node_count, edge_offsets, edge_targets, edge_kind_masks);
     assert!(seed.len() <= words, "frontier fits the node domain");
-    if current.capacity() < words {
-        current.reserve(words.saturating_sub(current.len()));
-    }
-    current.clear();
-    current.extend_from_slice(seed);
-    if current.len() < words {
-        current.resize(words, 0);
-    }
-
-    if next.capacity() < words {
-        next.reserve(words.saturating_sub(next.len()));
-    }
-    next.clear();
-    next.resize(words, 0);
+    prepare_copied_buffer(current, words, seed);
+    prepare_output_buffer(next, words);
 
     for _ in 0..max_iters {
         csr_bidirectional_step_witness_into(

@@ -14,8 +14,9 @@ use vyre_reference::expr::Buffer;
 use vyre_reference::{expr as eval_expr, value::Value, workgroup::Memory};
 
 use flat_expr_eval::{
-    canonical_f32, empty_program, eval_binop_f32, eval_binop_i32, eval_binop_u32, eval_expr_value,
-    eval_unop_f32, eval_unop_i32, eval_unop_u32, expected_f32, zero_invocation,
+    assert_binop_i32_err, canonical_f32, empty_program, eval_binop_f32, eval_binop_i32,
+    eval_binop_u32, eval_expr_value, eval_unop_f32, eval_unop_i32, eval_unop_u32, expected_f32,
+    zero_invocation,
 };
 
 fn eval_cast(target: DataType, value: Expr) -> Value {
@@ -52,13 +53,27 @@ fn f32_adversarial() -> impl Strategy<Value = f32> {
 #[derive(Debug)]
 struct DummyOpaque;
 impl vyre_foundation::ir::ExprNode for DummyOpaque {
-    fn extension_kind(&self) -> &'static str { "test.dummy" }
-    fn debug_identity(&self) -> &str { "dummy" }
-    fn result_type(&self) -> Option<DataType> { Some(DataType::U32) }
-    fn cse_safe(&self) -> bool { false }
-    fn stable_fingerprint(&self) -> [u8; 32] { [0x5A; 32] }
-    fn validate_extension(&self) -> Result<(), String> { Ok(()) }
-    fn as_any(&self) -> &dyn std::any::Any { self }
+    fn extension_kind(&self) -> &'static str {
+        "test.dummy"
+    }
+    fn debug_identity(&self) -> &str {
+        "dummy"
+    }
+    fn result_type(&self) -> Option<DataType> {
+        Some(DataType::U32)
+    }
+    fn cse_safe(&self) -> bool {
+        false
+    }
+    fn stable_fingerprint(&self) -> [u8; 32] {
+        [0x5A; 32]
+    }
+    fn validate_extension(&self) -> Result<(), String> {
+        Ok(())
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 // ---------------------------------------------------------------------------
 // BinOp – u32

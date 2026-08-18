@@ -119,7 +119,6 @@ pub(crate) fn gcd_u32(mut a: u32, mut b: u32) -> u32 {
     a
 }
 
-
 /// Child-body indices referenced by a structured control-flow op's operands.
 ///
 /// Every placement analysis and every descriptor walk calls this instead of

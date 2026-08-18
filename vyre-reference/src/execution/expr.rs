@@ -13,6 +13,7 @@ use vyre_foundation::ir::{
 use crate::ReferenceError;
 use smallvec::SmallVec;
 
+use crate::execution::axis_value;
 use crate::execution::call::{callable_signature, invoke_signature, resolve_call};
 use crate::execution::expr_cast::cast_value;
 use crate::{atomics, oob, value::Value, workgroup::Invocation, workgroup::Memory};
@@ -150,7 +151,14 @@ pub(crate) fn eval_frame_oracle(
                     frames.push(Frame::Expr(b));
                     frames.push(Frame::Expr(a));
                 }
-                Expr::Atomic { op, buffer, index, expected, value, ordering: _ } => {
+                Expr::Atomic {
+                    op,
+                    buffer,
+                    index,
+                    expected,
+                    value,
+                    ordering: _,
+                } => {
                     if *op == AtomicOp::CompareExchange && expected.is_none() {
                         return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
                     }
@@ -514,12 +522,6 @@ fn buffer_decl<'a>(
             "unknown buffer `{name}`. Fix: declare it in Program::buffers."
         ))
     })
-}
-
-fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
-    (axis < 3)
-        .then(|| Value::U32(values[axis as usize]))
-        .ok_or_else(|| ReferenceError::new(format!("invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2.")))
 }
 
 // Inline: covers the crate-private `eval`, which no integration test can reach.

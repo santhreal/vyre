@@ -1,5 +1,6 @@
 //! Round-robin node stepping and expression-adjacent execution helpers.
 mod node_step;
+pub(crate) use crate::execution::axis_value;
 pub(crate) use node_step::{eval_call, step_loop_frame, step_nodes_frame};
 
 #[cfg(feature = "subgroup-ops")]
@@ -79,12 +80,6 @@ fn step(
             }
         }
     }
-}
-
-pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, ReferenceError> {
-    (axis < 3)
-        .then(|| Value::U32(values[axis as usize]))
-        .ok_or_else(|| ReferenceError::new(format!("invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2.")))
 }
 
 pub(crate) fn eval_to_index(

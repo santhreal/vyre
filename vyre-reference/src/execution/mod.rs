@@ -17,6 +17,15 @@ pub mod sequential;
 pub(crate) mod tile;
 pub(crate) mod typed_ops;
 
+pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
+    (axis < 3)
+        .then(|| Value::U32(values[axis as usize]))
+        .ok_or_else(|| {
+            crate::ReferenceError::new(format!(
+                "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
+            ))
+        })
+}
 use std::borrow::Cow;
 
 use rustc_hash::FxHashMap;

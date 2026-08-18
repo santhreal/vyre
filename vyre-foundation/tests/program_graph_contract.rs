@@ -2,35 +2,13 @@
 
 #![forbid(unsafe_code)]
 
+#[path = "support/program_graph_fixtures.rs"]
+mod support;
+use support::{contract, copy_program};
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, GraphValueId, Node, Program,
+    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, GraphValueId, Program,
     ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
-
-fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
-    ValueContract {
-        dtype: DataType::F32,
-        shape: vec![ShapeDim::Symbol("tokens".into()), ShapeDim::Known(8)],
-        access,
-        lifetime,
-    }
-}
-
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::F32),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            output,
-            vyre_foundation::ir::Expr::u32(0),
-            vyre_foundation::ir::Expr::load(input, vyre_foundation::ir::Expr::u32(0)),
-        )],
-    )
-}
-
 fn two_output_program(input: &str, first: &str, second: &str) -> Program {
     Program::wrapped(
         vec![

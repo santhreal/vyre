@@ -325,9 +325,9 @@ fn detect_unclosed_cyclic_nodes(ops: &[OpInfo], index_map: &HashMap<String, usiz
         if lowlinks[v] == indices[v] {
             let mut scc = Vec::new();
             loop {
-                let w = stack
-                    .pop()
-                    .expect("Tarjan stack must retain its component root");
+                let w = stack.pop().expect(
+                    "Fix: maintain node records on the Tarjan stack until the SCC root is popped",
+                );
                 assert!(
                     on_stack[w],
                     "Tarjan component member must be marked on-stack"

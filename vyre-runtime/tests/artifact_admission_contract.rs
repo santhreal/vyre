@@ -34,7 +34,9 @@ use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
 #[path = "../../tests/support/artifact_fixtures.rs"]
 mod artifact_fixtures;
 
-use artifact_fixtures::{compile_graph, contract, entry_point, graph_over, neutral_artifact, single_input_graph};
+use artifact_fixtures::{
+    compile_graph, contract, entry_point, graph_over, neutral_artifact, single_input_graph,
+};
 use vyre_test_support::pass_programs::{add_program, copy_program};
 
 const FRAME_HEADER_BYTES: usize = 10;

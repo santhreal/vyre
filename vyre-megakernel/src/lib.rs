@@ -24,6 +24,9 @@ mod envelope;
 mod error;
 mod facts;
 mod frame;
+#[cfg(test)]
+#[path = "../tests/graph_fixtures/mod.rs"]
+mod graph_fixtures;
 /// Whole-grid fence detection, and the planner cut that removes it.
 pub mod grid_sync;
 mod identity;
@@ -38,9 +41,6 @@ mod search;
 mod select;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
 pub(crate) mod target;
-#[cfg(test)]
-#[path = "../tests/graph_fixtures/mod.rs"]
-mod graph_fixtures;
 
 pub use compile::{compile, compile_measured, FinalistEvaluator};
 pub use device_facts::DeviceFacts;

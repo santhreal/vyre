@@ -142,9 +142,18 @@ fn ifds_queue_closure_prepare_builds_delta_fixpoint_sequence() {
         prepared.wave_queue_lengths.len(),
         prepared.closure_iterations as usize
     );
-    let wave_sum: u64 = prepared.wave_queue_lengths.iter().map(|&len| u64::from(len)).sum();
+    let wave_sum: u64 = prepared
+        .wave_queue_lengths
+        .iter()
+        .map(|&len| u64::from(len))
+        .sum();
     assert_eq!(wave_sum, prepared.total_queue_pops);
-    let wave_max = prepared.wave_queue_lengths.iter().copied().max().unwrap_or(0);
+    let wave_max = prepared
+        .wave_queue_lengths
+        .iter()
+        .copied()
+        .max()
+        .unwrap_or(0);
     assert_eq!(wave_max, prepared.max_wave_queue_len);
     let launch_lanes = crate::cases::queue_closure_profile::queue_closure_launch_lanes_per_wave(
         prepared.delta_grid,

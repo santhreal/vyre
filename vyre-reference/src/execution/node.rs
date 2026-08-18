@@ -680,7 +680,12 @@ mod tests {
     fn sequential_eval_tile_matmul_and_reduce() {
         use vyre_foundation::ir::{BufferAccess, Layout, Residency, SubgroupReduceOp, Tile};
 
-        let tile_reg = Tile::new(DataType::F32, vec![2, 2], Layout::RowMajor, Residency::Register);
+        let tile_reg = Tile::new(
+            DataType::F32,
+            vec![2, 2],
+            Layout::RowMajor,
+            Residency::Register,
+        );
         let program = Program::wrapped(
             vec![
                 BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
@@ -691,8 +696,20 @@ mod tests {
             [1, 1, 1],
             vec![
                 Node::tile_decl("c", tile_reg.clone()),
-                Node::tile_load("t_a", tile_reg.clone(), "a", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor),
-                Node::tile_load("t_b", tile_reg, "b", vec![Expr::u32(0), Expr::u32(0)], Layout::RowMajor),
+                Node::tile_load(
+                    "t_a",
+                    tile_reg.clone(),
+                    "a",
+                    vec![Expr::u32(0), Expr::u32(0)],
+                    Layout::RowMajor,
+                ),
+                Node::tile_load(
+                    "t_b",
+                    tile_reg,
+                    "b",
+                    vec![Expr::u32(0), Expr::u32(0)],
+                    Layout::RowMajor,
+                ),
                 Node::tile_matmul("c", "t_a", "t_b"),
                 Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
                 Node::tile_reduce("r", "c", SubgroupReduceOp::Add, 1),

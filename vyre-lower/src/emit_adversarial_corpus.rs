@@ -83,7 +83,11 @@ fn slot(
 }
 
 fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
-    KernelOp { kind, operands, result }
+    KernelOp {
+        kind,
+        operands,
+        result,
+    }
 }
 
 fn lit(pool: u32, result: u32) -> KernelOp {

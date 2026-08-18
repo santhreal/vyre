@@ -59,16 +59,12 @@ mod tests {
         let desc = descriptor("dead_op_test")
             .slot(global_rw(0, DataType::U32, "out"))
             .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .literals([LiteralValue::U32(42)])
-                    .ops([
-                        lit(0, 0), // result 0, used by store
-                        lit(0, 1), // result 1, dead!
-                        lit(0, 2), // result 2, dead!
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
-                    ]),
-            )
+            .body(body().literals([LiteralValue::U32(42)]).ops([
+                lit(0, 0), // result 0, used by store
+                lit(0, 1), // result 1, dead!
+                lit(0, 2), // result 2, dead!
+                effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
+            ]))
             .build();
 
         let rewritten = rewrite_dead_ops(&desc);
@@ -84,15 +80,11 @@ mod tests {
         let desc = descriptor("effectful_test")
             .slot(global_rw(0, DataType::U32, "out"))
             .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .literals([LiteralValue::U32(0)])
-                    .ops([
-                        lit(0, 0),
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
-                        effect(KernelOpKind::Return, []),
-                    ]),
-            )
+            .body(body().literals([LiteralValue::U32(0)]).ops([
+                lit(0, 0),
+                effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
+                effect(KernelOpKind::Return, []),
+            ]))
             .build();
 
         let rewritten = rewrite_dead_ops(&desc);
@@ -104,16 +96,12 @@ mod tests {
         let desc = descriptor("used_pure_test")
             .slot(global_rw(0, DataType::U32, "out"))
             .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .literals([LiteralValue::U32(10)])
-                    .ops([
-                        lit(0, 0),
-                        lit(0, 1),
-                        op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
-                    ]),
-            )
+            .body(body().literals([LiteralValue::U32(10)]).ops([
+                lit(0, 0),
+                lit(0, 1),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
+                effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+            ]))
             .build();
 
         let rewritten = rewrite_dead_ops(&desc);
@@ -135,14 +123,9 @@ mod tests {
                     .child(
                         body()
                             .literals([LiteralValue::U32(2)])
-                            .ops([
-                                lit(0, 2),
-                                effect(KernelOpKind::StoreGlobal, [0, 0, 0]),
-                            ]),
+                            .ops([lit(0, 2), effect(KernelOpKind::StoreGlobal, [0, 0, 0])]),
                     )
-                    .child(
-                        body().ops([effect(KernelOpKind::StoreGlobal, [0, 0, 0])]),
-                    ),
+                    .child(body().ops([effect(KernelOpKind::StoreGlobal, [0, 0, 0])])),
             )
             .build();
 

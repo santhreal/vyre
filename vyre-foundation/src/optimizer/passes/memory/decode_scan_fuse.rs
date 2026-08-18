@@ -109,28 +109,7 @@ fn cross_workgroup_buffers(nodes: &[Node], out: &mut FxHashSet<Ident>) {
             out.insert(input.clone());
             out.insert(output.clone());
         }
-        Node::Let { .. }
-        | Node::Assign { .. }
-        | Node::Store { .. }
-        | Node::If { .. }
-        | Node::Loop { .. }
-        | Node::Block(_)
-        | Node::Region { .. }
-        | Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AsyncWait { .. }
-        | Node::Trap { .. }
-        | Node::Resume { .. }
-        | Node::TileLoad { .. }
-        | Node::TileStore { .. }
-        | Node::TileMatmul { .. }
-        | Node::TileReduce { .. }
-        | Node::TileElementwise { .. }
-        | Node::TileDecl { .. }
-        | Node::Opaque(_) => {}
+        _ => {}
     });
 }
 

@@ -332,8 +332,15 @@ pub fn try_chebyshev_filter_witness(
 ) -> Result<Vec<f32>, String> {
     let mut out = Vec::new();
     try_chebyshev_filter_witness_into(
-        laplacian, signal, coefficients, n, k_steps,
-        &mut out, &mut Vec::new(), &mut Vec::new(), &mut Vec::new(),
+        laplacian,
+        signal,
+        coefficients,
+        n,
+        k_steps,
+        &mut out,
+        &mut Vec::new(),
+        &mut Vec::new(),
+        &mut Vec::new(),
     )?;
     Ok(out)
 }
@@ -585,7 +592,9 @@ pub fn natural_gradient_autotune_step_witness_into(
     out: &mut Vec<f64>,
 ) {
     try_natural_gradient_autotune_step_witness_into(m_inv_sqrt, grad, n, learning_rate, out)
-        .expect("natural_gradient_autotune_step_witness_into failed");
+        .expect(
+            "Fix: provide m_inv_sqrt of length n*n and grad of length n with n*n fitting in usize",
+        );
 }
 
 /// Natural-gradient autotuner step.
@@ -622,7 +631,8 @@ pub fn try_identity_matrix_witness_into(n: u32, out: &mut Vec<f64>) -> Result<()
 ///
 /// Panics if matrix dimension `n * n` overflows `usize`.
 pub fn identity_matrix_witness_into(n: u32, out: &mut Vec<f64>) {
-    try_identity_matrix_witness_into(n, out).expect("identity_matrix_witness_into failed");
+    try_identity_matrix_witness_into(n, out)
+        .expect("Fix: choose matrix dimension n such that n * n does not overflow usize");
 }
 
 /// Identity matrix of size n x n.
@@ -855,7 +865,7 @@ pub fn tensor_train_fusion_pressure_witness_with_scratch(
     next: &mut Vec<f64>,
 ) -> f64 {
     try_tensor_train_fusion_pressure_witness_with_scratch(shared_buffer_ranks, acc, next)
-        .expect("tensor_train_fusion_pressure_witness_with_scratch failed")
+        .expect("Fix: ensure adjacent tensor train rank products fit within usize bounds")
 }
 
 /// Tensor-Train chain fusion pressure calculation.
@@ -971,7 +981,9 @@ pub fn scallop_join_fixpoint_witness_into(
         .checked_mul(n)
         .and_then(|cells| cells.checked_mul(words_per_cell))
         .and_then(|count| usize::try_from(count).ok())
-        .expect("lineage matrix dimensions must fit usize");
+        .expect(
+            "Fix: keep n * n * words_per_cell within usize bounds for lineage matrix allocation",
+        );
     assert_eq!(state.len(), words, "complete n*n*w state matrix");
     assert_eq!(join_rules.len(), words, "complete n*n*w join-rule matrix");
     let width = words_per_cell as usize;
@@ -1306,7 +1318,9 @@ pub fn amg_v_cycle_witness_with_scratch_into(
         scratch,
         out,
     )
-    .expect("AMG V-cycle failed: invalid input buffer shapes");
+    .expect(
+        "Fix: provide fine and coarse matrix and transfer operator buffers matching dimensions",
+    );
 }
 
 /// Fallible two-level algebraic-multigrid V-cycle writing into caller storage.
@@ -1369,7 +1383,9 @@ pub fn amg_v_cycle_witness_into(
         coarse_count,
         out,
     )
-    .expect("AMG V-cycle failed: invalid input buffer shapes");
+    .expect(
+        "Fix: provide fine and coarse matrix and transfer operator buffers matching dimensions",
+    );
 }
 
 /// One two-level algebraic-multigrid V-cycle in scalar floating-point arithmetic.
@@ -1556,7 +1572,7 @@ pub fn amg_solve_to_tolerance_witness_with_scratch_into(
         scratch,
         out,
     )
-    .expect("amg_solve_to_tolerance failed: invalid input buffer shapes")
+    .expect("Fix: supply matching fine/coarse AMG operator buffers and a finite positive tolerance")
 }
 
 /// Fallible iterative AMG V-cycle solver to tolerance into caller-owned storage.
@@ -1636,7 +1652,7 @@ pub fn amg_solve_to_tolerance_witness_into(
         out,
         scratch,
     )
-    .expect("amg_solve_to_tolerance failed: invalid input buffer shapes")
+    .expect("Fix: supply matching fine/coarse AMG operator buffers and a finite positive tolerance")
 }
 
 /// Iterative AMG V-cycle solver to tolerance returning solution vector and cycle count.
@@ -1775,7 +1791,7 @@ pub fn jacobi_solve_to_tolerance_witness_into(
     try_jacobi_solve_to_tolerance_witness_into(
         matrix, rhs, initial, omega, n, tolerance, max_iters, out, scratch,
     )
-    .expect("jacobi_solve_to_tolerance failed: invalid input buffer shapes")
+    .expect("Fix: provide a square matrix of size n*n, vectors of size n, and a finite positive tolerance")
 }
 
 /// Iterative Jacobi solver to tolerance returning solution vector and iteration count.
@@ -2136,18 +2152,21 @@ pub fn try_sinkhorn_iterate_witness_into(
     let mut iterations = 0;
     for iteration in 0..max_iterations {
         u_old.copy_from_slice(u_out);
-        for row in 0..m {
-            let sum = (0..n).fold(0_u32, |sum, column| {
-                sum.wrapping_add(k[row * n + column].wrapping_mul(v_out[column]))
-            });
-            u_out[row] = a[row] / sum.max(1);
-        }
-        for column in 0..n {
-            let sum = (0..m).fold(0_u32, |sum, row| {
-                sum.wrapping_add(k_t[column * m + row].wrapping_mul(u_out[row]))
-            });
-            v_out[column] = b[column] / sum.max(1);
-        }
+        let step_u32 = |mat: &[u32],
+                        in_v: &[u32],
+                        tgt: &[u32],
+                        out_v: &mut [u32],
+                        rows: usize,
+                        cols: usize| {
+            for r in 0..rows {
+                let sum = (0..cols).fold(0_u32, |acc, c| {
+                    acc.wrapping_add(mat[r * cols + c].wrapping_mul(in_v[c]))
+                });
+                out_v[r] = tgt[r] / sum.max(1);
+            }
+        };
+        step_u32(k, v_out, a, u_out, m, n);
+        step_u32(k_t, u_out, b, v_out, n, m);
         if u_out == u_old {
             return Ok(iteration);
         }
@@ -2171,7 +2190,18 @@ pub fn try_sinkhorn_iterate_witness(
 ) -> Result<(Vec<u32>, Vec<u32>, u32), String> {
     let (mut u, mut v, mut u_old) = (Vec::new(), Vec::new(), Vec::new());
     let iters = try_sinkhorn_iterate_witness_into(
-        k, k_t, a, b, u_init, v_init, m, n, max_iterations, &mut u, &mut v, &mut u_old,
+        k,
+        k_t,
+        a,
+        b,
+        u_init,
+        v_init,
+        m,
+        n,
+        max_iterations,
+        &mut u,
+        &mut v,
+        &mut u_old,
     )?;
     Ok((u, v, iters))
 }
@@ -2206,18 +2236,22 @@ pub fn sinkhorn_clustering_witness(
     let mut u = vec![1.0_f32; m];
     let mut v = vec![1.0_f32; n];
     for _ in 0..iterations {
-        for region in 0..m {
-            let sum = (0..n).fold(0.0_f32, |sum, cluster| {
-                sum + kernel[region * n + cluster] * v[cluster]
-            });
-            u[region] = region_weights[region] / sum.max(1.0e-10);
-        }
-        for cluster in 0..n {
-            let sum = (0..m).fold(0.0_f32, |sum, region| {
-                sum + kernel[region * n + cluster] * u[region]
-            });
-            v[cluster] = cluster_capacities[cluster] / sum.max(1.0e-10);
-        }
+        let step_f32 = |in_v: &[f32],
+                        weights: &[f32],
+                        out_u: &mut [f32],
+                        rows: usize,
+                        cols: usize,
+                        trans: bool| {
+            for r in 0..rows {
+                let sum = (0..cols).fold(0.0_f32, |sum, c| {
+                    let idx = if trans { c * rows + r } else { r * cols + c };
+                    sum + kernel[idx] * in_v[c]
+                });
+                out_u[r] = weights[r] / sum.max(1.0e-10);
+            }
+        };
+        step_f32(&v, region_weights, &mut u, m, n, false);
+        step_f32(&u, cluster_capacities, &mut v, n, m, true);
     }
 
     (0..m)
@@ -2426,7 +2460,14 @@ pub fn sum_product_evaluate_witness(
 ) -> Vec<f64> {
     let mut output = Vec::new();
     sum_product_evaluate_witness_into(
-        kinds, child_offsets, child_counts, children, weights, leaf_values, topological_order, &mut output,
+        kinds,
+        child_offsets,
+        child_counts,
+        children,
+        weights,
+        leaf_values,
+        topological_order,
+        &mut output,
     );
     output
 }
@@ -2596,7 +2637,7 @@ pub fn differentiable_autotune_pick_config_witness_into(
         scaled,
         out,
     )
-    .expect("differentiable_autotune_pick_config_witness_into failed: invalid temperature");
+    .expect("Fix: supply a finite positive temperature parameter for differentiable autotune configuration selection");
 }
 
 /// Differentiable autotune configuration pick probabilities.
@@ -2949,7 +2990,7 @@ pub fn l2p_zeroth_all_witness(
 ) -> Vec<f64> {
     let mut output = Vec::new();
     try_l2p_zeroth_all_witness_into(cell_local, cell_assignment, region_count, &mut output)
-        .expect("L2P witness assignments must match the region count and reference valid cells");
+        .expect("Fix: provide cell assignments matching region_count and indexing valid cells in cell_local");
     output
 }
 
@@ -3185,7 +3226,7 @@ pub fn mori_zwanzig_coarsen_via_clustering_witness(
 pub fn qsvt_block_encode_witness_into(matrix: &[f64], dimension: u32, out: &mut Vec<f64>) -> f64 {
     let cells = (dimension as usize)
         .checked_mul(dimension as usize)
-        .expect("QSVT matrix dimensions must fit usize");
+        .expect("Fix: choose block encoding dimension such that dimension * dimension does not overflow usize");
     if out.capacity() < cells {
         out.reserve(cells.saturating_sub(out.len()));
     }
@@ -3205,7 +3246,7 @@ pub fn qsvt_block_encode_witness_into(matrix: &[f64], dimension: u32, out: &mut 
 pub fn qsvt_block_encode_witness(matrix: &[f64], dimension: u32) -> (Vec<f64>, f64) {
     let cells = (dimension as usize)
         .checked_mul(dimension as usize)
-        .expect("QSVT matrix dimensions must fit usize");
+        .expect("Fix: choose block encoding dimension such that dimension * dimension does not overflow usize");
     let mut scaled = Vec::with_capacity(cells);
     let norm = qsvt_block_encode_witness_into(matrix, dimension, &mut scaled);
     (scaled, norm)
@@ -3625,21 +3666,23 @@ pub fn try_sinkhorn_iterate_f64_witness_into(
     for iter in 0..max_iterations {
         u_old.copy_from_slice(u_out);
 
-        for i in 0..m {
-            let mut sum = 0.0_f64;
-            for j in 0..n {
-                sum += k[i * n + j] * v_out[j];
+        let step_f64 = |in_v: &[f64],
+                        tgt: &[f64],
+                        out_v: &mut [f64],
+                        rows: usize,
+                        cols: usize,
+                        trans: bool| {
+            for r in 0..rows {
+                let mut sum = 0.0_f64;
+                for c in 0..cols {
+                    let idx = if trans { c * rows + r } else { r * cols + c };
+                    sum += k[idx] * in_v[c];
+                }
+                out_v[r] = if sum == 0.0 { 0.0 } else { tgt[r] / sum };
             }
-            u_out[i] = if sum == 0.0 { 0.0 } else { a[i] / sum };
-        }
-
-        for j in 0..n {
-            let mut sum = 0.0_f64;
-            for i in 0..m {
-                sum += k[i * n + j] * u_out[i];
-            }
-            v_out[j] = if sum == 0.0 { 0.0 } else { b[j] / sum };
-        }
+        };
+        step_f64(v_out, a, u_out, m, n, false);
+        step_f64(u_out, b, v_out, n, m, true);
 
         let max_delta = u_out
             .iter()
@@ -3663,7 +3706,14 @@ pub fn try_sinkhorn_iterate_f64_witness(
 ) -> Result<(Vec<f64>, Vec<f64>, u32), String> {
     let (mut u, mut v, mut u_old) = (Vec::new(), Vec::new(), Vec::new());
     let iters = try_sinkhorn_iterate_f64_witness_into(
-        k, a, b, tolerance, max_iterations, &mut u, &mut v, &mut u_old,
+        k,
+        a,
+        b,
+        tolerance,
+        max_iterations,
+        &mut u,
+        &mut v,
+        &mut u_old,
     )?;
     Ok((u, v, iters))
 }
@@ -3685,36 +3735,36 @@ pub fn sinkhorn_iterate_f64_witness(
         .unwrap_or_else(|error| panic!("Sinkhorn f64 witness failed: {error}"))
 }
 
+fn sinkhorn_residual(k: &[f64], u: &[f64], v: &[f64], target: &[f64], trans: bool) -> f64 {
+    let (m, n) = (u.len(), v.len());
+    assert_eq!(k.len(), m * n);
+    let (outer, inner) = if trans { (n, m) } else { (m, n) };
+    assert_eq!(target.len(), outer);
+    target
+        .iter()
+        .enumerate()
+        .map(|(o, &exp)| {
+            let act: f64 = (0..inner)
+                .map(|i| {
+                    let (r, c) = if trans { (i, o) } else { (o, i) };
+                    u[r] * k[r * n + c] * v[c]
+                })
+                .sum();
+            (act - exp).abs()
+        })
+        .fold(0.0, f64::max)
+}
+
 /// Sequential floating-point Sinkhorn row residual calculation.
 #[must_use]
 pub fn sinkhorn_row_residual_witness(k: &[f64], u: &[f64], v: &[f64], a: &[f64]) -> f64 {
-    let m = u.len();
-    let n = v.len();
-    assert_eq!(k.len(), m * n);
-    assert_eq!(a.len(), m);
-    a.iter()
-        .enumerate()
-        .map(|(i, &expected)| {
-            let actual: f64 = (0..n).map(|j| u[i] * k[i * n + j] * v[j]).sum();
-            (actual - expected).abs()
-        })
-        .fold(0.0_f64, f64::max)
+    sinkhorn_residual(k, u, v, a, false)
 }
 
 /// Sequential floating-point Sinkhorn column residual calculation.
 #[must_use]
 pub fn sinkhorn_col_residual_witness(k: &[f64], u: &[f64], v: &[f64], b: &[f64]) -> f64 {
-    let m = u.len();
-    let n = v.len();
-    assert_eq!(k.len(), m * n);
-    assert_eq!(b.len(), n);
-    b.iter()
-        .enumerate()
-        .map(|(j, &expected)| {
-            let actual: f64 = (0..m).map(|i| u[i] * k[i * n + j] * v[j]).sum();
-            (actual - expected).abs()
-        })
-        .fold(0.0_f64, f64::max)
+    sinkhorn_residual(k, u, v, b, true)
 }
 
 /// One sequential step of floating-point Sinkhorn normalization into caller-owned storage.
@@ -3794,40 +3844,32 @@ pub fn try_sinkhorn_iter_f64_in_place_witness_into(
     m.checked_mul(n)
         .ok_or_else(|| format!("sinkhorn_iter witness K shape overflows: m={m}, n={n}."))?;
 
-    if kv.capacity() < m {
-        kv.reserve(m.saturating_sub(kv.len()));
-    }
-    kv.clear();
-    kv.resize(m, 0.0);
-    for i in 0..m {
-        for j in 0..n {
-            let k_ij = k.get(i * n + j).copied().unwrap_or(0.0);
-            let v_j = v.get(j).copied().unwrap_or(0.0);
-            kv[i] += k_ij * v_j;
+    let step = |k_slice: &[f64],
+                in_v: &[f64],
+                target_a: &[f64],
+                out_u: &mut [f64],
+                rows: usize,
+                cols: usize,
+                trans: bool,
+                scr: &mut Vec<f64>| {
+        if scr.capacity() < rows {
+            scr.reserve(rows.saturating_sub(scr.len()));
         }
-    }
-    for i in 0..m {
-        if let Some(u_i) = u.get_mut(i) {
-            *u_i = a.get(i).copied().unwrap_or(0.0) / kv[i].max(1e-30);
+        scr.clear();
+        scr.resize(rows, 0.0);
+        for r in 0..rows {
+            for c in 0..cols {
+                let idx = if trans { c * rows + r } else { r * cols + c };
+                scr[r] +=
+                    k_slice.get(idx).copied().unwrap_or(0.0) * in_v.get(c).copied().unwrap_or(0.0);
+            }
+            if let Some(slot) = out_u.get_mut(r) {
+                *slot = target_a.get(r).copied().unwrap_or(0.0) / scr[r].max(1e-30);
+            }
         }
-    }
-    if ktu.capacity() < n {
-        ktu.reserve(n.saturating_sub(ktu.len()));
-    }
-    ktu.clear();
-    ktu.resize(n, 0.0);
-    for j in 0..n {
-        for i in 0..m {
-            let k_ij = k.get(i * n + j).copied().unwrap_or(0.0);
-            let u_i = u.get(i).copied().unwrap_or(0.0);
-            ktu[j] += k_ij * u_i;
-        }
-    }
-    for j in 0..n {
-        if let Some(v_j) = v.get_mut(j) {
-            *v_j = b.get(j).copied().unwrap_or(0.0) / ktu[j].max(1e-30);
-        }
-    }
+    };
+    step(k, v, a, u, m, n, false, kv);
+    step(k, u, b, v, n, m, true, ktu);
     Ok(())
 }
 
@@ -3848,8 +3890,9 @@ pub fn sinkhorn_iter_f64_in_place_witness_into(
     kv: &mut Vec<f64>,
     ktu: &mut Vec<f64>,
 ) {
-    try_sinkhorn_iter_f64_in_place_witness_into(k, a, b, u, v, m, n, kv, ktu)
-        .expect("sinkhorn_iter_f64_in_place_witness_into failed");
+    try_sinkhorn_iter_f64_in_place_witness_into(k, a, b, u, v, m, n, kv, ktu).expect(
+        "Fix: ensure m and n fit usize with m*n within bounds for Sinkhorn kernel matrix iteration",
+    );
 }
 
 /// Fallible sequential Grünwald-Letnikov kernel generator into caller-owned storage.
@@ -4305,23 +4348,22 @@ pub fn is_psd_matrix_witness(matrix: &[f64], n: u32) -> bool {
 /// Sequential Modified Gram-Schmidt orthogonalization witness into caller-owned storage.
 pub fn modified_gram_schmidt_witness_into(y: &[f64], m: u32, l: u32, q: &mut Vec<f64>) {
     let (m, l) = (m as usize, l as usize);
-    let mut cols = vec![0.0_f64; m * l];
-    for (idx, slot) in cols.iter_mut().enumerate() {
-        let (j, i) = (idx / m, idx % m);
-        *slot = y.get(i * l + j).copied().unwrap_or(0.0);
-    }
+    let mut cols: Vec<Vec<f64>> = (0..l)
+        .map(|j| {
+            (0..m)
+                .map(|i| y.get(i * l + j).copied().unwrap_or(0.0))
+                .collect()
+        })
+        .collect();
     for j in 0..l {
-        let norm = cols[j * m..(j + 1) * m].iter().map(|&v| v * v).sum::<f64>().sqrt();
+        let norm = cols[j].iter().map(|&v| v * v).sum::<f64>().sqrt();
         if norm > 1e-12 {
-            let inv_norm = 1.0 / norm;
-            for i in 0..m {
-                cols[j * m + i] *= inv_norm;
-            }
+            cols[j].iter_mut().for_each(|v| *v /= norm);
         }
         for k in (j + 1)..l {
-            let dot: f64 = (0..m).map(|i| cols[j * m + i] * cols[k * m + i]).sum();
+            let dot: f64 = (0..m).map(|i| cols[j][i] * cols[k][i]).sum();
             for i in 0..m {
-                cols[k * m + i] -= dot * cols[j * m + i];
+                cols[k][i] -= dot * cols[j][i];
             }
         }
     }
@@ -4329,7 +4371,7 @@ pub fn modified_gram_schmidt_witness_into(y: &[f64], m: u32, l: u32, q: &mut Vec
     q.reserve(m * l);
     for i in 0..m {
         for j in 0..l {
-            q.push(cols[j * m + i]);
+            q.push(cols[j][i]);
         }
     }
 }
@@ -4408,13 +4450,17 @@ pub fn rms_norm_linear_witness(
         normalized.len(),
         n
     );
-    let inv_scale = 1.0_f32 / ((normalized.iter().map(|&v| v * v).sum::<f32>() / (n as f32)) + eps).sqrt();
+    let inv_scale =
+        1.0_f32 / ((normalized.iter().map(|&v| v * v).sum::<f32>() / (n as f32)) + eps).sqrt();
     let (out_dim, in_dim) = (out_dim as usize, in_dim as usize);
     (0..out_dim)
         .map(|j| {
             let b = bias.get(j).copied().unwrap_or(0.0);
             let dot: f32 = (0..in_dim)
-                .map(|k| input.get(k).copied().unwrap_or(0.0) * weights.get(k * out_dim + j).copied().unwrap_or(0.0))
+                .map(|k| {
+                    input.get(k).copied().unwrap_or(0.0)
+                        * weights.get(k * out_dim + j).copied().unwrap_or(0.0)
+                })
                 .sum();
             b + dot * inv_scale
         })

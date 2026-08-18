@@ -542,7 +542,10 @@ pub fn adjustment_set_ordering_is_safe_witness(
     if treatment == outcome {
         return true;
     }
-    let Some(cells) = (n as usize).checked_mul(n as usize).filter(|&c| adj.len() == c) else {
+    let Some(cells) = (n as usize)
+        .checked_mul(n as usize)
+        .filter(|&c| adj.len() == c)
+    else {
         return false;
     };
     if treatment >= n || outcome >= n {
@@ -555,7 +558,10 @@ pub fn adjustment_set_ordering_is_safe_witness(
 /// For each pass index `i`, return strict descendants reachable in the influence graph.
 #[must_use]
 pub fn adjustment_set_pass_descendants_witness(adj: &[u32], n: u32) -> Vec<Vec<u32>> {
-    let Some(cells) = (n as usize).checked_mul(n as usize).filter(|&c| c > 0 && adj.len() == c) else {
+    let Some(cells) = (n as usize)
+        .checked_mul(n as usize)
+        .filter(|&c| c > 0 && adj.len() == c)
+    else {
         return Vec::new();
     };
     let closure = dense_transitive_closure(adj, n as usize);
@@ -665,11 +671,17 @@ pub fn passes_commute_on_witness(
 /// Evaluation context queried by the rule condition reference witness.
 pub trait RuleEvaluationContextWitness {
     /// Count of matched pattern occurrences.
-    fn pattern_count(&self, _pattern_id: u32) -> u32 { 0 }
+    fn pattern_count(&self, _pattern_id: u32) -> u32 {
+        0
+    }
     /// Measured file size in bytes.
-    fn file_size(&self) -> u64 { 0 }
+    fn file_size(&self) -> u64 {
+        0
+    }
     /// Lookup value for named record field.
-    fn field_value(&self, _name: &str) -> Option<&str> { None }
+    fn field_value(&self, _name: &str) -> Option<&str> {
+        None
+    }
 }
 
 /// Canonical neutral rule condition representation for reference witnesses.
@@ -768,23 +780,110 @@ pub enum RuleConditionWitness {
 impl PartialEq for RuleConditionWitness {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::PatternExists { pattern_id: a }, Self::PatternExists { pattern_id: b }) => a == b,
-            (Self::PatternCountGt { pattern_id: a, threshold: ta }, Self::PatternCountGt { pattern_id: b, threshold: tb }) => (a, ta) == (b, tb),
-            (Self::PatternCountGte { pattern_id: a, threshold: ta }, Self::PatternCountGte { pattern_id: b, threshold: tb }) => (a, ta) == (b, tb),
+            (Self::PatternExists { pattern_id: a }, Self::PatternExists { pattern_id: b }) => {
+                a == b
+            }
+            (
+                Self::PatternCountGt {
+                    pattern_id: a,
+                    threshold: ta,
+                },
+                Self::PatternCountGt {
+                    pattern_id: b,
+                    threshold: tb,
+                },
+            ) => (a, ta) == (b, tb),
+            (
+                Self::PatternCountGte {
+                    pattern_id: a,
+                    threshold: ta,
+                },
+                Self::PatternCountGte {
+                    pattern_id: b,
+                    threshold: tb,
+                },
+            ) => (a, ta) == (b, tb),
             (Self::FileSizeLt(a), Self::FileSizeLt(b)) => a == b,
             (Self::FileSizeLte(a), Self::FileSizeLte(b)) => a == b,
             (Self::FileSizeGt(a), Self::FileSizeGt(b)) => a == b,
             (Self::FileSizeGte(a), Self::FileSizeGte(b)) => a == b,
             (Self::FileSizeEq(a), Self::FileSizeEq(b)) => a == b,
             (Self::FileSizeNe(a), Self::FileSizeNe(b)) => a == b,
-            (Self::LiteralTrue, Self::LiteralTrue) | (Self::LiteralFalse, Self::LiteralFalse) => true,
-            (Self::RegexMatch { field: af, pattern: ap }, Self::RegexMatch { field: bf, pattern: bp }) => af == bf && ap == bp,
-            (Self::SubstringMatch { haystack: ah, needle: an }, Self::SubstringMatch { haystack: bh, needle: bn }) => ah == bh && an == bn,
-            (Self::PrefixMatch { value: av, prefix: ap }, Self::PrefixMatch { value: bv, prefix: bp }) => av == bv && ap == bp,
-            (Self::SuffixMatch { value: av, suffix: as_ }, Self::SuffixMatch { value: bv, suffix: bs }) => av == bv && as_ == bs,
-            (Self::RangeMatch { value: av, min: amin, max: amax }, Self::RangeMatch { value: bv, min: bmin, max: bmax }) => (av, amin, amax) == (bv, bmin, bmax),
-            (Self::SetMembership { value: av, set: aset }, Self::SetMembership { value: bv, set: bset }) => av == bv && aset == bset,
-            (Self::FieldInSet { field: af, set: aset }, Self::FieldInSet { field: bf, set: bset }) => af == bf && aset == bset,
+            (Self::LiteralTrue, Self::LiteralTrue) | (Self::LiteralFalse, Self::LiteralFalse) => {
+                true
+            }
+            (
+                Self::RegexMatch {
+                    field: af,
+                    pattern: ap,
+                },
+                Self::RegexMatch {
+                    field: bf,
+                    pattern: bp,
+                },
+            ) => af == bf && ap == bp,
+            (
+                Self::SubstringMatch {
+                    haystack: ah,
+                    needle: an,
+                },
+                Self::SubstringMatch {
+                    haystack: bh,
+                    needle: bn,
+                },
+            ) => ah == bh && an == bn,
+            (
+                Self::PrefixMatch {
+                    value: av,
+                    prefix: ap,
+                },
+                Self::PrefixMatch {
+                    value: bv,
+                    prefix: bp,
+                },
+            ) => av == bv && ap == bp,
+            (
+                Self::SuffixMatch {
+                    value: av,
+                    suffix: as_,
+                },
+                Self::SuffixMatch {
+                    value: bv,
+                    suffix: bs,
+                },
+            ) => av == bv && as_ == bs,
+            (
+                Self::RangeMatch {
+                    value: av,
+                    min: amin,
+                    max: amax,
+                },
+                Self::RangeMatch {
+                    value: bv,
+                    min: bmin,
+                    max: bmax,
+                },
+            ) => (av, amin, amax) == (bv, bmin, bmax),
+            (
+                Self::SetMembership {
+                    value: av,
+                    set: aset,
+                },
+                Self::SetMembership {
+                    value: bv,
+                    set: bset,
+                },
+            ) => av == bv && aset == bset,
+            (
+                Self::FieldInSet {
+                    field: af,
+                    set: aset,
+                },
+                Self::FieldInSet {
+                    field: bf,
+                    set: bset,
+                },
+            ) => af == bf && aset == bset,
             (Self::Opaque(a), Self::Opaque(b)) => a.extension_id() == b.extension_id(),
             _ => false,
         }
