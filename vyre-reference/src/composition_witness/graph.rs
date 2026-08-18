@@ -18,18 +18,23 @@ pub fn dominator_tree_witness(node_count: u32, root: u32, edges: &[(u32, u32)]) 
     }
     let mut visited = vec![false; n];
     let mut postorder = Vec::with_capacity(n);
-    fn dfs(u: usize, succs: &[Vec<u32>], visited: &mut [bool], postorder: &mut Vec<usize>) {
-        visited[u] = true;
-        for &v in &succs[u] {
-            let v = v as usize;
-            if !visited[v] {
-                dfs(v, succs, visited, postorder);
+    if (root as usize) < n {
+        let root_idx = root as usize;
+        let mut stack = Vec::with_capacity(64);
+        visited[root_idx] = true;
+        stack.push((root_idx, 0usize));
+        while let Some((u, succ_idx)) = stack.pop() {
+            if succ_idx < succs[u].len() {
+                let v = succs[u][succ_idx] as usize;
+                stack.push((u, succ_idx + 1));
+                if !visited[v] {
+                    visited[v] = true;
+                    stack.push((v, 0usize));
+                }
+            } else {
+                postorder.push(u);
             }
         }
-        postorder.push(u);
-    }
-    if (root as usize) < n {
-        dfs(root as usize, &succs, &mut visited, &mut postorder);
     }
     let mut postorder_num = vec![usize::MAX; n];
     for (i, &u) in postorder.iter().enumerate() {
