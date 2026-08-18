@@ -244,20 +244,14 @@ pub fn shape_spectrum_fixed_via_with_scratch_into(
     let program = mp_edge_clip("eigenvalues", "mp_edge", "out", n);
     scratch.mp_edge.clear();
     scratch.mp_edge.push(mp_edge_fixed);
-    // Real-backend input contract: `eigenvalues` RO (0) + `mp_edge` scalar RO (1) + the plain-RW
-    // `out` (2, n words, zero-filled, the elementwise-min kernel writes it). mp_edge_clip delegates
-    // to u32_vector_scalar_map_program whose `out` is plain ReadWrite, so a third zero slot is
-    // required; passing 2 fails the backend's strict count.
-    ensure_input_slots(&mut scratch.inputs, 3);
+    // `mp_edge_clip` declares two read-only inputs. Its write-complete output is
+    // allocated by the backend and must not be submitted as a host input.
+    ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], eigenvalues_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.mp_edge);
-    write_zero_bytes(
-        &mut scratch.inputs[2],
-        (n as usize) * std::mem::size_of::<u32>(),
-    );
     let outputs = dispatcher.dispatch(
         &program,
-        &scratch.inputs[..3],
+        &scratch.inputs[..2],
         Some([ceil_div_u32(n, 256), 1, 1]),
     )?;
     if outputs.is_empty() {
@@ -351,8 +345,8 @@ mod tests {
             grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
             match inputs.len() {
-                // mp_edge_clip: eigenvalues RO(0) + mp_edge scalar RO(1) + plain-RW out(2).
-                3 => {
+                // mp_edge_clip: eigenvalues RO(0) + mp_edge scalar RO(1).
+                2 => {
                     assert_eq!(grid_override, Some([1, 1, 1]));
                     let eigenvalues = crate::dispatch_buffers::read_u32s(&inputs[0]);
                     let edge = crate::dispatch_buffers::read_u32s(&inputs[1])[0];

@@ -8,8 +8,8 @@
 //! real backend.
 //!
 //! Contract (audited CLEAN): `mp_edge_clip` (a `u32_vector_scalar_map_program` with `Expr::min`) binds
-//! eigenvalues RO(0) + mp_edge scalar RO(1) + out RW(2) = 3 IC; the via zero-fills `out` and decodes
-//! outputs[0] = the clipped vector.
+//! eigenvalues RO(0) + mp_edge scalar RO(1) = 2 IC; the write-complete output is backend-allocated
+//! and decoded from outputs[0] as the clipped vector.
 //!
 //! BIT-EXACT (no tolerance): the kernel is pure u32 elementwise `out[i] = min(eigenvalues[i], mp_edge)`.
 //! Because `min` is monotone and order-preserving, the u32 result equals the documented f64 reference

@@ -7,7 +7,6 @@
 
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
 };
 #[cfg(test)]
 use crate::hash::hypervector::hamming_similarity;
@@ -157,12 +156,13 @@ fn dispatch_xor_bind_with_scratch_into(
 ) -> Result<(), DispatchError> {
     let program = hypervector_xor_bind("a", "b", "out", dim_words);
     let out_len = dim_words as usize;
-    ensure_input_slots(inputs, 3);
+    // `hypervector_xor_bind` declares two read-only inputs. Its write-complete output is
+    // allocated by the backend and must not be submitted as a host input.
+    ensure_input_slots(inputs, 2);
     write_u32_slice_le_bytes(&mut inputs[0], a);
     write_u32_slice_le_bytes(&mut inputs[1], b);
-    write_zero_bytes(&mut inputs[2], out_len * std::mem::size_of::<u32>());
     let grid_x = ceil_div_u32(dim_words, 256);
-    let outputs = dispatcher.dispatch(&program, inputs, Some([grid_x, 1, 1]))?;
+    let outputs = dispatcher.dispatch(&program, &inputs[..2], Some([grid_x, 1, 1]))?;
     if outputs.is_empty() {
         return Err(DispatchError::BackendError(format!(
             "Fix: fingerprint_via XOR expected at least one output buffer, got {}.",
@@ -207,9 +207,9 @@ mod tests {
             inputs: &[Vec<u8>],
             _grid_override: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            let [a_bytes, b_bytes, out_bytes] = inputs else {
+            let [a_bytes, b_bytes] = inputs else {
                 return Err(DispatchError::BadInputs(format!(
-                    "Fix: XOR test dispatcher expected 3 buffers, got {}.",
+                    "Fix: XOR test dispatcher expected 2 buffers, got {}.",
                     inputs.len()
                 )));
             };
@@ -217,14 +217,7 @@ mod tests {
                 crate::dispatch_buffers::decode_u32_input_aligned(a_bytes, "XOR test dispatcher")?;
             let b =
                 crate::dispatch_buffers::decode_u32_input_aligned(b_bytes, "XOR test dispatcher")?;
-            let out_len = out_bytes.len() / 4;
-            if a.len() < out_len || b.len() < out_len {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: XOR test dispatcher input too short for out_len={out_len}; got a={}, b={}.",
-                    a.len(),
-                    b.len()
-                )));
-            }
+            let out_len = a.len().min(b.len());
             let out = a
                 .iter()
                 .zip(b.iter())
