@@ -400,7 +400,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   through the source crate's own feature table, and every feature that gates a
   registration is one the source crate's widest aggregate turns on. A new
   domain feature carrying registrations turns both red until the aggregate
-  covers it, and a consumer naming the aggregate then needs no change.
+  covers it, and a consumer naming the aggregate then needs no change. The
+  `vyre` facade now keeps the CUDA and WGPU registration providers linked when
+  their optional features are enabled, with feature-specific tests that fail if
+  either provider is reduced to an unused manifest dependency.
 - Every registry closure gate in the workspace is a tracked test. The gate
   asserts that each `pub fn ... -> Program` builder a crate publishes is
   reachable from its `inventory` registry or named by one of its tests, that
@@ -640,6 +643,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - xtask gates --write-baseline records a measured finding count only when it is
   at or below the pin already recorded, and fails naming every gate that
   reports more, so a run can no longer legalize a red gate.
+- Nineteen source files that carried unrelated concerns in one compilation unit
+  are split into submodules, and the ten whose test suites outweighed the
+  implementation they cover now keep those suites beside the code. Every moved
+  item keeps its path through the parent module, so no caller changes.
 - The Aho-Corasick emit paths in `vyre-libs/src/scan/` read the flat
   output-record span through one owner. Six builders each wrote their own loop
   over `out_begin..out_end` binding `pattern_id` from `output_records`, and
@@ -3701,6 +3708,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   submissions. `ordered_outputs` keeps its slot-order contract for a caller
   that authored the graph and has no Program to declare an order. Closes 7
   diverging (backend, op) conformance pairs.
+- The public-API snapshot is rendered by a dated nightly rather than whatever
+  nightly the workflow resolved that morning. rustdoc's item paths move with
+  the compiler, and the release that re-homed std::io::Error under core rewrote
+  nine committed snapshots with no source change behind them. RUSTDOC_TOOLCHAIN
+  declares the date, the extraction exports it, the workflow installs it, and a
+  contract fails when the two drift.
 - The release benchmark generator builds vyre-bench with --release, vyre-bench
   refuses to measure the release suite from an unoptimized build, and every
   release benchmark artifact records the build profile that measured it, so a
@@ -4521,8 +4534,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   invariants for a `DialectRegistry` the crate does not define. Every invariant
   now names a construct that exists, and the sealing entry names
   `backend::private::Sealed`.
-- Parity suites, backend materializers and the gate tooling each take their
-  shared routine from one definition instead of a per-file copy.
+- Parity suites, backend materializers and gate tooling share canonical
+  routines, and dispatcher-based solvers select named results without rejecting
+  writable scratch outputs.
 - The duplication gate measures the repository rather than the working
   directory. It walked the tree with `walkdir` and counted every `.rs` file
   present, including files an ignore rule excludes, so a pin recorded on a
@@ -4735,7 +4749,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   plus named entry input and output bindings. `InstanceCore` derives module
   resources from exact target binding metadata, updates antecedent retained
   values after dispatch, and rejects missing or mismatched resource identities
-  instead of falling back to positional descriptor order.
+  instead of falling back to positional descriptor order. A read-write buffer's
+  input and renamed output identities may share one Program buffer name only
+  when retained lineage relates them.
 - The fusion-alias hazard rule `V116` has one owner, the whole-program pass in
   `vyre-foundation/src/validate/fusion_safety.rs`, which both the production
   single-pass validator and the legacy differential arm call. Production
@@ -5022,6 +5038,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - Loop guard elision, range folding, software pipelining and unrolling rewrite
   every nested body the IR node declares, taking the slots from the shared
   owner instead of a per-pass list.
+- Loop transform proof obligations declared an integer arithmetic logic while
+  emitting bit-vector declarations, so the solver rejected the script before
+  reading the assertion and left every one of them undischarged. Iteration
+  spaces are machine integers, so the domain now declares the bit-vector logic,
+  and a contract test rejects any obligation whose declared logic does not
+  admit the sorts it emits.
 - The measured release-evidence workflow now runs conformance and release
   benchmarks on the self-hosted RTX 4090 axiomexec lane instead of the local
   workstation or a GPU-less hosted runner.
@@ -5577,7 +5599,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   measures all 30 harness-owned release-profile samples instead of setup,
   environment probes, or one-time artifact preparation. Resident string-bitmap
   batching reads back one canonical bitmap while retaining the full
-  device-resident batch, avoiding redundant PCIe output transfers.
+  device-resident batch, avoiding redundant PCIe output transfers. The
+  Criterion optimizer corpus records one benchmark per semantic family, so
+  adding a family creates a new baseline instead of slowing an unrelated
+  aggregate id.
 - The release macro benchmarks no longer time a CPU baseline that rebuilds its
   own input. `synthetic_cpu_count` regenerated every record from its index
   inside the timed region, twelve to twenty-four rotate-multiply rounds per
@@ -5821,6 +5846,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   module behind a feature that is off by default all pass, so no frozen public
   path has to be renamed. No dependency outside dev-dependencies may name the
   test support crate.
+- The AES-CTR benchmark case vendors openssl on every host instead of resolving
+  whichever build the host installed, so two recorded results compare the same
+  library. Declaring the same dependency in two target-conditional tables also
+  left windows-msvc on the system probe rather than the vendored feature, and
+  that probe has no answer there: the harness failed to build before taking a
+  measurement.
+- The criterion regression gate reported its threshold check as a median change
+  while reading the upper bound of the confidence interval. It now prints both
+  and names the bound it gates on. The threshold is unchanged.
 - eigenvector_column_sign declared the matrix it rewrites in place as an output
   buffer. An output buffer is not a witness input, so the caller matrix never
   reached the program: the operation read zeros, wrote zeros, and its recorded
@@ -5871,6 +5905,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   now proves it. It named a path only the core table listed, so it asserted a
   core cap and never exercised the precedence; cap_from takes both tables, and
   the test injects one path into both and asserts the tighter number wins.
+- Float algebraic rewrites now preserve IEEE-754 signed zero: addition
+  eliminates only negative zero, subtraction only a positive-zero right
+  operand, and FMA zero-product elimination requires a negative-zero product.
+  Type-blind `x - x` expressions no longer become an unsigned zero when the
+  operand may be a float, signed integer, NaN, or infinity. The shipped proof
+  obligations now encode the same sound identities.
 - The gate-canon gate holds the registry, the pinned baselines and the subsets
   to each other and fails on the seven shapes that soften them: a baseline
   count that rises, a floor constant that moves up, a weakened target, a gate
