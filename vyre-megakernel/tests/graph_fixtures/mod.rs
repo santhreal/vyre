@@ -16,7 +16,6 @@ use vyre_foundation::ir::{
 };
 use vyre_test_support::pass_programs::copy_program;
 
-
 /// A `u32` value of symbolic length that lives for one invocation.
 pub(crate) fn invocation_contract() -> ValueContract {
     ValueContract {
@@ -130,10 +129,7 @@ pub(crate) fn two_arm_graph(arm_a: Program, arm_b: Program) -> ProgramGraph {
 
 /// Independent two-arm graph: two parallel copy operations reading separate inputs and writing separate outputs.
 pub(crate) fn independent_two_arm_graph() -> ProgramGraph {
-    two_arm_graph(
-        copy_program("in_a", "out_a"),
-        copy_program("in_b", "out_b"),
-    )
+    two_arm_graph(copy_program("in_a", "out_a"), copy_program("in_b", "out_b"))
 }
 
 /// RAW conflicting two-arm graph: arm B reads the intermediate output of arm A within the same graph.

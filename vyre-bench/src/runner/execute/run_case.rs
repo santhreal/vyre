@@ -134,7 +134,8 @@ pub(super) fn run_case(
 
         // B-4: Ensure we got enough samples before timing out
         let actual_samples = samples.get("wall_ns").map(|v| v.len()).unwrap_or(0);
-        let allow_few = !matches!(suite, SuiteKind::Release) && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_ok();
+        let allow_few =
+            !matches!(suite, SuiteKind::Release) && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_ok();
         if actual_samples < 30 && !allow_few {
             let requirements = case.requirements();
             let case_id = meta.id.0;

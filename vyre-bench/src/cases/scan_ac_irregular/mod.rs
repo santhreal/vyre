@@ -69,18 +69,27 @@ pub(super) fn scan_ac_requirements() -> crate::api::case::BenchRequirements {
 pub(super) fn scan_ac_candidate_masks(
     ac: &vyre_libs::pattern::classic_ac::ClassicAcAutomaton,
 ) -> ([u32; 8], [u32; 2048], Vec<u32>) {
-    let candidate_end_mask = vyre_reference::composition_witness::classic_ac_candidate_end_byte_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix2_mask = vyre_reference::composition_witness::classic_ac_candidate_suffix2_mask_words_witness(
-        &ac.dfa.transitions,
-        &ac.dfa.output_offsets,
-        ac.dfa.state_count,
-    );
-    let candidate_suffix3_bloom = vyre_reference::composition_witness::classic_ac_candidate_suffix3_bloom_words_witness(PATTERNS);
-    (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom)
+    let candidate_end_mask =
+        vyre_reference::composition_witness::classic_ac_candidate_end_byte_mask_words_witness(
+            &ac.dfa.transitions,
+            &ac.dfa.output_offsets,
+            ac.dfa.state_count,
+        );
+    let candidate_suffix2_mask =
+        vyre_reference::composition_witness::classic_ac_candidate_suffix2_mask_words_witness(
+            &ac.dfa.transitions,
+            &ac.dfa.output_offsets,
+            ac.dfa.state_count,
+        );
+    let candidate_suffix3_bloom =
+        vyre_reference::composition_witness::classic_ac_candidate_suffix3_bloom_words_witness(
+            PATTERNS,
+        );
+    (
+        candidate_end_mask,
+        candidate_suffix2_mask,
+        candidate_suffix3_bloom,
+    )
 }
 
 pub(super) fn scan_ac_metadata(

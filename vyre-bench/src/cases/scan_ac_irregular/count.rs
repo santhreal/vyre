@@ -2,8 +2,8 @@ use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
 use crate::api::case::{
-    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata,
-    BenchRequirements, BenchRun, Correctness, PerformanceContract, PreparedCase,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
+    BenchRun, Correctness, PerformanceContract, PreparedCase,
 };
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use crate::api::suite::SuiteKind;
