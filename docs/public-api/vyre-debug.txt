@@ -68,9 +68,9 @@ pub vyre_debug::ArtifactReport::request: alloc::string::String
 pub vyre_debug::ArtifactReport::selected_plan: vyre_megakernel::schema::SelectedPlan
 pub vyre_debug::ArtifactReport::source_graph: alloc::string::String
 pub vyre_debug::ArtifactReport::targets: alloc::vec::Vec<vyre_debug::TargetPayloadReport>
-pub vyre_debug::BindResultLogError::Open(std::io::error::Error)
+pub vyre_debug::BindResultLogError::Open(core::io::error::Error)
 pub vyre_debug::BindResultLogError::Parse(usize, serde_json::error::Error)
-pub vyre_debug::BindResultLogError::Read(std::io::error::Error)
+pub vyre_debug::BindResultLogError::Read(core::io::error::Error)
 pub vyre_debug::CarrierSummary::carrier_finals: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
 pub vyre_debug::CarrierSummary::carrier_reads: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>
 pub vyre_debug::CarrierSummary::carrier_writes: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>

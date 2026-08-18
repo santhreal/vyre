@@ -31,6 +31,7 @@ This crate declares no Cargo features.
 | `test` | `carrier_scope_regression` | `vyre-emit-naga/tests/carrier_scope_regression.rs` | None | `./cargo_full test -p vyre-emit-naga --test carrier_scope_regression` |
 | `test` | `emit_contracts` | `vyre-emit-naga/tests/emit_contracts/mod.rs` | None | `./cargo_full test -p vyre-emit-naga --test emit_contracts` |
 | `test` | `emitted_artifact_byte_stability` | `vyre-emit-naga/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-naga --test emitted_artifact_byte_stability` |
+| `test` | `lowering_digest` | `vyre-emit-naga/tests/lowering_digest.rs` | None | `./cargo_full test -p vyre-emit-naga --test lowering_digest` |
 | `test` | `target_capabilities` | `vyre-emit-naga/tests/target_capabilities.rs` | None | `./cargo_full test -p vyre-emit-naga --test target_capabilities` |
 
 ## Test classes

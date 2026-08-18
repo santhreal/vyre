@@ -167,6 +167,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `dominator_tree_scale_gate` | `vyre-libs/tests/dominator_tree_scale_gate.rs` | `graph` | `./cargo_full test -p vyre-libs --test dominator_tree_scale_gate` |
 | `test` | `dp_clip_signed_newton_parity` | `vyre-libs/tests/dp_clip_signed_newton_parity.rs` | None | `./cargo_full test -p vyre-libs --test dp_clip_signed_newton_parity` |
 | `test` | `f32_adversarial` | `vyre-libs/tests/f32_adversarial.rs` | None | `./cargo_full test -p vyre-libs --test f32_adversarial` |
+| `test` | `f32_states_its_contractions` | `vyre-libs/tests/f32_states_its_contractions.rs` | None | `./cargo_full test -p vyre-libs --test f32_states_its_contractions` |
 | `test` | `family_duplication_budget` | `vyre-libs/tests/family_duplication_budget.rs` | None | `./cargo_full test -p vyre-libs --test family_duplication_budget` |
 | `test` | `filesystem_path_archive_policies` | `vyre-libs/tests/filesystem_path_archive_policies.rs` | None | `./cargo_full test -p vyre-libs --test filesystem_path_archive_policies` |
 | `test` | `fingerprint_lock` | `vyre-libs/tests/fingerprint_lock.rs` | None | `./cargo_full test -p vyre-libs --test fingerprint_lock` |
@@ -504,6 +505,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `submodular_retention_via_reference_parity` | `vyre-libs/tests/submodular_retention_via_reference_parity.rs` | `scheduling` | `./cargo_full test -p vyre-libs --test submodular_retention_via_reference_parity` |
 | `test` | `succinct_rank_contracts` | `vyre-libs/tests/succinct_rank_contracts.rs` | None | `./cargo_full test -p vyre-libs --test succinct_rank_contracts` |
 | `test` | `succinct_rank_select_adversarial_contracts` | `vyre-libs/tests/succinct_rank_select_adversarial_contracts.rs` | None | `./cargo_full test -p vyre-libs --test succinct_rank_select_adversarial_contracts` |
+| `test` | `sum_product_depth_order_is_a_contract` | `vyre-libs/tests/sum_product_depth_order_is_a_contract.rs` | None | `./cargo_full test -p vyre-libs --test sum_product_depth_order_is_a_contract` |
 | `test` | `sum_product_signed_parity` | `vyre-libs/tests/sum_product_signed_parity.rs` | None | `./cargo_full test -p vyre-libs --test sum_product_signed_parity` |
 | `test` | `surface_contracts` | `vyre-libs/tests/surface_contracts.rs` | None | `./cargo_full test -p vyre-libs --test surface_contracts` |
 | `test` | `surface_contracts` | `vyre-libs/tests/surface_contracts.rs` | `nn-attention`, `nn-norm` | `./cargo_full test -p vyre-libs --test surface_contracts` |

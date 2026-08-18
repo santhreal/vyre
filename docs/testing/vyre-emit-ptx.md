@@ -40,6 +40,7 @@ The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains
 | `test` | `emit_contracts` | `vyre-emit-ptx/tests/emit_contracts/mod.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emit_contracts` |
 | `test` | `emitted_artifact_byte_stability` | `vyre-emit-ptx/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emitted_artifact_byte_stability` |
 | `test` | `grid_sync_loop_refusal` | `vyre-emit-ptx/tests/grid_sync_loop_refusal.rs` | None | `./cargo_full test -p vyre-emit-ptx --test grid_sync_loop_refusal` |
+| `test` | `lowering_digest` | `vyre-emit-ptx/tests/lowering_digest.rs` | None | `./cargo_full test -p vyre-emit-ptx --test lowering_digest` |
 | `test` | `nested_return_branch` | `vyre-emit-ptx/tests/nested_return_branch.rs` | None | `./cargo_full test -p vyre-emit-ptx --test nested_return_branch` |
 | `test` | `nvrtc_compile_gate` | `vyre-emit-ptx/tests/nvrtc_compile_gate/mod.rs` | None | `./cargo_full test -p vyre-emit-ptx --test nvrtc_compile_gate` |
 | `test` | `pattern_analysis_contracts` | `vyre-emit-ptx/tests/pattern_analysis_contracts/mod.rs` | None | `./cargo_full test -p vyre-emit-ptx --test pattern_analysis_contracts` |

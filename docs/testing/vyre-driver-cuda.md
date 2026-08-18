@@ -41,6 +41,7 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `adaptive_traverse_vast_walk_gpu_parity` | `vyre-driver-cuda/tests/adaptive_traverse_vast_walk_gpu_parity/mod.rs` | None | `./cargo_full test -p vyre-driver-cuda --test adaptive_traverse_vast_walk_gpu_parity` |
 | `test` | `aot_launcher_contracts` | `vyre-driver-cuda/tests/aot_launcher_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test aot_launcher_contracts` |
 | `test` | `argmax_of_marginals_gpu_parity` | `vyre-driver-cuda/tests/argmax_of_marginals_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test argmax_of_marginals_gpu_parity` |
+| `test` | `async_transfer_byte_span_parity` | `vyre-driver-cuda/tests/async_transfer_byte_span_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test async_transfer_byte_span_parity` |
 | `test` | `autodiff_cuda_parity` | `vyre-driver-cuda/tests/autodiff_cuda_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test autodiff_cuda_parity` |
 | `test` | `bellman_tn_order_gpu_parity` | `vyre-driver-cuda/tests/bellman_tn_order_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test bellman_tn_order_gpu_parity` |
 | `test` | `bigint_add_carry_gpu_parity` | `vyre-driver-cuda/tests/bigint_add_carry_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test bigint_add_carry_gpu_parity` |

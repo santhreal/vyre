@@ -2,14 +2,14 @@ impl vyre_driver::backend::sealed::Sealed for vyre_driver_reference::CpuRefBacke
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_reference::CpuRefBackend
 impl vyre_foundation::program_dispatch::ProgramDispatcher for vyre_driver_reference::ReferenceEvalDispatcher
 pub const vyre_driver_reference::CPU_REF_BACKEND_ID: &str
-pub const vyre_driver_reference::CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId
+pub const vyre_driver_reference::CPU_REF_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
 pub fn vyre_driver_reference::CpuRefBackend::dispatch_borrowed(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_reference::CpuRefBackend::id(&self) -> &'static str
 pub fn vyre_driver_reference::CpuRefBackend::max_compute_workgroups_per_dimension(&self) -> u32
 pub fn vyre_driver_reference::CpuRefBackend::max_workgroup_size(&self) -> [u32; 3]
 pub fn vyre_driver_reference::CpuRefBackend::supported_ops(&self) -> &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub fn vyre_driver_reference::CpuRefBackend::version(&self) -> &'static str
-pub fn vyre_driver_reference::ReferenceEvalDispatcher::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], _grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_driver_reference::ReferenceEvalDispatcher::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], _grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::resident::DispatchError>
 pub fn vyre_driver_reference::registered_backend_id() -> core::option::Option<&'static str>
 pub mod vyre_driver_reference
 pub struct vyre_driver_reference::CpuRefBackend

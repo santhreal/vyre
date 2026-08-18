@@ -4,7 +4,7 @@ impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_spirv::Spir
 impl vyre_driver_spirv::SpirvBackend
 impl vyre_driver_spirv::SpirvBackendRegistration
 pub const vyre_driver_spirv::SPIRV_BACKEND_ID: &str
-pub const vyre_driver_spirv::SPIRV_TARGET_ID: vyre_foundation::operation::TargetId
+pub const vyre_driver_spirv::SPIRV_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
 pub const vyre_driver_spirv::SpirvBackend::BACKEND_ID: &'static str
 pub fn vyre_driver_spirv::SpirvBackend::default() -> Self
 pub fn vyre_driver_spirv::SpirvBackend::new() -> Self

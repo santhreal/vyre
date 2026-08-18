@@ -56,7 +56,7 @@ impl vyre_foundation::validate::options::BackendValidationCapabilities for vyre_
 pub async fn vyre_driver_wgpu::runtime::acquire_gpu() -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::EnabledFeatures), vyre_driver::backend::error::BackendError>
 pub async fn vyre_driver_wgpu::runtime::acquire_gpu_for_adapter(index: usize) -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::EnabledFeatures), vyre_driver::backend::error::BackendError>
 pub const vyre_driver_wgpu::WGPU_BACKEND_ID: &str
-pub const vyre_driver_wgpu::WGPU_TARGET_ID: vyre_foundation::operation::TargetId
+pub const vyre_driver_wgpu::WGPU_TARGET_ID: vyre_foundation::operation::target_facet::TargetId
 pub const vyre_driver_wgpu::runtime::LruPolicy::DEFAULT_THRESHOLD: u32
 pub const vyre_driver_wgpu::runtime::indirect::INDIRECT_ARGS_BYTES: u64
 pub const vyre_driver_wgpu::runtime::serializer::MAX_SERIALIZED_PART_BYTES: usize
@@ -77,7 +77,7 @@ pub fn vyre_driver_wgpu::WgpuBackend::device_limits(&self) -> &wgpu_types::Limit
 pub fn vyre_driver_wgpu::WgpuBackend::device_lost(&self) -> bool
 pub fn vyre_driver_wgpu::WgpuBackend::device_profile(&self) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver_wgpu::WgpuBackend::device_queue(&self) -> alloc::sync::Arc<(wgpu::api::device::Device, wgpu::api::queue::Queue)>
-pub fn vyre_driver_wgpu::WgpuBackend::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_foundation::program_dispatch::resident::DispatchError>
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_async(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::pending_dispatch::PendingDispatch>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_batch(&self, jobs: &[(vyre_foundation::ir_inner::model::program::definition::Program, alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::dispatch_config::DispatchConfig)]) -> core::result::Result<alloc::vec::Vec<core::result::Result<vyre_driver::backend::dispatch_result::OutputBuffers, vyre_driver::backend::error::BackendError>>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>

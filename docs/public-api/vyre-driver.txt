@@ -22,7 +22,7 @@ impl core::convert::From<vyre_driver::megakernel_barrier::MegakernelBarrierPlanE
 impl core::convert::From<vyre_driver::megakernel_barrier::MegakernelBarrierPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 impl core::convert::From<vyre_driver::megakernel_execution::MegakernelMemoryError> for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl core::convert::From<vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
-impl core::convert::From<vyre_foundation::program_dispatch::DispatchError> for vyre_driver::cache_invalidation::CacheInvalidationError
+impl core::convert::From<vyre_foundation::program_dispatch::resident::DispatchError> for vyre_driver::cache_invalidation::CacheInvalidationError
 impl core::default::Default for vyre_driver::DeviceProfile
 impl core::default::Default for vyre_driver::LaunchPlan
 impl core::default::Default for vyre_driver::Resource
@@ -483,13 +483,13 @@ pub fn vyre_driver::DeviceSignatureTable::get(&self, id: &str) -> core::option::
 pub fn vyre_driver::DeviceSignatureTable::load_dir(dir: impl core::convert::AsRef<std::path::Path>) -> core::result::Result<Self, alloc::string::String>
 pub fn vyre_driver::DeviceSignatureTable::signatures(&self) -> &[vyre_driver::DeviceSignature]
 pub fn vyre_driver::DiskPipelineCache::default_root() -> std::path::PathBuf
-pub fn vyre_driver::DiskPipelineCache::flush(&self) -> std::io::error::Result<()>
-pub fn vyre_driver::DiskPipelineCache::invalidate_impacted(&self, impact_mask: &[u32], program_digests: &[[u8; 32]], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> std::io::error::Result<()>
-pub fn vyre_driver::DiskPipelineCache::open(root: impl core::convert::Into<std::path::PathBuf>) -> std::io::error::Result<Self>
+pub fn vyre_driver::DiskPipelineCache::flush(&self) -> core::io::error::Result<()>
+pub fn vyre_driver::DiskPipelineCache::invalidate_impacted(&self, impact_mask: &[u32], program_digests: &[[u8; 32]], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> core::io::error::Result<()>
+pub fn vyre_driver::DiskPipelineCache::open(root: impl core::convert::Into<std::path::PathBuf>) -> core::io::error::Result<Self>
 pub fn vyre_driver::DiskPipelineCache::path_for(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> std::path::PathBuf
-pub fn vyre_driver::DiskPipelineCache::read(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> std::io::error::Result<core::option::Option<alloc::vec::Vec<u8>>>
+pub fn vyre_driver::DiskPipelineCache::read(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint) -> core::io::error::Result<core::option::Option<alloc::vec::Vec<u8>>>
 pub fn vyre_driver::DiskPipelineCache::root(&self) -> &std::path::Path
-pub fn vyre_driver::DiskPipelineCache::write(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint, bytes: &[u8]) -> std::io::error::Result<()>
+pub fn vyre_driver::DiskPipelineCache::write(&self, program_digest: [u8; 32], fingerprint: vyre_driver::PipelineDeviceFingerprint, bytes: &[u8]) -> core::io::error::Result<()>
 pub fn vyre_driver::DispatchConfig::new(profile: core::option::Option<alloc::string::String>, ulp_budget: core::option::Option<u8>, timeout: core::option::Option<core::time::Duration>, label: core::option::Option<alloc::string::String>) -> Self
 pub fn vyre_driver::Distribution::observe(values: &[u32]) -> Self
 pub fn vyre_driver::EnforceGate::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_driver::EnforceVerdict
@@ -715,9 +715,9 @@ pub fn vyre_driver::autotune_store::AutotuneStore::get(&self, key: &vyre_driver:
 pub fn vyre_driver::autotune_store::AutotuneStore::is_dirty(&self) -> bool
 pub fn vyre_driver::autotune_store::AutotuneStore::is_empty(&self) -> bool
 pub fn vyre_driver::autotune_store::AutotuneStore::len(&self) -> usize
-pub fn vyre_driver::autotune_store::AutotuneStore::load(path: &std::path::Path) -> std::io::error::Result<Self>
+pub fn vyre_driver::autotune_store::AutotuneStore::load(path: &std::path::Path) -> core::io::error::Result<Self>
 pub fn vyre_driver::autotune_store::AutotuneStore::put(&mut self, key: vyre_driver::autotune_store::AutotuneKey, record: vyre_driver::autotune_store::AutotuneRecord)
-pub fn vyre_driver::autotune_store::AutotuneStore::save_if_dirty(&mut self, path: &std::path::Path) -> std::io::error::Result<bool>
+pub fn vyre_driver::autotune_store::AutotuneStore::save_if_dirty(&mut self, path: &std::path::Path) -> core::io::error::Result<bool>
 pub fn vyre_driver::backend_dispatches(id: &str) -> core::result::Result<bool, vyre_driver::BackendError>
 pub fn vyre_driver::backend_precedence(id: &str) -> core::result::Result<u32, vyre_driver::BackendError>
 pub fn vyre_driver::backend_registration(id: &str) -> core::result::Result<&'static vyre_driver::BackendRegistration, vyre_driver::BackendError>
@@ -747,7 +747,7 @@ pub fn vyre_driver::cache_eviction_heat::CacheEntryStats::heat(&self, current_ti
 pub fn vyre_driver::cache_eviction_heat::entries_to_evict(entries: &[vyre_driver::cache_eviction_heat::CacheEntryStats], capacity: usize, current_time_s: f64) -> alloc::vec::Vec<u64>
 pub fn vyre_driver::cache_eviction_heat::try_entries_to_evict(entries: &[vyre_driver::cache_eviction_heat::CacheEntryStats], capacity: usize, current_time_s: f64) -> core::result::Result<alloc::vec::Vec<u64>, alloc::string::String>
 pub fn vyre_driver::cache_invalidation::CacheInvalidationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_driver::cache_invalidation::CacheInvalidationError::from(error: vyre_foundation::program_dispatch::DispatchError) -> Self
+pub fn vyre_driver::cache_invalidation::CacheInvalidationError::from(error: vyre_foundation::program_dispatch::resident::DispatchError) -> Self
 pub fn vyre_driver::cache_invalidation::impacted_entries(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, lineage_cells: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_driver::cache_invalidation::CacheInvalidationError>
 pub fn vyre_driver::cache_invalidation::impacted_entries_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, lineage_cells: &[u32], out: &mut alloc::vec::Vec<u32>, _scratch: &mut vyre_driver::cache_invalidation::CacheInvalidationScratch) -> core::result::Result<(), vyre_driver::cache_invalidation::CacheInvalidationError>
 pub fn vyre_driver::coerce_to_pow2_with_tail_mask(element_count: u32) -> vyre_driver::TailMaskPolicy
@@ -790,7 +790,7 @@ pub fn vyre_driver::durable_fanout::parent_directories<E>(paths: &[std::path::Pa
 pub fn vyre_driver::durable_fanout::worker_count() -> usize
 pub fn vyre_driver::dynamic_element_count_from_bytes(element: &vyre_spec::data_type::DataType, byte_len: usize) -> core::option::Option<u32>
 pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
-pub fn vyre_driver::emit_aot_launcher_target(target: &vyre_foundation::operation::TargetId, request: &vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, vyre_driver::BackendError>
+pub fn vyre_driver::emit_aot_launcher_target(target: &vyre_foundation::operation::target_facet::TargetId, request: &vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, vyre_driver::BackendError>
 pub fn vyre_driver::encode_counter_tail(report: vyre_driver::SpeculationReport) -> [u8; 8]
 pub fn vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::enforce_output_budget(config: &vyre_driver::DispatchConfig, actual: usize) -> core::result::Result<(), vyre_driver::BackendError>
@@ -1044,7 +1044,7 @@ pub fn vyre_driver::registered_aot_launcher_emitters() -> alloc::vec::Vec<&'stat
 pub fn vyre_driver::registered_backends() -> core::result::Result<&'static [vyre_driver::BackendRegistration], vyre_driver::BackendError>
 pub fn vyre_driver::registered_backends_by_precedence() -> core::result::Result<alloc::vec::Vec<&'static vyre_driver::BackendRegistration>, vyre_driver::BackendError>
 pub fn vyre_driver::registered_backends_by_precedence_slice() -> core::result::Result<&'static [&'static vyre_driver::BackendRegistration], vyre_driver::BackendError>
-pub fn vyre_driver::registered_target_operation_facets() -> core::result::Result<&'static [vyre_foundation::operation::TargetOperationFacet], vyre_driver::BackendError>
+pub fn vyre_driver::registered_target_operation_facets() -> core::result::Result<&'static [vyre_foundation::operation::target_facet::TargetOperationFacet], vyre_driver::BackendError>
 pub fn vyre_driver::replace_output_buffers_preserving_slots(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers)
 pub fn vyre_driver::replace_output_buffers_preserving_slots_with_memory_stats(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers) -> vyre_driver::OutputReplacementStats
 pub fn vyre_driver::replace_output_buffers_preserving_slots_with_stats(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers) -> vyre_driver::OutputSlotStats
@@ -1504,13 +1504,13 @@ pub use vyre_driver::allocation::try_reserve_vec_to_capacity
 pub use vyre_driver::grid_sync::contains_grid_sync
 pub use vyre_driver::node_op_id
 pub vyre_driver::AotLauncherEmitter::emit: fn(&vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, alloc::string::String>
-pub vyre_driver::AotLauncherEmitter::target: vyre_foundation::operation::TargetId
+pub vyre_driver::AotLauncherEmitter::target: vyre_foundation::operation::target_facet::TargetId
 pub vyre_driver::AotLauncherFiles::dependencies: alloc::vec::Vec<vyre_driver::LauncherDependency>
 pub vyre_driver::AotLauncherFiles::files: alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String>
 pub vyre_driver::AotLauncherRequest::crate_name: &'a str
 pub vyre_driver::AotLauncherRequest::include_collectives: bool
 pub vyre_driver::AotLauncherRequest::include_ttt_loop: bool
-pub vyre_driver::AotLauncherRequest::target: vyre_foundation::operation::TargetId
+pub vyre_driver::AotLauncherRequest::target: vyre_foundation::operation::target_facet::TargetId
 pub vyre_driver::AttrValue::Bool(bool)
 pub vyre_driver::AttrValue::Bytes(alloc::vec::Vec<u8>)
 pub vyre_driver::AttrValue::F32(f32)
@@ -1565,7 +1565,7 @@ pub vyre_driver::BackendRegistration::reference_oracle: bool
 pub vyre_driver::BackendRegistration::semantic_operations: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub vyre_driver::BackendRegistration::supported_ops: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub vyre_driver::BackendRegistration::target_compiler: core::option::Option<fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>>
-pub vyre_driver::BackendRegistration::target_id: vyre_foundation::operation::TargetId
+pub vyre_driver::BackendRegistration::target_id: vyre_foundation::operation::target_facet::TargetId
 pub vyre_driver::Binding::binding: u32
 pub vyre_driver::Binding::buffer_index: usize
 pub vyre_driver::Binding::element_count: u32

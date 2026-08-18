@@ -80,6 +80,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `geometry_lowering_plan_search` | `vyre-driver/tests/geometry_lowering_plan_search.rs` | None | `./cargo_full test -p vyre-driver --test geometry_lowering_plan_search` |
 | `test` | `grid_sync_detection_reaches_every_body_variant` | `vyre-driver/tests/grid_sync_detection_reaches_every_body_variant.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_detection_reaches_every_body_variant` |
 | `test` | `grid_sync_nested_fence_survives_split` | `vyre-driver/tests/grid_sync_nested_fence_survives_split.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_nested_fence_survives_split` |
+| `test` | `grid_sync_segments_declare_every_referenced_buffer` | `vyre-driver/tests/grid_sync_segments_declare_every_referenced_buffer.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_segments_declare_every_referenced_buffer` |
 | `test` | `hostile_input_probe_shapes` | `vyre-driver/tests/hostile_input_probe_shapes.rs` | None | `./cargo_full test -p vyre-driver --test hostile_input_probe_shapes` |
 | `test` | `http_proxy_redirect_policy` | `vyre-driver/tests/http_proxy_redirect_policy.rs` | None | `./cargo_full test -p vyre-driver --test http_proxy_redirect_policy` |
 | `test` | `input_identity_contracts` | `vyre-driver/tests/input_identity_contracts.rs` | None | `./cargo_full test -p vyre-driver --test input_identity_contracts` |

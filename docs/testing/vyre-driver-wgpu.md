@@ -45,6 +45,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 | `test` | `async_capability_innovation` | `vyre-driver-wgpu/tests/async_capability_innovation.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_capability_innovation` |
 | `test` | `async_dispatch_contract` | `vyre-driver-wgpu/tests/async_dispatch_contract.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_dispatch_contract` |
 | `test` | `async_dispatch_non_blocking` | `vyre-driver-wgpu/tests/async_dispatch_non_blocking.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_dispatch_non_blocking` |
+| `test` | `async_transfer_byte_span_parity` | `vyre-driver-wgpu/tests/async_transfer_byte_span_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test async_transfer_byte_span_parity` |
 | `test` | `binding_layout_drift` | `vyre-driver-wgpu/tests/binding_layout_drift.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binding_layout_drift` |
 | `test` | `binop_parity_fixtures` | `vyre-driver-wgpu/tests/binop_parity_fixtures.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test binop_parity_fixtures` |
 | `test` | `bitset_zero_gpu_parity` | `vyre-driver-wgpu/tests/bitset_zero_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test bitset_zero_gpu_parity` |

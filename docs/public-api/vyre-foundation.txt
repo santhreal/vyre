@@ -1390,11 +1390,11 @@ pub fn vyre_foundation::optimizer::eqsat_gpu::apply_equivalences_to_egraph<L>(eg
 pub fn vyre_foundation::optimizer::eqsat_gpu::bridge_equivalence_batch_with_report<L, F, S, C>(egraph: &mut vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, op_name: F, equivalences: &[vyre_foundation::optimizer::eqsat_gpu::Equivalence], cost_fn: C) -> core::result::Result<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeReport, vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError> where L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn(&L) -> S, S: core::convert::AsRef<str>, C: core::ops::function::Fn(&L) -> u64 + core::marker::Copy
 pub fn vyre_foundation::optimizer::eqsat_gpu::gpu_egraph_row_signature(language_op_id: u32, children_len: u32, children: &[u32]) -> u32
 pub fn vyre_foundation::optimizer::eqsat_toml::OpIdNode::op_id(&self) -> core::option::Option<&str>
-pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::from_toml_str(name: &'static str, text: &str) -> std::io::error::Result<Self>
+pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::from_toml_str(name: &'static str, text: &str) -> core::io::error::Result<Self>
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::is_empty(&self) -> bool
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = &vyre_foundation::optimizer::eqsat_toml::EquivalenceRule>
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::len(&self) -> usize
-pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::load(name: &'static str, path: &std::path::Path) -> std::io::error::Result<Self>
+pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::load(name: &'static str, path: &std::path::Path) -> core::io::error::Result<Self>
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::matches(&self, egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>) -> alloc::vec::Vec<(vyre_foundation::optimizer::eqsat::EClassId, vyre_foundation::optimizer::eqsat::EClassId)>
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::name(&self) -> &'static str
 pub fn vyre_foundation::optimizer::eqsat_toml::TomlEquivalenceRules::new(name: &'static str) -> Self

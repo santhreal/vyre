@@ -461,7 +461,7 @@ pub fn vyre_runtime::persistent_executor::PersistentExecutor::from_bytes(registr
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::recover(&self, failure: vyre_driver::backend::error::BackendError) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::submit_and_wait(&self, state: vyre_runtime::persistent_executor::ResidentQueueState) -> core::result::Result<vyre_runtime::persistent_executor::ResidentQueueCompletion, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::pipeline_cache::DiskCache::durability_report(&self) -> vyre_runtime::pipeline_cache::DiskCacheDurabilityReport
-pub fn vyre_runtime::pipeline_cache::DiskCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::DiskCache::flush(&self) -> core::io::error::Result<()>
 pub fn vyre_runtime::pipeline_cache::DiskCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
 pub fn vyre_runtime::pipeline_cache::DiskCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
 pub fn vyre_runtime::pipeline_cache::DiskCache::in_user_cache() -> core::result::Result<Self, vyre_runtime::pipeline_cache::DiskCacheError>
@@ -472,7 +472,7 @@ pub fn vyre_runtime::pipeline_cache::DiskCache::root(&self) -> &std::path::Path
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::cached_bytes(&self) -> usize
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::default() -> Self
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::eviction_reports(&self) -> alloc::vec::Vec<vyre_runtime::pipeline_cache::InMemoryEvictionReport>
-pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::flush(&self) -> core::io::error::Result<()>
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::is_empty(&self) -> bool
@@ -481,7 +481,7 @@ pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::metrics(&self) -> vy
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::new() -> Self
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::pipeline_cache::InMemoryPipelineCache::with_limits(max_entries_per_shard: usize, max_bytes_per_shard: usize) -> Self
-pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::flush(&self) -> core::io::error::Result<()>
 pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
 pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
 pub fn vyre_runtime::pipeline_cache::LayeredPipelineCache::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
@@ -492,14 +492,14 @@ pub fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::fmt(&self, format
 pub fn vyre_runtime::pipeline_cache::PipelineCacheMetricError::message(&self) -> &str
 pub fn vyre_runtime::pipeline_cache::PipelineCacheMetrics::hit_rate_ppm(&self) -> u32
 pub fn vyre_runtime::pipeline_cache::PipelineCacheMetrics::try_hit_rate_ppm(&self) -> core::result::Result<u32, vyre_runtime::pipeline_cache::PipelineCacheMetricError>
-pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::flush(&self) -> core::io::error::Result<()>
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
 pub fn vyre_runtime::pipeline_cache::PipelineCacheStore::put(&self, fp: vyre_runtime::pipeline_cache::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::hex(&self) -> alloc::string::String
 pub fn vyre_runtime::pipeline_cache::PipelineFingerprint::of(artifact: &vyre_megakernel::schema::Artifact) -> Self
-pub fn vyre_runtime::pipeline_cache::RemoteCache::flush(&self) -> std::io::error::Result<()>
+pub fn vyre_runtime::pipeline_cache::RemoteCache::flush(&self) -> core::io::error::Result<()>
 pub fn vyre_runtime::pipeline_cache::RemoteCache::get(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::vec::Vec<u8>>
 pub fn vyre_runtime::pipeline_cache::RemoteCache::get_arc(&self, fp: &vyre_runtime::pipeline_cache::PipelineFingerprint) -> core::option::Option<alloc::sync::Arc<alloc::vec::Vec<u8>>>
 pub fn vyre_runtime::pipeline_cache::RemoteCache::metrics(&self) -> vyre_runtime::pipeline_cache::PipelineCacheMetrics
@@ -1315,7 +1315,7 @@ pub vyre_runtime::persistent_executor::ResidentQueueState::ring: alloc::vec::Vec
 pub vyre_runtime::pipeline_cache::DiskCacheDurabilityReport::durable: bool
 pub vyre_runtime::pipeline_cache::DiskCacheDurabilityReport::pending_flushes: u64
 pub vyre_runtime::pipeline_cache::DiskCacheError::CacheDirUnknown
-pub vyre_runtime::pipeline_cache::DiskCacheError::Io(std::io::error::Error)
+pub vyre_runtime::pipeline_cache::DiskCacheError::Io(core::io::error::Error)
 pub vyre_runtime::pipeline_cache::InMemoryEvictionReason::ByteLimit
 pub vyre_runtime::pipeline_cache::InMemoryEvictionReason::EntryAndByteLimit
 pub vyre_runtime::pipeline_cache::InMemoryEvictionReason::EntryLimit
@@ -1417,7 +1417,7 @@ pub vyre_runtime::replay::ReplayLogError::HeaderMismatch::path: alloc::sync::Arc
 pub vyre_runtime::replay::ReplayLogError::Io
 pub vyre_runtime::replay::ReplayLogError::Io::op: &'static str
 pub vyre_runtime::replay::ReplayLogError::Io::path: alloc::sync::Arc<str>
-pub vyre_runtime::replay::ReplayLogError::Io::source: std::io::error::Error
+pub vyre_runtime::replay::ReplayLogError::Io::source: core::io::error::Error
 pub vyre_runtime::replay::ReplayLogError::ZeroCapacity
 pub vyre_runtime::replay::ReplayRecord::failure: core::option::Option<vyre_runtime::replay::ReplayFailureEvidence>
 pub vyre_runtime::replay::ReplayRecord::slot: vyre_runtime::replay::RecordedSlot
@@ -2081,6 +2081,11 @@ pub vyre_runtime::tenant::TenantError::Backpressure
 pub vyre_runtime::tenant::TenantError::Backpressure::cap: u64
 pub vyre_runtime::tenant::TenantError::Backpressure::outstanding: u64
 pub vyre_runtime::tenant::TenantError::Backpressure::tenant_id: u32
+pub vyre_runtime::tenant::TenantError::CapacityExceeded
+pub vyre_runtime::tenant::TenantError::CapacityExceeded::cap: u32
+pub vyre_runtime::tenant::TenantError::NotFound
+pub vyre_runtime::tenant::TenantError::NotFound::fix: &'static str
+pub vyre_runtime::tenant::TenantError::NotFound::tenant_id: u32
 pub vyre_runtime::tenant::TenantError::OpcodeOutOfRange
 pub vyre_runtime::tenant::TenantError::OpcodeOutOfRange::cap: u32
 pub vyre_runtime::tenant::TenantError::OpcodeOutOfRange::local_opcode: u32
