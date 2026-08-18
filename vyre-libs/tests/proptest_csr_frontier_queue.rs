@@ -2,6 +2,9 @@
 
 #![cfg(feature = "graph")]
 
+mod wire_words;
+use wire_words::mix64;
+
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_frontier_queue::{validate_csr_queue_graph, CsrQueueGraphLayout};
@@ -278,12 +281,4 @@ fn frontier_has_node(frontier: &[u32], node: u32) -> bool {
 
 fn set_node(frontier: &mut [u32], node: u32) {
     frontier[node as usize / 32] |= 1u32 << (node & 31);
-}
-
-fn mix64(mut value: u64) -> u64 {
-    value ^= value >> 30;
-    value = value.wrapping_mul(0xbf58_476d_1ce4_e5b9);
-    value ^= value >> 27;
-    value = value.wrapping_mul(0x94d0_49bb_1331_11eb);
-    value ^ (value >> 31)
 }

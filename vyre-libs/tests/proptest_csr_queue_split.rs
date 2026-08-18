@@ -2,6 +2,9 @@
 
 #![cfg(feature = "graph")]
 
+mod wire_words;
+use wire_words::mix64;
+
 use proptest::prelude::*;
 use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_frontier_queue::validate_csr_queue_graph;
@@ -432,12 +435,4 @@ fn emit_row(
         let dst = edge_targets[edge];
         out[dst as usize / 32] |= 1_u32 << (dst % 32);
     }
-}
-
-fn mix64(mut x: u64) -> u64 {
-    x ^= x >> 30;
-    x = x.wrapping_mul(0xbf58_476d_1ce4_e5b9);
-    x ^= x >> 27;
-    x = x.wrapping_mul(0x94d0_49bb_1331_11eb);
-    x ^ (x >> 31)
 }

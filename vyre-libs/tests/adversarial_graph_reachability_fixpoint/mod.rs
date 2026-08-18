@@ -11,6 +11,10 @@
 #![cfg(feature = "fixpoint")]
 #![cfg(feature = "math")]
 
+#[path = "../wire_words/mod.rs"]
+mod wire_words;
+use wire_words::toposort;
+
 use std::collections::HashSet;
 
 use vyre_libs::graph::reachable::{reachable_program, UnknownNode};
@@ -24,27 +28,8 @@ use vyre_reference::composition_witness::{
 };
 use vyre_reference::composition_witness::{
     reachable_witness, scc_decompose_witness as scc_cpu_ref,
-    tensor_scc_witness as tensor_scc_cpu_ref, toposort_witness,
+    tensor_scc_witness as tensor_scc_cpu_ref,
 };
-
-fn toposort(node_count: u32, edges: &[(u32, u32)]) -> Result<Vec<u32>, ToposortError> {
-    for (edge, &(from, to)) in edges.iter().enumerate() {
-        if from >= node_count {
-            return Err(ToposortError::UnknownNode { edge, node: from });
-        }
-        if to >= node_count {
-            return Err(ToposortError::UnknownNode { edge, node: to });
-        }
-    }
-    toposort_witness(node_count, edges).map_err(|err| {
-        if let Some(rest) = err.strip_prefix("Cycle detected involving node ") {
-            if let Ok(node) = rest.parse::<u32>() {
-                return ToposortError::Cycle { node };
-            }
-        }
-        ToposortError::InconsistentState { message: err }
-    })
-}
 
 fn reachable(
     node_count: u32,

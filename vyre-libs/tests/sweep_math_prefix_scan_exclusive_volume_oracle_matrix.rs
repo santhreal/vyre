@@ -3,30 +3,10 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "math")]
 
-use vyre_libs::math::prefix_scan::ScanKind;
-fn cpu_ref(input: &[u32], kind: ScanKind) -> Vec<u32> {
-    match kind {
-        ScanKind::InclusiveSum => {
-            vyre_reference::composition_witness::inclusive_prefix_sum_witness(input)
-        }
-        ScanKind::ExclusiveSum => {
-            vyre_reference::composition_witness::exclusive_prefix_sum_witness(input)
-        }
-    }
-}
+mod wire_words;
+use wire_words::{lcg_u32, prefix_scan_cpu_ref as cpu_ref};
 
-fn lcg_u32(seed: u32, len: usize) -> Vec<u32> {
-    let mut state = seed;
-    (0..len)
-        .map(|idx| {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223)
-                .rotate_left((idx % 31) as u32);
-            state ^ (idx as u32).wrapping_mul(0x85EB_CA6B)
-        })
-        .collect()
-}
+use vyre_libs::math::prefix_scan::ScanKind;
 
 fn oracle_exclusive_scan(input: &[u32]) -> Vec<u32> {
     let mut out = Vec::with_capacity(input.len());

@@ -780,32 +780,11 @@ pub fn paged_cache_append(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::{
+        decode_f32 as bytes_to_f32, f32_bytes as f32_to_bytes, u32_bytes as u32_to_bytes,
+    };
     use vyre_reference::reference_eval;
     use vyre_reference::value::Value;
-
-    fn f32_to_bytes(data: &[f32]) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(data.len() * 4);
-        for &v in data {
-            bytes.extend_from_slice(&v.to_ne_bytes());
-        }
-        bytes
-    }
-
-    fn u32_to_bytes(data: &[u32]) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(data.len() * 4);
-        for &v in data {
-            bytes.extend_from_slice(&v.to_ne_bytes());
-        }
-        bytes
-    }
-
-    fn bytes_to_f32(bytes: &[u8]) -> Vec<f32> {
-        assert_eq!(bytes.len() % 4, 0);
-        bytes
-            .chunks_exact(4)
-            .map(|chunk| f32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-            .collect()
-    }
 
     #[test]
     fn paged_attention_validates_dimensions() {

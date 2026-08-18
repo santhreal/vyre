@@ -1,35 +1,16 @@
 //! Numerical reference tests and adversarial cases for paged attention programs.
 
 #![forbid(unsafe_code)]
+#![cfg(feature = "nn-attention")]
 
 use vyre_foundation::ir::DataType;
 use vyre_libs::nn::attention::{paged_attention, PagedAttentionSpec};
+use vyre_primitives::wire::{
+    decode_f32_le_bytes_all as bytes_to_f32, pack_f32_slice as f32_to_bytes,
+    pack_u32_slice as u32_to_bytes,
+};
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
-
-fn f32_to_bytes(data: &[f32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(data.len() * 4);
-    for &v in data {
-        bytes.extend_from_slice(&v.to_ne_bytes());
-    }
-    bytes
-}
-
-fn u32_to_bytes(data: &[u32]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(data.len() * 4);
-    for &v in data {
-        bytes.extend_from_slice(&v.to_ne_bytes());
-    }
-    bytes
-}
-
-fn bytes_to_f32(bytes: &[u8]) -> Vec<f32> {
-    assert_eq!(bytes.len() % 4, 0);
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| f32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-        .collect()
-}
 
 #[test]
 fn paged_gqa_attention_broadcasts_kv_heads() {
