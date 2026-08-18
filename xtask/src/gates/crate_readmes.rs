@@ -12,7 +12,7 @@
 //! Everything between the two markers is rendered from those authorities. Text
 //! outside them is the crate's own and is preserved.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -291,61 +291,28 @@ fn load_guides(
             }
         }
     }
-    let mut overrides = BTreeMap::new();
-    if let Some(table) = config.get("package").and_then(Value::as_table) {
-        for (package, value) in table {
-            match value.as_table() {
-                Some(table) => {
-                    // An override is read the way a profile is. Prose that
-                    // renders a heading with nothing under it is a finding here
-                    // rather than an empty section in a published README.
-                    let empty = match table.get("error_behavior") {
-                        None => false,
-                        Some(value) => value.as_str().unwrap_or_default().trim().is_empty(),
-                    };
-                    if empty {
-                        report.find(Finding::in_file(
-                            METADATA,
-                            format!(
-                                "the override for `{package}` declares an empty `error_behavior`"
-                            ),
-                            "state what the crate does with an unsupported input, or drop the key",
-                        ));
-                    }
-                    overrides.insert(package.clone(), table.clone());
-                }
-                None => report.find(Finding::in_file(
-                    METADATA,
-                    format!("the override for `{package}` is not a table"),
-                    "declare [package.<name>] as a table",
-                )),
-            }
-        }
-    }
-
-    // A profile for a layer no crate occupies, or an override for a package no
-    // longer in the workspace, survives a rename and reads as coverage while
-    // describing nothing.
-    let packages: BTreeSet<&str> = records.iter().map(|r| r.package.as_str()).collect();
-    let layers: BTreeSet<&str> = records.iter().map(|r| r.layer.as_str()).collect();
-    for package in overrides.keys() {
-        if !packages.contains(package.as_str()) {
+    let overrides = crate_registry::extract_table_overrides(METADATA, &config, "package", report);
+    for (package, table) in &overrides {
+        let empty = match table.get("error_behavior") {
+            None => false,
+            Some(value) => value.as_str().unwrap_or_default().trim().is_empty(),
+        };
+        if empty {
             report.find(Finding::in_file(
                 METADATA,
-                format!("`{package}` has an override and is not a workspace crate"),
-                "delete the override, or restore the crate",
+                format!("the override for `{package}` declares an empty `error_behavior`"),
+                "state what the crate does with an unsupported input, or drop the key",
             ));
         }
     }
-    for layer in profiles.keys() {
-        if !layers.contains(layer.as_str()) {
-            report.find(Finding::in_file(
-                METADATA,
-                format!("layer `{layer}` has an error profile and no crate occupies it"),
-                "delete the profile, or record the crate that occupies the layer",
-            ));
-        }
-    }
+    crate_registry::validate_metadata_membership(
+        METADATA,
+        overrides.keys(),
+        profiles.keys(),
+        records,
+        |layer| format!("layer `{layer}` has an error profile and no crate occupies it"),
+        report,
+    );
     Ok(Guides {
         profiles,
         overrides,
@@ -514,17 +481,7 @@ fn explicit_example(manifest: &toml::Table) -> Option<(String, Vec<String>)> {
         .iter()
         .filter_map(|row| {
             let name = row.get("name").and_then(Value::as_str)?.to_string();
-            let mut features: Vec<String> = row
-                .get("required-features")
-                .and_then(Value::as_array)
-                .map(|array| {
-                    array
-                        .iter()
-                        .filter_map(Value::as_str)
-                        .map(str::to_string)
-                        .collect()
-                })
-                .unwrap_or_default();
+            let mut features = crate::toml_text::string_array(row.get("required-features"));
             features.sort();
             Some((name, features))
         })
@@ -557,29 +514,7 @@ fn render_contract(
     example: &(String, String),
     report: &mut Report,
 ) -> String {
-    let features = manifest
-        .get("features")
-        .and_then(Value::as_table)
-        .cloned()
-        .unwrap_or_default();
-    let names: Vec<String> = features.keys().cloned().collect();
-    let mut defaults: Vec<String> = Vec::new();
-    if let Some(declared) = features.get("default") {
-        match declared.as_array() {
-            Some(array) => {
-                defaults = array
-                    .iter()
-                    .filter_map(Value::as_str)
-                    .map(str::to_string)
-                    .collect();
-            }
-            None => report.find(Finding::in_file(
-                format!("{}/Cargo.toml", record.path),
-                "features.default is not a string array",
-                "declare features.default as an array of feature names",
-            )),
-        }
-    }
+    let (names, defaults) = crate::manifest_walk::manifest_features(&record.path, manifest, report);
     let up = "../".repeat(Path::new(&record.path).components().count());
     let guide = format!("docs/testing/{}.md", record.package);
     let (source, command) = example;
@@ -659,14 +594,7 @@ fn render_contract(
 
 /// A backtick-joined list, or `None` when the list is empty.
 fn joined(values: &[String]) -> String {
-    if values.is_empty() {
-        return "None".to_string();
-    }
-    values
-        .iter()
-        .map(|value| format!("`{value}`"))
-        .collect::<Vec<_>>()
-        .join(", ")
+    crate::toml_text::joined_backticked(values)
 }
 
 /// Read one README, or the empty string when the crate has none yet.

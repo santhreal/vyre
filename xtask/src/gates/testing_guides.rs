@@ -323,56 +323,16 @@ fn load_metadata(
             ));
             toml::Table::new()
         });
-    let mut profiles = BTreeMap::new();
-    if let Some(table) = config.get("profile").and_then(Value::as_table) {
-        for (layer, profile) in table {
-            match profile.as_table() {
-                Some(profile) => {
-                    profiles.insert(layer.clone(), profile.clone());
-                }
-                None => report.find(Finding::in_file(
-                    METADATA,
-                    format!("profile `{layer}` is not a table"),
-                    "declare [profile.<layer>] as a table",
-                )),
-            }
-        }
-    }
-    let mut overrides = BTreeMap::new();
-    if let Some(table) = config.get("package").and_then(Value::as_table) {
-        for (package, value) in table {
-            match value.as_table() {
-                Some(value) => {
-                    overrides.insert(package.clone(), value.clone());
-                }
-                None => report.find(Finding::in_file(
-                    METADATA,
-                    format!("the override for `{package}` is not a table"),
-                    "declare [package.<name>] as a table",
-                )),
-            }
-        }
-    }
-    let packages: BTreeSet<&str> = records.iter().map(|r| r.package.as_str()).collect();
-    let layers: BTreeSet<&str> = records.iter().map(|r| r.layer.as_str()).collect();
-    for package in overrides.keys() {
-        if !packages.contains(package.as_str()) {
-            report.find(Finding::in_file(
-                METADATA,
-                format!("`{package}` has an override and is not a workspace crate"),
-                "delete the override, or restore the crate",
-            ));
-        }
-    }
-    for layer in profiles.keys() {
-        if !layers.contains(layer.as_str()) {
-            report.find(Finding::in_file(
-                METADATA,
-                format!("layer `{layer}` has a profile and no crate occupies it"),
-                "delete the profile, or record the crate that occupies the layer",
-            ));
-        }
-    }
+    let profiles = crate_registry::extract_table_overrides(METADATA, &config, "profile", report);
+    let overrides = crate_registry::extract_table_overrides(METADATA, &config, "package", report);
+    crate_registry::validate_metadata_membership(
+        METADATA,
+        overrides.keys(),
+        profiles.keys(),
+        records,
+        |layer| format!("layer `{layer}` has a profile and no crate occupies it"),
+        report,
+    );
     Ok(Metadata {
         defaults,
         profiles,
@@ -382,17 +342,7 @@ fn load_metadata(
 
 /// The sorted feature names a target row requires.
 fn required_features(row: &Value) -> Vec<String> {
-    let mut features: Vec<String> = row
-        .get("required-features")
-        .and_then(Value::as_array)
-        .map(|array| {
-            array
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut features = crate::toml_text::string_array(row.get("required-features"));
     features.sort();
     features
 }
@@ -552,29 +502,7 @@ fn render_guide(
     fields: &Fields,
     report: &mut Report,
 ) -> String {
-    let features = manifest
-        .get("features")
-        .and_then(Value::as_table)
-        .cloned()
-        .unwrap_or_default();
-    let names: Vec<String> = features.keys().cloned().collect();
-    let mut defaults: Vec<String> = Vec::new();
-    if let Some(declared) = features.get("default") {
-        match declared.as_array() {
-            Some(array) => {
-                defaults = array
-                    .iter()
-                    .filter_map(Value::as_str)
-                    .map(str::to_string)
-                    .collect();
-            }
-            None => report.find(Finding::in_file(
-                format!("{}/Cargo.toml", record.path),
-                "features.default is not a string array",
-                "declare features.default as an array of feature names",
-            )),
-        }
-    }
+    let (names, defaults) = crate::manifest_walk::manifest_features(&record.path, manifest, report);
 
     let mut commands = vec![format!("./cargo_full test -p {}", record.package)];
     if !names.is_empty() {
@@ -684,14 +612,7 @@ fn render_guide(
 
 /// A backtick-joined list, or `None` when the list is empty.
 fn joined(values: &[String]) -> String {
-    if values.is_empty() {
-        return "None".to_string();
-    }
-    values
-        .iter()
-        .map(|value| format!("`{value}`"))
-        .collect::<Vec<_>>()
-        .join(", ")
+    crate::toml_text::joined_backticked(values)
 }
 
 #[cfg(test)]

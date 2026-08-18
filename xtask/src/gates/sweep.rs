@@ -148,27 +148,7 @@ fn token(text: &str) -> String {
 /// A YAML comment is documentation, not a reference: prose that ends a sentence
 /// with `source_scan.sh.` names no file, and reporting it as a missing script
 /// makes the check fail on its own explanatory text.
-fn referenced_script(line: &str) -> Option<&str> {
-    let command = strip_yaml_comment(line.trim());
-    let index = command.find("scripts/")?;
-    let rest = &command[index + "scripts/".len()..];
-    let name = rest.split_whitespace().next().unwrap_or(rest);
-    let name = name.trim_end_matches(['"', '\'', ';', ')']);
-    (!name.is_empty()).then_some(name)
-}
-
-/// Everything before a trailing YAML comment. `#` opens one at the start of a
-/// line or after whitespace.
-fn strip_yaml_comment(line: &str) -> &str {
-    if line.starts_with('#') {
-        return "";
-    }
-    match line.find(" #") {
-        Some(index) => &line[..index],
-        None => line,
-    }
-}
-
+use crate::gates::ci_registry::referenced_script;
 /// Every workflow reference to a script the checkout does not carry.
 ///
 /// A glob is rejected outright. It was accepted while `scripts/check_*.sh`
@@ -869,38 +849,6 @@ mod tests {
         assert!(selection(&["--subset".to_string(), "nope".to_string()]).is_err());
     }
 
-    /// WHY: a workflow reference is read out of a shell command, and the same
-    /// file explains itself in YAML comments. Prose that ends a sentence with a
-    /// script name invokes nothing, so reading it as a reference would make the
-    /// check fail on documentation.
-    #[test]
-    fn a_script_reference_comes_from_a_command_not_from_prose() {
-        assert_eq!(
-            referenced_script("        run: bash scripts/check_feature_msrv.sh"),
-            Some("check_feature_msrv.sh")
-        );
-        assert_eq!(
-            referenced_script("        run: bash scripts/lib/cargo_runner.sh --strict"),
-            Some("lib/cargo_runner.sh")
-        );
-        assert_eq!(
-            referenced_script("        run: bash \"scripts/check_public_api.sh\";"),
-            Some("check_public_api.sh")
-        );
-        assert_eq!(
-            referenced_script("      # all on scripts/cargo_runner.sh."),
-            None
-        );
-        assert_eq!(
-            referenced_script("        run: bash scripts/gate.sh # see scripts/other.sh."),
-            Some("gate.sh")
-        );
-        assert_eq!(referenced_script("        run: cargo test"), None);
-        assert_eq!(
-            referenced_script("        run: bash scripts/check_*.sh"),
-            Some("check_*.sh")
-        );
-    }
 
     /// WHY: every script this campaign deletes is named by the workflow that
     /// used to run it. A step pointing at a script the checkout no longer

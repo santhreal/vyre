@@ -183,7 +183,7 @@ macro_rules! artifact_gate {
         $(#[$attribute:meta])*
         $gate:ident,
         name: $name:literal,
-        help: $help:literal,
+        $(help: $help:literal,)?
         inspect: |$ctx:ident| $inspection:expr $(,)?
     ) => {
         $(#[$attribute])*

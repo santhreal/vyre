@@ -36,8 +36,6 @@ pub(super) fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpI
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gates::lego_audit::test_ops::op;
-
     #[test]
     fn non_leaf_operations_without_children_are_flagged() {
         let mut valid_composed = op(

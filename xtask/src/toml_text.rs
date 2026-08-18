@@ -57,9 +57,21 @@ pub fn string_array(value: Option<&toml::Value>) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// Values rendered as backtick-quoted items joined with commas, or `"None"` when empty.
+#[must_use]
+pub fn joined_backticked(values: &[String]) -> String {
+    if values.is_empty() {
+        return "None".to_string();
+    }
+    values
+        .iter()
+        .map(|value| format!("`{value}`"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
 #[cfg(test)]
 mod tests {
-    use super::{array, quote, string_array};
+    use super::{array, joined_backticked, quote, string_array};
 
     #[test]
     fn a_quoted_value_escapes_the_characters_toml_reserves() {
@@ -89,5 +101,14 @@ mod tests {
         assert!(string_array(table.get("empty")).is_empty());
         assert!(string_array(table.get("scalar")).is_empty());
         assert!(string_array(table.get("absent")).is_empty());
+    }
+
+    #[test]
+    fn joined_backticked_formats_comma_separated_list() {
+        assert_eq!(joined_backticked(&[]), "None");
+        assert_eq!(
+            joined_backticked(&["alpha".to_string(), "beta".to_string()]),
+            "`alpha`, `beta`"
+        );
     }
 }

@@ -279,3 +279,5 @@ pub(crate) mod test_ops {
         info
     }
 }
+#[cfg(test)]
+pub(crate) use self::test_ops::*;

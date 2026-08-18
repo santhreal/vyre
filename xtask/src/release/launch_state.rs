@@ -73,15 +73,6 @@ crate::artifact_gate! {
     /// Holds the public launch state to the completion marker and the gate artifacts.
     LaunchStateGate,
     name: "launch-state",
-    help: "Regenerate release/evidence/final/public-launch-state.json from the launch completion \
-       marker and the four prepublish gate artifacts, and report each line the committed \
-       artifact disagrees on. Proves the recorded launch state matches the marker on disk, and \
-       that each prepublish gate left an artifact carrying no blockers. A launch whose external \
-       actions are still pending is recorded and noted, not reported: this gate runs on every \
-       tree, and the gate that requires a closed launch is `vyre-release-gate --launch-complete`, \
-       which reads this artifact in launch-complete mode. Proves nothing about whether the \
-       external actions were really performed: the marker is written by the launch script and \
-       this gate reads it, it does not contact crates.io or the git remote.",
     inspect: |ctx| inspect(&ctx.root),
 }
 

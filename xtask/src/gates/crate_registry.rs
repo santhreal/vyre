@@ -428,17 +428,7 @@ fn merged_specification(
         return merged;
     };
     let inherited: Vec<String> = feature_list(&merged);
-    let local: Vec<String> = table
-        .get("features")
-        .and_then(Value::as_array)
-        .map(|array| {
-            array
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default();
+    let local: Vec<String> = crate::toml_text::string_array(table.get("features"));
     for (key, value) in table {
         if key != "workspace" {
             merged.insert(key.clone(), value.clone());
@@ -456,17 +446,7 @@ fn merged_specification(
 
 /// The feature list a merged specification carries.
 fn feature_list(table: &toml::Table) -> Vec<String> {
-    table
-        .get("features")
-        .and_then(Value::as_array)
-        .map(|array| {
-            array
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
+    crate::toml_text::string_array(table.get("features"))
 }
 
 /// The workspace as cargo declares it: members, their packages, and the
@@ -725,14 +705,63 @@ fn contract_findings(state: &WorkspaceState, records: &[CrateRecord]) -> Vec<Fin
 
 /// A backtick-joined list, or `None` when the list is empty.
 fn format_list(values: &[String]) -> String {
-    if values.is_empty() {
-        return "None".to_string();
+    crate::toml_text::joined_backticked(values)
+}
+
+/// Extract a table of override tables from `config`, reporting entries that are not tables.
+pub(crate) fn extract_table_overrides(
+    metadata_file: &str,
+    config: &toml::Table,
+    key: &str,
+    report: &mut Report,
+) -> BTreeMap<String, toml::Table> {
+    let mut overrides = BTreeMap::new();
+    if let Some(table) = config.get(key).and_then(Value::as_table) {
+        for (name, value) in table {
+            match value.as_table() {
+                Some(entry) => {
+                    overrides.insert(name.clone(), entry.clone());
+                }
+                None => report.find(Finding::in_file(
+                    metadata_file,
+                    format!("the override for `{name}` is not a table"),
+                    format!("declare [{key}.<name>] as a table"),
+                )),
+            }
+        }
     }
-    values
-        .iter()
-        .map(|value| format!("`{value}`"))
-        .collect::<Vec<_>>()
-        .join(", ")
+    overrides
+}
+
+/// Reject an override or profile describing no crate or layer in the tree.
+pub(crate) fn validate_metadata_membership<'a>(
+    metadata_file: &str,
+    override_packages: impl IntoIterator<Item = &'a String>,
+    profile_layers: impl IntoIterator<Item = &'a String>,
+    records: &[CrateRecord],
+    profile_finding_message: impl Fn(&str) -> String,
+    report: &mut Report,
+) {
+    let packages: BTreeSet<&str> = records.iter().map(|r| r.package.as_str()).collect();
+    let layers: BTreeSet<&str> = records.iter().map(|r| r.layer.as_str()).collect();
+    for package in override_packages {
+        if !packages.contains(package.as_str()) {
+            report.find(Finding::in_file(
+                metadata_file,
+                format!("`{package}` has an override and is not a workspace crate"),
+                "delete the override, or restore the crate",
+            ));
+        }
+    }
+    for layer in profile_layers {
+        if !layers.contains(layer.as_str()) {
+            report.find(Finding::in_file(
+                metadata_file,
+                profile_finding_message(layer.as_str()),
+                "delete the profile, or record the crate that occupies the layer",
+            ));
+        }
+    }
 }
 
 /// Records in package order, which is the order both documents render in.

@@ -69,12 +69,7 @@ fn judge(root: &Path) -> Report {
 
 /// Every finding rendered as one line, for substring assertions.
 fn rendered(report: &Report) -> String {
-    report
-        .findings
-        .iter()
-        .map(|finding| finding.message.clone())
-        .collect::<Vec<_>>()
-        .join("\n")
+    report.finding_messages()
 }
 
 /// A required list that names the display name of every job is accepted.

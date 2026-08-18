@@ -168,12 +168,7 @@ mod tests {
 
     /// Every finding message, joined.
     fn messages(report: &Report) -> String {
-        report
-            .findings
-            .iter()
-            .map(|finding| finding.message.clone())
-            .collect::<Vec<_>>()
-            .join("\n")
+        report.finding_messages()
     }
 
     /// WHY: this gate is a ratchet, and a ratchet is only worth its run time if

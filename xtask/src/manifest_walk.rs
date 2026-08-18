@@ -177,3 +177,34 @@ fn collect_dependency_names(table: &toml::Table, optional_only: bool, out: &mut 
         }
     }
 }
+/// Read all features and default features from a package manifest.
+pub fn manifest_features(
+    record_path: &str,
+    manifest: &toml::Table,
+    report: &mut crate::gate::Report,
+) -> (Vec<String>, Vec<String>) {
+    let features = manifest
+        .get("features")
+        .and_then(toml::Value::as_table)
+        .cloned()
+        .unwrap_or_default();
+    let names: Vec<String> = features.keys().cloned().collect();
+    let mut defaults: Vec<String> = Vec::new();
+    if let Some(declared) = features.get("default") {
+        match declared.as_array() {
+            Some(array) => {
+                defaults = array
+                    .iter()
+                    .filter_map(toml::Value::as_str)
+                    .map(str::to_string)
+                    .collect();
+            }
+            None => report.find(crate::gate::Finding::in_file(
+                format!("{record_path}/Cargo.toml"),
+                "features.default is not a string array",
+                "declare features.default as an array of feature names",
+            )),
+        }
+    }
+    (names, defaults)
+}

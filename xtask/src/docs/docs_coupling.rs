@@ -468,13 +468,7 @@ fn changed_paths(root: &Path, base: Option<&str>) -> Result<Diff, GateError> {
 /// because a diff can fail for reasons a fetch does not fix and the two
 /// answers need different fix lines.
 fn ref_exists(root: &Path, reference: &str) -> bool {
-    Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["rev-parse", "--verify", "--quiet"])
-        .arg(format!("{reference}^{{commit}}"))
-        .output()
-        .is_ok_and(|output| output.status.success())
+    crate::checkout::git_ref_exists(root, reference)
 }
 
 /// One `git diff` invocation, as a set of paths.

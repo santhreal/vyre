@@ -152,19 +152,16 @@ fn documents_named_in(line: &str) -> Vec<&str> {
     let path_character = |character: char| {
         character.is_ascii_alphanumeric() || matches!(character, '.' | '/' | '-' | '_')
     };
-    let bytes = line.as_bytes();
     let mut found = Vec::new();
-    let mut cursor = 0;
-    while let Some(offset) = line[cursor..].find(DOCUMENT_DIRECTORY) {
-        let start = cursor + offset;
-        cursor = start + DOCUMENT_DIRECTORY.len();
-        if start > 0 && path_character(char::from(bytes[start - 1])) {
+    for (start, _) in line.match_indices(DOCUMENT_DIRECTORY) {
+        if start > 0 && path_character(line[..start].chars().next_back().unwrap_or_default()) {
             continue;
         }
-        let end = line[start..]
+        let rest = &line[start..];
+        let end = rest
             .find(|character| !path_character(character))
-            .map_or(line.len(), |length| start + length);
-        let candidate = &line[start..end];
+            .unwrap_or(rest.len());
+        let candidate = &rest[..end];
         if candidate.ends_with(DOCUMENT_SUFFIX) {
             found.push(candidate);
         }

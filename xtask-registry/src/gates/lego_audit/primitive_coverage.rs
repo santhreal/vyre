@@ -175,8 +175,6 @@ pub(super) fn check_3_primitive_coverage(report: &mut Report, ops: &[OpInfo]) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gates::lego_audit::test_ops::op;
-
     /// This test prevents generated consumer_a/consumer_b aliases from satisfying the two-caller primitive promotion rule.
     #[test]
     fn synthetic_catalog_consumers_do_not_count_as_primitive_callers() {

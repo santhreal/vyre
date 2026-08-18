@@ -184,41 +184,9 @@ mod tests {
 
     #[test]
     fn cuda_first_axes_rejects_missing_scalar_axes() {
-        let dir = tempfile::TempDir::new()
-            .expect("Fix: create temporary workspace for release axis scalar gate test.");
-        let release_dir = dir.path().join("release");
-        std::fs::create_dir_all(release_dir.join("evidence/benchmarks"))
-            .expect("Fix: create temporary benchmark evidence directory.");
-        let mut source_artifacts = Vec::new();
-        for index in 0..12 {
-            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
-            std::fs::write(
-                dir.path().join(&artifact),
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "selected_backend": "cuda",
-                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": gpu_memory_environment(24576),
-                    "cases": [
-                        {
-                            "id": format!("case-{index}"),
-                            "backend_id": "cuda",
-                            "status": "pass",
-                            "metrics": {
-                                "wall_ns": {"p50": 17_000},
-                                "cold_compile_ns": {"p50": 2_000_000},
-                                "wall_gb_s_x1000": {"p50": 4_000}
-                            },
-                            "correctness": {
-                                "Toleranced": {"max_observed_ulp": 3}
-                            }
-                        }
-                    ]
-                }))
-                .expect("Fix: serialize temporary CUDA artifact."),
-            )
-            .expect("Fix: write temporary CUDA artifact.");
-            source_artifacts.push(artifact);
-        }
+        let workspace = crate::report_fixture::EvidenceWorkspace::new();
+        let source_artifacts = workspace.cuda_release_axis_artifacts("case", 3);
+        let release_dir = workspace.path().join("release");
         let axes = serde_json::json!({
             "source_artifacts": source_artifacts
         });
