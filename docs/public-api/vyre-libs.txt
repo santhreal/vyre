@@ -86,6 +86,7 @@ impl vyre_libs::BufferDescriptor
 impl vyre_libs::BuildOptions
 impl vyre_libs::ProgramDescriptor
 impl vyre_libs::TensorRef
+impl vyre_libs::csr::CsrBuffers<'static>
 impl vyre_libs::decode::ziftsieve::ZiftsieveBuffers<'static>
 impl vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout
 impl vyre_libs::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch
@@ -401,6 +402,7 @@ pub const vyre_libs::csr::BINDING_NODES: u32
 pub const vyre_libs::csr::BINDING_NODE_TAGS: u32
 pub const vyre_libs::csr::BINDING_PRIMITIVE_START: u32
 pub const vyre_libs::csr::CSR_TRAVERSAL_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs::csr::CsrBuffers<'static>::CANONICAL: Self
 pub const vyre_libs::csr::NAME_EDGE_KIND_MASK: &str
 pub const vyre_libs::csr::NAME_EDGE_OFFSETS: &str
 pub const vyre_libs::csr::NAME_EDGE_TARGETS: &str
