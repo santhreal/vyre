@@ -14,6 +14,7 @@ pub mod patterns;
 pub mod program;
 pub use error::EmitError;
 
+
 /// Stable diagnostic row emitted when binding a lowered Vyre operation into a
 /// Naga module.
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

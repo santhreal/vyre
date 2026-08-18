@@ -142,7 +142,9 @@ impl BodyBuilder<'_> {
     /// shift and a mask: the NVIDIA shader compiler emits an integer divide for
     /// the general form even when the divisor is a constant.
     fn byte_span(&mut self, offset: naga::Handle<Expression>) -> ByteSpan {
-        let word_aligned = true;
+        let word_aligned = self
+            .literal_u32_of(offset)
+            .is_some_and(|byte| byte % 4 == 0);
         let two = self.literal_u32(2);
         let word_start = self.shr_u32(offset, two);
         if word_aligned {
@@ -166,8 +168,9 @@ impl BodyBuilder<'_> {
     }
 
     /// Whether the transfer length is a literal whole number of words.
-    fn is_whole_words(&self, _size: naga::Handle<Expression>) -> bool {
-        true
+    fn is_whole_words(&self, size: naga::Handle<Expression>) -> bool {
+        self.literal_u32_of(size)
+            .is_some_and(|bytes| bytes % 4 == 0)
     }
 
     /// The word of `slot` at `index`, or zero when `index` is past the end.
@@ -181,9 +184,14 @@ impl BodyBuilder<'_> {
         len: naga::Handle<Expression>,
     ) -> Result<naga::Handle<Expression>, EmitError> {
         let in_bounds = self.lt_u32(index, len);
-        let pointer = self.binding_element_pointer_by_slot(slot, index)?;
-        let loaded = self.append_expr(Expression::Load { pointer });
         let zero = self.literal_u32(0);
+        let safe_index = self.append_expr(Expression::Select {
+            condition: in_bounds,
+            accept: index,
+            reject: zero,
+        });
+        let pointer = self.binding_element_pointer_by_slot(slot, safe_index)?;
+        let loaded = self.append_expr(Expression::Load { pointer });
         Ok(self.append_expr(Expression::Select {
             condition: in_bounds,
             accept: loaded,

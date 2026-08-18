@@ -7,7 +7,7 @@ use vyre_foundation::ir::Program;
 use crate::backend::dispatch_phase_probe as probe;
 
 pub(super) const PTX_LOWERING_CONTRACT: &[u8] =
-    b"vyre-cuda-ptx-lowering-contract:v15:ssa-carrier-snapshots+f32-canonical+select-pred-normalization+bool-cast-boundary+f32-bool-nan-truthiness+bool-numeric-materialization+bool-memory-word-abi+f32-ne-unordered+masked-integer-shifts+no-mutable-loop-unroll+full-workgroup-entry+bounded-full-workgroup-stores+child-captured-producer-liveness+single-mad-dual-mul-liveness";
+    b"vyre-cuda-ptx-lowering-contract:v16:ssa-carrier-snapshots+f32-canonical+select-pred-normalization+bool-cast-boundary+f32-bool-nan-truthiness+bool-numeric-ops-zero-extend+grid-sync-carrier-barrier-alignment+u32-wrap-arithmetic-lowering+async-transfer-byte-spans+saturating-mul-via-mulhi";
 pub(super) const CUDA_PTX_SOURCE_FROM_PROGRAM_DOMAIN: &[u8] =
     b"vyre.cuda.ptx-source-cache.program.v1";
 pub(super) const CUDA_MODULE_FROM_PTX_SOURCE_KEY_DOMAIN: &[u8] =
@@ -81,4 +81,16 @@ pub(super) fn module_cache_key_from_domain_digest(
         &[&digest[..]],
     )?;
     Ok(ModuleCacheKey(key))
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ptx_lowering_contract_pins_v16_and_labels() {
+        let contract = std::str::from_utf8(PTX_LOWERING_CONTRACT).expect("valid utf8");
+        assert!(contract.starts_with("vyre-cuda-ptx-lowering-contract:v16:"));
+        assert!(contract.contains("async-transfer-byte-spans"));
+        assert!(contract.contains("saturating-mul-via-mulhi"));
+    }
 }

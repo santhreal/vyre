@@ -4,7 +4,7 @@ use vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION;
 
 pub(super) const NAGA_VERSION: &str = env!("VYRE_NAGA_VERSION");
 pub(super) const WGSL_LOWERING_CONTRACT: &str =
-    "vyre-wgpu-lowering-contract:v17:region-phi-named-carrier+ssa-carrier-snapshots+block-shadowed-carriers+carrier-rebind-invalidates-stale-blocks+restored-loop-and-block-carrier-scope+nonfinite-f32-bitcast+per-word-byte-compact+no-mutable-loop-unroll+licm-keeps-reassigned-loop-locals+runtime-storage-buffer-lengths+saturating-f32-to-int-cast";
+    "vyre-wgpu-lowering-contract:v18:region-phi-named-carrier+ssa-carrier-snapshots+block-shadowed-carriers+carrier-rebind-invalidates-stale-blocks+restored-loop-head-rebind-invalidates-stale-carriers+u32-wrap-arithmetic-lowering+async-transfer-byte-spans+saturating-mul-via-mulhi";
 
 pub(crate) struct CompiledPipelineCacheKey {
     pub(crate) hash: [u8; 32],

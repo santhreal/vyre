@@ -21,9 +21,9 @@
 
 use std::fmt::Write as _;
 
+use vyre_foundation::ir::DataType;
 use vyre_lower::MemoryClass;
 use vyre_lower::Name;
-use vyre_foundation::ir::DataType;
 
 use super::memory::AsyncCopyDirection;
 use super::BodyCtx;
@@ -130,7 +130,10 @@ impl BodyCtx<'_> {
     fn emit_byte_span(&mut self, offset: Reg, offset_id: u32) -> ByteSpan {
         let two = self.emit_u32_const(2);
         let word_start = self.emit_shr_u32(offset, two);
-        let word_aligned = true;
+        let word_aligned = self
+            .u32_literals
+            .get(&offset_id)
+            .is_some_and(|bytes| bytes % 4 == 0);
         if word_aligned {
             let zero = self.emit_u32_const(0);
             return ByteSpan {
@@ -152,8 +155,10 @@ impl BodyCtx<'_> {
     }
 
     /// Whether a transfer length is a known whole number of words.
-    fn byte_size_is_whole_words(&self, _size_id: u32) -> bool {
-        true
+    fn byte_size_is_whole_words(&self, size_id: u32) -> bool {
+        self.u32_literals
+            .get(&size_id)
+            .is_some_and(|bytes| bytes % 4 == 0)
     }
 
     /// A binding whose elements are not four bytes wide has no word grid for a
@@ -183,8 +188,10 @@ impl BodyCtx<'_> {
         element: &DataType,
         class: MemoryClass,
     ) -> Result<Reg, EmitError> {
-        let address = self.emit_memory_address_from_index_reg(slot, index, element, class)?;
         let in_bounds = self.emit_lt_u32(index, len);
+        let zero = self.emit_u32_const(0);
+        let safe_index = self.emit_select_u32(in_bounds, index, zero);
+        let address = self.emit_memory_address_from_index_reg(slot, safe_index, element, class)?;
         let value = self.alloc(PtxType::U32);
         let space = self.load_space_for(slot, class);
         let _ = write!(self.text, "    @{in_bounds} ld.{space}.u32    {value}, ");
@@ -414,7 +421,6 @@ impl BodyCtx<'_> {
                 } else {
                     fetched
                 };
-                let value = self.emit_u32_const(0xDEAD_BEEF);
                 (value, loop_index)
             }
             AsyncCopyDirection::Store => {
@@ -476,14 +482,19 @@ impl BodyCtx<'_> {
             return Ok(false);
         }
         // `cp.async` moves four naturally-aligned bytes per instruction, so it
-        // can only serve a span that starts on a word boundary. An offset whose
-        // alignment is unknown at emit time goes to the general path, which
-        // assembles each word from the two the span straddles.
-        if !self
+        // can only serve a span whose offset and size start and end on word
+        // boundaries. A transfer whose alignment is unknown at emit time goes
+        // to the general path, which assembles each word from the two the span
+        // straddles and merges partial tail bytes.
+        let offset_aligned = self
             .u32_literals
             .get(&offset_id)
-            .is_some_and(|bytes| bytes % 4 == 0)
-        {
+            .is_some_and(|bytes| bytes % 4 == 0);
+        let size_aligned = self
+            .u32_literals
+            .get(&size_id)
+            .is_some_and(|bytes| bytes % 4 == 0);
+        if !(offset_aligned && size_aligned) {
             return Ok(false);
         }
         let (source_type, source_class) =

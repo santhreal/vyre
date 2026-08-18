@@ -227,7 +227,7 @@ pub(super) fn barrier_flags(
             "relaxed barrier has no synchronization semantics".to_owned(),
         )),
         MemoryOrdering::GridSync => Err(EmitError::NagaConstructionFailed(
-            "grid synchronization requires dispatch splitting before Naga emission".to_owned(),
+            "Fix: grid synchronization requires dispatch splitting before Naga emission".to_owned(),
         )),
         _ => Err(EmitError::NagaConstructionFailed(
             "future memory ordering is not mapped by the Naga emitter".to_owned(),

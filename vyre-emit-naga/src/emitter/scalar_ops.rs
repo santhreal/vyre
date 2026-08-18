@@ -94,10 +94,7 @@ impl BodyBuilder<'_> {
         })
     }
 
-    pub(super) fn not_u32(
-        &mut self,
-        value: naga::Handle<Expression>,
-    ) -> naga::Handle<Expression> {
+    pub(super) fn not_u32(&mut self, value: naga::Handle<Expression>) -> naga::Handle<Expression> {
         self.append_expr(Expression::Unary {
             op: UnaryOperator::BitwiseNot,
             expr: value,
