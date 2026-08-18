@@ -63,12 +63,12 @@ rand.workspace = true
 env_logger = { workspace = true, optional = true }
 rusqlite = { workspace = true }
 core_affinity = { workspace = true }
-
-[target.'cfg(windows)'.dependencies]
+# The AES-CTR CPU baseline names openssl as its comparison crate, so the
+# measured library must be the same build on every host that records a result.
+# Vendoring pins the C library with the crate instead of resolving whatever the
+# host installed, which also removes the system probe that has no answer on
+# windows-msvc.
 openssl = { workspace = true, features = ["vendored"] }
-
-[target.'cfg(not(windows))'.dependencies]
-openssl = { workspace = true }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 vyre-driver-cuda = { workspace = true }
