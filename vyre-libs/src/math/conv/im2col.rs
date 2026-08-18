@@ -116,13 +116,8 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
-            im2col_3x3("input", "output", 4, 4).unwrap_or_else(|error| {
-                trap_program(
-                    OP_ID,
-                    Some(("output", DataType::F32)),
-                    error,
-                )
-            })
+            im2col_3x3("input", "output", 4, 4)
+                .unwrap_or_else(|error| super::trap_f32_output_program(OP_ID, "output", error))
         },
         Some(|| {
             vec![vec![f32_bytes(&im2col_fixture_input())]]

@@ -42,14 +42,7 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || bitset_equal("lhs", "rhs", "out", 2),
-        Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            vec![vec![
-                to_bytes(&[0xFFFF, 0xF0F0]),
-                to_bytes(&[0xFFFF, 0xF0F0]),
-                to_bytes(&[0]),
-            ]]
-        }),
+        Some(crate::bitset::relation::bitset_relation_2word_fixture_inputs),
         Some(|| {
             vec![vec![EXPECTED_BITSET_EQUAL_OUTPUT_BYTES.to_vec()]]
         }),

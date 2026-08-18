@@ -311,13 +311,7 @@ mod tests {
     #[test]
     fn zero_order_is_rejected() {
         let program = symmetric_eigen_jacobi("a", "evec", "eval", 0);
-        assert!(
-            program.entry().iter().any(|node| matches!(
-                node,
-                Node::Region { body, .. } if body.iter().any(|inner| matches!(inner, Node::Trap { .. }))
-            )),
-            "Fix: n = 0 must produce a trapping Program."
-        );
+        crate::math::assert_trapping_region_on_zero(&program, "Fix: n = 0 must produce a trapping Program.");
     }
 
     #[test]

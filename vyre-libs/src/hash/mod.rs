@@ -45,3 +45,23 @@ pub mod ntt;
 pub mod sparse_fft;
 
 pub use blake3_compress::blake3_compress;
+
+#[must_use]
+pub(crate) fn wrap_unary_scalar_hash_program(
+    op_id: &'static str,
+    input: &str,
+    out: &str,
+    n: u32,
+    body: Vec<vyre_foundation::ir::Node>,
+) -> vyre_foundation::ir::Program {
+    use vyre_foundation::composition::wrap_anonymous_region;
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::output(out, 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(op_id, body)],
+    )
+}

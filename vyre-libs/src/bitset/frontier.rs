@@ -862,11 +862,5 @@ mod tests {
         .0
     }
 
-    fn mix32(mut value: u32) -> u32 {
-        value ^= value >> 16;
-        value = value.wrapping_mul(0x7FEB_352D);
-        value ^= value >> 15;
-        value = value.wrapping_mul(0x846C_A68B);
-        value ^ (value >> 16)
-    }
+    use crate::bitset::mix32;
 }

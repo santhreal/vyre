@@ -45,33 +45,9 @@ impl Matmul {
     /// `a.shape[1] == b.shape[0]` (shared k dim),
     /// `out.shape == [a.shape[0], b.shape[1]]`.
     pub fn build(self) -> Result<Program, TensorRefError> {
-        let m = if self.a.shape.len() == 2 {
-            self.a.shape[0]
-        } else {
-            0
-        };
-        let k = if self.a.shape.len() == 2 {
-            self.a.shape[1]
-        } else {
-            0
-        };
-        let n = if self.b.shape.len() == 2 {
-            self.b.shape[1]
-        } else {
-            0
-        };
-
-        let mut composer = ContractionComposer::matmul_2d(OP_ID, self.a, self.b, self.out, m, k, n);
-        if let Some(workgroup) = self.options.workgroup_size {
-            composer = composer.with_workgroup_size(workgroup);
-        }
-        if let Some(generator) = self.options.region_generator {
-            composer = composer.with_region_generator(generator);
-        }
-        if let Some(tenant_id) = self.options.tenant_id {
-            composer = composer.with_tenant_id(tenant_id);
-        }
-        composer.build()
+        let (m, k, n) = super::matmul_2d_dims(&self.a, &self.b);
+        let composer = ContractionComposer::matmul_2d(OP_ID, self.a, self.b, self.out, m, k, n);
+        super::apply_contraction_options(composer, &self.options).build()
     }
 }
 
@@ -110,35 +86,11 @@ impl MatmulBias {
     /// `bias.shape == [n]`,
     /// `out.shape == [a.shape[0], b.shape[1]]`.
     pub fn build(self) -> Result<Program, TensorRefError> {
-        let m = if self.a.shape.len() == 2 {
-            self.a.shape[0]
-        } else {
-            0
-        };
-        let k = if self.a.shape.len() == 2 {
-            self.a.shape[1]
-        } else {
-            0
-        };
-        let n = if self.b.shape.len() == 2 {
-            self.b.shape[1]
-        } else {
-            0
-        };
-
-        let mut composer = ContractionComposer::matmul_bias_2d(
+        let (m, k, n) = super::matmul_2d_dims(&self.a, &self.b);
+        let composer = ContractionComposer::matmul_bias_2d(
             OP_ID_BIAS, self.a, self.b, self.bias, self.out, m, k, n,
         );
-        if let Some(workgroup) = self.options.workgroup_size {
-            composer = composer.with_workgroup_size(workgroup);
-        }
-        if let Some(generator) = self.options.region_generator {
-            composer = composer.with_region_generator(generator);
-        }
-        if let Some(tenant_id) = self.options.tenant_id {
-            composer = composer.with_tenant_id(tenant_id);
-        }
-        composer.build()
+        super::apply_contraction_options(composer, &self.options).build()
     }
 }
 
@@ -498,22 +450,8 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         OP_ID_BIAS,
         || matmul_bias("a", "b", "bias", "out", 2, 2, 2),
-        Some(|| {
-
-            vec![vec![
-                crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
-                crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
-                crate::fixture_bytes::u32_bytes(&[10, 20]),
-            ]]
-        }),
-        Some(|| {
-            vec![vec![vec![
-                0x1d, 0x00, 0x00, 0x00, // 29
-                0x2a, 0x00, 0x00, 0x00, // 42
-                0x35, 0x00, 0x00, 0x00, // 53
-                0x46, 0x00, 0x00, 0x00, // 70
-            ]]]
-        }),
+        Some(super::matmul_bias_2x2_fixture_inputs),
+        Some(super::matmul_bias_2x2_fixture_expected),
     )
     .with_category("math")
 }

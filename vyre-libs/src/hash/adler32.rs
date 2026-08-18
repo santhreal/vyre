@@ -149,18 +149,7 @@ pub fn adler32_finalize_expr(a: Expr, b: Expr) -> Expr {
 /// Build a Program that writes Adler-32(input[0..n]) to `out[0]`.
 #[must_use]
 pub fn adler32_program(input: &str, out: &str, n: u32) -> Program {
-    let body = vec![wrap_anonymous_region(
-        ADLER32_OP_ID,
-        adler32_body(input, out, n),
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        body,
-    )
+    super::wrap_unary_scalar_hash_program(ADLER32_OP_ID, input, out, n, adler32_body(input, out, n))
 }
 
 fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {

@@ -22,6 +22,8 @@ pub(crate) mod im2col;
 pub use conv2d::conv2d_3x3_direct;
 pub use im2col::im2col_3x3;
 
+pub(crate) use crate::math::trap_f32_output_program;
+
 /// Decision wrapper: choose the fused patch contraction in
 /// `conv2d_3x3_direct` vs a materialised `im2col_3x3` matrix handed to a
 /// tiled gemm, based on image area. Crossover threshold derived from a simple

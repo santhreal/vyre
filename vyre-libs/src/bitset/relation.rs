@@ -58,3 +58,13 @@ pub(crate) fn bitset_relation_program(
         op_id,
     )
 }
+
+#[must_use]
+pub(crate) fn bitset_relation_2word_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+    vec![vec![
+        to_bytes(&[0xFFFF, 0xF0F0]),
+        to_bytes(&[0xFFFF, 0xF0F0]),
+        to_bytes(&[0]),
+    ]]
+}

@@ -108,18 +108,11 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::visit::any_descendant;
 
     #[test]
     fn zero_order_is_rejected() {
         let program = matrix_diagonal_extract("m", "diag", 0);
-        assert!(
-            program.entry().iter().any(|node| matches!(
-                node,
-                Node::Region { body, .. } if body.iter().any(|inner| matches!(inner, Node::Trap { .. }))
-            )),
-            "Fix: n = 0 must produce a trapping Program."
-        );
+        crate::math::assert_trapping_region_on_zero(&program, "Fix: n = 0 must produce a trapping Program.");
     }
 
     #[test]
@@ -146,17 +139,9 @@ mod tests {
     #[test]
     fn diagonal_extract_binds_local_id() {
         let program = matrix_diagonal_extract("m", "diag", 4);
-        let has_local_binding = program.entry().iter().any(|node| {
-            any_descendant(node, &mut |inner| match inner {
-                Node::Let { name, value } => {
-                    name == "local" && matches!(value, Expr::LocalId { axis: 0 })
-                }
-                _ => false,
-            })
-        });
-        assert!(
-            has_local_binding,
-            "Fix: matrix_diagonal_extract must bind `local` to LocalId {{ axis: 0 }}."
+        crate::math::assert_local_id_0_bound(
+            &program,
+            "Fix: matrix_diagonal_extract must bind `local` to LocalId { axis: 0 }.",
         );
     }
 }

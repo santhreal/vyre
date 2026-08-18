@@ -194,14 +194,10 @@ mod tests {
             try_score_denoise_step_cpu_into(&x, &score, &noise, alpha, beta, sigma, &mut out)
                 .unwrap();
 
-            for i in 0..n {
-                let expected = alpha * x[i] + beta * score[i] + sigma * noise[i];
-                assert!(
-                    approx_eq(out[i], expected),
-                    "case {case} idx {i}: expected {expected}, got {}",
-                    out[i]
-                );
-            }
+            let expected: Vec<f64> = (0..n)
+                .map(|i| alpha * x[i] + beta * score[i] + sigma * noise[i])
+                .collect();
+            crate::math::assert_slices_approx_eq(case, &out[..n], &expected, approx_eq);
         }
     }
 

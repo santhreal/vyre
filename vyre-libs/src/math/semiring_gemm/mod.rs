@@ -219,14 +219,7 @@ inventory::submit! {
             fixture_u32(&[1, 2, 3, 4]),
             fixture_u32(&[5, 6, 7, 8]),
         ]]),
-        Some(|| {
-            vec![vec![vec![
-                0x13, 0x00, 0x00, 0x00, // 19
-                0x16, 0x00, 0x00, 0x00, // 22
-                0x2b, 0x00, 0x00, 0x00, // 43
-                0x32, 0x00, 0x00, 0x00, // 50
-            ]]]
-        }),
+        Some(crate::math::linalg::matmul_2x2_fixture_expected),
     )
 }
 

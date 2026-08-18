@@ -7,7 +7,7 @@ use super::inflate::{
     STORED_HEADER_FIX,
 };
 use crate::buffer_names::fixed_name;
-use crate::pattern::{dfa_compile, CompiledDfa};
+use crate::pattern::dfa_compile;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::composition_witness::{inflate_stored_witness, InflateStoredWitness};
 use vyre_reference::value::Value;
@@ -254,15 +254,7 @@ fn fused_stored_block_matches_parity_with_separate_inflate_then_aho() {
 
 #[test]
 fn fused_program_reuses_decoded_buffer_for_scan() {
-    let dfa = CompiledDfa {
-        transitions: vec![0; 256],
-        accept: vec![0],
-
-        state_count: 1,
-        max_pattern_len: 0,
-        output_offsets: vec![0, 0],
-        output_records: vec![],
-    };
+    let dfa = crate::decode::scan::dummy_compiled_dfa();
     let program = inflate_stored_block_then_aho_corasick(
         "input",
         "decoded",

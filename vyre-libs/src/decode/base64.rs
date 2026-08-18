@@ -641,7 +641,7 @@ mod primitive_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pattern::CompiledDfa;
+    use crate::decode::scan::dummy_compiled_dfa;
     use vyre_reference::value::Value;
 
     fn run(input: &[u8]) -> (Vec<u32>, u32) {
@@ -696,14 +696,7 @@ mod tests {
 
     #[test]
     fn fused_program_reuses_decoded_buffer_for_scan() {
-        let dfa = CompiledDfa {
-            transitions: vec![0; 256],
-            accept: vec![0],
-            state_count: 1,
-            max_pattern_len: 0,
-            output_offsets: vec![0, 0],
-            output_records: vec![],
-        };
+        let dfa = dummy_compiled_dfa();
         let program = base64_decode_then_aho_corasick(
             "input",
             "decoded",
