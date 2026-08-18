@@ -63,7 +63,7 @@ pub fn adaptive_sparse_dense_step(
         "dense_",
     );
 
-    let sparse_body: Vec<Node> = crate::builder::csr::CsrTraversalComposer::new(
+    let composer = crate::builder::csr::CsrTraversalComposer::new(
         HYBRID_OP_ID,
         "adaptive_sparse_dense_step",
         node_count,
@@ -74,8 +74,23 @@ pub fn adaptive_sparse_dense_step(
         Some(edge_kind_mask),
     ))
     .with_allow_mask(allow_mask)
-    .with_prefix("sparse")
-    .emit_edge_scan(frontier_out, lane.clone(), |word| word, Vec::new);
+    .with_prefix("sparse");
+
+    let sparse_expand =
+        composer.emit_edge_expand(frontier_out, lane.clone(), |word| word, Vec::new);
+    let word_idx_name = composer.local_name("word_idx");
+    let bit_mask_name = composer.local_name("bit_mask");
+    let src_word_name = composer.local_name("src_word");
+
+    let sparse_body = crate::graph::frontier_bits::when_bit_set(
+        frontier_in,
+        &lane,
+        Some(word_idx_name.as_str()),
+        src_word_name.as_str(),
+        bit_mask_name.as_str(),
+        |word| word,
+        sparse_expand,
+    );
 
     let body = vec![
         Node::let_bind(
@@ -145,5 +160,16 @@ mod tests {
         assert_eq!(find("tgts"), 7);
         assert_eq!(find("kinds"), 7);
         assert_eq!(find("adj"), 64 * words);
+    }
+
+    #[test]
+    fn emitted_hybrid_program_sparse_branch_probes_frontier_in_and_expands_to_frontier_out() {
+        let p = adaptive_sparse_dense_step(
+            "fin", "fout", "count", "offs", "tgts", "kinds", "adj", 64, 7, 1, 25,
+        );
+        let rendered = format!("{p:?}");
+        assert!(rendered.contains("fin"), "must probe input frontier in sparse branch");
+        assert!(rendered.contains("fout"), "must expand out-edges into output frontier");
+        assert!(rendered.contains("count"), "must load popcount for selector");
     }
 }
