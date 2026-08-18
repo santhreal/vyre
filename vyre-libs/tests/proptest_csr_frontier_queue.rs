@@ -4,7 +4,7 @@
 
 mod graph_sweep_fixtures;
 use graph_sweep_fixtures::{
-    active_nodes, generated_csr, generated_frontier_words, max_row_degree, GeneratedCsr,
+    active_nodes, generated_csr, generated_frontier_words, max_row_degree,
 };
 mod wire_words;
 use wire_words::queue_forward_oracle;

@@ -6,7 +6,6 @@ mod wire_words;
 use wire_words::{mix64, queue_forward_oracle};
 
 use proptest::prelude::*;
-use vyre_libs::bitset::bitset_words;
 use vyre_libs::graph::csr_frontier_queue::validate_csr_queue_graph;
 use vyre_libs::graph::csr_queue_strided::{
     csr_queue_strided_forward_dispatch_grid, CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
