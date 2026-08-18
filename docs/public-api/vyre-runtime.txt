@@ -1217,6 +1217,9 @@ pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExchangeError(alloc:
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::expert_id: u32
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertOutOfBounds::num_experts: u32
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertQueueMissing
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertQueueMissing::expert_id: u32
+pub vyre_runtime::expert_scheduling::ExpertSchedulingError::ExpertQueueMissing::num_experts: u32
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::LockPoisoned
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::QueueSaturated
 pub vyre_runtime::expert_scheduling::ExpertSchedulingError::QueueSaturated::capacity: usize
