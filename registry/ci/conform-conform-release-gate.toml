@@ -6,7 +6,7 @@ required_status = "Conformance / Conform release gate"
 triggers = ["push", "pull_request"]
 steps = [
   { command = '''if [ "${{ needs.operation-registry.result }}" != "success" ] \
-  || [ "${{ needs.conform-cpu.result }}" != "success" ]; then
+  || [ "${{ needs.conform-gpu.result }}" != "success" ]; then
   echo "::error::A required conformance job failed or did not run."
   exit 1
 fi

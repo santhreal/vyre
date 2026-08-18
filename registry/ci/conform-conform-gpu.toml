@@ -1,8 +1,8 @@
-lane = "conform-conform-cpu"
+lane = "conform-conform-gpu"
 workflow = ".github/workflows/conform.yml"
-job = "conform-cpu"
+job = "conform-gpu"
 state = "live"
-required_status = "Conformance / Vyre conformance CPU"
+required_status = "Conformance / Vyre conformance GPU"
 triggers = ["push", "pull_request"]
 steps = [
   { command = "./cargo_full test -p vyre-conform" },

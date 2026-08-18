@@ -19,10 +19,12 @@ jobs:
       - name: Verify semantic operation coverage
         run: ./cargo_full run -p xtask -- op-matrix --check
 
-  conform-cpu:
-    name: Vyre conformance CPU
+  conform-gpu:
+    name: Vyre conformance GPU
+    # A public repository never executes fork code on the persistent GPU host.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     needs: operation-registry
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, gpu-5090]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -68,15 +70,20 @@ jobs:
     name: Conform release gate
     needs:
       - operation-registry
-      - conform-cpu
-    if: ${{ always() }}
+      - conform-gpu
+    if: >-
+      ${{
+        always() &&
+        (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Verify required conformance jobs
         shell: bash
         run: |
           if [ "${{ needs.operation-registry.result }}" != "success" ] \
-            || [ "${{ needs.conform-cpu.result }}" != "success" ]; then
+            || [ "${{ needs.conform-gpu.result }}" != "success" ]; then
             echo "::error::A required conformance job failed or did not run."
             exit 1
           fi

@@ -17,6 +17,8 @@ env:
 jobs:
   gpu-adapter-probe:
     name: Probe real GPU adapter
+    # A public repository never executes fork code on the persistent GPU host.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, gpu-5090]
     timeout-minutes: 5
     steps:
@@ -234,7 +236,12 @@ jobs:
       - wgpu-conformance-all-ops
       - release-conformance-artifacts
       - cuda-release-bench-evidence
-    if: ${{ always() }}
+    if: >-
+      ${{
+        always() &&
+        (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+      }}
     runs-on: [self-hosted, gpu-5090]
     timeout-minutes: 5
     steps:
