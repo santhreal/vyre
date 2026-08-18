@@ -1941,13 +1941,42 @@ pub fn try_tensor_flow_forward_witness_into(
     allow_mask: u32,
     out: &mut Vec<u32>,
 ) -> Result<(), String> {
-    if edge_offsets.len() != (node_count as usize) + 1
-        || edge_offsets.first() != Some(&0)
-        || edge_offsets.windows(2).any(|w| w[0] > w[1])
-        || edge_offsets.last().map_or(0, |&v| v as usize) != edge_targets.len()
-        || edge_targets.len() != edge_kind_mask.len()
-    {
-        return Err("invalid CSR offsets or edge buffer size mismatch".to_owned());
+    let expected_offsets = (node_count as usize).checked_add(1).ok_or_else(|| {
+        format!("Fix: node_count + 1 overflows usize for node_count={node_count}.")
+    })?;
+    if edge_offsets.len() != expected_offsets {
+        return Err(format!(
+            "Fix: edge_offsets.len() must equal node_count + 1, got len={}, node_count={node_count}.",
+            edge_offsets.len()
+        ));
+    }
+    if edge_offsets[0] != 0 {
+        return Err(format!(
+            "Fix: edge_offsets[0] must be 0, got {}.",
+            edge_offsets[0]
+        ));
+    }
+    for (index, pair) in edge_offsets.windows(2).enumerate() {
+        if pair[0] > pair[1] {
+            return Err(format!(
+                "Fix: non-monotonic CSR offsets at row {index}: {} > {}.",
+                pair[0], pair[1]
+            ));
+        }
+    }
+    let edge_count = edge_offsets[expected_offsets - 1] as usize;
+    if edge_targets.len() != edge_kind_mask.len() {
+        return Err(format!(
+            "Fix: edge_targets.len() must equal edge_kind_mask.len(), got {} vs {}.",
+            edge_targets.len(),
+            edge_kind_mask.len()
+        ));
+    }
+    if edge_targets.len() != edge_count {
+        return Err(format!(
+            "Fix: final offset declares edge_count={edge_count}, but edge_targets.len() is {}.",
+            edge_targets.len()
+        ));
     }
     let lanes_per_node = context_limit
         .checked_mul(field_limit)

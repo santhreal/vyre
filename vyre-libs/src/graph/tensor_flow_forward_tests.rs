@@ -215,3 +215,26 @@ fn checked_tensor_flow_cpu_rejects_malformed_csr() {
         "error should describe malformed CSR offsets: {error}"
     );
 }
+
+#[test]
+fn checked_tensor_flow_cpu_rejects_sibling_csr_and_input_violations() {
+    let err = try_tensor_flow_forward_cpu(2, &[0, 1], &[0], &[1], &[1], 1, 1, 1)
+        .expect_err("edge_offsets length mismatch must fail");
+    assert!(err.contains("edge_offsets.len() must equal node_count + 1"));
+
+    let err = try_tensor_flow_forward_cpu(2, &[1, 1, 1], &[], &[], &[1], 1, 1, 1)
+        .expect_err("nonzero first offset must fail");
+    assert!(err.contains("edge_offsets[0] must be 0"));
+
+    let err = try_tensor_flow_forward_cpu(2, &[0, 1, 1], &[1], &[], &[1], 1, 1, 1)
+        .expect_err("mismatched edge targets and kind mask must fail");
+    assert!(err.contains("edge_targets.len() must equal edge_kind_mask.len()"));
+
+    let err = try_tensor_flow_forward_cpu(2, &[0, 2, 2], &[1], &[1], &[1], 1, 1, 1)
+        .expect_err("final offset declaring more edges than targets must fail");
+    assert!(err.contains("final offset declares edge_count=2, but edge_targets.len() is 1"));
+
+    let err = try_tensor_flow_forward_cpu(2, &[0, 1, 1], &[1], &[1], &[], 1, 1, 1)
+        .expect_err("undersized tensor_in buffer must fail");
+    assert!(err.contains("tensor input buffer shorter than required tensor words"));
+}
