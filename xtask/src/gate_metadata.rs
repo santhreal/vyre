@@ -1128,12 +1128,13 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "release-conformance",
-        help: "Enforce the release conformance suite across CUDA, WGPU, and CPU reference baselines. \
-        Proves all 48 required release conformance operations exist, compile, and execute with \
-        exact output bit-identity across all backends. Proves zero runtime crashes, zero ULP \
-        drift on floating-point operations, and that all test inputs match the frozen spec. \
-        Runs the compiled test suite on this host; hardware acceleration required for CUDA \
-        and WGPU targets. Run with --write to refresh release conformance evidence artifacts.",
+        help: "Enforce the release conformance suite across the selected CUDA, WGPU, and CPU \
+        reference backends. Proves every operation required by the current release OP_MATRIX \
+        exists exactly once per selected backend and executes against vyre-reference. Non-F32 \
+        outputs are byte-exact and F32 outputs stay within the Program-derived ULP cap. Proves \
+        zero missing release rows, duplicate operation ids, malformed summaries, failed pairs, \
+        and blockers. Runs the compiled suite on this host; CUDA and WGPU selections require \
+        hardware acceleration. Run with --write to refresh release conformance evidence artifacts.",
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
