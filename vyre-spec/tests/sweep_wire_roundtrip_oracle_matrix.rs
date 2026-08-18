@@ -50,21 +50,28 @@ fn hostile_program(case: u64) -> Program {
     let entry = hostile_entry(&mut rng);
     let non_composable = rng.next_u32() & 7 == 0;
     Program::wrapped(
-        vec![
-            BufferDecl::output("out", 0, DataType::U32).with_count(8).with_output_byte_range(0..16),
-            BufferDecl::read("input", 1, DataType::U32).with_count(8),
-            BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
-            BufferDecl::read("bytes_in", 3, DataType::Bytes).with_count(16),
-            BufferDecl::read_write("bytes_out", 4, DataType::Bytes).with_count(16),
-            BufferDecl::read("counts", 5, DataType::U32).with_count(8),
-            BufferDecl::workgroup("scratch", 4, DataType::U32),
-            BufferDecl::read("extra_a", 6, dtype_a).with_count(1),
-            BufferDecl::read("extra_b", 7, dtype_b).with_count(1),
-        ],
+        hostile_program_buffers(dtype_a, dtype_b),
         [1 + rng.range(3), 1, 1],
         entry,
     )
     .with_non_composable_with_self(non_composable)
+}
+
+fn hostile_program_buffers(extra_a: DataType, extra_b: DataType) -> Vec<BufferDecl> {
+    let mut bufs = vec![
+        BufferDecl::output("out", 0, DataType::U32)
+            .with_count(8)
+            .with_output_byte_range(0..16),
+        BufferDecl::read("input", 1, DataType::U32).with_count(8),
+        BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
+        BufferDecl::read("bytes_in", 3, DataType::Bytes).with_count(16),
+        BufferDecl::read_write("bytes_out", 4, DataType::Bytes).with_count(16),
+        BufferDecl::read("counts", 5, DataType::U32).with_count(8),
+        BufferDecl::workgroup("scratch", 4, DataType::U32),
+    ];
+    bufs.push(BufferDecl::read("extra_a", 6, extra_a).with_count(1));
+    bufs.push(BufferDecl::read("extra_b", 7, extra_b).with_count(1));
+    bufs
 }
 
 fn hostile_entry(rng: &mut Rng) -> Vec<Node> {

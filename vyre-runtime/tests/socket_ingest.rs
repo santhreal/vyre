@@ -17,24 +17,15 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use vyre_runtime::uring::{AsyncUringStream, GpuMappedBuffer, IoUringState, Iovec};
-use vyre_runtime::PipelineError;
 
 #[test]
 fn reads_from_tcp_socket_into_host_buffer() {
     const PAYLOAD: &[u8] = b"vyre-pipeline socket-ingest smoke payload 0123456789";
     const CHUNK: usize = 128;
 
-    let ring = match IoUringState::new(8) {
-        Ok(r) => r,
-        Err(PipelineError::IoUringSyscall { errno, .. })
-            if errno == libc::EPERM || errno == libc::ENOSYS =>
-        {
-            panic!(
-                "io_uring unavailable (errno {errno}). Fix: enable io_uring for this host or mark the runtime feature unavailable loudly before running this test."
-            );
-        }
-        Err(e) => panic!("unexpected io_uring setup failure: {e}"),
-    };
+    let ring = IoUringState::new(8).unwrap_or_else(|err| {
+        panic!("socket ingest io_uring initialization failed: {err}");
+    });
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind ephemeral port");
     let addr = listener.local_addr().unwrap();

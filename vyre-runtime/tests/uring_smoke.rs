@@ -23,17 +23,9 @@ use vyre_runtime::PipelineError;
 fn reads_from_dev_zero_into_host_buffer() {
     const CHUNK: usize = 4096;
 
-    let ring = match IoUringState::new(8) {
-        Ok(r) => r,
-        Err(PipelineError::IoUringSyscall { errno, .. })
-            if errno == libc::EPERM || errno == libc::ENOSYS =>
-        {
-            panic!(
-                "io_uring unavailable (errno {errno}). Fix: enable io_uring for this host or mark the runtime feature unavailable loudly before running this test."
-            );
-        }
-        Err(e) => panic!("unexpected io_uring setup failure: {e}"),
-    };
+    let ring = IoUringState::new(8).unwrap_or_else(|err| {
+        panic!("uring smoke io_uring initialization failed: {err}");
+    });
 
     let mut target = vec![0xAAu8; CHUNK];
     // SAFETY (test-only): GpuMappedBuffer's contract requires a
