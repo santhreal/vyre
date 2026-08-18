@@ -145,12 +145,7 @@ mod tests {
 
         let borrowed = programs.iter().collect::<Vec<_>>();
         let final_p = crate::test_parity_oracles::wrap_program_sequence(&borrowed, [256, 1, 1]);
-        let region_count = final_p
-            .entry()
-            .iter()
-            .filter(|n| matches!(n, vyre_foundation::ir::Node::Region { .. }))
-            .count();
-        assert!(region_count >= 3);
+        crate::solvers::test_helpers::assert_min_region_count(&final_p, 3);
     }
 
     #[test]

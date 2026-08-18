@@ -165,17 +165,10 @@ fn softmax_top_k_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::topk_selection::{f32_from_bytes, u32_from_bytes};
     use super::*;
     use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
-
-    fn u32_from_bytes(bytes: &[u8]) -> Vec<u32> {
-        vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
-    }
-
-    fn f32_from_bytes(bytes: &[u8]) -> Vec<f32> {
-        vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
-    }
 
     #[test]
     fn softmax_top_k_basic() {

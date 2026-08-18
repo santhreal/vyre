@@ -386,18 +386,6 @@ mod tests {
                     || expr_contains_subgroup_shuffle(value)
             }
             Expr::Call { args, .. } => args.iter().any(expr_contains_subgroup_shuffle),
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => false,
             _ => false,
         }
     }

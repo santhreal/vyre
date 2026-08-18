@@ -199,11 +199,8 @@ inventory::submit! {
 
 #[cfg(test)]
 mod tests {
+    use super::super::approx_eq;
     use super::*;
-
-    fn approx_eq(a: f64, b: f64) -> bool {
-        (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
-    }
 
     fn mv_eq(a: Cl2Mv, b: Cl2Mv) -> bool {
         approx_eq(a.s, b.s)

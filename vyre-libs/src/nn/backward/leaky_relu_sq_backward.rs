@@ -45,8 +45,8 @@ inventory::submit! {
 
 #[cfg(test)]
 mod tests {
+    use super::super::unary_f32::eval_unary_f32_backward;
     use super::*;
-    use vyre_reference::value::Value;
 
     #[test]
     fn generated_leaky_relu_sq_backward_matches_scalar_reference() {
@@ -58,16 +58,12 @@ mod tests {
             .map(|i| ((i as i32 % 31) - 15) as f32 / 5.0)
             .collect::<Vec<_>>();
         let program = leaky_relu_sq_backward("input", "grad_out", "grad_in", n as u32);
-        let outputs = vyre_reference::reference_eval(
+        let actual = eval_unary_f32_backward(
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_f32_slice(&input)),
-                Value::from(vyre_primitives::wire::pack_f32_slice(&grad_out)),
-                Value::from(vec![0u8; n * core::mem::size_of::<f32>()]),
-            ],
-        )
-        .expect("Fix: leaky_relu_sq_backward must execute in the reference interpreter.");
-        let actual = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
+            &input,
+            &grad_out,
+            "Fix: leaky_relu_sq_backward must execute in the reference interpreter.",
+        );
         for (index, ((actual, x), dy)) in actual
             .iter()
             .copied()

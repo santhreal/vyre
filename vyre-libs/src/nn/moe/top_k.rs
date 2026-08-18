@@ -60,13 +60,10 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
 
 #[cfg(test)]
 mod tests {
+    use super::super::topk_selection::u32_from_bytes;
     use super::*;
     use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
-
-    fn u32_from_bytes(bytes: &[u8]) -> Vec<u32> {
-        vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
-    }
 
     #[test]
     fn top_k_descending_input() {

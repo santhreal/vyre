@@ -1,6 +1,8 @@
+use crate::dispatch_buffers::{
+    ensure_input_slots, write_f32_slice_le_bytes, write_u32_slice_le_bytes,
+};
 use crate::math::quantized::i4_packed_words;
 use vyre_foundation::program_dispatch::DispatchError;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct PackedI4BatchedMatmulShape {
     pub(super) total_outputs_u32: u32,
@@ -86,4 +88,17 @@ pub(super) fn expect_one_output<'a>(
         )));
     }
     Ok(&outputs[0])
+}
+pub(super) fn write_packed_batched_matmul_inputs(
+    inputs: &mut Vec<Vec<u8>>,
+    weights_packed: &[u32],
+    activation_batches_packed: &[u32],
+    row_scales: &[f32],
+    batch_scales: &[f32],
+) {
+    ensure_input_slots(inputs, 4);
+    write_u32_slice_le_bytes(&mut inputs[0], weights_packed);
+    write_u32_slice_le_bytes(&mut inputs[1], activation_batches_packed);
+    write_f32_slice_le_bytes(&mut inputs[2], row_scales);
+    write_f32_slice_le_bytes(&mut inputs[3], batch_scales);
 }

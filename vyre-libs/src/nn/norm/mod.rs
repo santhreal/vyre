@@ -3,6 +3,7 @@ mod gated_rms_norm;
 mod last_dim_l2_norm;
 mod layer_norm;
 pub(crate) mod layerwise_ln_scale;
+mod row_norm;
 mod rms_norm;
 
 pub use gated_rms_norm::{

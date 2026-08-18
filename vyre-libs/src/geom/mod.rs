@@ -18,3 +18,7 @@ pub mod clifford;
 /// SE(3)-equivariant tensor field network scalar (l=0) channel mix
 /// step (#33). User: equivariant NN, molecular dynamics, cryo-EM.
 pub mod tfn;
+#[cfg(test)]
+pub(crate) fn approx_eq(a: f64, b: f64) -> bool {
+    (a - b).abs() < 1e-10 * (1.0 + a.abs() + b.abs())
+}
