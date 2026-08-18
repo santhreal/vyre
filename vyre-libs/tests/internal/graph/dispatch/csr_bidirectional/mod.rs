@@ -69,6 +69,33 @@ fn linear_graph() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     // 0 -> 1 -> 2 -> 3
     (vec![0, 1, 2, 3, 3], vec![1, 2, 3], vec![1, 1, 1])
 }
+fn linear_inputs<'a>(
+    off: &'a [u32],
+    tgt: &'a [u32],
+    msk: &'a [u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> CsrClosureInputs<'a> {
+    CsrClosureInputs {
+        graph: CsrGraphView {
+            node_count: 4,
+            edge_offsets: off,
+            edge_targets: tgt,
+            edge_kind_mask: msk,
+        },
+        allow_mask,
+        max_iters,
+    }
+}
+
+fn linear_inputs_all<'a>(
+    off: &'a [u32],
+    tgt: &'a [u32],
+    msk: &'a [u32],
+    max_iters: u32,
+) -> CsrClosureInputs<'a> {
+    linear_inputs(off, tgt, msk, 0xFFFF_FFFF, max_iters)
+}
 
 /// Runs one bidirectional step over [`linear_graph`] into caller-owned storage. The contracts below
 /// vary the dispatcher and the seed; the graph itself is incidental to them.
@@ -115,23 +142,8 @@ fn linear_closure_with_scratch(
     next: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
     let (off, tgt, msk) = linear_graph();
-    bidirectional_closure_via_with_scratch_into(
-        dispatcher,
-        CsrClosureInputs {
-            graph: CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            allow_mask: 0xFFFF_FFFF,
-            max_iters,
-        },
-        seed,
-        scratch,
-        current,
-        next,
-    )
+    let inputs = linear_inputs_all(&off, &tgt, &msk, max_iters);
+    bidirectional_closure_via_with_scratch_into(dispatcher, inputs, seed, scratch, current, next)
 }
 
 #[test]
@@ -202,34 +214,12 @@ fn closure_reaches_full_chain() {
 #[test]
 fn closure_into_matches_owned_closure() {
     let (off, tgt, msk) = linear_graph();
-    let owned = reference_bidirectional_closure(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            5,
-        ),
-        &[0b0001],
-    );
+    let inputs = linear_inputs_all(&off, &tgt, &msk, 5);
+    let owned = reference_bidirectional_closure(inputs, &[0b0001]);
     let mut current = Vec::new();
     let mut next = Vec::new();
-    reference_bidirectional_closure_into(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            5,
-        ),
-        &[0b0001],
-        &mut current,
-        &mut next,
-    );
+    let inputs_into = linear_inputs_all(&off, &tgt, &msk, 5);
+    reference_bidirectional_closure_into(inputs_into, &[0b0001], &mut current, &mut next);
     assert_eq!(current, owned);
 }
 
@@ -237,30 +227,9 @@ fn closure_into_matches_owned_closure() {
 fn closure_matches_primitive_directly() {
     let (off, tgt, msk) = linear_graph();
     let seed = [0b0001];
-    let via_substrate = reference_bidirectional_closure(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            5,
-        ),
-        &seed,
-    );
-    let via_primitive = reference_csr_bidir_closure(
-        CsrClosureInputs::allow_all(
-            CsrGraphView {
-                node_count: 4,
-                edge_offsets: &off,
-                edge_targets: &tgt,
-                edge_kind_mask: &msk,
-            },
-            5,
-        ),
-        &seed,
-    );
+    let inputs = linear_inputs_all(&off, &tgt, &msk, 5);
+    let via_substrate = reference_bidirectional_closure(inputs, &seed);
+    let via_primitive = reference_csr_bidir_closure(inputs, &seed);
     assert_eq!(via_substrate, via_primitive);
 }
 

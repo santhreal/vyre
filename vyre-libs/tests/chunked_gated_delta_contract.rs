@@ -4,7 +4,8 @@
 
 mod wire_words;
 use wire_words::{
-    bf16_bytes, bf16_word, f32_bytes as bytes, f32_words, f32_words_of as decode, u16_words,
+    bf16_bytes, bf16_word, default_gated_delta_spec, f32_bytes as bytes, f32_words,
+    f32_words_of as decode, u16_words,
 };
 
 use vyre::ir::DataType;
@@ -28,28 +29,12 @@ fn run_schedule(
         DataType::F32 => (bytes as fn(&[f32]) -> Vec<u8>, 4),
         other => panic!("Fix: gated delta contract covers BF16 and F32 sources, not {other:?}"),
     };
+    let spec = default_gated_delta_spec(sequence, 1, 1, 1, 1, source);
     let program = if chunked {
-        chunked_gated_delta
+        chunked_gated_delta(&spec)
     } else {
-        recurrent_gated_delta
-    }(&GatedDeltaSpec {
-        query: "query",
-        key: "key",
-        value: "value",
-        decay_log: "decay",
-        beta_logits: "beta",
-        state_input: "state.in",
-        output: "output",
-        state_output: "state.out",
-        batch: 1,
-        sequence,
-        key_heads: 1,
-        value_heads: 1,
-        key_dim: 1,
-        value_dim: 1,
-        eps: 0.0,
-        dtype: source,
-    })
+        recurrent_gated_delta(&spec)
+    }
     .expect("Fix: valid delta fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
@@ -162,25 +147,9 @@ fn execute_chunk_fixture(
     key_dim: u32,
     value_dim: u32,
 ) -> (Vec<f32>, Vec<f32>) {
-    let program = chunked_gated_delta(&GatedDeltaSpec {
-        query: "query",
-        key: "key",
-        value: "value",
-        decay_log: "decay",
-        beta_logits: "beta",
-        state_input: "state.in",
-        output: "output",
-        state_output: "state.out",
-        batch: 1,
-        sequence,
-        key_heads: 1,
-        value_heads: 1,
-        key_dim,
-        value_dim,
-        eps: 1e-6,
-        dtype: DataType::F32,
-    })
-    .expect("Fix: authoritative chunk fixture must build");
+    let mut spec = default_gated_delta_spec(sequence, 1, 1, key_dim, value_dim, DataType::F32);
+    spec.eps = 1e-6;
+    let program = chunked_gated_delta(&spec).expect("Fix: authoritative chunk fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[

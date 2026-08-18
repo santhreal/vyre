@@ -240,6 +240,67 @@ fn pack_i4_rows(rows: &[&[i32]]) -> Vec<u32> {
     packed
 }
 
+fn run_batched_matvec_via(
+    weights: &[u32],
+    x_batches: &[f32],
+    row_scales: &[f32],
+    batch: u32,
+    rows: u32,
+    cols: u32,
+) -> Result<Vec<f32>, DispatchError> {
+    i4x8_batched_matvec_f32_scaled_via(
+        &QuantizedBatchedMatvecDispatcher,
+        weights,
+        x_batches,
+        row_scales,
+        batch,
+        rows,
+        cols,
+    )
+}
+
+fn run_batched_matmul_via(
+    weights: &[u32],
+    activations: &[u32],
+    row_scales: &[f32],
+    batch_scales: &[f32],
+    batch: u32,
+    rows: u32,
+    cols: u32,
+) -> Result<Vec<f32>, DispatchError> {
+    i4x8_batched_matmul_f32_scaled_via(
+        &QuantizedBatchedMatmulDispatcher,
+        weights,
+        activations,
+        row_scales,
+        batch_scales,
+        batch,
+        rows,
+        cols,
+    )
+}
+
+fn run_batched_matmul_top1_via(
+    weights: &[u32],
+    activations: &[u32],
+    row_scales: &[f32],
+    batch_scales: &[f32],
+    batch: u32,
+    rows: u32,
+    cols: u32,
+) -> Result<(Vec<f32>, Vec<u32>), DispatchError> {
+    i4x8_batched_matmul_top1_f32_scaled_via(
+        &QuantizedBatchedMatmulTop1Dispatcher,
+        weights,
+        activations,
+        row_scales,
+        batch_scales,
+        batch,
+        rows,
+        cols,
+    )
+}
+
 /// Every batched INT4 entry point validates the same five shape preconditions before it builds a
 /// Program, and reports each one with the fragment paired below.
 fn assert_rejects_batched_shape_errors<T>(

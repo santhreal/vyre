@@ -15,8 +15,10 @@
 #![cfg(feature = "pattern-substring")]
 
 mod wire_words;
-use wire_words::{decode_u32_words as decode_u32, Lcg};
+use wire_words::decode_u32_words as decode_u32;
 
+mod presence_oracle;
+use presence_oracle::{random_haystack, random_literals, random_region_starts, Lcg};
 use std::collections::BTreeSet;
 
 use vyre_libs::pattern::classic_ac::{
@@ -33,49 +35,8 @@ use vyre_reference::composition_witness::{
     classic_ac_candidate_suffix3_bloom_words_witness,
 };
 
-/// Small alphabet so literals collide and the DFA / prefilter actually exercise
-/// shared prefixes, suffix2/suffix3 candidate gating, and overlapping matches.
-const ALPHABET: &[u8] = b"abcAB_0/-";
 
 const MAX_MATCHES: u32 = 4096;
-
-fn random_literals(rng: &mut Lcg) -> Vec<Vec<u8>> {
-    let count = 1 + rng.below(8); // 1..=8 patterns
-    let mut set: BTreeSet<Vec<u8>> = BTreeSet::new();
-    for _ in 0..count {
-        let len = 1 + rng.below(6); // 1..=6 bytes
-        let mut lit = Vec::with_capacity(len as usize);
-        for _ in 0..len {
-            lit.push(ALPHABET[rng.below(ALPHABET.len() as u32) as usize]);
-        }
-        set.insert(lit);
-    }
-    set.into_iter().collect()
-}
-
-fn random_haystack(rng: &mut Lcg) -> Vec<u8> {
-    let len = 8 + rng.below(160); // 8..=167 bytes (room for several regions)
-    (0..len)
-        .map(|_| ALPHABET[rng.below(ALPHABET.len() as u32) as usize])
-        .collect()
-}
-
-/// 1..=4 ascending region starts, always beginning at 0 (the kernel binary-search
-/// lower bound). Both the fused and the separate presence-by-region programs use
-/// END-position attribution, so the differential holds for ANY ascending split
-/// no separator bytes needed to make the two AGREE with each other.
-fn random_region_starts(rng: &mut Lcg, haystack_len: usize) -> Vec<u32> {
-    let region_count = 1 + rng.below(4); // 1..=4 regions
-    let mut starts: BTreeSet<u32> = BTreeSet::new();
-    starts.insert(0);
-    if haystack_len > 1 {
-        for _ in 1..region_count {
-            starts.insert(1 + rng.below(haystack_len as u32 - 1));
-        }
-    }
-    starts.into_iter().collect()
-}
-
 fn decode_triples(count_words: &[u32], match_words: &[u32]) -> BTreeSet<(u32, u32, u32)> {
     let count = *count_words.first().unwrap_or(&0) as usize;
     match_words

@@ -16,7 +16,7 @@
 #![cfg(feature = "graph")]
 
 mod graph_sweep_fixtures;
-use graph_sweep_fixtures::{bitset_words, frontier_step_out};
+use graph_sweep_fixtures::{bitset_words, gpu_step};
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 
@@ -24,25 +24,6 @@ use proptest::prelude::*;
 use vyre_libs::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_reference::composition_witness::csr_forward_traverse_witness as cpu_ref;
 
-/// Drive the real forward-step IR and return the `frontier_out` word bitset.
-fn gpu_forward_step(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier_in: &[u32],
-    allow_mask: u32,
-) -> Vec<u32> {
-    frontier_step_out(
-        csr_forward_traverse,
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier_in,
-        allow_mask,
-    )
-}
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(2000))]
@@ -53,7 +34,7 @@ proptest! {
             csr_sweep::generate(csr_sweep::group("multi_source_restricted_kinds"), seed)
                 .into_parts();
         let expected = cpu_ref(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
-        let got = gpu_forward_step(node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
+        let got = gpu_step(csr_forward_traverse, node_count, &offsets, &targets, &kind_mask, &frontier, allow_mask);
         prop_assert_eq!(
             got, expected,
             "forward-step IR diverged from cpu_ref: node_count={}, offsets={:?}, targets={:?}, allow_mask={:#x}",
@@ -98,13 +79,14 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
         "cpu_ref: bit 64 set in word 2"
     );
     assert_eq!(
-        gpu_forward_step(
+        gpu_step(
+            csr_forward_traverse,
             node_count,
             &offsets,
             &targets,
             &kind_mask,
             &frontier,
-            0xFFFF_FFFF
+            0xFFFF_FFFF,
         ),
         expected,
         "cross-word-seam scatter must match"
@@ -132,13 +114,14 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
         "cpu_ref: mask mismatch drops the edge"
     );
     assert_eq!(
-        gpu_forward_step(
+        gpu_step(
+            csr_forward_traverse,
             node_count,
             &offsets,
             &targets,
             &kind_mask,
             &frontier,
-            1 << 4
+            1 << 4,
         ),
         filtered,
         "allow_mask non-intersection must drop the edge in IR too"
@@ -158,13 +141,14 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
         "cpu_ref: matching mask sets dst bit 1"
     );
     assert_eq!(
-        gpu_forward_step(
+        gpu_step(
+            csr_forward_traverse,
             node_count,
             &offsets,
             &targets,
             &kind_mask,
             &frontier,
-            1 << 2
+            1 << 2,
         ),
         passed,
         "allow_mask intersection must fire the edge in IR too"
@@ -183,13 +167,14 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
     );
     assert_eq!(oob, vec![0u32], "cpu_ref: OOB dst is skipped");
     assert_eq!(
-        gpu_forward_step(
+        gpu_step(
+            csr_forward_traverse,
             node_count,
             &offsets,
             &oob_targets,
             &kind_mask,
             &frontier,
-            1 << 2
+            1 << 2,
         ),
         oob,
         "OOB dst must be bound-gated in IR too"

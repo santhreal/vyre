@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod wire_words;
-use wire_words::{f32_bytes as bytes, f32_words_of as decode};
+use wire_words::{default_gated_delta_spec, f32_bytes as bytes, f32_words_of as decode};
 
 use vyre::ir::{
     BufferAccess, DataType, GraphInput, GraphOutput, ProgramGraph, ShapeDim, ValueContract,
@@ -26,25 +26,8 @@ fn execute(
     key_dim: u32,
     value_dim: u32,
 ) -> (Vec<f32>, Vec<f32>) {
-    let program = recurrent_gated_delta(&GatedDeltaSpec {
-        query: "query",
-        key: "key",
-        value: "value",
-        decay_log: "decay",
-        beta_logits: "beta",
-        state_input: "state.in",
-        output: "output",
-        state_output: "state.out",
-        batch: 1,
-        sequence,
-        key_heads,
-        value_heads,
-        key_dim,
-        value_dim,
-        eps: 0.0,
-        dtype: DataType::F32,
-    })
-    .expect("Fix: valid recurrent delta fixture must build");
+    let spec = default_gated_delta_spec(sequence, key_heads, value_heads, key_dim, value_dim, DataType::F32);
+    let program = recurrent_gated_delta(&spec).expect("Fix: valid recurrent delta fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[

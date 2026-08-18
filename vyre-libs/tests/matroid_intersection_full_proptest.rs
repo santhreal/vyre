@@ -14,12 +14,10 @@
 //! 250-case self-substrate sweep + the grow/shrink/tie hand-checks with randomized breadth.
 #![cfg(feature = "math")]
 
+mod wire_words;
 use proptest::prelude::*;
-use vyre_libs::math::matroid_intersection_full::matroid_intersection_full;
-use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::composition_witness::matroid_intersection_augmentation_witness as cpu_ref;
-use vyre_reference::value::Value;
-
+use wire_words::matroid_intersection_eval;
 /// Run one dispatch of the IR at `budget` and return the updated `set_x`.
 fn run_ir(
     exchange_adj: &[u32],
@@ -29,46 +27,7 @@ fn run_ir(
     n: u32,
     budget: u32,
 ) -> Vec<u32> {
-    let program = matroid_intersection_full(
-        "exchange_adj",
-        "sources",
-        "sinks",
-        "set_x",
-        "parent",
-        "frontier",
-        "next_frontier",
-        "visited",
-        "any_change",
-        "path_out",
-        "path_len",
-        n,
-        budget,
-    );
-    let zeros_n = vec![0u32; n as usize];
-    let zero1 = vec![0u32];
-    // Buffer order: exchange_adj(0) sources(1) sinks(2) set_x(3, seeded) parent(4) frontier(5)
-    // next_frontier(6) visited(7) any_change(8) path_out(9) path_len(10) target_node_buf(11).
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(pack(exchange_adj)),
-            Value::from(pack(sources)),
-            Value::from(pack(sinks)),
-            Value::from(pack(seed)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zero1)),
-            Value::from(pack(&zeros_n)),
-            Value::from(pack(&zero1)),
-            Value::from(pack(&zero1)),
-        ],
-    )
-    .expect("matroid_intersection_full reference evaluation must succeed");
-    let index = vyre_reference::output_index(&program, "set_x")
-        .expect("matroid_intersection_full must declare output set_x");
-    unpack(&outputs[index].to_bytes())[..n as usize].to_vec()
+    matroid_intersection_eval(exchange_adj, sources, sinks, seed, n, budget, 0)
 }
 
 /// Independent host oracle: one Edmonds augmentation via `cpu_ref` (a separate BFS+toggle impl), then

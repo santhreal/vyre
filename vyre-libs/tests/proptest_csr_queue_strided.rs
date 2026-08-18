@@ -21,6 +21,23 @@ struct GeneratedSkewedCsr {
     edge_kind_mask: Vec<u32>,
     hub: u32,
 }
+fn forward_witness(
+    graph: &GeneratedSkewedCsr,
+    queue: &[u32],
+    queue_len: u32,
+    node_count: u32,
+    allow_mask: u32,
+) -> Vec<u32> {
+    csr_queue_strided_forward_witness(
+        queue,
+        queue_len,
+        &graph.edge_offsets,
+        &graph.edge_targets,
+        &graph.edge_kind_mask,
+        node_count,
+        allow_mask,
+    )
+}
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10_000))]
@@ -48,15 +65,7 @@ proptest! {
             allow_mask,
         );
 
-        let actual = csr_queue_strided_forward_witness(
-            &queue,
-            queue_len,
-            &graph.edge_offsets,
-            &graph.edge_targets,
-            &graph.edge_kind_mask,
-            node_count,
-            allow_mask,
-        );
+        let actual = forward_witness(&graph, &queue, queue_len, node_count, allow_mask);
 
         prop_assert_eq!(actual, expected);
     }
@@ -73,26 +82,10 @@ proptest! {
         let queue = generated_active_queue(node_count, graph.hub, queue_slots, queue_seed);
         let queue_len = (queue.len() as u32).saturating_add(queue_len_extra);
         let allow_mask = 0b1011;
-        let first = csr_queue_strided_forward_witness(
-            &queue,
-            queue_len,
-            &graph.edge_offsets,
-            &graph.edge_targets,
-            &graph.edge_kind_mask,
-            node_count,
-            allow_mask,
-        );
+        let first = forward_witness(&graph, &queue, queue_len, node_count, allow_mask);
         let unrelated =
             csr_queue_strided_forward_witness(&[], 0, &[0, 0], &[], &[], 1, allow_mask);
-        let second = csr_queue_strided_forward_witness(
-            &queue,
-            queue_len,
-            &graph.edge_offsets,
-            &graph.edge_targets,
-            &graph.edge_kind_mask,
-            node_count,
-            allow_mask,
-        );
+        let second = forward_witness(&graph, &queue, queue_len, node_count, allow_mask);
 
         prop_assert_eq!(unrelated, vec![0]);
         prop_assert_eq!(second, first);
