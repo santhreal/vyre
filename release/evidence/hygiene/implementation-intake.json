@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:d3fa3608eebf53d38606601e84ba1ff23f0c3535:dirty=true:worktree=4d717958ed0a63d7e41731700152c7a1d9faa6be99677d839ae958ebccb4feb8",
+  "source_fingerprint": "git:7c0e8ec1bac18699c231f5dc4782314c6b18168e:dirty=true:worktree=37d2ffa17cd132f2f74eb6ca58cbc46bdce3b634aa756d93d83ad6af55010095",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -19,7 +19,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 42
+      "count": 38
     },
     {
       "owner_lane": "coordination",
@@ -55,7 +55,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 3
+      "count": 4
     },
     {
       "owner_lane": "coordination",
@@ -244,7 +244,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 9
+      "count": 10
     },
     {
       "owner_lane": "security_dataflow",

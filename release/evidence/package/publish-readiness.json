@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=false",
+  "source_fingerprint": "git:7c0e8ec1bac18699c231f5dc4782314c6b18168e:dirty=true:worktree=37d2ffa17cd132f2f74eb6ca58cbc46bdce3b634aa756d93d83ad6af55010095",
   "schema_version": 3,
   "release_train": {
     "vyre": "0.7.2",
@@ -693,8 +693,8 @@
       "package": "vyre-foundation",
       "manifest": "vyre-foundation/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 590,
-      "file_list_digest": "blake3:4918a6fef6450ae56e448005cbf821186f07d9d3b15d9bb8d888c129c1d3382c",
+      "file_count": 591,
+      "file_list_digest": "blake3:0595bd2a42294d2670b66677b2863cfee124bcb23bbaea71bcd7d01e8944fb6d",
       "rust_source_count": 334,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -790,7 +790,7 @@
       "manifest": "vyre-libs/Cargo.toml",
       "cargo_package_list_succeeded": true,
       "file_count": 1270,
-      "file_list_digest": "blake3:b52e8c7607dfb59c883d1a6033a8bb660b913d81360945ae6a2fca72adc0c80d",
+      "file_list_digest": "blake3:ec3d58ce56a8456ab3dd8e78f59a4c1f8bf2f9ead8a18f47578dc53fa54fecb0",
       "rust_source_count": 702,
       "missing_required_files": [],
       "forbidden_files": [],

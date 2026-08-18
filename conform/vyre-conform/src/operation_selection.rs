@@ -223,7 +223,7 @@ mod tests {
     /// WHY: signature-only semantic records belong in catalogs but cannot
     /// become false conformance failures or executable shard members.
     #[test]
-    fn selection_excludes_signature_only_operations() {
+    fn selection_excludes_signature_only_operations() -> Result<(), String> {
         let entries = [
             UnifiedEntry {
                 id: "core.signature_only",
@@ -239,15 +239,15 @@ mod tests {
             },
         ];
 
-        let selected = select_entries(&entries, "all", None).expect("one executable operation");
+        let selected = select_entries(&entries, "all", None)?;
         assert_eq!(selected.len(), 1);
         assert_eq!(selected[0].id, "core.executable");
 
-        let error = match select_entries(&entries, "core.signature_only", None) {
-            Ok(_) => panic!("signature-only operations must remain non-executable"),
-            Err(error) => error,
-        };
+        let error = select_entries(&entries, "core.signature_only", None)
+            .err()
+            .ok_or_else(|| "signature-only operations must remain non-executable".to_string())?;
         assert!(error.contains("registered as signature-only"), "{error}");
+        Ok(())
     }
 
     #[test]

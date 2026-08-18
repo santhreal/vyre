@@ -39,7 +39,8 @@ impl U32Witness {
         ];
         let mut out = BOUNDARY.to_vec();
         let seed = *blake3::hash(b"u32-witness-v1").as_bytes();
-        let mut state = u64::from_le_bytes(seed[..8].try_into().unwrap());
+        let [s0, s1, s2, s3, s4, s5, s6, s7, ..] = seed;
+        let mut state = u64::from_le_bytes([s0, s1, s2, s3, s4, s5, s6, s7]);
         for _ in 0..24 {
             state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
             let z = (state ^ (state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);

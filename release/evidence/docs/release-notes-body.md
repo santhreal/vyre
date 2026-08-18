@@ -4985,8 +4985,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   every nested body the IR node declares, taking the slots from the shared
   owner instead of a per-pass list.
 - The measured release-evidence workflow now runs conformance and release
-  benchmarks on the self-hosted RTX 5090 lane instead of a GPU-less hosted
-  runner.
+  benchmarks on the self-hosted RTX 4090 axiomexec lane instead of the local
+  workstation or a GPU-less hosted runner.
 - The six byte counts that decide a megakernel wave's device-memory plan travel
   as one value, `vyre_driver::megakernel_execution::MegakernelByteLayout`,
   instead of a positional list of six `u64` arguments restated at every hop
