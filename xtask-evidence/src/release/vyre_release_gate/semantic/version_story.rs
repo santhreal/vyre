@@ -5,9 +5,11 @@ use super::super::gate_inputs::Requirement;
 use xtask::release::release_train;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
-    if !requirement.evidence.iter().any(|evidence| {
-        evidence.contains("cargo_full") && evidence.contains("version-matrix")
-    }) {
+    if !requirement
+        .evidence
+        .iter()
+        .any(|evidence| evidence.contains("cargo_full") && evidence.contains("version-matrix"))
+    {
         failures.push(
             "requirement `version-story` must include the cargo_full version-matrix evidence command"
                 .to_string(),
@@ -115,76 +117,81 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             ));
         }
     }
-    if let Some(tag_plan) =
+    check_tag_plan(requirement, base_dir, failures);
+}
+
+fn check_tag_plan(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
+    let Some(tag_plan) =
         first_json_evidence(requirement, base_dir, "release-tag-plan.json", failures)
-    {
-        let tag_plan_blockers = array_len(&tag_plan, "blockers");
-        if tag_plan_blockers != 0 {
+    else {
+        return;
+    };
+    let tag_plan_blockers = array_len(&tag_plan, "blockers");
+    if tag_plan_blockers != 0 {
+        failures.push(format!(
+            "requirement `version-story` release-tag-plan reports {tag_plan_blockers} blocker(s)"
+        ));
+    }
+    for (field, expected) in release_train::tag_story_fields() {
+        if tag_plan.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
             failures.push(format!(
-                "requirement `version-story` release-tag-plan reports {tag_plan_blockers} blocker(s)"
+                "requirement `version-story` release-tag-plan {field} must be `{expected}`"
             ));
         }
-        for (field, expected) in release_train::tag_story_fields() {
-            if tag_plan.get(field).and_then(serde_json::Value::as_str) != Some(expected) {
-                failures.push(format!(
-                    "requirement `version-story` release-tag-plan {field} must be `{expected}`"
-                ));
-            }
-        }
-        if !tag_plan
-            .get("required_gate_before_rc_tag")
-            .and_then(serde_json::Value::as_str)
-            .is_some_and(|command| {
-                command.contains("version-matrix")
-                    && command.contains("vyre-release-gate")
-                    && command.contains("scripts/apply-branch-protection.sh")
-                    && command.contains("cargo_full")
-            })
-        {
-            failures.push(
+    }
+    if !tag_plan
+        .get("required_gate_before_rc_tag")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|command| {
+            command.contains("version-matrix")
+                && command.contains("vyre-release-gate")
+                && command.contains("scripts/apply-branch-protection.sh")
+                && command.contains("cargo_full")
+        })
+    {
+        failures.push(
             "requirement `version-story` release-tag-plan must require version matrix regeneration, release gate, and branch-protection application before RC tag creation"
                 .to_string(),
         );
-        }
-        let order = tag_plan
-            .get("tag_creation_order")
-            .and_then(serde_json::Value::as_array)
-            .cloned()
-            .unwrap_or_default();
-        let ordered_tags = order
-            .iter()
-            .filter_map(serde_json::Value::as_str)
-            .collect::<Vec<_>>();
-        for (rc, final_tag) in [(release_train::vyre_rc_tag(), release_train::vyre_tag())] {
-            let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
-            let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
-            if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {
-                failures.push(format!(
-                    "requirement `version-story` release-tag-plan must list `{rc}` before `{final_tag}`"
-                ));
-            }
-        }
-        if !tag_plan
-            .get("required_gate_before_tag")
-            .and_then(serde_json::Value::as_str)
-            .is_some_and(|command| {
-                command.contains("version-matrix")
-                    && command.contains("vyre-release-gate")
-                    && command.contains("scripts/apply-branch-protection.sh")
-                    && command.contains("cargo_full")
-            })
-        {
-            failures.push(
-                "requirement `version-story` release-tag-plan must require version matrix regeneration, release gate, and branch-protection application before tag creation"
-                    .to_string(),
-        );
-        }
-        let version_blockers = u64_field(&tag_plan, "version_matrix_blocker_count", u64::MAX);
-        if version_blockers != 0 {
+    }
+    let order = tag_plan
+        .get("tag_creation_order")
+        .and_then(serde_json::Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let ordered_tags = order
+        .iter()
+        .filter_map(serde_json::Value::as_str)
+        .collect::<Vec<_>>();
+    for (rc, final_tag) in [(release_train::vyre_rc_tag(), release_train::vyre_tag())] {
+        let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
+        let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
+        if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {
             failures.push(format!(
-                "requirement `version-story` release-tag-plan carries {version_blockers} version matrix blocker(s)"
+                "requirement `version-story` release-tag-plan must list `{rc}` before `{final_tag}`"
             ));
         }
+    }
+    if !tag_plan
+        .get("required_gate_before_tag")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|command| {
+            command.contains("version-matrix")
+                && command.contains("vyre-release-gate")
+                && command.contains("scripts/apply-branch-protection.sh")
+                && command.contains("cargo_full")
+        })
+    {
+        failures.push(
+            "requirement `version-story` release-tag-plan must require version matrix regeneration, release gate, and branch-protection application before tag creation"
+                .to_string(),
+        );
+    }
+    let version_blockers = u64_field(&tag_plan, "version_matrix_blocker_count", u64::MAX);
+    if version_blockers != 0 {
+        failures.push(format!(
+            "requirement `version-story` release-tag-plan carries {version_blockers} version matrix blocker(s)"
+        ));
     }
 }
 
@@ -217,9 +224,7 @@ mod tests {
             id: "version-story".to_string(),
             title: "version story".to_string(),
             status: "closed".to_string(),
-            evidence: vec![
-                "cargo_full run --bin xtask -- version-matrix --write".to_string(),
-            ],
+            evidence: vec!["cargo_full run --bin xtask -- version-matrix --write".to_string()],
         };
         check(&requirement, Path::new("."), &mut failures);
         assert!(
