@@ -1,2 +1,2 @@
 category = "Fixed"
-text = "The measured release-evidence workflow now runs conformance and release benchmarks on the self-hosted RTX 5090 lane instead of a GPU-less hosted runner."
+text = "The measured release-evidence workflow now runs conformance and release benchmarks on the self-hosted RTX 4090 axiomexec lane instead of the local workstation or a GPU-less hosted runner."

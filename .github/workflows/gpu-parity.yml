@@ -19,7 +19,7 @@ jobs:
     name: Probe real GPU adapter
     # A public repository never executes fork code on the persistent GPU host.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
   driver-contracts:
     name: WGPU backend contracts
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
   cuda-driver-contracts:
     name: CUDA backend contracts
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
   cuda-parity-suite:
     name: CUDA parity suite
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -119,7 +119,7 @@ jobs:
   composition-parity-gpu:
     name: Composition parity on real GPU
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -131,7 +131,7 @@ jobs:
   determinism-stress-gpu:
     name: Determinism stress on real GPU
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -143,7 +143,7 @@ jobs:
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -155,7 +155,7 @@ jobs:
   cuda-conformance-all-ops:
     name: CUDA conformance all ops
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -167,7 +167,7 @@ jobs:
   wgpu-conformance-all-ops:
     name: WGPU conformance all ops
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -181,7 +181,7 @@ jobs:
     needs:
       - cuda-conformance-all-ops
       - wgpu-conformance-all-ops
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -198,7 +198,7 @@ jobs:
   cuda-release-bench-evidence:
     name: CUDA release benchmark evidence
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -242,7 +242,7 @@ jobs:
         (github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository)
       }}
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 5
     steps:
       - name: Verify required GPU jobs

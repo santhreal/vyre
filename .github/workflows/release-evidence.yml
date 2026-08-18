@@ -44,7 +44,7 @@ jobs:
 
   measured-evidence:
     name: Generate measured evidence
-    runs-on: [self-hosted, gpu-5090]
+    runs-on: [self-hosted, axiomexec, gpu-4090]
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
