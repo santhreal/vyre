@@ -31,6 +31,42 @@ fn every_obligation_has_unique_name() {
     );
 }
 
+/// A declared logic that does not admit the sorts an obligation declares is
+/// rejected by the solver before it reads the assertion, so the obligation is
+/// silently undischarged rather than proven. Naming an integer arithmetic logic
+/// for bit-vector loop obligations did exactly that.
+///
+/// The theory set is derived from the emitted script, and the obligation set
+/// from the registry, so a new obligation or a new domain is covered without
+/// editing this test. It checks admissibility only; discharge is the
+/// `verify-rewrite-proofs` gate, which runs a solver.
+#[test]
+fn every_declared_logic_admits_every_sort_the_obligation_declares() {
+    for obligation in shipped_obligations() {
+        let smt = obligation.to_smt2();
+        let logic = obligation.domain.smt_logic();
+        let theories = logic.strip_prefix("QF_").unwrap_or_else(|| {
+            panic!(
+                "{} declares non-quantifier-free logic {logic}",
+                obligation.rewrite
+            )
+        });
+        for (sort, theory, name) in [
+            ("(Array ", "A", "arrays"),
+            ("(_ BitVec ", "BV", "bit-vectors"),
+            ("(_ FloatingPoint ", "FP", "floating point"),
+        ] {
+            if smt.contains(sort) {
+                assert!(
+                    theories.contains(theory),
+                    "{} declares {name} but logic {logic} does not admit them",
+                    obligation.rewrite
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn every_obligation_emits_well_formed_smt2() {
     for obligation in shipped_obligations() {

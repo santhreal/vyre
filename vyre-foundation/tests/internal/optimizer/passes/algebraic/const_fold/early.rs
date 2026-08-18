@@ -459,11 +459,12 @@ fn fma_synthesis_does_not_fire_for_unknown_integer_shape() {
 
 // ---- Self-operand identity tests ----
 
+/// WHY: const-fold has no type fact for a bare variable. Folding `x - x`
+/// to `u32(0)` corrupts i32/f32 types and erases float NaN/Inf behavior.
 #[test]
-fn sub_self_is_zero() {
+fn sub_self_type_blind_var_does_not_fold() {
     let x = Expr::var("x");
-    let expr = Expr::sub(x.clone(), x);
-    assert_eq!(fold_expr(&expr), Some(Expr::u32(0)));
+    assert_eq!(fold_expr(&Expr::sub(x.clone(), x)), None);
 }
 
 #[test]
@@ -488,8 +489,13 @@ fn or_self_is_self() {
 }
 
 #[test]
-fn sub_self_complex_expr() {
+fn sub_self_complex_type_blind_expr_does_not_fold() {
     let ab = Expr::add(Expr::var("a"), Expr::var("b"));
-    let expr = Expr::sub(ab.clone(), ab);
-    assert_eq!(fold_expr(&expr), Some(Expr::u32(0)));
+    assert_eq!(fold_expr(&Expr::sub(ab.clone(), ab)), None);
+}
+
+#[test]
+fn sub_self_provably_unsigned_builtin_folds() {
+    let gid = Expr::gid_x();
+    assert_eq!(fold_expr(&Expr::sub(gid.clone(), gid)), Some(Expr::u32(0)));
 }
