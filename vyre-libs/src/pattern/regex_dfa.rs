@@ -642,7 +642,7 @@ mod tests {
     fn registered_regex_dfa_expected_bytes_match_reference_execution() {
         let pipeline = build_regex_dfa_pipeline(&["[a-z]+"], 64, 256)
             .expect("Fix: canonical fixture regex DFA must compile");
-        let inputs = vec![
+        let inputs = [
             vec![0u8; 64],
             vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.transitions),
             vyre_primitives::wire::pack_u32_slice(&pipeline.dfa.output_offsets),
@@ -970,8 +970,7 @@ mod tests {
         for &b in b"xxabc" {
             state = pipeline.dfa.transitions
                 [crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
-                    state as u32,
-                    b,
+                    state, b,
                 )];
             if pipeline.dfa.accept[state as usize] != 0 {
                 accepted = true;
@@ -993,8 +992,7 @@ mod tests {
         for (i, &b) in hay.iter().enumerate() {
             state = dfa.transitions
                 [crate::builder::state_machine::TableStateMachineComposer::flat_byte_index(
-                    state as u32,
-                    b,
+                    state, b,
                 )];
             let s = state as usize;
             let lo = dfa.output_offsets[s] as usize;

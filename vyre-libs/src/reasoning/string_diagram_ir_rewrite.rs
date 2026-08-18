@@ -369,7 +369,6 @@ mod tests {
         let one = 1u32 << 16;
         let mut scratch = StringDiagramRewriteScratch {
             dispatch_inputs: vec![Vec::with_capacity(64), Vec::with_capacity(64)],
-            ..StringDiagramRewriteScratch::default()
         };
         let mut out = Vec::with_capacity(8);
         let f_ptr = scratch.dispatch_inputs[0].as_ptr();

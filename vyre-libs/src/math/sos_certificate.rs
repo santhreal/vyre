@@ -141,9 +141,7 @@ mod tests {
             return false;
         }
         let mut a = vec![0.0f64; n * n];
-        for i in 0..n * n {
-            a[i] = matrix[i];
-        }
+        a.copy_from_slice(&matrix[..n * n]);
         for i in 0..n {
             for j in i + 1..n {
                 if (a[i * n + j] - a[j * n + i]).abs() > 1e-6 {

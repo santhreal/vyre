@@ -418,7 +418,7 @@ mod tests {
             .expect("Fix: canonical fixture regex scan must compile");
         let program = super::regex_scan_program(&["[a-z]+"], "input", "hits", 64)
             .expect("Fix: canonical fixture regex scan must compile");
-        let inputs = vec![
+        let inputs = [
             vec![0u8; 64],
             vyre_primitives::wire::pack_u32_slice(&compiled.transition_table),
             vyre_primitives::wire::pack_u32_slice(&compiled.epsilon_table),
