@@ -112,6 +112,16 @@ whole reason a copy survives; only the source shows there are two.
 """
 
 [[gate]]
+file = "vyre-libs/tests/shared_owner_closure.rs"
+tests = ["no_production_op_calls_unrouted_persistent_fixpoint"]
+reason = """
+Asserts that no production caller bypasses the shared persistent-fixpoint
+routing owner. The subject is source ownership: an unrouted direct call can
+execute correctly below one workgroup and exposes the race only on a wider
+dispatch.
+"""
+
+[[gate]]
 file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
 tests = ["every_submitted_registration_is_reachable_from_this_walker"]
 reason = """

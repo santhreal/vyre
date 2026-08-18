@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=true:worktree=30531da37e53670e7b8d915514805ee8e31745f7767d0bad7a7b409954b15df9",
+  "source_fingerprint": "git:d3fa3608eebf53d38606601e84ba1ff23f0c3535:dirty=true:worktree=4d717958ed0a63d7e41731700152c7a1d9faa6be99677d839ae958ebccb4feb8",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4135,
+  "scanned_files": 4136,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -65,7 +65,7 @@
     },
     {
       "pattern": "source_inspection_test",
-      "count": 154
+      "count": 155
     },
     {
       "pattern": "std_thread_sleep",
@@ -123,7 +123,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 11
+      "count": 12
     },
     {
       "owner_lane": "coordination",
@@ -345,7 +345,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 11
+      "count": 12
     },
     {
       "owner_lane": "coordination",
@@ -941,6 +941,11 @@
         "file": "vyre-libs/tests/shared_owner_closure.rs",
         "test": "no_op_re_asserts_the_routing_obligations_privately",
         "reason": "Asserts that no file outside the routing owner observes both halves of the\nrouting obligation itself. A private copy of an assertion passes, which is the\nwhole reason a copy survives; only the source shows there are two."
+      },
+      {
+        "file": "vyre-libs/tests/shared_owner_closure.rs",
+        "test": "no_production_op_calls_unrouted_persistent_fixpoint",
+        "reason": "Asserts that no production caller bypasses the shared persistent-fixpoint\nrouting owner. The subject is source ownership: an unrouted direct call can\nexecute correctly below one workgroup and exposes the race only on a wider\ndispatch."
       },
       {
         "file": "xtask-registry/tests/registry_contracts/registration_visibility.rs",
@@ -3722,7 +3727,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 280,
+      "line": 291,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3732,7 +3737,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 319,
+      "line": 330,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3742,7 +3747,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 493,
+      "line": 504,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3752,7 +3757,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 545,
+      "line": 556,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3762,7 +3767,7 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 600,
+      "line": 611,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3772,7 +3777,17 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 665,
+      "line": 691,
+      "pattern": "source_inspection_test",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/tests/shared_owner_closure.rs",
+      "line": 727,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -6924,45 +6939,52 @@
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 280,
+      "line": 291,
       "pattern": "source_inspection_test",
       "text": "test `no_dispatch_grid_function_hand_rolls_the_ceiling_division` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_dispatch_grid_function_hand_rolls_the_ceiling_division"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 319,
+      "line": 330,
       "pattern": "source_inspection_test",
       "text": "test `every_domain_with_a_dispatch_grid_can_reach_the_owner` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_domain_with_a_dispatch_grid_can_reach_the_owner"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 493,
+      "line": 504,
       "pattern": "source_inspection_test",
       "text": "test `no_binding_record_spells_its_full_name_set_twice` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_binding_record_spells_its_full_name_set_twice"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 545,
+      "line": 556,
       "pattern": "source_inspection_test",
       "text": "test `every_buffer_binding_record_publishes_canonical_names` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_buffer_binding_record_publishes_canonical_names"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 600,
+      "line": 611,
       "pattern": "source_inspection_test",
       "text": "test `every_routed_convergence_op_registers_with_the_routing_contract` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_routed_convergence_op_registers_with_the_routing_contract"
     },
     {
       "path": "vyre-libs/tests/shared_owner_closure.rs",
-      "line": 665,
+      "line": 691,
       "pattern": "source_inspection_test",
       "text": "test `no_op_re_asserts_the_routing_obligations_privately` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_op_re_asserts_the_routing_obligations_privately"
+    },
+    {
+      "path": "vyre-libs/tests/shared_owner_closure.rs",
+      "line": 727,
+      "pattern": "source_inspection_test",
+      "text": "test `no_production_op_calls_unrouted_persistent_fixpoint` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "no_production_op_calls_unrouted_persistent_fixpoint"
     },
     {
       "path": "vyre-spec/tests/token_ids_have_one_owner.rs",
