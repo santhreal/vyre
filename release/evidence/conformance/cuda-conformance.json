@@ -1,16 +1,16 @@
 {
-  "source_fingerprint": "git:3482b796b2877c7b5a2a7b5d79ad7e0058e764aa:dirty=true:worktree=b6a6de1a206d21a0801d95d469adcf307977fd2357ff8609f3d26abf375958e8",
+  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=false",
   "schema_version": 4,
   "backend_id": "cuda",
   "command": "cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all",
   "stdout_diagnostics": [],
-  "total_pairs": 337,
-  "distinct_op_count": 337,
-  "catalog_required_op_count": 337,
-  "catalog_covered_op_count": 337,
+  "total_pairs": 338,
+  "distinct_op_count": 338,
+  "catalog_required_op_count": 338,
+  "catalog_covered_op_count": 338,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1011,
-  "supported_release_backend_row_count": 1011,
+  "release_backend_row_count": 1014,
+  "supported_release_backend_row_count": 1014,
   "release_backend_rows": [
     "vyre-primitives::hardware::bit_reverse_u32:reference:supported",
     "vyre-primitives::hardware::bit_reverse_u32:cuda:supported",
@@ -297,6 +297,12 @@
     "vyre-libs::matching::emit_hit:reference:supported",
     "vyre-libs::matching::emit_hit:cuda:supported",
     "vyre-libs::matching::emit_hit:wgpu:supported",
+    "vyre-libs::matching::regex_dfa:reference:supported",
+    "vyre-libs::matching::regex_dfa:cuda:supported",
+    "vyre-libs::matching::regex_dfa:wgpu:supported",
+    "vyre-libs::matching::regex_scan:reference:supported",
+    "vyre-libs::matching::regex_scan:cuda:supported",
+    "vyre-libs::matching::regex_scan:wgpu:supported",
     "vyre-libs::math::algebra::bool_semiring_matmul:reference:supported",
     "vyre-libs::math::algebra::bool_semiring_matmul:cuda:supported",
     "vyre-libs::math::algebra::bool_semiring_matmul:wgpu:supported",
@@ -507,9 +513,6 @@
     "vyre-libs::math::sinkhorn_iterate:reference:supported",
     "vyre-libs::math::sinkhorn_iterate:cuda:supported",
     "vyre-libs::math::sinkhorn_iterate:wgpu:supported",
-    "vyre-libs::math::sinkhorn_scale:reference:supported",
-    "vyre-libs::math::sinkhorn_scale:cuda:supported",
-    "vyre-libs::math::sinkhorn_scale:wgpu:supported",
     "vyre-libs::math::softmax_step:reference:supported",
     "vyre-libs::math::softmax_step:cuda:supported",
     "vyre-libs::math::softmax_step:wgpu:supported",
@@ -1028,11 +1031,11 @@
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
-  "passed_pairs": 337,
+  "passed_pairs": 338,
   "failed_pairs": 0,
   "duplicate_op_ids": [],
   "diff_schema_version": 1,
-  "diff_summary_count": 337,
+  "diff_summary_count": 338,
   "diff_summary_errors": [],
   "diff_summaries": [
     {
@@ -1896,6 +1899,26 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::matching::regex_dfa",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:05de974b4d726175cc01746a4c95208b528d19335535fa2b29037a32805dbe91",
+      "output_digest": "vyre-conform-output-envelope-v1:3a42d0fa4e07827cf2097635f749b9b11930751724e697008b65f25401cca1fc",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::matching::regex_scan",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:7a37a5084de16fb941dedc786e36eea4624def6a2dec86f2a6ba3155c6d09f05",
+      "output_digest": "vyre-conform-output-envelope-v1:343a5eb434368ef46049b447d47f0859d5247347026807d478ca4d9e0514234a",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::math::algebra::bool_semiring_matmul",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:d695456c4c0d8e6ae9c249ec021a1306c6312d0aff46f855d56bbbe3396e781b",
@@ -2590,16 +2613,6 @@
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:0589dd56badc8c9f817ce07c352bcf449f2c744647d5677a2bc33060b104d19f",
       "output_digest": "vyre-conform-output-envelope-v1:03838d424f7170d75833eb57c27f7c819ce3f03a99d398a55d76ec2ab6d8d596",
-      "timing_class": "not_reported",
-      "failure_class": "passed",
-      "passed": true,
-      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
-    },
-    {
-      "op_id": "vyre-libs::math::sinkhorn_scale",
-      "backend_id": "cuda",
-      "input_digest": "vyre-conform-input-envelope-v1:923bbdaf288258651b75a2e94ef5f4e0624dc7888fb7f5ac9a681329321f8775",
-      "output_digest": "vyre-conform-output-envelope-v1:d11c5c43c48fe7b3fabffd207347a3bf8edf766cbedb2ea7bdff1bb7e56b3445",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -4924,6 +4937,18 @@
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
     },
     {
+      "op_id": "vyre-libs::matching::regex_dfa",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
+      "op_id": "vyre-libs::matching::regex_scan",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
       "op_id": "vyre-libs::math::algebra::bool_semiring_matmul",
       "backend_id": "cuda",
       "passed": true,
@@ -5339,12 +5364,6 @@
     },
     {
       "op_id": "vyre-libs::math::sinkhorn_iterate",
-      "backend_id": "cuda",
-      "passed": true,
-      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
-    },
-    {
-      "op_id": "vyre-libs::math::sinkhorn_scale",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
