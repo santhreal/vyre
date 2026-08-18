@@ -5,6 +5,7 @@ impl vyre_emit_naga::patterns::vec_pack::PackKind
 impl vyre_emit_naga::patterns::vec_pack::PackingPlan
 impl vyre_lower::pattern_audit::PatternAudit for vyre_emit_naga::patterns::NagaAuditReport
 pub const fn vyre_emit_naga::patterns::vec_pack::PackKind::lane_count(&self) -> u32
+pub const vyre_emit_naga::LOWERING_DIGEST: &str
 pub const vyre_emit_naga::patterns::NagaAuditReport::FINDING_NOUN: &'static str
 pub const vyre_emit_naga::patterns::pipeline_prewarm::PREWARM_OP_THRESHOLD: u32
 pub const vyre_emit_naga::program::TRAP_SIDECAR_NAME: &str
