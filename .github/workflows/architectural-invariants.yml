@@ -12,6 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      # `tree_contracts` drives the public-API snapshot gate, which renders item
+      # paths with the rustdoc RUSTDOC_TOOLCHAIN names in
+      # xtask/src/gates/public_api.rs. Any job that runs the extraction installs
+      # that toolchain and the pinned extractor, or the contract reads a
+      # different compiler's rendering as tree drift.
+      - uses: dtolnay/rust-toolchain@nightly-2026-08-07
+      - name: Install cargo-public-api
+        run: cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
 
       # Two rules, one gate module. `neutral-crates` reads the manifests of the
       # named neutral crates directly; `layering` resolves the whole graph and

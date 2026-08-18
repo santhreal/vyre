@@ -159,52 +159,93 @@ fn every_cargo_fuzz_job_selects_nightly() {
 /// and that rendering moves with the compiler. The release that re-homed
 /// `std::io::Error` under `core` rewrote nine committed snapshots with no source
 /// change behind them, so a floating `nightly` turns the gate red on a date. The
-/// date is declared once by `RUSTDOC_TOOLCHAIN`, exported onto the extraction,
-/// and installed by the workflow; nothing but this contract keeps the workflow
-/// from drifting off the constant and blessing a snapshot the gate cannot
-/// reproduce.
+/// date is declared once by `RUSTDOC_TOOLCHAIN` and exported onto the
+/// extraction, which makes it a build requirement of every job that runs the
+/// extraction, not only of the job named after it: `tree_contracts` drives the
+/// same gate. The job set is derived from the workflows at run time so a new job
+/// that reaches the extraction is covered without being listed here.
+///
+/// It does not catch a job that reaches the extraction through a command spelled
+/// in neither form, such as a script that runs the gate binary by path.
 #[test]
-fn the_public_api_workflow_installs_the_declared_rustdoc_toolchain() {
+fn every_job_running_the_public_api_extraction_installs_the_declared_rustdoc() {
     let root = workspace_root();
     let pinned = xtask::gates::public_api::RUSTDOC_TOOLCHAIN;
-    let workflow = std::fs::read_to_string(root.join(".github/workflows/public-api.yml"))
-        .expect("Fix: the public-api workflow must be readable");
+    let version = xtask::gates::public_api::CARGO_PUBLIC_API_VERSION;
 
-    let mut selected = None;
-    let mut installs = 0usize;
-    for line in workflow.lines() {
-        let trimmed = line.trim();
-        if let Some(toolchain) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
-            selected = Some(toolchain.to_string());
+    assert!(
+        pinned.starts_with("nightly-") && pinned.len() > "nightly-".len(),
+        "Fix: RUSTDOC_TOOLCHAIN must name a dated nightly; a floating channel makes the \
+         snapshot a function of the calendar rather than of the tree"
+    );
+
+    let directory = root.join(".github/workflows");
+    let mut reached = 0usize;
+    for entry in
+        std::fs::read_dir(&directory).expect("Fix: the workflow directory must be readable")
+    {
+        let path = entry.expect("Fix: every workflow entry must be readable").path();
+        if path.extension().and_then(|value| value.to_str()) != Some("yml") {
+            continue;
         }
-        if trimmed.contains("install --locked cargo-public-api") {
-            installs += 1;
-            assert_eq!(
-                selected.as_deref(),
-                Some(pinned),
-                "Fix: select dtolnay/rust-toolchain@{pinned} before installing cargo-public-api, \
-                 so the workflow renders the snapshot with the toolchain RUSTDOC_TOOLCHAIN names"
-            );
-            assert!(
-                trimmed.contains(&format!("cargo +{pinned} install")),
-                "Fix: install cargo-public-api with `cargo +{pinned}`: {trimmed}"
-            );
-            assert!(
-                trimmed.contains(xtask::gates::public_api::CARGO_PUBLIC_API_VERSION),
-                "Fix: install the pinned cargo-public-api version {}: {trimmed}",
-                xtask::gates::public_api::CARGO_PUBLIC_API_VERSION
-            );
+        let name = path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .expect("Fix: a workflow file name must be UTF-8")
+            .to_string();
+        let workflow =
+            std::fs::read_to_string(&path).expect("Fix: every workflow file must be readable");
+
+        // A step that runs the snapshot gate directly, or the contract suite that
+        // drives it, needs the extractor and the toolchain it renders with.
+        let runs_extraction = workflow.lines().any(|line| {
+            let trimmed = line.trim();
+            trimmed.contains("public-api-snapshot") || trimmed.contains("--test tree_contracts")
+        });
+        if !runs_extraction {
+            continue;
         }
+        reached += 1;
+
+        let mut selected: Option<String> = None;
+        let mut installs = 0usize;
+        for line in workflow.lines() {
+            let trimmed = line.trim();
+            if let Some(toolchain) = trimmed.strip_prefix("- uses: dtolnay/rust-toolchain@") {
+                selected = Some(toolchain.to_string());
+            }
+            if trimmed.contains("install --locked cargo-public-api") {
+                installs += 1;
+                assert_eq!(
+                    selected.as_deref(),
+                    Some(pinned),
+                    "Fix: in {name}, select dtolnay/rust-toolchain@{pinned} before installing \
+                     cargo-public-api, so the extraction renders with the toolchain \
+                     RUSTDOC_TOOLCHAIN names"
+                );
+                assert!(
+                    trimmed.contains(&format!("cargo +{pinned} install")),
+                    "Fix: in {name}, install cargo-public-api with `cargo +{pinned}`: {trimmed}"
+                );
+                assert!(
+                    trimmed.contains(version),
+                    "Fix: in {name}, install the pinned cargo-public-api version {version}: \
+                     {trimmed}"
+                );
+            }
+        }
+
+        assert_eq!(
+            installs, 1,
+            "Fix: {name} runs the public-API extraction, so it must install cargo-public-api \
+             exactly once on {pinned}"
+        );
     }
 
-    assert_eq!(
-        installs, 1,
-        "Fix: the public-api workflow must install cargo-public-api exactly once, or this \
-         contract guards nothing"
-    );
     assert!(
-        !pinned.eq("nightly"),
-        "Fix: RUSTDOC_TOOLCHAIN must name a dated nightly; a floating channel makes the \
-         snapshot a function of the calendar"
+        reached >= 2,
+        "Fix: the workflow scan found {reached} job file(s) running the public-API extraction; \
+         the snapshot gate and the tree-contract suite both run it, so a lower count means the \
+         scan stopped matching and this contract guards nothing"
     );
 }

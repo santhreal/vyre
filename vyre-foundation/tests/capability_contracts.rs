@@ -426,7 +426,7 @@ fn missing_capability_is_a_leaf_std_error() {
         backend: "foo".into(),
         missing: vec!["bar".to_string()],
     };
-    let dyn_error: &(dyn std::error::Error) = &error;
+    let dyn_error: &dyn std::error::Error = &error;
     assert!(dyn_error.source().is_none());
     let message = dyn_error.to_string();
     assert!(message.contains("foo"));
