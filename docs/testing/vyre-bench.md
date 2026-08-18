@@ -77,6 +77,7 @@ The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
 | `test` | `release_bench_release_macro` | `vyre-bench/tests/release_bench_release_macro.rs` | None | `./cargo_full test -p vyre-bench --test release_bench_release_macro` |
 | `test` | `release_macro_cuda_live` | `vyre-bench/tests/release_macro_cuda_live.rs` | None | `./cargo_full test -p vyre-bench --test release_macro_cuda_live` |
 | `test` | `release_matrix_contracts` | `vyre-bench/tests/release_matrix_contracts/mod.rs` | None | `./cargo_full test -p vyre-bench --test release_matrix_contracts` |
+| `test` | `release_producer_cuda_contracts` | `vyre-bench/tests/release_producer_cuda_contracts.rs` | None | `./cargo_full test -p vyre-bench --test release_producer_cuda_contracts` |
 | `test` | `reproducibility_capsules` | `vyre-bench/tests/reproducibility_capsules.rs` | None | `./cargo_full test -p vyre-bench --test reproducibility_capsules` |
 | `test` | `result_schema` | `vyre-bench/tests/result_schema.rs` | None | `./cargo_full test -p vyre-bench --test result_schema` |
 | `test` | `roofline_counter_evidence` | `vyre-bench/tests/roofline_counter_evidence.rs` | None | `./cargo_full test -p vyre-bench --test roofline_counter_evidence` |
