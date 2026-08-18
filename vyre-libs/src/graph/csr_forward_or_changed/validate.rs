@@ -87,6 +87,13 @@ pub(crate) fn validate_csr_inputs(
             edge_offsets.len()
         ));
     }
+    if let Some(&first) = edge_offsets.first() {
+        if first != 0 {
+            return Err(format!(
+                "Fix: csr_forward_or_changed requires edge_offsets[0] == 0, got {first}."
+            ));
+        }
+    }
     if edge_targets.len() != edge_kind_mask.len() {
         return Err(format!(
             "Fix: csr_forward_or_changed requires edge_targets.len() == edge_kind_mask.len(), got {} vs {}.",

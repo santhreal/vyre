@@ -13,6 +13,17 @@ pub fn csr_bfs_witness(
     col_indices: &[u32],
     source: usize,
 ) -> Vec<u32> {
+    if row_offsets.is_empty() {
+        assert!(
+            col_indices.is_empty(),
+            "empty CSR offset shorthand requires empty edge buffers"
+        );
+        let mut distances = vec![u32::MAX; node_count];
+        if source < node_count {
+            distances[source] = 0;
+        }
+        return distances;
+    }
     assert!(
         row_offsets.len() >= node_count + 1,
         "row_offsets must have at least node_count + 1 entries"
@@ -52,6 +63,13 @@ fn validate_csr_inputs(
     edge_kind_mask: &[u32],
 ) -> (usize, usize) {
     let node_count = node_count as usize;
+    if row_offsets.is_empty() {
+        assert!(
+            col_indices.is_empty() && edge_kind_mask.is_empty(),
+            "empty CSR offset shorthand requires empty edge buffers"
+        );
+        return (node_count, node_count.div_ceil(32));
+    }
     assert!(row_offsets.len() > node_count, "complete CSR offset table");
     let edge_count = row_offsets[node_count] as usize;
     assert!(
@@ -104,6 +122,9 @@ fn for_each_active_edge(
 ) -> (usize, usize) {
     let (node_count, words) =
         validate_csr_inputs(node_count, row_offsets, col_indices, edge_kind_mask);
+    if row_offsets.is_empty() {
+        return (node_count, words);
+    }
     for source in 0..node_count {
         let start = row_offsets[source] as usize;
         let end = row_offsets[source + 1] as usize;
@@ -937,6 +958,9 @@ pub fn csr_bidirectional_step_witness_into(
     let (node_count_usize, words) =
         validate_csr_inputs(node_count, edge_offsets, edge_targets, edge_kind_masks);
     prepare_output_buffer(out, words);
+    if edge_offsets.is_empty() {
+        return;
+    }
 
     for source in 0..node_count_usize {
         let source_active = frontier

@@ -55,6 +55,15 @@ fn validate_csr_inputs_rejects_mismatched_and_nonmonotonic_csr() {
 
     let err = validate_csr_inputs(2, &[0, 2, 1], &[1, 0], &[1, 1]).unwrap_err();
     assert!(err.contains("offsets must be monotonic"));
+
+    let err = validate_csr_inputs(2, &[1, 1, 1], &[], &[]).unwrap_err();
+    assert!(err.contains("edge_offsets[0] == 0"));
+
+    let err = validate_csr_inputs(2, &[0, 1], &[], &[]).unwrap_err();
+    assert!(err.contains("edge_offsets.len() == node_count + 1"));
+
+    let err = validate_csr_inputs(2, &[0, 2, 2], &[1], &[1]).unwrap_err();
+    assert!(err.contains("final offset declares edge_count=2, but targets_len=1"));
 }
 
 #[test]
@@ -92,6 +101,9 @@ fn empty_offsets_shorthand_is_empty_edge_set_only() {
     );
 
     let err = validate_csr_inputs(64, &[], &[1], &[]).unwrap_err();
+    assert!(err.contains("empty edge_offsets may only encode an empty edge set"));
+
+    let err = validate_csr_inputs(64, &[], &[], &[1]).unwrap_err();
     assert!(err.contains("empty edge_offsets may only encode an empty edge set"));
 
     let mut out = Vec::new();
