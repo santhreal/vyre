@@ -31,10 +31,15 @@ pub(super) fn run_case(
             base
         }
     });
+    if matches!(suite, SuiteKind::Release) && target_samples < 30 {
+        return Err(format!(
+            "release suite measured_samples must unconditionally be >= 30 for CLT validity; got {target_samples}. Fix: pass --measured-samples 30 or higher."
+        ));
+    }
     if std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_err() && target_samples < 30 {
         return Err(format!(
-                "measured_samples must be >= 30 for CLT validity; got {target_samples}. Fix: pass --measured-samples 30 or set VYRE_ALLOW_FEW_SAMPLES=1 for local smoke-only debugging."
-            ));
+            "measured_samples must be >= 30 for CLT validity; got {target_samples}. Fix: pass --measured-samples 30 or set VYRE_ALLOW_FEW_SAMPLES=1 for local smoke-only debugging."
+        ));
     }
     let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
     let mut correctness = None;
@@ -45,8 +50,13 @@ pub(super) fn run_case(
     // discarded as before.
     let mut cold_metrics: Option<crate::api::metric::BenchMetrics> = None;
     let mut cold_wall_ns: Option<u64> = None;
+    let effective_warmup_samples = if matches!(suite, SuiteKind::Release) {
+        config.warmup_samples.max(300)
+    } else {
+        config.warmup_samples
+    };
 
-    for warmup_index in 0..config.warmup_samples {
+    for warmup_index in 0..effective_warmup_samples {
         let started = Instant::now();
         ctx.include_baseline_outputs = warmup_index == 0;
         let run_result = case
@@ -124,7 +134,8 @@ pub(super) fn run_case(
 
         // B-4: Ensure we got enough samples before timing out
         let actual_samples = samples.get("wall_ns").map(|v| v.len()).unwrap_or(0);
-        if actual_samples < 30 && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_err() {
+        let allow_few = !matches!(suite, SuiteKind::Release) && std::env::var("VYRE_ALLOW_FEW_SAMPLES").is_ok();
+        if actual_samples < 30 && !allow_few {
             let requirements = case.requirements();
             let case_id = meta.id.0;
             let workload_fingerprint = workload_fingerprint(case_id.as_str(), None);
