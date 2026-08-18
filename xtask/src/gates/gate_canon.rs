@@ -279,13 +279,7 @@ fn base_revision(root: &Path, flag: Option<&str>) -> Option<String> {
 
 /// Whether this checkout resolves a revision to a commit.
 fn revision_exists(root: &Path, reference: &str) -> bool {
-    Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["rev-parse", "--verify", "--quiet"])
-        .arg(format!("{reference}^{{commit}}"))
-        .output()
-        .is_ok_and(|output| output.status.success())
+    crate::checkout::git_ref_exists(root, reference)
 }
 
 /// One file as one revision holds it, or `None` when that revision has no such

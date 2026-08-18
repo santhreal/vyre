@@ -467,23 +467,6 @@ mod tests {
             ),
         )
     }
-    fn fixture_distinct(id: &'static str) -> OpInfo {
-        build_info(
-            id,
-            Program::wrapped(
-                vec![
-                    BufferDecl::read("in", 0, DataType::U32).with_count(1),
-                    BufferDecl::output("out", 1, DataType::U32).with_count(1),
-                ],
-                [1, 1, 1],
-                vec![Node::store(
-                    "out",
-                    Expr::u32(0),
-                    Expr::load("in", Expr::u32(0)),
-                )],
-            ),
-        )
-    }
 
     /// WHY: exact semantic duplicates are the non-heuristic consolidation class.
     /// A same-domain copy and a cross-domain copy must both fail; differences in
@@ -501,7 +484,7 @@ mod tests {
         assert!(findings[0].fix.contains("parameterized semantic owner"));
         assert!(findings[1].fix.contains("common substrate domain"));
 
-        let distinct = fixture_distinct("vyre-libs::math::distinct");
+        let distinct = fixture("vyre-libs::math::distinct", 8);
         findings.clear();
         check_pair(&same_domain_left, &distinct, &mut findings);
         assert!(findings.is_empty());

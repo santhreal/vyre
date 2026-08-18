@@ -259,16 +259,7 @@ fn named_targets(
         let Some(name) = entry.get("name").and_then(toml::Value::as_str) else {
             continue;
         };
-        let required = entry
-            .get("required-features")
-            .and_then(toml::Value::as_array)
-            .map(|array| {
-                array
-                    .iter()
-                    .filter_map(|value| value.as_str().map(str::to_string))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let required = crate::toml_text::string_array(entry.get("required-features"));
         targets.insert(
             name.to_string(),
             Target {
@@ -371,14 +362,7 @@ pub fn steps(origin: &str, text: &str) -> Vec<Step> {
 
 /// One line with its shell comment removed.
 fn code(line: &str) -> &str {
-    let line = line.trim();
-    if line.starts_with('#') {
-        return "";
-    }
-    match line.find(" #") {
-        Some(at) => &line[..at],
-        None => line,
-    }
+    crate::gates::ci_registry::strip_yaml_comment(line.trim())
 }
 
 /// The commands a `run:` block scalar starting at `index` issues, and the line
@@ -963,11 +947,7 @@ mod tests {
     }
 
     fn messages(findings: &[Finding]) -> String {
-        findings
-            .iter()
-            .map(|finding| finding.message.clone())
-            .collect::<Vec<_>>()
-            .join("\n")
+        Finding::messages(findings)
     }
 
     /// WHY: the whole rule rests on reading a command the way cargo reads it. A

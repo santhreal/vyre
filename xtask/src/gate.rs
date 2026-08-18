@@ -93,6 +93,16 @@ impl Finding {
         }
         self
     }
+
+    /// Format multiple findings as newline-separated message strings.
+    #[must_use]
+    pub fn messages(findings: &[Self]) -> String {
+        findings
+            .iter()
+            .map(|finding| finding.message.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
 }
 
 /// Machine-checkable semantic distinction that justifies an exemption (Section 182.4.5).
@@ -233,6 +243,12 @@ impl Report {
     #[must_use]
     pub fn clean() -> Self {
         Self::default()
+    }
+
+    /// Format all findings in this report as newline-separated message strings.
+    #[must_use]
+    pub fn finding_messages(&self) -> String {
+        Finding::messages(&self.findings)
     }
 
     /// A report of findings with no notes.

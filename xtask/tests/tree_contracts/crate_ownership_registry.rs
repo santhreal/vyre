@@ -15,12 +15,7 @@ fn run(root: &Path) -> Report {
 
 /// Every message the gate reported, joined for a failure diagnostic.
 fn messages(report: &Report) -> String {
-    report
-        .findings
-        .iter()
-        .map(|finding| finding.message.clone())
-        .collect::<Vec<_>>()
-        .join("\n")
+    report.finding_messages()
 }
 
 fn write_member(root: &Path, path: &str, package: &str, dependencies: &str) {

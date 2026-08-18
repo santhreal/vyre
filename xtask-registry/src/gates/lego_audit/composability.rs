@@ -49,8 +49,6 @@ pub(super) fn check_8_composability(report: &mut Report, ops: &[OpInfo]) -> usiz
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gates::lego_audit::test_ops::op;
-
     #[test]
     fn island_operations_are_detected_and_connected_ops_pass() {
         let mut island = op("vyre-libs::math::isolated_op", Tier::T3, &[]);

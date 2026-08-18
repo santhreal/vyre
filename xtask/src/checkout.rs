@@ -22,7 +22,8 @@
 //! `structure-gate`, the one crate here that depends on no vyre crate, so a
 //! single owner answers this question for every gate.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 /// Absolute root of the checkout this tool was invoked in.
 ///
@@ -34,6 +35,18 @@ use std::path::PathBuf;
 #[must_use]
 pub fn checkout_root() -> PathBuf {
     structure_gate::workspace_root()
+}
+
+/// Whether this checkout resolves a git reference to a commit.
+#[must_use]
+pub fn git_ref_exists(root: &Path, reference: &str) -> bool {
+    Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["rev-parse", "--verify", "--quiet"])
+        .arg(format!("{reference}^{{commit}}"))
+        .output()
+        .is_ok_and(|output| output.status.success())
 }
 
 #[cfg(test)]

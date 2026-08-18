@@ -108,11 +108,9 @@ fn walk(op_id: &str, node: &Node, depth: usize, report: &mut Report) {
                 walk(op_id, child, depth, report);
             }
         }
-        Node::Loop { body, .. } => {
-            for child in body {
-                walk(op_id, child, depth, report);
-            }
-        }
+        Node::Loop { body, .. } => body
+            .iter()
+            .for_each(|child| walk(op_id, child, depth, report)),
         _ => {}
     }
 }

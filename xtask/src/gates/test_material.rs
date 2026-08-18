@@ -402,17 +402,16 @@ fn bracket_delta(code: &str) -> i32 {
 
 /// Every feature a cfg attribute names.
 fn features(attributes: &str) -> BTreeSet<String> {
-    let mut found = BTreeSet::new();
-    let mut rest = attributes;
-    while let Some(at) = rest.find("feature") {
-        rest = &rest[at + "feature".len()..];
-        let Some(open) = rest.find('"') else { break };
-        let after = &rest[open + 1..];
-        let Some(close) = after.find('"') else { break };
-        found.insert(after[..close].to_string());
-        rest = &after[close + 1..];
-    }
-    found
+    attributes
+        .split("feature")
+        .filter_map(|segment| {
+            let after = segment.trim_start();
+            let after = after.strip_prefix('=')?.trim_start();
+            let name = after.strip_prefix('"')?;
+            let close = name.find('"')?;
+            Some(name[..close].to_string())
+        })
+        .collect()
 }
 
 /// The default feature closure one member declares.
@@ -597,22 +596,9 @@ fn reachable_crates(member: &Member) -> BTreeSet<String> {
 
 /// Every Rust identifier in one line of code.
 fn identifiers(code: &str) -> Vec<&str> {
-    let mut found = Vec::new();
-    let bytes = code.as_bytes();
-    let mut start = None;
-    for index in 0..=bytes.len() {
-        let word =
-            index < bytes.len() && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_');
-        match (word, start) {
-            (true, None) => start = Some(index),
-            (false, Some(from)) => {
-                found.push(&code[from..index]);
-                start = None;
-            }
-            _ => {}
-        }
-    }
-    found
+    code.split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .filter(|segment| !segment.is_empty())
+        .collect()
 }
 
 /// WHY: the readers below decide the verdict and none is reachable from an

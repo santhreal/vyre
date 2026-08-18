@@ -320,7 +320,7 @@ fn token(text: &str) -> String {
 }
 
 /// The script a workflow line invokes, relative to `scripts/`, or `None`.
-fn referenced_script(line: &str) -> Option<&str> {
+pub(crate) fn referenced_script(line: &str) -> Option<&str> {
     let command = strip_yaml_comment(line.trim());
     let index = command.find("scripts/")?;
     let rest = &command[index + "scripts/".len()..];
@@ -335,7 +335,7 @@ fn referenced_script(line: &str) -> Option<&str> {
 }
 
 /// The command without its YAML comment.
-fn strip_yaml_comment(line: &str) -> &str {
+pub(crate) fn strip_yaml_comment(line: &str) -> &str {
     if line.starts_with('#') {
         return "";
     }
@@ -1080,11 +1080,7 @@ mod tests {
     }
 
     fn messages(findings: &[Finding]) -> String {
-        findings
-            .iter()
-            .map(|finding| finding.message.clone())
-            .collect::<Vec<_>>()
-            .join("\n")
+        Finding::messages(findings)
     }
 
     /// WHY: the whole point of one declaration is that the four sources agree.

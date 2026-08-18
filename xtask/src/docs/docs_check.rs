@@ -1021,11 +1021,7 @@ mod tests {
 
     /// Every message a validation run produced.
     fn messages(findings: &[Finding]) -> String {
-        findings
-            .iter()
-            .map(|finding| finding.message.clone())
-            .collect::<Vec<_>>()
-            .join("\n")
+        Finding::messages(findings)
     }
 
     /// WHY: the coherent case must produce nothing, or every negative below

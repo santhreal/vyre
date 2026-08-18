@@ -102,13 +102,6 @@ crate::artifact_gate! {
     /// Holds the version-story evidence to the manifests, lockfile and release docs.
     VersionMatrixGate,
     name: "version-matrix",
-    help: "Regenerate release/evidence/version/version-matrix.json and release/evidence/version/release-tag-plan.json from \
-       the workspace manifests, Cargo.lock and the release docs, and report each line the \
-       committed copies disagree on. Proves every publishable crate carries the version the \
-       release train declares, that every required release package is present at its expected \
-       version, that pinned dependency and lockfile versions match, that no release doc gives \
-       a bare tag command, and that release notes carry no stale version token. Proves nothing \
-       about what is published on a registry: every fact here is read from this checkout.",
     inspect: |ctx| inspect(&ctx.root),
 }
 

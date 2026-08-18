@@ -496,7 +496,8 @@ impl crate::gate::GateBehavior for DupScan {
                 .filter(|value| !value.starts_with("--"))
                 .map(String::as_str);
             let reports = report_for(root, only)?;
-            report.cover_complete("source files with duplication measurements", reports.len());
+            let tree = scan::Tree::open(root)?;
+            report.cover_complete("tracked source files", tree.all_rust().len());
             let scope = only.unwrap_or("the workspace");
             let total: usize = reports.iter().map(|entry| entry.duplicate_lines).sum();
             report.note(format!(
