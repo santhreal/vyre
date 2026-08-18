@@ -43,11 +43,11 @@ fn sample_corpus() -> Vec<ConformanceCase> {
     vec![
         ConformanceCase {
             name: "alpha".into(),
-            inputs: vec![bytes_u32(&[1, 2, 3, 4]), bytes_u32(&[0, 0])],
+            inputs: vec![bytes_u32(&[1, 2, 3, 4]), bytes_u32(&[0])],
         },
         ConformanceCase {
             name: "beta".into(),
-            inputs: vec![bytes_u32(&[7, 8, 9, 10]), bytes_u32(&[0, 0])],
+            inputs: vec![bytes_u32(&[7, 8, 9, 10]), bytes_u32(&[0])],
         },
     ]
 }
@@ -117,13 +117,13 @@ fn changing_program_changes_bundle_hash() {
                 BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(4),
                 BufferDecl::storage("output", 1, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(2),
+                    .with_count(1),
             ],
             [1, 1, 1],
             vec![Node::store(
                 "output",
-                Expr::u32(1),
-                Expr::load("input", Expr::u32(0)),
+                Expr::u32(0),
+                Expr::load("input", Expr::u32(1)),
             )],
         )
     };

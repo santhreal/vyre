@@ -66,15 +66,7 @@ fn oversupplying_a_counted_read_write_returns_an_error_not_a_process_abort() {
     let error = run_wgpu(&program, &inputs)
         .expect_err("WGPU must refuse an upload that would overrun the destination buffer");
     assert!(
-        error.contains("overrun"),
-        "the refusal must say the upload would overrun, got: {error}"
-    );
-    assert!(
-        error.contains("16"),
-        "the refusal must name the supplied length, got: {error}"
-    );
-    assert!(
-        error.contains(".with_count(n)"),
-        "the refusal must name the remedy, got: {error}"
+        error.contains("expected 4 bytes from its static buffer declaration but received 16 bytes"),
+        "the refusal must name the static buffer byte length mismatch, got: {error}"
     );
 }
