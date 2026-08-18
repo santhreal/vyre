@@ -16,19 +16,79 @@ use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::vast::{walk_preorder_indices, VastNode, NODE_STRIDE_U32, SENTINEL};
 use vyre_libs::graph::adaptive_traverse::{
-    adaptive_dense_step, adaptive_node_dispatch_grid, adaptive_sparse_dense_step, cpu_dense_step,
-    cpu_sparse_dense_step, AdaptiveTraversalMode,
+    adaptive_dense_step, adaptive_node_dispatch_grid, adaptive_sparse_dense_step,
+    AdaptiveTraversalMode,
 };
 use vyre_libs::graph::dispatch::adaptive_traverse::{
     adaptive_traverse_resident_graph_auto_step_with_scratch_into,
     adaptive_traverse_resident_graph_sparse_queue_step_with_scratch_into,
     adaptive_traverse_resident_graph_step_with_scratch_into,
-    adaptive_traverse_resident_sparse_queue_step_with_scratch_into, adaptive_traverse_step,
+    adaptive_traverse_resident_sparse_queue_step_with_scratch_into,
     upload_resident_adaptive_sparse_queue_graph, upload_resident_adaptive_traversal_graph,
     AdaptiveTraversalPlanCacheSnapshot, AdaptiveTraversalResidentScratch,
 };
 use vyre_libs::graph::vast_tree_walk::ast_walk_preorder;
 use vyre_libs::reduce::count::reduce_count;
+
+fn cpu_dense_step(frontier_in: &[u32], adj_rows_dense: &[u32], node_count: u32) -> Vec<u32> {
+    vyre_reference::composition_witness::dense_bitmatrix_step_witness(
+        frontier_in,
+        adj_rows_dense,
+        node_count,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cpu_sparse_dense_step(
+    frontier_in: &[u32],
+    selector_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    adj_rows_dense: &[u32],
+    node_count: u32,
+    allow_mask: u32,
+    dense_threshold_pct: u32,
+) -> Vec<u32> {
+    let cutover = (u64::from(node_count) * u64::from(dense_threshold_pct)).div_ceil(100) as u32;
+    if selector_count >= cutover {
+        cpu_dense_step(frontier_in, adj_rows_dense, node_count)
+    } else {
+        vyre_reference::composition_witness::csr_forward_traverse_witness(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            frontier_in,
+            allow_mask,
+        )
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn adaptive_traverse_step(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    adj_rows_dense: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    dense_threshold_pct: u32,
+) -> Result<Vec<u32>, String> {
+    let popcount = vyre_reference::composition_witness::frontier_popcount_witness(frontier_in)?;
+    Ok(cpu_sparse_dense_step(
+        frontier_in,
+        popcount,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        adj_rows_dense,
+        node_count,
+        allow_mask,
+        dense_threshold_pct,
+    ))
+}
 
 fn bitset_words(node_count: u32) -> u32 {
     node_count.div_ceil(32).max(1)

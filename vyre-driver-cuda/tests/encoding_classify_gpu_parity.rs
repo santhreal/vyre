@@ -8,9 +8,10 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::text::{
-    classify_from_histogram, encoding_classify, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII,
-    ENC_BINARY, ENC_ISO8859_1, ENC_UTF16LE, ENC_UTF8,
+    encoding_classify, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
+    ENC_UTF16LE, ENC_UTF8,
 };
+use vyre_reference::composition_witness::encoding_classify_histogram_witness as classify_from_histogram;
 
 fn run_classify(histogram: &[u32; 256], count: u32) -> u32 {
     let program = encoding_classify("histogram", "encoding", count);

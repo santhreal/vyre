@@ -9,10 +9,12 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_driver::DispatchConfig;
-use vyre_libs::text::{line_index, line_index_u8, reference_line_index};
+use vyre_libs::text::{line_index, line_index_u8};
 use vyre_libs::text::{
-    reference_utf8_validate, utf8_validate, utf8_validate_u8, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3,
-    UTF8_LEAD_4,
+    utf8_validate, utf8_validate_u8, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3, UTF8_LEAD_4,
+};
+use vyre_reference::composition_witness::{
+    line_index_witness as reference_line_index, utf8_validate_witness as reference_utf8_validate,
 };
 
 fn bytes_to_u32_per_lane(source: &[u8]) -> Vec<u32> {

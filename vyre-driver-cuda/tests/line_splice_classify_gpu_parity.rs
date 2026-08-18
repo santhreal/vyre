@@ -12,8 +12,8 @@ use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::parsing::line_splice_classify::{
     line_splice_classify, line_splice_classify_dispatch_grid, line_splice_classify_u8,
-    reference_line_splice_classify,
 };
+use vyre_reference::composition_witness::line_splice_classify_witness as reference_line_splice_classify;
 
 fn pack_bytes(bytes: &[u8]) -> Vec<u32> {
     let mut padded = bytes.to_vec();

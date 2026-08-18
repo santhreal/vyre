@@ -7,8 +7,12 @@ mod harness;
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
-use vyre_libs::hash::sketch::{count_sketch_update, count_sketch_update_cpu};
-use vyre_libs::hash::sparse_fft::{sparse_fft_bin_hash, sparse_fft_bin_hash_cpu};
+use vyre_libs::hash::sketch::count_sketch_update;
+use vyre_libs::hash::sparse_fft::sparse_fft_bin_hash;
+use vyre_reference::composition_witness::{
+    count_sketch_update_witness as count_sketch_update_cpu,
+    sparse_fft_bin_hash_witness as sparse_fft_bin_hash_cpu,
+};
 
 // ---------------------------------------------------------------------
 // count_sketch_update

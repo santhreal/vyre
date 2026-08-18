@@ -1,8 +1,9 @@
 use crate::harness::{bytes_u32, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::parsing::line_splice_classify::{
-    line_splice_classify_dispatch_grid, line_splice_classify_u8, reference_line_splice_classify,
+    line_splice_classify_dispatch_grid, line_splice_classify_u8,
 };
+use vyre_reference::composition_witness::line_splice_classify_witness as reference_line_splice_classify;
 
 fn generated_line_splice_u8_source(case: u32, len: usize) -> Vec<u8> {
     let mut state = 0xc2b2_ae35_u32 ^ case.wrapping_mul(0x27d4_eb2d);
