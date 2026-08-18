@@ -97,9 +97,19 @@ pub fn bitset_equal_witness(lhs: &[u32], rhs: &[u32]) -> bool {
 }
 
 /// Sequential mathematical witness for bitset subset relation (`lhs ⊆ rhs`).
+///
+/// Missing words in either operand are treated as zero. Extra bits set in `rhs`
+/// do not invalidate a subset; any non-zero bit in `lhs` not present in `rhs`
+/// (including trailing non-zero words in `lhs` beyond `rhs`) causes the subset
+/// relation to return `false`.
 #[must_use]
 pub fn bitset_subset_of_witness(lhs: &[u32], rhs: &[u32]) -> bool {
-    lhs.iter().zip(rhs.iter()).all(|(&a, &b)| (a & !b) == 0)
+    let min_len = lhs.len().min(rhs.len());
+    lhs[..min_len]
+        .iter()
+        .zip(&rhs[..min_len])
+        .all(|(&a, &b)| (a & !b) == 0)
+        && lhs[min_len..].iter().all(|&a| a == 0)
 }
 
 /// Sequential mathematical witness for bitset membership test.
