@@ -13,7 +13,7 @@ use vyre_reference::composition_witness::bitset_popcount_witness;
 fn run_popcount(input: &[u32]) -> Vec<u32> {
     let words = input.len() as u32;
     let program = bitset_popcount("input", "count_words", words);
-    let inputs: Vec<Vec<u8>> = vec![u32_bytes(input), vec![0u8; words as usize * 4]];
+    let inputs: Vec<Vec<u8>> = vec![u32_bytes(input)];
     let mut config = DispatchConfig::default();
     let workgroup_x = 256u32;
     let grid_x = ((words + workgroup_x - 1) / workgroup_x).max(1);

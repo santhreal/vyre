@@ -24,11 +24,8 @@ where
 {
     let words = lhs.len() as u32;
     let program = program_builder("lhs", "rhs", "out", words);
-    let inputs: Vec<Vec<u8>> = vec![
-        u32_bytes(lhs),
-        u32_bytes(rhs),
-        vec![0u8; words as usize * 4],
-    ];
+    // Pairwise bitset outputs are write-complete and backend allocated.
+    let inputs: Vec<Vec<u8>> = vec![u32_bytes(lhs), u32_bytes(rhs)];
     let mut config = DispatchConfig::default();
     let workgroup_x = 256u32;
     let grid_x = ((words + workgroup_x - 1) / workgroup_x).max(1);

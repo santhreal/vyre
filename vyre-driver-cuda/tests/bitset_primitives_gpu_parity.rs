@@ -45,7 +45,7 @@ fn cuda_bitset_not_parity() {
     let input = vec![0x0F0F_0F0Fu32, 0xCAFE_BABE];
     let cpu = bitset_not_witness(&input);
     let program = bitset_not("input", "out", 2);
-    let inputs = vec![u32_bytes(&input), vec![0u8; 8]];
+    let inputs = vec![u32_bytes(&input)];
     let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
@@ -58,7 +58,7 @@ fn cuda_bitset_or_parity() {
     let rhs = vec![0x00FFu32, 0xF0F0];
     let cpu = bitset_or_witness(&lhs, &rhs);
     let program = bitset_or("lhs", "rhs", "out", 2);
-    let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs), vec![0u8; 8]];
+    let inputs = vec![u32_bytes(&lhs), u32_bytes(&rhs)];
     let outputs = dispatch_grid(&program, &inputs, 1);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(2);
@@ -173,7 +173,7 @@ fn cuda_bitset_copy_parity() {
 fn cuda_bitset_zero_parity_crosses_workgroup_lanes() {
     let mut cpu_target = (0..600).map(|idx| 0xA5A5_0000u32 ^ idx).collect::<Vec<_>>();
     let program = bitset_zero("target", cpu_target.len() as u32);
-    let inputs = vec![u32_bytes(&cpu_target)];
+    let inputs: [Vec<u8>; 0] = [];
     let outputs = dispatch_grid(&program, &inputs, 3);
     let mut gpu = bytes_u32(&outputs[0]);
     gpu.truncate(cpu_target.len());

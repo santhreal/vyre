@@ -321,11 +321,7 @@ fn run_xor_bind(backend: &CudaBackend, a: &[u32], b: &[u32]) -> Vec<u32> {
     assert_eq!(a.len(), b.len());
     let dim_words = a.len() as u32;
     let program = hypervector_xor_bind("a", "b", "out", dim_words);
-    let inputs: Vec<Vec<u8>> = vec![
-        u32_bytes(a),
-        u32_bytes(b),
-        vec![0u8; dim_words as usize * 4],
-    ];
+    let inputs: Vec<Vec<u8>> = vec![u32_bytes(a), u32_bytes(b)];
     let mut config = DispatchConfig::default();
     let workgroup_x = 256u32;
     let grid_x = ((dim_words + workgroup_x - 1) / workgroup_x).max(1);
