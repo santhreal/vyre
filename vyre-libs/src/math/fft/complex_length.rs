@@ -19,9 +19,29 @@ pub(super) fn validate_complex_len(n: u32, op: &str) -> Result<u32, String> {
 }
 
 #[cfg(test)]
+pub(crate) fn naive_dft(input: &[f32], n: usize) -> Vec<f32> {
+    let mut out = vec![0.0_f32; 2 * n];
+    for k in 0..n {
+        let mut re = 0.0_f32;
+        let mut im = 0.0_f32;
+        for nn in 0..n {
+            let xr = input[2 * nn];
+            let xi = input[2 * nn + 1];
+            let theta = -2.0_f32 * std::f32::consts::PI * (nn as f32) * (k as f32) / (n as f32);
+            let cos_t = theta.cos();
+            let sin_t = theta.sin();
+            re += xr * cos_t - xi * sin_t;
+            im += xr * sin_t + xi * cos_t;
+        }
+        out[2 * k] = re;
+        out[2 * k + 1] = im;
+    }
+    out
+}
+
+#[cfg(test)]
 mod tests {
     use super::validate_complex_len;
-
     #[test]
     fn validate_complex_len_rejects_invalid_shapes() {
         assert!(validate_complex_len(0, "generated_fft").is_err());

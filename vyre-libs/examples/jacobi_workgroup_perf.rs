@@ -3,7 +3,9 @@
 use std::time::Instant;
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_libs::math::eigenvector_column_sign::{eigenvector_column_sign, OP_ID as SIGN_OP_ID};
+use vyre_libs::math::eigenvector_column_sign::{
+    eigenvector_column_sign, eigenvector_column_sign_body, OP_ID as SIGN_OP_ID,
+};
 use vyre_libs::math::matrix_diagonal_extract::{matrix_diagonal_extract, OP_ID as DIAG_OP_ID};
 use vyre_libs::math::matrix_identity_fill::{matrix_identity_fill, OP_ID as IDENTITY_OP_ID};
 use vyre_libs::math::symmetric_eigen_jacobi::symmetric_eigen_jacobi;
@@ -76,76 +78,15 @@ fn serial_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> Program {
 
 fn serial_column_sign(eigenvectors: &str, n: u32) -> Program {
     let cells = n * n;
-    let cell = |r: &str, c: &str| Expr::add(Expr::mul(Expr::var(r), Expr::u32(n)), Expr::var(c));
+    let mut body = vec![Node::let_bind("local", Expr::u32(0))];
+    body.extend(eigenvector_column_sign_body(eigenvectors, n, 1));
     Program::wrapped(
         vec![
             BufferDecl::storage(eigenvectors, 0, BufferAccess::ReadWrite, DataType::F32)
                 .with_count(cells),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(
-            SIGN_OP_ID,
-            vec![Node::loop_for(
-                "ecs_col",
-                Expr::u32(0),
-                Expr::u32(n),
-                vec![
-                    Node::let_bind("ecs_sign", Expr::f32(1.0)),
-                    Node::let_bind("ecs_found", Expr::u32(0)),
-                    Node::loop_for(
-                        "ecs_scan",
-                        Expr::u32(0),
-                        Expr::u32(n),
-                        vec![
-                            Node::let_bind(
-                                "ecs_value",
-                                Expr::load(eigenvectors, cell("ecs_scan", "ecs_col")),
-                            ),
-                            Node::let_bind(
-                                "ecs_first",
-                                Expr::and(
-                                    Expr::gt(Expr::abs(Expr::var("ecs_value")), Expr::f32(1e-6)),
-                                    Expr::eq(Expr::var("ecs_found"), Expr::u32(0)),
-                                ),
-                            ),
-                            Node::assign(
-                                "ecs_sign",
-                                Expr::select(
-                                    Expr::var("ecs_first"),
-                                    Expr::select(
-                                        Expr::lt(Expr::var("ecs_value"), Expr::f32(0.0)),
-                                        Expr::f32(-1.0),
-                                        Expr::f32(1.0),
-                                    ),
-                                    Expr::var("ecs_sign"),
-                                ),
-                            ),
-                            Node::assign(
-                                "ecs_found",
-                                Expr::select(
-                                    Expr::var("ecs_first"),
-                                    Expr::u32(1),
-                                    Expr::var("ecs_found"),
-                                ),
-                            ),
-                        ],
-                    ),
-                    Node::loop_for(
-                        "ecs_apply",
-                        Expr::u32(0),
-                        Expr::u32(n),
-                        vec![Node::store(
-                            eigenvectors,
-                            cell("ecs_apply", "ecs_col"),
-                            Expr::mul(
-                                Expr::load(eigenvectors, cell("ecs_apply", "ecs_col")),
-                                Expr::var("ecs_sign"),
-                            ),
-                        )],
-                    ),
-                ],
-            )],
-        )],
+        vec![wrap_anonymous_region(SIGN_OP_ID, body)],
     )
 }
 

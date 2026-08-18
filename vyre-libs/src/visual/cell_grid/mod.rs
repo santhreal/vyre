@@ -57,44 +57,20 @@ impl GridShape {
     pub const fn pixel_count(&self) -> u32 {
         self.width() * self.height()
     }
-
     /// Validate dimensions and overflow bounds.
     ///
     /// # Panics
     ///
     /// Panics if `cols` or `rows` is 0, if `cell_width` or `cell_height` is 0,
-    /// or if any dimension multiplication (`cols * cell_width`, `rows * cell_height`,
-    /// surface pixels, or `cols * rows`) overflows `u32`.
+    /// or if any dimension multiplication overflows `u32`.
     pub(super) fn validated(self) -> Self {
-        assert!(
-            self.cols > 0 && self.rows > 0,
-            "Fix: a cell grid needs at least one row and one column, got {}x{}",
-            self.cols,
-            self.rows
-        );
-        assert!(
-            self.cell_width > 0 && self.cell_height > 0,
-            "Fix: a cell needs a non-zero size, got {}x{} pixels",
-            self.cell_width,
-            self.cell_height
-        );
-        // Every product below is computed once, here, so an overflow is a
-        // named build-time failure rather than a wrapped count that silently
-        // sizes a buffer too small.
-        let width = self
-            .cols
-            .checked_mul(self.cell_width)
-            .expect("Fix: cols * cell_width overflows u32");
-        let height = self
-            .rows
-            .checked_mul(self.cell_height)
-            .expect("Fix: rows * cell_height overflows u32");
-        width
-            .checked_mul(height)
-            .expect("Fix: the surface pixel count overflows u32");
-        self.cols
-            .checked_mul(self.rows)
-            .expect("Fix: cols * rows overflows u32");
+        let _ = crate::builder::stencil::CellGridShape {
+            cols: self.cols,
+            rows: self.rows,
+            cell_width: self.cell_width,
+            cell_height: self.cell_height,
+        }
+        .validated();
         self
     }
 }

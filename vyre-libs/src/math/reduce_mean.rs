@@ -102,10 +102,10 @@ mod tests {
     #[test]
     fn tiled_reduce_mean_matches_scalar_reference_across_multiple_tiles() {
         let n = 777_u32;
-        let input = (0..n)
+        let input: Vec<f32> = (0..n)
             .map(|i| ((i as f32) * 0.019).sin() * 4.0 + (i % 7) as f32)
-            .collect::<Vec<_>>();
-        let run = |program: Program| {
+            .collect();
+        let eval_mean = |program: Program| -> f32 {
             let outputs = vyre_reference::reference_eval(
                 &program,
                 &[
@@ -116,8 +116,8 @@ mod tests {
             .expect("Fix: reduce_mean program must execute in the reference interpreter.");
             decode_one(&outputs[0].to_bytes())
         };
-        let actual = run(reduce_mean("input", "output", n));
-        let expected = run(reduce_mean_reference_program("input", "output", n));
+        let actual = eval_mean(reduce_mean("input", "output", n));
+        let expected = eval_mean(reduce_mean_reference_program("input", "output", n));
         assert!(
             (actual - expected).abs() <= 1.0e-5,
             "reduce_mean mismatch: tiled={actual:?} reference={expected:?}"

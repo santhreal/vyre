@@ -240,5 +240,32 @@ pub(crate) fn kv_cache_append_test_spec<'a>(
         dtype,
     }
 }
+#[cfg(feature = "graph")]
+pub(crate) fn queue_forward_oracle(
+    active_queue: &[u32],
+    queue_len: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    node_count: u32,
+    allow_mask: u32,
+) -> Vec<u32> {
+    let mut out = vec![0u32; vyre_libs::bitset::bitset_words(node_count) as usize];
+    let take = (queue_len as usize).min(active_queue.len());
+    for &src in &active_queue[..take] {
+        if src >= node_count {
+            continue;
+        }
+        let start = edge_offsets[src as usize] as usize;
+        let end = edge_offsets[src as usize + 1] as usize;
+        for edge in start..end {
+            if edge_kind_mask[edge] & allow_mask != 0 {
+                let dst = edge_targets[edge];
+                out[dst as usize / 32] |= 1u32 << (dst % 32);
+            }
+        }
+    }
+    out
+}
 #[cfg(feature = "go-parser")]
 pub(crate) mod go;
