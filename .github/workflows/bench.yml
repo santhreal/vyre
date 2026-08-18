@@ -21,10 +21,15 @@ jobs:
 
       - name: Save baseline from main
         run: |
+          set -euo pipefail
           git fetch origin main
           git checkout origin/main
+          git checkout - -- vyre-foundation/benches
+          if ! grep -q 'name = "optimizer_pipeline"' vyre-foundation/Cargo.toml; then
+            printf '\n[[bench]]\nname = "optimizer_pipeline"\nharness = false\n' >> vyre-foundation/Cargo.toml
+          fi
           ./cargo_full bench -p vyre-foundation --bench optimizer_pipeline -- --save-baseline main
-          git checkout -
+          git checkout -f -
 
       - name: Compare PR against baseline
         run: |
