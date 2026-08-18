@@ -8,6 +8,7 @@ use vyre_reference::composition_witness::{
     argmax_of_marginals_witness, argmin_cost_witness, backdoor_descendants_check_witness,
     bellman_shortest_path_witness, betti_persistence_witness, bhattacharyya_coefficient_witness,
     bigint_add_carry_witness, bigint_add_carry_witness_into, bitset_saturation_ratio_witness,
+    bitset_subset_of_witness,
     canonicalize_union_find_witness, chebyshev_filter_witness, chebyshev_filter_witness_into,
     cluster_projection_matrix_witness_into, compose_ir_arrows_witness, compose_passes_witness,
     compose_passes_witness_into, composition_associates_witness, conformal_threshold_witness,
@@ -2483,6 +2484,41 @@ fn frontier_bitset_witness_contracts() {
     let sat_words = vec![0xAAAA_AAAA_u32; 64];
     assert!((bitset_saturation_ratio_witness(&sat_words) - 0.5).abs() < 1e-12);
     assert_eq!(bitset_saturation_ratio_witness(&[]), 0.0);
+
+}
+
+/// WHY: Zip-truncation defect class where `lhs.iter().zip(rhs.iter())` stops comparison
+/// early when `lhs.len() > rhs.len()`, falsely treating uninspected non-zero LHS tail words
+/// as satisfying the subset relation (`lhs ⊆ rhs`). The sequential witness models word-level
+/// bitset slices where omitted words represent zero.
+///
+/// Limit: Operates strictly at word-slice granularity without external logical bit-length metadata.
+#[test]
+fn bitset_subset_of_witness_length_and_boundary_invariants() {
+    let cases: [(&str, &[u32], &[u32], bool); 14] = [
+        ("both_empty", &[], &[], true),
+        ("empty_lhs_nonempty_rhs", &[], &[1, 2, 3], true),
+        ("zero_lhs_empty_rhs", &[0, 0], &[], true),
+        ("nonzero_lhs_empty_rhs_single_word", &[1], &[], false),
+        ("nonzero_lhs_empty_rhs_multi_word", &[0, 1], &[], false),
+        ("equal_single_word", &[0b1010], &[0b1010], true),
+        ("equal_multi_word", &[0b1010, 0x1234], &[0b1010, 0x1234], true),
+        ("shorter_lhs_proper_subset", &[0b0010], &[0b1010, 0xFFFF_0000], true),
+        ("shorter_lhs_equal_prefix_extra_rhs", &[0b1010], &[0b1010, 0x0001], true),
+        ("longer_lhs_all_zero_tail", &[0b0010, 0, 0], &[0b1010], true),
+        ("longer_lhs_nonzero_tail_word1", &[0b0010, 1], &[0b1010], false),
+        ("longer_lhs_nonzero_tail_word2", &[0b0010, 0, 0x8000_0000], &[0b1010, 0], false),
+        ("prefix_mismatch_single_word", &[0b1011], &[0b1010], false),
+        ("prefix_mismatch_multi_word", &[0b1010, 0b11], &[0b1010, 0b01], false),
+    ];
+
+    for (label, lhs, rhs, expected) in cases {
+        let actual = bitset_subset_of_witness(lhs, rhs);
+        assert_eq!(
+            actual, expected,
+            "bitset_subset_of_witness invariant failed for case '{label}': lhs={lhs:?}, rhs={rhs:?}"
+        );
+    }
 }
 
 #[test]
