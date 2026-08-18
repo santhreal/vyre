@@ -1,7 +1,7 @@
 use crate::parsing::go::parse::structure::GO_SPAN_RECORD_WORDS;
 use crate::parsing::go::parse::token_predicates::{
-    token_is_chan_keyword, token_is_keyword, token_is_receive_leading_keyword, token_len,
-    token_start, token_type_eq,
+    emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_chan_keyword,
+    token_is_keyword, token_is_receive_leading_keyword, token_len, token_start, token_type_eq,
 };
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -44,6 +44,39 @@ define_go_keyword_call_extractor!(
 );
 
 #[allow(clippy::too_many_arguments)]
+fn go_extract_span_program(
+    tok_types: &str,
+    tok_starts: &str,
+    tok_lens: &str,
+    haystack: &str,
+    num_tokens: Expr,
+    out_records: &str,
+    out_counts: &str,
+    op_id: &str,
+    body: Vec<Node>,
+) -> Program {
+    let t = Expr::gid_x();
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(haystack, 3, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage(out_records, 4, BufferAccess::ReadWrite, DataType::U32),
+            BufferDecl::storage(out_counts, 5, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
+        ],
+        [256, 1, 1],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(Expr::lt(t, num_tokens), body)],
+        )],
+    )
+    .with_entry_op_id(op_id)
+    .with_non_composable_with_self(true)
+}
+
+#[allow(clippy::too_many_arguments)]
 fn go_extract_keyword_calls(
     tok_types: &str,
     tok_starts: &str,
@@ -56,61 +89,26 @@ fn go_extract_keyword_calls(
     op_id: &str,
 ) -> Program {
     let t = Expr::gid_x();
-    let body = vec![Node::if_then(
-        Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_tokens.clone()),
-        vec![Node::if_then(
-            token_is_keyword(
-                haystack,
-                tok_types,
-                tok_starts,
-                tok_lens,
-                t.clone(),
-                keyword,
-            ),
-            vec![Node::if_then(
-                token_type_eq(
-                    tok_types,
-                    Expr::add(t.clone(), Expr::u32(1)),
-                    TOK_IDENTIFIER,
-                ),
-                vec![
-                    Node::let_bind(
-                        "call_idx",
-                        Expr::atomic_add(out_counts, Expr::u32(0), Expr::u32(GO_SPAN_RECORD_WORDS)),
-                    ),
-                    Node::store(
-                        out_calls,
-                        Expr::var("call_idx"),
-                        token_start(tok_starts, Expr::add(t.clone(), Expr::u32(1))),
-                    ),
-                    Node::store(
-                        out_calls,
-                        Expr::add(Expr::var("call_idx"), Expr::u32(1)),
-                        token_len(tok_lens, Expr::add(t.clone(), Expr::u32(1))),
-                    ),
-                ],
-            )],
-        )],
+    let body = vec![emit_keyword_span_record_nodes(
+        haystack,
+        tok_types,
+        tok_starts,
+        tok_lens,
+        t.clone(),
+        num_tokens.clone(),
+        keyword,
+        token_type_eq(
+            tok_types,
+            Expr::add(t, Expr::u32(1)),
+            TOK_IDENTIFIER,
+        ),
+        out_calls,
+        out_counts,
+        "call_idx",
     )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(haystack, 3, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(out_calls, 4, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(out_counts, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(Expr::lt(t, num_tokens), body)],
-        )],
+    go_extract_span_program(
+        tok_types, tok_starts, tok_lens, haystack, num_tokens, out_calls, out_counts, op_id, body,
     )
-    .with_entry_op_id(op_id)
-    .with_non_composable_with_self(true)
 }
 
 /// Extract channel sends (`ch <- value`) as channel operand spans.
@@ -172,42 +170,28 @@ pub fn go_extract_channel_sends(
                 ),
             ),
             vec![
-                Node::let_bind(
-                    "send_idx",
-                    Expr::atomic_add(out_counts, Expr::u32(0), Expr::u32(GO_SPAN_RECORD_WORDS)),
-                ),
-                Node::store(
-                    out_ops,
-                    Expr::var("send_idx"),
-                    token_start(tok_starts, t.clone()),
-                ),
-                Node::store(
-                    out_ops,
-                    Expr::add(Expr::var("send_idx"), Expr::u32(1)),
-                    token_len(tok_lens, t.clone()),
-                ),
-            ],
+            emit_span_record_nodes(
+                tok_starts,
+                tok_lens,
+                out_ops,
+                out_counts,
+                "send_idx",
+                t,
+            ),
         )],
     )];
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(haystack, 3, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(out_ops, 4, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(out_counts, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::parsing::go_extract_channel_sends",
-            vec![Node::if_then(Expr::lt(t, num_tokens), body)],
-        )],
+    go_extract_span_program(
+        tok_types,
+        tok_starts,
+        tok_lens,
+        haystack,
+        num_tokens,
+        out_ops,
+        out_counts,
+        "vyre-libs::parsing::go_extract_channel_sends",
+        body,
     )
-    .with_entry_op_id("vyre-libs::parsing::go_extract_channel_sends")
-    .with_non_composable_with_self(true)
 }
 
 /// Extract channel receives (`<-ch`) as channel operand spans.
@@ -266,42 +250,28 @@ pub fn go_extract_channel_receives(
                 ),
             ),
             vec![
-                Node::let_bind(
-                    "recv_idx",
-                    Expr::atomic_add(out_counts, Expr::u32(0), Expr::u32(GO_SPAN_RECORD_WORDS)),
-                ),
-                Node::store(
-                    out_ops,
-                    Expr::var("recv_idx"),
-                    token_start(tok_starts, Expr::add(t.clone(), Expr::u32(1))),
-                ),
-                Node::store(
-                    out_ops,
-                    Expr::add(Expr::var("recv_idx"), Expr::u32(1)),
-                    token_len(tok_lens, Expr::add(t.clone(), Expr::u32(1))),
-                ),
-            ],
+            emit_span_record_nodes(
+                tok_starts,
+                tok_lens,
+                out_ops,
+                out_counts,
+                "recv_idx",
+                next,
+            ),
         )],
     )];
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(haystack, 3, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(out_ops, 4, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(out_counts, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::parsing::go_extract_channel_receives",
-            vec![Node::if_then(Expr::lt(t, num_tokens), body)],
-        )],
+    go_extract_span_program(
+        tok_types,
+        tok_starts,
+        tok_lens,
+        haystack,
+        num_tokens,
+        out_ops,
+        out_counts,
+        "vyre-libs::parsing::go_extract_channel_receives",
+        body,
     )
-    .with_entry_op_id("vyre-libs::parsing::go_extract_channel_receives")
-    .with_non_composable_with_self(true)
 }
 
 /// Extract `make(chan T, ...)` constructions as the `make` call span.
@@ -341,41 +311,24 @@ pub fn go_extract_channel_creations(
                     ),
                 ),
             ),
-            vec![
-                Node::let_bind(
-                    "create_idx",
-                    Expr::atomic_add(out_counts, Expr::u32(0), Expr::u32(GO_SPAN_RECORD_WORDS)),
-                ),
-                Node::store(
-                    out_ops,
-                    Expr::var("create_idx"),
-                    token_start(tok_starts, t.clone()),
-                ),
-                Node::store(
-                    out_ops,
-                    Expr::add(Expr::var("create_idx"), Expr::u32(1)),
-                    token_len(tok_lens, t.clone()),
-                ),
-            ],
-        )],
+            emit_span_record_nodes(
+                tok_starts,
+                tok_lens,
+                out_ops,
+                out_counts,
+                "create_idx",
+                t,
+            ),
     )];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(haystack, 3, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(out_ops, 4, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(out_counts, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::parsing::go_extract_channel_creations",
-            vec![Node::if_then(Expr::lt(t, num_tokens), body)],
-        )],
+    go_extract_span_program(
+        tok_types,
+        tok_starts,
+        tok_lens,
+        haystack,
+        num_tokens,
+        out_ops,
+        out_counts,
+        "vyre-libs::parsing::go_extract_channel_creations",
+        body,
     )
-    .with_entry_op_id("vyre-libs::parsing::go_extract_channel_creations")
-    .with_non_composable_with_self(true)
 }

@@ -15,3 +15,14 @@ pub(super) fn reserve_vec<T>(
         }
     })
 }
+
+pub(super) fn init_flags_vec(
+    count: usize,
+    field: &'static str,
+    init: bool,
+) -> Result<Vec<bool>, NfaCompileError> {
+    let mut vec = Vec::new();
+    reserve_vec(&mut vec, count, field)?;
+    vec.resize(count, init);
+    Ok(vec)
+}

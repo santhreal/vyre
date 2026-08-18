@@ -62,15 +62,13 @@ fn classic_ac_bounded_ranges_suffix3_presence_program(
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
         ),
-        AcInputBindings::new(
-            [
-                haystack,
-                transitions,
-                output_offsets,
-                output_records,
-                pattern_lengths,
-                haystack_len,
-            ],
+        AcInputBindings::from_names(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
             state_count,
             output_records_len,
             pattern_count,
@@ -196,15 +194,13 @@ fn classic_ac_bounded_ranges_suffix3_presence_by_region_program(
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
         ),
-        AcInputBindings::new(
-            [
-                haystack,
-                transitions,
-                output_offsets,
-                output_records,
-                pattern_lengths,
-                haystack_len,
-            ],
+        AcInputBindings::from_names(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
             state_count,
             output_records_len,
             pattern_count,
@@ -372,15 +368,13 @@ fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_fi
             candidate_suffix2_mask,
             candidate_suffix3_bloom,
         ),
-        AcInputBindings::new(
-            [
-                haystack,
-                transitions,
-                output_offsets,
-                output_records,
-                pattern_lengths,
-                haystack_len,
-            ],
+        AcInputBindings::from_names(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
             state_count,
             output_records_len,
             pattern_count,
@@ -558,8 +552,8 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coale
 mod tests {
     use super::*;
     use crate::pattern::classic_ac::test_dispatch_and_decode::{
-        ac_ranges_inputs, assert_infallible_matches_try, decode_match_triples, pattern_lengths,
-        u32_input,
+        ac_ranges_inputs, assert_infallible_matches_try, evaluate_and_assert_ranges_matches,
+        pattern_lengths, u32_input,
     };
     use crate::pattern::classic_ac::{
         classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
@@ -613,13 +607,7 @@ mod tests {
         inputs.push(u32_input(&classic_ac_candidate_suffix3_bloom_words(
             &patterns,
         )));
-        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
-            "Fix: suffix3 prefiltered AC bounded-ranges program should evaluate in reference backend.",
-        );
-        let mut actual = decode_match_triples(&outputs);
-        actual.sort_unstable();
-
-        assert_eq!(actual, expected);
+        evaluate_and_assert_ranges_matches(&program, &inputs, &expected);
     }
 
     #[test]

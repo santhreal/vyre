@@ -1,6 +1,6 @@
 //! Shared token predicates for Go structural extraction kernels.
 
-use vyre_foundation::ir::Expr;
+use vyre_foundation::ir::{Expr, Node};
 use vyre_spec::go_token::TOK_IDENTIFIER;
 
 /// Test a token kind at `idx`.
@@ -122,5 +122,70 @@ pub(super) fn token_is_keyword(
     Expr::and(
         token_is_ident(tok_types, idx.clone()),
         token_bytes_eq(haystack, tok_starts, tok_lens, idx, keyword),
+    )
+}
+
+/// Emit statements to claim an atomic slot and store a 2-word `(start, len)` record for `tok_idx`.
+pub(super) fn emit_span_record_nodes(
+    tok_starts: &str,
+    tok_lens: &str,
+    out_records: &str,
+    out_counts: &str,
+    slot_var: &str,
+    tok_idx: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind(
+            slot_var,
+            Expr::atomic_add(
+                out_counts,
+                Expr::u32(0),
+                Expr::u32(crate::parsing::go::GO_SPAN_RECORD_WORDS),
+            ),
+        ),
+        Node::store(
+            out_records,
+            Expr::var(slot_var),
+            token_start(tok_starts, tok_idx.clone()),
+        ),
+        Node::store(
+            out_records,
+            Expr::add(Expr::var(slot_var), Expr::u32(1)),
+            token_len(tok_lens, tok_idx),
+        ),
+    ]
+}
+
+/// Test if token `t` matches `keyword` and token `t+1` satisfies `target_cond`, appending a span record if matched.
+pub(super) fn emit_keyword_span_record_nodes(
+    haystack: &str,
+    tok_types: &str,
+    tok_starts: &str,
+    tok_lens: &str,
+    t: Expr,
+    num_tokens: Expr,
+    keyword: &[u8],
+    target_cond: Expr,
+    out_records: &str,
+    out_counts: &str,
+    slot_var: &str,
+) -> Node {
+    let next_tok = Expr::add(t.clone(), Expr::u32(1));
+    Node::if_then(
+        Expr::lt(next_tok.clone(), num_tokens),
+        vec![Node::if_then(
+            token_is_keyword(haystack, tok_types, tok_starts, tok_lens, t, keyword),
+            vec![Node::if_then(
+                target_cond,
+                emit_span_record_nodes(
+                    tok_starts,
+                    tok_lens,
+                    out_records,
+                    out_counts,
+                    slot_var,
+                    next_tok,
+                ),
+            )],
+        )],
     )
 }

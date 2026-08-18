@@ -1,9 +1,8 @@
-use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::pattern::CompiledDfa;
 
-use super::count_scan_nodes;
+use super::{count_scan_nodes, wrap_count_program};
 
 /// Number of u32 words in the hashed three-byte suffix mask.
 pub const CLASSIC_AC_SUFFIX3_BLOOM_WORDS: usize = 8192;
@@ -69,13 +68,10 @@ fn classic_ac_bounded_count_suffix3_prefilter_program(
         BufferDecl::storage(haystack_len, 6, BufferAccess::ReadOnly, DataType::U32).with_count(1),
     );
     buffers.push(BufferDecl::read_write(match_count, 7, DataType::U32).with_count(1));
-    Program::wrapped(
+    wrap_count_program(
+        "vyre-libs::matching::classic_ac_bounded_count_suffix3_prefilter",
         buffers,
-        [128, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::matching::classic_ac_bounded_count_suffix3_prefilter",
-            body,
-        )],
+        body,
     )
 }
 

@@ -131,7 +131,37 @@ pub(crate) struct TokenPass<'a> {
     pub haystack_len: u32,
 }
 
-impl TokenPass<'_> {
+impl<'a> TokenPass<'a> {
+    /// Token pass linked against the canonical line index child phase.
+    pub(crate) fn with_line_index(
+        op_id: &'a str,
+        tok_types: &'a str,
+        tok_starts: &'a str,
+        tok_lens: &'a str,
+        haystack_len: u32,
+    ) -> Self {
+        Self {
+            op_id,
+            child_op_id: crate::text::LINE_INDEX_OP_ID,
+            tok_types,
+            tok_starts,
+            tok_lens,
+            haystack_len,
+        }
+    }
+
+    /// Build a standard single-output-record program.
+    pub(crate) fn build_record_program(
+        &self,
+        out_records: &str,
+        out_counts: &str,
+        record_words: u32,
+        body: Vec<Node>,
+    ) -> Program {
+        let mut buffers = self.token_buffers();
+        buffers.extend(self.record_buffers(out_records, out_counts, 3, record_words));
+        self.program(buffers, body)
+    }
     /// The three read-only token buffers, at bindings 0 through 2.
     pub(crate) fn token_buffers(&self) -> Vec<BufferDecl> {
         [self.tok_types, self.tok_starts, self.tok_lens]
@@ -198,4 +228,11 @@ pub(crate) fn pack_sparse_tokens(
         tok_lens[base..base + 4].copy_from_slice(&len.to_le_bytes());
     }
     (tok_types, tok_starts, tok_lens)
+}
+
+/// Pack a slice of u32 words into a little-endian byte vector padded to `total_words * 4` bytes.
+pub(crate) fn pad_u32_words_bytes(words: &[u32], total_words: usize) -> Vec<u8> {
+    let mut out = crate::fixture_bytes::u32_bytes(words);
+    out.resize(total_words * 4, 0);
+    out
 }

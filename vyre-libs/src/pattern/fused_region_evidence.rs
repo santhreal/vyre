@@ -178,20 +178,18 @@ pub fn fused_region_evidence_program(
             ),
         ],
     );
-    let walk_body = super::regex_region_admission::anchored_region_walk_body(
-        super::regex_region_admission::AnchoredRegionWalk {
-            haystack,
-            transitions,
-            output_offsets,
-            region_starts,
-            region_base,
-            haystack_len,
-            presence_words,
-            max_pattern_len,
-            log2_max_regions,
-        },
-        emit_loop,
-    );
+    let walk_body = super::regex_region_admission::AnchoredRegionWalk {
+        haystack,
+        transitions,
+        output_offsets,
+        region_starts,
+        region_base,
+        haystack_len,
+        presence_words,
+        max_pattern_len,
+        log2_max_regions,
+    }
+    .walk_body(emit_loop);
     let mut buffers = super::regex_region_admission::regex_region_scan_common_buffers(
         haystack,
         transitions,
@@ -239,14 +237,8 @@ pub fn fused_region_evidence_program(
 mod tests {
     use super::*;
     use crate::pattern::haystack::pack_haystack_u32;
-    use crate::pattern::regex_dfa::build_regex_dfa_pipeline;
+    use crate::pattern::regex_region_admission::tests::dfa_for;
     use vyre_primitives::wire::pack_u32_slice;
-
-    fn dfa_for(patterns: &[&str]) -> CompiledDfa {
-        build_regex_dfa_pipeline(patterns, 4096, 16_384)
-            .expect("Fix: test patterns must compile to an anchored regex DFA")
-            .dfa
-    }
 
     fn log2_regions(region_count: u32) -> u32 {
         (32 - (region_count.max(2) - 1).leading_zeros()).max(1)
@@ -276,7 +268,7 @@ mod tests {
 
         let words = regex_admission_presence_words(patterns.len() as u32) as usize;
         let bit = |bm: &[u32], r: usize, pid: u32| {
-            (bm[r * words + (pid >> 5) as usize] >> (pid & 31)) & 1 == 1
+            super::regex_region_admission::tests::presence_bit(bm, r, words, pid)
         };
         // presence: all four in their regions.
         assert!(bit(&ev.presence, 0, 0) && bit(&ev.presence, 0, 1));

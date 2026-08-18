@@ -202,14 +202,17 @@ impl<'a> AcInputBindings<'a> {
     /// respelled at every call site: the builders here bind the identical six
     /// names, and a struct literal spelling them out is nine lines of the same
     /// text in each.
-    pub(in crate::pattern) const fn new(
-        names: [&'a str; 6],
+    pub(in crate::pattern) const fn from_names(
+        haystack: &'a str,
+        transitions: &'a str,
+        output_offsets: &'a str,
+        output_records: &'a str,
+        pattern_lengths: &'a str,
+        haystack_len: &'a str,
         state_count: u32,
         output_records_len: u32,
         pattern_count: u32,
     ) -> Self {
-        let [haystack, transitions, output_offsets, output_records, pattern_lengths, haystack_len] =
-            names;
         Self {
             haystack,
             transitions,
@@ -221,6 +224,27 @@ impl<'a> AcInputBindings<'a> {
             output_records_len,
             pattern_count,
         }
+    }
+
+    pub(in crate::pattern) const fn new(
+        names: [&'a str; 6],
+        state_count: u32,
+        output_records_len: u32,
+        pattern_count: u32,
+    ) -> Self {
+        let [haystack, transitions, output_offsets, output_records, pattern_lengths, haystack_len] =
+            names;
+        Self::from_names(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
+            state_count,
+            output_records_len,
+            pattern_count,
+        )
     }
 
     /// The six declarations, in binding order.
@@ -396,15 +420,13 @@ fn classic_ac_bounded_ranges_program_with_subgroup_coalesce(
 ) -> Program {
     ranges_scan_program(
         PrefilterGate::unfiltered(),
-        AcInputBindings::new(
-            [
-                haystack,
-                transitions,
-                output_offsets,
-                output_records,
-                pattern_lengths,
-                haystack_len,
-            ],
+        AcInputBindings::from_names(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
             state_count,
             output_records_len,
             pattern_count,

@@ -1,5 +1,6 @@
 use crate::parsing::go::parse::token_predicates::{
-    token_is_ident, token_is_keyword, token_len, token_start, token_type_eq,
+    emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_ident, token_is_keyword,
+    token_len, token_start, token_type_eq,
 };
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -136,41 +137,18 @@ pub fn go_extract_packages_and_imports(
 ) -> Program {
     let t = Expr::gid_x();
     let body = vec![
-        Node::if_then(
-            Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_tokens.clone()),
-            vec![Node::if_then(
-                token_is_keyword(
-                    haystack,
-                    tok_types,
-                    tok_starts,
-                    tok_lens,
-                    t.clone(),
-                    b"package",
-                ),
-                vec![Node::if_then(
-                    token_is_ident(tok_types, Expr::add(t.clone(), Expr::u32(1))),
-                    vec![
-                        Node::let_bind(
-                            "pkg_idx",
-                            Expr::atomic_add(
-                                out_package_counts,
-                                Expr::u32(0),
-                                Expr::u32(GO_SPAN_RECORD_WORDS),
-                            ),
-                        ),
-                        Node::store(
-                            out_packages,
-                            Expr::var("pkg_idx"),
-                            token_start(tok_starts, Expr::add(t.clone(), Expr::u32(1))),
-                        ),
-                        Node::store(
-                            out_packages,
-                            Expr::add(Expr::var("pkg_idx"), Expr::u32(1)),
-                            token_len(tok_lens, Expr::add(t.clone(), Expr::u32(1))),
-                        ),
-                    ],
-                )],
-            )],
+        emit_keyword_span_record_nodes(
+            haystack,
+            tok_types,
+            tok_starts,
+            tok_lens,
+            t.clone(),
+            num_tokens.clone(),
+            b"package",
+            token_is_ident(tok_types, Expr::add(t.clone(), Expr::u32(1))),
+            out_packages,
+            out_package_counts,
+            "pkg_idx",
         ),
         Node::if_then(
             Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_tokens.clone()),
@@ -186,26 +164,14 @@ pub fn go_extract_packages_and_imports(
                 vec![
                     Node::if_then(
                         token_type_eq(tok_types, Expr::add(t.clone(), Expr::u32(1)), TOK_STRING),
-                        vec![
-                            Node::let_bind(
-                                "import_idx",
-                                Expr::atomic_add(
-                                    out_import_counts,
-                                    Expr::u32(0),
-                                    Expr::u32(GO_SPAN_RECORD_WORDS),
-                                ),
-                            ),
-                            Node::store(
-                                out_imports,
-                                Expr::var("import_idx"),
-                                token_start(tok_starts, Expr::add(t.clone(), Expr::u32(1))),
-                            ),
-                            Node::store(
-                                out_imports,
-                                Expr::add(Expr::var("import_idx"), Expr::u32(1)),
-                                token_len(tok_lens, Expr::add(t.clone(), Expr::u32(1))),
-                            ),
-                        ],
+                        emit_span_record_nodes(
+                            tok_starts,
+                            tok_lens,
+                            out_imports,
+                            out_import_counts,
+                            "import_idx",
+                            Expr::add(t.clone(), Expr::u32(1)),
+                        ),
                     ),
                     Node::if_then(
                         token_type_eq(tok_types, Expr::add(t.clone(), Expr::u32(1)), TOK_LPAREN),
@@ -220,30 +186,14 @@ pub fn go_extract_packages_and_imports(
                                     vec![
                                         Node::if_then(
                                             token_type_eq(tok_types, Expr::var("scan"), TOK_STRING),
-                                            vec![
-                                                Node::let_bind(
-                                                    "import_idx",
-                                                    Expr::atomic_add(
-                                                        out_import_counts,
-                                                        Expr::u32(0),
-                                                        Expr::u32(GO_SPAN_RECORD_WORDS),
-                                                    ),
-                                                ),
-                                                Node::store(
-                                                    out_imports,
-                                                    Expr::var("import_idx"),
-                                                    token_start(tok_starts, Expr::var("scan")),
-                                                ),
-                                                Node::store(
-                                                    out_imports,
-                                                    Expr::add(
-                                                        Expr::var("import_idx"),
-                                                        Expr::u32(1),
-                                                    ),
-                                                    token_len(tok_lens, Expr::var("scan")),
-                                                ),
-                                            ],
-                                        ),
+                                            emit_span_record_nodes(
+                                                tok_starts,
+                                                tok_lens,
+                                                out_imports,
+                                                out_import_counts,
+                                                "import_idx",
+                                                Expr::var("scan"),
+                                            ),
                                         Node::if_then(
                                             token_type_eq(tok_types, Expr::var("scan"), TOK_RPAREN),
                                             vec![Node::assign("import_done", Expr::u32(1))],
