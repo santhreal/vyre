@@ -9,7 +9,9 @@ use vyre_megakernel::{
     TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 
-use crate::materialize::{unbound_input, unbound_resident_buffer, InstanceCore, NEUTRAL_MESSAGES};
+use crate::materialize::{
+    retained_chain_relates, unbound_input, unbound_resident_buffer, InstanceCore, NEUTRAL_MESSAGES,
+};
 use crate::{BackendError, BindingPlan, DeviceIdentity, Resource};
 
 fn test_format() -> TargetPayloadFormat {
@@ -802,4 +804,165 @@ fn read_write_output_lifetime_is_output_only_and_not_module_input() {
         completion.outputs.get(&ArtifactValueId(out_id.0)).unwrap(),
         &[42, 0, 0, 0]
     );
+}
+
+/// WHY: one Program buffer name carries two artifact identities whenever the
+/// buffer is `ReadWrite`: it reads the resource it was wired to and writes the
+/// renamed successor. A guard that rejected any two identities under one name
+/// therefore rejected every fixpoint node in the tree, and it shipped with no
+/// test, so nothing said which of the two readings was the contract. The
+/// contract is that the pair is accepted when the retained chain relates the two
+/// identities, because that is the same buffer at two points of its lineage, and
+/// resolution walks that chain in either direction.
+///
+/// It does not cover a group whose members belong to different Programs: fusion
+/// groups fuse nodes of one graph, so a name is only ever ambiguous through the
+/// read/write pair this asserts.
+#[test]
+fn a_read_write_buffer_keeps_both_ends_of_its_retained_chain_under_one_name() {
+    let mut graph = ProgramGraph::new();
+    let state_init = graph
+        .add_external_value(
+            "canonical_state",
+            contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+        )
+        .unwrap();
+
+    let prog = Program::wrapped(
+        vec![BufferDecl::storage(
+            "state",
+            0,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )],
+        [32, 1, 1],
+        vec![Node::store(
+            "state",
+            Expr::u32(0),
+            Expr::add(Expr::load("state", Expr::u32(0)), Expr::u32(1)),
+        )],
+    );
+
+    let (node, outputs) = graph
+        .add_node(
+            "step",
+            prog.clone(),
+            vec![GraphInput {
+                buffer: "state".into(),
+                value: state_init,
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![GraphOutput {
+                buffer: "state".into(),
+                name: "state_next".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                retained_successor_of: Some(state_init),
+            }],
+        )
+        .unwrap();
+    let state_next = outputs[0];
+
+    let req = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        DeviceFacts::unknown(),
+        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+    let artifact = compile(&req).expect("compilation must succeed");
+
+    // The ABI is what the guard reads: one name, two identities, one chain.
+    let abi_entry = artifact
+        .abi()
+        .entries
+        .iter()
+        .find(|entry| entry.node == ArtifactNodeId(node.0))
+        .expect("the node must have an ABI entry");
+    let read = abi_entry
+        .input_bindings
+        .iter()
+        .find(|binding| binding.buffer == "state")
+        .expect("the ReadWrite buffer must bind an input identity")
+        .value;
+    let written = abi_entry
+        .output_bindings
+        .iter()
+        .find(|binding| binding.buffer == "state")
+        .expect("the ReadWrite buffer must bind an output identity")
+        .value;
+    assert_ne!(
+        read, written,
+        "the fixture must exercise two identities under one name"
+    );
+
+    let payload = TargetPayload::new(
+        &artifact,
+        test_format(),
+        test_profile(),
+        vec![TargetEntryPoint {
+            name: "step_entry".into(),
+            node: ArtifactNodeId(node.0),
+            workgroup_size: [32, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: vec![TargetResourceBinding {
+                resource: ArtifactValueId(state_next.0),
+                group: 0,
+                slot: 0,
+                memory: TargetResourceMemory::Global,
+                access: TargetResourceAccess::ReadWrite,
+            }],
+        }],
+        vec![1, 2, 3],
+    )
+    .unwrap();
+
+    let core = test_instance_core(&artifact, &payload)
+        .expect("a ReadWrite buffer's own read and write identities are not a name collision");
+
+    // The write identity is the one the name resolves to, and the read identity
+    // remains reachable because the two share a retained chain.
+    assert_eq!(
+        core.module_named_resources[0].get("state").copied(),
+        Some(ArtifactValueId(state_next.0))
+    );
+    assert!(
+        core.retained_predecessors
+            .get(&ArtifactValueId(state_next.0))
+            .is_some_and(|priors| priors.contains(&ArtifactValueId(state_init.0))),
+        "the two identities must be related by the retained chain the guard consults"
+    );
+}
+
+/// WHY: accepting the read/write pair must not weaken collision rejection for
+/// identities outside the same retained lineage. This covers both map
+/// directions, transitive ancestry, and the fail-closed unrelated case.
+#[test]
+fn retained_chain_identity_guard_accepts_only_one_lineage() {
+    let root = ArtifactValueId(1);
+    let child = ArtifactValueId(2);
+    let grandchild = ArtifactValueId(3);
+    let unrelated = ArtifactValueId(4);
+    let retained_predecessors =
+        BTreeMap::from([(child, vec![root]), (grandchild, vec![child, root])]);
+
+    assert!(retained_chain_relates(&retained_predecessors, root, child));
+    assert!(retained_chain_relates(&retained_predecessors, child, root));
+    assert!(retained_chain_relates(
+        &retained_predecessors,
+        root,
+        grandchild
+    ));
+    assert!(!retained_chain_relates(
+        &retained_predecessors,
+        root,
+        unrelated
+    ));
+    assert!(!retained_chain_relates(
+        &retained_predecessors,
+        child,
+        unrelated
+    ));
 }

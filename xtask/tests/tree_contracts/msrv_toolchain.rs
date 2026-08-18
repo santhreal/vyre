@@ -184,7 +184,9 @@ fn every_job_running_the_public_api_extraction_installs_the_declared_rustdoc() {
     for entry in
         std::fs::read_dir(&directory).expect("Fix: the workflow directory must be readable")
     {
-        let path = entry.expect("Fix: every workflow entry must be readable").path();
+        let path = entry
+            .expect("Fix: every workflow entry must be readable")
+            .path();
         if path.extension().and_then(|value| value.to_str()) != Some("yml") {
             continue;
         }

@@ -181,6 +181,47 @@ pub(crate) fn require_exactly_one_output<'a>(
     Ok(output)
 }
 
+/// Position of the writable buffer `name` within returned dispatcher outputs.
+///
+/// Output buffers correspond to non-Workgroup buffers that are either backend-allocated
+/// or declared with `BufferAccess::ReadWrite`, in `program.buffers()` order.
+#[must_use]
+pub(crate) fn output_buffer_index(
+    program: &vyre_foundation::ir::Program,
+    name: &str,
+) -> Option<usize> {
+    program.output_buffer_indices().iter().position(|&index| {
+        program
+            .buffers()
+            .get(index as usize)
+            .is_some_and(|decl| decl.name() == name)
+    })
+}
+
+/// Return the output buffer corresponding to `name` from a program's returned outputs.
+///
+/// Accepts programs that return multiple output buffers (such as scratch or write-complete
+/// sibling buffers) and extracts the requested buffer by name.
+pub(crate) fn require_named_output<'a>(
+    outputs: &'a [Vec<u8>],
+    program: &vyre_foundation::ir::Program,
+    name: &str,
+    context: &str,
+) -> Result<&'a [u8], DispatchError> {
+    let index = output_buffer_index(program, name).ok_or_else(|| {
+        DispatchError::BadInputs(format!(
+            "Fix: {context} program does not declare an output buffer named `{name}`."
+        ))
+    })?;
+
+    outputs.get(index).map(|buf| buf.as_slice()).ok_or_else(|| {
+        DispatchError::BackendError(format!(
+            "Fix: {context} expected output buffer `{name}` at index {index}, but dispatcher returned {} output buffer(s).",
+            outputs.len()
+        ))
+    })
+}
+
 /// Decode a dispatcher u32 output buffer with exact byte-count validation.
 pub fn decode_u32_output_exact(
     bytes: &[u8],
@@ -325,5 +366,48 @@ mod tests {
             require_exactly_one_output(&one, "dispatch-buffer test").expect("one output is exact"),
             [3]
         );
+    }
+
+    #[test]
+    fn require_named_output_extracts_by_name_and_accepts_sibling_scratch() {
+        use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("in_ro", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(4),
+                BufferDecl::storage("primary_out", 1, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(4),
+                BufferDecl::storage("scratch_sibling", 2, BufferAccess::ReadWrite, DataType::U32)
+                    .with_count(8),
+            ],
+            [1, 1, 1],
+            Vec::new(),
+        );
+
+        assert_eq!(output_buffer_index(&program, "primary_out"), Some(0));
+        assert_eq!(output_buffer_index(&program, "scratch_sibling"), Some(1));
+        assert_eq!(output_buffer_index(&program, "in_ro"), None);
+        assert_eq!(output_buffer_index(&program, "missing"), None);
+
+        let outputs = vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8, 9, 10, 11, 12]];
+
+        let primary = require_named_output(&outputs, &program, "primary_out", "test_extract")
+            .expect("primary output extracted");
+        assert_eq!(primary, &[1, 2, 3, 4]);
+
+        let scratch = require_named_output(&outputs, &program, "scratch_sibling", "test_extract")
+            .expect("scratch output extracted");
+        assert_eq!(scratch, &[5, 6, 7, 8, 9, 10, 11, 12]);
+
+        let missing_decl = require_named_output(&outputs, &program, "missing", "test_extract")
+            .expect_err("undeclared buffer must fail with BadInputs");
+        assert!(matches!(missing_decl, DispatchError::BadInputs(_)));
+
+        let empty_outputs: Vec<Vec<u8>> = Vec::new();
+        let missing_slot =
+            require_named_output(&empty_outputs, &program, "primary_out", "test_extract")
+                .expect_err("missing dispatcher slot must fail with BackendError");
+        assert!(matches!(missing_slot, DispatchError::BackendError(_)));
     }
 }

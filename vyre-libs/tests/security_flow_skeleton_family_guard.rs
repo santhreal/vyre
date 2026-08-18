@@ -278,135 +278,140 @@ fn pinned_cases() -> Vec<(&'static str, Program)> {
     ]
 }
 
-/// Pre-merge fingerprints, recorded against `b72b96dbc8`.
+/// Pinned canonical IR fingerprints across the security flow-skeleton family.
+///
+/// Pinned post-merge against canonical wire hash updates (commits `811a42dabd`
+/// and `16f1af5c07`), where `Program::canonical_wire_bytes` introduced
+/// borrow-preserving canonicalization and transparent block-splicing across all
+/// statement depths, normalizing nested block and traversal region structures.
 const PINS: &[(&str, &str)] = &[
     (
         "flows_to/1n0e/fin-fout",
-        "d42c4ab9661960f3c95b278844ebc134bc4bee18770e9d52f38eb7e35c035778",
+        "162bf7fac3d425b79480a52e5cafba72b67ef801929ed92455b4225c565cebba",
     ),
     (
         "flows_to/4n3e/fin-fout",
-        "9aee3aea6309ef03a2b93ec3b7ab00c7026ac6c1088f5953e285b22ccf408353",
+        "bcbf803353846fec73cc51dcff20b9b18ab87d9efe36a2528a70339c034a016b",
     ),
     (
         "flows_to/32n31e/fin-fout",
-        "e554000a5afd08c2bbacdad58676d5a63b67981756d1a3d0d02be4f9002e3532",
+        "0673e34fd37504d2ae39410dddd7891ff0e8795bbd702b8426bad9aaf05c177f",
     ),
     (
         "flows_to/33n32e/fin-fout",
-        "c934beb96caa1e56a4d8fed89e6f59b27af5b6888f0aabae04b91fd5cf3de0a4",
+        "ad2776bad94c0b485f919af03face61a61565610bc3086b8d54aeeaf638842ee",
     ),
     (
         "flows_to/1024n4096e/renamed",
-        "068e6b83d08b01b2f72a8bbd16a3f29897c31250276d45cf551ea9a5c1da47e2",
+        "9f18951599a58ec0092ad6a5f310c90752503537e57c3f5863441222a50f20b0",
     ),
     (
         "flows_to_alias_only/1n0e/fin-fout",
-        "0538da3a9575a96fd136b50ede6352bf2b79dd0743092c2b2567e6a21337dd79",
+        "76f32f76193817d097f2227b49fdaa94dca23b3cbd4b714f1bf00914b07bfc0f",
     ),
     (
         "flows_to_alias_only/4n3e/fin-fout",
-        "c8e9fd7630765026e1f56dbcd4422e2fce0f6891716e8ad6f5705a08f8d9af40",
+        "c5d854e5c5bcef4de9c1a705e090b5bc5fdc8f151936235c36c94052bbe6124f",
     ),
     (
         "flows_to_alias_only/33n32e/renamed",
-        "fa6601c723716d81b6541e2243affb4790fc4aa76a82ac66f34e91f2c0f7ad61",
+        "024688997a03920be3b24a6c0c8d316f147fb2a39e9915f8defce02cd9e6223f",
     ),
     (
         "taint_flow/1n0e/fin-fout",
-        "ee7319154a76bf6153d1fb669bcff2f3d87c5331b9061a763d9ec78d0f6c59ae",
+        "ef5d33bed7c5cba42d5c30d2012284f8f08c0fa45d71addd07905f6c704e467e",
     ),
     (
         "taint_flow/4n3e/fin-fout",
-        "107e134fbe0466c7ca72c0fe7766eae3f0c5cff4c18a64a9e0a08032593bd0d0",
+        "e4ca7456ff3f5cb6547d6c6f0faaa9bad36868a9f0ade6f239927ad667db25a3",
     ),
     (
         "taint_flow/32n31e/fin-fout",
-        "75a8a1e7c723e4326b28d4f65486e63a22b6bd351c3aabb0851026c9872060be",
+        "e75369d7fa35846e027a1e090e0266c69d17096dbda90ed21683f2c7c3bbe195",
     ),
     (
         "taint_flow/33n32e/fin-fout",
-        "a2888e35fa76d79828ec4301270681d03a2e6ce3aea08547be2617460fb45414",
+        "169fb0865e50656c9d1500e35b9478be1a4457ce36857466eebd8436d14bf381",
     ),
     (
         "taint_flow/1024n4096e/renamed",
-        "741a70c43a97040c5fe1f44db59cfc566dbe2ee7ce558fb4ec54d2d267b60883",
+        "2d987b052310594904459a3cae75a959211aa76ad5e93859c13a4efd9b60b0b8",
     ),
     (
         "bounded_by_comparison/1n0e/fin-fout",
-        "f31a1a51136ab035c71155e04bd26028b309a9346913d951a770a45e8b513372",
+        "eedc3bbffff952a8191b1769e1457cdfb539eac2e47eec2135265b1ac6b93106",
     ),
     (
         "bounded_by_comparison/4n4e/fin-fout",
-        "bef8f8f9ab15db03555140fb488db0f40760d31cc83fe90c8fd4632a5cc0256f",
+        "a3ab09b7563dfdab4acafda471a2eb1f042c2e5810214a2fb87a921b282492d8",
     ),
     (
         "bounded_by_comparison/32n31e/fin-fout",
-        "be861261378775d3339a04a9ba8df8536760159ef6fbec2efb9e8ecf8e2686f8",
+        "0a65c05f39e28690633c52830d7ff4e9f6ae0aad68b165e72ee0af7186213df1",
     ),
     (
         "bounded_by_comparison/33n32e/fin-fout",
-        "0ca65843af6aad494af2851f0bead6831034695d00b69e1132da7e9b163b394f",
+        "b2443ed84f319e559c720788085b21295815ed9f21f15859efdee618a6312185",
     ),
     (
         "bounded_by_comparison/1024n4096e/renamed",
-        "3f6cace2639cc091f43b932a4b2de29dd011d555561b53c7d59abe11d50fe8fa",
+        "4a43c69f0079cdebb4e037e9ebfd2b16a3f2c978d826ccedd00ddd189b2d284c",
     ),
     (
         "dominance_predecessors/1n0e/fin-fout",
-        "a23ff3f9e6162cf4ed598b1f5493aabeb3a6a85a8478fedf77b764686c3e4ade",
+        "b8dda9adde26f773c6e6f01a12798916eb16e4e71c9883bb2c76bb9969e7f295",
     ),
     (
         "dominance_predecessors/4n4e/fin-fout",
-        "14595f955e249bb54042d12b424e08ba21e86f45bcec5cb8229cc3df5aa05052",
+        "6d8395ae7fd85113355bf034ffe5f3b2111101b7c30450c10e539c8c92028a8a",
     ),
     (
         "dominance_predecessors/32n31e/fin-fout",
-        "bcc043ffbcb388328743a26a0634546bd8532d8798ce0a273b6d635f00b0268b",
+        "dac792ffa9f1736e48dc0ae8c523077deeb2661ec4930a79fdf849be685c88f3",
     ),
     (
         "dominance_predecessors/33n32e/fin-fout",
-        "879ec2c6a1fe6684dbb1f7c4c6e29995676b34ec2f33777e9050bf8c2b62c0ef",
+        "3c71f322c03592497780c1b5cf09459b8d01cdc666f2ca4d669a3f2f42341004",
     ),
     (
         "dominance_predecessors/1024n4096e/renamed",
-        "e1f13c229784b01f940d9c9c06f5178242cd08cf66144d2814445b59cd207c40",
+        "40055c8ff73b3ba07db6d2a5050b83e950121d37be564a64edad582d7e59378c",
     ),
     (
         "flows_to_to_sink/1n0e",
-        "14fb76d30ec2eb89381d407383c2e66bb1a7d37434ce4c0b4e2d172d2d468051",
+        "7d47676673558204a38a9508cb26505f7aa9a2b9dd9a260514900adcee374172",
     ),
     (
         "flows_to_to_sink/4n3e",
-        "f8fcaa19ecf1daa9a7eb03707734271aeae9790828eb6c3cc884370fa2c3f5a7",
+        "b835e4f94d3f7fdd50a5ab6d2a4d5789aacb0a48b8d8e772ba111f858442617b",
     ),
     (
         "flows_to_to_sink/33n32e/renamed",
-        "e45a81d6d5ba4df636612b41c5ecabef327634005417139ee426d8057ab41767",
+        "b09ca3deff963f3b9cbd456d55d7a2e2fb8637ba978e34445b661076219c3382",
     ),
     (
         "taint_pollution/1n0e",
-        "6ab7b0ebecf2c2988c01263bb2a937f499c6a0e2ecf5f751fe146df0335fa359",
+        "447d40a649467ed1c0a7a5313ece37bbdbf0d6a513a21705ec307f6e6cda6fa4",
     ),
     (
         "taint_pollution/4n3e",
-        "42ff277b94718aa1c69aac7b9e7f7b4c3678486030cddad8696772b57bd94c6b",
+        "6af3481130576c106ba37d296b35aade7eb6d7d8e8a37ba300079af093239b4c",
     ),
     (
         "taint_pollution/33n32e/renamed",
-        "f4fc5ccdb81c9fe202f3e079cee20e1b9f349a85991f18becb59e8a1c0e586f8",
+        "2ce60b393817e0db12f06643a38a0041a0c3d5297db6da545b6f3c385d271419",
     ),
     (
         "flows_to_with_sanitizer/1n0e",
-        "8504e5f50086acda06d7ab4a72ed370c6cba350141c707bdccc6545688a62763",
+        "1965d292c243971c2ffcfbdc4bcea0fd1fbd45ceb45258f0e902fa0c15d7f7f7",
     ),
     (
         "flows_to_with_sanitizer/4n3e",
-        "fc88511044cf98e01e73a453cd747da4fb74c8c4228d8705cfbd03b5f8b12431",
+        "a327d6e018e90d19c3dbfc435c8df6d9fc941ff92bb63e9e31dfac565197031e",
     ),
     (
         "flows_to_with_sanitizer/33n32e/renamed",
-        "647c66e1c35293addababae97c202b7cc217098f35510724ffd0238a54e51a54",
+        "14b9909ab8eb43efd379463a946e5807f3ef6421f84c5085a86a58de420028b0",
     ),
 ];
 
@@ -455,12 +460,13 @@ fn graph_bytes(kinds: [u32; 3]) -> Vec<(&'static str, Vec<u32>)> {
     ]
 }
 
-/// Feed a program in its own declared buffer order, taking each buffer's
-/// contents from `named` and zero-filling anything it does not name.
+/// Feed a program in its own declared buffer order, passing values for
+/// non-backend-allocated reference inputs matching `vyre_reference::is_reference_input`.
 fn eval(program: &Program, named: &[(&str, Vec<u32>)]) -> Vec<Vec<u32>> {
     let values: Vec<Value> = program
         .buffers()
         .iter()
+        .filter(|decl| vyre_reference::is_reference_input(decl))
         .map(|decl| {
             let words = named
                 .iter()

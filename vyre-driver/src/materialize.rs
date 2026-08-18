@@ -232,6 +232,27 @@ pub struct InstanceCore {
     pub retained_predecessors: BTreeMap<ArtifactValueId, Vec<ArtifactValueId>>,
 }
 
+/// Whether two artifact identities are the same buffer at two points of its
+/// retained chain.
+///
+/// A `ReadWrite` buffer is wired to the resource it reads and to the renamed
+/// resource it writes, and the writer records the reader as its
+/// `retained_predecessor`. Either identity therefore names the same buffer, and
+/// the map holds transitive priors, so one containment test in each direction
+/// covers a chain of any depth.
+fn retained_chain_relates(
+    retained_predecessors: &BTreeMap<ArtifactValueId, Vec<ArtifactValueId>>,
+    left: ArtifactValueId,
+    right: ArtifactValueId,
+) -> bool {
+    retained_predecessors
+        .get(&left)
+        .is_some_and(|priors| priors.contains(&right))
+        || retained_predecessors
+            .get(&right)
+            .is_some_and(|priors| priors.contains(&left))
+}
+
 impl InstanceCore {
     /// Record what an instance materialized from `artifact` and `payload` keeps.
     ///
@@ -328,6 +349,14 @@ impl InstanceCore {
                     "target payload entry identity must match the first node of its fusion group",
                 )
             })?;
+            // One Program buffer name carries up to two artifact identities: a
+            // `ReadWrite` buffer reads the resource it was wired to and writes the
+            // renamed successor, and those two are linked by
+            // `retained_predecessor`. Rejecting the pair rejected every fixpoint
+            // node in the tree, so the collision that matters is two identities
+            // under one name that the retained chain does not relate at all.
+            // Resolution keeps the write identity because
+            // `value_for_module_canonical` walks the chain in either direction.
             let mut named_resources = BTreeMap::new();
             for member in &record.members {
                 let abi_entry = artifact
@@ -340,27 +369,26 @@ impl InstanceCore {
                             "a selected fusion-group member has no named artifact ABI entry",
                         )
                     })?;
-                for binding in &abi_entry.input_bindings {
-                    if let Some(existing) =
-                        named_resources.insert(binding.buffer.clone(), binding.value)
-                    {
-                        if existing != binding.value {
-                            return Err(invalid_module(&format!(
-                                "fusion group {} maps Program buffer `{}` to distinct input resources {} and {}",
-                                record.id.0, binding.buffer, existing.0, binding.value.0
-                            )));
-                        }
-                    }
-                }
-                for binding in &abi_entry.output_bindings {
-                    if let Some(existing) =
-                        named_resources.insert(binding.buffer.clone(), binding.value)
-                    {
-                        if existing != binding.value {
-                            return Err(invalid_module(&format!(
-                                "fusion group {} maps Program buffer `{}` to distinct output resources {} and {}",
-                                record.id.0, binding.buffer, existing.0, binding.value.0
-                            )));
+                for (direction, bindings) in [
+                    ("input", &abi_entry.input_bindings),
+                    ("output", &abi_entry.output_bindings),
+                ] {
+                    for binding in bindings {
+                        if let Some(existing) =
+                            named_resources.insert(binding.buffer.clone(), binding.value)
+                        {
+                            if existing != binding.value
+                                && !retained_chain_relates(
+                                    &retained_predecessors,
+                                    existing,
+                                    binding.value,
+                                )
+                            {
+                                return Err(invalid_module(&format!(
+                                    "fusion group {} maps Program buffer `{}` to unrelated {direction} resources {} and {}",
+                                    record.id.0, binding.buffer, existing.0, binding.value.0
+                                )));
+                            }
                         }
                     }
                 }
@@ -386,16 +414,25 @@ impl InstanceCore {
                         outputs.push(binding.resource);
                     }
                     vyre_megakernel::TargetResourceAccess::ReadWrite => {
-                        let is_output_lifetime = resources
-                            .get(&(binding.group, binding.slot))
-                            .map_or(false, |res_id| {
-                                artifact.resources().iter().any(|r| {
-                                    r.value == *res_id
-                                        && r.lifetime == vyre_megakernel::ResourceLifetime::Output
-                                })
-                            });
+                        let is_output_lifetime = artifact.resources().iter().any(|resource| {
+                            resource.value == binding.resource
+                                && resource.lifetime == vyre_megakernel::ResourceLifetime::Output
+                        });
                         if !is_output_lifetime {
-                            inputs.push(binding.resource);
+                            // A retained buffer is one allocation the caller binds
+                            // once, under the identity at the head of its chain;
+                            // the renamed successors are versions of that same
+                            // allocation. Reading the successor here made a module
+                            // demand an identity no caller can bind, so the input
+                            // projection names the root and the output projection
+                            // names the version this module writes.
+                            inputs.push(
+                                retained_predecessors
+                                    .get(&binding.resource)
+                                    .and_then(|priors| priors.last())
+                                    .copied()
+                                    .unwrap_or(binding.resource),
+                            );
                         }
                         outputs.push(binding.resource);
                     }

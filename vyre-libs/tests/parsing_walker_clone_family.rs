@@ -13,7 +13,7 @@
 //! What these do not catch: a deliberate IR change. That is the point at which
 //! a human decides the new IR is correct and re-pins the affected constant.
 //!
-//! Three constants were re-recorded for two such changes. The two `shunting`
+//! Constants were re-recorded for deliberate IR/ABI changes. The two `shunting`
 //! entries moved when every child region that had named itself by suffixing its
 //! parent operation id took the `anonymous::` prefix instead: a phase boundary
 //! inside one operation has no operation to name it with, and an audit reading
@@ -21,6 +21,8 @@
 //! must not exist. The `python/decorators` entry moved when the dotted-name walk
 //! gained one owner: the decorator copy was missing the
 //! `cursor != INVALID_POS` guard, which is the defect the collapse fixed.
+//! All 9 canonical fingerprints moved uniformly when VIR0 wire format rev 7
+//! integrated first-class Tile values into the IR serialization framing header.
 
 #![cfg(feature = "parsing")]
 #![forbid(unsafe_code)]
@@ -458,45 +460,47 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 }
 
 /// Canonical wire fingerprints for every entry point the clone-family merges
-/// pass through. Recorded on the pre-merge tree except for `python/decorators`,
-/// whose pre-merge value encoded the drift the merge resolved: the missing
-/// `cursor != INVALID_POS` guard in the decorator dotted-name walk.
+/// pass through. All 9 entries reflect the canonical wire format revision 7
+/// framing header. Prior historical moves: `python/decorators` moved when
+/// the missing `cursor != INVALID_POS` guard was fixed in the unified dotted-name
+/// walk, and the two `shunting` entries moved when anonymous child regions
+/// replaced op-id suffix naming.
 const EXPECTED: &[(&str, &str)] = &[
     (
         "python/structure",
-        "7b737f3c6d347e5d931914b094d83f1baf97cedcd03d0c91ea5a0e9aafbe3f2e",
+        "b92dab430a3874395cb5cd54a3d7b07734f8bb44e3e07e0cabd418de1c51f869",
     ),
     (
         "python/imports",
-        "639ca8ff90ef863b10abdfcead55c657712717787a77c449dd1911f25596d0ed",
+        "2f78a7b96051f33417ed06aeda68e8fe515e114541b2a58de004478ceb5efd0d",
     ),
     (
         "python/with_blocks",
-        "e5988ebad66407b2aa161e72ed30541541798e547f43b0b74a1178c68ccf92c8",
+        "933708a7843f045e53043866556cd32732ef1664873b4cb05dc3e4e9e290020d",
     ),
     (
         "python/calls",
-        "b7fc4b37f8edeb2a21b8fef987255beb033406dcc783050d5e3fd560722fb7fd",
+        "5c9135ca0c3a343935b68af1ec51bf8d8538fe47f9266cc3202c2b8443a63d94",
     ),
     (
         "python/decorators",
-        "17f23ec1fd4cb40da1ef4f932e3c35deefbe71f088042f0d094a99efd4c90ba0",
+        "11098cde885bb626c3ac3739674020acdaf26a057dc1fb09a3408670481a867f",
     ),
     (
         "go/packages_and_imports",
-        "3969eca2030b300e567181e6fa0e76dac573a88d3282011e2a7e86261a4dc69b",
+        "6e880c51accaaeabde6e1bb090e905f3d90f1d795204ed8f0428539ea67d9433",
     ),
     (
         "go/declarations",
-        "f2995d3054afdee134f7ba19d85f3810d2cd3a223733f8b4b025c9c8773038ea",
+        "0e294b1f56d9b86fec9592a3869137a7d84a3a91c39661b099771c99ddb79751",
     ),
     (
         "core/ast/shunting",
-        "7d48e9cf92a5244fe5252e20108c8a2b8461577e152c934e3f5ee69f3c8a8c43",
+        "8e37b37f223ad3103e55a15d255f8a39a7e60dd7a53b9ddb88b0c41a08609ad6",
     ),
     (
         "core/ast/shunting_with_capacity",
-        "15008181950586f054720b52b712a14b34aa83ab10fb56f2bc871d49b5eca7df",
+        "0f2e99cc7f3c868de182a71747231a7c2dfd703a432957697fb50ca26d050a15",
     ),
 ];
 
