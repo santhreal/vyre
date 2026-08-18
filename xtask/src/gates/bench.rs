@@ -22,6 +22,10 @@ use crate::gates::scan::{numbered, Tree};
 /// The published baseline every bench-bearing crate is measured into.
 const RESULTS: &str = "benches/RESULTS.md";
 
+/// Registry-derived semantic families whose optimizer baselines must be published.
+const OPTIMIZATION_FAMILY_MANIFEST: &str =
+    "release/evidence/optimization/optimization-family-manifest.json";
+
 /// Header fields a baseline must carry to be reproducible by a reader.
 ///
 /// A median with no machine, no toolchain and no commit is a number, not a
@@ -68,6 +72,7 @@ impl crate::gate::GateBehavior for BenchBaselines {
                 ));
             }
         }
+        require_optimizer_family_baselines(&tree, &text, &mut report)?;
         Ok(report)
     }
 }
@@ -77,6 +82,72 @@ fn has_section(text: &str, package: &str) -> bool {
     let heading = format!("### {package}");
     text.lines()
         .any(|line| line.trim_end() == heading || line.starts_with(&format!("{heading} ")))
+}
+
+/// Require one independently measured optimizer baseline for every registered family.
+fn require_optimizer_family_baselines(
+    tree: &Tree,
+    results: &str,
+    report: &mut Report,
+) -> Result<(), GateError> {
+    if !tree.has(OPTIMIZATION_FAMILY_MANIFEST) {
+        report.find(Finding::in_file(
+            OPTIMIZATION_FAMILY_MANIFEST,
+            "the optimizer family manifest is absent, so benchmark-family coverage cannot be judged",
+            "regenerate optimization evidence with `./cargo_full run -p xtask -- optimization-corpus --write`",
+        ));
+        return Ok(());
+    }
+    let manifest: serde_json::Value =
+        serde_json::from_str(&tree.read(OPTIMIZATION_FAMILY_MANIFEST)?).map_err(|error| {
+            GateError::new(
+                format!("cannot parse JSON `{OPTIMIZATION_FAMILY_MANIFEST}`: {error}"),
+                "regenerate optimization evidence with `./cargo_full run -p xtask -- optimization-corpus --write`",
+            )
+        })?;
+    let families = manifest
+        .get("required_families")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            GateError::new(
+                format!(
+                    "`{OPTIMIZATION_FAMILY_MANIFEST}` has no `required_families` array"
+                ),
+                "regenerate optimization evidence with `./cargo_full run -p xtask -- optimization-corpus --write`",
+            )
+        })?;
+    if families.is_empty() {
+        return Err(GateError::new(
+            format!(
+                "`{OPTIMIZATION_FAMILY_MANIFEST}` declares no required optimizer families"
+            ),
+            "regenerate optimization evidence with `./cargo_full run -p xtask -- optimization-corpus --write`",
+        ));
+    }
+    report.cover_complete("optimizer benchmark families", families.len());
+    for family in families {
+        let family = family.as_str().ok_or_else(|| {
+            GateError::new(
+                format!(
+                    "`{OPTIMIZATION_FAMILY_MANIFEST}` contains a non-string optimizer family"
+                ),
+                "regenerate optimization evidence with `./cargo_full run -p xtask -- optimization-corpus --write`",
+            )
+        })?;
+        let row = format!("| optimizer/pipeline/corpus/{family} |");
+        if !results.lines().any(|line| line.starts_with(&row)) {
+            report.find(Finding::in_file(
+                RESULTS,
+                format!(
+                    "registered optimizer family `{family}` has no independent Criterion baseline"
+                ),
+                format!(
+                    "run `./cargo_full bench -p vyre-foundation --bench optimizer_pipeline` and record `optimizer/pipeline/corpus/{family}`"
+                ),
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Every workspace package `cargo bench` can run a target for.
@@ -719,7 +790,11 @@ mod tests {
             ("b/benches/two.rs", ""),
             (
                 "benches/RESULTS.md",
-                "# Criterion baselines\n\nmachine: host\ncpu: cpu\ncommit: abc\n\n### a\n\n1ms\n",
+                "# Criterion baselines\n\nmachine: host\ncpu: cpu\ncommit: abc\n\n### a\n\n1ms\n| optimizer/pipeline/corpus/fixture | 1 us |\n",
+            ),
+            (
+                OPTIMIZATION_FAMILY_MANIFEST,
+                "{\"required_families\":[\"fixture\"]}\n",
             ),
         ]);
         let report = BenchBaselines
@@ -735,6 +810,60 @@ mod tests {
         assert!(rendered.contains("`gpu:` field"), "{rendered}");
         assert!(rendered.contains("`rustc:` field"), "{rendered}");
         assert!(rendered.contains("### b"), "{rendered}");
+    }
+
+    /// WHY: one aggregate corpus id hid which semantic family regressed and
+    /// made adding a family look like a slowdown. The roster comes from the
+    /// generated manifest, so a new family must fail until it has its own
+    /// measured row.
+    #[test]
+    fn every_registered_optimizer_family_owes_an_independent_baseline() {
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            (
+                "Cargo.toml",
+                "[workspace]\nresolver = \"2\"\nmembers = []\n",
+            ),
+            (
+                "benches/RESULTS.md",
+                "# Criterion baselines\n\nmachine: host\ngpu: gpu\ncpu: cpu\nrustc: 1.86\ncommit: abc\n\n| bench | median |\n| --- | --- |\n| optimizer/pipeline/corpus/scalar-algebra | 1 us |\n",
+            ),
+            (
+                OPTIMIZATION_FAMILY_MANIFEST,
+                "{\"required_families\":[\"scalar-algebra\",\"loop-transform\"]}\n",
+            ),
+        ]);
+        let report = BenchBaselines.run(&GateCtx::new(root, Vec::new())).unwrap();
+        assert_eq!(report.count(), 1);
+        assert!(report.findings[0]
+            .message
+            .contains("`loop-transform` has no independent Criterion baseline"));
+    }
+
+    /// WHY: an empty generated roster must not make coverage vacuously green.
+    /// The optimization producer owns the member set, but this consumer still
+    /// rejects a manifest that gives it nothing to check.
+    #[test]
+    fn an_empty_optimizer_family_manifest_is_rejected() {
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            (
+                "Cargo.toml",
+                "[workspace]\nresolver = \"2\"\nmembers = []\n",
+            ),
+            (
+                "benches/RESULTS.md",
+                "# Criterion baselines\n\nmachine: host\ngpu: gpu\ncpu: cpu\nrustc: 1.86\ncommit: abc\n",
+            ),
+            (
+                OPTIMIZATION_FAMILY_MANIFEST,
+                "{\"required_families\":[]}\n",
+            ),
+        ]);
+        let error = BenchBaselines
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect_err("an empty optimizer family roster must fail closed");
+        assert!(error
+            .message
+            .contains("declares no required optimizer families"));
     }
 
     /// WHY: a baseline nobody published is the whole gap this gate names, and it
