@@ -61,7 +61,8 @@ use vyre_reference::composition_witness::{
     qsvt_apply_witness_into, qsvt_block_encode_witness, qsvt_block_encode_witness_into,
     rdp_to_dp_witness, reachable_witness, reduce_max_f32_witness, reduce_sum_f32_witness,
     region_of_witness, resolve_bigint_carry_chain_witness, resolve_bigint_carry_chain_witness_into,
-    resolve_family_witness, scale_aware_pressure_witness, scallop_join_fixpoint_witness,
+    resolve_family_witness, rms_norm_linear_witness, scale_aware_pressure_witness,
+    scallop_join_fixpoint_witness,
     scc_decompose_witness, schedule_via_homotopy_witness, schedule_via_scale_aware_samples_witness,
     select_retention_set_witness, select_retention_set_witness_into, semiring_gemm_witness,
     sheaf_diffusion_equilibrium_witness_into, sheaf_diffusion_step_witness,
@@ -2695,4 +2696,27 @@ fn fmm_zeroth_witnesses_known_answers_reuse_and_no_mutation() {
     assert_eq!(preserved, [7.0, 8.0]);
     assert!(try_l2p_zeroth_all_witness_into(&local, &[0, 2], 2, &mut preserved).is_err());
     assert_eq!(preserved, [7.0, 8.0]);
+}
+
+#[test]
+fn rms_norm_linear_witness_contracts() {
+    let input = [1.0_f32, 2.0, 3.0, 4.0];
+    let normalized = [1.0_f32, 2.0, 3.0, 4.0];
+    let weights: Vec<f32> = (0..16).map(|v| v as f32).collect();
+    let bias = [0.0_f32; 4];
+    let out = rms_norm_linear_witness(&input, &normalized, &weights, &bias, 4, 4, 4, 1e-5);
+    assert_eq!(out.len(), 4);
+    for (idx, &v) in out.iter().enumerate() {
+        assert!(v.is_finite(), "lane {idx} must be finite, got {v}");
+    }
+}
+
+#[test]
+#[should_panic(expected = "rms_norm_linear_witness must receive exactly n normalized values")]
+fn rms_norm_linear_witness_rejects_mismatched_normalized_len() {
+    let input = [1.0_f32, 2.0];
+    let normalized = [1.0_f32];
+    let weights = [1.0_f32, 2.0, 3.0, 4.0];
+    let bias = [0.0_f32, 0.0];
+    let _ = rms_norm_linear_witness(&input, &normalized, &weights, &bias, 2, 2, 2, 1e-5);
 }
