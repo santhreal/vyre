@@ -6062,6 +6062,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   changing its per-item mathematics or release threshold, and
   `release-benchmarks` declares ownership of the WGPU suite and all seventeen
   WGPU workload artifacts.
+- The registered-operation similarity gate now owns one fixed comparison-safe
+  report and qualifies structural matches with canonical semantic identity.
 - The framing module doc in vyre-foundation named the envelope tag VIR0 in two
   places while the constant beside it is VYRE, so a reader inspecting a blob
   byte by byte compared against a tag no encoder has written.
