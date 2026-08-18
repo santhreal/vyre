@@ -321,7 +321,7 @@ fn wgpu_dispatch_async_returns_handle_and_matches_borrowed_dispatch() {
     let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();
     assert!(
         !adapters.is_empty(),
-        "Fix: async dispatch contract requires the live RTX 5090 adapter."
+        "Fix: async dispatch contract requires a live GPU adapter."
     );
     let backend =
         WgpuBackend::acquire().expect("Fix: async dispatch contract must acquire live GPU");

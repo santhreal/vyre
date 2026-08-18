@@ -393,7 +393,7 @@ fn ptx_lowers_workgroup_sum_region_to_subgroup_reduction() {
     // `laneid ^ offset` source, combined by add.f32. Two instructions must NOT
     // appear: redux.sync.add.f32 (invalid PTX for f32), and shfl.sync.down.b32
     // (a down-tree feeds only lane 0, violating the all-lane-broadcast contract
-    // that subgroup_reduce_gpu_parity verifies on a live sm_120 GPU).
+    // that subgroup_reduce_gpu_parity verifies on a live CUDA GPU).
     assert!(
         secondary_text.contains("shfl.sync.idx.b32")
             && secondary_text.contains("add.f32")

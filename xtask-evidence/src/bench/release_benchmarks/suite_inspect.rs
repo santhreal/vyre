@@ -1353,7 +1353,7 @@ mod tests {
                 "selected_backend": "cuda",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
+                "environment": host_environment("test CPU", "NVIDIA Test Device", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
@@ -1421,7 +1421,7 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:stale",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
+                "environment": host_environment("test CPU", "NVIDIA Test Device", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
@@ -1477,7 +1477,7 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 2, "passed": 2, "failed": 0},
-                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
+                "environment": host_environment("test CPU", "NVIDIA Test Device", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
@@ -1539,7 +1539,7 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
+                "environment": host_environment("test CPU", "NVIDIA Test Device", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",
@@ -1618,7 +1618,7 @@ mod tests {
                 "source_fingerprint": "git:abc:dirty=false",
                 "source_tree_fingerprint": "source-tree-v1:abc",
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "environment": host_environment("test CPU", "RTX 5090", "580.0", "13.0"),
+                "environment": host_environment("test CPU", "NVIDIA Test Device", "580.0", "13.0"),
                 "cases": [
                     {
                         "id": "release.condition_eval.1m",

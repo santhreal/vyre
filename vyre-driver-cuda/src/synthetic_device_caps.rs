@@ -4,11 +4,11 @@
 //! occupancy, autotune, planner, and megakernel-cache arithmetic can be exercised
 //! without opening a CUDA context, and its values are held CONSTANT on purpose:
 //! tests that pin `2048 / 256 = 8` are checking the estimator's division, not a
-//! hardware fact, and they must not churn when the hardware under the desk
+//! hardware fact, and they must not churn when the hardware under test
 //! changes.
 //!
-//! Its numbers are deliberately NOT this machine's. Several of them differ from
-//! the local RTX 5090, measured with `cuDeviceGetAttribute`: this envelope says
+//! Its numbers are deliberately synthetic. Several of them differ from
+//! physical hardware (such as an SM_120 reference device), measured with `cuDeviceGetAttribute`: this envelope says
 //! 2048 threads per SM where the device reports 1536, 256 KiB of shared memory
 //! per SM where the device reports 100 KiB, and 128 KiB of shared memory per
 //! block where the device reports 48 KiB (with an opt-in maximum of 99 KiB, so
@@ -30,13 +30,13 @@ pub const SYNTHETIC_SM120_DEFAULT_MEMORY_BYTES: u64 = 32 * 1024 * 1024 * 1024;
 ///
 /// The caller supplies total memory so tests can exercise both high-VRAM planning
 /// and low-VRAM pressure behavior without duplicating the rest of the envelope.
-/// The remaining fields are fixed; see the module doc for why they are not this
-/// machine's values and must not be used as if they were.
+/// The remaining fields are fixed; see the module doc for why they are synthetic
+/// and must not be used as if they were a live probe.
 #[must_use]
 pub fn synthetic_sm120_envelope(total_memory: u64) -> CudaDeviceCaps {
     CudaDeviceCaps {
         // Deliberately not a real product name: this envelope is a fixture and
-        // must not be mistaken for a probe of the local device.
+        // must not be mistaken for a probe of a live device.
         name: "synthetic sm_120 envelope (test fixture, not real hardware)".to_string(),
         ordinal: 0,
         compute_capability: (12, 0),

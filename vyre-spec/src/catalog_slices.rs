@@ -20,6 +20,8 @@ const EXPR_VARIANTS: &[&str] = &[
     "SubgroupBallot",
     "SubgroupShuffle",
     "SubgroupReduce",
+    "SubgroupLocalId",
+    "SubgroupSize",
     "Opaque",
 ];
 

@@ -14,7 +14,7 @@
 //! had ever dispatched a 64-bit-output buffer, so a wrong `cvt`, a mis-sized
 //! 8-byte element store, or a high-word leak would be invisible.
 //!
-//! These tests dispatch the cast on the 5090, read back BOTH 32-bit words of each
+//! These tests dispatch the cast on the live CUDA device, read back BOTH 32-bit words of each
 //! 64-bit element, and assert the full `u64` byte-for-byte against Rust `as`. The
 //! Law-10 case is a NEGATIVE `i32` widened into an UNSIGNED `u64`: it must STILL
 //! sign-extend (`-7i32 as u64 == 0xFFFF_FFFF_FFFF_FFF9`), driven by the SOURCE

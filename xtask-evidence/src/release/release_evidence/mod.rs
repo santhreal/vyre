@@ -828,6 +828,64 @@ mod tests {
     }
 
     #[test]
+    fn external_release_wgpu_benchmark_status_requires_external_mode_and_digest_chain() {
+        let tmp = tempfile::tempdir().unwrap();
+        let artifact_rel = "release/evidence/benchmarks/wgpu-fallback-suite.json";
+        let artifact = tmp.path().join(artifact_rel);
+        std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
+        std::fs::write(
+            &artifact,
+            br#"{
+  "schema_version": 3,
+  "blockers": ["stale source fingerprint"],
+  "artifact_statuses": []
+}
+"#,
+        )
+        .unwrap();
+
+        let spawned_statuses = inspect_expected_artifacts(
+            tmp.path(),
+            &["release-benchmarks", "--backend", "wgpu"],
+            &[artifact_rel],
+        );
+        let spawned_blockers = &spawned_statuses[0].blockers;
+        assert!(spawned_blockers
+            .iter()
+            .any(|blocker| blocker.contains("command_mode `spawned`")));
+
+        let external_statuses = inspect_expected_artifacts_with_mode(
+            tmp.path(),
+            &["release-benchmarks", "--backend", "wgpu"],
+            &[artifact_rel],
+            COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY,
+        );
+        let external_blockers = &external_statuses[0].blockers;
+        assert_eq!(
+            external_statuses[0].command_mode,
+            COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY
+        );
+        assert!(external_blockers
+            .iter()
+            .all(|blocker| !blocker.contains("command_mode `spawned`")));
+        assert!(external_blockers
+            .iter()
+            .any(|blocker| blocker.contains("stale source fingerprint")));
+        assert!(external_blockers
+            .iter()
+            .any(|blocker| blocker.contains("schema_digest_chain.source_digest")));
+        assert!(external_blockers
+            .iter()
+            .any(|blocker| blocker.contains("schema_digest_chain.command_digest")));
+        assert!(external_blockers
+            .iter()
+            .any(|blocker| blocker.contains("schema_digest_chain.hardware_digest")));
+        assert!(external_blockers
+            .iter()
+            .any(|blocker| blocker.contains("hardware_digest")));
+    }
+
+    #[test]
     fn expected_artifact_registry_counts_commands_and_artifacts() {
         let registry = build_expected_artifact_registry(vec![ReleaseExpectedArtifactCommand::new(
             "xtask version-matrix".to_string(),

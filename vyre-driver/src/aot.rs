@@ -129,7 +129,10 @@ mod tests {
             }],
             [
                 (PathBuf::from("src/main.rs"), String::from("fn main() {}")),
-                (PathBuf::from("src/cuda_ffi.rs"), String::from("mod ffi {}")),
+                (
+                    PathBuf::from("src/native_ffi.rs"),
+                    String::from("mod ffi {}"),
+                ),
             ],
         );
 

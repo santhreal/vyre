@@ -174,6 +174,7 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
 
 fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
     path == b"cargo_full"
+        || path == b"cargo_full.cmd"
         || path.starts_with(b".github/")
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")
@@ -187,6 +188,7 @@ fn source_tree_path_is_operator_internal(path: &[u8]) -> bool {
     const FILE_NAMES: &[&[u8]] = &[
         b"AGENTS.md",
         b"BACKLOG.md",
+        b"DEDUP_PLAN.md",
         b"CLAUDE.md",
         b"GEMINI.md",
         b"SKILL.md",

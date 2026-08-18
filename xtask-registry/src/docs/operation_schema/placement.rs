@@ -113,6 +113,11 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
             if !declared.is_empty() {
                 registering.insert(member.name.clone());
             }
+            for id in &declared {
+                if let Some(id) = ids.get(id.as_str()) {
+                    registered.entry(*id).or_default().push(site.clone());
+                }
+            }
             for literal in string_literals(&text)
                 .into_iter()
                 .collect::<BTreeSet<&str>>()
@@ -120,9 +125,7 @@ pub fn read(root: &Path, ids: &BTreeSet<&str>, errors: &mut Vec<String>) -> Plac
                 let Some(id) = ids.get(literal) else {
                     continue;
                 };
-                if declared.contains(literal) {
-                    registered.entry(*id).or_default().push(site.clone());
-                } else {
+                if !declared.contains(literal) {
                     mentioned.entry(*id).or_default().push(site.clone());
                 }
             }

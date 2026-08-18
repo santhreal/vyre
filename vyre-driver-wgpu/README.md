@@ -2,8 +2,8 @@
 
 wgpu backend for Vyre IR. It implements `vyre_driver::VyreBackend` and the registered target compiler and materializer facets on any wgpu-capable GPU (Vulkan, DX12, Metal, WebGPU).
 
-This crate is the `0.7.2` portable GPU fallback backend. It is a GPU fallback
-for systems where CUDA is not the target path, not a CPU fallback.
+This crate is the `0.7.2` portable GPU backend. It targets systems
+where WebGPU/Vulkan/Metal/DX12 is the driver path.
 
 ```
 cargo add vyre vyre-driver vyre-driver-wgpu vyre-runtime
@@ -34,7 +34,7 @@ for completion before readback.
 
 ## Requirements
 
-- A wgpu-capable GPU. This crate does NOT silently fall back to CPU. Absence of a GPU is surfaced as an actionable error, not a degradation.
+- A wgpu-capable GPU. This crate does NOT execute on the CPU. Absence of a GPU is surfaced as an actionable error, not a degradation.
 - `wgpu = 25.x`. Pinned: major wgpu version bumps are a `vyre-driver-wgpu` major bump.
 
 ## MSRV

@@ -557,7 +557,7 @@ mod tests {
     }
 
     /// The residency division is integral and both of its edges are pinned,
-    /// because this arithmetic now has exactly one definition and CUDA's
+    /// because this arithmetic now has exactly one definition and the native
     /// cooperative launch preflight reads it.
     ///
     /// A zero width has no meaningful block count and yields zero rather than

@@ -792,14 +792,14 @@ mod tests {
                     b"bytes",
                     "backend-a",
                     "v24",
-                    "ada",
+                    "arch-a",
                     PipelineFeatureFlags::SUBGROUP_OPS,
                 );
                 let b = compute_cache_key(
                     b"bytes",
                     "backend-a",
                     "v24",
-                    "ada",
+                    "arch-a",
                     PipelineFeatureFlags::SUBGROUP_OPS,
                 );
                 assert_eq!(a, b);

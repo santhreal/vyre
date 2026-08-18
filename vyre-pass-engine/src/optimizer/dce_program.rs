@@ -309,7 +309,7 @@ fn build_persistent_bfs_program_internal(
         //
         // First, the gate stays. It gates the WORK, which the `Return` does not:
         // once the fixpoint is recorded, every later iteration skips the edge walk
-        // entirely. Measured on an RTX 5090 before the gate existed: a 2000-node
+        // entirely. Measured on device before the gate existed: a 2000-node
         // star that reaches its fixpoint in 2 iterations cost 2450 ms at a 2000
         // budget against 13 ms at an 8 budget, 183x, because one lane re-walked the
         // hub's 1999 edges 2000 times. The answer was right every time, which is why
@@ -396,8 +396,8 @@ fn build_persistent_bfs_program_internal(
         // and loses nothing, because it owns no unique work. Escalating this to
         // `MemoryOrdering::GridSync` would order that harmless case at the price of
         // forcing a cooperative launch on every dispatch above one workgroup, which
-        // is a real constraint on launch geometry and portability. Measured on an
-        // RTX 5090, that fence bought no closure this form does not already reach.
+        // is a real constraint on launch geometry and portability. Measured on
+        // device, that fence bought no closure this form does not already reach.
         Node::barrier(),
         // Persistent loop with early-exit.
         Node::loop_for("iter", Expr::u32(0), Expr::u32(max_iters.max(1)), iter_body),

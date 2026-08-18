@@ -36,7 +36,7 @@ fn ptx_target_candidates(native_sm: u32) -> SmallVec<[u32; 10]> {
     // PTX target candidates, sorted preference high→low. The probe
     // walks them and picks the highest one that the live CUDA
     // driver+JIT actually accepts. Capability-contracts gate
-    // (`ptx_target_sm() >= 90`) means we must offer the native sm
+    // (`ptx_target_sm() >= 70`) means we must offer the native sm
     // first. Kernel-level PTX regressions must be fixed in the emitter
     // and kept under live CUDA parity tests, not hidden behind ignored
     // target-specific lanes.

@@ -192,16 +192,7 @@ fn f64_into_zero_tolerance_fails_loud() {
     let mut u = Vec::new();
     let mut v = Vec::new();
     let mut old = Vec::new();
-    let _ = sinkhorn_iterate_f64_into(
-        &[1.0],
-        &[1.0],
-        &[1.0],
-        0.0,
-        10,
-        &mut u,
-        &mut v,
-        &mut old,
-    );
+    let _ = sinkhorn_iterate_f64_into(&[1.0], &[1.0], &[1.0], 0.0, 10, &mut u, &mut v, &mut old);
 }
 
 #[test]
@@ -251,18 +242,13 @@ fn f64_try_into_rejects_invalid_inputs() {
         &mut old,
     )
     .unwrap_err();
-    assert!(err_shape.contains("k.len()==a.len()*b.len()"), "{err_shape}");
+    assert!(
+        err_shape.contains("k.len()==a.len()*b.len()"),
+        "{err_shape}"
+    );
 
-    let err_zero = try_sinkhorn_iterate_f64_into(
-        &[1.0],
-        &[1.0],
-        &[1.0],
-        0.0,
-        10,
-        &mut u,
-        &mut v,
-        &mut old,
-    )
-    .unwrap_err();
+    let err_zero =
+        try_sinkhorn_iterate_f64_into(&[1.0], &[1.0], &[1.0], 0.0, 10, &mut u, &mut v, &mut old)
+            .unwrap_err();
     assert!(err_zero.contains("finite positive tolerance"), "{err_zero}");
 }

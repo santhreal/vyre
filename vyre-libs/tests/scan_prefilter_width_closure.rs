@@ -44,7 +44,7 @@ use vyre_libs::pattern::CompiledDfa;
 
 /// The source file that owns the width table, relative to the crate root. Read at
 /// run time so the member set is the shipped enum rather than a copy of it.
-const WIDTH_TABLE_SOURCE: &str = "src/scan/classic_ac/bounded_ranges/prefilter/mod.rs";
+const WIDTH_TABLE_SOURCE: &str = "src/pattern/classic_ac/bounded_ranges/prefilter/mod.rs";
 
 /// The enum whose variants are the member set.
 const WIDTH_TABLE_ENUM: &str = "enum PrefilterWidth {";

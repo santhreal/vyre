@@ -1,6 +1,6 @@
 # Vyre architecture
 
-Last verified: 2026-08-15
+Last verified: 2026-08-17
 
 Vyre 0.7.2 is a GPU compiler. You build a `Program` from registered
 operations, compile the whole graph into one immutable `Artifact`, emit a
@@ -62,7 +62,8 @@ schedule inside that artifact, not a second output type. Static and
 persistent routes consume the same artifact class and must produce the same
 bytes. Hardware enters compile as a fact vector, never as a backend name.
 Unmeasured selections are recorded as unmeasured and are never called
-autoroute.
+autoroute. GPU execution is capability-based on the designated execution host
+(`axiomexec`). Every release crate enforces a zero panic budget.
 
 ## Chapters
 

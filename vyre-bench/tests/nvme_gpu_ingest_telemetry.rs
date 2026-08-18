@@ -32,7 +32,7 @@ fn nvme_gpu_ingest_specs_are_release_scale_and_gpu_resident() {
         );
         assert!(
             resident_bytes <= 2 * 1024 * 1024 * 1024,
-            "Fix: spec `{}` staging footprint must fit the RTX 5090 release host with margin.",
+            "Fix: spec `{}` staging footprint must fit the target GPU VRAM budget with margin.",
             spec.id
         );
         assert!(

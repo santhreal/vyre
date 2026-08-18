@@ -95,12 +95,12 @@ fn i4_is_wire_format_not_bytecode() {
 /// Names the conform parity matrix keys its per-variant rows by. A catalog that
 /// shrinks silently drops rows from that matrix, and a name that is not an
 /// identifier can never match one.
-const EXPR_VARIANT_FLOOR: usize = 22;
+const EXPR_VARIANT_FLOOR: usize = 24;
 
 /// The catalog is the row key set of the conform parity matrix, so it must not
 /// shrink and every entry must be shaped like an `Expr` variant name.
 ///
-/// This deliberately does not restate the list. A second copy of the same 22
+/// This deliberately does not restate the list. A second copy of the same 24
 /// strings would fail only when someone edited one copy, which is a diff nobody
 /// can land by accident, while proving nothing about the catalog itself. A
 /// renamed variant is caught where it matters, by the parity matrix failing to

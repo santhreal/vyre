@@ -149,7 +149,7 @@ fn cfg_test_spans_detailed(text: &str) -> Vec<CfgTestSpan> {
             search += span.get();
             continue;
         }
-        if !text[search..].starts_with(ATTR) {
+        if !text.as_bytes()[search..].starts_with(ATTR.as_bytes()) {
             search += 1;
             continue;
         }
@@ -266,20 +266,24 @@ fn arguments(rest: &str) -> Vec<&str> {
     let inner = &rest[..end];
     let mut parts = Vec::new();
     let mut depth = 0usize;
-    let mut in_string = false;
     let mut start = 0usize;
-    for (offset, character) in inner.char_indices() {
-        match character {
-            '"' => in_string = !in_string,
-            _ if in_string => {}
-            '(' => depth += 1,
-            ')' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => {
+    let mut offset = 0usize;
+    let bytes = inner.as_bytes();
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(inner, offset) {
+            offset += span.get();
+            continue;
+        }
+        match bytes[offset] {
+            b'(' => depth += 1,
+            b')' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
                 parts.push(inner[start..offset].trim());
                 start = offset + 1;
             }
             _ => {}
         }
+        offset += 1;
     }
     let tail = inner[start..].trim();
     if !tail.is_empty() {
@@ -291,16 +295,20 @@ fn arguments(rest: &str) -> Vec<&str> {
 /// Byte index of the `)` closing the list `rest` starts inside.
 fn closing_paren(rest: &str) -> Option<usize> {
     let mut depth = 0usize;
-    let mut in_string = false;
-    for (offset, character) in rest.char_indices() {
-        match character {
-            '"' => in_string = !in_string,
-            _ if in_string => {}
-            '(' => depth += 1,
-            ')' if depth == 0 => return Some(offset),
-            ')' => depth -= 1,
+    let mut offset = 0usize;
+    let bytes = rest.as_bytes();
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(rest, offset) {
+            offset += span.get();
+            continue;
+        }
+        match bytes[offset] {
+            b'(' => depth += 1,
+            b')' if depth == 0 => return Some(offset),
+            b')' => depth -= 1,
             _ => {}
         }
+        offset += 1;
     }
     None
 }
@@ -338,12 +346,17 @@ fn match_delimited(text: &str, open: usize, opener: u8, closer: u8) -> Option<us
 /// True when the cfg predicate names `test` as a bare token.
 fn mentions_test(predicate: &str) -> bool {
     let mut outside = String::with_capacity(predicate.len());
-    let mut in_string = false;
-    for character in predicate.chars() {
-        match character {
-            '"' => in_string = !in_string,
-            _ if in_string => {}
-            _ => outside.push(character),
+    let mut offset = 0usize;
+    while offset < predicate.len() {
+        if let Some(span) = opaque_span(predicate, offset) {
+            offset += span.get();
+            continue;
+        }
+        if let Some(character) = predicate[offset..].chars().next() {
+            outside.push(character);
+            offset += character.len_utf8();
+        } else {
+            break;
         }
     }
     outside
@@ -360,6 +373,10 @@ fn end_of_item(text: &str, from: usize) -> Option<usize> {
     let bytes = text.as_bytes();
     let mut index = from;
     while index < bytes.len() {
+        if let Some(span) = opaque_span(text, index) {
+            index += span.get();
+            continue;
+        }
         match bytes[index] {
             b'{' => return match_delimited(text, index, b'{', b'}').map(|close| close + 1),
             b';' => return Some(index + 1),
@@ -551,4 +568,39 @@ fn is_keyword_start(text: &str, index: usize) -> bool {
         .chars()
         .next_back()
         .is_none_or(|c| !c.is_alphanumeric() && c != '_')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn end_of_item_ignores_delimiters_in_comments_and_strings() {
+        let source = r#"
+            /// doc comment with { and ;
+            /* block comment with { and ; */
+            // line comment with { and ;
+            fn foo() {
+                let _ = ";";
+                let _ = "{";
+            }
+        "#;
+        let end = end_of_item(source, 0).unwrap();
+        assert_eq!(&source[..end], &source[..source.rfind('}').unwrap() + 1]);
+
+        let decl = r#"
+            /// doc with ;
+            mod tests;
+        "#;
+        let end_decl = end_of_item(decl, 0).unwrap();
+        assert_eq!(&decl[..end_decl], &decl[..decl.rfind(';').unwrap() + 1]);
+    }
+
+    #[test]
+    fn mentions_test_ignores_test_inside_strings_and_comments() {
+        assert!(!mentions_test(r#"feature = "test""#));
+        assert!(!mentions_test(r#"/* test */ feature = "foo""#));
+        assert!(mentions_test("all(test, feature = \"foo\")"));
+        assert!(mentions_test("test"));
+    }
 }

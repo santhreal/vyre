@@ -7,10 +7,16 @@ use vyre_lower::descriptor_builder::{
 #[test]
 fn capability_constants_present() {
     assert_eq!(ComputeCapability::SM_70.major, 7);
+    assert_eq!(ComputeCapability::SM_89.major, 8);
+    assert_eq!(ComputeCapability::SM_89.minor, 9);
     assert_eq!(ComputeCapability::SM_90.major, 9);
+    assert_eq!(ComputeCapability::SM_100.major, 10);
+    assert_eq!(ComputeCapability::SM_120.major, 12);
     assert!(ComputeCapability::SM_80.supports_async_copy());
+    assert!(ComputeCapability::SM_89.supports_async_copy());
     assert!(!ComputeCapability::SM_70.supports_async_copy());
     assert!(ComputeCapability::SM_75.supports_ldmatrix());
+    assert!(ComputeCapability::SM_89.supports_ldmatrix());
     assert!(!ComputeCapability::SM_70.supports_ldmatrix());
 }
 

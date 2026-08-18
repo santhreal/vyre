@@ -68,7 +68,7 @@ pub(crate) mod resident_graph_session;
 mod stream;
 // Neutral policies are imported from `vyre-driver`; CUDA exports only concrete behavior.
 /// A fixed synthetic device envelope for context-free estimator tests. Not a
-/// probe, and not this machine's values: never derive a hardware decision from it.
+/// live probe: never derive a hardware decision from it.
 pub mod synthetic_device_caps;
 mod target_compiler;
 /// CUDA execution planning for unified token/fact graph frontier waves.

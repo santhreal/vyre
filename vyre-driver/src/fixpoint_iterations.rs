@@ -67,11 +67,11 @@ mod tests {
     fn explicit_zero_fixpoint_iterations_fail_loudly() {
         let mut config = DispatchConfig::default();
         config.fixpoint_iterations = Some(0);
-        let error = resolve_fixpoint_iterations(&config, "CUDA").unwrap_err();
+        let error = resolve_fixpoint_iterations(&config, "test-backend").unwrap_err();
         let rendered = error.to_string();
         assert!(
             rendered.contains("fixpoint_iterations must be at least 1")
-                && rendered.contains("CUDA")
+                && rendered.contains("test-backend")
                 && rendered.contains("zero-iteration dispatch"),
             "Fix: explicit zero fixpoint iterations must produce an actionable backend-specific error."
         );

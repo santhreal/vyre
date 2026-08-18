@@ -197,7 +197,12 @@ fn submitting_files(crate_dir: &Path) -> BTreeMap<String, Vec<BTreeSet<String>>>
         let mut attribute: Option<&str> = None;
         for line in text.lines() {
             let line = line.trim();
-            if line.starts_with("inventory::submit!") {
+            if line.starts_with("inventory::submit!")
+                || line.starts_with("submit_hardware_intrinsic!")
+                || line.starts_with("submit_intrinsic_operation!")
+                || line.starts_with("define_unary_u32_hardware_intrinsic!")
+                || line.starts_with("define_barrier_u32_hardware_intrinsic!")
+            {
                 if let Some(gate) = attribute.filter(|gate| gate.contains("feature")) {
                     let features = feature_names(gate);
                     if !features.is_empty() {

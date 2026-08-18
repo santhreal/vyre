@@ -21,8 +21,8 @@ fn usize_boundary_accepts_fit_values() {
 
 #[test]
 fn backend_numeric_policy_carries_backend_label_without_local_wrappers() {
-    let policy = BackendNumericPolicy::new("CUDA");
-    assert_eq!(policy.backend(), "CUDA");
+    let policy = BackendNumericPolicy::new("test-backend");
+    assert_eq!(policy.backend(), "test-backend");
     assert_eq!(policy.usize_to_u64(17, "bytes").unwrap(), 17);
     assert_eq!(policy.ratio_basis_points_u64(1, 4, 0, "pressure"), 2_500);
     assert_eq!(
@@ -44,7 +44,7 @@ fn backend_numeric_policy_carries_backend_label_without_local_wrappers() {
         .unwrap_err();
     let rendered = err.to_string();
     assert!(
-        rendered.contains("CUDA resident bytes"),
+        rendered.contains("test-backend resident bytes"),
         "backend policy diagnostics must carry the backend label and boundary name: {rendered}"
     );
 }
@@ -179,7 +179,7 @@ fn alignment_helpers_pad_minimums_and_reject_overflow() {
 }
 
 #[test]
-fn checked_ceil_div_u64_handles_cuda_queue_boundaries() {
+fn checked_ceil_div_u64_handles_queue_boundaries() {
     assert_eq!(checked_ceil_div_u64(0, 64), Some(0));
     assert_eq!(checked_ceil_div_u64(1, 64), Some(1));
     assert_eq!(checked_ceil_div_u64(65_537, 65_536), Some(2));
@@ -192,7 +192,7 @@ fn checked_ceil_div_u64_handles_cuda_queue_boundaries() {
 }
 
 #[test]
-fn checked_dim_product_helpers_cover_cuda_launch_boundaries() {
+fn checked_dim_product_helpers_cover_launch_boundaries() {
     assert_eq!(checked_dim_product_u64([1, 1, 1]), Some(1));
     assert_eq!(checked_dim_product_u64([0, 999, 999]), Some(0));
     assert_eq!(checked_dim_product_u64([65_535, 2, 3]), Some(393_210));

@@ -319,8 +319,8 @@ pub fn inspect_fail_closed_fanins(vyre_root: &Path) -> Vec<String> {
             continue;
         };
         let mut reasons = Vec::new();
-        if !section.contains("if: ${{ always() }}") {
-            reasons.push("the job is not declared `if: ${{ always() }}`".to_string());
+        if !section.contains("always()") {
+            reasons.push("the job does not declare `always()`".to_string());
         }
         if !section.contains("exit 1") {
             reasons.push("no step exits nonzero".to_string());

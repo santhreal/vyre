@@ -37,7 +37,7 @@ cargo_full run -p vyre-bench --release -- run --suite honest --measured-samples 
 # Generate CUDA release evidence
 cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets
 
-# Generate WGPU fallback evidence
+# Generate WGPU release evidence
 cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets
 
 # Compare two runs

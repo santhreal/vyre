@@ -150,7 +150,7 @@ fn direct_walk_all_origins(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<ByteRange>
         let window = (dfa.max_pattern_len as usize).min(haystack.len() - origin);
         let mut state = 0u32;
         for step in 0..window {
-            let trans_idx = crate::builder::TableStateMachineComposer::flat_byte_index(
+            let trans_idx = crate::state_machine::TableStateMachineComposer::flat_byte_index(
                 state,
                 haystack[origin + step],
             );

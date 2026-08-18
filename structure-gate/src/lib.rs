@@ -1021,7 +1021,14 @@ fn scan_discarding_imports(root: &Path, members: &[String]) -> Vec<DiscardingImp
 /// mistaken for a registration.
 #[must_use]
 pub fn submits_registrations(text: &str) -> bool {
-    code_offsets(text).any(|at| text[at..].starts_with("inventory::submit!"))
+    code_offsets(text).any(|at| {
+        let rest = &text[at..];
+        rest.starts_with("inventory::submit!")
+            || rest.starts_with("submit_hardware_intrinsic!")
+            || rest.starts_with("submit_intrinsic_operation!")
+            || rest.starts_with("define_unary_u32_hardware_intrinsic!")
+            || rest.starts_with("define_barrier_u32_hardware_intrinsic!")
+    })
 }
 
 /// Crate identifiers named by a discarding import, as written.
@@ -1382,6 +1389,12 @@ mod tests {
         ));
         assert!(submits_registrations(
             "inventory::submit! {\n    ExampleRegistration { id: \"example\" }\n}\n"
+        ));
+        assert!(submits_registrations(
+            "submit_hardware_intrinsic! {\n    id: \"example\",\n}\n"
+        ));
+        assert!(submits_registrations(
+            "define_unary_u32_hardware_intrinsic!(foo, \"example\", expr);\n"
         ));
     }
 }

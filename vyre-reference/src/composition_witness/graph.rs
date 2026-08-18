@@ -470,6 +470,12 @@ pub fn dominator_frontier_witness_into(
 ) {
     let node_count = node_count as usize;
     let words = node_count.div_ceil(32);
+    assert_eq!(
+        seed.len(),
+        words,
+        "expected seed length {words} words for {node_count} nodes, got {}",
+        seed.len()
+    );
     if output.capacity() < words {
         output.reserve(words.saturating_sub(output.len()));
     }

@@ -11,7 +11,7 @@
 //! If the loop carrier or the wrapping multiply miscompiled on the GPU, every
 //! GPU FNV hash would be silently wrong and no test would catch it.
 //!
-//! Dispatched on the 5090 and asserted byte-for-byte against the `fnv1a32` Rust
+//! Dispatched on the live GPU and asserted byte-for-byte against the `fnv1a32` Rust
 //! reference (itself the proven contract, validated by
 //! `vyre-primitives/tests/adversarial_hash.rs`).
 

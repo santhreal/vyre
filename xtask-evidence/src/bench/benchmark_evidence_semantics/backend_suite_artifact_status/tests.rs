@@ -417,7 +417,7 @@ fn backend_suite_artifact_status_rejects_omitted_artifact_backed_fields() {
             "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
             "gpu_devices": [
                 {
-                    "name": "NVIDIA GeForce RTX 5090",
+                    "name": "NVIDIA GPU (Capability 12.0)",
                     "memory_total_mib": 32607,
                     "compute_capability_major": 12,
                     "compute_capability_minor": 0
@@ -576,7 +576,7 @@ fn backend_suite_artifact_status_rejects_provenance_drift() {
             "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
             "gpu_devices": [
                 {
-                    "name": "NVIDIA GeForce RTX 5090",
+                    "name": "NVIDIA GPU (Capability 12.0)",
                     "memory_total_mib": 32607,
                     "compute_capability_major": 12,
                     "compute_capability_minor": 0
@@ -621,7 +621,7 @@ fn backend_suite_artifact_status_rejects_provenance_drift() {
                 path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
                 field: "gpu_model",
                 status_value: "different GPU".to_string(),
-                artifact_value: "NVIDIA GeForce RTX 5090".to_string(),
+                artifact_value: "NVIDIA GPU (Capability 12.0)".to_string(),
             },
             BackendSuiteArtifactStatusIssue::StringFieldMismatch {
                 path: "release/evidence/benchmarks/workload-01-condition-eval.json".to_string(),
@@ -650,7 +650,7 @@ fn backend_suite_artifact_status_rejects_blank_environment_provenance() {
         "nonmatching_case_backend_count": 0,
         "requested_case_id": "release.condition_eval.1m",
         "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
-        "gpu_model": "NVIDIA GeForce RTX 5090",
+        "gpu_model": "NVIDIA GPU (Capability 12.0)",
         "gpu_memory_total_mib": 32607,
         "gpu_compute_capability_major": 12,
         "gpu_compute_capability_minor": 0,

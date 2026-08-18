@@ -10,14 +10,14 @@
 //! The test asserts byte identity between the two unless the canonical
 //! `OperationRegistration` permits backend-defined transcendental drift in
 //! ULPs. Any divergence beyond that contract is a P0 finding: a
-//! Cat-A op that passes CPU conform but diverges on the 5090 would
+//! Cat-A op that passes CPU conform but diverges on the GPU would
 //! silently corrupt every downstream consumer that dispatches the op
 //! on GPU.
 //!
 //! This file is the single load-bearing gate between vyre-libs and
 //! GPU-backed consumers. It ships with 0.6 so "release" is measurable.
 //!
-//! **Status 2026-04-20 on a live 5090:**
+//! **Status on live GPU:**
 //!
 //! Byte-identity CPU ↔ GPU differential sweep.
 //!
@@ -142,7 +142,7 @@ fn run_gpu(lowered: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let config = cat_a_dispatch_config(lowered);
     backend()
         .dispatch(lowered, &inputs, &config)
-        .expect("5090 must execute Cat-A op")
+        .expect("GPU must execute Cat-A op")
 }
 
 /// Assert CPU and GPU paths agree byte-for-byte on `program` given the
@@ -160,14 +160,14 @@ fn assert_buffer_within_tolerance(
     assert_eq!(
         cpu.len(),
         gpu.len(),
-        "{op}: CPU vs 5090 buffer #{buffer_index} length diverged under tolerance {tolerance}. CPU={} GPU={}",
+        "{op}: CPU vs GPU buffer #{buffer_index} length diverged under tolerance {tolerance}. CPU={} GPU={}",
         cpu.len(),
         gpu.len()
     );
     if tolerance == 0 {
         assert_eq!(
             cpu, gpu,
-            "{op}: CPU vs 5090 diverged on RW buffer #{buffer_index}.\n  CPU: {:x?}\n  GPU: {:x?}",
+            "{op}: CPU vs GPU diverged on RW buffer #{buffer_index}.\n  CPU: {:x?}\n  GPU: {:x?}",
             cpu, gpu
         );
         return;
@@ -183,7 +183,7 @@ fn assert_buffer_within_tolerance(
         let diff = f32_to_ordered(cpu_bits).abs_diff(f32_to_ordered(gpu_bits));
         assert!(
             diff <= tolerance,
-            "{op}: CPU vs 5090 diverged above {} ULP on RW buffer #{} lane {}.\n  CPU bits: 0x{:08x}\n  GPU bits: 0x{:08x}\n  CPU: {:x?}\n  GPU: {:x?}",
+            "{op}: CPU vs GPU diverged above {} ULP on RW buffer #{} lane {}.\n  CPU bits: 0x{:08x}\n  GPU bits: 0x{:08x}\n  CPU: {:x?}\n  GPU: {:x?}",
             tolerance,
             buffer_index,
             lane,

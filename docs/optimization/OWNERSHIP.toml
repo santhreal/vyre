@@ -73,7 +73,7 @@ required_commands = [
 [lane.driver_cuda]
 purpose = "CUDA-only PTX lowering, CUDA stream/event/residency behavior, module cache, target-aware emission."
 layer = "Layer 2"
-release_role = "NVIDIA fast path for Vyre 0.4.1 release workloads."
+release_role = "NVIDIA native accelerator execution for Vyre release workloads."
 write = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-cuda/tests/**",
@@ -84,8 +84,8 @@ required_commands = [
 ]
 required_evidence = [
   "release/evidence/backends/backend-matrix.json",
-  "release/evidence/features/feature-matrix.json",
-  "release/evidence/metadata/crate-metadata.json",
+  "release/evidence/metadata/feature-matrix.json",
+  "release/evidence/metadata/metadata-matrix.json",
   "release/evidence/benchmarks/release-workload-matrix.json",
   "release/evidence/conformance/conformance-matrix.json",
 ]
@@ -93,7 +93,7 @@ required_evidence = [
 [lane.driver_wgpu]
 purpose = "wgpu-only device, queue, naga/WGSL lowering, buffer pool, readback, pipeline behavior."
 layer = "Layer 2"
-release_role = "Portable GPU fallback path for Vyre 0.4.1 release workloads."
+release_role = "Portable GPU backend execution for Vyre release workloads."
 write = [
   "vyre-driver-wgpu/src/**",
   "vyre-driver-wgpu/tests/**",
@@ -103,8 +103,8 @@ required_commands = [
 ]
 required_evidence = [
   "release/evidence/backends/backend-matrix.json",
-  "release/evidence/features/feature-matrix.json",
-  "release/evidence/metadata/crate-metadata.json",
+  "release/evidence/metadata/feature-matrix.json",
+  "release/evidence/metadata/metadata-matrix.json",
   "release/evidence/conformance/conformance-matrix.json",
 ]
 

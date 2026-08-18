@@ -1200,7 +1200,7 @@ impl CudaBackend {
 /// The counter is a MODULE-scope global, and a barrier releases when it reaches
 /// `(barrier_index + 1) * gridSize`. Two launches of one module that are in
 /// flight together therefore interfere in both directions, and both were
-/// measured on an RTX 5090 before this gate existed:
+/// observed during multi-stream verification before this serialization existed:
 ///
 /// - Their arrivals MIX. Barrier 0's target is one `gridSize`, so it is reached
 ///   after `gridSize` arrivals drawn from either grid, releasing both before

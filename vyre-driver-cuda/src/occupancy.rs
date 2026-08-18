@@ -13,11 +13,11 @@
 //! `regs_per_thread` parameter; `shared_bytes_per_block` is read directly
 //! from the descriptor's shared bindings.
 //!
-//! # Measured occupancy on the local device
+//! # Measured occupancy on RTX 5090 reference fixture
 //!
 //! You can read these numbers instead of re-deriving them. They are OBSERVED, not
 //! calculated: each row comes from `cuOccupancyMaxActiveBlocksPerMultiprocessor`
-//! on a real emitted vyre storage kernel at that width, on an RTX 5090 (compute
+//! on a real emitted vyre storage kernel at that width, on an RTX 5090 reference device (compute
 //! capability 12.0, 170 SMs, 1536 threads per SM, 24 blocks per SM, driver
 //! 570.211.01, CUDA 12.8). The kernel used 10 registers per thread and zero
 //! static shared memory, and the element count was a multiple of every width, so
@@ -249,8 +249,8 @@ pub fn pick_workgroup_size_for_occupancy(
 ///
 /// Two independent per-SM ceilings apply and this must respect BOTH. The thread
 /// budget gives `max_threads_per_sm / workgroup`; the hardware separately caps
-/// blocks per SM (`CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR`, 24 on this
-/// device). At narrow widths the block cap binds first and the thread budget
+/// blocks per SM (`CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR`, e.g. 24 on sm_120).
+/// At narrow widths the block cap binds first and the thread budget
 /// alone over-admits: at workgroup 32 the thread math yields 48 blocks/SM and
 /// 8160 blocks device-wide, while the hardware holds 24 per SM and 4080 total.
 /// Admitting on threads alone returns `true` from the preflight and then fails

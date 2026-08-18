@@ -187,20 +187,46 @@ fn is_pruned(entry: &DirEntry) -> bool {
 
 /// Index of the `}` closing the `{` at `open`.
 pub fn matching_brace(bytes: &[u8], open: usize) -> Option<usize> {
-    let mut depth = 0usize;
-    for (index, byte) in bytes.iter().enumerate().skip(open) {
-        match byte {
-            b'{' => depth += 1,
-            b'}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Some(index);
-                }
-            }
-            _ => {}
-        }
+    if open >= bytes.len() || bytes[open] != b'{' {
+        return None;
     }
-    None
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        let mut depth = 0usize;
+        let mut offset = open;
+        while offset < bytes.len() {
+            if let Some(span) = opaque_span(text, offset) {
+                offset += span.get();
+                continue;
+            }
+            match bytes[offset] {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        return Some(offset);
+                    }
+                }
+                _ => {}
+            }
+            offset += 1;
+        }
+        None
+    } else {
+        let mut depth = 0usize;
+        for (index, byte) in bytes.iter().enumerate().skip(open) {
+            match byte {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        return Some(index);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
 }
 
 /// Whether `byte` can sit inside a Rust identifier.
@@ -269,7 +295,7 @@ pub fn mask_comments_and_strings(text: &str) -> String {
 /// the ones that did not were correct only because no arm here returns zero
 /// today.
 pub fn opaque_span(text: &str, at: usize) -> Option<NonZeroUsize> {
-    let rest = &text[at..];
+    let rest = text.get(at..)?;
     if let Some(body) = rest.strip_prefix("//") {
         return at_least_one_byte(2 + body.find('\n').map_or(body.len(), |end| end + 1));
     }
@@ -694,4 +720,36 @@ pub fn cfg_feature_names(attribute: &str) -> Vec<String> {
         rest = &rest[end + 1..];
     }
     found
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matching_brace_ignores_braces_in_strings_and_comments() {
+        let source = r##"{
+            let s = "}";
+            let raw = r#"{"#;
+            // line comment with }
+            /* block comment with { and } */
+            let x = 1;
+        }"##;
+        let open = source.find('{').unwrap();
+        let close = matching_brace(source.as_bytes(), open).unwrap();
+        assert_eq!(close, source.len() - 1);
+    }
+
+    #[test]
+    fn matching_brace_returns_none_for_non_brace_or_unclosed() {
+        assert_eq!(matching_brace(b"not a brace", 0), None);
+        assert_eq!(matching_brace(b"{ unclosed", 0), None);
+    }
+
+    #[test]
+    fn opaque_span_refuses_non_utf8_boundary_offsets() {
+        let source = "λ";
+        assert!(!source.is_char_boundary(1));
+        assert_eq!(opaque_span(source, 1), None);
+    }
 }

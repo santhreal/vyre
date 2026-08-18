@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "node_count + 1 CSR offsets")]
+    #[should_panic(expected = "complete CSR offset table")]
     fn malformed_csr_short_offsets_fail_loudly() {
         let _ = cpu_ref(4, &[0, 1], &[1], &[1], &[0b0001], 0xFFFF_FFFF);
     }

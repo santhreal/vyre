@@ -5,7 +5,10 @@ use std::process::Command;
 use serde_json::Value;
 
 use super::artifact_metrics::{read_text_bounded, suite_metric_percentile, suite_metric_samples};
-use super::release_thresholds::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
+use super::release_thresholds::{
+    MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR,
+    MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR, MIN_CUDA_RELEASE_MEMORY_MIB,
+};
 
 const RELEASE_WARMUP_SAMPLES: usize = 300;
 
@@ -166,6 +169,47 @@ fn benchmark_artifact_report_shape_is_reusable(
 ) -> bool {
     if report.get("selected_backend").and_then(Value::as_str) != Some(backend) {
         return false;
+    }
+    let environment = report.get("environment");
+    if environment
+        .and_then(|environment| environment.get("build_profile"))
+        .and_then(Value::as_str)
+        != Some("release")
+    {
+        return false;
+    }
+    if backend == "cuda" {
+        let Some(devices) = environment
+            .and_then(|environment| environment.get("gpu_devices"))
+            .and_then(Value::as_array)
+        else {
+            return false;
+        };
+        let has_qualifying_device = devices.iter().any(|device| {
+            device
+                .get("memory_total_mib")
+                .and_then(Value::as_u64)
+                .is_some_and(|mib| mib >= MIN_CUDA_RELEASE_MEMORY_MIB)
+                && matches!(
+                    (
+                        device
+                            .get("compute_capability_major")
+                            .and_then(Value::as_u64),
+                        device
+                            .get("compute_capability_minor")
+                            .and_then(Value::as_u64),
+                    ),
+                    (Some(major), Some(minor))
+                        if (major, minor)
+                            >= (
+                                MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR,
+                                MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR,
+                            )
+                )
+        });
+        if !has_qualifying_device {
+            return false;
+        }
     }
     if report
         .get("summary")
@@ -403,6 +447,62 @@ mod tests {
         );
     }
 
+    #[test]
+    fn cuda_reuse_accepts_a_qualifying_device_in_multi_gpu_inventory() {
+        let report = serde_json::json!({
+            "selected_backend": "cuda",
+            "environment": {
+                "build_profile": "release",
+                "gpu_devices": [
+                    {
+                        "memory_total_mib": 8192,
+                        "compute_capability_major": 6,
+                        "compute_capability_minor": 1
+                    },
+                    {
+                        "memory_total_mib": 24576,
+                        "compute_capability_major": 8,
+                        "compute_capability_minor": 9
+                    }
+                ]
+            },
+            "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+            "cases": [{
+                "id": "release.condition_eval.1m",
+                "backend_id": "cuda",
+                "status": "pass",
+                "metrics": reusable_timing_metrics()
+            }]
+        });
+
+        assert!(
+            benchmark_artifact_report_shape_is_reusable(
+                &report,
+                "cuda",
+                "condition-eval",
+                "release.condition_eval.1m",
+                None,
+            ),
+            "Fix: CUDA artifact reuse must inspect the complete device inventory."
+        );
+
+        let mut missing_profile = report;
+        missing_profile["environment"]
+            .as_object_mut()
+            .expect("Fix: the test report must contain environment provenance.")
+            .remove("build_profile");
+        assert!(
+            !benchmark_artifact_report_shape_is_reusable(
+                &missing_profile,
+                "cuda",
+                "condition-eval",
+                "release.condition_eval.1m",
+                None,
+            ),
+            "Fix: CUDA artifact reuse must reject missing release-profile provenance."
+        );
+    }
+
     /// Reuse must not bypass release-only evidence enrichment. The previous
     /// predicate accepted a valid timing report that lacked the fused DAG, so
     /// `--reuse-existing` could never repair the gated artifact.
@@ -544,6 +644,14 @@ mod tests {
             serde_json::json!({
                 "selected_backend": "cuda",
                 "source_fingerprint": current_test_source_fingerprint(dir.path()),
+                "environment": {
+                    "build_profile": "release",
+                    "gpu_devices": [{
+                        "memory_total_mib": 24576,
+                        "compute_capability_major": 8,
+                        "compute_capability_minor": 9
+                    }]
+                },
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0},
                 "cases": [
                     {

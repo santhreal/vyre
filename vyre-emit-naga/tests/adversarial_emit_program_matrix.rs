@@ -126,7 +126,7 @@ fn rejection_corpus_fails_without_panic() {
         .expect_err("Fix: rejection corpus case must be rejected by naga emit");
         let msg = format!("{err:?}");
         assert!(
-            msg.contains(&case.id) || msg.contains("Fix:") || !msg.is_empty(),
+            msg.contains(&case.id) || msg.contains("Fix:") || msg.contains("unsupported"),
             "rejection for `{}` must carry diagnostic context: {msg}",
             case.id
         );

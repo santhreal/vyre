@@ -198,7 +198,7 @@ string, and every other variant is an object with one key.
     "has_gpu": true,
     "gpu_devices": [
       {
-        "name": "NVIDIA GeForce RTX 5090",
+        "name": "NVIDIA GPU Device",
         "driver_version": "580.65.06",
         "memory_total_mib": 32607
       }

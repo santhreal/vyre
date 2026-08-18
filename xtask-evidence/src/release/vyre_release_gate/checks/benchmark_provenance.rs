@@ -171,54 +171,78 @@ pub(crate) fn check_benchmark_cuda_environment_provenance(
     let gpu_devices = environment
         .get("gpu_devices")
         .and_then(serde_json::Value::as_array);
-    let first_gpu = gpu_devices.and_then(|devices| devices.first());
+    let qualifying_gpu = gpu_devices.and_then(|devices| {
+        devices.iter().find(|device| {
+            device
+                .get("name")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|name| !name.trim().is_empty())
+                && device
+                    .get("memory_total_mib")
+                    .and_then(serde_json::Value::as_u64)
+                    .is_some_and(|mib| mib >= 16 * 1024)
+                && matches!(
+                    (
+                        device
+                            .get("compute_capability_major")
+                            .and_then(serde_json::Value::as_u64),
+                        device
+                            .get("compute_capability_minor")
+                            .and_then(serde_json::Value::as_u64),
+                    ),
+                    (Some(major), Some(minor)) if (major, minor) >= (8, 0)
+                )
+        })
+    });
     if gpu_devices.is_none_or(|devices| devices.is_empty()) {
         failures.push(format!(
-            "requirement `{}` CUDA benchmark `{label}` has no nvidia-smi gpu_devices provenance",
+            "requirement `{}` CUDA benchmark `{label}` has no GPU devices from nvidia-smi",
             requirement.id
         ));
-    }
-    if first_gpu
-        .and_then(|device| device.get("name"))
-        .and_then(serde_json::Value::as_str)
-        .is_none_or(str::is_empty)
-    {
-        failures.push(format!(
-            "requirement `{}` CUDA benchmark `{label}` has no GPU model from nvidia-smi",
-            requirement.id
-        ));
-    }
-    match first_gpu
-        .and_then(|device| device.get("memory_total_mib"))
-        .and_then(serde_json::Value::as_u64)
-    {
-        Some(mib) if mib >= 16 * 1024 => {}
-        Some(mib) => failures.push(format!(
-            "requirement `{}` CUDA benchmark `{label}` GPU memory is {mib} MiB, below release floor 16384 MiB",
-            requirement.id
-        )),
-        None => failures.push(format!(
-            "requirement `{}` CUDA benchmark `{label}` has no GPU memory_total_mib from nvidia-smi",
-            requirement.id
-        )),
-    }
-    match (
-        first_gpu
-            .and_then(|device| device.get("compute_capability_major"))
-            .and_then(serde_json::Value::as_u64),
-        first_gpu
-            .and_then(|device| device.get("compute_capability_minor"))
-            .and_then(serde_json::Value::as_u64),
-    ) {
-        (Some(major), Some(minor)) if (major, minor) >= (8, 0) => {}
-        (Some(major), Some(minor)) => failures.push(format!(
-            "requirement `{}` CUDA benchmark `{label}` compute capability is {major}.{minor}, below release floor 8.0",
-            requirement.id
-        )),
-        _ => failures.push(format!(
-            "requirement `{}` CUDA benchmark `{label}` has no compute capability from nvidia-smi",
-            requirement.id
-        )),
+    } else if qualifying_gpu.is_none() {
+        let first_gpu = gpu_devices.and_then(|devices| devices.first());
+        if first_gpu
+            .and_then(|device| device.get("name"))
+            .and_then(serde_json::Value::as_str)
+            .is_none_or(str::is_empty)
+        {
+            failures.push(format!(
+                "requirement `{}` CUDA benchmark `{label}` has no GPU model from nvidia-smi",
+                requirement.id
+            ));
+        }
+        match first_gpu
+            .and_then(|device| device.get("memory_total_mib"))
+            .and_then(serde_json::Value::as_u64)
+        {
+            Some(mib) if mib < 16 * 1024 => failures.push(format!(
+                "requirement `{}` CUDA benchmark `{label}` GPU memory is {mib} MiB, below release floor 16384 MiB",
+                requirement.id
+            )),
+            None => failures.push(format!(
+                "requirement `{}` CUDA benchmark `{label}` has no GPU memory_total_mib from nvidia-smi",
+                requirement.id
+            )),
+            _ => {}
+        }
+        match (
+            first_gpu
+                .and_then(|device| device.get("compute_capability_major"))
+                .and_then(serde_json::Value::as_u64),
+            first_gpu
+                .and_then(|device| device.get("compute_capability_minor"))
+                .and_then(serde_json::Value::as_u64),
+        ) {
+            (Some(major), Some(minor)) if (major, minor) < (8, 0) => failures.push(format!(
+                "requirement `{}` CUDA benchmark `{label}` compute capability is {major}.{minor}, below release floor 8.0",
+                requirement.id
+            )),
+            (None, _) | (_, None) => failures.push(format!(
+                "requirement `{}` CUDA benchmark `{label}` has no compute capability from nvidia-smi",
+                requirement.id
+            )),
+            _ => {}
+        }
     }
     for field in ["nvidia_driver_version", "nvidia_cuda_version"] {
         if environment
@@ -1351,5 +1375,124 @@ mod tests {
             !metrics_has_positive_any(metrics, LAUNCH_COUNT_METRICS),
             "Fix: non-dispatch proof evidence must prove zero dispatches instead of being counted as a launched CUDA kernel."
         );
+    }
+
+    #[test]
+    fn cuda_environment_provenance_accepts_qualifying_device_in_multi_gpu_setup() {
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+        };
+        let environment = serde_json::json!({
+            "host_cpu_model": "test CPU",
+            "nvidia_driver_version": "580.0",
+            "nvidia_cuda_version": "13.0",
+            "gpu_devices": [
+                {
+                    "name": "sub-floor-device",
+                    "memory_total_mib": 8192,
+                    "compute_capability_major": 6,
+                    "compute_capability_minor": 1
+                },
+                {
+                    "name": "qualifying-device",
+                    "memory_total_mib": 24576,
+                    "compute_capability_major": 8,
+                    "compute_capability_minor": 9
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+        check_benchmark_cuda_environment_provenance(
+            &requirement,
+            "cuda-workload.json",
+            &serde_json::json!({"environment": environment}),
+            &mut failures,
+        );
+        assert!(
+            failures.is_empty(),
+            "Fix: CUDA environment provenance must accept setups where a qualifying device is present; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_environment_provenance_rejects_sub_floor_gpu_and_missing_driver() {
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+        };
+        let environment = serde_json::json!({
+            "host_cpu_model": "test CPU",
+            "gpu_devices": [
+                {
+                    "name": "sub-floor-device",
+                    "memory_total_mib": 8192,
+                    "compute_capability_major": 6,
+                    "compute_capability_minor": 1
+                }
+            ]
+        });
+        let mut failures = Vec::new();
+        check_benchmark_cuda_environment_provenance(
+            &requirement,
+            "cuda-workload.json",
+            &serde_json::json!({"environment": environment}),
+            &mut failures,
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains("8192 MiB, below release floor 16384 MiB")),
+            "Fix: CUDA environment provenance must reject GPU memory below floor; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains("compute capability is 6.1, below release floor 8.0")),
+            "Fix: CUDA environment provenance must reject compute capability below floor; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains("missing `nvidia_driver_version`")),
+            "Fix: CUDA environment provenance must reject missing nvidia_driver_version; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure.contains("missing `nvidia_cuda_version`")),
+            "Fix: CUDA environment provenance must reject missing nvidia_cuda_version; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn cuda_environment_provenance_rejects_missing_or_empty_gpu_inventory() {
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: Vec::new(),
+        };
+        for environment in [
+            serde_json::json!({
+                "nvidia_driver_version": "580.0",
+                "nvidia_cuda_version": "13.0"
+            }),
+            serde_json::json!({
+                "nvidia_driver_version": "580.0",
+                "nvidia_cuda_version": "13.0",
+                "gpu_devices": []
+            }),
+        ] {
+            let mut failures = Vec::new();
+            check_benchmark_cuda_environment_provenance(
+                &requirement,
+                "cuda-workload.json",
+                &serde_json::json!({"environment": environment}),
+                &mut failures,
+            );
+            assert!(
+                failures
+                    .iter()
+                    .any(|failure| failure.contains("has no GPU devices from nvidia-smi")),
+                "Fix: CUDA evidence without a device inventory must fail closed; failures={failures:?}"
+            );
+        }
     }
 }

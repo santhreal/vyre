@@ -116,7 +116,7 @@ fn compute_live_mask_with_scratch_into(
     //
     // One dispatch, because the kernel's persistent loop runs the traversal to a
     // fixpoint internally. Converting this to host-repeated grid-synced wave
-    // batches was measured on an RTX 5090 at 4 to 6 times the wall time and about
+    // batches was measured on device at 4 to 6 times the wall time and about
     // 232 times the launches for a deep chain, and it bounded an IR size that a
     // bounded `Node::loop_for` already bounds.
     //

@@ -13,7 +13,7 @@
 //! the carry propagation miscompiled, every GPU FNV-64 hash would be silently
 //! wrong with no test to catch it.
 //!
-//! Dispatched on the 5090 and asserted byte-for-byte against the `fnv1a64` Rust
+//! Dispatched on the live GPU and asserted byte-for-byte against the `fnv1a64` Rust
 //! reference (and the canonical FNV-1a 64 vector for "abc").
 
 mod harness;

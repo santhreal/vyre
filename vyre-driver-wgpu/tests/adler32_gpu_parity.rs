@@ -10,7 +10,7 @@
 //! silicon, the modulo complements `div_zero_shift_mask_parity` (which only
 //! covered the mod-by-zero edge) with mod-by-constant in a real workload loop.
 //!
-//! Dispatched on the 5090 and asserted byte-for-byte against the `adler32` Rust
+//! Dispatched on the live GPU and asserted byte-for-byte against the `adler32` Rust
 //! reference and the standard zlib Adler-32 vector for "abc".
 
 mod harness;

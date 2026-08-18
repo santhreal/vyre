@@ -1,7 +1,7 @@
 //! Cross-file duplication budget for the two operation families that were
 //! de-duplicated together: the neural-network dialect under `src/nn` (attention,
 //! norm, linear, activation) and the classic Aho-Corasick dialect under
-//! `src/scan/classic_ac`.
+//! `src/pattern/classic_ac`.
 //!
 //! # What this gate owns
 //!
@@ -36,7 +36,7 @@ const SHINGLE: usize = 8;
 
 /// Directory roots, relative to the crate manifest, whose files are compared
 /// against each other.
-const ROOTS: [&str; 2] = ["src/nn", "src/scan/classic_ac"];
+const ROOTS: [&str; 2] = ["src/nn", "src/pattern/classic_ac"];
 
 /// Anti-vacuity floor on files discovered by the walk. Well below the current
 /// count so ordinary growth or a merged deletion does not trip it, and far

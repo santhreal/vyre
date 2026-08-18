@@ -11,7 +11,7 @@
 //!
 //! Nothing in the vyre IR asks for fusion. The IR says multiply, then add. The
 //! shader compiler and driver contract the pair anyway, and WGSL permits it.
-//! Measured on an RTX 5090 (wgpu 25, Vulkan): for `a = b = 1 + 2^-12` and
+//! Measured on GPU hardware (wgpu 25, Vulkan): for `a = b = 1 + 2^-12` and
 //! `c = -1` the device returns `0x3a000400` where two separate roundings give
 //! `0x3a000000`, a one-ulp difference that is exactly the retained low bit of
 //! the unrounded product.

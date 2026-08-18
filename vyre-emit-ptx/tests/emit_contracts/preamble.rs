@@ -22,6 +22,12 @@ fn emit_has_visible_entry_main() {
 fn emit_with_target_uses_requested_capability() {
     let s = emit_with_target(&one_store_kernel(), ComputeCapability::SM_90).unwrap();
     assert!(s.contains(".target sm_90"));
+    let s89 = emit_with_target(&one_store_kernel(), ComputeCapability::SM_89).unwrap();
+    assert!(s89.contains(".target sm_89"));
+    assert!(s89.contains(".version 8.5"));
+    let s120 = emit_with_target(&one_store_kernel(), ComputeCapability::SM_120).unwrap();
+    assert!(s120.contains(".target sm_120"));
+    assert!(s120.contains(".version 8.7"));
 }
 
 #[test]

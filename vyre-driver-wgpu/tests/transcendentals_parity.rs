@@ -35,7 +35,7 @@ use vyre_driver_wgpu::WgpuBackend;
 /// grows with |x|  -  WebGPU permits up to 2^-11 relative error there,
 /// which maps to ~128 ULP at magnitudes near π. A regression beyond
 /// these envelopes is a real backend bug, not vendor variance.
-// Measured envelopes on an RTX 5090 + wgpu 24.0.5 + Linux driver 570.211,
+// Measured envelopes on GPU hardware + wgpu + Vulkan,
 // paired with the WebGPU Transcendental Function Accuracy spec:
 //   sqrt(x in [0, 10])             ≤ 1 ULP, abs ≤ 0 (spec: correctly-rounded on most HW)
 //   exp(x in [-10, 10])            ≤ 4 ULP, abs ≤ 1e-5 (spec: 3 ULP / 2^-21 rel)

@@ -509,7 +509,7 @@ bank_width_bytes = 4
     /// callers ask for it.
     ///
     /// Backend projections call `builtins()` on every dispatch (twice, in the
-    /// CUDA case: once deriving validation capabilities and once deriving
+    /// native backend case: once deriving validation capabilities and once deriving
     /// adapter caps), so a reparse here is a per-dispatch TOML parse on the
     /// hot path. This pins the invariant rather than a duration, because a
     /// timing assertion would be flaky on a contended box and would not

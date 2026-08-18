@@ -275,11 +275,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
-        path: "vyre-foundation/tests/contract_cases/autodiff_transform_contracts_programs.rs",
-        owner: "foundation-ir",
-        reason: "test oracle deliberately independent of the production walker it audits",
-    },
-    Waiver {
         path: "vyre-foundation/tests/contract_cases/program_stats_proptest__arb_node.rs",
         owner: "foundation-ir",
         reason: "generator building arbitrary nodes; routing it through the owner would compare the walker against itself",
@@ -315,17 +310,17 @@ const WAIVERS: &[Waiver] = &[
         reason: "test oracle deliberately independent of the wire round trip it audits",
     },
     Waiver {
-        path: "vyre-libs/src/graph/dominator_tree/tests/mod.rs",
+        path: "vyre-libs/tests/internal/graph/dominator_tree/mod.rs",
         owner: "product-libraries",
         reason: "test oracle deliberately independent of the dominator construction it audits",
     },
     Waiver {
-        path: "vyre-libs/src/graph/persistent_bfs/tests/behavior_contracts/program_sync_contracts.rs",
+        path: "vyre-libs/tests/internal/graph/persistent_bfs/behavior_contracts/program_sync_contracts.rs",
         owner: "product-libraries",
         reason: "test oracle deliberately independent of the traversal it audits",
     },
     Waiver {
-        path: "vyre-libs/src/graph/persistent_bfs/tests/validation_and_builders.rs",
+        path: "vyre-libs/tests/internal/graph/persistent_bfs/validation_and_builders.rs",
         owner: "product-libraries",
         reason: "test oracle deliberately independent of the traversal it audits",
     },

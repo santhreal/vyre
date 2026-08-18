@@ -729,12 +729,13 @@ fn peak_resident_threads_per_compute_unit(
 ///
 /// Ranking widest-first is also what keeps the thread-only residency model
 /// sound. It ignores the device-reported cap on blocks per unit, so it
-/// overstates residency at the narrow end: measured on an RTX 5090, whose cap
-/// is 24, a 32-wide group gets 24 blocks and 768 resident threads where this
-/// model predicts 48 and 1536, a factor of two. Selecting the widest survivor
-/// never reaches that regime, and on this device the pick lands at 512 with 3
-/// blocks per SM, well clear of the cap. A future tie-break toward narrower
-/// widths would need the block cap as a second input.
+/// overstates residency at the narrow end: on a device whose cap is 24 blocks
+/// per compute unit and per-unit budget is 1536 threads, a 32-wide group gets
+/// 24 blocks and 768 resident threads where this model predicts 48 and 1536, a
+/// factor of two. Selecting the widest survivor never reaches that regime, and
+/// on such a device the pick lands at 512 with 3 blocks per compute unit, well
+/// clear of the cap. A future tie-break toward narrower widths would need the
+/// block cap as a second input.
 ///
 /// This gate applies to cold start only. A width carrying a real measurement
 /// bypasses it entirely, so measured feedback can still choose a width cold
@@ -1181,14 +1182,14 @@ mod tests {
         );
     }
 
-    /// Streaming multiprocessors on the RTX 5090 this defect was measured on.
-    const RTX_5090_SM_COUNT: u32 = 170;
+    /// Historical regression geometry: 170 compute units.
+    const REGRESSION_170_SM_COUNT: u32 = 170;
 
-    /// Launch limits shaped like that RTX 5090: 1024 threads per block and a
-    /// 1536-thread per-SM residency budget, which 1024 does not divide.
-    fn blackwell_5090_limits() -> LaunchGeometryLimits {
+    /// Historical regression geometry: 1024 threads per block and a
+    /// 1536-thread per-compute-unit residency budget, which 1024 does not divide evenly.
+    fn regression_1536_thread_sm_limits() -> LaunchGeometryLimits {
         LaunchGeometryLimits {
-            backend: "blackwell-5090-test",
+            backend: "regression-1536-thread-sm-test",
             max_threads_per_block: 1024,
             max_block_dim: [1024, 1024, 64],
             max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
@@ -1222,7 +1223,7 @@ mod tests {
     /// outright, and counts with a tail.
     #[test]
     fn cold_start_never_strands_resident_thread_slots_when_an_even_divisor_exists() {
-        let limits = blackwell_5090_limits();
+        let limits = regression_1536_thread_sm_limits();
         for (output, element_count) in [
             ("out_no_strand_1k", 1024u32),
             ("out_no_strand_4k", 4096),
@@ -1286,7 +1287,7 @@ mod tests {
     /// A backend reporting no per-SM thread budget keeps its previous cold
     /// start bit for bit.
     ///
-    /// WebGPU exposes no such number, so wgpu reports `max_threads_per_sm: 0`.
+    /// Portable backends that expose no compute-unit residency budget report `max_threads_per_sm: 0`.
     /// Zero must make the residency preference inert rather than derive an
     /// opinion from a budget the backend never supplied: every candidate stays
     /// eligible and the latency estimate alone decides, which is [1024,1,1] for
@@ -1339,7 +1340,7 @@ mod tests {
     /// defect never reached it.
     #[test]
     fn explicit_geometry_pins_outrank_residency_aware_cold_start() {
-        let limits = blackwell_5090_limits();
+        let limits = regression_1536_thread_sm_limits();
         let declared = [256, 1, 1];
         let program = tunable_1d_program("out_pinned_geometry", 262_144, declared);
 
@@ -1387,7 +1388,7 @@ mod tests {
     /// turns one launch into many.
     #[test]
     fn cooperative_lane_ceiling_follows_the_resolved_width_not_the_declared_one() {
-        let limits = blackwell_5090_limits();
+        let limits = regression_1536_thread_sm_limits();
         let declared = [256, 1, 1];
         let program = tunable_1d_program("out_resolved_ceiling", 262_144, declared);
         let lane_ceiling = |width: u32| -> u64 {
@@ -1395,7 +1396,7 @@ mod tests {
                 limits
                     .resident_threads_per_compute_unit(width)
                     .expect("Fix: this device model reports a per-SM thread budget"),
-            ) * u64::from(RTX_5090_SM_COUNT)
+            ) * u64::from(REGRESSION_170_SM_COUNT)
         };
 
         let resolved = resolve_launch_workgroup_for_mode(
@@ -1446,7 +1447,7 @@ mod tests {
         let dir =
             tempfile::tempdir().expect("Fix: measured feedback test needs an isolated tuner cache");
         let path = dir.path().join("residency-feedback.toml");
-        let limits = blackwell_5090_limits();
+        let limits = regression_1536_thread_sm_limits();
         let declared = [32, 1, 1];
         let program = tunable_1d_program("out_measured_beats_residency", 65_536, declared);
         let key = NaturalLaunchCacheKey::new(&program, declared, 65_536, limits);

@@ -478,6 +478,8 @@ pub(super) fn write_optimization_benchmark_manifest(
     });
     if environment
         .get("cpu_model")
+        .or_else(|| environment.get("host_cpu_model"))
+        .or_else(|| environment.get("host_cpu"))
         .and_then(Value::as_str)
         .filter(|value| !value.trim().is_empty())
         .is_none()

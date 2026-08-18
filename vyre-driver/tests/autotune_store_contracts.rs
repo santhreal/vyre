@@ -105,7 +105,7 @@ fn save_takes_exclusive_lock_so_concurrent_writes_serialize() {
 
     // The file must be parseable (not torn) regardless of which
     // writer won. Without the lock this race produced corrupt TOML
-    // ~30% of the time on a warm 5090 box.
+    // ~30% of the time on contended multi-threaded runs.
     let loaded = AutotuneStore::load(&path).expect("Fix: file must be valid TOML");
     assert_eq!(loaded.len(), 1, "exactly one writer's record must persist");
 }

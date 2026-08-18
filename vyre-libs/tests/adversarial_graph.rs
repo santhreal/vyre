@@ -107,7 +107,7 @@ fn csr_forward_traverse_zero_nodes() {
 }
 
 #[test]
-#[should_panic(expected = "node_count + 1 CSR offsets")]
+#[should_panic(expected = "complete CSR offset table")]
 fn csr_forward_traverse_malformed_csr_fails_loudly() {
     let _ = cpu_ref(2, &[0], &[1], &[1], &[0b11], 0xFFFF_FFFF);
 }

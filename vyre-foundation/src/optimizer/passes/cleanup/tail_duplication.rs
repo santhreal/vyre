@@ -27,6 +27,7 @@ use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::collect_bound_names;
+use crate::visit::child_bodies;
 
 /// Hoist common side-effect-free tails out of `Node::If`.
 #[derive(Debug, Default)]
@@ -135,11 +136,16 @@ fn try_extract_tail(then: &[Node], otherwise: &[Node]) -> Option<(Vec<Node>, Vec
 /// that nests bodies by never looking inside it, and a refusal nobody decided on
 /// reads like one somebody did.
 fn node_reads_any(node: &Node, names: &FxHashSet<Ident>) -> bool {
-    match node {
-        Node::Let { value, .. } => expr_reads_any(value, names),
-        Node::Block(body) => body.iter().any(|node| node_reads_any(node, names)),
-        _ => true,
+    if let Node::Let { value, .. } = node {
+        return expr_reads_any(value, names);
     }
+    if let Node::Block(_) = node {
+        return child_bodies(node)
+            .into_iter()
+            .flatten()
+            .any(|child| node_reads_any(child, names));
+    }
+    true
 }
 
 /// True iff `expr` references any name in `names`.
@@ -177,11 +183,16 @@ fn expr_reads_any(expr: &Expr, names: &FxHashSet<Ident>) -> bool {
 /// uniform-control-flow requirements. Loads are excluded because the
 /// guarded If may exist precisely to avoid an out-of-bounds access.
 fn node_is_observably_free(node: &Node) -> bool {
-    match node {
-        Node::Let { value, .. } => expr_is_observably_free(value),
-        Node::Block(body) => body.iter().all(node_is_observably_free),
-        _ => false,
+    if let Node::Let { value, .. } = node {
+        return expr_is_observably_free(value);
     }
+    if let Node::Block(_) = node {
+        return child_bodies(node)
+            .into_iter()
+            .flatten()
+            .all(node_is_observably_free);
+    }
+    false
 }
 
 /// True iff `node` is an `If` whose arms have an extractable common tail.

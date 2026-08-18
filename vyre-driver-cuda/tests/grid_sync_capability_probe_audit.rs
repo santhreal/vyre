@@ -50,7 +50,7 @@ fn hardware_grid_sync_claim_equals_the_independently_probed_predicate() {
     // On this fleet the probe must report a cooperative-capable device. A false
     // here means the capability is genuinely absent and every GridSync program
     // routes to the kernel-split path, which is a configuration failure on a
-    // host that has an RTX 5090, not an acceptable outcome.
+    // GPU-required test host, not an acceptable outcome.
     assert!(
         probed.cooperative_launch,
         "Fix: CU_DEVICE_ATTRIBUTE_COOPERATIVE_LAUNCH probed false on `{}`; native \

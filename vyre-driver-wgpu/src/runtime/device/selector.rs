@@ -452,8 +452,10 @@ mod tests {
     #[test]
     fn enumerate_adapters_finds_required_gpu() {
         let adapters = enumerate_adapters();
-        assert_ne!(adapters.len(), 0,
-            "Fix: WGPU adapter enumeration returned no adapters on a GPU-required release host; repair driver/runtime configuration instead of accepting a CPU-only environment."
+        assert_ne!(
+            adapters.len(),
+            0,
+            "Fix: WGPU adapter enumeration returned no adapters; repair driver/runtime configuration instead of accepting a CPU-only environment."
         );
     }
 

@@ -5,7 +5,7 @@
 //! number of input byte buffers. Those two numbers live in different files, and
 //! nothing but a live GPU dispatch used to compare them. When 0.7.0 added the
 //! `converged` output to the persistent-BFS layout the program grew a ninth
-//! input slot, the filler kept writing eight, and every CUDA DCE test failed at
+//! input slot, the filler kept writing eight, and every backend DCE test failed at
 //! dispatch time with "expected 9 input buffer(s) from Program declarations but
 //! received 8". These tests move that check off the GPU: they run `gpu_dce`
 //! against a recording dispatcher, so a slot-count drift fails on any host, in

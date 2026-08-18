@@ -16,16 +16,23 @@ pub fn char_class_witness(input: &[u8], table: &[u32; 256]) -> Vec<u32> {
     input.iter().map(|&b| table[b as usize]).collect()
 }
 
-/// Sequential mathematical witness for line start indexing.
+/// Sequential mathematical witness for each byte's zero-based line index.
 #[must_use]
 pub fn line_index_witness(input: &[u8]) -> Vec<u32> {
-    let mut indices = vec![0u32];
-    for (i, &b) in input.iter().enumerate() {
-        if b == b'\n' && i + 1 < input.len() {
-            indices.push((i + 1) as u32);
-        }
-    }
-    indices
+    let mut line = 0u32;
+    input
+        .iter()
+        .enumerate()
+        .map(|(offset, &byte)| {
+            let index = line;
+            if byte == b'\n'
+                || (byte == b'\r' && input.get(offset + 1).is_some_and(|&next| next != b'\n'))
+            {
+                line = line.wrapping_add(1);
+            }
+            index
+        })
+        .collect()
 }
 
 /// Sequential mathematical witness for UTF-8 shape counts (ASCII, 2-byte, 3-byte, 4-byte).

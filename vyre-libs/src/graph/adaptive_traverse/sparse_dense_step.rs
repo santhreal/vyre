@@ -168,8 +168,17 @@ mod tests {
             "fin", "fout", "count", "offs", "tgts", "kinds", "adj", 64, 7, 1, 25,
         );
         let rendered = format!("{p:?}");
-        assert!(rendered.contains("fin"), "must probe input frontier in sparse branch");
-        assert!(rendered.contains("fout"), "must expand out-edges into output frontier");
-        assert!(rendered.contains("count"), "must load popcount for selector");
+        assert!(
+            rendered.contains("fin"),
+            "must probe input frontier in sparse branch"
+        );
+        assert!(
+            rendered.contains("fout"),
+            "must expand out-edges into output frontier"
+        );
+        assert!(
+            rendered.contains("count"),
+            "must load popcount for selector"
+        );
     }
 }

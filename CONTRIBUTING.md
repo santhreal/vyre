@@ -25,6 +25,9 @@ build-affecting variable or flag of its own. Pass it exactly what you would pass
 cargo. Every command in this repository's documentation is written that way, and
 a document that spells a bare `cargo` invocation fails the hygiene gate.
 
+On Windows, `cargo_full.cmd` provides the same contract and selects an
+executable Cargo binary for nested gate commands.
+
 Per-crate test instructions live under `docs/testing/`, one page per crate.
 
 ## Gates
@@ -75,17 +78,19 @@ contains it.
 
 ## Backend work needs a device
 
-Backend suites run against a real GPU. Before calling a backend failure
-environmental, prove the device is visible and the capability contract holds:
+Backend suites run against a real GPU on the designated execution host
+(`axiomexec`). Before calling a backend failure environmental, prove the
+device is visible and the capability contract holds:
 
 ```bash
 nvidia-smi
 ./cargo_full test -p vyre-driver-wgpu --test capability_contract -- --nocapture
 ```
 
-A GPU-required lane fails loudly when the probe is broken. Do not add a host
-fallback, a skip guard, or a `no GPU` pass. `vyre-lints` rejects all three, and
-a silent fallback is the failure class the workspace exists to prevent.
+Hardware execution is capability-based and never tied to specific hardware
+identities. A GPU-required lane fails loudly when the probe is broken. Do not
+add a host fallback, a skip guard, or a `no GPU` pass. `vyre-lints` rejects
+all three; a silent fallback is the failure class the workspace exists to prevent.
 
 ## What a change must satisfy
 

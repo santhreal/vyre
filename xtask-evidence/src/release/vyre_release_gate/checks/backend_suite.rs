@@ -285,6 +285,7 @@ pub(crate) fn check_backend_suite_report(
                     )),
                 }
                 for field in [
+                    "min_cuda_ptx_source_cache_entries",
                     "min_cuda_ptx_source_cache_hits",
                     "min_cuda_ptx_source_cache_misses",
                 ] {
@@ -1561,6 +1562,151 @@ mod backend_suite_tests {
                 "selected backend `Some(\"wgpu\")`, expected `cuda`"
             )),
             "Fix: CUDA suite artifacts must be validated against filename-implied backend, not a bad suite backend field; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_cuda_status_missing_cache_metrics() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite cache metrics test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for backend suite cache metrics test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 1,
+                "artifacts": ["release/evidence/benchmarks/cuda-workload-01-condition-eval.json"],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-workload-01-condition-eval.json",
+                        "exists": true,
+                        "bytes": 1,
+                        "read_error": null,
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "source_fingerprint": "git:abc:dirty=false",
+                        "host_cpu_model": "test CPU",
+                        "selected_backend": "cuda",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "min_kernel_launches": 1,
+                        "gpu_model": "qualifying-device",
+                        "nvidia_driver_version": "580.0",
+                        "nvidia_cuda_version": "13.0",
+                        "gpu_memory_total_mib": 24576,
+                        "gpu_compute_capability_major": 8,
+                        "gpu_compute_capability_minor": 9
+                    }
+                ],
+                "blockers": []
+            }))
+            .expect("Fix: serialize CUDA suite with missing cache metrics."),
+        )
+        .expect("Fix: write CUDA suite with missing cache metrics.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        for expected in [
+            "min_cuda_ptx_source_cache_entries",
+            "min_cuda_ptx_source_cache_hits",
+            "min_cuda_ptx_source_cache_misses",
+        ] {
+            assert!(
+                failures.iter().any(|failure| failure.contains(expected)),
+                "Fix: release gate must require `{expected}` on CUDA artifact_statuses rows; failures={failures:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn backend_suite_report_rejects_cuda_status_sub_floor_gpu() {
+        let dir = tempfile::TempDir::new()
+            .expect("Fix: create temporary workspace for backend suite sub-floor GPU test.");
+        let release_dir = dir.path().join("release");
+        let benchmark_dir = release_dir.join("evidence/benchmarks");
+        std::fs::create_dir_all(&benchmark_dir).expect(
+            "Fix: create benchmark evidence directory for backend suite sub-floor GPU test.",
+        );
+        std::fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "family_count": 1,
+                "artifacts": ["release/evidence/benchmarks/cuda-workload-01-condition-eval.json"],
+                "artifact_statuses": [
+                    {
+                        "path": "release/evidence/benchmarks/cuda-workload-01-condition-eval.json",
+                        "exists": true,
+                        "bytes": 1,
+                        "read_error": null,
+                        "family_id": "condition-eval",
+                        "requested_case_id": "release.condition_eval.1m",
+                        "source_fingerprint": "git:abc:dirty=false",
+                        "host_cpu_model": "test CPU",
+                        "selected_backend": "cuda",
+                        "case_count": 1,
+                        "failed_count": 0,
+                        "nonmatching_case_backend_count": 0,
+                        "min_kernel_launches": 1,
+                        "gpu_model": "sub-floor-device",
+                        "nvidia_driver_version": "580.0",
+                        "nvidia_cuda_version": "13.0",
+                        "gpu_memory_total_mib": 8192,
+                        "gpu_compute_capability_major": 6,
+                        "gpu_compute_capability_minor": 1,
+                        "min_cuda_ptx_source_cache_entries": 1,
+                        "min_cuda_ptx_source_cache_hits": 0,
+                        "min_cuda_ptx_source_cache_misses": 1
+                    }
+                ],
+                "blockers": []
+            }))
+            .expect("Fix: serialize CUDA suite with sub-floor GPU."),
+        )
+        .expect("Fix: write CUDA suite with sub-floor GPU.");
+        let requirement = Requirement {
+            id: "cuda-first-path".to_string(),
+            title: "CUDA first path".to_string(),
+            status: "required".to_string(),
+            evidence: vec!["evidence/benchmarks/cuda-release-suite.json".to_string()],
+        };
+        let mut failures = Vec::new();
+
+        check_backend_suite_report(
+            &requirement,
+            &release_dir,
+            "cuda-release-suite.json",
+            &mut failures,
+        );
+
+        assert!(
+            failures.iter().any(|failure| failure
+                .contains("reports 8192 MiB GPU memory, below release floor 16384 MiB")),
+            "Fix: release gate must reject CUDA status with VRAM below 16384 MiB; failures={failures:?}"
+        );
+        assert!(
+            failures.iter().any(|failure| failure
+                .contains("reports compute capability 6.1, below release floor 8.0")),
+            "Fix: release gate must reject CUDA status with CC below 8.0; failures={failures:?}"
         );
     }
 }

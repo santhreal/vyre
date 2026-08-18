@@ -783,7 +783,7 @@ pub(crate) fn csr_frontier_step_cpu_ref(
 ) -> Vec<u32> {
     assert!(
         graph.edge_offsets.len() == (graph.node_count as usize) + 1,
-        "node_count + 1 CSR offsets required"
+        "complete CSR offset table"
     );
     match kind {
         CsrFrontierStepKind::Forward => {

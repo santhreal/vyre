@@ -85,13 +85,15 @@ fn wgpu_runtime_sized_input_uses_representative_extent() {
 
 #[test]
 fn cuda_production_route_executes_line_index() {
-    let registrations = live_backend_registry().expect("valid backend registry");
-    let Some(registration) = registrations.iter().find(|reg| reg.id == "cuda") else {
-        return;
-    };
-    if !backend_dispatches("cuda").expect("valid backend registry") {
-        return;
-    }
+    let registration = live_backend_registry()
+        .expect("valid backend registry")
+        .iter()
+        .find(|reg| reg.id == "cuda")
+        .expect("Fix: the gpu feature must link the cuda registration");
+    assert!(
+        backend_dispatches("cuda").expect("valid backend registry"),
+        "Fix: CUDA backend must be dispatch-capable on a supported GPU host."
+    );
     let source = b"ab\ncd";
     let n = source.len() as u32;
     let program = vyre_libs::text::line_index("source", "lines", n);
@@ -120,13 +122,15 @@ fn cuda_production_route_executes_line_index() {
 
 #[test]
 fn cuda_production_route_reports_traps_on_malformed_inputs() {
-    let registrations = live_backend_registry().expect("valid backend registry");
-    let Some(registration) = registrations.iter().find(|reg| reg.id == "cuda") else {
-        return;
-    };
-    if !backend_dispatches("cuda").expect("valid backend registry") {
-        return;
-    }
+    let registration = live_backend_registry()
+        .expect("valid backend registry")
+        .iter()
+        .find(|reg| reg.id == "cuda")
+        .expect("Fix: the gpu feature must link the cuda registration");
+    assert!(
+        backend_dispatches("cuda").expect("valid backend registry"),
+        "Fix: CUDA backend must be dispatch-capable on a supported GPU host."
+    );
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::U32).with_count(1),
@@ -195,9 +199,11 @@ fn every_artifact_backend_finishes_a_session_lifecycle_including_drop() {
 
     let mut exercised = Vec::new();
     for registration in registrations {
-        if !backend_dispatches(registration.id).expect("valid backend registry") {
-            continue;
-        }
+        assert!(
+            backend_dispatches(registration.id).expect("valid backend registry"),
+            "Fix: linked artifact backend `{}` must be dispatch-capable on a supported GPU host.",
+            registration.id
+        );
         let program = Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
             [1, 1, 1],

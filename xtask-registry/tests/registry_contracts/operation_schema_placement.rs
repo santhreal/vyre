@@ -372,3 +372,32 @@ fn an_intrinsic_registration_places_the_operation_in_its_defining_crate() {
         })
     );
 }
+
+#[test]
+fn a_macro_generated_intrinsic_places_the_operation_in_its_defining_crate() {
+    let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
+    let root = dir.path();
+    workspace(root, &["primitives"]);
+    write(&root.join("primitives/src/lib.rs"), "pub mod hardware;\n");
+    write(
+        &root.join("primitives/src/hardware.rs"),
+        "define_unary_u32_hardware_intrinsic!(\n\
+             bit_reverse_u32,\n\
+             \"primitives::hardware::bit_reverse_u32\",\n\
+             Expr::reverse_bits,\n\
+         );\n",
+    );
+
+    let ids = BTreeSet::from(["primitives::hardware::bit_reverse_u32"]);
+    let mut errors = Vec::new();
+    let placements = read(root, &ids, &mut errors);
+
+    assert_eq!(errors, Vec::<String>::new());
+    assert_eq!(
+        placements.get("primitives::hardware::bit_reverse_u32"),
+        Some(&Placement {
+            crate_name: "primitives".to_string(),
+            features: Vec::new(),
+        })
+    );
+}

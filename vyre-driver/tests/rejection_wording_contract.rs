@@ -1,7 +1,7 @@
 //! WHY: a submission rejection's text is the only thing that tells a reader
 //! which contract broke, and `InstanceMessages` lets each backend supply its
 //! own. Nothing stopped two of the five rejections in one record from rendering
-//! the same sentence, and one record did exactly that: CUDA spelled an
+//! the same sentence, and one record did exactly that: a driver spelled an
 //! unpreserved retained value with the neutral text for an unproduced output, so
 //! for as long as that wording stood, a value the execution never preserved was
 //! reported as a value it never produced. Diagnosis of a real device failure had
@@ -15,7 +15,7 @@
 //!
 //! Does not catch: a backend record this suite cannot name. A record declared
 //! `const` inside a driver crate is private to it, so the same assertion has to
-//! live beside that record; `vyre-driver-wgpu` carries its own copy for the
+//! live beside that record; concrete driver crates carry their own copies for the
 //! resident record for that reason. This suite covers the neutral record, which
 //! is every backend that does not override one.
 

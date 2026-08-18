@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn unsupported_regex_accelerator_fails_closed_with_evidence() {
         let capability = RegexAcceleratorCapability::unsupported(
-            "wgpu",
+            "test-backend",
             RegexAcceleratorClass::RxpLike,
             "backend has no RXP-like regex accelerator",
         );
@@ -259,7 +259,7 @@ mod tests {
         match error {
             BackendError::UnsupportedFeature { name, backend } => {
                 assert_eq!(name, "regex_accelerator:rxp_like");
-                assert_eq!(backend, "wgpu");
+                assert_eq!(backend, "test-backend");
             }
             other => panic!("expected UnsupportedFeature, got {other:?}"),
         }

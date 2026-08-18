@@ -511,6 +511,89 @@ mod benchmark_backend_tests {
             "Fix: direct benchmark gate must reject stale summary.passed even when summary.failed is zero; failures={failures:?}"
         );
     }
+
+    #[test]
+    fn backend_gpu_probe_accepts_qualifying_device_in_multi_gpu_setup() {
+        let matrix = serde_json::json!({
+            "gpu_probe": {
+                "nvidia_smi_ok": true,
+                "nvidia_smi_devices": ["GPU 0: sub-floor-device", "GPU 1: qualifying-device"],
+                "nvidia_driver_version": "580.0",
+                "nvidia_cuda_version": "13.0",
+                "nvidia_smi_device_details": [
+                    {
+                        "name": "sub-floor-device",
+                        "memory_total_mib": 8192,
+                        "compute_capability_major": 6,
+                        "compute_capability_minor": 1
+                    },
+                    {
+                        "name": "qualifying-device",
+                        "memory_total_mib": 24576,
+                        "compute_capability_major": 8,
+                        "compute_capability_minor": 9
+                    }
+                ]
+            }
+        });
+        let mut failures = Vec::new();
+        check_backend_gpu_probe("cuda-first-path", &matrix, &mut failures);
+        assert!(
+            failures.is_empty(),
+            "Fix: GPU probe must accept setup where at least one device meets release floors; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn backend_gpu_probe_rejects_sub_floor_gpu() {
+        let matrix = serde_json::json!({
+            "gpu_probe": {
+                "nvidia_smi_ok": true,
+                "nvidia_smi_devices": ["GPU 0: sub-floor-device"],
+                "nvidia_driver_version": "580.0",
+                "nvidia_cuda_version": "13.0",
+                "nvidia_smi_device_details": [
+                    {
+                        "name": "sub-floor-device",
+                        "memory_total_mib": 8192,
+                        "compute_capability_major": 6,
+                        "compute_capability_minor": 1
+                    }
+                ]
+            }
+        });
+        let mut failures = Vec::new();
+        check_backend_gpu_probe("cuda-first-path", &matrix, &mut failures);
+        assert!(
+            failures.iter().any(|failure| failure.contains(
+                "must include a CUDA GPU with >=16384 MiB VRAM and compute capability >=8.0"
+            )),
+            "Fix: GPU probe must reject setups where no device meets release floors; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn preferred_backend_gpu_only_rejects_cpu_ref() {
+        let matrix = serde_json::json!({
+            "preferred_backend_gpu_only": false,
+            "preferred_backend_id": "cpu-ref"
+        });
+        let mut failures = Vec::new();
+        check_preferred_backend_gpu_only("cuda-first-path", &matrix, &mut failures);
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure
+                    .contains("must prove preferred runtime acquisition is GPU-only")),
+            "Fix: release gate must reject preferred_backend_gpu_only=false; failures={failures:?}"
+        );
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("must be cuda or wgpu, never cpu-ref/reference")),
+            "Fix: release gate must reject cpu-ref as preferred backend; failures={failures:?}"
+        );
+    }
 }
 pub(crate) fn require_no_hidden_backend_fallback_findings(
     requirement_id: &str,

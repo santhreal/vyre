@@ -8,8 +8,9 @@ use super::*;
 /// matrix would narrow the release claim instead of turning this gate red.
 const RELEASE_WORKLOAD_FAMILY_FLOOR: usize = 12;
 
-/// Release-class recorded device memory floor, in MiB.
-const RELEASE_GPU_MEMORY_FLOOR_MIB: usize = 24 * 1024;
+/// Release-class recorded device memory floor, in MiB. This matches the
+/// producer and release-gate minimum rather than a particular device's capacity.
+const RELEASE_GPU_MEMORY_FLOOR_MIB: usize = 16 * 1024;
 
 /// Lowest compute capability the release backends are probed against.
 ///
@@ -47,36 +48,69 @@ impl RecordedDevice {
         }
     }
 
-    fn from_environment(environment: &Value) -> Self {
+    fn from_environment_inventory(environment: &Value) -> BTreeSet<Self> {
         let devices = environment["gpu_devices"]
             .as_array()
             .expect("Fix: benchmark environment must record probed gpu_devices.");
-        assert_eq!(
-            devices.len(),
-            1,
-            "Fix: release benchmark evidence must record exactly one probed device."
-        );
-        let device = &devices[0];
-        Self {
-            model: json_str(device, "name").to_owned(),
-            memory_total_mib: json_usize(device, "memory_total_mib"),
-            compute_capability: (
-                json_usize(device, "compute_capability_major"),
-                json_usize(device, "compute_capability_minor"),
-            ),
-            driver_version: json_str(environment, "nvidia_driver_version").to_owned(),
-            cuda_version: json_str(environment, "nvidia_cuda_version").to_owned(),
-        }
+        devices
+            .iter()
+            .map(|device| Self {
+                model: json_str(device, "name").to_owned(),
+                memory_total_mib: json_usize(device, "memory_total_mib"),
+                compute_capability: (
+                    json_usize(device, "compute_capability_major"),
+                    json_usize(device, "compute_capability_minor"),
+                ),
+                driver_version: json_str(environment, "nvidia_driver_version").to_owned(),
+                cuda_version: json_str(environment, "nvidia_cuda_version").to_owned(),
+            })
+            .collect()
     }
+}
+
+/// WHY: a release sweep selects one qualifying device from a complete probe.
+/// Requiring the probe itself to contain one row rejects valid multi-GPU hosts.
+#[test]
+fn recorded_device_matches_any_member_of_environment_inventory() {
+    let environment = serde_json::json!({
+        "nvidia_driver_version": "580.173.02",
+        "nvidia_cuda_version": "13.0",
+        "gpu_devices": [
+            {
+                "name": "sub-floor-device",
+                "memory_total_mib": 8192,
+                "compute_capability_major": 6,
+                "compute_capability_minor": 1
+            },
+            {
+                "name": "qualifying-device",
+                "memory_total_mib": 24564,
+                "compute_capability_major": 8,
+                "compute_capability_minor": 9
+            }
+        ]
+    });
+    let selected = RecordedDevice {
+        model: "qualifying-device".to_string(),
+        memory_total_mib: 24564,
+        compute_capability: (8, 9),
+        driver_version: "580.173.02".to_string(),
+        cuda_version: "13.0".to_string(),
+    };
+
+    assert!(
+        RecordedDevice::from_environment_inventory(&environment).contains(&selected),
+        "Fix: release-suite provenance must find the selected device anywhere in the complete inventory."
+    );
 }
 
 /// Single-run provenance closure over a release suite artifact.
 ///
-/// Both suites record, per workload row, the device probed and the checkout
-/// measured, in two independent places: the suite status row and the workload
-/// artifact that row cites. One sweep writes one device and one tree into all
-/// of them, so the inventory is derived here from the artifact at run time and
-/// held to a count of one rather than to any expected value.
+/// A suite status row records the selected device and measured checkout; the
+/// workload artifact records that device within its complete probe inventory
+/// and repeats the checkout identity. Comparing those independent records is
+/// the only artifact-internal way to separate one measured sweep from rows
+/// glued together out of several.
 ///
 /// Trusting the suite's own `blockers` array instead cannot see a violation.
 /// The WGPU fallback suite carried an empty `blockers` array while two of its
@@ -121,10 +155,10 @@ impl SuiteProvenance {
             &recorded.driver_version,
         );
         assert_probed_version(suite, path, "nvidia_cuda_version", &recorded.cuda_version);
-        assert_eq!(
-            recorded,
-            RecordedDevice::from_environment(&artifact["environment"]),
-            "Fix: {suite} status `{path}` records a different device than the artifact it cites."
+        assert!(
+            RecordedDevice::from_environment_inventory(&artifact["environment"])
+                .contains(&recorded),
+            "Fix: {suite} status `{path}` names a device absent from the artifact's complete GPU inventory."
         );
         self.devices.insert(recorded);
 

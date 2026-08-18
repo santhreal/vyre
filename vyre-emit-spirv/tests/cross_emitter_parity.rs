@@ -132,6 +132,11 @@ fn every_descriptor_lowers_through_all_three_emitters() {
             !naga_module.entry_points.is_empty(),
             "naga module for `{id}` must expose an entry point"
         );
+        assert_eq!(naga_module.entry_points[0].name, "main");
+        assert_eq!(
+            naga_module.entry_points[0].workgroup_size,
+            verified.dispatch.workgroup_size
+        );
 
         let ptx = vyre_emit_ptx::emit(&verified)
             .unwrap_or_else(|error| panic!("PTX emit failed for `{id}`: {error:?}"));
@@ -146,6 +151,10 @@ fn every_descriptor_lowers_through_all_three_emitters() {
             spirv_words.first().copied(),
             Some(vyre_emit_spirv::SPIRV_MAGIC),
             "spirv for `{id}` must start with the SPIR-V magic word"
+        );
+        assert!(
+            spirv_words.len() > 16,
+            "spirv for `{id}` must contain a complete module, not just a header"
         );
     }
 }

@@ -9,8 +9,7 @@
 use std::collections::BTreeMap;
 
 use crate::cfg_test::strip_cfg_test_items;
-use crate::source_scan::opaque_span;
-
+use crate::source_scan::{is_word_byte, mask_comments_and_strings, opaque_span};
 /// Tier implied by each `OperationRegistration` constructor.
 ///
 /// `new` takes the tier as its second argument, so it is read there rather
@@ -24,6 +23,26 @@ const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
     ("::library(", Some("Library")),
     ("::new(", None),
 ];
+
+/// Treat every non-ASCII scalar conservatively as an identifier continuation.
+///
+/// Rust identifiers admit Unicode. Looking only at the adjacent byte mistakes
+/// the ASCII suffix of `λOperationRegistration` for the canonical type name.
+fn identifier_continues_before(text: &str, at: usize) -> bool {
+    text.get(..at)
+        .and_then(|prefix| prefix.chars().next_back())
+        .is_some_and(identifier_continuation)
+}
+
+fn identifier_continues_at(text: &str, at: usize) -> bool {
+    text.get(at..)
+        .and_then(|suffix| suffix.chars().next())
+        .is_some_and(identifier_continuation)
+}
+
+fn identifier_continuation(character: char) -> bool {
+    character == '_' || character.is_ascii_alphanumeric() || !character.is_ascii()
+}
 
 /// Extract `(op_id, tier)` for every `OperationRegistration` in one file.
 ///
@@ -43,30 +62,49 @@ pub fn parse_registrations(text: &str) -> Vec<(String, Option<String>)> {
     let text = stripped.as_ref();
     let consts = string_consts(text);
     let mut found = Vec::new();
-    let mut rest = text;
-    while let Some(start) = rest.find("OperationRegistration") {
-        let body = &rest[start..];
-        let after = &body["OperationRegistration".len()..];
-        let constructor = CONSTRUCTOR_TIERS.iter().find(|(call, _)| {
-            after
-                .trim_start()
-                .starts_with(call.trim_start_matches("::"))
-                || after.starts_with(call)
-        });
-        if let Some((call, tier)) = constructor {
-            if let Some(id) = first_argument(after, call).and_then(|raw| resolve_id(raw, &consts)) {
-                let tier = tier
-                    .map(|tier| tier.to_string())
-                    .or_else(|| nth_argument(after, call, 1).map(tier_variant));
-                found.push((id, tier));
-            }
-        } else {
-            let block = &body[..struct_literal_end(body)];
-            if let Some(id) = field_value(block, "id").and_then(|raw| resolve_id(raw, &consts)) {
-                found.push((id, field_value(block, "tier").map(tier_variant)));
+    let bytes = text.as_bytes();
+    let registration_name = "OperationRegistration";
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(text, offset) {
+            offset += span.get();
+            continue;
+        }
+        if !identifier_continues_before(text, offset)
+            && bytes[offset..].starts_with(registration_name.as_bytes())
+        {
+            let after_name = offset + registration_name.len();
+            if !identifier_continues_at(text, after_name) {
+                let body = &text[offset..];
+                let after = &text[after_name..];
+                let constructor = CONSTRUCTOR_TIERS.iter().find(|(call, _)| {
+                    after
+                        .trim_start()
+                        .starts_with(call.trim_start_matches("::"))
+                        || after.starts_with(call)
+                });
+                if let Some((call, tier)) = constructor {
+                    if let Some(id) =
+                        first_argument(after, call).and_then(|raw| resolve_id(raw, &consts))
+                    {
+                        let tier = tier
+                            .map(|tier| tier.to_string())
+                            .or_else(|| nth_argument(after, call, 1).map(tier_variant));
+                        found.push((id, tier));
+                    }
+                } else if after.trim_start().starts_with('{') {
+                    let block = &body[..struct_literal_end(body)];
+                    if let Some(id) =
+                        field_value(block, "id").and_then(|raw| resolve_id(raw, &consts))
+                    {
+                        found.push((id, field_value(block, "tier").map(tier_variant)));
+                    }
+                }
+                offset = after_name;
+                continue;
             }
         }
-        rest = after;
+        offset += 1;
     }
     parse_named_intrinsic_macros(text, &consts, &mut found);
     parse_positional_intrinsic_macros(text, &consts, &mut found);
@@ -83,20 +121,10 @@ fn parse_named_intrinsic_macros(
     found: &mut Vec<(String, Option<String>)>,
 ) {
     for macro_name in ["submit_hardware_intrinsic", "submit_intrinsic_operation"] {
-        let needle = format!("{macro_name}!");
-        let mut rest = text;
-        while let Some(start) = rest.find(&needle) {
-            let after_name = &rest[start + needle.len()..];
-            let Some(open) = after_name.find('{') else {
-                break;
-            };
-            let body = &after_name[open..];
-            let end = struct_literal_end(body);
-            let block = &body[..end];
-            if let Some(id) = field_value(block, "id").and_then(|raw| resolve_id(raw, consts)) {
+        for (body, _) in find_macro_invocations(text, macro_name) {
+            if let Some(id) = field_value(body, "id").and_then(|raw| resolve_id(raw, consts)) {
                 found.push((id, Some("Intrinsic".to_string())));
             }
-            rest = &body[end..];
         }
     }
 }
@@ -111,18 +139,137 @@ fn parse_positional_intrinsic_macros(
         "define_unary_u32_hardware_intrinsic",
         "define_barrier_u32_hardware_intrinsic",
     ] {
-        let needle = format!("{macro_name}!");
-        let mut rest = text;
-        while let Some(start) = rest.find(&needle) {
-            let after_name = &rest[start + macro_name.len()..];
-            if let Some(id) =
-                nth_argument(after_name, "!(", 1).and_then(|raw| resolve_id(raw, consts))
+        for (body, _) in find_macro_invocations(text, macro_name) {
+            if let Some(id) = nth_argument_in_body(body, 1).and_then(|raw| resolve_id(raw, consts))
             {
                 found.push((id, Some("Intrinsic".to_string())));
             }
-            rest = &after_name[1..];
         }
     }
+}
+
+fn is_comment_span(text: &str, at: usize) -> Option<usize> {
+    let rest = text.get(at..)?;
+    if !rest.starts_with("//") && !rest.starts_with("/*") {
+        return None;
+    }
+    opaque_span(text, at).map(std::num::NonZeroUsize::get)
+}
+
+fn find_macro_invocations<'a>(text: &'a str, macro_name: &str) -> Vec<(&'a str, usize)> {
+    let mut invocations = Vec::new();
+    let bytes = text.as_bytes();
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(text, offset) {
+            offset += span.get();
+            continue;
+        }
+        if !identifier_continues_before(text, offset)
+            && bytes[offset..].starts_with(macro_name.as_bytes())
+        {
+            let after_name = offset + macro_name.len();
+            if !identifier_continues_at(text, after_name) {
+                let mut cursor = after_name;
+                while cursor < bytes.len() {
+                    if let Some(span) = opaque_span(text, cursor) {
+                        cursor += span.get();
+                        continue;
+                    }
+                    if bytes[cursor].is_ascii_whitespace() {
+                        cursor += 1;
+                    } else {
+                        break;
+                    }
+                }
+                if cursor < bytes.len() && bytes[cursor] == b'!' {
+                    cursor += 1;
+                    while cursor < bytes.len() {
+                        if let Some(span) = opaque_span(text, cursor) {
+                            cursor += span.get();
+                            continue;
+                        }
+                        if bytes[cursor].is_ascii_whitespace() {
+                            cursor += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    if cursor < bytes.len()
+                        && (bytes[cursor] == b'(' || bytes[cursor] == b'{' || bytes[cursor] == b'[')
+                    {
+                        let open_delim = bytes[cursor];
+                        let close_delim = match open_delim {
+                            b'(' => b')',
+                            b'{' => b'}',
+                            _ => b']',
+                        };
+                        let body_start = cursor + 1;
+                        let mut depth = 1usize;
+                        let mut body_cursor = body_start;
+                        while body_cursor < bytes.len() {
+                            if let Some(span) = opaque_span(text, body_cursor) {
+                                body_cursor += span.get();
+                                continue;
+                            }
+                            let c = bytes[body_cursor];
+                            if c == open_delim {
+                                depth += 1;
+                            } else if c == close_delim {
+                                depth -= 1;
+                                if depth == 0 {
+                                    invocations
+                                        .push((&text[body_start..body_cursor], body_cursor + 1));
+                                    offset = body_cursor + 1;
+                                    break;
+                                }
+                            }
+                            body_cursor += 1;
+                        }
+                        if depth == 0 {
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        offset += 1;
+    }
+    invocations
+}
+
+fn nth_argument_in_body(body: &str, index: usize) -> Option<&str> {
+    let bytes = body.as_bytes();
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    let mut argument = 0usize;
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(body, offset) {
+            offset += span.get();
+            continue;
+        }
+        match bytes[offset] {
+            b'(' | b'[' | b'{' => depth += 1,
+            b')' | b']' | b'}' if depth > 0 => depth -= 1,
+            b',' if depth == 0 => {
+                if argument == index {
+                    return Some(body[start..offset].trim());
+                }
+                argument += 1;
+                start = offset + 1;
+            }
+            _ => {}
+        }
+        offset += 1;
+    }
+    if argument == index {
+        let tail = body[start..].trim();
+        if !tail.is_empty() {
+            return Some(tail);
+        }
+    }
+    None
 }
 
 /// First argument of a constructor call, as written.
@@ -224,55 +371,171 @@ fn struct_literal_end(body: &str) -> usize {
 /// declared type must name `str`, which keeps `const fn` bodies and const
 /// generic parameters out of the map.
 fn string_consts(text: &str) -> BTreeMap<String, String> {
-    const KEYWORD: &str = "const ";
     let mut consts = BTreeMap::new();
-    let mut cursor = 0usize;
-    while let Some(offset) = text[cursor..].find(KEYWORD) {
-        let start = cursor + offset + KEYWORD.len();
-        cursor = start;
-        let Some(end) = text[start..].find(';') else {
-            break;
-        };
-        let Some((declared, value)) = text[start..start + end].split_once('=') else {
-            continue;
-        };
-        let Some((name, declared_type)) = declared.split_once(':') else {
-            continue;
-        };
-        let name = name.trim();
-        if !declared_type.contains("str")
-            || name.is_empty()
-            || !name
-                .chars()
-                .all(|character| character.is_alphanumeric() || character == '_')
-        {
+    let bytes = text.as_bytes();
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(text, offset) {
+            offset += span.get();
             continue;
         }
-        if let Some(literal) = string_literal(value) {
-            consts.insert(name.to_string(), literal);
+        if !identifier_continues_before(text, offset) && bytes[offset..].starts_with(b"const") {
+            let after_const = offset + "const".len();
+            if after_const < bytes.len() && !identifier_continues_at(text, after_const) {
+                let mut cursor = after_const;
+                while cursor < bytes.len() {
+                    if let Some(span) = opaque_span(text, cursor) {
+                        cursor += span.get();
+                        continue;
+                    }
+                    if bytes[cursor].is_ascii_whitespace() {
+                        cursor += 1;
+                    } else {
+                        break;
+                    }
+                }
+                let name_start = cursor;
+                while cursor < bytes.len() && is_word_byte(bytes[cursor]) {
+                    cursor += 1;
+                }
+                let name = text[name_start..cursor].trim();
+                while cursor < bytes.len() {
+                    if let Some(span) = opaque_span(text, cursor) {
+                        cursor += span.get();
+                        continue;
+                    }
+                    if bytes[cursor].is_ascii_whitespace() {
+                        cursor += 1;
+                    } else {
+                        break;
+                    }
+                }
+                if cursor < bytes.len() && bytes[cursor] == b':' {
+                    cursor += 1;
+                    let type_start = cursor;
+                    while cursor < bytes.len() {
+                        if let Some(span) = opaque_span(text, cursor) {
+                            cursor += span.get();
+                            continue;
+                        }
+                        if bytes[cursor] == b'=' {
+                            break;
+                        }
+                        cursor += 1;
+                    }
+                    let declared_type = text[type_start..cursor].trim();
+                    if cursor < bytes.len()
+                        && bytes[cursor] == b'='
+                        && is_string_reference_type(declared_type)
+                        && !name.is_empty()
+                    {
+                        cursor += 1;
+                        let val_start = cursor;
+                        while cursor < bytes.len() {
+                            if let Some(span) = opaque_span(text, cursor) {
+                                cursor += span.get();
+                                continue;
+                            }
+                            if bytes[cursor] == b';' {
+                                break;
+                            }
+                            cursor += 1;
+                        }
+                        let val_str = &text[val_start..cursor];
+                        if let Some(literal) = string_literal(val_str) {
+                            consts.insert(name.to_string(), literal);
+                        }
+                        offset = cursor + 1;
+                        continue;
+                    }
+                }
+            }
         }
+        offset += 1;
     }
     consts
 }
 
+fn is_string_reference_type(declared_type: &str) -> bool {
+    let masked = mask_comments_and_strings(declared_type);
+    let compact: String = masked
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .collect();
+    matches!(compact.as_str(), "&str" | "&'staticstr")
+}
+
 fn string_literal(text: &str) -> Option<String> {
-    let start = text.find('"')?;
-    let rest = &text[start + 1..];
-    let end = rest.find('"')?;
-    Some(rest[..end].to_string())
+    crate::source_scan::string_literals(text)
+        .into_iter()
+        .next()
+        .map(str::to_string)
 }
 
 /// Read one `field: value,` from a struct literal body.
 fn field_value<'a>(block: &'a str, field: &str) -> Option<&'a str> {
-    for line in block.lines() {
-        let line = line.trim();
-        let Some(rest) = line.strip_prefix(field) else {
+    let bytes = block.as_bytes();
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        if let Some(span) = opaque_span(block, offset) {
+            offset += span.get();
             continue;
-        };
-        let Some(rest) = rest.strip_prefix(':') else {
-            continue;
-        };
-        return Some(rest.trim().trim_end_matches(','));
+        }
+        if !identifier_continues_before(block, offset)
+            && bytes[offset..].starts_with(field.as_bytes())
+        {
+            let after_field = offset + field.len();
+            if !identifier_continues_at(block, after_field) {
+                let mut cursor = after_field;
+                while cursor < bytes.len() {
+                    if let Some(c_span) = is_comment_span(block, cursor) {
+                        cursor += c_span;
+                        continue;
+                    }
+                    if bytes[cursor].is_ascii_whitespace() {
+                        cursor += 1;
+                    } else {
+                        break;
+                    }
+                }
+                if cursor < bytes.len() && bytes[cursor] == b':' {
+                    cursor += 1;
+                    while cursor < bytes.len() {
+                        if let Some(c_span) = is_comment_span(block, cursor) {
+                            cursor += c_span;
+                            continue;
+                        }
+                        if bytes[cursor].is_ascii_whitespace() {
+                            cursor += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    let val_start = cursor;
+                    let mut depth = 0usize;
+                    let mut val_end = cursor;
+                    while cursor < bytes.len() {
+                        if let Some(span) = opaque_span(block, cursor) {
+                            cursor += span.get();
+                            val_end = cursor;
+                            continue;
+                        }
+                        let c = bytes[cursor];
+                        match c {
+                            b'(' | b'[' | b'{' => depth += 1,
+                            b')' | b']' | b'}' if depth > 0 => depth -= 1,
+                            b')' | b']' | b'}' if depth == 0 => break,
+                            b',' if depth == 0 => break,
+                            _ => {}
+                        }
+                        cursor += 1;
+                        val_end = cursor;
+                    }
+                    return Some(block[val_start..val_end].trim());
+                }
+            }
+        }
+        offset += 1;
     }
     None
 }
@@ -402,6 +665,49 @@ documentation_entry! {
                 ),
                 (
                     "vyre-primitives::hardware::bit_reverse_u32".to_string(),
+                    Some("Intrinsic".to_string())
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn hardware_registration_macro_syntax_variants_are_parsed() {
+        let parsed = parse_registrations(
+            r#"
+const STORAGE_ID: &str = "vyre-primitives::hardware::storage_barrier";
+submit_hardware_intrinsic! (
+    id : "vyre-primitives::hardware::fma_f32",
+    signature: F32_TERNARY_SIGNATURE,
+);
+define_unary_u32_hardware_intrinsic! (
+    bit_reverse_u32,
+    "vyre-primitives::hardware::bit_reverse_u32",
+    Expr::reverse_bits,
+);
+define_barrier_u32_hardware_intrinsic! {
+    storage_barrier,
+    STORAGE_ID,
+    &[10u32, 20, 30, 40],
+}
+/// Docs mention [`OperationRegistration`].
+pub fn helper() {}
+"#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![
+                (
+                    "vyre-primitives::hardware::fma_f32".to_string(),
+                    Some("Intrinsic".to_string())
+                ),
+                (
+                    "vyre-primitives::hardware::bit_reverse_u32".to_string(),
+                    Some("Intrinsic".to_string())
+                ),
+                (
+                    "vyre-primitives::hardware::storage_barrier".to_string(),
                     Some("Intrinsic".to_string())
                 ),
             ]
@@ -887,6 +1193,29 @@ inventory::submit! {
         assert_eq!(parsed, Vec::new());
     }
 
+    #[test]
+    fn registration_names_inside_opaque_spans_are_ignored() {
+        let parsed = parse_registrations(
+            r#"
+            const DESCRIPTION: &str =
+                "OperationRegistration::library(\"test::string\")";
+            // OperationRegistration::library("test::line_comment");
+            /* outer OperationRegistration::library("test::block_comment");
+               /* nested OperationRegistration::library("test::nested_comment"); */
+            */
+            OperationRegistration::library("vyre-libs::hash::crc32");
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-libs::hash::crc32".to_string(),
+                Some("Library".to_string())
+            )]
+        );
+    }
+
     /// A brace inside a string literal used to end the struct literal early,
     /// which truncated the scanned window before `id:` and dropped the
     /// registration. The literal here carries one unbalanced `}`, which is what
@@ -946,5 +1275,110 @@ inventory::submit! {
                 Some("Library".to_string())
             )]
         );
+    }
+
+    #[test]
+    fn string_consts_handles_raw_strings_and_comments() {
+        let source = r##"
+            /// doc comment with const IGNORED: &str = "bad";
+            /* const ALSO_IGNORED: &str = "bad"; */
+            const OP1: &str = "op::one";
+            const OP2: &'static str = r#"op::two"#;
+            const OP3: &str = /* comment with ; */ "op::three;with_semicolon";
+        "##;
+        let consts = string_consts(source);
+        assert_eq!(consts.get("OP1").map(String::as_str), Some("op::one"));
+        assert_eq!(consts.get("OP2").map(String::as_str), Some("op::two"));
+        assert_eq!(
+            consts.get("OP3").map(String::as_str),
+            Some("op::three;with_semicolon")
+        );
+        assert_eq!(consts.get("IGNORED"), None);
+        assert_eq!(consts.get("ALSO_IGNORED"), None);
+        assert_eq!(
+            string_consts("const NOT_AN_ID: &restrict::Name = \"bad\";").get("NOT_AN_ID"),
+            None
+        );
+    }
+
+    /// Byte-oriented scans must cross UTF-8 identifiers without creating an
+    /// invalid `str` boundary before a later registration token.
+    #[test]
+    fn registrations_after_non_ascii_source_are_parsed() {
+        let parsed = parse_registrations(
+            r#"
+fn λ() {}
+const OP: &str = "vyre-libs::unicode::library";
+OperationRegistration::library(OP);
+
+#[cfg(test)]
+mod δοκιμή {
+    OperationRegistration::library("test::unicode_fixture");
+}
+
+const INTRINSIC: &str = "vyre-primitives::unicode::intrinsic";
+submit_hardware_intrinsic! {
+    id: INTRINSIC,
+    signature: F32_UNARY_SIGNATURE,
+}
+"#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![
+                (
+                    "vyre-libs::unicode::library".to_string(),
+                    Some("Library".to_string())
+                ),
+                (
+                    "vyre-primitives::unicode::intrinsic".to_string(),
+                    Some("Intrinsic".to_string())
+                ),
+            ]
+        );
+    }
+
+    /// Unicode identifier scalars adjacent to canonical token text must not
+    /// turn an identifier substring into registration syntax.
+    #[test]
+    fn registration_tokens_inside_unicode_identifiers_are_ignored() {
+        let parsed = parse_registrations(
+            r#"
+λOperationRegistration::library("bad::constructor");
+OperationRegistrationλ::library("bad::constructor_suffix");
+λsubmit_hardware_intrinsic! {
+    id: "bad::macro",
+    signature: F32_UNARY_SIGNATURE,
+}
+submit_hardware_intrinsicλ! {
+    id: "bad::macro_suffix",
+    signature: F32_UNARY_SIGNATURE,
+}
+λconst BAD: &str = "bad::const";
+constλ BAD_SUFFIX: &str = "bad::const_suffix";
+OperationRegistration::library(BAD_SUFFIX);
+OperationRegistration::library(BAD);
+OperationRegistration {
+    λid: "bad::field",
+    tier: OperationTier::Library,
+}
+OperationRegistration {
+    idλ: "bad::field_suffix",
+    tier: OperationTier::Library,
+}
+OperationRegistration::library("good::registration");
+"#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "good::registration".to_string(),
+                Some("Library".to_string())
+            )]
+        );
+        assert!(string_consts("λconst BAD: &str = \"bad::const\";").is_empty());
+        assert_eq!(field_value("{ λid: \"bad::field\" }", "id"), None);
     }
 }

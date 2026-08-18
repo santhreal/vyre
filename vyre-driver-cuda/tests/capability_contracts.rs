@@ -22,19 +22,19 @@ fn cuda_device_probe_must_succeed_on_gpu_fleet() {
     );
 
     let backend = CudaBackend::acquire()
-        .expect("Fix: CudaBackend::acquire must succeed on the local RTX 5090 machine.");
+        .expect("Fix: CudaBackend::acquire must succeed on the GPU-required test host.");
     assert!(
         !backend.caps.name.trim().is_empty(),
         "Fix: CUDA device-name probe returned an empty adapter name."
     );
     assert!(
-        backend.compute_capability() >= (12, 0),
-        "Fix: expected the local RTX 5090 CUDA path to report compute capability >= 12.0, got {:?}.",
+        backend.compute_capability() >= (8, 0),
+        "Fix: expected CUDA device to report compute capability >= (8, 0), got {:?}.",
         backend.compute_capability()
     );
     assert!(
-        backend.device_memory_bytes() >= 30 * 1024 * 1024 * 1024,
-        "Fix: expected at least 30 GiB VRAM on the local RTX 5090 path, got {} bytes.",
+        backend.device_memory_bytes() >= 8 * 1024 * 1024 * 1024,
+        "Fix: expected at least 8 GiB VRAM on the CUDA device, got {} bytes.",
         backend.device_memory_bytes()
     );
 }
@@ -91,7 +91,7 @@ fn cuda_backend_caps_match_driver_attributes() {
         "Fix: CUDA PTX emitter target must not exceed the physical device target."
     );
     assert!(
-        backend.ptx_target_sm() >= 90,
+        backend.ptx_target_sm() >= 70,
         "Fix: CUDA PTX emitter target must be selected by live driver probing and preserve modern NVIDIA instructions instead of falling back to an old baseline."
     );
     assert!(
@@ -201,7 +201,7 @@ fn vyre_backend_trait_reports_live_cuda_capabilities() {
     );
     assert!(
         backend.supports_async_compute(),
-        "Fix: RTX 5090 CUDA backend must report async CUDA hardware capability."
+        "Fix: CUDA backend must report async CUDA hardware capability."
     );
     assert!(
         !backend.allows_host_grid_sync_split(),

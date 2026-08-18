@@ -29,23 +29,23 @@ use vyre_reference::composition_witness::{
     differentiable_argmax_witness, differentiable_argmax_witness_into,
     differentiable_autotune_gradient_witness_into,
     differentiable_autotune_pick_config_witness_into, do_intervention_delete_incoming_witness_into,
-    dominator_frontier_witness, dominator_idoms_witness, dominator_sets_idoms_witness,
-    dominator_tree_witness, dp_clip_per_sample_witness, dp_clip_per_sample_witness_into,
-    evaluate_condition_witness, evaluate_formula_witness, exploded_ifds_csr_witness,
-    fisher_rao_distance_witness, fnv1a32_witness, fnv1a64_witness, fractional_derivative_witness,
-    frontier_absorb_witness, frontier_domain_popcount_witness, frontier_popcount_witness,
-    frontier_step_sharded_witness, frontier_to_queue_witness, frontier_to_queue_witness_into,
-    functor_apply_witness, functor_apply_witness_into, fusion_affinity_witness,
-    fusion_affinity_witness_into, gaussian_rdp_step_witness, grunwald_letnikov_kernel_witness,
-    homotopy_euler_predictor_witness, hypervector_majority_bundle_witness,
-    hypervector_xor_bind_witness, i4x8_batched_matmul_f32_scaled_witness,
-    i4x8_batched_matmul_top1_f32_scaled_witness, i4x8_batched_matvec_f32_scaled_witness,
-    i4x8_dot_f32_scaled_witness, i4x8_dot_i32_witness, i4x8_matvec_f32_scaled_witness,
-    identity_arrow_witness, identity_functor_witness, identity_functor_witness_into,
-    identity_matrix_witness_into, idoms_to_dominator_sets_witness, iht_top_k_witness,
-    interval_merge_witness, jacobi_solve_to_tolerance_witness_into, kernel_to_fixed_16_16_witness,
-    kernel_to_fixed_16_16_witness_into, kfac_block_inverse_witness, knn_csr_witness,
-    l2p_zeroth_all_witness, launch_dominance_witness, linear_homotopy_witness,
+    dominator_frontier_witness, dominator_frontier_witness_into, dominator_idoms_witness,
+    dominator_sets_idoms_witness, dominator_tree_witness, dp_clip_per_sample_witness,
+    dp_clip_per_sample_witness_into, evaluate_condition_witness, evaluate_formula_witness,
+    exploded_ifds_csr_witness, fisher_rao_distance_witness, fnv1a32_witness, fnv1a64_witness,
+    fractional_derivative_witness, frontier_absorb_witness, frontier_domain_popcount_witness,
+    frontier_popcount_witness, frontier_step_sharded_witness, frontier_to_queue_witness,
+    frontier_to_queue_witness_into, functor_apply_witness, functor_apply_witness_into,
+    fusion_affinity_witness, fusion_affinity_witness_into, gaussian_rdp_step_witness,
+    grunwald_letnikov_kernel_witness, homotopy_euler_predictor_witness,
+    hypervector_majority_bundle_witness, hypervector_xor_bind_witness,
+    i4x8_batched_matmul_f32_scaled_witness, i4x8_batched_matmul_top1_f32_scaled_witness,
+    i4x8_batched_matvec_f32_scaled_witness, i4x8_dot_f32_scaled_witness, i4x8_dot_i32_witness,
+    i4x8_matvec_f32_scaled_witness, identity_arrow_witness, identity_functor_witness,
+    identity_functor_witness_into, identity_matrix_witness_into, idoms_to_dominator_sets_witness,
+    iht_top_k_witness, interval_merge_witness, jacobi_solve_to_tolerance_witness_into,
+    kernel_to_fixed_16_16_witness, kernel_to_fixed_16_16_witness_into, kfac_block_inverse_witness,
+    knn_csr_witness, l2p_zeroth_all_witness, launch_dominance_witness, linear_homotopy_witness,
     m2l_zeroth_all_witness, matmul_u32_witness, matroid_exchange_bfs_step_witness,
     matroid_intersection_augmentation_witness, matroid_select_optimal_subset_witness,
     matroid_select_optimal_subset_witness_into, merge_frontier_out_witness_into,
@@ -62,9 +62,9 @@ use vyre_reference::composition_witness::{
     rdp_to_dp_witness, reachable_witness, reduce_max_f32_witness, reduce_sum_f32_witness,
     region_of_witness, resolve_bigint_carry_chain_witness, resolve_bigint_carry_chain_witness_into,
     resolve_family_witness, rms_norm_linear_witness, scale_aware_pressure_witness,
-    scallop_join_fixpoint_witness,
-    scc_decompose_witness, schedule_via_homotopy_witness, schedule_via_scale_aware_samples_witness,
-    select_retention_set_witness, select_retention_set_witness_into, semiring_gemm_witness,
+    scallop_join_fixpoint_witness, scc_decompose_witness, schedule_via_homotopy_witness,
+    schedule_via_scale_aware_samples_witness, select_retention_set_witness,
+    select_retention_set_witness_into, semiring_gemm_witness,
     sheaf_diffusion_equilibrium_witness_into, sheaf_diffusion_step_witness,
     sheaf_diffusion_step_witness_into, sheaf_dominant_spectrum_witness_into,
     sheaf_fusion_incompatible_witness, sheaf_fusion_incompatible_witness_into,
@@ -720,6 +720,32 @@ fn dominator_witnesses_contracts() {
     );
     // DF(1) = {3}
     assert_eq!(df_1, vec![0b1000]);
+}
+
+/// WHY: the device composer requires an exact packed seed width. A lenient
+/// reference oracle would certify malformed inputs the shipped path rejects.
+#[test]
+fn dominator_frontier_rejects_short_seed_before_output_mutation() {
+    let mut output = vec![0xCAFE_BABE];
+    let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        dominator_frontier_witness_into(2, &[0, 0, 0], &[], &[0, 0, 0], &[], &[], &mut output);
+    }))
+    .expect_err("Fix: a two-node dominator seed requires one packed word.");
+
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+    assert!(
+        message.contains("expected seed length 1 words for 2 nodes, got 0"),
+        "Fix: the witness must report the exact seed-width mismatch, got: {message}"
+    );
+    assert_eq!(
+        output,
+        [0xCAFE_BABE],
+        "Fix: malformed input must not mutate caller-owned output."
+    );
 }
 
 #[test]

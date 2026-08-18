@@ -11,7 +11,7 @@
 //! silicon end-to-end. A miscompiled nested loop carrier or the conditional xor
 //! would make every GPU CRC silently wrong with no test to catch it.
 //!
-//! Dispatched on the 5090 and asserted byte-for-byte against the `crc32` Rust
+//! Dispatched on the live GPU and asserted byte-for-byte against the `crc32` Rust
 //! reference and the standard zlib CRC-32 vector for "abc".
 
 mod harness;

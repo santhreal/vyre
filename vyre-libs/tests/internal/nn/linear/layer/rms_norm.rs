@@ -147,7 +147,9 @@ fn parity_rms_norm_linear_matches_reference_adversarial_inputs() {
     for &eps in &test_epsilons {
         // Subnormal-adjacent small magnitudes
         let small_input: Vec<f32> = (0..in_dim).map(|i| (i as f32 + 1.0) * 1e-4).collect();
-        let weights: Vec<f32> = (0..(in_dim * out_dim)).map(|i| (i as f32) * 0.05 - 0.5).collect();
+        let weights: Vec<f32> = (0..(in_dim * out_dim))
+            .map(|i| (i as f32) * 0.05 - 0.5)
+            .collect();
         let bias: Vec<f32> = (0..out_dim).map(|i| (i as f32) * 0.2 - 0.8).collect();
 
         let fused = rms_norm_linear("input", "w", "b", "out", n, in_dim, out_dim, eps);
@@ -157,16 +159,30 @@ fn parity_rms_norm_linear_matches_reference_adversarial_inputs() {
             Value::from(to_f32_bytes(&bias)),
             Value::from(vec![0u8; out_dim as usize * core::mem::size_of::<f32>()]),
         ];
-        let fused_outputs = vyre_reference::reference_eval(&fused, &fused_inputs).expect(
-            "Fix: fused rms_norm_linear must execute on small inputs",
-        );
+        let fused_outputs = vyre_reference::reference_eval(&fused, &fused_inputs)
+            .expect("Fix: fused rms_norm_linear must execute on small inputs");
         let fused_out = bytes_to_f32(&fused_outputs[0].to_bytes());
-        let expected = linear_reference(&small_input, &small_input[0..n as usize], &weights, &bias, out_dim, in_dim, n, eps);
+        let expected = linear_reference(
+            &small_input,
+            &small_input[0..n as usize],
+            &weights,
+            &bias,
+            out_dim,
+            in_dim,
+            n,
+            eps,
+        );
         compare_ulp(&fused_out, &expected, n, in_dim, out_dim);
 
         // Alternating high dynamic range
         let alt_input: Vec<f32> = (0..in_dim)
-            .map(|i| if i % 2 == 0 { 100.0 * (i as f32 + 1.0) } else { -0.01 * (i as f32 + 1.0) })
+            .map(|i| {
+                if i % 2 == 0 {
+                    100.0 * (i as f32 + 1.0)
+                } else {
+                    -0.01 * (i as f32 + 1.0)
+                }
+            })
             .collect();
         let fused_alt = rms_norm_linear("input", "w", "b", "out", n, in_dim, out_dim, eps);
         let fused_alt_inputs = vec![
@@ -175,11 +191,19 @@ fn parity_rms_norm_linear_matches_reference_adversarial_inputs() {
             Value::from(to_f32_bytes(&bias)),
             Value::from(vec![0u8; out_dim as usize * core::mem::size_of::<f32>()]),
         ];
-        let fused_alt_outputs = vyre_reference::reference_eval(&fused_alt, &fused_alt_inputs).expect(
-            "Fix: fused rms_norm_linear must execute on alternating dynamic range inputs",
-        );
+        let fused_alt_outputs = vyre_reference::reference_eval(&fused_alt, &fused_alt_inputs)
+            .expect("Fix: fused rms_norm_linear must execute on alternating dynamic range inputs");
         let fused_alt_out = bytes_to_f32(&fused_alt_outputs[0].to_bytes());
-        let expected_alt = linear_reference(&alt_input, &alt_input[0..n as usize], &weights, &bias, out_dim, in_dim, n, eps);
+        let expected_alt = linear_reference(
+            &alt_input,
+            &alt_input[0..n as usize],
+            &weights,
+            &bias,
+            out_dim,
+            in_dim,
+            n,
+            eps,
+        );
         compare_ulp(&fused_alt_out, &expected_alt, n, in_dim, out_dim);
     }
 }

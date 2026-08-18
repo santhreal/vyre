@@ -14,7 +14,7 @@ use vyre_foundation::{
 
 fn test_profile_1024() -> DeviceProfile {
     DeviceProfile {
-        backend: "test-cuda",
+        backend: "test-profile-1024",
         supports_subgroup_ops: true,
         supports_indirect_dispatch: true,
         supports_distributed_collectives: true,
@@ -54,7 +54,7 @@ fn test_profile_1024() -> DeviceProfile {
 
 fn test_profile_256() -> DeviceProfile {
     DeviceProfile {
-        backend: "test-wgpu",
+        backend: "test-profile-256",
         supports_subgroup_ops: true,
         supports_indirect_dispatch: true,
         supports_distributed_collectives: false,

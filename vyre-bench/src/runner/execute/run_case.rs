@@ -105,7 +105,10 @@ pub(super) fn run_case(
                     .get_or_insert(read + written);
             }
             if started.elapsed() > config.sample_timeout {
-                break;
+                return Err(format!(
+                    "Measured sample {sample_index} exceeded timeout {:?}",
+                    config.sample_timeout
+                ));
             }
             if sample_index == 0 {
                 correctness = Some(

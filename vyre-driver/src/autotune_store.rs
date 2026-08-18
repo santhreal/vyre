@@ -17,7 +17,7 @@
 //!
 //! [[record]]
 //! key = "0123456789abcdef0123456789abcdef"   # 32-hex of (key.spec_hash ^ key.shader_hash, adapter_id)
-//! adapter = "portable-vk-rtx5090"
+//! adapter = "portable-adapter-0"
 //! workgroup_size = [128, 1, 1]
 //! unroll = 4
 //! tile = [16, 16, 1]
@@ -77,8 +77,8 @@ pub struct AutotuneStore {
 pub struct AutotuneKey {
     /// Folded SpecCacheKey digest as 32 hex characters (16 bytes).
     pub key_hex: String,
-    /// Stable adapter identifier (e.g. `portable-vk-rtx5090`,
-    /// `native-sm_90`).
+    /// Stable adapter identifier (e.g. `portable-adapter-0`,
+    /// `native-adapter-1`).
     pub adapter_id: String,
 }
 

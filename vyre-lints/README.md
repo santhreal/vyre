@@ -1,12 +1,12 @@
 # vyre-lints
 
-The workspace lints: production CPU fallbacks, silent GPU skip guards,
+The workspace lints: production host execution paths, silent GPU skip guards,
 module forks, consumer coupling, raw IR construction in composition
 crates.
 
 Each lint exists because the defect it caught shipped once. Not here:
 style. A lint that fires on formatting trains everyone to ignore the
-lints that catch a CPU fallback.
+lints that catch a host execution path.
 
 ## Usage
 

@@ -217,7 +217,7 @@ pub fn gpu_pipeline_resident(
     // SeqCst barriers between levels.
     let hash_program = build_structural_hash_program(n, arena.max_depth.saturating_add(1).max(1));
     // Brute-force scan O(n²); each thread i finds smallest j ≤ i with
-    // matching hash. Acceptable up to n ≈ 5000 on RTX 5090.
+    // matching hash. Acceptable up to n ≈ 5000 on device.
     let canonical_program = build_canonical_id_program(n, table_capacity);
     let pattern_program = build_pattern_match_program_with_cse(n);
     let delta_bitset_program = build_resident_delta_bitset_pack_program(n);

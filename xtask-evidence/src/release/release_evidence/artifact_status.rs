@@ -217,7 +217,9 @@ fn external_benchmark_artifact_freshness_blockers(
             "external benchmark artifact `{artifact}` must declare positive schema_version"
         ));
     }
-    if artifact.ends_with("cuda-release-suite.json") {
+    if artifact.ends_with("cuda-release-suite.json")
+        || artifact.ends_with("wgpu-fallback-suite.json")
+    {
         blockers.extend(
             crate::bench::benchmark_evidence_semantics::benchmark_schema_digest_chain_issues(
                 artifact,
@@ -254,6 +256,7 @@ fn is_release_benchmark_semantic_artifact(artifact: &str) -> bool {
     matches!(
         artifact,
         "release/evidence/benchmarks/cuda-release-suite.json"
+            | "release/evidence/benchmarks/wgpu-fallback-suite.json"
             | "release/evidence/benchmarks/bench-release-axes.json"
             | "release/evidence/benchmarks/cpu-only-100x-proof.json"
             | "release/evidence/optimization/pass-family-benchmark-manifest.json"

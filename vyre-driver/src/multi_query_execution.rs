@@ -834,7 +834,7 @@ mod tests {
     }
 
     #[test]
-    fn multi_query_splits_compatible_group_to_fit_cuda_budget_without_reuploading_graph() {
+    fn multi_query_splits_compatible_group_to_fit_resident_budget_without_reuploading_graph() {
         let plan = plan_multi_query_execution(
             &[
                 query(1, 0xabc, 0x10, 100, 100, 10, 10),

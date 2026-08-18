@@ -15,7 +15,7 @@ use std::sync::Arc;
 /// from a hot scrape loop.
 #[derive(Clone, Debug)]
 pub struct WgpuBackendStats {
-    /// Adapter name the backend is bound to (e.g. `"NVIDIA GeForce RTX 5090"`).
+    /// Adapter name the backend is bound to (e.g. `"NVIDIA GPU Adapter"`).
     pub adapter_name: std::sync::Arc<str>,
     /// Live entries in the pipeline cache.
     pub pipeline_cache_entries: usize,

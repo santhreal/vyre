@@ -113,7 +113,8 @@ pub mod logical;
     feature = "nn-activation",
     feature = "nn-linear",
     feature = "nn-norm",
-    feature = "nn-attention"
+    feature = "nn-attention",
+    feature = "nn-kernels"
 ))]
 pub mod nn;
 

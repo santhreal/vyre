@@ -241,7 +241,7 @@ mod tests {
         assert_eq!(words[10], 4);
         assert_eq!(
             words[8], 0,
-            "Fix: CUDA/PTX parameter words are indexed by binding slot, not buffer_index."
+            "Fix: dispatch parameter words are indexed by binding slot, not buffer_index."
         );
     }
 

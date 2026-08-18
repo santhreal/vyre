@@ -120,7 +120,10 @@ fn target_sm_string_formatted_correctly() {
         (ComputeCapability::SM_70, "sm_70"),
         (ComputeCapability::SM_75, "sm_75"),
         (ComputeCapability::SM_80, "sm_80"),
+        (ComputeCapability::SM_89, "sm_89"),
         (ComputeCapability::SM_90, "sm_90"),
+        (ComputeCapability::SM_100, "sm_100"),
+        (ComputeCapability::SM_120, "sm_120"),
     ] {
         let p = analyze(&desc, target);
         assert_eq!(p.target_sm, expected);

@@ -1,4 +1,4 @@
-//! Focused 5090 conform checks for Cat-A fixture-bearing ops.
+//! Focused GPU conform checks for Cat-A fixture-bearing ops.
 
 mod harness;
 use harness::cat_a_dispatch_config;
@@ -16,9 +16,9 @@ fn backend() -> &'static WgpuBackend {
         let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();
         assert!(
             !adapters.is_empty(),
-            "Fix: cat_a_conform requires a live GPU adapter; this host is expected to expose the RTX 5090."
+            "Fix: cat_a_conform requires a live GPU adapter."
         );
-        WgpuBackend::acquire().expect("Fix: cat_a_conform must acquire the live 5090 backend")
+        WgpuBackend::acquire().expect("Fix: cat_a_conform must acquire the live GPU backend")
     })
 }
 
@@ -58,7 +58,7 @@ fn assert_gpu_matches_fixture(id: &'static str) {
         let outputs = backend()
             .dispatch(&program, input_set, &config)
             .unwrap_or_else(|error| {
-                panic!("Fix: 5090 dispatch failed for {id} case {case_index}: {error}")
+                panic!("Fix: GPU dispatch failed for {id} case {case_index}: {error}")
             });
         let tolerance = fp_parity::effective_tolerance(entry.id, &program);
         assert_outputs_match(&entry, tolerance, &outputs, expected_outputs, case_index);
@@ -141,21 +141,21 @@ fn ordered_bits(value: f32) -> u32 {
 }
 
 #[test]
-fn matmul_tiled_matches_fixture_on_5090() {
+fn matmul_tiled_matches_fixture_on_gpu() {
     assert_gpu_matches_fixture("vyre-libs::math::matmul_tiled");
 }
 
 #[test]
-fn softmax_matches_fixture_on_5090() {
+fn softmax_matches_fixture_on_gpu() {
     assert_gpu_matches_fixture("vyre-libs::nn::softmax");
 }
 
 #[test]
-fn layer_norm_matches_fixture_on_5090() {
+fn layer_norm_matches_fixture_on_gpu() {
     assert_gpu_matches_fixture("vyre-libs::nn::layer_norm");
 }
 
 #[test]
-fn attention_matches_fixture_on_5090() {
+fn attention_matches_fixture_on_gpu() {
     assert_gpu_matches_fixture("vyre-libs::nn::attention");
 }

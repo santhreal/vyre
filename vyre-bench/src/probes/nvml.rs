@@ -141,45 +141,28 @@ fn thermal_or_clock_unstable(counters: &[GpuCounter]) -> bool {
 }
 
 pub fn query_peak_memory_bandwidth(adapter_name: &str) -> anyhow::Result<f64> {
-    if adapter_name.contains("RTX 5090") {
-        return Ok(1792.0);
-    }
-    if adapter_name.contains("RTX 4090") {
-        return Ok(1008.0);
-    }
-    if adapter_name.contains("A100") {
-        return Ok(2039.0);
-    }
-    if adapter_name.contains("H100") {
-        return Ok(3350.0);
-    }
-    if adapter_name.contains("MI300X") {
-        return Ok(5300.0);
-    }
-
-    let output = std::process::Command::new("nvidia-smi")
-        .args([
-            "--query-gpu=clocks.max.memory",
-            "--format=csv,noheader,nounits",
-        ])
-        .output()?;
-
-    let stdout = String::from_utf8(output.stdout)?;
-    let line = stdout
-        .lines()
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("No NVML output"))?;
-    let clock_mhz = line.trim().parse::<f64>()?;
-
-    let bus_bits = if adapter_name.contains("RTX 4080") || adapter_name.contains("RTX 5080") {
-        256.0
-    } else {
-        384.0
+    let model = adapter_name
+        .trim()
+        .strip_prefix("NVIDIA ")
+        .unwrap_or(adapter_name.trim());
+    let bandwidth_gb_s = match model {
+        "GeForce RTX 5090" => 1792.0,
+        "GeForce RTX 5080" => 1024.0,
+        "GeForce RTX 5070 Ti" => 896.0,
+        "GeForce RTX 5070" => 672.0,
+        "GeForce RTX 4090" => 1008.0,
+        "GeForce RTX 4080" => 717.0,
+        "GeForce RTX 3090" => 936.0,
+        "A100" => 2039.0,
+        "H100 80GB HBM3" => 3350.0,
+        "H200" => 4800.0,
+        "B100" | "B200" => 8000.0,
+        "AMD Instinct MI300X" | "MI300X" => 5300.0,
+        _ => anyhow::bail!(
+            "unknown GPU model `{adapter_name}`: peak memory bandwidth requires an exact telemetry-table entry"
+        ),
     };
-
-    // clock_mhz is data-rate for GDDR in NVML
-    // bandwidth GB/s = clock_mhz * bus_bits / 8 / 1000
-    Ok(clock_mhz * bus_bits / 8.0 / 1000.0)
+    Ok(bandwidth_gb_s)
 }
 
 #[cfg(test)]
@@ -272,5 +255,50 @@ mod tests {
         .expect("Fix: valid hot telemetry must parse");
 
         assert_eq!(counter_value(&counters, "thermal_unstable"), Some(1));
+    }
+
+    #[test]
+    fn known_model_peak_bandwidth_lookup() {
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 5090").unwrap(),
+            1792.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 4090").unwrap(),
+            1008.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 5070 Ti").unwrap(),
+            896.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 5070").unwrap(),
+            672.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA H100 80GB HBM3").unwrap(),
+            3350.0
+        );
+    }
+
+    /// A known model name embedded in a different SKU must not borrow its bandwidth.
+    ///
+    /// Memory width and data rate change across suffix variants, so approximate
+    /// matching can certify impossible utilization for unrecorded hardware.
+    #[test]
+    fn unknown_model_peak_bandwidth_fails_cleanly() {
+        for model in [
+            "Unknown Future Accelerator 9999",
+            "NVIDIA GeForce RTX 4080 SUPER",
+            "NVIDIA GeForce RTX 3090 Ti",
+            "NVIDIA H100 NVL",
+        ] {
+            let error = query_peak_memory_bandwidth(model)
+                .expect_err("unregistered model variants must fail closed");
+            assert!(
+                error.to_string().contains("exact telemetry-table entry"),
+                "unexpected error for {model}: {error}"
+            );
+        }
     }
 }

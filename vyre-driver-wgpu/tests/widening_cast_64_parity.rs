@@ -14,7 +14,7 @@
 //! read back as a large positive value (the Law 10 miscompile the high-word fix
 //! closed).
 //!
-//! These tests dispatch the cast on the 5090, read back BOTH 32-bit words of the
+//! These tests dispatch the cast on the live GPU, read back BOTH 32-bit words of the
 //! resulting 64-bit value, and assert the full `u64` byte-for-byte against Rust.
 //! The inventory carried 64-bit sign-extension as unit/source-proven with a
 //! live-GPU check as the "remaining gold standard" (this is that check).

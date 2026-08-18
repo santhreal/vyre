@@ -12,7 +12,7 @@ use vyre_lower::analyses::{rank_measured_candidates, CandidateRanking, TargetEmi
 fn parity_failure_disqualifies_candidate_immediately() {
     let fast_but_corrupted = CandidateRanking {
         candidate_id: "corrupted_fast_tile".to_string(),
-        target_device: "cuda_rtx5090".to_string(),
+        target_device: "device_profile_sm90".to_string(),
         metrics: TargetEmittedMetrics {
             instruction_count: 50,
             register_count: 32,
@@ -31,7 +31,7 @@ fn parity_failure_disqualifies_candidate_immediately() {
 
     let slower_correct = CandidateRanking {
         candidate_id: "correct_baseline_tile".to_string(),
-        target_device: "cuda_rtx5090".to_string(),
+        target_device: "device_profile_sm90".to_string(),
         metrics: TargetEmittedMetrics {
             instruction_count: 100,
             register_count: 32,
@@ -67,7 +67,7 @@ fn parity_failure_disqualifies_candidate_immediately() {
 fn candidates_ranked_by_device_time_and_spill_penalty() {
     let fast_candidate = CandidateRanking {
         candidate_id: "swizzled_async_tile".to_string(),
-        target_device: "cuda_rtx5090".to_string(),
+        target_device: "device_profile_sm90".to_string(),
         metrics: TargetEmittedMetrics {
             instruction_count: 80,
             register_count: 48,
@@ -86,7 +86,7 @@ fn candidates_ranked_by_device_time_and_spill_penalty() {
 
     let spilled_candidate = CandidateRanking {
         candidate_id: "over_unrolled_tile".to_string(),
-        target_device: "cuda_rtx5090".to_string(),
+        target_device: "device_profile_sm90".to_string(),
         metrics: TargetEmittedMetrics {
             instruction_count: 200,
             register_count: 140,

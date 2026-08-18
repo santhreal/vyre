@@ -1,7 +1,7 @@
 //! Signed integer modulo parity against Rust `%` on the live GPU.
 //!
 //! naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the SPIR-V
-//! backend even for signed operands, a vendored-naga bug: on the 5090,
+//! backend even for signed operands, a vendored-naga bug: on live GPU silicon,
 //! `rem(i32, i32)` of (-7, 3) returned 0 (== unsigned `0xFFFF_FFF9 % 3`) instead
 //! of the signed -1, while `div(i32, i32)` of (-7, 3) correctly returned -2. The
 //! emitter now synthesizes signed remainder from the truncating-division identity

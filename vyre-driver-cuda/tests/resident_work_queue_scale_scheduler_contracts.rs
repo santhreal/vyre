@@ -173,7 +173,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     let mut execution_cache = CudaMegakernelPlanCache::new();
     let execution_plan = execution_cache
         .get_or_plan_execution(
-            0xC0DA_5090,
+            0xC0DA_1001,
             CudaMegakernelAnalysisKind::Dataflow,
             CudaMegakernelDeviceKey::from(&backend.caps),
             scheduler_large,
@@ -188,7 +188,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         .expect("Fix: live CUDA telemetry-selected megakernel plan must fit the explicit device-memory budget.");
     let cached_execution_plan = execution_cache
         .get_or_plan_execution(
-            0xC0DA_5090,
+            0xC0DA_1001,
             CudaMegakernelAnalysisKind::Dataflow,
             CudaMegakernelDeviceKey::from(&backend.caps),
             CudaMegakernelScheduleSample {
@@ -324,7 +324,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         budget_bytes: large.readback_bytes.saturating_mul(16),
     };
     let cached_first = plan_cache.get_or_select_topology(
-        0xC0DA_5090,
+        0xC0DA_1001,
         CudaMegakernelAnalysisKind::Dataflow,
         device_key,
         large,
@@ -334,7 +334,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         schedule[1],
     );
     let cached_second = plan_cache.get_or_select_topology(
-        0xC0DA_5090,
+        0xC0DA_1001,
         CudaMegakernelAnalysisKind::Dataflow,
         device_key,
         CudaMegakernelScheduleSample {
@@ -361,7 +361,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
 
     let red_zone = plan_cache
         .get_or_select_topology(
-            0xC0DA_5090,
+            0xC0DA_1001,
             CudaMegakernelAnalysisKind::Dataflow,
             device_key,
             large,

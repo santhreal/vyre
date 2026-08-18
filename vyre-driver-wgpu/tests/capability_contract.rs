@@ -55,7 +55,7 @@ fn live_backend_reports_subgroup_and_indirect_support_truthfully() {
     );
     assert!(
         <WgpuBackend as VyreBackend>::supports_subgroup_ops(&backend),
-        "Fix: RTX 5090 wgpu backend enables wgpu::Features::SUBGROUP and the Naga lowering emits subgroup statements, so supports_subgroup_ops must be true."
+        "Fix: wgpu backend enables wgpu::Features::SUBGROUP on supported GPU hardware and the Naga lowering emits subgroup statements, so supports_subgroup_ops must be true."
     );
     assert!(
         <WgpuBackend as VyreBackend>::supports_indirect_dispatch(&backend),

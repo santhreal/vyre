@@ -11,7 +11,7 @@
 //! every BLAKE3 hash computed on the GPU would be silently wrong and NO test
 //! would catch it, because the KAT never dispatches to a backend.
 //!
-//! This runs the real shipped BLAKE3 single-block compression on the 5090 and
+//! This runs the real shipped BLAKE3 single-block compression on the live GPU and
 //! asserts the 8-word chaining output bit-matches `blake3::hash`: a real-
 //! workload end-to-end check, the strongest possible verification of the
 //! rotate/xor/add lowering chain under load.
