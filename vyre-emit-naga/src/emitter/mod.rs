@@ -21,6 +21,7 @@ pub(crate) use setup::emit_uncached;
 use setup::{Builtins, TypeHandles};
 
 use rustc_hash::{FxHashMap, FxHashSet};
+use smallvec::SmallVec;
 
 use naga::{Expression, Function, GlobalVariable, LocalVariable, Type};
 use vyre_foundation::ir::DataType;
@@ -88,7 +89,7 @@ struct BodyBuilder<'a> {
     /// block-scoped local has a single writer; routing each read
     /// directly to the carrier local forces a per-consumer-site load.
     named_carrier_result_ids: FxHashMap<u32, vyre_lower::Name>,
-    vector_lanes: FxHashMap<u32, (Vec<naga::Handle<Expression>>, naga::Handle<Type>)>,
+    vector_lanes: FxHashMap<u32, (SmallVec<[naga::Handle<Expression>; 4]>, naga::Handle<Type>)>,
     trap_sidecar_slot: Option<u32>,
     trap_tag_codes: FxHashMap<vyre_lower::Name, u32>,
     op_dispatch_routes: op_dispatch::OpDispatchRouteCache,

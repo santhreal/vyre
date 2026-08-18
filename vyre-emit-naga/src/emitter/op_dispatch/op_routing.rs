@@ -4,6 +4,7 @@
 use std::fmt::Write as _;
 
 use naga::{BinaryOperator, Expression, Literal, LocalVariable, ScalarKind, Span, Statement};
+use smallvec::SmallVec;
 use vyre_foundation::ir::{DataType, UnOp};
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
@@ -160,7 +161,7 @@ impl BodyBuilder<'_> {
                             slot,
                             reason: "no scalar type was recorded for this slot".into(),
                         })?;
-                    let mut lane_exprs = Vec::with_capacity(*width as usize);
+                    let mut lane_exprs = SmallVec::<[naga::Handle<Expression>; 4]>::new();
                     for i in 0..*width {
                         let offset_expr = if i == 0 {
                             base_index
