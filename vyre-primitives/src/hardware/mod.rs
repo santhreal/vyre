@@ -49,6 +49,45 @@ macro_rules! submit_intrinsic_operation {
     };
 }
 
+macro_rules! submit_hardware_intrinsic {
+    (
+        id: $op_id:expr,
+        signature: $sig:expr,
+        builder: $builder:expr,
+        inputs: $inputs:expr,
+        expected: $expected:expr,
+        effects: $effects:expr,
+        capabilities: $caps:expr,
+        inputs_count: $in_cnt:expr,
+        outputs_count: $out_cnt:expr,
+        semantic: $semantic:expr
+    ) => {
+        inventory::submit! {
+            vyre_foundation::operation::OperationRegistration::intrinsic(
+                $op_id,
+                $sig,
+                Some($builder),
+                Some($inputs),
+                Some($expected),
+            )
+            .with_explicit_effects($effects)
+            .with_explicit_capabilities($caps)
+        }
+
+        inventory::submit! {
+            crate::hardware::catalog::IntrinsicFacet {
+                operation_id: $op_id,
+                shape: crate::hardware::catalog::OpShape::new(
+                    $in_cnt,
+                    $out_cnt,
+                    4,
+                    $semantic,
+                ),
+            }
+        }
+    };
+}
+
 macro_rules! define_unary_u32_hardware_intrinsic {
     (
         $function:ident,
@@ -73,62 +112,38 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             crate::hardware::unary_u32_program(OP_ID, input, out, n, $expr)
         }
 
-        fn fixture_input() -> Vec<u32> {
-            $fixture.to_vec()
-        }
-
         fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-            let input = fixture_input();
-            let len = input.len() * 4;
-            vec![vec![crate::wire::pack_u32_slice(&input), vec![0u8; len]]]
+            crate::hardware::packed_u32_input_with_output($fixture)
         }
 
         const EXPECTED_REGISTRATION_BYTES: &[u8] = $expected_bytes;
 
-        inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::intrinsic(
-                OP_ID,
-                crate::hardware::catalog::U32_UNARY_SIGNATURE,
-                Some(|| $function("input", "out", 4)),
-                Some(test_inputs),
-                Some(|| vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]),
-            )
-            .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE)
-            .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
-        }
-
-        inventory::submit! {
-            crate::hardware::catalog::IntrinsicFacet {
-                operation_id: OP_ID,
-                shape: crate::hardware::catalog::OpShape::new(
-                    1,
-                    1,
-                    4,
-                    crate::hardware::catalog::HardwareSemantic::UnaryU32Map,
-                ),
-            }
+        submit_hardware_intrinsic! {
+            id: OP_ID,
+            signature: crate::hardware::catalog::U32_UNARY_SIGNATURE,
+            builder: || $function("input", "out", 4),
+            inputs: test_inputs,
+            expected: || vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]],
+            effects: vyre_foundation::operation::OperationEffects::READ_WRITE,
+            capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
+            inputs_count: 1,
+            outputs_count: 1,
+            semantic: crate::hardware::catalog::HardwareSemantic::UnaryU32Map
         }
 
         #[cfg(test)]
         mod tests {
             use super::*;
-            use crate::hardware::{lcg_u32, run_program};
-            use crate::wire::pack_u32_slice as pack_u32;
+            use crate::hardware::{assert_unary_u32_case, lcg_u32};
 
-            fn test_cpu_ref(input: &[u32]) -> Vec<u8> {
+            fn test_cpu_ref(input: &[u32]) -> Vec<u32> {
                 let map_lane = $cpu_map;
-                let output: Vec<u32> = input.iter().copied().map(map_lane).collect();
-                crate::wire::pack_u32_slice(&output)
+                input.iter().copied().map(map_lane).collect()
             }
 
             fn assert_case(input: &[u32]) {
-                let n = input.len() as u32;
-                let program = $function("input", "out", n.max(1));
-                let outputs = run_program(
-                    &program,
-                    vec![pack_u32(input), vec![0u8; (n.max(1) * 4) as usize]],
-                );
-                assert_eq!(outputs, vec![test_cpu_ref(input)]);
+                let expected = test_cpu_ref(input);
+                assert_unary_u32_case($function, input, &expected);
             }
 
             #[test]
@@ -151,7 +166,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             fn registration_fixture_matches_exact_byte_constant() {
                 assert_eq!(
                     EXPECTED_REGISTRATION_BYTES,
-                    test_cpu_ref($fixture).as_slice()
+                    crate::wire::pack_u32_slice(&test_cpu_ref($fixture)).as_slice()
                 );
             }
         }
@@ -178,57 +193,32 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             crate::hardware::barrier_identity_u32_program(OP_ID, input, out, n)
         }
 
-        fn fixture_input() -> Vec<u32> {
-            $fixture.to_vec()
-        }
-
         fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-            let input = fixture_input();
-            let len = input.len() * 4;
-            vec![vec![crate::wire::pack_u32_slice(&input), vec![0u8; len]]]
+            crate::hardware::packed_u32_input_with_output($fixture)
         }
 
         const EXPECTED_REGISTRATION_BYTES: &[u8] = $fixture_bytes;
 
-
-        inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::intrinsic(
-                OP_ID,
-                crate::hardware::catalog::U32_UNARY_SIGNATURE,
-                Some(|| $function("input", "out", 4)),
-                Some(test_inputs),
-                Some(|| vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]),
-            )
-            .with_explicit_effects(vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES)
-            .with_explicit_capabilities(vyre_foundation::program_caps::RequiredCapabilities::NONE)
-        }
-
-        inventory::submit! {
-            crate::hardware::catalog::IntrinsicFacet {
-                operation_id: OP_ID,
-                shape: crate::hardware::catalog::OpShape::new(
-                    1,
-                    1,
-                    4,
-                    crate::hardware::catalog::HardwareSemantic::BarrierIdentityU32,
-                ),
-            }
+        submit_hardware_intrinsic! {
+            id: OP_ID,
+            signature: crate::hardware::catalog::U32_UNARY_SIGNATURE,
+            builder: || $function("input", "out", 4),
+            inputs: test_inputs,
+            expected: || vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]],
+            effects: vyre_foundation::operation::OperationEffects::READ_WRITE_SYNCHRONIZES,
+            capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
+            inputs_count: 1,
+            outputs_count: 1,
+            semantic: crate::hardware::catalog::HardwareSemantic::BarrierIdentityU32
         }
 
         #[cfg(test)]
         mod tests {
             use super::*;
-            use crate::hardware::{lcg_u32, run_program};
-            use crate::wire::pack_u32_slice as pack_u32;
+            use crate::hardware::{assert_unary_u32_case, lcg_u32};
 
             fn assert_case(input: &[u32]) {
-                let n = input.len() as u32;
-                let program = $function("input", "out", n.max(1));
-                let outputs = run_program(
-                    &program,
-                    vec![pack_u32(input), vec![0u8; (n.max(1) * 4) as usize]],
-                );
-                assert_eq!(outputs, vec![pack_u32(input)]);
+                assert_unary_u32_case($function, input, input);
             }
 
             #[test]
@@ -246,7 +236,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             fn registration_fixture_matches_exact_byte_constant() {
                 assert_eq!(
                     EXPECTED_REGISTRATION_BYTES,
-                    pack_u32($fixture).as_slice()
+                    crate::wire::pack_u32_slice($fixture).as_slice()
                 );
             }
         }
@@ -289,6 +279,45 @@ pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
 
 pub(crate) const MAP_WORKGROUP: [u32; 3] = [64, 1, 1];
 
+pub(crate) fn unary_program(
+    op_id: &'static str,
+    input: &str,
+    out: &str,
+    n: u32,
+    ty: DataType,
+    body: Vec<Node>,
+) -> Program {
+    let wrapped_body = vec![wrap_anonymous_region(op_id, body)];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, ty.clone()).with_count(n),
+            BufferDecl::output(out, 1, ty).with_count(n),
+        ],
+        MAP_WORKGROUP,
+        wrapped_body,
+    )
+}
+
+pub(crate) fn binary_u32_program(
+    op_id: &'static str,
+    a: &str,
+    b: &str,
+    out: &str,
+    n: u32,
+    body: Vec<Node>,
+) -> Program {
+    let wrapped_body = vec![wrap_anonymous_region(op_id, body)];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(a, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::storage(b, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::output(out, 2, DataType::U32).with_count(n),
+        ],
+        MAP_WORKGROUP,
+        wrapped_body,
+    )
+}
+
 pub(crate) fn unary_u32_program<F>(
     op_id: &'static str,
     input: &str,
@@ -299,8 +328,12 @@ pub(crate) fn unary_u32_program<F>(
 where
     F: Fn(Expr) -> Expr,
 {
-    let body = vec![wrap_anonymous_region(
+    unary_program(
         op_id,
+        input,
+        out,
+        n,
+        DataType::U32,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(
@@ -312,14 +345,6 @@ where
                 )],
             ),
         ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 1, DataType::U32).with_count(n),
-        ],
-        MAP_WORKGROUP,
-        body,
     )
 }
 
@@ -329,8 +354,12 @@ pub(crate) fn barrier_identity_u32_program(
     out: &str,
     n: u32,
 ) -> Program {
-    let body = vec![wrap_anonymous_region(
+    unary_program(
         op_id,
+        input,
+        out,
+        n,
+        DataType::U32,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(
@@ -343,15 +372,51 @@ pub(crate) fn barrier_identity_u32_program(
             ),
             Node::barrier(),
         ],
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(n),
-            BufferDecl::output(out, 1, DataType::U32).with_count(n),
-        ],
-        MAP_WORKGROUP,
-        body,
     )
+}
+
+pub(crate) fn subgroup_unary_u32_program<F>(
+    op_id: &'static str,
+    input: &str,
+    out: &str,
+    n: u32,
+    collective: F,
+) -> Program
+where
+    F: FnOnce(Expr) -> Expr,
+{
+    unary_program(
+        op_id,
+        input,
+        out,
+        n,
+        DataType::U32,
+        vec![
+            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+            Node::let_bind("lane_value", Expr::u32(0)),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::buf_len(input)),
+                vec![Node::assign(
+                    "lane_value",
+                    Expr::load(input, Expr::var("idx")),
+                )],
+            ),
+            Node::let_bind("result", collective(Expr::var("lane_value"))),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::buf_len(out)),
+                vec![Node::store(out, Expr::var("idx"), Expr::var("result"))],
+            ),
+        ],
+    )
+}
+
+pub(crate) fn inverse_sqrt_f32_ref(x: f32) -> f32 {
+    let safe = if x.is_finite() && x > f32::MIN_POSITIVE {
+        x
+    } else {
+        f32::MIN_POSITIVE
+    };
+    1.0 / safe.sqrt()
 }
 
 pub(crate) fn ternary_f32_program(
@@ -401,6 +466,19 @@ pub(crate) fn packed_u32_input_with_output(words: &[u32]) -> Vec<Vec<Vec<u8>>> {
 
 pub(crate) fn pack_f32(values: &[f32]) -> Vec<u8> {
     crate::wire::pack_f32_slice(values)
+}
+#[cfg(test)]
+pub(crate) fn assert_unary_u32_case<F>(build: F, input: &[u32], expected: &[u32])
+where
+    F: Fn(&str, &str, u32) -> Program,
+{
+    let n = input.len() as u32;
+    let program = build("input", "out", n.max(1));
+    let outputs = run_program(
+        &program,
+        vec![crate::wire::pack_u32_slice(input), vec![0u8; (n.max(1) * 4) as usize]],
+    );
+    assert_eq!(outputs, vec![crate::wire::pack_u32_slice(expected)]);
 }
 
 #[cfg(test)]

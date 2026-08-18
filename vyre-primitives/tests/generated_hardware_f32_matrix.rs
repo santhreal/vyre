@@ -5,59 +5,28 @@
 //! lowering. This matrix covers edge values and generated lanes beyond one
 //! workgroup.
 
-use vyre_foundation::ir::Program;
-use vyre_reference::value::Value;
+mod gate_fixtures;
 
-fn pack(values: &[f32]) -> Vec<u8> {
-    vyre_primitives::wire::pack_f32_slice(values)
-}
+use gate_fixtures::{generated_f32_with_edges, inverse_sqrt_f32_ref, run_eval_single};
+use vyre_primitives::wire::pack_f32_slice as pack;
 
-fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<u8> {
-    let values: Vec<Value> = inputs
-        .into_iter()
-        .map(|bytes| Value::Bytes(bytes.into()))
-        .collect();
-    let outputs = vyre_reference::reference_eval(program, &values)
-        .expect("Fix: f32 hardware intrinsic builder must execute on the CPU oracle.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "Fix: f32 hardware intrinsic emits one output buffer."
-    );
-    outputs[0].to_bytes()
-}
+const FINITE_EDGES: [f32; 12] = [
+    -8.0,
+    -1.0,
+    -0.0,
+    0.0,
+    f32::MIN_POSITIVE,
+    0.25,
+    0.5,
+    1.0,
+    2.0,
+    4.0,
+    16.0,
+    f32::MAX,
+];
 
 fn generated_finite(len: usize, seed: u32) -> Vec<f32> {
-    let edge = [
-        -8.0,
-        -1.0,
-        -0.0,
-        0.0,
-        f32::MIN_POSITIVE,
-        0.25,
-        0.5,
-        1.0,
-        2.0,
-        4.0,
-        16.0,
-        f32::MAX,
-    ];
-    let mut state = seed;
-    (0..len)
-        .map(|idx| {
-            if idx < edge.len() {
-                edge[idx]
-            } else {
-                state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
-                let unit = f32::from_bits((state >> 9) | 0x3f00_0000) - 1.0;
-                if idx & 1 == 0 {
-                    unit
-                } else {
-                    -unit
-                }
-            }
-        })
-        .collect()
+    generated_f32_with_edges(len, seed, &FINITE_EDGES)
 }
 
 fn generated_inverse_sqrt_inputs(len: usize, seed: u32) -> Vec<f32> {
@@ -95,7 +64,7 @@ fn generated_fma_f32_matrix_matches_mul_add_bits() {
         let b = generated_finite(len, 0x0f1a_a012 ^ len as u32);
         let c = generated_finite(len, 0x0f1a_a013 ^ len as u32);
         let program = vyre_primitives::hardware::fma_f32::fma_f32("a", "b", "c", "out", len as u32);
-        let got = run(
+        let got = run_eval_single(
             &program,
             vec![pack(&a), pack(&b), pack(&c), vec![0u8; len.max(1) * 4]],
         );
@@ -122,17 +91,11 @@ fn generated_inverse_sqrt_f32_matrix_matches_clamped_host_semantics() {
         let program = vyre_primitives::hardware::inverse_sqrt_f32::inverse_sqrt_f32(
             "input", "out", len as u32,
         );
-        let got = run(&program, vec![pack(&input), vec![0u8; len.max(1) * 4]]);
+        let got = run_eval_single(&program, vec![pack(&input), vec![0u8; len.max(1) * 4]]);
         let expected = input
             .iter()
-            .map(|&x| {
-                let safe_x = if x.is_finite() && x > f32::MIN_POSITIVE {
-                    x
-                } else {
-                    f32::MIN_POSITIVE
-                };
-                1.0 / safe_x.sqrt()
-            })
+            .copied()
+            .map(inverse_sqrt_f32_ref)
             .collect::<Vec<_>>();
         assert_eq!(
             got,

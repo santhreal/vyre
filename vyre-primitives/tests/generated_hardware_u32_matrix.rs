@@ -5,9 +5,10 @@
 //! oracle, so the public builders must stay byte-exact over edge-heavy and
 //! generated lanes, including dispatch extents larger than one workgroup.
 
-use vyre_foundation::ir::Program;
-use vyre_reference::value::Value;
+mod gate_fixtures;
 
+use gate_fixtures::{generated_u32_with_edges, run_eval_single};
+use vyre_foundation::ir::Program;
 struct U32Case {
     name: &'static str,
     build: fn(&str, &str, u32) -> Program,
@@ -37,49 +38,29 @@ const CASES: &[U32Case] = &[
     },
 ];
 
+const INPUT_EDGES: [u32; 12] = [
+    0,
+    1,
+    2,
+    3,
+    31,
+    32,
+    63,
+    64,
+    0x7fff_ffff,
+    0x8000_0000,
+    0xffff_fffe,
+    u32::MAX,
+];
+
 fn generated_input(len: usize, seed: u32) -> Vec<u32> {
-    let edge = [
-        0,
-        1,
-        2,
-        3,
-        31,
-        32,
-        63,
-        64,
-        0x7fff_ffff,
-        0x8000_0000,
-        0xffff_fffe,
-        u32::MAX,
-    ];
-    let mut state = seed;
-    (0..len)
-        .map(|idx| {
-            if idx < edge.len() {
-                edge[idx]
-            } else {
-                state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
-                state.rotate_left((idx as u32) & 31) ^ ((idx as u32).wrapping_mul(0x9e37_79b9))
-            }
-        })
-        .collect()
+    generated_u32_with_edges(len, seed, &INPUT_EDGES)
 }
 
 fn run(program: &Program, input: &[u32]) -> Vec<u8> {
     let input_bytes = vyre_primitives::wire::pack_u32_slice(input);
     let output_bytes = vec![0u8; input.len().max(1) * 4];
-    let values = [
-        Value::Bytes(input_bytes.into()),
-        Value::Bytes(output_bytes.into()),
-    ];
-    let outputs = vyre_reference::reference_eval(program, &values)
-        .expect("Fix: u32 hardware intrinsic builder must execute on the CPU oracle.");
-    assert_eq!(
-        outputs.len(),
-        1,
-        "Fix: each u32 intrinsic emits one output buffer."
-    );
-    outputs[0].to_bytes()
+    run_eval_single(program, vec![input_bytes, output_bytes])
 }
 
 #[test]
