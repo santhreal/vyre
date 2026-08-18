@@ -37,16 +37,15 @@ mod tests {
 
     #[test]
     fn rejects_reverse_dependency_cycle() {
-        let adj = vec![0, 0, 1, 0];
-        assert!(!ordering_is_safe(&adj, 0, 1, 2));
+        let cyclic_deps = [0u32, 0, 1, 0];
+        assert!(!ordering_is_safe(&cyclic_deps, 0, 1, 2));
     }
 
     #[test]
     fn accepts_forward_dependency_order() {
-        let adj = vec![0, 1, 0, 0];
-        assert!(ordering_is_safe(&adj, 0, 1, 2));
+        let acyclic_deps = [0u32, 1, 0, 0];
+        assert!(ordering_is_safe(&acyclic_deps, 0, 1, 2));
     }
-
     #[test]
     fn invalid_shapes_are_rejected_without_panicking() {
         assert!(!ordering_is_safe(&[0, 1, 0], 0, 1, 2));

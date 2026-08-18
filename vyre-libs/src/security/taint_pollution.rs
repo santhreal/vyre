@@ -11,8 +11,7 @@ use vyre_foundation::ir::Program;
 #[cfg(test)]
 use crate::security::flow_composition::dataflow_hit_cpu_ref;
 use crate::security::flow_composition::{
-    dataflow_hit_fixture_expected, dataflow_hit_fixture_inputs, security_flow_program,
-    SecurityFlowOptions, SinkProjection,
+    security_flow_program, SecurityFlowOptions, SinkProjection,
 };
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::taint_pollution";
@@ -49,15 +48,6 @@ impl vyre_spec::soundness::SoundnessTagged for TaintPollution {
     }
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        OP_ID,
-        || taint_pollution(ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar"),
-        Some(dataflow_hit_fixture_inputs),
-        Some(dataflow_hit_fixture_expected),
-    )
-    .with_category("security")
-}
 
 #[cfg(test)]
 mod tests {

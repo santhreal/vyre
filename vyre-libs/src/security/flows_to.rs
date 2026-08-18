@@ -20,8 +20,7 @@ use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::{
-    forward_reach_fixture_expected, forward_reach_fixture_inputs, security_flow_program,
-    FlowPredicate, SecurityFlowOptions, FLOW_MAX_ITERATIONS,
+    security_flow_program, FlowPredicate, SecurityFlowOptions,
 };
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::flows_to";
@@ -96,22 +95,6 @@ pub fn flows_to_alias_only(
     ))
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        OP_ID,
-        || flows_to(ProgramGraphShape::new(4, 3), "fin", "fout"),
-        Some(forward_reach_fixture_inputs),
-        Some(forward_reach_fixture_expected),
-    )
-    .with_category("security")
-}
-
-inventory::submit! {
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: FLOW_MAX_ITERATIONS,
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -212,16 +195,7 @@ mod tests {
     fn flows_to_program_uses_non_degenerate_shape() {
         let shape = ProgramGraphShape::new(64, 128);
         let p = flows_to(shape, "fin", "fout");
-        let fin_buf = p
-            .buffers
-            .iter()
-            .find(|b| b.name() == "fin")
-            .expect("Fix: fin buffer");
-        assert!(
-            fin_buf.count >= 2,
-            "bitset_words(64) = 2; count {} suggests degenerate shape",
-            fin_buf.count
-        );
+        crate::security::flow_composition::assert_non_degenerate_bitset_shape(&p, "fin", 2);
     }
 
     #[test]

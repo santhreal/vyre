@@ -30,15 +30,12 @@ pub fn edge(
 mod tests {
     use super::*;
     use crate::graph::csr_forward_traverse::cpu_ref_into;
-    use vyre_foundation::ir::Node;
+    use crate::predicate::traversal::assert_region_op_id;
+
     #[test]
     fn preserves_wrapper_op_id() {
         let program = edge(ProgramGraphShape::new(4, 2), "fin", "fout", 0xFFFF_FFFF);
-        let generator = match &program.entry[0] {
-            Node::Region { generator, .. } => generator.to_string(),
-            other => panic!("Fix: edge must build a Region entry, got {other:?}."),
-        };
-        assert_eq!(generator, OP_ID);
+        assert_region_op_id(&program, OP_ID, "edge");
     }
 
     #[test]

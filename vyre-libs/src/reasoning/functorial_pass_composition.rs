@@ -154,10 +154,11 @@ mod tests {
             &self,
             _program: &Program,
             inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
+            grid: Option<[u32; 3]>,
         ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            assert_eq!(inputs.len(), 3);
+            if grid != Some([1, 1, 1]) || inputs.len() != 3 {
+                return Err(DispatchError::BadInputs("functor dispatch shape mismatch".into()));
+            }
             let source = crate::dispatch_buffers::read_u32s(&inputs[0]);
             let mapping = crate::dispatch_buffers::read_u32s(&inputs[1]);
             let target_n_cols = inputs[2].len() / std::mem::size_of::<u32>();

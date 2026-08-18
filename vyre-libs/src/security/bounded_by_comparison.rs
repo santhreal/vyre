@@ -17,8 +17,7 @@ use crate::predicate::edge_kind;
 use vyre_foundation::ir::Program;
 
 use crate::security::flow_composition::{
-    dominance_fixture_expected, dominance_fixture_inputs, security_flow_program, FlowPredicate,
-    SecurityFlowOptions, FLOW_MAX_ITERATIONS,
+    security_flow_program, FlowPredicate, SecurityFlowOptions,
 };
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::bounded_by_comparison";
@@ -39,22 +38,6 @@ pub fn bounded_by_comparison(
     ))
 }
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        OP_ID,
-        || bounded_by_comparison(ProgramGraphShape::new(4, 4), "fin", "fout"),
-        Some(dominance_fixture_inputs),
-        Some(dominance_fixture_expected),
-    )
-    .with_category("security")
-}
-
-inventory::submit! {
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: FLOW_MAX_ITERATIONS,
-    }
-}
 
 #[cfg(test)]
 mod tests {

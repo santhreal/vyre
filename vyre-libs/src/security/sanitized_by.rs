@@ -11,7 +11,7 @@ use crate::graph::csr_forward_traverse::csr_forward_traverse_excluding;
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::composition::tag_program;
 
-const OP_ID: &str = "vyre-libs::security::sanitized_by";
+pub(crate) const OP_ID: &str = "vyre-libs::security::sanitized_by";
 
 /// Build one sanitizer-guarded forward-traversal step.
 ///
@@ -45,38 +45,21 @@ pub fn sanitized_by(
 
 const EXPECTED_SANITIZED_BY_OUTPUT_BYTES: [u8; 4] = [0x03, 0x00, 0x00, 0x00];
 
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library(
-        OP_ID,
-        || sanitized_by(ProgramGraphShape::new(4, 3), "fin", "san", "fout"),
-        Some(|| {
-            // Linear 0→1→2→3 with node 1 marked sanitizer.
-            vec![vec![
-                vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 0: pg_nodes
-                vec![0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // 1: pg_edge_offsets
-                vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],             // 2: pg_edge_targets
-                vec![1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],             // 3: pg_edge_kind_mask (ASSIGNMENT=1)
-                vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 4: pg_node_tags
-                vec![1, 0, 0, 0],                                     // 5: fin = {0}
-                vec![2, 0, 0, 0],                                     // 6: san = {1}
-                vec![1, 0, 0, 0],                                     // 7: fout accumulator seed = {0}
-            ]]
-        }),
-        Some(|| {
-            vec![vec![EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]
-        }),
-    )
-    .with_category("security")
+pub(crate) fn sanitized_by_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 0: pg_nodes
+        vec![0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0], // 1: pg_edge_offsets
+        vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],             // 2: pg_edge_targets
+        vec![1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],             // 3: pg_edge_kind_mask (ASSIGNMENT=1)
+        vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 4: pg_node_tags
+        vec![1, 0, 0, 0],                                     // 5: fin = {0}
+        vec![2, 0, 0, 0],                                     // 6: san = {1}
+        vec![1, 0, 0, 0],                                     // 7: fout accumulator seed = {0}
+    ]]
 }
 
-inventory::submit! {
-    // AUDIT_2026-04-24 F-SB-01: raised from 64 to 4096 so taint
-    // sanitization on deep call chains doesn't truncate silently;
-    // same reasoning as flows_to / taint_flow.
-    crate::operation_catalog::ConvergenceContract {
-        op_id: OP_ID,
-        max_iterations: 4096,
-    }
+pub(crate) fn sanitized_by_fixture_expected() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]
 }
 
 #[cfg(test)]
@@ -114,16 +97,7 @@ mod tests {
     fn sanitized_by_program_uses_non_degenerate_shape() {
         let shape = ProgramGraphShape::new(64, 128);
         let p = sanitized_by(shape, "fin", "san", "fout");
-        let fin_buf = p
-            .buffers()
-            .iter()
-            .find(|b| b.name() == "fin")
-            .expect("Fix: fin buffer");
-        assert!(
-            fin_buf.count >= 2,
-            "bitset_words(64) = 2; count {} suggests degenerate shape",
-            fin_buf.count
-        );
+        crate::security::flow_composition::assert_non_degenerate_bitset_shape(&p, "fin", 2);
     }
 
     #[test]
