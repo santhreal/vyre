@@ -24,6 +24,7 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
+use vyre_foundation::validate::BackendCapabilities;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::security::taint_pollution;
 use vyre_megakernel::{
@@ -49,9 +50,17 @@ fn validated(program: Program) -> ValidatedCompileRequest {
     CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        // A device with no cooperative launch is the point: the planner cut removes
-        // the fence before device admission, so admission must accept the program.
-        DeviceFacts::unknown(),
+        // A device with shared memory for workgroup scratch but no cooperative
+        // launch is the point: the planner cut removes the fence before device
+        // admission, so admission must accept the program.
+        DeviceFacts::new(
+            BackendCapabilities {
+                has_shared_memory: true,
+                ..BackendCapabilities::default()
+            },
+            256,
+        )
+        .with_occupancy(0, 4096),
         SearchBudget::new(128, 1_000_000, 8, 4, 1_000_000_000),
         1 << 24,
     )

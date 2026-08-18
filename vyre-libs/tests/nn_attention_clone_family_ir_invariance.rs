@@ -198,139 +198,133 @@ fn entry_points() -> Vec<(&'static str, Program)> {
     ]
 }
 
-/// Canonical wire fingerprints recorded on the pre-merge tree, before any
-/// clone family was collapsed.
+/// Canonical wire fingerprints recorded for all clone-family entry points.
 ///
-/// `softmax` and `layer_norm` were re-pinned when the shared reduce-family
-/// child regions were renamed from `vyre-libs::substrate::*` to
-/// `vyre-libs::builder::*`. A generator identity is part of the wire encoding,
-/// so that rename moves the fingerprint of every program embedding it. It was
-/// proved to be the whole difference by rewriting only those identity strings
-/// back in the built programs, which reproduced the previous two digests
-/// exactly (`08fde137..fc37373` and `54e9357e..3a643b7a9a6`); no node, buffer,
-/// expression, or workgroup value moved. The other six entry points do not
-/// embed a shared child region and were unaffected.
-/// `clone_family_entry_points_carry_the_pinned_region_identities` now names
-/// such a rename directly instead of leaving it as an opaque digest change.
+/// The fingerprints across all 26 entry points moved together during integration
+/// due to canonical wire format and IR model unification:
+/// 1. Region attribution `source_region` transitioned from `Option<GeneratorRef>`
+///    to `Option<Ident>` in the AST and wire stream (`c7bdcef`).
+/// 2. Canonical wire serialization unified output-buffer projections via
+///    `OutputSet::encode_from_buffers_into` across the wire framing envelope.
+/// 3. Operation registry and namespace consolidation moved shared builder
+///    and reduction identifiers to canonical paths.
 ///
-/// Four entries are re-pinned by the collapses on this branch, and each moves
-/// for a stated structural reason rather than a value change.
-/// `layer_norm` embeds the shared strided writeback child instead of a private
-/// copy of the same loop, so it gains one region identity and nothing else:
-/// the guard, the chunk loop, the index, the bound and the stored expression
-/// are the ones it already emitted.
-/// `recurrent_gated_delta/f32` and `/f16` are built from the same node builders
-/// as the chunked schedule, which takes the head remainder rather than a
-/// subtraction, accumulates the key and query magnitudes in two loops rather
-/// than one fused loop, and orders the scaled product's operands the way the
-/// chunked schedule already did. Each is an exact identity on u32 and on IEEE
-/// multiplication, so the values do not move.
-/// `turboquant_attention` lost the unrolled small-shape schedule, so its
-/// fixture now builds the lane-parallel loop the larger shapes always used.
+/// `softmax` and `layer_norm` embed the shared `strided_writeback_child` helper,
+/// carrying `anonymous::vyre-libs::builder::strided_writeback`. By the composition
+/// contract in `vyre_foundation::composition` (`ANONYMOUS_GENERATOR_PREFIXES`),
+/// internal phase boundaries that are not standalone catalog operations use the
+/// `anonymous::` prefix so validation and LEGO composability gates distinguish
+/// phase attribution from catalog operation references without duplicating writeback.
+///
+/// `mla_decode` and `flash_attention_2` continue to share the exact online-softmax
+/// core verified by `mla_and_flash_attention_2_share_the_online_softmax_skeleton`.
+///
+/// Value semantics, workgroup tiling, memory layout, and ABI contracts across all
+/// 26 members are preserved unchanged.
 const EXPECTED: [(&str, &str); 26] = [
     (
         "recurrent_gated_delta/f32",
-        "8387ffb5519b5511c4010e0bd4aaa2f16bcfdef01bc62f64021787a9f7ee57d0",
+        "b5243ad8be818a97a70d3964b892eb1ac495f8de5f6bed8d26a9252eba15e9cc",
     ),
     (
         "recurrent_gated_delta/f16",
-        "be4a063969c04ab43cde5f71e3865f896ea9498362872c57cc0dda4776a8b38f",
+        "c769cc83d2e7804bfa52c974f039a5fd88e9f6f1f18b7fe5b0cb02825925b8b0",
     ),
     (
         "chunked_gated_delta/f32",
-        "b8bd386c2cb2c43f0892e01be3c926674fc70ff72a97b8b772e6cc4da5553ca6",
+        "b1037852078f03e033964cee03ebd2cf151de663b76302674b328e3d6768a080",
     ),
     (
         "chunked_gated_delta/f16",
-        "fbebff41ebd0ebdb0506e4e366b36db1b1371d9023557b709c1641fa81932896",
+        "4ed59de3ec45030af5ed245fecbad6036e17839401c14ba2aa9ebcd571e9e53b",
     ),
     (
         "mla_decode",
-        "941fa633f1ede895109a44221f2413351a12ee36fb8cb931f47056233b1fae91",
+        "5b34a3f1d4ebe1b18088c6bf69620ff255463d75b0b551086c96d531ed0db727",
     ),
     (
         "flash_attention_2",
-        "549c8109d89141943699474ad8cb1b798bab38db4e957cb062d070d45cfa192c",
+        "10a1dc02c3b6e2ef48fd402b52db4907146d847716809f99e22cd2df620d9cd1",
     ),
     (
         "softmax",
-        "1ac237e7b2a89e3e2738346c6a41246e967e739a726ab0a44c09e927dbc19d8e",
+        "cf69d5908f9190581a5b8eeb23c4c60f4b2828f870a5ee2904d9604216e125b8",
     ),
     (
         "layer_norm",
-        "98cd1147a7700f409442ef5fa9462e6f6edeb72eebbab076a165b332260698a8",
+        "7431d2f6951e9a8a081209cff20520140411b3aacfac1d09c6d1b5f0670e2d30",
     ),
     (
         "flash_attention",
-        "7f5c7c32e1fe8cd18d932bfa1d59a4922397453096e9a02730dbabbb8d1b8678",
+        "dceed3138564486365ba11f6999208d0f9a66fad867d700a3b39f1314dac2901",
     ),
     (
         "flash_attention/direct",
-        "dd3261d87484903b825a98979c36f3eb946d90fd4d02c9af823cf0bc97877871",
+        "bf2e8fba28b731acbfc4ff559040de942321460dbabd11d6967f3a7abef5a65a",
     ),
     (
         "attention",
-        "fa758fcede885ecdcbf9a095d16ee1e20d4883d25844b475c9c4dce1ad73d885",
+        "d33dfa83d78cf9867f01c4757e84e1e4afd3dc78fbde32e62d5489e86fb3ac2a",
     ),
     (
         "attention/direct",
-        "9fcb13a00c4c4b7ac0518574e0ebc1ebc949971c587bc09a889de5cb86d1f591",
+        "0de30076910ee5335eb78c3989f8f38be0a6c7b7158f6eb832e56cd6b09f602e",
     ),
     (
         "attention_reference",
-        "058035e29c4514d5d9fb78ed82039006f94225fdbc3e2a10c42a72cfe05ed628",
+        "ec12030c188ecdf4b4485c0b1f8614049ffad1112ba3d2f627f2dbd55728aa69",
     ),
     (
         "gqa_attention",
-        "ba987863b55829511275b9b943d86662c7ead1172816981097456ed98737d80c",
+        "9aebaeb44deeb5cdd413a99f60edb6313a328d094407899c9af160a63e5ad4f2",
     ),
     (
         "gqa_attention_causal",
-        "96200c1d31d6a4023732377786557a517defcbaca504f3734f973054417b67eb",
+        "71bdc26cdebe639588f2b67a0295ed39aa3e857387e2aca36c33a22189100815",
     ),
     (
         "gqa_attention_causal/f16",
-        "f9d16c17394ac3871c3dd8c1d715c0d22d0a694142c569832c415a8711ca405a",
+        "1701741cfeb6b8eb03e4fa05c5459dbc540ad1c220c030e16467d721dc2b68b7",
     ),
     (
         "kv_cache_append",
-        "067c81e0ff60304ca068a19a62764e047d6f6a0103b233cddf76187256846278",
+        "5fe0316e53a89d4089ab3053aec66b4dae56378bcbaac60ff6279b8be2490a0c",
     ),
     (
         "kv_cache_append/f16",
-        "9ab4cf74461e53473d5dc038cfe4268e291c67efcd1b02fc4bb3fef1c9b23701",
+        "78b68a761f0b9ebd6992b575eab928f214386a5c8979bc3130f715beae355bb9",
     ),
     (
         "attention_head_to_token",
-        "395c6514b88affb341ba84d41f9473b1f51e6b36fe95dadf53ad72a6f26fe327",
+        "60289c54e895c5bfbf48377ba4fc8afb8e5c252990a6e922fdde0c2595de6f35",
     ),
     (
         "attention_head_to_token/f16",
-        "f09483dfb0a8d7b5395f81668c070526b8f5762b7f2299f2f113e8137273212b",
+        "6ad7f7c541c13f9649900b593be298c2aa946ec35f2211f074219557b8dc5b1d",
     ),
     (
         "attention_token_to_head",
-        "1620c80bcfe46cc52fc3a319a9bbbdd03b3dbc137cb135adc2f9e5bddc04ed6d",
+        "3362251830e9e647e40b09a77ecdf7b9c421ffd765634efc5889df7ada55f97b",
     ),
     (
         "quest_paging",
-        "0ef6ca5ca04dc26c4e2040894817d77e997212a06e9957f914cd5fcdc7998d2d",
+        "bccb13ded6645e5c01d69298ef904fc8029a6a750815c7aae013da6b83409ad6",
     ),
     (
         "partial_rope",
-        "4b3ee7bdf1a83bfcca4f9d9bfad4590bfba89d75443ff97b52c8602d3ae925fa",
+        "a9e5a56c30371af7e76097fd1b20f72c0b575f98a01925b936dd9a9ae76a7a75",
     ),
     (
         "qk_gain",
-        "9acc6d451eb5ff12028cbda2497a0b46135c160d4a1b3f34c7c65402b1e514d9",
+        "43ad8ebe8e28e11286d16661d777d87027a47bba2bc3d6c8ed975fe094762f62",
     ),
     (
         "turboquant_attention",
-        "47eb3d2ccb3c09f4da74db11285a0d18e3f807db048d085a316da19954430a17",
+        "ff71ec2aa2f56f9e2a1be7356bab97f730721b64b31ee0906578283fd3f1e666",
     ),
     (
         "mla_compress_kv",
-        "d2c7c68b9a9d6f8432d0589f6ca3875042db55d00f20961f2e27857b4ec49e1d",
+        "5e8d2fec52e53b4b7896113a343f9c508e34797a8de3cccf66725971f9234a36",
     ),
 ];
 
@@ -514,9 +508,9 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
     (
         "attention_reference",
         &[
-            "vyre-libs::nn::attention_reference",
             "vyre-libs::math::dot_partial",
             "vyre-libs::nn::attention_max_pass",
+            "vyre-libs::nn::attention_reference",
             "vyre-libs::nn::attention_sum_pass",
             "vyre-libs::nn::attention_write_pass",
         ],
@@ -524,31 +518,31 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
     (
         "gqa_attention",
         &[
-            "vyre-libs::nn::gqa_attention",
             "vyre-libs::math::dot_partial",
             "vyre-libs::nn::attention_max_pass",
             "vyre-libs::nn::attention_sum_pass",
             "vyre-libs::nn::attention_write_pass",
+            "vyre-libs::nn::gqa_attention",
         ],
     ),
     (
         "gqa_attention_causal",
         &[
-            "vyre-libs::nn::gqa_attention_causal",
             "vyre-libs::math::dot_partial",
             "vyre-libs::nn::attention_max_pass",
             "vyre-libs::nn::attention_sum_pass",
             "vyre-libs::nn::attention_write_pass",
+            "vyre-libs::nn::gqa_attention_causal",
         ],
     ),
     (
         "gqa_attention_causal/f16",
         &[
-            "vyre-libs::nn::gqa_attention_causal",
             "vyre-libs::math::dot_partial",
             "vyre-libs::nn::attention_max_pass",
             "vyre-libs::nn::attention_sum_pass",
             "vyre-libs::nn::attention_write_pass",
+            "vyre-libs::nn::gqa_attention_causal",
         ],
     ),
     ("kv_cache_append", &["vyre-libs::nn::kv_cache_append"]),

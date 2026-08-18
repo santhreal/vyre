@@ -97,18 +97,26 @@ construction for the stated byte counts, not the transfer.
 
 `cargo bench -p vyre-foundation --bench optimizer_pipeline`
 
-Measured at commit 4cb6a3a37d5db12159dd52ca6103d122c959ea47 on the machine in
-the header. `optimize()` is the host IR pipeline every compile runs before any
-backend lowering, so these are compile latency, not device time.
+Measured at commit 1c104c0852 on 2026-08-18, on the machine in the header.
+`optimize()` is the host IR pipeline every compile runs before any backend
+lowering, so these are compile latency, not device time.
 
 | bench | median |
 | --- | --- |
-| optimizer/pipeline/release_corpus_families | 240.21 us |
-| optimizer/pipeline/kernel_wide/16 | 242.40 us |
-| optimizer/pipeline/kernel_wide/64 | 886.14 us |
-| optimizer/pipeline/kernel_loop_nest/4x8 | 70.902 us |
+| optimizer/pipeline/corpus/scalar-algebra | 25.704 us |
+| optimizer/pipeline/corpus/strength-reduction | 32.684 us |
+| optimizer/pipeline/corpus/fusion-cse | 43.253 us |
+| optimizer/pipeline/corpus/dead-code | 31.261 us |
+| optimizer/pipeline/corpus/memory-dataflow | 32.914 us |
+| optimizer/pipeline/corpus/loop-transform | 32.554 us |
+| optimizer/pipeline/corpus/control-flow | 29.312 us |
+| optimizer/pipeline/corpus/canonicalization | 28.233 us |
+| optimizer/pipeline/kernel_wide/16 | 267.29 us |
+| optimizer/pipeline/kernel_wide/64 | 921.47 us |
+| optimizer/pipeline/kernel_loop_nest/4x8 | 75.503 us |
 
-`release_corpus_families` optimizes one program per semantic family of the
-shipped release corpus per iteration. The two `kernel_wide` rows scale straight
-line arithmetic depth, so the difference between them is rewrite work rather
-than per-pass fixed cost: 4x the depth costs 3.65x the time.
+Each `corpus/<family>` row optimizes one deterministic program from that
+semantic family; Criterion prepares the cloned input outside the measured
+iteration. The two `kernel_wide` rows scale straight-line arithmetic depth, so
+the difference between them is rewrite work rather than per-pass fixed cost:
+4x the depth costs 3.45x the time.

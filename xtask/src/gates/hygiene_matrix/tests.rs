@@ -514,6 +514,43 @@ fn source_inspection_test_scanner_rejects_transitive_nested_and_aliased_walks() 
     assert!(findings[0].text.contains("freezes_architecture_spelling"));
 }
 
+/// WHY: reading and the `.rs` decision can live in different helpers. The
+/// transitive walk must combine both facts or a source-inspection test can hide
+/// the forbidden contract behind two individually harmless functions.
+#[test]
+fn source_inspection_test_scanner_combines_split_read_and_path_facts() {
+    let forbidden = r#"
+            use std::path::Path;
+
+            #[test]
+            fn freezes_architecture_spelling() {
+                assert!(inspect(Path::new("src/lib.rs")));
+            }
+
+            fn inspect(path: &Path) -> bool {
+                let source = load(path);
+                is_rust(path) && source.contains("fn helper")
+            }
+
+            fn load(path: &Path) -> String {
+                std::fs::read_to_string(path).unwrap()
+            }
+
+            fn is_rust(path: &Path) -> bool {
+                path.extension().is_some_and(|extension| extension == "rs")
+            }
+        "#;
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(
+        Path::new("driver/tests/source_contract.rs"),
+        forbidden,
+        &mut findings,
+    );
+
+    assert_eq!(findings.len(), 1);
+    assert!(findings[0].text.contains("freezes_architecture_spelling"));
+}
+
 #[test]
 fn hidden_fallback_scan_ignores_guard_implementation_text() {
     let guard = Path::new("vyre-lints/src/production_cpu_fallbacks.rs");
