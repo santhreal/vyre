@@ -197,4 +197,13 @@ mod tests {
             "distinct algebraic laws must close structural candidate"
         );
     }
+
+    #[test]
+    fn global_reductions_have_no_reinvention_pairs() {
+        let ops = collect_ops(&mut Report::clean());
+        assert_no_global_reduce_pairs(
+            &no_reinvention_pairs(&ops),
+            "all global reduction and indexed move pairs must be closed",
+        );
+    }
 }

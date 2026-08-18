@@ -8,8 +8,8 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::execution_plan::fusion::{fuse_programs_vec, FusionError};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-const EMIT_HIT_OP_ID: &str = "vyre-libs::matching::emit_hit";
-const COMPACT_HITS_OP_ID: &str = "vyre-libs::matching::compact_hits";
+pub(crate) const EMIT_HIT_OP_ID: &str = "vyre-libs::pattern::emit_hit";
+pub(crate) const COMPACT_HITS_OP_ID: &str = "vyre-libs::pattern::compact_hits";
 const DEFAULT_LANES: u32 = 4;
 const DEFAULT_MAX_HITS: u32 = 4;
 

@@ -304,7 +304,7 @@ fn diff_fnv1a64_primitive_regression() {
 #[cfg(feature = "pattern-substring")]
 #[test]
 fn diff_substring_search_gpu_regression() {
-    run_entry_diff(&entry_by_id("vyre-libs::scan::substring_search"));
+    run_entry_diff(&entry_by_id("vyre-libs::pattern::substring_search"));
 }
 
 #[test]

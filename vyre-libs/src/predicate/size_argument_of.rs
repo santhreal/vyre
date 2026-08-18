@@ -5,12 +5,11 @@
 //! frontier. Rule-level predicates own any additional node-kind
 //! filtering.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
 use crate::graph::program_graph::ProgramGraphShape;
-use crate::predicate::edge_kind;
-use crate::predicate::node_kind;
-use crate::predicate::traversal::backward_edge_program;
+use crate::predicate::arg_of::arg_of;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::predicate::size_argument_of";
@@ -29,7 +28,7 @@ pub fn size_argument_of(
     frontier_in: &str,
     frontier_out: &str,
 ) -> Program {
-    backward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
+    tag_program(OP_ID, arg_of(shape, frontier_in, frontier_out))
 }
 
 #[cfg(test)]
@@ -51,6 +50,7 @@ inventory::submit! {
         OP_ID,
         || size_argument_of(ProgramGraphShape::new(4, 4), "fin", "fout"),
         Some(|| {
+            use crate::predicate::{edge_kind, node_kind};
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![
                 to_bytes(&[node_kind::LITERAL, node_kind::CALL, node_kind::LITERAL, node_kind::CALL]),
@@ -66,4 +66,5 @@ inventory::submit! {
             vec![vec![EXPECTED_SIZE_ARGUMENT_OF_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["complement"])
 }

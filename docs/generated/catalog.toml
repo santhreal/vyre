@@ -127,6 +127,7 @@ operations = [
 [[subsystem]]
 id = "label"
 operations = [
+  "vyre-libs::label::nodeset_filter",
   "vyre-libs::label::resolve_family",
 ]
 
@@ -145,18 +146,6 @@ id = "logical"
 operations = [
   "vyre-libs::logical::nand",
   "vyre-libs::logical::nor",
-]
-
-[[subsystem]]
-id = "matching"
-operations = [
-  "vyre-libs::matching::aho_corasick",
-  "vyre-libs::matching::bracket_match",
-  "vyre-libs::matching::compact_hits",
-  "vyre-libs::matching::cooperative_dfa",
-  "vyre-libs::matching::emit_hit",
-  "vyre-libs::matching::regex_dfa",
-  "vyre-libs::matching::regex_scan",
 ]
 
 [[subsystem]]
@@ -340,6 +329,19 @@ operations = [
 ]
 
 [[subsystem]]
+id = "pattern"
+operations = [
+  "vyre-libs::pattern::aho_corasick",
+  "vyre-libs::pattern::bracket_match",
+  "vyre-libs::pattern::compact_hits",
+  "vyre-libs::pattern::cooperative_dfa",
+  "vyre-libs::pattern::emit_hit",
+  "vyre-libs::pattern::regex_dfa",
+  "vyre-libs::pattern::regex_scan",
+  "vyre-libs::pattern::substring_search",
+]
+
+[[subsystem]]
 id = "predicate"
 operations = [
   "vyre-libs::predicate::arg_of",
@@ -402,12 +404,6 @@ operations = [
 id = "representation"
 operations = [
   "vyre-libs::representation::unpack_4bit_f32",
-]
-
-[[subsystem]]
-id = "scan"
-operations = [
-  "vyre-libs::scan::substring_search",
 ]
 
 [[subsystem]]

@@ -10,20 +10,8 @@ pub const OP_ID: &str = "vyre-libs::predicate::node_kind_eq";
 /// Build a Program: `NodeSet = { v : nodes[v] == kind }`.
 #[must_use]
 pub fn node_kind_eq(nodes: &str, nodeset_out: &str, node_count: u32, kind: u32) -> Program {
-    node_kind_eq_with_op_id(OP_ID, nodes, nodeset_out, node_count, kind)
-}
-
-/// Build a node-kind predicate Program under a caller-owned op id.
-#[must_use]
-pub(crate) fn node_kind_eq_with_op_id(
-    op_id: &'static str,
-    nodes: &str,
-    nodeset_out: &str,
-    node_count: u32,
-    kind: u32,
-) -> Program {
     nodeset_filter_program(
-        op_id,
+        OP_ID,
         nodes,
         nodeset_out,
         node_count,
@@ -49,6 +37,7 @@ inventory::submit! {
             vec![vec![EXPECTED_NODE_KIND_EQ_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["identity"])
 }
 
 #[cfg(test)]

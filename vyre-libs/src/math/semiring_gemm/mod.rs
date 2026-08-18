@@ -221,6 +221,7 @@ inventory::submit! {
         ]]),
         Some(crate::fixture_bytes::matmul_2x2_expected),
     )
+    .with_laws(&["distributive"])
 }
 
 #[cfg(test)]

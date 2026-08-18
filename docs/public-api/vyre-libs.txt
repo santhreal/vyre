@@ -158,6 +158,7 @@ impl vyre_libs::prelude::MatmulBias
 impl vyre_libs::prelude::MatmulBiasTiled
 impl vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch
 impl vyre_libs::reasoning::string_diagram_ir_rewrite::StringDiagramRewriteScratch
+impl vyre_libs::reduce::workgroup_tree::WorkgroupFold
 impl vyre_libs::rule::RuleFormula
 impl vyre_libs::rule::file_size_eq::FileSizeEq
 impl vyre_libs::rule::file_size_gt::FileSizeGt
@@ -196,6 +197,7 @@ impl<'a> vyre_libs::csr::CsrBuffers<'a>
 impl<'a> vyre_libs::csr::CsrTraversalComposer<'a>
 impl<'a> vyre_libs::graph::csr_closure_inputs::CsrClosureInputs<'a>
 impl<'a> vyre_libs::graph::csr_closure_inputs::CsrGraphView<'a>
+impl<'a> vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>
 impl<'a> vyre_libs::state_machine::TableStateMachineComposer<'a>
 impl<'anchor> vyre_libs::pattern::AnchorDfaCandidate<'anchor>
 impl<T> vyre_libs::parsing::source_cache::ParsedSourceLru<T>
@@ -325,6 +327,8 @@ pub const fn vyre_libs::pattern::bracket_match_dispatch_grid(n: u32, max_depth: 
 pub const fn vyre_libs::pattern::region_dedup_dispatch_grid(count: u32) -> [u32; 3]
 pub const fn vyre_libs::predicate::edge_kind::call_arg_slot(n: u32) -> u32
 pub const fn vyre_libs::reduce::multi_block_prefix_scan::multi_block_prefix_scan_requirements() -> vyre_foundation::geometry::GeometryRequirements
+pub const fn vyre_libs::reduce::workgroup_tree::WorkgroupFold::laws(self) -> &'static [&'static str]
+pub const fn vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>::new(op_id: &'static str, values: &'a str, out: &'a str, count: u32, tile: u32, dtype: vyre_spec::data_type::DataType, fold: vyre_libs::reduce::workgroup_tree::WorkgroupFold) -> Self
 pub const fn vyre_libs::security::SanitizedFlowExecutionMode::is_converged_fixpoint(self) -> bool
 pub const fn vyre_libs::security::SanitizedFlowExecutionMode::label(self) -> &'static str
 pub const fn vyre_libs::security::sanitized_flow_soundness_contract(mode: vyre_libs::security::SanitizedFlowExecutionMode) -> vyre_libs::security::SanitizedFlowSoundnessContract
@@ -665,6 +669,7 @@ pub const vyre_libs::hash::sparse_fft::OP_ID: &str
 pub const vyre_libs::hash::table::EMPTY_KEY: u32
 pub const vyre_libs::hash::table::MISS_VALUE: u32
 pub const vyre_libs::hash::table::RESERVED_KEY: u32
+pub const vyre_libs::label::nodeset_filter::OP_ID: &str
 pub const vyre_libs::label::resolve_family::OP_ID: &str
 pub const vyre_libs::llm::paged_kv::PAGED_KV_APPEND_OP_ID: &str
 pub const vyre_libs::llm::paged_kv::PAGED_KV_GATHER_OP_ID: &str
@@ -867,7 +872,7 @@ pub const vyre_libs::pattern::classic_ac::CLASSIC_AC_SUFFIX2_MASK_WORDS: usize
 pub const vyre_libs::pattern::classic_ac::CLASSIC_AC_SUFFIX3_BLOOM_WORDS: usize
 pub const vyre_libs::pattern::nfa::HAYSTACK_LEN_BUF: &str
 pub const vyre_libs::pattern::nfa::MAX_SCAN_BYTES_BUF: &str
-pub const vyre_libs::pattern::nfa::OP_ID: &str
+pub const vyre_libs::pattern::nfa::REGEX_SCAN_OP_ID: &str
 pub const vyre_libs::predicate::arg_of::OP_ID: &str
 pub const vyre_libs::predicate::call_to::OP_ID: &str
 pub const vyre_libs::predicate::edge::OP_ID: &str
@@ -1080,7 +1085,6 @@ pub enum vyre_libs::device::memory_ownership_contract::MemoryOwner
 pub enum vyre_libs::device::memory_ownership_contract::MemoryOwnershipError
 pub enum vyre_libs::encoding::bitset_mask_algebra::BitsetMaskBinaryOp
 pub enum vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError
-pub enum vyre_libs::encoding::reduction_metrics::ReductionMetric
 pub enum vyre_libs::gemm::ContractionEpilogue
 pub enum vyre_libs::gemm::ContractionGeometry
 pub enum vyre_libs::gemm::ContractionSemiring
@@ -1092,6 +1096,7 @@ pub enum vyre_libs::graph::csr_frontier_queue::batch_memory::ResidentCsrQueueBat
 pub enum vyre_libs::graph::program_graph::GraphValidationError
 pub enum vyre_libs::graph::reachable::ReachableError
 pub enum vyre_libs::graph::vast_tree_walk::VastWalkOrder
+pub enum vyre_libs::label::nodeset_filter::NodeSetFilter
 pub enum vyre_libs::llm::paged_kv::PagedKvError
 pub enum vyre_libs::llm::sampling::SamplingError
 pub enum vyre_libs::math::prefix_scan::ScanKind
@@ -1114,6 +1119,8 @@ pub enum vyre_libs::pattern::AnchorDfaPlanError
 pub enum vyre_libs::pattern::CaptureMode
 pub enum vyre_libs::pattern::PostProcessError
 pub enum vyre_libs::pattern::nfa::NfaCompileError
+pub enum vyre_libs::reduce::reduction_metrics::ReductionMetric
+pub enum vyre_libs::reduce::workgroup_tree::WorkgroupFold
 pub enum vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope
 pub enum vyre_libs::rule::RuleBuildError
 pub enum vyre_libs::scheduling::frontier_typed_ir::FrontierDomain
@@ -1403,17 +1410,6 @@ pub fn vyre_libs::encoding::reduce_dispatch_pipeline::prefix_pass_c(partials: &s
 pub fn vyre_libs::encoding::reduce_dispatch_pipeline::prefixed_any_accumulator_body(values: &str, out_var: &str, count: u32, iter_var: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::encoding::reduce_dispatch_pipeline::prefixed_child_any_stage(parent_op_id: &str, values: &str, out_var: &str, count: u32, iter_var: &str) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::encoding::reduce_dispatch_pipeline::range_count_accumulator_body(histogram: &str, out_var: &str, start: u32, end: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::encoding::reduction_metrics::histogram_atomic_scatter_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], num_bins: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_all_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<bool, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_any_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<bool, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_count_non_zero_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_max_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_metric_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, metric: vyre_libs::encoding::reduction_metrics::ReductionMetric, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_metric_via_with_scratch(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, metric: vyre_libs::encoding::reduction_metrics::ReductionMetric, values: &[u32], scratch: &mut vyre_libs::encoding::reduction_metrics::ReductionMetricsGpuScratch) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_min_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::reduce_sum_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::segment_reduce_sum_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], segment_offsets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
-pub fn vyre_libs::encoding::reduction_metrics::segment_reduce_sum_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], segment_offsets: &[u32], scratch: &mut vyre_libs::encoding::reduction_metrics::ReductionMetricsGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::encoding::scallop_provenance::build_provenance_program(n: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::encoding::scallop_provenance::provenance_closure_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::encoding::scallop_provenance::provenance_closure_via_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, closure: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
@@ -1815,6 +1811,7 @@ pub fn vyre_libs::hash::sketch::count_sketch_update(table: &str, hashes: &str, s
 pub fn vyre_libs::hash::sparse_fft::sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::hash::table::hash_insert(in_keys: &str, in_values: &str, table_keys: &str, table_values: &str, table_capacity: u32, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::hash::table::hash_lookup(queries: &str, table_keys: &str, table_values: &str, out_results: &str, table_capacity: u32, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::label::nodeset_filter::nodeset_filter(values: &str, nodeset_out: &str, node_count: u32, filter: vyre_libs::label::nodeset_filter::NodeSetFilter) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::label::resolve_family::resolve_family(node_tags: &str, nodeset_out: &str, node_count: u32, family_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::llm::paged_kv::paged_kv_append(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, chunk: &str, chunk_tokens: u32, position: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::paged_kv::PagedKvError>
 pub fn vyre_libs::llm::paged_kv::paged_kv_gather(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, window: &str, window_tokens: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::paged_kv::PagedKvError>
@@ -2218,6 +2215,9 @@ pub fn vyre_libs::pattern::RegexReplayPolicy::default() -> Self
 pub fn vyre_libs::pattern::RegionTriple::cmp(&self, other: &Self) -> core::cmp::Ordering
 pub fn vyre_libs::pattern::RegionTriple::partial_cmp(&self, other: &Self) -> core::option::Option<core::cmp::Ordering>
 pub fn vyre_libs::pattern::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::pattern::aho_corasick::aho_corasick(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::pattern::aho_corasick::aho_corasick_bounded(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::pattern::aho_corasick::aho_corasick_program_from_dfa_wire(wire_bytes: &[u8], haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::pattern::DfaWireError>
 pub fn vyre_libs::pattern::aho_corasick_bounded(haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32, state_count: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::pattern::aho_corasick_program_from_dfa_wire(wire_bytes: &[u8], haystack: &str, transitions: &str, accept: &str, matches: &str, haystack_len: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::pattern::DfaWireError>
 pub fn vyre_libs::pattern::anchored_window_extract_program(haystack: &str, transitions: &str, output_offsets: &str, output_records: &str, candidates: &str, candidate_count: &str, haystack_len: &str, match_count: &str, matches: &str, state_count: u32, output_records_len: u32, max_candidates: u32, max_matches: u32, max_pattern_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2371,6 +2371,17 @@ pub fn vyre_libs::reduce::radix_sort::radix_sort(input: &str, output: &str, coun
 pub fn vyre_libs::reduce::range_counts::range_counts_u32(histogram: &str, out: &str, start: u32, end: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::range_counts::range_counts_u32_body(histogram: &str, out_var: &str, start: u32, end: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::reduce::range_counts::range_counts_u32_child(parent_op_id: &str, histogram: &str, out_var: &str, start: u32, end: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::reduce::reduction_metrics::histogram_atomic_scatter_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], num_bins: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_all_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<bool, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_any_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<bool, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_count_non_zero_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_max_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_metric_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, metric: vyre_libs::reduce::reduction_metrics::ReductionMetric, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_metric_via_with_scratch(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, metric: vyre_libs::reduce::reduction_metrics::ReductionMetric, values: &[u32], scratch: &mut vyre_libs::reduce::reduction_metrics::ReductionMetricsGpuScratch) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_min_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::reduce_sum_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, values: &[u32]) -> core::result::Result<u32, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::segment_reduce_sum_via(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], segment_offsets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::program_dispatch::DispatchError>
+pub fn vyre_libs::reduce::reduction_metrics::segment_reduce_sum_via_with_scratch_into(dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, input: &[u32], segment_offsets: &[u32], scratch: &mut vyre_libs::reduce::reduction_metrics::ReductionMetricsGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_foundation::program_dispatch::DispatchError>
 pub fn vyre_libs::reduce::scatter::scatter(src: &str, indices: &str, dst: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::segment_reduce::segment_reduce_sum(input: &str, segment_offsets: &str, output: &str, num_segments: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::sum::reduce_sum(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2379,6 +2390,10 @@ pub fn vyre_libs::reduce::workgroup_any::workgroup_any_u32_body(values: &str, ou
 pub fn vyre_libs::reduce::workgroup_any::workgroup_any_u32_body_prefixed(values: &str, out_var: &str, count: u32, iter_var: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::reduce::workgroup_any::workgroup_any_u32_child(parent_op_id: &str, values: &str, out_var: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::reduce::workgroup_any::workgroup_any_u32_child_prefixed(parent_op_id: &str, values: &str, out_var: &str, count: u32, iter_var: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::reduce::workgroup_tree::WorkgroupFold::combine(self, left: vyre_foundation::ir_inner::model::generated::Expr, right: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::reduce::workgroup_tree::WorkgroupFold::identity(self, dtype: &vyre_spec::data_type::DataType) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs::reduce::workgroup_tree::WorkgroupFold::tree(self, tile: u32, scratch: &'static str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>::build(self) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::workgroup_tree::max_f32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::reduce::workgroup_tree::max_u32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_libs::reduce::workgroup_tree::min_f32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
@@ -2389,6 +2404,7 @@ pub fn vyre_libs::reduce::workgroup_tree::workgroup_max_f32(values: &str, out: &
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_min_f32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_min_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::workgroup_tree::workgroup_reduction_child<F>(op_id: &'static str, parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope, combine: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_sum_f32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::workgroup_tree::workgroup_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::representation::unpack_4bit_f32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2750,7 +2766,6 @@ pub mod vyre_libs::encoding::matroid_exact_megakernel
 pub mod vyre_libs::encoding::nn_attention_paging
 pub mod vyre_libs::encoding::parsing_dispatch_pipeline
 pub mod vyre_libs::encoding::reduce_dispatch_pipeline
-pub mod vyre_libs::encoding::reduction_metrics
 pub mod vyre_libs::encoding::scallop_provenance
 pub mod vyre_libs::encoding::scallop_provenance_wide
 pub mod vyre_libs::encoding::vsa_fingerprint
@@ -2828,6 +2843,7 @@ pub mod vyre_libs::hash::sparse_fft
 pub mod vyre_libs::hash::table
 pub mod vyre_libs::intern
 pub mod vyre_libs::label
+pub mod vyre_libs::label::nodeset_filter
 pub mod vyre_libs::label::resolve_family
 pub mod vyre_libs::llm
 pub mod vyre_libs::llm::paged_kv
@@ -2947,6 +2963,7 @@ pub mod vyre_libs::parsing::ssa_dominance_scan
 pub mod vyre_libs::parsing::vast
 pub mod vyre_libs::parsing::whitespace_classify_word
 pub mod vyre_libs::pattern
+pub mod vyre_libs::pattern::aho_corasick
 pub mod vyre_libs::pattern::builders
 pub mod vyre_libs::pattern::classic_ac
 pub mod vyre_libs::pattern::nfa
@@ -2983,6 +3000,7 @@ pub mod vyre_libs::reduce::min
 pub mod vyre_libs::reduce::multi_block_prefix_scan
 pub mod vyre_libs::reduce::radix_sort
 pub mod vyre_libs::reduce::range_counts
+pub mod vyre_libs::reduce::reduction_metrics
 pub mod vyre_libs::reduce::scatter
 pub mod vyre_libs::reduce::segment_reduce
 pub mod vyre_libs::reduce::sum
@@ -3139,7 +3157,6 @@ pub struct vyre_libs::encoding::bitset_mask_algebra::BitsetMaskAlgebraGpuScratch
 pub struct vyre_libs::encoding::bitset_summary::BitsetSummaryGpuScratch
 pub struct vyre_libs::encoding::matching_diagnostic_compaction::MatchingDiagnosticCompactionGpuScratch
 pub struct vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidDispatchScratch
-pub struct vyre_libs::encoding::reduction_metrics::ReductionMetricsGpuScratch
 pub struct vyre_libs::encoding::scallop_provenance::ScallopProvenanceGpuScratch
 pub struct vyre_libs::encoding::vsa_fingerprint::VsaFingerprintGpuScratch
 pub struct vyre_libs::fixpoint::persistent_fixpoint::FixpointRoute
@@ -3281,6 +3298,8 @@ pub struct vyre_libs::prelude::MatmulBiasTiled
 pub struct vyre_libs::reasoning::do_calculus_change_impact::DoCalculusImpactScratch
 pub struct vyre_libs::reasoning::do_calculus_change_impact::ImpactedLineageProjectionScratch
 pub struct vyre_libs::reasoning::string_diagram_ir_rewrite::StringDiagramRewriteScratch
+pub struct vyre_libs::reduce::reduction_metrics::ReductionMetricsGpuScratch
+pub struct vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>
 pub struct vyre_libs::rule::file_size_eq::FileSizeEq
 pub struct vyre_libs::rule::file_size_gt::FileSizeGt
 pub struct vyre_libs::rule::file_size_gte::FileSizeGte
@@ -3620,12 +3639,6 @@ pub vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError::SinksLen::
 pub vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError::SourcesLen
 pub vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError::SourcesLen::actual: usize
 pub vyre_libs::encoding::matroid_exact_megakernel::ExactMatroidError::SourcesLen::expected: usize
-pub vyre_libs::encoding::reduction_metrics::ReductionMetric::All
-pub vyre_libs::encoding::reduction_metrics::ReductionMetric::Any
-pub vyre_libs::encoding::reduction_metrics::ReductionMetric::CountNonZero
-pub vyre_libs::encoding::reduction_metrics::ReductionMetric::Max
-pub vyre_libs::encoding::reduction_metrics::ReductionMetric::Min
-pub vyre_libs::encoding::reduction_metrics::ReductionMetric::Sum
 pub vyre_libs::fixpoint::persistent_fixpoint::FixpointRoute::changed_words: u32
 pub vyre_libs::fixpoint::persistent_fixpoint::FixpointRoute::needs_grid_sync: bool
 pub vyre_libs::fixpoint::persistent_fixpoint::FixpointState::changed: &'a str
@@ -4076,6 +4089,8 @@ pub vyre_libs::hash::sketch::CountSketchError::InvalidDimensions::w: u32
 pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow
 pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow::d: u32
 pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow::w: u32
+pub vyre_libs::label::nodeset_filter::NodeSetFilter::Eq(u32)
+pub vyre_libs::label::nodeset_filter::NodeSetFilter::Intersects(u32)
 pub vyre_libs::llm::paged_kv::PagedKvCache::block_table: &'a str
 pub vyre_libs::llm::paged_kv::PagedKvCache::block_tokens: u32
 pub vyre_libs::llm::paged_kv::PagedKvCache::blocks: u32
@@ -4580,6 +4595,22 @@ pub vyre_libs::pattern::nfa::NfaPlan::accept_state_ids: alloc::vec::Vec<u32>
 pub vyre_libs::pattern::nfa::NfaPlan::accept_states: alloc::vec::Vec<(u32, u32)>
 pub vyre_libs::pattern::nfa::NfaPlan::input_len: u32
 pub vyre_libs::pattern::nfa::NfaPlan::num_states: u32
+pub vyre_libs::reduce::reduction_metrics::ReductionMetric::All
+pub vyre_libs::reduce::reduction_metrics::ReductionMetric::Any
+pub vyre_libs::reduce::reduction_metrics::ReductionMetric::CountNonZero
+pub vyre_libs::reduce::reduction_metrics::ReductionMetric::Max
+pub vyre_libs::reduce::reduction_metrics::ReductionMetric::Min
+pub vyre_libs::reduce::reduction_metrics::ReductionMetric::Sum
+pub vyre_libs::reduce::workgroup_tree::WorkgroupFold::Max
+pub vyre_libs::reduce::workgroup_tree::WorkgroupFold::Min
+pub vyre_libs::reduce::workgroup_tree::WorkgroupFold::Sum
+pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::count: u32
+pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::dtype: vyre_spec::data_type::DataType
+pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::fold: vyre_libs::reduce::workgroup_tree::WorkgroupFold
+pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::op_id: &'static str
+pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::out: &'a str
+pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::tile: u32
+pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionBuilder::values: &'a str
 pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope::EveryWorkgroup
 pub vyre_libs::reduce::workgroup_tree::WorkgroupReductionScope::FirstWorkgroup
 pub vyre_libs::rule::RuleBuildError::OpaqueCondition

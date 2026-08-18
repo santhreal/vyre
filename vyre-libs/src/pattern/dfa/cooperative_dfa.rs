@@ -8,7 +8,7 @@ use crate::pattern::{dfa_compile, CompiledDfa};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-const OP_ID: &str = "vyre-libs::matching::cooperative_dfa";
+const OP_ID: &str = "vyre-libs::pattern::cooperative_dfa";
 const ALPHABET_SIZE: u32 = 256;
 
 // Forwarding alias to the canonical packer in `scan::dispatch_io`.

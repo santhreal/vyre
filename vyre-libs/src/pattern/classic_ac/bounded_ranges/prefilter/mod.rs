@@ -12,8 +12,8 @@
 //! fail-closed rejection path stay with their owner in the parent module; this
 //! module calls them and restates neither.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::composition::wrap_child_region;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use crate::pattern::CompiledDfa;
 
@@ -255,7 +255,11 @@ pub(in crate::pattern) fn gated_ranges_program(
     Program::wrapped(
         buffers,
         [128, 1, 1],
-        vec![wrap_anonymous_region(generator, body)],
+        vec![wrap_child_region(
+            crate::pattern::dfa::aho_corasick::OP_ID,
+            Ident::from(generator),
+            body,
+        )],
     )
 }
 

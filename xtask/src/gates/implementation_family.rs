@@ -152,6 +152,14 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-primitives::hardware::unary_u32_program",
     ),
     (
+        "vyre-primitives::hardware::subgroup_add",
+        "vyre-primitives::hardware::subgroup_unary_u32_program",
+    ),
+    (
+        "vyre-primitives::hardware::subgroup_ballot",
+        "vyre-primitives::hardware::subgroup_unary_u32_program",
+    ),
+    (
         "vyre-libs::graph::monoidal_compose",
         "vyre-libs::math::fixed_u32_matmul_program",
     ),
@@ -348,6 +356,22 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::builder::tiled_reduce",
     ),
     ("vyre-libs::nn::softmax", "vyre-libs::builder::tiled_reduce"),
+    (
+        "vyre-libs::nn::leaky_relu_sq_backward",
+        "vyre-libs::nn::backward::unary_f32_backward_program",
+    ),
+    (
+        "vyre-libs::nn::logit_softcap_backward",
+        "vyre-libs::nn::backward::unary_f32_backward_program",
+    ),
+    (
+        "vyre-libs::nn::linear_relu",
+        "vyre-libs::nn::linear::layer::linear_fused_activation",
+    ),
+    (
+        "vyre-libs::nn::linear_silu",
+        "vyre-libs::nn::linear::layer::linear_fused_activation",
+    ),
     (
         "vyre-libs::nn::partial_rope",
         "vyre-libs::nn::attention::layout_move",

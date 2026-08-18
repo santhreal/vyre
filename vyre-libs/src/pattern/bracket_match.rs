@@ -18,7 +18,7 @@ pub(crate) use vyre_reference::composition_witness::{
 };
 
 /// Stable op id for the Tier 2.5 primitive.
-pub const BRACKET_MATCH_OP_ID: &str = "vyre-libs::matching::bracket_match";
+pub const BRACKET_MATCH_OP_ID: &str = "vyre-libs::pattern::bracket_match";
 /// Workgroup size for the uncapped parallel parser-bracket path.
 pub const BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 

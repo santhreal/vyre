@@ -109,6 +109,7 @@ inventory::submit! {
             vec![vec![EXPECTED_CSR_FORWARD_TRAVERSE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["monotonic"])
 }
 
 inventory::submit! {
@@ -127,6 +128,7 @@ inventory::submit! {
             vec![vec![EXPECTED_CSR_FORWARD_TRAVERSE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["monotonic"])
 }
 
 #[cfg(test)]

@@ -150,6 +150,12 @@ macro_rules! define_bitwise_binary_op {
                     vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                 }),
             )
+            .with_laws(match BitwiseBinaryOp::$op_kind {
+                BitwiseBinaryOp::And => &["associative", "commutative", "idempotent"],
+                BitwiseBinaryOp::Or => &["associative", "commutative", "idempotent"],
+                BitwiseBinaryOp::Xor => &["associative", "commutative", "self-inverse"],
+                BitwiseBinaryOp::AndNot => &[],
+            })
         }
 
         #[cfg(test)]
@@ -356,6 +362,12 @@ macro_rules! define_bitwise_in_place_op {
                     vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                 }),
             )
+            .with_laws(match BitwiseBinaryOp::$op_kind {
+                BitwiseBinaryOp::And => &["idempotent"],
+                BitwiseBinaryOp::Or => &["idempotent"],
+                BitwiseBinaryOp::Xor => &["self-inverse"],
+                BitwiseBinaryOp::AndNot => &[],
+            })
         }
 
         #[cfg(test)]

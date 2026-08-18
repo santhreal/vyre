@@ -100,13 +100,9 @@ pub fn mask_binary_via_with_scratch_into(
         BitsetMaskBinaryOp::Or => bitset_or("lhs", "rhs", "out", words),
         BitsetMaskBinaryOp::Xor => bitset_xor("lhs", "rhs", "out", words),
     };
-    ensure_input_slots(&mut scratch.inputs, 3);
+    ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], lhs);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], rhs);
-    write_zero_bytes(
-        &mut scratch.inputs[2],
-        lhs.len() * std::mem::size_of::<u32>(),
-    );
     let outputs = dispatcher.dispatch(
         &program,
         &scratch.inputs,
@@ -190,12 +186,8 @@ pub fn mask_not_via_with_scratch_into(
     }
     let words = checked_words(input.len(), "mask_not_via")?;
     let program = bitset_not("input", "out", words);
-    ensure_input_slots(&mut scratch.inputs, 2);
+    ensure_input_slots(&mut scratch.inputs, 1);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], input);
-    write_zero_bytes(
-        &mut scratch.inputs[1],
-        input.len() * std::mem::size_of::<u32>(),
-    );
     let outputs = dispatcher.dispatch(
         &program,
         &scratch.inputs,

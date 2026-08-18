@@ -24,24 +24,21 @@ inventory::submit! {
         }),
         Some(|| vec![vec![vec![0x0a, 0x00, 0x00, 0x00]]]),
     )
+    .with_laws(AtomicReduceKind::Sum.laws())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn reference_sum(values: &[u32]) -> u32 {
-        values.iter().copied().fold(0u32, |a, b| a.wrapping_add(b))
-    }
-
     #[test]
     fn sums_values() {
-        assert_eq!(reference_sum(&[1, 2, 3, 4]), 10);
+        assert_eq!(AtomicReduceKind::Sum.reference_reduce(&[1, 2, 3, 4]), 10);
     }
 
     #[test]
     fn wraps_on_overflow() {
-        assert_eq!(reference_sum(&[u32::MAX, 1]), 0);
+        assert_eq!(AtomicReduceKind::Sum.reference_reduce(&[u32::MAX, 1]), 0);
     }
     #[test]
     fn program_uses_parallel_grid_stride() {

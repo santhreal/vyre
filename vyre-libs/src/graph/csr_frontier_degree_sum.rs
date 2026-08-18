@@ -115,6 +115,7 @@ inventory::submit! {
             vec![vec![EXPECTED_CSR_FRONTIER_DEGREE_SUM_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["bounded"])
 }
 
 #[cfg(test)]

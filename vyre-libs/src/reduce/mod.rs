@@ -24,6 +24,8 @@ pub mod min;
 pub mod multi_block_prefix_scan;
 pub mod radix_sort;
 pub mod range_counts;
+/// GPU reduction metrics for self-substrate scheduling and telemetry.
+pub mod reduction_metrics;
 pub mod scatter;
 pub mod segment_reduce;
 pub mod sum;

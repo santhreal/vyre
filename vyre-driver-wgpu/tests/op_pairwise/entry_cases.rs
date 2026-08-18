@@ -216,7 +216,7 @@ fn substring_self_composition_does_not_seed_output_from_downstream_input() {
     let entries = all_entries_vec();
     let entry = entries
         .iter()
-        .find(|entry| entry.id == "vyre-libs::scan::substring_search")
+        .find(|entry| entry.id == "vyre-libs::pattern::substring_search")
         .expect("substring registry entry");
     let composition =
         try_compose(entry, entry).expect("substring output must compose with substring input");

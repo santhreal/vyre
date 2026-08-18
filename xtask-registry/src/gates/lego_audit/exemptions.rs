@@ -67,7 +67,6 @@ pub(crate) const DECLARED_TIER3_LEAVES: [&str; 39] = [
     "vyre-libs::graph::vast_walk_postorder",
     "vyre-libs::graph::vast_walk_preorder",
     "vyre-libs::llm::nucleus_select",
-    "vyre-libs::matching::bracket_match",
     "vyre-libs::math::bellman_shortest_path",
     "vyre-libs::math::fft::fft_radix2",
     "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
@@ -85,6 +84,7 @@ pub(crate) const DECLARED_TIER3_LEAVES: [&str; 39] = [
     "vyre-libs::parsing::ast_cse_structural_hash",
     "vyre-libs::parsing::core_delimiter_match",
     "vyre-libs::parsing::ssa_dominance_scan",
+    "vyre-libs::pattern::bracket_match",
 ];
 
 pub(crate) fn is_declared_tier3_leaf(id: &str) -> bool {

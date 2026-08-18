@@ -1,10 +1,10 @@
 {
   "schema_version": 4,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 338,
+  "operation_count": 339,
   "tier_counts": {
     "intrinsic": 9,
-    "libs": 329
+    "libs": 330
   },
   "category_counts": {
     "bitset": 23,
@@ -15,14 +15,14 @@
     "graph": 28,
     "hardware": 9,
     "hash": 10,
-    "label": 1,
+    "label": 2,
     "llm": 5,
     "logical": 2,
-    "matching": 6,
     "math": 80,
     "nn": 72,
     "opt": 1,
     "parsing": 15,
+    "pattern": 6,
     "predicate": 10,
     "reduce": 21,
     "representation": 1,
@@ -111,7 +111,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -189,7 +193,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -680,7 +686,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -767,7 +775,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "commutative"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -978,7 +988,7 @@
           {
             "binding": 1,
             "name": "out",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 1,
@@ -1115,7 +1125,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -1193,7 +1207,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -1221,7 +1237,7 @@
           {
             "binding": 1,
             "name": "count",
-            "access": "ReadWrite",
+            "access": "WriteOnly",
             "memory": "Global",
             "element": "U32",
             "count": 2,
@@ -1514,7 +1530,10 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -1766,7 +1785,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "self-inverse"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -1844,7 +1867,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "self-inverse"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -3417,7 +3442,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "inverse-of"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -3663,7 +3690,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "monotonic"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -3795,7 +3824,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "monotonic"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -3918,7 +3949,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "bounded"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -4710,7 +4743,10 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -5851,7 +5887,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "distributive"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -6094,7 +6132,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "monotonic"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -7275,6 +7315,87 @@
       ]
     },
     {
+      "id": "vyre-libs::label::nodeset_filter",
+      "tier": "libs",
+      "category": "label",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "values",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "nodeset",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "label",
+        "predicate"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [
+        "idempotent"
+      ],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::label::nodeset_filter",
+          "registered": true
+        }
+      ]
+    },
+    {
       "id": "vyre-libs::label::resolve_family",
       "tier": "libs",
       "category": "label",
@@ -7343,11 +7464,18 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::label::resolve_family",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::label::nodeset_filter",
           "registered": true
         }
       ]
@@ -8046,769 +8174,6 @@
           "depth": 0,
           "operation": "vyre-libs::logical::nor",
           "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::matching::aho_corasick",
-      "tier": "libs",
-      "category": "scan",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "haystack",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 11,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "transitions",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1280,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "accept",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 5,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 3,
-            "name": "matches",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 11,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::matching::aho_corasick",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::matching::bracket_match",
-      "tier": "libs",
-      "category": "matching",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "kinds",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "stack",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "match_pairs",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::matching::bracket_match",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::matching::compact_hits",
-      "tier": "libs",
-      "category": "matching",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "out_hits",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 16,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "out_cursor",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "hit_buffer_live_length",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::matching::compact_hits",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::matching::cooperative_dfa",
-      "tier": "libs",
-      "category": "matching",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "input",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 6,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "transitions",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 512,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "accept_mask",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 2,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 3,
-            "name": "matches",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 6,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::matching::cooperative_dfa",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::matching::emit_hit",
-      "tier": "libs",
-      "category": "matching",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "rule_id",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "file_id",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "span_start",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 3,
-            "name": "span_len",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 4,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 4,
-            "name": "out_hits",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 16,
-            "pipeline_live_out": true
-          },
-          {
-            "binding": 5,
-            "name": "out_cursor",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 6,
-            "name": "hit_buffer_overflow_count",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::matching::emit_hit",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::matching::regex_dfa",
-      "tier": "libs",
-      "category": "matching",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "haystack",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 0,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "transitions",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1024,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "output_offsets",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 5,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 3,
-            "name": "output_records",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 2,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 4,
-            "name": "pattern_lengths",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 5,
-            "name": "haystack_len",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 6,
-            "name": "match_count",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 7,
-            "name": "matches",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 192,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "anonymous::vyre-libs::matching::regex_exact_ranges",
-          "registered": false
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::matching::regex_scan",
-      "tier": "libs",
-      "category": "matching",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "input",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 16,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "nfa_transition",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 57344,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "nfa_epsilon",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 224,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 3,
-            "name": "hits",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 30001,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 4,
-            "name": "nfa_haystack_len",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 5,
-            "name": "nfa_max_scan_bytes",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "anonymous::vyre-libs::matching::nfa_scan",
-          "registered": false
         }
       ]
     },
@@ -9704,7 +9069,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -9795,7 +9164,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -9986,7 +9359,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "custom"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -10077,7 +9452,13 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -10168,7 +9549,13 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent",
+        "left-absorbing"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -10259,7 +9646,12 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -10350,7 +9742,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "self-inverse"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -15232,7 +14628,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "distributive"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -16237,7 +15635,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -24481,6 +23881,860 @@
       ]
     },
     {
+      "id": "vyre-libs::pattern::aho_corasick",
+      "tier": "libs",
+      "category": "scan",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 11,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "transitions",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1280,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "accept",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 5,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "matches",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 11,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::aho_corasick",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::pattern::bracket_match",
+      "tier": "libs",
+      "category": "pattern",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "kinds",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "stack",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "match_pairs",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::bracket_match",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::pattern::compact_hits",
+      "tier": "libs",
+      "category": "pattern",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "out_hits",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 16,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out_cursor",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "hit_buffer_live_length",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::compact_hits",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::pattern::cooperative_dfa",
+      "tier": "libs",
+      "category": "pattern",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "input",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 6,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "transitions",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 512,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "accept_mask",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "matches",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 6,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::cooperative_dfa",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::pattern::emit_hit",
+      "tier": "libs",
+      "category": "pattern",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "rule_id",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "file_id",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "span_start",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "span_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "out_hits",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 16,
+            "pipeline_live_out": true
+          },
+          {
+            "binding": 5,
+            "name": "out_cursor",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 6,
+            "name": "hit_buffer_overflow_count",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::emit_hit",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::pattern::regex_dfa",
+      "tier": "libs",
+      "category": "pattern",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 0,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "transitions",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1024,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "output_offsets",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 5,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "output_records",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 2,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "pattern_lengths",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 6,
+            "name": "match_count",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 7,
+            "name": "matches",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 192,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::aho_corasick",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::pattern::regex_scan",
+      "tier": "libs",
+      "category": "pattern",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "input",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 16,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "nfa_transition",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 57344,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "nfa_epsilon",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 224,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "hits",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 30001,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "nfa_haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "nfa_max_scan_bytes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::emit_hit",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::pattern::substring_search",
+      "tier": "libs",
+      "category": "scan",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 8,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "needle",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 3,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "matches",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 8,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "pattern-substring",
+        "pattern-dfa",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-kernels"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::pattern::substring_search",
+          "registered": true
+        }
+      ]
+    },
+    {
       "id": "vyre-libs::predicate::arg_of",
       "tier": "libs",
       "category": "predicate",
@@ -24594,11 +24848,18 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "inverse-of"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::predicate::arg_of",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::graph::csr_backward_traverse",
           "registered": true
         }
       ]
@@ -24717,11 +24978,23 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "monotonic"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::predicate::call_to",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::predicate::edge",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::graph::csr_forward_traverse",
           "registered": true
         }
       ]
@@ -24840,11 +25113,18 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "distributive"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::predicate::edge",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::graph::csr_forward_traverse",
           "registered": true
         }
       ]
@@ -24918,7 +25198,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -24928,6 +25210,11 @@
         {
           "depth": 1,
           "operation": "vyre-libs::label::resolve_family",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::label::nodeset_filter",
           "registered": true
         }
       ]
@@ -25001,7 +25288,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -25011,6 +25300,11 @@
         {
           "depth": 1,
           "operation": "vyre-libs::label::resolve_family",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::label::nodeset_filter",
           "registered": true
         }
       ]
@@ -25084,7 +25378,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -25094,6 +25390,11 @@
         {
           "depth": 1,
           "operation": "vyre-libs::label::resolve_family",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::label::nodeset_filter",
           "registered": true
         }
       ]
@@ -25167,11 +25468,23 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::predicate::literal_of",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::predicate::node_kind_eq",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::label::nodeset_filter",
           "registered": true
         }
       ]
@@ -25245,11 +25558,18 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::predicate::node_kind_eq",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::label::nodeset_filter",
           "registered": true
         }
       ]
@@ -25368,11 +25688,23 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "monotonic"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::predicate::return_value_of",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::predicate::edge",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::graph::csr_forward_traverse",
           "registered": true
         }
       ]
@@ -25491,11 +25823,23 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "complement"
+      ],
       "composition_chain": [
         {
           "depth": 0,
           "operation": "vyre-libs::predicate::size_argument_of",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::predicate::arg_of",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::graph::csr_backward_traverse",
           "registered": true
         }
       ]
@@ -26842,7 +27186,13 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "distributive",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -26920,7 +27270,13 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent",
+        "lattice-absorption"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -26998,7 +27354,10 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "bounded"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -27076,7 +27435,10 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "bounded",
+        "monotonic"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -27163,7 +27525,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "monotonic"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -27319,7 +27683,13 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -27397,7 +27767,12 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -27736,7 +28111,9 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "inverse-of"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -27901,7 +28278,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -28066,7 +28447,13 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -28153,7 +28540,13 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -28240,7 +28633,12 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -28327,7 +28725,12 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "absorbing",
+        "associative",
+        "commutative",
+        "idempotent"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -28414,7 +28817,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -28501,7 +28908,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
+      "laws": [
+        "associative",
+        "commutative",
+        "identity"
+      ],
       "composition_chain": [
         {
           "depth": 0,
@@ -28584,97 +28995,6 @@
         {
           "depth": 0,
           "operation": "vyre-libs::representation::unpack_4bit_f32",
-          "registered": true
-        }
-      ]
-    },
-    {
-      "id": "vyre-libs::scan::substring_search",
-      "tier": "libs",
-      "category": "scan",
-      "signature": {
-        "kind": "program_buffers",
-        "buffers": [
-          {
-            "binding": 0,
-            "name": "haystack",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 8,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "needle",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 3,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "matches",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 8,
-            "pipeline_live_out": true
-          }
-        ],
-        "inputs": [],
-        "outputs": [],
-        "attributes": [],
-        "bytes_extraction": false
-      },
-      "features": [
-        "pattern-substring",
-        "pattern-dfa",
-        "pattern-nfa",
-        "pattern-regex",
-        "pattern-kernels"
-      ],
-      "oracle": {
-        "reference_eval": true,
-        "flat_reference_facet": false,
-        "fixture_inputs": true,
-        "expected_output": true,
-        "tolerance_ulp": 0
-      },
-      "backend_support": {
-        "cuda": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "reference": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        },
-        "wgpu": {
-          "status": "supported",
-          "test_paths": [
-            "vyre-libs/tests/universal_harness.rs",
-            "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
-          ]
-        }
-      },
-      "target_facets": [
-        "cuda",
-        "spirv",
-        "wgpu"
-      ],
-      "laws": [],
-      "composition_chain": [
-        {
-          "depth": 0,
-          "operation": "vyre-libs::scan::substring_search",
           "registered": true
         }
       ]
@@ -30214,6 +30534,11 @@
         {
           "depth": 1,
           "operation": "vyre-libs::label::resolve_family",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-libs::label::nodeset_filter",
           "registered": true
         }
       ]

@@ -11,7 +11,7 @@ buffers = 3
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -23,7 +23,7 @@ buffers = 2
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -95,7 +95,7 @@ buffers = 2
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -107,7 +107,7 @@ buffers = 3
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["commutative"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -155,7 +155,7 @@ buffers = 3
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -167,7 +167,7 @@ buffers = 2
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -215,7 +215,7 @@ buffers = 3
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -251,7 +251,7 @@ buffers = 3
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "self-inverse"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -263,7 +263,7 @@ buffers = 2
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["self-inverse"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -467,7 +467,7 @@ buffers = 7
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["inverse-of"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -491,7 +491,7 @@ buffers = 7
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -503,7 +503,7 @@ buffers = 8
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -515,7 +515,7 @@ buffers = 7
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["bounded"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -611,7 +611,7 @@ buffers = 3
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -719,7 +719,7 @@ buffers = 7
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["distributive"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -755,7 +755,7 @@ buffers = 2
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -879,6 +879,18 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::label::nodeset_filter"
+tier = "libs"
+category = "label"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["label", "predicate"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["idempotent"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::label::resolve_family"
 tier = "libs"
 category = "label"
@@ -887,7 +899,7 @@ buffers = 2
 bytes_extraction = false
 features = ["label"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -970,90 +982,6 @@ kind = "program_buffers"
 buffers = 3
 bytes_extraction = false
 features = ["logical"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::matching::aho_corasick"
-tier = "libs"
-category = "scan"
-kind = "program_buffers"
-buffers = 4
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::matching::bracket_match"
-tier = "libs"
-category = "matching"
-kind = "program_buffers"
-buffers = 3
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::matching::compact_hits"
-tier = "libs"
-category = "matching"
-kind = "program_buffers"
-buffers = 3
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::matching::cooperative_dfa"
-tier = "libs"
-category = "matching"
-kind = "program_buffers"
-buffers = 4
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::matching::emit_hit"
-tier = "libs"
-category = "matching"
-kind = "program_buffers"
-buffers = 7
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::matching::regex_dfa"
-tier = "libs"
-category = "matching"
-kind = "program_buffers"
-buffers = 8
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::matching::regex_scan"
-tier = "libs"
-category = "matching"
-kind = "program_buffers"
-buffers = 6
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
 target_facets = ["cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]
@@ -1163,7 +1091,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1175,7 +1103,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1199,7 +1127,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["custom"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1211,7 +1139,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1223,7 +1151,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent", "left-absorbing"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1235,7 +1163,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1247,7 +1175,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "self-inverse"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1859,7 +1787,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["distributive"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -1967,7 +1895,7 @@ buffers = 3
 bytes_extraction = false
 features = ["math-dialect", "math-kernels", "graph", "geom", "opt"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2919,6 +2847,102 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::pattern::aho_corasick"
+tier = "libs"
+category = "scan"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::bracket_match"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::compact_hits"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::cooperative_dfa"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::emit_hit"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 7
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::regex_dfa"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 8
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::regex_scan"
+tier = "libs"
+category = "pattern"
+kind = "program_buffers"
+buffers = 6
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::pattern::substring_search"
+tier = "libs"
+category = "scan"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::predicate::arg_of"
 tier = "libs"
 category = "predicate"
@@ -2927,7 +2951,7 @@ buffers = 7
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["inverse-of"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2939,7 +2963,7 @@ buffers = 7
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2951,7 +2975,7 @@ buffers = 7
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["distributive"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2963,7 +2987,7 @@ buffers = 2
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2975,7 +2999,7 @@ buffers = 2
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2987,7 +3011,7 @@ buffers = 2
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2999,7 +3023,7 @@ buffers = 2
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3011,7 +3035,7 @@ buffers = 2
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3023,7 +3047,7 @@ buffers = 7
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3035,7 +3059,7 @@ buffers = 7
 bytes_extraction = false
 features = ["predicate"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["complement"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3203,7 +3227,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "distributive", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3215,7 +3239,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent", "lattice-absorption"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3227,7 +3251,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "bounded"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3239,7 +3263,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["bounded", "monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3251,7 +3275,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3275,7 +3299,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3287,7 +3311,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3335,7 +3359,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["inverse-of"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3359,7 +3383,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3383,7 +3407,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3395,7 +3419,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3407,7 +3431,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3419,7 +3443,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["absorbing", "associative", "commutative", "idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3431,7 +3455,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3443,7 +3467,7 @@ buffers = 3
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3454,18 +3478,6 @@ kind = "program_buffers"
 buffers = 2
 bytes_extraction = false
 features = ["representation"]
-target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
-backends = ["cuda", "reference", "wgpu"]
-
-[[operation]]
-id = "vyre-libs::scan::substring_search"
-tier = "libs"
-category = "scan"
-kind = "program_buffers"
-buffers = 3
-bytes_extraction = false
-features = ["pattern-substring", "pattern-dfa", "pattern-nfa", "pattern-regex", "pattern-kernels"]
 target_facets = ["cuda", "spirv", "wgpu"]
 laws = []
 backends = ["cuda", "reference", "wgpu"]

@@ -33,24 +33,24 @@ inventory::submit! {
         }),
         Some(|| vec![vec![vec![0x03, 0x00, 0x00, 0x00]]]),
     )
+    .with_laws(AtomicReduceKind::CountNonZero.laws())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn reference_count_non_zero(values: &[u32]) -> u32 {
-        values.iter().filter(|&&value| value != 0).count() as u32
-    }
-
     #[test]
     fn counts_non_zero_lanes() {
-        assert_eq!(reference_count_non_zero(&[0, 7, 0, 9, 1]), 3);
+        assert_eq!(
+            AtomicReduceKind::CountNonZero.reference_reduce(&[0, 7, 0, 9, 1]),
+            3
+        );
     }
 
     #[test]
     fn empty_values_count_zero() {
-        assert_eq!(reference_count_non_zero(&[]), 0);
+        assert_eq!(AtomicReduceKind::CountNonZero.reference_reduce(&[]), 0);
     }
     #[test]
     fn program_uses_parallel_grid_stride() {
@@ -80,7 +80,7 @@ mod tests {
 
             let expected = values.iter().filter(|&&value| value != 0).count() as u32;
             assert_eq!(
-                reference_count_non_zero(&values),
+                AtomicReduceKind::CountNonZero.reference_reduce(&values),
                 expected,
                 "generated case {case}"
             );

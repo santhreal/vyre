@@ -121,7 +121,7 @@ fn blake3_cpu_witness_is_pinned() {
 
 #[test]
 fn aho_corasick_cpu_witness_is_pinned() {
-    assert_entry_matches_declared_witness("vyre-libs::matching::aho_corasick");
+    assert_entry_matches_declared_witness("vyre-libs::pattern::aho_corasick");
 }
 
 #[test]
@@ -152,7 +152,7 @@ fn silu_cpu_witness_is_pinned() {
 #[test]
 fn substring_cpu_witness_is_pinned() {
     assert_entry_matches_pinned_witness(
-        "vyre-libs::scan::substring_search",
+        "vyre-libs::pattern::substring_search",
         vec![
             vec![vec![
                 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,

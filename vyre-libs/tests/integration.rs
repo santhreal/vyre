@@ -116,7 +116,7 @@ fn nn_relu_produces_valid_program() {
 fn matching_substring_produces_valid_program() {
     let p = substring_search("haystack", "needle", "matches", 16, 5);
     assert_valid(&p);
-    assert_wrapped_in_region(&p, "vyre-libs::scan::substring_search");
+    assert_wrapped_in_region(&p, "vyre-libs::pattern::substring_search");
 }
 
 #[test]

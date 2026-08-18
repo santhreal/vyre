@@ -59,6 +59,7 @@ inventory::submit! {
             vec![vec![EXPECTED_CSR_BACKWARD_TRAVERSE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["inverse-of"])
 }
 
 #[cfg(test)]

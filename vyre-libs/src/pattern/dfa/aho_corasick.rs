@@ -18,6 +18,8 @@
 
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+/// Canonical op id.
+pub(crate) const OP_ID: &str = "vyre-libs::pattern::aho_corasick";
 
 /// Build a Program that scans `haystack` (u32 per byte) for any
 /// accepting state of a pre-built DFA. Buffers:
@@ -78,10 +80,7 @@ pub fn aho_corasick_bounded(
             BufferDecl::output(matches, 3, DataType::U32).with_count(haystack_len),
         ],
         [64, 1, 1],
-        vec![wrap_anonymous_region(
-            "vyre-libs::matching::aho_corasick",
-            body,
-        )],
+        vec![wrap_anonymous_region(OP_ID, body)],
     )
 }
 
@@ -118,7 +117,7 @@ const EXPECTED_AHO_CORASICK_OUTPUT_BYTES: [u8; 44] = [
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
-        "vyre-libs::matching::aho_corasick",
+        OP_ID,
         || {
             let patterns: [&[u8]; 1] = [b"abra"];
             let compiled = crate::pattern::dfa_compile(&patterns);

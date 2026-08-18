@@ -77,6 +77,7 @@ inventory::submit! {
             ]]]
         }),
     )
+    .with_laws(&["associative"])
 }
 
 #[cfg(test)]

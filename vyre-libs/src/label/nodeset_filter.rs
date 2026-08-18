@@ -5,13 +5,15 @@
 //! NodeSet. Centralizing that skeleton prevents node-kind, label-family,
 //! and future tag predicates from drifting at word boundaries.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+/// Canonical op id for the shared nodeset filter kernel skeleton.
+pub const OP_ID: &str = "vyre-libs::label::nodeset_filter";
 /// Compile-time predicate applied to each per-node u32 value.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum NodeSetFilter {
+pub enum NodeSetFilter {
     /// Match exactly one u32 value.
     Eq(u32),
     /// Match when any bit in the mask is present.
@@ -28,6 +30,16 @@ impl NodeSetFilter {
 }
 
 /// Build `nodeset_out = { v : filter(values[v]) }`.
+#[must_use]
+pub fn nodeset_filter(
+    values: &str,
+    nodeset_out: &str,
+    node_count: u32,
+    filter: NodeSetFilter,
+) -> Program {
+    nodeset_filter_program(OP_ID, values, nodeset_out, node_count, filter)
+}
+
 #[must_use]
 pub(crate) fn nodeset_filter_program(
     op_id: &'static str,
@@ -53,6 +65,18 @@ pub(crate) fn nodeset_filter_program(
             ),
         ],
     )];
+    let inner = vec![Node::if_then(
+        Expr::lt(t.clone(), Expr::u32(node_count)),
+        body,
+    )];
+    let region = if op_id == OP_ID {
+        wrap_anonymous_region(OP_ID, inner)
+    } else {
+        wrap_anonymous_region(
+            op_id,
+            vec![wrap_child_region(OP_ID, Ident::from(op_id), inner)],
+        )
+    };
     Program::wrapped(
         vec![
             BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32)
@@ -61,14 +85,25 @@ pub(crate) fn nodeset_filter_program(
                 .with_count(words),
         ],
         [256, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(node_count)),
-                body,
-            )],
-        )],
+        vec![region],
     )
+}
+
+const EXPECTED_NODESET_FILTER_OUTPUT_BYTES: [u8; 4] = [6, 0, 0, 0];
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || nodeset_filter("values", "nodeset", 4, NodeSetFilter::Intersects(0b0010)),
+        Some(|| {
+            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+            vec![vec![to_bytes(&[0x01, 0x02, 0x06, 0x04]), to_bytes(&[0])]]
+        }),
+        Some(|| {
+            vec![vec![EXPECTED_NODESET_FILTER_OUTPUT_BYTES.to_vec()]]
+        }),
+    )
+    .with_laws(&["idempotent"])
 }
 
 #[cfg(test)]

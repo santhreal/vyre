@@ -28,6 +28,8 @@ use crate::gates::scan::Tree;
 
 /// Directory holding one snapshot per publishable package.
 pub const SNAPSHOT_DIR: &str = "docs/public-api";
+/// Required pinned version of `cargo-public-api`.
+pub const CARGO_PUBLIC_API_VERSION: &str = "0.51.0";
 
 /// One publishable package and where its sources live.
 pub struct Snapshotted {
@@ -293,7 +295,7 @@ fn extract(root: &Path, package: &str) -> Result<String, GateError> {
         .map_err(|error| {
             GateError::new(
                 format!("cannot run `{} public-api -p {package}`: {error}", cargo.display()),
-                "install cargo-public-api, and restore the cargo_full wrapper at the workspace root",
+                format!("install cargo-public-api {CARGO_PUBLIC_API_VERSION} (`cargo +nightly install --locked cargo-public-api --version {CARGO_PUBLIC_API_VERSION}`), and restore the cargo_full wrapper at the workspace root"),
             )
         })?;
     if !output.status.success() {

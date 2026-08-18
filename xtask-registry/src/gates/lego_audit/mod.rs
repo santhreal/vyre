@@ -278,6 +278,34 @@ pub(crate) mod test_ops {
         info.fingerprint = fingerprint;
         info
     }
+
+    pub(crate) fn is_global_reduce_or_indexed_move(id: &str) -> bool {
+        matches!(
+            id.strip_prefix("vyre-libs::reduce::"),
+            Some(
+                "all"
+                    | "any"
+                    | "count"
+                    | "count_non_zero"
+                    | "max"
+                    | "min"
+                    | "sum"
+                    | "gather"
+                    | "scatter"
+            )
+        )
+    }
+
+    pub(crate) fn assert_no_global_reduce_pairs<T>(pairs: &[(T, &OpInfo, &OpInfo)], context: &str) {
+        let reduce_pairs: Vec<(&str, &str)> = pairs
+            .iter()
+            .filter(|(_, a, b)| {
+                is_global_reduce_or_indexed_move(&a.id) && is_global_reduce_or_indexed_move(&b.id)
+            })
+            .map(|(_, a, b)| (a.id.as_str(), b.id.as_str()))
+            .collect();
+        assert!(reduce_pairs.is_empty(), "{context}: {reduce_pairs:?}");
+    }
 }
 #[cfg(test)]
 pub(crate) use self::test_ops::*;

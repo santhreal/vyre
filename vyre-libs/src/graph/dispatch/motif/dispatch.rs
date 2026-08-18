@@ -1,8 +1,8 @@
 use super::{CachedMotifProgram, MotifGpuScratch};
-use crate::encoding::reduction_metrics::{reduce_any_via, reduce_count_non_zero_via};
 use crate::graph::motif::{
     plan_motif_launch, validate_motif_witness, MotifEdge, MotifStaticInputKey,
 };
+use crate::reduce::reduction_metrics::{reduce_any_via, reduce_count_non_zero_via};
 
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,

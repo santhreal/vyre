@@ -36,6 +36,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BITSET_COPY_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["idempotent"])
 }
 
 #[cfg(test)]

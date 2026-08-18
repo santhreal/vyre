@@ -45,6 +45,7 @@ inventory::submit! {
             vec![vec![EXPECTED_RESOLVE_FAMILY_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["idempotent"])
 }
 
 #[cfg(test)]

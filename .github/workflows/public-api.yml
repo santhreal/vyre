@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-public-api
-        run: cargo +nightly install cargo-public-api --locked
+        run: cargo +nightly install --locked cargo-public-api --version 0.51.0
       - name: Diff every publishable crate
         run: ./cargo_full run -q -p xtask --bin xtask -- public-api-snapshot
       - name: One public path per published item

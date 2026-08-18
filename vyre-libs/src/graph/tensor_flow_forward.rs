@@ -264,4 +264,5 @@ inventory::submit! {
             vec![vec![EXPECTED_TENSOR_FLOW_FORWARD_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["distributive"])
 }

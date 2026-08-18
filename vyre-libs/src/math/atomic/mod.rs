@@ -66,6 +66,16 @@ macro_rules! define_atomic_serial_module {
                 }),
             )
             .with_category("math")
+            .with_laws(match vyre_foundation::ir::AtomicOp::$atomic_op {
+                vyre_foundation::ir::AtomicOp::Add => &["associative", "commutative", "identity"],
+                vyre_foundation::ir::AtomicOp::And => &["associative", "commutative", "idempotent"],
+                vyre_foundation::ir::AtomicOp::Or => &["absorbing", "associative", "commutative", "idempotent"],
+                vyre_foundation::ir::AtomicOp::Xor => &["associative", "commutative", "self-inverse"],
+                vyre_foundation::ir::AtomicOp::Max => &["absorbing", "associative", "commutative", "idempotent", "identity"],
+                vyre_foundation::ir::AtomicOp::Min => &["absorbing", "associative", "commutative", "idempotent", "left-absorbing"],
+                vyre_foundation::ir::AtomicOp::Exchange => &["custom"],
+                _ => &[],
+            })
         }
 
         #[cfg(test)]

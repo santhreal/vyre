@@ -214,6 +214,7 @@ macro_rules! define_tag_family_predicate {
                     Some(|| crate::predicate::traversal::tag_family_fixture_inputs($fixture_tags)),
                     Some(|| crate::predicate::traversal::single_output_fixture_expected(&EXPECTED_REGISTRATION_BYTES)),
                 )
+                .with_laws(&["idempotent"])
             }
 
             #[cfg(test)]
@@ -247,10 +248,11 @@ macro_rules! define_fixed_forward_edge_predicate {
     ) => {
         #[doc = $module_doc]
         pub mod $module {
+            use vyre_foundation::composition::tag_program;
             use vyre_foundation::ir::Program;
 
             use crate::graph::program_graph::ProgramGraphShape;
-            use crate::predicate::traversal::forward_edge_program;
+            use crate::predicate::edge::edge;
 
             /// Canonical op id.
             pub const OP_ID: &str = $op_id;
@@ -263,7 +265,10 @@ macro_rules! define_fixed_forward_edge_predicate {
                 frontier_in: &str,
                 frontier_out: &str,
             ) -> Program {
-                forward_edge_program(OP_ID, shape, frontier_in, frontier_out, $edge_mask)
+                tag_program(
+                    OP_ID,
+                    edge(shape, frontier_in, frontier_out, $edge_mask),
+                )
             }
 
             inventory::submit! {
@@ -273,6 +278,7 @@ macro_rules! define_fixed_forward_edge_predicate {
                     Some(|| crate::predicate::traversal::forward_edge_fixture_inputs($fixture_edge_offsets, $fixture_edge_targets, $fixture_edge_masks)),
                     Some(|| crate::predicate::traversal::single_output_fixture_expected(&EXPECTED_REGISTRATION_BYTES)),
                 )
+                .with_laws(&["monotonic"])
             }
 
             #[cfg(test)]
@@ -291,6 +297,8 @@ macro_rules! define_fixed_forward_edge_predicate {
 }
 
 pub mod arg_of;
+pub mod edge;
+mod traversal;
 define_fixed_forward_edge_predicate!(
     call_to,
     call_to,
@@ -306,8 +314,6 @@ define_fixed_forward_edge_predicate!(
     "Build a Program that emits the callee NodeSet reachable via `CallArg` edges from the input frontier.",
     "call_to"
 );
-pub mod edge;
-mod traversal;
 define_tag_family_predicate!(
     in_file,
     in_file,

@@ -8,11 +8,12 @@
 //! `arg_of` returns every `CALL_ARG` predecessor regardless of position. This
 //! form is recall-safe but precision-loose.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
+use crate::graph::csr_backward_traverse::csr_backward_traverse;
 use crate::graph::program_graph::ProgramGraphShape;
 use crate::predicate::edge_kind;
-use crate::predicate::traversal::backward_edge_program;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::predicate::arg_of";
@@ -29,12 +30,14 @@ pub fn arg_of_slot(
     frontier_out: &str,
     slot: u32,
 ) -> Program {
-    backward_edge_program(
+    tag_program(
         OP_ID,
-        shape,
-        frontier_in,
-        frontier_out,
-        edge_kind::call_arg_slot(slot),
+        csr_backward_traverse(
+            shape,
+            frontier_in,
+            frontier_out,
+            edge_kind::call_arg_slot(slot),
+        ),
     )
 }
 
@@ -43,7 +46,10 @@ pub fn arg_of_slot(
 /// the slot is genuinely unknown.
 #[must_use]
 pub fn arg_of(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> Program {
-    backward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
+    tag_program(
+        OP_ID,
+        csr_backward_traverse(shape, frontier_in, frontier_out, edge_kind::CALL_ARG),
+    )
 }
 
 #[cfg(test)]
@@ -81,4 +87,5 @@ inventory::submit! {
             vec![vec![EXPECTED_ARG_OF_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["inverse-of"])
 }

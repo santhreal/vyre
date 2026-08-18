@@ -31,6 +31,13 @@ impl IndexedMoveKind {
             Self::Scatter => Node::store(dst, Expr::var("idx"), Expr::load(src, lane)),
         }
     }
+
+    pub(crate) const fn laws(self) -> &'static [&'static str] {
+        match self {
+            Self::Gather => &["monotonic"],
+            Self::Scatter => &["inverse-of"],
+        }
+    }
 }
 
 /// Build guarded gather/scatter over `count` u32 lanes.

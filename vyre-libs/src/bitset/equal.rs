@@ -47,6 +47,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BITSET_EQUAL_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["commutative"])
 }
 
 #[cfg(test)]

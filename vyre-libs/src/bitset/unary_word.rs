@@ -13,7 +13,7 @@ pub(crate) fn bitset_unary_word_program(
     ElementwiseComposer::new(op_id, words)
         .with_workgroup_size([256, 1, 1])
         .add_input_storage(input, BufferAccess::ReadOnly, DataType::U32, words)
-        .add_output_storage(output, BufferAccess::ReadWrite, DataType::U32, words)
+        .add_output_storage(output, BufferAccess::WriteOnly, DataType::U32, words)
         .build_pointwise(output, |i| Expr::UnOp {
             op,
             operand: Box::new(Expr::load(input, i)),

@@ -350,9 +350,6 @@ pub fn build_scan_program_from_regex(
     })
 }
 
-/// Canonical op id for regex NFA scan.
-pub const REGEX_SCAN_OP_ID: &str = "vyre-libs::matching::regex_scan";
-
 /// Build a regex scan [`Program`] directly from regex sources.
 ///
 /// Convenience wrapper over [`build_scan_program_from_regex`] returning the
@@ -401,7 +398,7 @@ fn canonical_regex_scan_inputs() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
-        REGEX_SCAN_OP_ID,
+        crate::pattern::nfa::REGEX_SCAN_OP_ID,
         canonical_regex_scan_program,
         Some(canonical_regex_scan_inputs),
         Some(|| vec![vec![EXPECTED_REGEX_SCAN_HITS_BYTES.to_vec()]]),

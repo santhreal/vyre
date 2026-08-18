@@ -51,6 +51,17 @@ pub(super) fn operand_shape_duplicate_pairs(ops: &[OpInfo]) -> Vec<(f64, &OpInfo
                 {
                     continue;
                 }
+                if xtask::gates::implementation_family::same_implementation_family(&a.id, &b.id)
+                    || xtask::gates::implementation_family::known_distinct_implementation_families(
+                        &a.id, &b.id,
+                    )
+                    || xtask::gates::implementation_family::reviewed_distinct_operations(
+                        &a.id, &b.id,
+                    )
+                    .is_some()
+                {
+                    continue;
+                }
                 let cos = structural_similarity(
                     fingerprint_past_prefix(&a.fingerprint),
                     fingerprint_past_prefix(&b.fingerprint),
@@ -162,6 +173,53 @@ mod tests {
         assert!(
             pairs.is_empty(),
             "distinct effects must close operand shape candidate"
+        );
+    }
+
+    /// WHY: Section 182.13.8 allows shared implementation families to close an operand shape candidate.
+    #[test]
+    fn same_implementation_family_closes_operand_shape_candidate() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA3]);
+        let ops = vec![
+            op_with_fingerprint("vyre-primitives::hardware::subgroup_add", left),
+            op_with_fingerprint("vyre-primitives::hardware::subgroup_ballot", right),
+        ];
+        let pairs = operand_shape_duplicate_pairs(&ops);
+        assert!(
+            pairs.is_empty(),
+            "same implementation family must close operand shape candidate"
+        );
+    }
+
+    /// WHY: Section 182.13.9 allows reviewed distinct operations to close an operand shape candidate.
+    #[test]
+    fn reviewed_distinct_operations_close_operand_shape_candidate() {
+        let entry: Vec<u8> = (0..PREFIX_LEN as u8).collect();
+        let mut left = entry.clone();
+        left.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2]);
+        let mut right = entry;
+        right.extend([0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA2, 0xA1, 0xA3]);
+        let ops = vec![
+            op_with_fingerprint("vyre-libs::math::fft::fft4_complex", left),
+            op_with_fingerprint("vyre-libs::hash::blake3_g", right),
+        ];
+        let pairs = operand_shape_duplicate_pairs(&ops);
+        assert!(
+            pairs.is_empty(),
+            "reviewed distinct operations must close operand shape candidate"
+        );
+    }
+
+    #[test]
+    fn global_reductions_have_no_operand_shape_pairs() {
+        let ops = collect_ops(&mut Report::clean());
+        assert_no_global_reduce_pairs(
+            &operand_shape_duplicate_pairs(&ops),
+            "all global reduction and indexed move operand-shape pairs must be closed",
         );
     }
 }

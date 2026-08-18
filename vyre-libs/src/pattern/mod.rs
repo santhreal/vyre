@@ -85,6 +85,8 @@ pub use hit_buffer::{
     emit_hit_then_compact_with_layout, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
     HIT_BUFFER_OVERFLOW_COUNT,
 };
+#[cfg(feature = "pattern-nfa")]
+pub use nfa::REGEX_SCAN_OP_ID;
 pub use post_process::{PostProcessError, PostProcessedMatch};
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub use regex_anchored_window::{
@@ -96,7 +98,7 @@ pub use regex_compile::{
     build_scan_program_from_regex, compile_regex_set, compile_regex_set_with_policy,
     regex_construct_diagnostic_code, regex_scan_program, CaptureMode, CaptureModeContract,
     CompiledRegexSet, RegexCompileError, RegexConstruct, RegexPatternExtent, RegexReplayPolicy,
-    DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES, REGEX_SCAN_OP_ID,
+    DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
 };
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub use regex_dfa::{

@@ -1,5 +1,7 @@
-use vyre_foundation::composition::wrap_anonymous_region;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use crate::pattern::dfa::aho_corasick::OP_ID as AHO_CORASICK_OP_ID;
+use crate::pattern::regex_dfa::REGEX_DFA_OP_ID;
+use vyre_foundation::composition::wrap_child_region;
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use super::{ac_output_span_nodes, ac_transition_step_nodes, AcInputBindings};
 use crate::pattern::builders::{append_match, append_match_subgroup};
@@ -84,6 +86,10 @@ pub(in crate::pattern) fn regex_exact_ranges_program(
     Program::wrapped(
         buffers,
         [128, 1, 1],
-        vec![wrap_anonymous_region(REGION_GENERATOR, invocation)],
+        vec![wrap_child_region(
+            AHO_CORASICK_OP_ID,
+            Ident::from(REGEX_DFA_OP_ID),
+            invocation,
+        )],
     )
 }

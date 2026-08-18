@@ -50,6 +50,7 @@ inventory::submit! {
             ]]]
         }),
     )
+    .with_laws(IndexedMoveKind::Gather.laws())
 }
 
 #[cfg(test)]

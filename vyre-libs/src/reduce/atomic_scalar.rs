@@ -33,6 +33,8 @@ pub(crate) enum AtomicReduceKind {
     Max,
     CountNonZero,
     PopcountSum,
+    AnyNonZero,
+    AllNonZero,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,34 +43,57 @@ pub(crate) enum AtomicBoolReduceKind {
     AllNonZero,
 }
 
-impl AtomicBoolReduceKind {
-    fn identity(self) -> u32 {
-        match self {
-            Self::AnyNonZero => 0,
-            Self::AllNonZero => 1,
+impl From<AtomicBoolReduceKind> for AtomicReduceKind {
+    fn from(kind: AtomicBoolReduceKind) -> Self {
+        match kind {
+            AtomicBoolReduceKind::AnyNonZero => Self::AnyNonZero,
+            AtomicBoolReduceKind::AllNonZero => Self::AllNonZero,
         }
     }
+}
 
-    fn atomic(self, out: &str, value: Expr) -> Expr {
+impl AtomicBoolReduceKind {
+    pub(crate) fn identity(self) -> u32 {
+        AtomicReduceKind::from(self).identity()
+    }
+
+    pub(crate) fn atomic(self, out: &str, value: Expr) -> Expr {
+        AtomicReduceKind::from(self).atomic(out, value)
+    }
+
+    pub(crate) const fn laws(self) -> &'static [&'static str] {
         match self {
-            Self::AnyNonZero => Expr::atomic_or(out, Expr::u32(0), value),
-            Self::AllNonZero => Expr::atomic_and(out, Expr::u32(0), value),
+            Self::AnyNonZero => &[
+                "absorbing",
+                "associative",
+                "commutative",
+                "idempotent",
+                "lattice-absorption",
+            ],
+            Self::AllNonZero => &[
+                "absorbing",
+                "associative",
+                "commutative",
+                "distributive",
+                "idempotent",
+            ],
         }
     }
 }
 
 impl AtomicReduceKind {
-    fn identity(self) -> u32 {
+    pub(crate) fn identity(self) -> u32 {
         match self {
-            Self::Sum | Self::Max | Self::CountNonZero | Self::PopcountSum => 0,
+            Self::Sum | Self::Max | Self::CountNonZero | Self::PopcountSum | Self::AnyNonZero => 0,
             Self::Min => u32::MAX,
+            Self::AllNonZero => 1,
         }
     }
 
-    fn value(self, input: &str, index: Expr) -> Expr {
+    pub(crate) fn value(self, input: &str, index: Expr) -> Expr {
         let loaded = Expr::load(input, index);
         match self {
-            Self::CountNonZero => {
+            Self::CountNonZero | Self::AnyNonZero | Self::AllNonZero => {
                 Expr::select(Expr::ne(loaded, Expr::u32(0)), Expr::u32(1), Expr::u32(0))
             }
             Self::PopcountSum => Expr::UnOp {
@@ -79,14 +104,92 @@ impl AtomicReduceKind {
         }
     }
 
-    fn atomic(self, out: &str, value: Expr) -> Expr {
+    pub(crate) fn atomic(self, out: &str, value: Expr) -> Expr {
         match self {
             Self::Sum | Self::CountNonZero | Self::PopcountSum => {
                 Expr::atomic_add(out, Expr::u32(0), value)
             }
             Self::Min => Expr::atomic_min(out, Expr::u32(0), value),
             Self::Max => Expr::atomic_max(out, Expr::u32(0), value),
+            Self::AnyNonZero => Expr::atomic_or(out, Expr::u32(0), value),
+            Self::AllNonZero => Expr::atomic_and(out, Expr::u32(0), value),
         }
+    }
+
+    pub(crate) const fn laws(self) -> &'static [&'static str] {
+        match self {
+            Self::Sum => &["associative", "commutative", "identity"],
+            Self::Min => &["absorbing", "associative", "commutative", "idempotent"],
+            Self::Max => &[
+                "absorbing",
+                "associative",
+                "commutative",
+                "idempotent",
+                "identity",
+            ],
+            Self::CountNonZero => &["bounded", "monotonic"],
+            Self::PopcountSum => &["associative", "bounded"],
+            Self::AnyNonZero => &[
+                "absorbing",
+                "associative",
+                "commutative",
+                "idempotent",
+                "lattice-absorption",
+            ],
+            Self::AllNonZero => &[
+                "absorbing",
+                "associative",
+                "commutative",
+                "distributive",
+                "idempotent",
+            ],
+        }
+    }
+
+    pub(crate) fn reference_reduce(self, values: &[u32]) -> u32 {
+        match self {
+            Self::Sum => values.iter().copied().fold(0u32, |a, b| a.wrapping_add(b)),
+            Self::Min => values.iter().copied().fold(u32::MAX, u32::min),
+            Self::Max => values.iter().copied().fold(0u32, u32::max),
+            Self::CountNonZero => values.iter().filter(|&&v| v != 0).count() as u32,
+            Self::PopcountSum => values.iter().map(|&w| w.count_ones()).sum(),
+            Self::AnyNonZero => u32::from(values.iter().any(|&v| v != 0)),
+            Self::AllNonZero => u32::from(!values.is_empty() && values.iter().all(|&v| v != 0)),
+        }
+    }
+}
+
+/// Typed builder for atomic scalar reductions over a u32 input buffer.
+#[derive(Debug, Clone)]
+pub(crate) struct AtomicReductionBuilder<'a> {
+    pub(crate) op_id: &'static str,
+    pub(crate) input: &'a str,
+    pub(crate) out: &'a str,
+    pub(crate) count: u32,
+    pub(crate) kind: AtomicReduceKind,
+}
+
+impl<'a> AtomicReductionBuilder<'a> {
+    #[must_use]
+    pub(crate) const fn new(
+        op_id: &'static str,
+        input: &'a str,
+        out: &'a str,
+        count: u32,
+        kind: AtomicReduceKind,
+    ) -> Self {
+        Self {
+            op_id,
+            input,
+            out,
+            count,
+            kind,
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn build(self) -> Program {
+        atomic_reduce_u32(self.input, self.out, self.count, self.kind, self.op_id)
     }
 }
 
@@ -115,183 +218,8 @@ pub(crate) fn atomic_nonzero_bool_reduce_u32(
     kind: AtomicBoolReduceKind,
     op_id: &'static str,
 ) -> Program {
-    atomic_grid_stride_u32(
-        &[input],
-        out,
-        count,
-        kind.identity(),
-        |index| {
-            Expr::select(
-                Expr::ne(Expr::load(input, index), Expr::u32(0)),
-                Expr::u32(1),
-                Expr::u32(0),
-            )
-        },
-        |out, value| kind.atomic(out, value),
-        op_id,
-    )
+    atomic_reduce_u32(input, out, count, kind.into(), op_id)
 }
-
-macro_rules! define_bool_reduce_op {
-    (
-        op_id: $op_id:expr,
-        fn_name: $fn_name:ident,
-        kind: $kind:ident,
-        true_case: $true_case:expr,
-        false_case: $false_case:expr,
-        inventory_expected: $inventory_expected:expr
-    ) => {
-        /// Canonical op id.
-        pub const OP_ID: &str = $op_id;
-
-        /// Build a non-zero boolean reduction Program over a u32 ValueSet.
-        #[must_use]
-        pub fn $fn_name(values: &str, out: &str, count: u32) -> vyre_foundation::ir::Program {
-            crate::reduce::atomic_scalar::atomic_nonzero_bool_reduce_u32(
-                values,
-                out,
-                count,
-                crate::reduce::atomic_scalar::AtomicBoolReduceKind::$kind,
-                OP_ID,
-            )
-        }
-
-        inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::library(
-                OP_ID,
-                || $fn_name("values", "out", 4),
-                Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-                    vec![vec![
-                        to_bytes(&[1, 0, 1, 1]),
-                        to_bytes(&[0]),
-                    ]]
-                }),
-                Some(|| {
-                    vec![vec![$inventory_expected.to_vec()]]
-                }),
-            )
-        }
-
-        #[cfg(test)]
-        mod tests {
-            use super::*;
-
-            fn reference_reduce(values: &[u32]) -> u32 {
-                match crate::reduce::atomic_scalar::AtomicBoolReduceKind::$kind {
-                    crate::reduce::atomic_scalar::AtomicBoolReduceKind::AnyNonZero => {
-                        u32::from(values.iter().any(|&v| v != 0))
-                    }
-                    crate::reduce::atomic_scalar::AtomicBoolReduceKind::AllNonZero => {
-                        u32::from(!values.is_empty() && values.iter().all(|&v| v != 0))
-                    }
-                }
-            }
-
-            #[test]
-            fn true_case_reduces_to_one() {
-                assert_eq!(reference_reduce(&$true_case), 1);
-            }
-
-            #[test]
-            fn false_case_reduces_to_zero() {
-                assert_eq!(reference_reduce(&$false_case), 0);
-            }
-
-            #[test]
-            fn program_uses_parallel_grid_stride() {
-                let program = $fn_name("values", "out", 513);
-                assert_eq!(
-                    program.workgroup_size(),
-                    [crate::reduce::atomic_scalar::WORKGROUP_SIZE, 1, 1]
-                );
-            }
-        }
-    };
-}
-
-pub(crate) use define_bool_reduce_op;
-
-macro_rules! define_u32_reduce_op {
-    (
-        op_id: $op_id:expr,
-        fn_name: $fn_name:ident,
-        kind: $kind:ident,
-        identity: $identity:expr,
-        fold: $fold:expr,
-        sample: $sample:expr,
-        expected: $expected:expr,
-        expected_bytes: $expected_bytes:expr
-    ) => {
-        /// Canonical op id.
-        pub const OP_ID: &str = $op_id;
-
-        /// Build an atomic grid-stride u32 reduction Program.
-        #[must_use]
-        pub fn $fn_name(values: &str, out: &str, count: u32) -> vyre_foundation::ir::Program {
-            crate::reduce::atomic_scalar::atomic_reduce_u32(
-                values,
-                out,
-                count,
-                crate::reduce::atomic_scalar::AtomicReduceKind::$kind,
-                OP_ID,
-            )
-        }
-
-        inventory::submit! {
-            vyre_foundation::operation::OperationRegistration::library(
-                OP_ID,
-                || $fn_name("values", "out", 4),
-                Some(|| {
-                    let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-                    vec![vec![
-                        to_bytes(&$sample),
-                        to_bytes(&[0]),
-                    ]]
-                }),
-                Some(|| {
-                    vec![vec![$expected_bytes.to_vec()]]
-                }),
-            )
-        }
-
-        #[cfg(test)]
-        mod tests {
-            use super::*;
-
-            fn reference_reduce(values: &[u32]) -> u32 {
-                values.iter().copied().fold($identity, $fold)
-            }
-
-            #[test]
-            fn sample_matches_reference() {
-                assert_eq!(reference_reduce(&$sample), $expected);
-            }
-
-            #[test]
-            fn empty_returns_identity() {
-                assert_eq!(reference_reduce(&[]), $identity);
-            }
-
-            #[test]
-            fn singleton_returns_value_or_identity_fold() {
-                assert_eq!(reference_reduce(&[$expected]), $expected);
-            }
-
-            #[test]
-            fn program_uses_parallel_grid_stride() {
-                let program = $fn_name("values", "out", 513);
-                assert_eq!(
-                    program.workgroup_size(),
-                    [crate::reduce::atomic_scalar::WORKGROUP_SIZE, 1, 1]
-                );
-            }
-        }
-    };
-}
-
-pub(crate) use define_u32_reduce_op;
-
 /// Build a grid-stride loop that folds one value per element into `out[0]`
 /// through a single atomic.
 ///

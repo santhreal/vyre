@@ -130,6 +130,7 @@ inventory::submit! {
             vec![vec![EXPECTED_STOCHASTIC_AND_MUL_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["associative", "commutative"])
 }
 
 #[cfg(test)]

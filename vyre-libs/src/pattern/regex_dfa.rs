@@ -335,7 +335,7 @@ pub fn build_regex_dfa_shards_unanchored(
 }
 
 /// Canonical op id for regex DFA scan.
-pub const REGEX_DFA_OP_ID: &str = "vyre-libs::matching::regex_dfa";
+pub const REGEX_DFA_OP_ID: &str = "vyre-libs::pattern::regex_dfa";
 
 /// Build a regex DFA scan [`Program`] from regex sources.
 ///

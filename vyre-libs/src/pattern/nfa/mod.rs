@@ -28,15 +28,14 @@
 //! in a grammar-to-NFA compiler layer that produces the same transition
 //! and epsilon tables before calling this scan kernel.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_child_region};
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use crate::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};
 
 /// Canonical op id for the end-to-end scan kernel.
-pub const OP_ID: &str = "vyre-libs::matching::nfa_scan";
-const REGION_GENERATOR: &str = "anonymous::vyre-libs::matching::nfa_scan";
+pub const REGEX_SCAN_OP_ID: &str = "vyre-libs::pattern::regex_scan";
 
 /// Compile a set of patterns into a scan Program.
 ///
@@ -58,7 +57,7 @@ const REGION_GENERATOR: &str = "anonymous::vyre-libs::matching::nfa_scan";
 pub fn nfa_scan(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> Program {
     try_nfa_scan(patterns, input_buf, hit_buf, input_len).unwrap_or_else(|error| {
         trap_program(
-            OP_ID,
+            REGEX_SCAN_OP_ID,
             Some((hit_buf, DataType::U32)),
             format!("Fix: {error}"),
         )
@@ -471,8 +470,9 @@ pub fn nfa_scan_with_plan(
     Ok(Program::wrapped(
         buffers,
         [LANES_PER_SUBGROUP as u32, 1, 1],
-        vec![wrap_anonymous_region(
-            REGION_GENERATOR,
+        vec![wrap_child_region(
+            crate::pattern::hit_buffer::EMIT_HIT_OP_ID,
+            Ident::from(REGEX_SCAN_OP_ID),
             vec![Node::if_then(
                 Expr::and(
                     Expr::lt(lane_u32(), Expr::u32(LANES_PER_SUBGROUP as u32)),

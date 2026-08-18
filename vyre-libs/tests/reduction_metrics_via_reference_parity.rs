@@ -14,7 +14,7 @@
 //! output RW(1) = 2 IC. All decode outputs[0] = the sole writable buffer. Every op is exact integer
 //! arithmetic → BIT-EXACT (no tolerance).
 
-use vyre_libs::encoding::reduction_metrics::{
+use vyre_libs::reduce::reduction_metrics::{
     histogram_atomic_scatter_via, reduce_all_via, reduce_any_via, reduce_count_non_zero_via,
     reduce_max_via, reduce_min_via, reduce_sum_via, segment_reduce_sum_via,
 };

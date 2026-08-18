@@ -30,19 +30,19 @@ inventory::submit! {
         }),
         Some(|| vec![vec![vec![0x24, 0x00, 0x00, 0x00]]]),
     )
+    .with_laws(AtomicReduceKind::PopcountSum.laws())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn reference_count(bitset: &[u32]) -> u32 {
-        bitset.iter().map(|&w| w.count_ones()).sum()
-    }
-
     #[test]
     fn total_bit_count() {
-        assert_eq!(reference_count(&[0b1111, 0xFFFF_FFFF]), 36);
+        assert_eq!(
+            AtomicReduceKind::PopcountSum.reference_reduce(&[0b1111, 0xFFFF_FFFF]),
+            36
+        );
     }
 
     #[test]

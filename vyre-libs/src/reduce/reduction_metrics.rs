@@ -6,7 +6,6 @@
 //! summaries through `vyre-primitives::reduce` programs instead of open-coding
 //! host loops in each pass.
 
-use super::decode_first_output;
 use crate::dispatch_buffers::{
     ceil_div_u32, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
@@ -66,8 +65,7 @@ pub fn reduce_metric_via_with_scratch(
     values: &[u32],
     scratch: &mut ReductionMetricsGpuScratch,
 ) -> Result<u32, DispatchError> {
-    use crate::telemetry::{bump, reduction_metrics_calls};
-    bump(&reduction_metrics_calls);
+    bump_reduction_metrics_calls();
 
     let count = checked_len(values.len(), "reduce_metric_via")?;
     let program = match metric {
@@ -196,8 +194,7 @@ pub fn segment_reduce_sum_via_with_scratch_into(
     scratch: &mut ReductionMetricsGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), DispatchError> {
-    use crate::telemetry::{bump, reduction_metrics_calls};
-    bump(&reduction_metrics_calls);
+    bump_reduction_metrics_calls();
 
     let num_segments = validate_segment_offsets(input, segment_offsets)?;
     let program = segment_reduce_sum("input", "segment_offsets", "output", num_segments);
@@ -228,8 +225,7 @@ pub fn histogram_atomic_scatter_via(
     input: &[u32],
     num_bins: u32,
 ) -> Result<Vec<u32>, DispatchError> {
-    use crate::telemetry::{bump, reduction_metrics_calls};
-    bump(&reduction_metrics_calls);
+    bump_reduction_metrics_calls();
 
     let count = checked_nonzero_len(input.len(), "histogram_atomic_scatter_via")?;
     if num_bins == 0 {
@@ -259,6 +255,14 @@ pub fn histogram_atomic_scatter_via(
         &mut out,
     )?;
     Ok(out)
+}
+
+fn bump_reduction_metrics_calls() {
+    #[cfg(feature = "telemetry")]
+    {
+        use crate::telemetry::{bump, reduction_metrics_calls};
+        bump(&reduction_metrics_calls);
+    }
 }
 
 fn grid_for_metric(metric: ReductionMetric, _count: u32) -> [u32; 3] {
@@ -313,6 +317,20 @@ fn validate_segment_offsets(input: &[u32], segment_offsets: &[u32]) -> Result<u3
         }
     }
     Ok(num_segments as u32)
+}
+
+fn decode_first_output(
+    outputs: &[Vec<u8>],
+    words: usize,
+    context: &'static str,
+    out: &mut Vec<u32>,
+) -> Result<(), DispatchError> {
+    if outputs.is_empty() {
+        return Err(DispatchError::BackendError(format!(
+            "Fix: {context} expected at least one output buffer, got 0."
+        )));
+    }
+    crate::dispatch_buffers::decode_u32_output_exact(&outputs[0], words, context, out)
 }
 
 fn decode_scalar(outputs: &[Vec<u8>], context: &'static str) -> Result<u32, DispatchError> {

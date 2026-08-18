@@ -404,7 +404,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `recurrent_gated_delta_contract` | `vyre-libs/tests/recurrent_gated_delta_contract.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test recurrent_gated_delta_contract` |
 | `test` | `reduce_atomic_ir_parity_proptest` | `vyre-libs/tests/reduce_atomic_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test reduce_atomic_ir_parity_proptest` |
 | `test` | `reduction_metrics_via_reference_parity` | `vyre-libs/tests/reduction_metrics_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test reduction_metrics_via_reference_parity` |
-| `test` | `reduction_metrics_via_reference_parity` | `vyre-libs/tests/reduction_metrics_via_reference_parity.rs` | `encoding` | `./cargo_full test -p vyre-libs --test reduction_metrics_via_reference_parity` |
+| `test` | `reduction_metrics_via_reference_parity` | `vyre-libs/tests/reduction_metrics_via_reference_parity.rs` | `reduce`, `telemetry` | `./cargo_full test -p vyre-libs --test reduction_metrics_via_reference_parity` |
 | `test` | `reduction_route_parity` | `vyre-libs/tests/reduction_route_parity.rs` | None | `./cargo_full test -p vyre-libs --test reduction_route_parity` |
 | `test` | `regex_adversarial_class_catalog` | `vyre-libs/tests/regex_adversarial_class_catalog.rs` | None | `./cargo_full test -p vyre-libs --test regex_adversarial_class_catalog` |
 | `test` | `regex_capture_mode_contracts` | `vyre-libs/tests/regex_capture_mode_contracts.rs` | None | `./cargo_full test -p vyre-libs --test regex_capture_mode_contracts` |

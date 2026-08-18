@@ -4,10 +4,11 @@
 //! edge-kind combinations. Downstream analyzer lowers arbitrary
 //! `edge(frontier, kind_mask)` expressions directly through this.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
+use crate::graph::csr_forward_traverse::csr_forward_traverse;
 use crate::graph::program_graph::ProgramGraphShape;
-use crate::predicate::traversal::forward_edge_program;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::predicate::edge";
@@ -23,7 +24,10 @@ pub fn edge(
     frontier_out: &str,
     edge_kind_mask: u32,
 ) -> Program {
-    forward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind_mask)
+    tag_program(
+        OP_ID,
+        csr_forward_traverse(shape, frontier_in, frontier_out, edge_kind_mask),
+    )
 }
 
 #[cfg(test)]
@@ -77,4 +81,5 @@ inventory::submit! {
             vec![vec![EXPECTED_EDGE_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["distributive"])
 }

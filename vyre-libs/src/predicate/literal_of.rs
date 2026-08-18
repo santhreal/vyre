@@ -7,10 +7,11 @@
 //! be composed by re-filtering with a dedicated literal-payload
 //! comparison primitive in Tier 3.
 
+use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;
 
 use crate::predicate::node_kind;
-use crate::predicate::node_kind_eq::node_kind_eq_with_op_id;
+use crate::predicate::node_kind_eq::node_kind_eq;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::predicate::literal_of";
@@ -18,7 +19,10 @@ pub const OP_ID: &str = "vyre-libs::predicate::literal_of";
 /// Build a Program that emits every node whose kind is Literal.
 #[must_use]
 pub fn literal_of(nodes: &str, nodeset_out: &str, node_count: u32) -> Program {
-    node_kind_eq_with_op_id(OP_ID, nodes, nodeset_out, node_count, node_kind::LITERAL)
+    tag_program(
+        OP_ID,
+        node_kind_eq(nodes, nodeset_out, node_count, node_kind::LITERAL),
+    )
 }
 
 const EXPECTED_LITERAL_OF_OUTPUT_BYTES: [u8; 4] = [8, 0, 0, 0];
@@ -39,4 +43,5 @@ inventory::submit! {
             vec![vec![EXPECTED_LITERAL_OF_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["absorbing"])
 }

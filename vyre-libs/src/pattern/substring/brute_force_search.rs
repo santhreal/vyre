@@ -10,7 +10,7 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical scan op id.
-pub const SCAN_SUBSTRING_OP_ID: &str = "vyre-libs::scan::substring_search";
+pub const SCAN_SUBSTRING_OP_ID: &str = "vyre-libs::pattern::substring_search";
 
 /// Build a Program that writes `1` to `matches[i]` when `haystack[i..]`
 /// starts with `needle`, else `0`. Both buffers are u32 byte arrays

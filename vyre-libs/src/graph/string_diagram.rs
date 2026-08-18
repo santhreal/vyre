@@ -69,6 +69,7 @@ inventory::submit! {
             vec![vec![EXPECTED_STRING_DIAGRAM_OUTPUT_BYTES.to_vec()]]
         }),
     )
+    .with_laws(&["associative", "identity"])
 }
 
 #[cfg(test)]

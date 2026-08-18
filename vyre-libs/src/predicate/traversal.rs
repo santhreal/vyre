@@ -1,41 +1,5 @@
+#[cfg(test)]
 use vyre_foundation::ir::Program;
-
-use crate::graph::csr_frontier_step::{csr_frontier_step_program, CsrFrontierStepKind};
-use crate::graph::program_graph::ProgramGraphShape;
-
-pub(crate) fn forward_edge_program(
-    op_id: &'static str,
-    shape: ProgramGraphShape,
-    frontier_in: &str,
-    frontier_out: &str,
-    edge_mask: u32,
-) -> Program {
-    csr_frontier_step_program(
-        op_id,
-        CsrFrontierStepKind::Forward,
-        shape,
-        frontier_in,
-        frontier_out,
-        edge_mask,
-    )
-}
-
-pub(crate) fn backward_edge_program(
-    op_id: &'static str,
-    shape: ProgramGraphShape,
-    frontier_in: &str,
-    frontier_out: &str,
-    edge_mask: u32,
-) -> Program {
-    csr_frontier_step_program(
-        op_id,
-        CsrFrontierStepKind::Backward,
-        shape,
-        frontier_in,
-        frontier_out,
-        edge_mask,
-    )
-}
 
 pub(crate) fn tag_family_fixture_inputs(fixture_tags: &[u32]) -> Vec<Vec<Vec<u8>>> {
     let to_bytes = crate::predicate::inventory_u32_le_bytes;

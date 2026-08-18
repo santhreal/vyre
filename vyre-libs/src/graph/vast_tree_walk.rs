@@ -775,6 +775,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_VAST_PREORDER_OUTPUT_BYTES.to_vec()]]),
     )
+    .with_laws(&["monotonic"])
 }
 
 inventory::submit! {

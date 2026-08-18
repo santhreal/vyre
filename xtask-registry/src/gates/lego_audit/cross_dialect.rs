@@ -441,4 +441,14 @@ mod tests {
             .message
             .contains("domain directory `vyre-libs/src/unlinked_domain` is not declared"));
     }
+    /// WHY: cross-dialect reach-through gate must report exactly zero findings on the workspace.
+    #[test]
+    fn cross_dialect_reachthrough_reports_zero_findings_on_real_checkout() {
+        let mut report = Report::clean();
+        let count = check_4_cross_dialect_reachthrough(&mut report);
+        for finding in &report.findings {
+            eprintln!("FINDING: {}", finding.message);
+        }
+        assert_eq!(count, 0, "findings: {:?}", report.findings);
+    }
 }

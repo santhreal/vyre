@@ -18,7 +18,6 @@ pub mod matroid_megakernel_scheduler;
 pub mod nn_attention_paging;
 pub mod parsing_dispatch_pipeline;
 pub mod reduce_dispatch_pipeline;
-pub mod reduction_metrics;
 pub mod scallop_provenance;
 pub mod scallop_provenance_wide;
 pub mod vsa_fingerprint;
