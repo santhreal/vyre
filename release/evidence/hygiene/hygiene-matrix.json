@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:0cc2b6a3878d1aaa33e24bbff84aa8a72cf2767a:dirty=true:worktree=e36fa659f178663d622122301e305a4cc0ad4d283c61384a786228d0eb599d7f",
+  "source_fingerprint": "git:6a9f9558377a822622ae09a124a9676afc747438:dirty=false",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4275,
+  "scanned_files": 4276,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -4196,7 +4196,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1453,
+      "line": 1456,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6423,7 +6423,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1453,
+      "line": 1456,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },
