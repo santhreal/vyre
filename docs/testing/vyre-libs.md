@@ -431,6 +431,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `region_dedup_property` | `vyre-libs/tests/region_dedup_property.rs` | None | `./cargo_full test -p vyre-libs --test region_dedup_property` |
 | `test` | `region_gpu_flag_contracts` | `vyre-libs/tests/region_gpu_flag_contracts.rs` | None | `./cargo_full test -p vyre-libs --test region_gpu_flag_contracts` |
 | `test` | `region_inline_let_scope` | `vyre-libs/tests/region_inline_let_scope.rs` | None | `./cargo_full test -p vyre-libs --test region_inline_let_scope` |
+| `test` | `registered_operation_validation` | `vyre-libs/tests/registered_operation_validation.rs` | None | `./cargo_full test -p vyre-libs --test registered_operation_validation` |
 | `test` | `registration_drift` | `vyre-libs/tests/registration_drift.rs` | None | `./cargo_full test -p vyre-libs --test registration_drift` |
 | `test` | `registry_closure` | `vyre-libs/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-libs --test registry_closure` |
 | `test` | `resolve_family_ir_parity_proptest` | `vyre-libs/tests/resolve_family_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test resolve_family_ir_parity_proptest` |

@@ -40,6 +40,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `adversarial_program_canonical_laws` | `vyre-foundation/tests/adversarial_program_canonical_laws.rs` | None | `./cargo_full test -p vyre-foundation --test adversarial_program_canonical_laws` |
 | `test` | `async_destination_writability` | `vyre-foundation/tests/async_destination_writability.rs` | None | `./cargo_full test -p vyre-foundation --test async_destination_writability` |
 | `test` | `async_tag_discipline` | `vyre-foundation/tests/async_tag_discipline.rs` | None | `./cargo_full test -p vyre-foundation --test async_tag_discipline` |
+| `test` | `async_uniformity` | `vyre-foundation/tests/async_uniformity.rs` | None | `./cargo_full test -p vyre-foundation --test async_uniformity` |
 | `test` | `atomic_linear_type_gap` | `vyre-foundation/tests/atomic_linear_type_gap.rs` | None | `./cargo_full test -p vyre-foundation --test atomic_linear_type_gap` |
 | `test` | `atomic_minimize_operand_positions` | `vyre-foundation/tests/atomic_minimize_operand_positions.rs` | None | `./cargo_full test -p vyre-foundation --test atomic_minimize_operand_positions` |
 | `test` | `autodiff_forward_local_fail_closed` | `vyre-foundation/tests/autodiff_forward_local_fail_closed.rs` | None | `./cargo_full test -p vyre-foundation --test autodiff_forward_local_fail_closed` |
@@ -150,6 +151,7 @@ The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 | `test` | `serial_envelope_boundary` | `vyre-foundation/tests/serial_envelope_boundary.rs` | None | `./cargo_full test -p vyre-foundation --test serial_envelope_boundary` |
 | `test` | `serial_envelope_corruption` | `vyre-foundation/tests/serial_envelope_corruption.rs` | None | `./cargo_full test -p vyre-foundation --test serial_envelope_corruption` |
 | `test` | `shape_predicate_evaluation` | `vyre-foundation/tests/shape_predicate_evaluation.rs` | None | `./cargo_full test -p vyre-foundation --test shape_predicate_evaluation` |
+| `test` | `source_tree_digest` | `vyre-foundation/tests/source_tree_digest.rs` | None | `./cargo_full test -p vyre-foundation --test source_tree_digest` |
 | `test` | `store_to_load_forward_value_invalidation` | `vyre-foundation/tests/store_to_load_forward_value_invalidation.rs` | None | `./cargo_full test -p vyre-foundation --test store_to_load_forward_value_invalidation` |
 | `test` | `strength_reduce_shift_fusion_overflow` | `vyre-foundation/tests/strength_reduce_shift_fusion_overflow.rs` | None | `./cargo_full test -p vyre-foundation --test strength_reduce_shift_fusion_overflow` |
 | `test` | `subst_preserves_subgroup_reduce_op` | `vyre-foundation/tests/subst_preserves_subgroup_reduce_op.rs` | None | `./cargo_full test -p vyre-foundation --test subst_preserves_subgroup_reduce_op` |

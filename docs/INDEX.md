@@ -15,7 +15,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `benchmark` | [`optimization/BENCH_TARGETS.toml`](optimization/BENCH_TARGETS.toml) |
 | `docs-governance` | [`DOCS.toml`](DOCS.toml) |
 | `historical` | [`DOCS.toml`](DOCS.toml) |
-| `operation-registry` | [`../vyre-foundation/src/operation.rs`](../vyre-foundation/src/operation.rs) |
+| `operation-registry` | [`../vyre-foundation/src/operation/mod.rs`](../vyre-foundation/src/operation/mod.rs) |
 | `optimization` | [`optimization/OWNERSHIP.toml`](optimization/OWNERSHIP.toml) |
 | `public-facade` | [`../vyre/src/lib.rs`](../vyre/src/lib.rs) |
 | `release-tooling` | [`../xtask/src/release/release_docs.rs`](../xtask/src/release/release_docs.rs) |

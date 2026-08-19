@@ -7978,26 +7978,31 @@
       "composition_chain": [
         {
           "depth": 0,
-          "operation": "anonymous::vyre.program.root",
-          "registered": false
+          "operation": "vyre-libs::llm::sample_token",
+          "registered": true
         },
         {
           "depth": 1,
+          "operation": "inline::vyre-libs::llm::sample_token",
+          "registered": false
+        },
+        {
+          "depth": 2,
           "operation": "vyre-libs::llm::logit_adjust",
           "registered": true
         },
         {
-          "depth": 2,
+          "depth": 3,
           "operation": "vyre-libs::builder::indexed_map",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-libs::nn::softmax_top_k",
           "registered": true
         },
         {
-          "depth": 1,
+          "depth": 2,
           "operation": "vyre-libs::llm::nucleus_select",
           "registered": true
         }
@@ -24520,6 +24525,11 @@
       "composition_chain": [
         {
           "depth": 0,
+          "operation": "vyre-libs::pattern::regex_dfa",
+          "registered": true
+        },
+        {
+          "depth": 1,
           "operation": "vyre-libs::pattern::aho_corasick",
           "registered": true
         }
@@ -24638,6 +24648,11 @@
       "composition_chain": [
         {
           "depth": 0,
+          "operation": "vyre-libs::pattern::regex_scan",
+          "registered": true
+        },
+        {
+          "depth": 1,
           "operation": "vyre-libs::pattern::emit_hit",
           "registered": true
         }
