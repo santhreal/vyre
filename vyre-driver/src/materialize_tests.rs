@@ -3,12 +3,10 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueLifetime,
 };
-use vyre_megakernel::{
-    ArtifactNodeId, ArtifactValueId, TargetResourceAccess, TargetResourceMemory,
-};
+use vyre_megakernel::{ArtifactNodeId, ArtifactValueId, TargetResourceAccess};
 
 use crate::materialize::materialize_test_fixtures::{
-    binding, compile_graph, contract, entry_point, test_instance_core, test_payload,
+    compile_graph, contract, entry_point, global_bindings, test_instance_core, test_payload,
 };
 use crate::materialize::{retained_chain_relates, unbound_input, unbound_resident_buffer};
 use crate::{BackendError, BindingPlan, Resource};
@@ -74,29 +72,11 @@ fn sparse_and_reordered_module_binding_identities() {
 
     let artifact = compile_graph(graph);
 
-    let bindings = vec![
-        binding(
-            ArtifactValueId(val_y.0),
-            0,
-            0,
-            TargetResourceMemory::Global,
-            TargetResourceAccess::ReadOnly,
-        ),
-        binding(
-            ArtifactValueId(val_x.0),
-            0,
-            1,
-            TargetResourceMemory::Global,
-            TargetResourceAccess::ReadOnly,
-        ),
-        binding(
-            ArtifactValueId(res_id.0),
-            0,
-            2,
-            TargetResourceMemory::Global,
-            TargetResourceAccess::WriteOnly,
-        ),
-    ];
+    let bindings = global_bindings(&[
+        (ArtifactValueId(val_y.0), TargetResourceAccess::ReadOnly),
+        (ArtifactValueId(val_x.0), TargetResourceAccess::ReadOnly),
+        (ArtifactValueId(res_id.0), TargetResourceAccess::WriteOnly),
+    ]);
 
     let payload = test_payload(
         &artifact,
@@ -285,33 +265,21 @@ fn transitive_retained_predecessor_lineage_preservation() {
             entry_point(
                 "seg0_entry",
                 ArtifactNodeId(node0.0),
-                vec![binding(
+                global_bindings(&[(
                     ArtifactValueId(state_mid.0),
-                    0,
-                    0,
-                    TargetResourceMemory::Global,
                     TargetResourceAccess::ReadWrite,
-                )],
+                )]),
             ),
             entry_point(
                 "seg1_entry",
                 ArtifactNodeId(node1.0),
-                vec![
-                    binding(
+                global_bindings(&[
+                    (
                         ArtifactValueId(state_final.0),
-                        0,
-                        0,
-                        TargetResourceMemory::Global,
                         TargetResourceAccess::ReadWrite,
                     ),
-                    binding(
-                        ArtifactValueId(out_id.0),
-                        0,
-                        1,
-                        TargetResourceMemory::Global,
-                        TargetResourceAccess::WriteOnly,
-                    ),
-                ],
+                    (ArtifactValueId(out_id.0), TargetResourceAccess::WriteOnly),
+                ]),
             ),
         ],
     );
@@ -500,22 +468,10 @@ fn later_module_inputs_and_outputs_resolve_by_named_entry_identity() {
         entry_point(
             "main",
             node,
-            vec![
-                binding(
-                    input,
-                    0,
-                    0,
-                    TargetResourceMemory::Global,
-                    TargetResourceAccess::ReadOnly,
-                ),
-                binding(
-                    output,
-                    0,
-                    1,
-                    TargetResourceMemory::Global,
-                    TargetResourceAccess::WriteOnly,
-                ),
-            ],
+            global_bindings(&[
+                (input, TargetResourceAccess::ReadOnly),
+                (output, TargetResourceAccess::WriteOnly),
+            ]),
         )
     };
     let payload = test_payload(
@@ -646,22 +602,10 @@ fn write_only_binding_of_an_output_value_is_output_only() {
         vec![entry_point(
             "entry0",
             ArtifactNodeId(0),
-            vec![
-                binding(
-                    ArtifactValueId(val_in.0),
-                    0,
-                    0,
-                    TargetResourceMemory::Global,
-                    TargetResourceAccess::ReadOnly,
-                ),
-                binding(
-                    ArtifactValueId(out_id.0),
-                    0,
-                    1,
-                    TargetResourceMemory::Global,
-                    TargetResourceAccess::WriteOnly,
-                ),
-            ],
+            global_bindings(&[
+                (ArtifactValueId(val_in.0), TargetResourceAccess::ReadOnly),
+                (ArtifactValueId(out_id.0), TargetResourceAccess::WriteOnly),
+            ]),
         )],
     );
 
@@ -785,13 +729,10 @@ fn a_read_write_buffer_keeps_both_ends_of_its_retained_chain_under_one_name() {
         vec![entry_point(
             "step_entry",
             ArtifactNodeId(node.0),
-            vec![binding(
+            global_bindings(&[(
                 ArtifactValueId(state_next.0),
-                0,
-                0,
-                TargetResourceMemory::Global,
                 TargetResourceAccess::ReadWrite,
-            )],
+            )]),
         )],
     );
 
@@ -927,16 +868,10 @@ fn payload_access_decides_projection_membership_at_every_lifetime() {
                 vec![entry_point(
                     "entry0",
                     ArtifactNodeId(0),
-                    vec![
-                        binding(
-                            ArtifactValueId(val_in.0),
-                            0,
-                            0,
-                            TargetResourceMemory::Global,
-                            TargetResourceAccess::ReadOnly,
-                        ),
-                        binding(acc_id, 0, 1, TargetResourceMemory::Global, access),
-                    ],
+                    global_bindings(&[
+                        (ArtifactValueId(val_in.0), TargetResourceAccess::ReadOnly),
+                        (acc_id, access),
+                    ]),
                 )],
             );
 

@@ -10,7 +10,8 @@ use vyre_megakernel::{
 
 use crate::materialize::materialize_test_fixtures::{
     binding, compile_graph, compile_graph_with_facts, compile_graph_with_search, contract,
-    entry_point, entry_point_with_geometry, test_instance_core, test_payload, try_payload,
+    entry_point, entry_point_with_geometry, global_bindings, test_instance_core, test_payload,
+    try_payload,
 };
 use crate::materialize::unbound_input;
 use crate::BindingPlan;
@@ -64,22 +65,13 @@ fn read_write_retained_preserves_input_output_and_order() {
         vec![entry_point(
             "entry0",
             ArtifactNodeId(0),
-            vec![
-                binding(
-                    ArtifactValueId(state_in.0),
-                    0,
-                    0,
-                    TargetResourceMemory::Global,
-                    TargetResourceAccess::ReadWrite,
-                ),
-                binding(
+            global_bindings(&[
+                (ArtifactValueId(state_in.0), TargetResourceAccess::ReadWrite),
+                (
                     ArtifactValueId(state_out.0),
-                    0,
-                    1,
-                    TargetResourceMemory::Global,
                     TargetResourceAccess::ReadWrite,
                 ),
-            ],
+            ]),
         )],
     );
 
@@ -218,13 +210,7 @@ fn read_write_invocation_lifetime_is_input_and_output() {
         vec![entry_point(
             "entry0",
             ArtifactNodeId(0),
-            vec![binding(
-                ArtifactValueId(val_inv.0),
-                0,
-                0,
-                TargetResourceMemory::Global,
-                TargetResourceAccess::ReadWrite,
-            )],
+            global_bindings(&[(ArtifactValueId(val_inv.0), TargetResourceAccess::ReadWrite)]),
         )],
     );
 
@@ -284,13 +270,10 @@ fn read_write_constant_lifetime_is_input_and_output() {
         vec![entry_point(
             "entry0",
             ArtifactNodeId(0),
-            vec![binding(
+            global_bindings(&[(
                 ArtifactValueId(val_const.0),
-                0,
-                0,
-                TargetResourceMemory::Global,
                 TargetResourceAccess::ReadWrite,
-            )],
+            )]),
         )],
     );
 
@@ -399,49 +382,25 @@ fn module_aliases_with_mixed_access_and_lifetimes_contract() {
             entry_point(
                 "entry0",
                 ArtifactNodeId(node0.0),
-                vec![
-                    binding(
-                        ArtifactValueId(val_in.0),
-                        0,
-                        0,
-                        TargetResourceMemory::Global,
-                        TargetResourceAccess::ReadOnly,
-                    ),
-                    binding(
-                        ArtifactValueId(out0.0),
-                        0,
-                        1,
-                        TargetResourceMemory::Global,
-                        TargetResourceAccess::WriteOnly,
-                    ),
-                ],
+                global_bindings(&[
+                    (ArtifactValueId(val_in.0), TargetResourceAccess::ReadOnly),
+                    (ArtifactValueId(out0.0), TargetResourceAccess::WriteOnly),
+                ]),
             ),
             entry_point(
                 "entry1",
                 ArtifactNodeId(node1.0),
-                vec![
-                    binding(
+                global_bindings(&[
+                    (
                         ArtifactValueId(state_init.0),
-                        0,
-                        0,
-                        TargetResourceMemory::Global,
                         TargetResourceAccess::ReadWrite,
                     ),
-                    binding(
+                    (
                         ArtifactValueId(state_next.0),
-                        0,
-                        1,
-                        TargetResourceMemory::Global,
                         TargetResourceAccess::WriteOnly,
                     ),
-                    binding(
-                        ArtifactValueId(out1.0),
-                        0,
-                        2,
-                        TargetResourceMemory::Global,
-                        TargetResourceAccess::WriteOnly,
-                    ),
-                ],
+                    (ArtifactValueId(out1.0), TargetResourceAccess::WriteOnly),
+                ]),
             ),
         ],
     );
@@ -518,22 +477,10 @@ fn target_descriptor_order_does_not_reorder_program_inputs() {
             [1, 1, 1],
             [1, 1, 1],
             0,
-            vec![
-                binding(
-                    out,
-                    0,
-                    0,
-                    TargetResourceMemory::Global,
-                    TargetResourceAccess::ReadWrite,
-                ),
-                binding(
-                    nodes,
-                    0,
-                    1,
-                    TargetResourceMemory::Global,
-                    TargetResourceAccess::ReadOnly,
-                ),
-            ],
+            global_bindings(&[
+                (out, TargetResourceAccess::ReadWrite),
+                (nodes, TargetResourceAccess::ReadOnly),
+            ]),
         )],
     )
     .expect("descriptor order is independent from Program declaration order");
@@ -606,22 +553,16 @@ fn bidirectional_retained_lineage_and_exact_slot_resolution_fails_closed() {
         vec![entry_point(
             "stage_entry",
             ArtifactNodeId(node_id.0),
-            vec![
-                binding(
+            global_bindings(&[
+                (
                     ArtifactValueId(state_val.0),
-                    0,
-                    0,
-                    TargetResourceMemory::Global,
                     TargetResourceAccess::ReadWrite,
                 ),
-                binding(
+                (
                     ArtifactValueId(out_final.0),
-                    0,
-                    1,
-                    TargetResourceMemory::Global,
                     TargetResourceAccess::WriteOnly,
                 ),
-            ],
+            ]),
         )],
     );
 

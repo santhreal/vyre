@@ -114,6 +114,29 @@ pub(super) fn binding(
     }
 }
 
+/// Bindings of `values` in group 0, one slot each in the order given.
+///
+/// Every fixture payload binds its resources in one group at consecutive
+/// slots, so the group and the slot are derived here and a test states only
+/// the value and its access.
+pub(super) fn global_bindings(
+    values: &[(ArtifactValueId, TargetResourceAccess)],
+) -> Vec<TargetResourceBinding> {
+    values
+        .iter()
+        .enumerate()
+        .map(|(slot, &(resource, access))| {
+            binding(
+                resource,
+                0,
+                u32::try_from(slot).unwrap(),
+                TargetResourceMemory::Global,
+                access,
+            )
+        })
+        .collect()
+}
+
 /// One entry point over the fixture launch geometry.
 pub(super) fn entry_point(
     name: &str,
