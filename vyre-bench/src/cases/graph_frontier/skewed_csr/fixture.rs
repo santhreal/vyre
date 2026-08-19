@@ -5,7 +5,8 @@ use crate::cases::queue_closure_oracle::{
     queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
 };
 use crate::cases::skewed_graph::{
-    skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
+    active_high_degree_sources, build_skewed_csr_arrays, skewed_degree as shared_skewed_degree,
+    sparse_queue_capacity, SkewedCsrShape,
 };
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
@@ -56,67 +57,41 @@ pub(super) struct SkewedCsrOracle {
 }
 
 pub(super) fn build_skewed_csr_fixture(node_count: u32) -> Result<SkewedCsrFixture, BenchError> {
-    if !node_count.is_power_of_two() || node_count < 32 {
-        return Err(BenchError::EnvironmentInvalid(format!(
-            "skewed CSR fixture requires a power-of-two node count >= 32, received {node_count}. Fix: choose a power-of-two graph size so target generation stays branch-free."
-        )));
-    }
-
-    let frontier_words = node_count.div_ceil(32);
-    let mut nodes = Vec::with_capacity(node_count as usize);
-    let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
-    let mut edge_targets = Vec::with_capacity((node_count as usize).saturating_mul(2));
-    let mut edge_kind_mask = Vec::with_capacity((node_count as usize).saturating_mul(2));
-    let mut node_tags = Vec::with_capacity(node_count as usize);
-    let mut frontier_in = vec![0_u32; frontier_words as usize];
-
-    let mut stats = SkewedCsrStats {
+    let arrays = build_skewed_csr_arrays(&SkewedCsrShape {
         node_count,
-        frontier_words,
-        ..Default::default()
-    };
-
-    edge_offsets.push(0);
-    for src in 0..node_count {
-        let degree = skewed_degree(src);
-        stats.max_degree = stats.max_degree.max(degree);
-        stats.high_degree_sources += u64::from(degree >= HIGH_DEGREE_THRESHOLD);
-        if source_is_active(src) {
-            stats.active_sources += 1;
-            frontier_in[(src / 32) as usize] |= 1_u32 << (src % 32);
-        }
-        nodes.push(mix32(src) & 0x1F);
-        node_tags.push(skewed_node_tag(src));
-        for edge in 0..degree {
-            edge_targets.push(skewed_target(node_count, src, edge));
-            edge_kind_mask.push(skewed_edge_kind(src, edge));
-        }
-        let offset = u32::try_from(edge_targets.len()).map_err(|_| {
-            BenchError::EnvironmentInvalid(
-                "skewed CSR fixture exceeded u32 edge offsets. Fix: split the benchmark graph."
-                    .to_string(),
-            )
-        })?;
-        edge_offsets.push(offset);
-    }
-
-    stats.edge_count = u32::try_from(edge_targets.len()).map_err(|_| {
-        BenchError::EnvironmentInvalid(
-            "skewed CSR fixture exceeded u32 edge count. Fix: split the benchmark graph."
-                .to_string(),
-        )
+        hub_degree: UGLY_HUB_DEGREE,
+        high_degree_threshold: HIGH_DEGREE_THRESHOLD,
+        fixture: "skewed CSR fixture",
+        power_of_two_fix:
+            "Fix: choose a power-of-two graph size so target generation stays branch-free.",
+        node_kind: skewed_node_kind,
+        node_tag: skewed_node_tag,
+        edge_kind: skewed_edge_kind,
+        source_is_active,
     })?;
 
     Ok(SkewedCsrFixture {
-        nodes,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        node_tags,
-        frontier_in,
-        frontier_out_seed: vec![0_u32; frontier_words as usize],
-        stats,
+        nodes: arrays.nodes,
+        edge_offsets: arrays.edge_offsets,
+        edge_targets: arrays.edge_targets,
+        edge_kind_mask: arrays.edge_kind_mask,
+        node_tags: arrays.node_tags,
+        frontier_in: arrays.frontier_in,
+        frontier_out_seed: vec![0_u32; arrays.frontier_words as usize],
+        stats: SkewedCsrStats {
+            node_count,
+            edge_count: arrays.edge_count,
+            frontier_words: arrays.frontier_words,
+            active_sources: arrays.active_sources,
+            max_degree: arrays.max_degree,
+            high_degree_sources: arrays.high_degree_sources,
+            ..Default::default()
+        },
     })
+}
+
+fn skewed_node_kind(src: u32) -> u32 {
+    mix32(src) & 0x1F
 }
 
 pub(super) fn skewed_csr_inputs(fixture: &SkewedCsrFixture) -> Vec<Vec<u8>> {
@@ -149,25 +124,13 @@ pub(super) fn skewed_csr_active_high_degree_sources(
     fixture: &SkewedCsrFixture,
     min_degree: u32,
 ) -> Result<u32, BenchError> {
-    let mut high_sources = 0_u32;
-    for src in 0..fixture.stats.node_count {
-        let word = (src / 32) as usize;
-        let bit = 1_u32 << (src % 32);
-        if fixture.frontier_in[word] & bit == 0 {
-            continue;
-        }
-        let start = fixture.edge_offsets[src as usize];
-        let end = fixture.edge_offsets[src as usize + 1];
-        if end.saturating_sub(start) >= min_degree {
-            high_sources = high_sources.checked_add(1).ok_or_else(|| {
-                BenchError::EnvironmentInvalid(
-                    "skewed CSR split queue high-degree active source count exceeded u32. Fix: split the frontier queue."
-                        .to_string(),
-                )
-            })?;
-        }
-    }
-    Ok(high_sources)
+    active_high_degree_sources(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        fixture.stats.node_count,
+        min_degree,
+        "skewed CSR split queue",
+    )
 }
 
 pub(super) fn materialize_skewed_csr_active_queue(
