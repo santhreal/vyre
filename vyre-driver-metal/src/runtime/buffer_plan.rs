@@ -5,7 +5,7 @@ use vyre_driver::{BackendError, BindingPlan, BindingRole, OutputBindingLayout};
 
 use super::resident::{
     copy_to_shared_buffer, metal_physical_buffer_len, new_host_input_buffer, new_zero_buffer,
-    zero_shared_buffer_range, ResolvedMetalResource,
+    resident_bindings, zero_shared_buffer_range, ResolvedMetalResource,
 };
 use crate::METAL_BACKEND_ID;
 
@@ -229,20 +229,8 @@ pub(crate) fn plan_resident_buffers(
             ),
         })?;
 
-    let mut resource_index = 0usize;
-    for binding in &binding_plan.bindings {
-        if binding.role == BindingRole::Shared {
-            continue;
-        }
-        if binding.role == BindingRole::Persistent {
-            return Err(BackendError::UnsupportedFeature {
-                name: format!(
-                    "Metal persistent buffer binding `{}` in resident dispatch",
-                    binding.name
-                ),
-                backend: METAL_BACKEND_ID.to_string(),
-            });
-        }
+    for entry in resident_bindings(binding_plan) {
+        let (resource_index, binding) = entry?;
         let metal_slot = metal_slots.get(&binding.binding).copied().ok_or_else(|| {
             BackendError::KernelCompileFailed {
                 backend: METAL_BACKEND_ID.to_string(),
@@ -313,7 +301,6 @@ pub(crate) fn plan_resident_buffers(
             allocated_bytes,
             host_to_device_bytes,
         });
-        resource_index += 1;
     }
     for binding in artifact_bindings {
         if buffers

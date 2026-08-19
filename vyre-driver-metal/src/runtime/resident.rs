@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use metal::{Buffer, Device, MTLResourceOptions, NSUInteger};
 use vyre_driver::resident_transfer_fusion::{ResidentTransferInterval, ResidentTransferView};
 use vyre_driver::{
-    BackendError, BindingPlan, BindingRole, ResidentHandle, ResidentOwner, Resource,
+    BackendError, Binding, BindingPlan, BindingRole, ResidentHandle, ResidentOwner, Resource,
 };
 
 use crate::METAL_BACKEND_ID;
@@ -77,20 +77,8 @@ pub(super) fn resolve_resident_resources_from_table<'a>(
                 "Fix: Metal resident dispatch could not reserve {expected} resolved resource descriptor(s): {error}. Split the dispatch bindings."
             ),
         })?;
-    let mut resource_index = 0usize;
-    for binding in &binding_plan.bindings {
-        if binding.role == BindingRole::Shared {
-            continue;
-        }
-        if binding.role == BindingRole::Persistent {
-            return Err(BackendError::UnsupportedFeature {
-                name: format!(
-                    "Metal persistent buffer binding `{}` in resident dispatch",
-                    binding.name
-                ),
-                backend: METAL_BACKEND_ID.to_string(),
-            });
-        }
+    for entry in resident_bindings(binding_plan) {
+        let (resource_index, binding) = entry?;
         let resource = resources.get(resource_index).ok_or_else(|| BackendError::InvalidProgram {
             fix: format!(
                 "Fix: Metal resident dispatch missing resource slot {resource_index} for binding {} (`{}`).",
@@ -116,9 +104,37 @@ pub(super) fn resolve_resident_resources_from_table<'a>(
                 });
             }
         }
-        resource_index += 1;
     }
     Ok(resolved)
+}
+
+/// Bindings a resident dispatch supplies a caller resource for, paired with
+/// the resource index each one reads, in binding order.
+///
+/// A shared binding is workgroup-local and consumes no caller resource, so it
+/// takes no index. A persistent binding has no resident dispatch meaning on
+/// Metal, so the walk refuses it instead of binding the next resource to the
+/// wrong slot.
+pub(super) fn resident_bindings(
+    binding_plan: &BindingPlan,
+) -> impl Iterator<Item = Result<(usize, &Binding), BackendError>> {
+    binding_plan
+        .bindings
+        .iter()
+        .filter(|binding| binding.role != BindingRole::Shared)
+        .enumerate()
+        .map(|(resource_index, binding)| {
+            if binding.role == BindingRole::Persistent {
+                return Err(BackendError::UnsupportedFeature {
+                    name: format!(
+                        "Metal persistent buffer binding `{}` in resident dispatch",
+                        binding.name
+                    ),
+                    backend: METAL_BACKEND_ID.to_string(),
+                });
+            }
+            Ok((resource_index, binding))
+        })
 }
 
 pub(super) fn resident_resource_count(binding_plan: &BindingPlan) -> Result<usize, BackendError> {
