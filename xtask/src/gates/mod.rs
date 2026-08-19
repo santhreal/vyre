@@ -43,6 +43,8 @@ mod host_oracle_elimination_extract;
 mod host_oracle_elimination_records;
 mod host_oracle_elimination_scanners;
 #[cfg(test)]
+mod host_oracle_elimination_test_fixtures;
+#[cfg(test)]
 mod host_oracle_elimination_tests_part1;
 #[cfg(test)]
 mod host_oracle_elimination_tests_part2;

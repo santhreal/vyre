@@ -1,5 +1,6 @@
 //! Unit tests for host oracle elimination gate (Part 1).
 
+use super::host_oracle_elimination_test_fixtures::{incrementing_oracle_body, oracle_body};
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
@@ -255,21 +256,20 @@ fn test_sim_in_standalone_function() {
 
 #[test]
 fn cfg_test_impl_block_is_scoped_as_test() {
-    let code = r#"
+    let code = format!(
+        r#"
 pub struct TestHelper;
 
 #[cfg(test)]
-impl TestHelper {
-    pub fn compute_oracle(&self, input: &[u32]) -> Vec<u8> {
-        let mut out = Vec::new();
-        for &x in input {
-            out.extend_from_slice(&x.wrapping_mul(3).to_le_bytes());
-        }
-        out
-    }
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/scoped_impl.rs", code)]);
+impl TestHelper {{
+    pub fn compute_oracle(&self, input: &[u32]) -> Vec<u8> {{
+{body}
+    }}
+}}
+"#,
+        body = oracle_body("wrapping_mul(3)")
+    );
+    let findings = analyze_files(&[("vyre-libs/src/scoped_impl.rs", &code)]);
     assert!(
             findings.is_empty(),
             "#[cfg(test)] impl methods must be scoped as test-only and produce zero findings, got: {findings:?}"
@@ -278,19 +278,18 @@ impl TestHelper {
 
 #[test]
 fn cfg_test_trait_block_is_scoped_as_test() {
-    let code = r#"
+    let code = format!(
+        r#"
 #[cfg(test)]
-pub trait TestOracleTrait {
-    fn default_sim(&self, input: &[u32]) -> Vec<u8> {
-        let mut out = Vec::new();
-        for &x in input {
-            out.extend_from_slice(&x.wrapping_add(1).to_le_bytes());
-        }
-        out
-    }
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/scoped_trait.rs", code)]);
+pub trait TestOracleTrait {{
+    fn default_sim(&self, input: &[u32]) -> Vec<u8> {{
+{body}
+    }}
+}}
+"#,
+        body = incrementing_oracle_body()
+    );
+    let findings = analyze_files(&[("vyre-libs/src/scoped_trait.rs", &code)]);
     assert!(
         findings.is_empty(),
         "#[cfg(test)] trait with default body must be scoped as test-only, got: {findings:?}"
@@ -299,18 +298,17 @@ pub trait TestOracleTrait {
 
 #[test]
 fn production_trait_default_method_uncalled_oracle_is_flagged() {
-    let code = r#"
-pub trait ProductionTrait {
-    fn default_sim(&self, input: &[u32]) -> Vec<u8> {
-        let mut out = Vec::new();
-        for &x in input {
-            out.extend_from_slice(&x.wrapping_add(1).to_le_bytes());
-        }
-        out
-    }
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/trait_oracle.rs", code)]);
+    let code = format!(
+        r#"
+pub trait ProductionTrait {{
+    fn default_sim(&self, input: &[u32]) -> Vec<u8> {{
+{body}
+    }}
+}}
+"#,
+        body = incrementing_oracle_body()
+    );
+    let findings = analyze_files(&[("vyre-libs/src/trait_oracle.rs", &code)]);
     assert_eq!(
         findings.len(),
         1,

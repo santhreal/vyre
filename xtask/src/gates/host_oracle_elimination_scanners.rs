@@ -53,38 +53,21 @@ impl<'ast, 'a> syn::visit::Visit<'ast> for SemanticOperationScanner<'a> {
     }
 
     fn visit_expr_for_loop(&mut self, expr: &'ast syn::ExprForLoop) {
-        let contains_dispatch = self.visitor.is_dispatch_execution_expr(&expr.expr)
-            || expr
-                .body
-                .stmts
-                .iter()
-                .any(|s| self.visitor.is_dispatch_execution_stmt(s));
-        if !contains_dispatch && !is_pure_decoder_loop(expr) {
+        if !self.visitor.for_loop_dispatches(expr) && !is_pure_decoder_loop(expr) {
             self.has_semantic_op = true;
         }
         syn::visit::visit_expr_for_loop(self, expr);
     }
 
     fn visit_expr_while(&mut self, expr: &'ast syn::ExprWhile) {
-        let contains_dispatch = self.visitor.is_dispatch_execution_expr(&expr.cond)
-            || expr
-                .body
-                .stmts
-                .iter()
-                .any(|s| self.visitor.is_dispatch_execution_stmt(s));
-        if !contains_dispatch {
+        if !self.visitor.while_loop_dispatches(expr) {
             self.has_semantic_op = true;
         }
         syn::visit::visit_expr_while(self, expr);
     }
 
     fn visit_expr_loop(&mut self, expr: &'ast syn::ExprLoop) {
-        let contains_dispatch = expr
-            .body
-            .stmts
-            .iter()
-            .any(|s| self.visitor.is_dispatch_execution_stmt(s));
-        if !contains_dispatch {
+        if !self.visitor.loop_dispatches(expr) {
             self.has_semantic_op = true;
         }
         syn::visit::visit_expr_loop(self, expr);

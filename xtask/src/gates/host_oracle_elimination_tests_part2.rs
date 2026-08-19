@@ -1,5 +1,6 @@
 //! Unit tests for host oracle elimination gate (Part 2).
 
+use super::host_oracle_elimination_test_fixtures::{incrementing_oracle_body, oracle_body};
 use super::host_oracle_elimination_tests_part1::analyze_files;
 use std::path::{Path, PathBuf};
 
@@ -716,18 +717,17 @@ pub fn encode_step_b(words: &[u32]) -> Vec<u8> {
 
 #[test]
 fn mutation_catches_ungated_tests_module() {
-    let code = r#"
-mod tests {
-    pub fn host_oracle_helper(input: &[u32]) -> Vec<u8> {
-        let mut out = Vec::new();
-        for &x in input {
-            out.extend_from_slice(&x.wrapping_add(1).to_le_bytes());
-        }
-        out
-    }
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/ungated.rs", code)]);
+    let code = format!(
+        r#"
+mod tests {{
+    pub fn host_oracle_helper(input: &[u32]) -> Vec<u8> {{
+{body}
+    }}
+}}
+"#,
+        body = incrementing_oracle_body()
+    );
+    let findings = analyze_files(&[("vyre-libs/src/ungated.rs", &code)]);
     assert_eq!(
         findings.len(),
         1,
@@ -763,44 +763,42 @@ pub fn stochastic_decode(words: &[u32]) -> Vec<u8> {
 
 #[test]
 fn mutation_catches_name_collision_uncalled_oracle() {
-    let code_a = r#"
+    let code_a = format!(
+        r#"
 use vyre_foundation::ir::Program;
 
-pub fn process_stream(input: &[u32]) -> Vec<u8> {
-    let mut out = Vec::new();
-    for &x in input {
-        out.extend_from_slice(&x.wrapping_add(1).to_le_bytes());
-    }
-    out
-}
+pub fn process_stream(input: &[u32]) -> Vec<u8> {{
+{body}
+}}
 
-pub fn compile_domain_a() -> Program {
+pub fn compile_domain_a() -> Program {{
     let _ = process_stream(&[]);
     Program::new()
-}
-"#;
-    let code_b = r#"
-pub fn process_stream(input: &[u32]) -> Vec<u8> {
-    let mut out = Vec::new();
-    for &x in input {
-        out.extend_from_slice(&x.wrapping_mul(7).to_le_bytes());
-    }
-    out
-}
+}}
+"#,
+        body = incrementing_oracle_body()
+    );
+    let code_b = format!(
+        r#"
+pub fn process_stream(input: &[u32]) -> Vec<u8> {{
+{body}
+}}
 
 #[cfg(test)]
-mod tests {
+mod tests {{
     use super::*;
 
     #[test]
-    fn test_b() {
+    fn test_b() {{
         let _ = process_stream(&[1, 2]);
-    }
-}
-"#;
+    }}
+}}
+"#,
+        body = oracle_body("wrapping_mul(7)")
+    );
     let findings = analyze_files(&[
-        ("vyre-libs/src/domain_a/mod.rs", code_a),
-        ("vyre-libs/src/domain_b/mod.rs", code_b),
+        ("vyre-libs/src/domain_a/mod.rs", &code_a),
+        ("vyre-libs/src/domain_b/mod.rs", &code_b),
     ]);
     assert_eq!(
         findings.len(),
@@ -888,20 +886,19 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 
 #[test]
 fn mutation_oracle_detection_catches_dynamic_expected_output_oracle_invocation() {
-    let code = r#"
-pub fn compute_twin_fixture(input: &[u32]) -> Vec<u8> {
-    let mut out = Vec::new();
-    for &x in input {
-        out.extend_from_slice(&x.wrapping_add(1).to_le_bytes());
-    }
-    out
-}
+    let code = format!(
+        r#"
+pub fn compute_twin_fixture(input: &[u32]) -> Vec<u8> {{
+{body}
+}}
 
-fn expected_output() -> Vec<Vec<Vec<u8>>> {
+fn expected_output() -> Vec<Vec<Vec<u8>>> {{
     vec![vec![compute_twin_fixture(&[1, 2, 3, 4])]]
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/op.rs", code)]);
+}}
+"#,
+        body = incrementing_oracle_body()
+    );
+    let findings = analyze_files(&[("vyre-libs/src/op.rs", &code)]);
     assert!(
         !findings.is_empty(),
         "expected finding for expected_output dynamic oracle invocation"
@@ -1008,27 +1005,26 @@ mod tests {
 
 #[test]
 fn mutation_catches_expected_output_target_also_called_by_builder() {
-    let code = r#"
+    let code = format!(
+        r#"
 use vyre_foundation::ir::Program;
 
-pub fn compute_twin_fixture(input: &[u32]) -> Vec<u8> {
-    let mut out = Vec::new();
-    for &x in input {
-        out.extend_from_slice(&x.wrapping_add(1).to_le_bytes());
-    }
-    out
-}
+pub fn compute_twin_fixture(input: &[u32]) -> Vec<u8> {{
+{body}
+}}
 
-pub fn compile_pipeline() -> Program {
+pub fn compile_pipeline() -> Program {{
     let _ = compute_twin_fixture(&[1, 2, 3]);
     Program::new()
-}
+}}
 
-fn expected_output() -> Vec<Vec<Vec<u8>>> {
+fn expected_output() -> Vec<Vec<Vec<u8>>> {{
     vec![vec![compute_twin_fixture(&[1, 2, 3, 4])]]
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/op.rs", code)]);
+}}
+"#,
+        body = incrementing_oracle_body()
+    );
+    let findings = analyze_files(&[("vyre-libs/src/op.rs", &code)]);
     assert!(
         !findings.is_empty(),
         "dynamic expected_output call must be flagged even if target is called by a builder"

@@ -7,16 +7,15 @@ use syn::visit::Visit;
 
 use crate::gate::Finding;
 
-use super::host_oracle_elimination_ast::AstAnalysisVisitor;
+use super::host_oracle_elimination_ast::{AstAnalysisVisitor, CallContext};
 use super::host_oracle_elimination_classify::{
-    has_data_output_ast, has_mutable_data_output_param, is_byte_unpack_codec_expr,
-    is_data_processing_ast, is_dispatch_sizing_or_validator, is_fmt_signature, is_wire_codec_ast,
-    returns_result_unit, returns_unit, BodyFeatureVisitor,
+    has_data_output_ast, has_mutable_data_output_param, is_data_processing_ast,
+    is_dispatch_sizing_or_validator, is_fmt_signature, is_wire_codec_ast, returns_result_unit,
+    returns_unit, BodyFeatureVisitor,
 };
 use super::host_oracle_elimination_extract::{extract_read_idents_from_expr, is_pure_decoder_loop};
 use super::host_oracle_elimination_records::{
-    compares_operands, computes_from_operands, extract_use_tree, CallSiteRecord, FunctionRecord,
-    StaticConstRecord, FIX, SCALAR_TYPES,
+    extract_use_tree, FunctionRecord, StaticConstRecord, FIX, SCALAR_TYPES,
 };
 use super::host_oracle_elimination_scanners::{
     compute_known_dispatch_exec_fns, FileImportCollector,
@@ -850,19 +849,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     param_callee_flows: Vec::new(),
                     stages_semantic_resident_upload: false,
                 });
-                self.calls.push(CallSiteRecord {
-                    callee: name,
-                    caller_file: self.file.clone(),
-                    caller_module: self.current_module.clone(),
-                    caller_fn_idx: None,
-                    line,
-                    is_method_call: false,
-                    is_in_test: false,
-                    is_in_expected_output: true,
-                    is_in_fallback: false,
-                    is_in_post_dispatch: false,
-                    is_in_op_reg: self.in_op_reg_depth > 0,
-                });
+                self.record_call(name, line, false, CallContext::ExpectedOutputFixture);
             }
         }
 
@@ -896,19 +883,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     param_callee_flows: Vec::new(),
                     stages_semantic_resident_upload: false,
                 });
-                self.calls.push(CallSiteRecord {
-                    callee: name,
-                    caller_file: self.file.clone(),
-                    caller_module: self.current_module.clone(),
-                    caller_fn_idx: None,
-                    line,
-                    is_method_call: false,
-                    is_in_test: false,
-                    is_in_expected_output: false,
-                    is_in_fallback: true,
-                    is_in_post_dispatch: false,
-                    is_in_op_reg: self.in_op_reg_depth > 0,
-                });
+                self.record_call(name, line, false, CallContext::FallbackFixture);
             }
         }
 
@@ -965,19 +940,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     param_callee_flows: Vec::new(),
                     stages_semantic_resident_upload: false,
                 });
-                self.calls.push(CallSiteRecord {
-                    callee: name,
-                    caller_file: self.file.clone(),
-                    caller_module: self.current_module.clone(),
-                    caller_fn_idx: None,
-                    line,
-                    is_method_call: false,
-                    is_in_test: false,
-                    is_in_expected_output: true,
-                    is_in_fallback: false,
-                    is_in_post_dispatch: false,
-                    is_in_op_reg: self.in_op_reg_depth > 0,
-                });
+                self.record_call(name, line, false, CallContext::ExpectedOutputFixture);
             }
         }
         if self.in_fallback_depth > 0 && !self.in_test() && self.in_synthetic_oracle_depth == 0 {
@@ -1012,19 +975,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                     param_callee_flows: Vec::new(),
                     stages_semantic_resident_upload: false,
                 });
-                self.calls.push(CallSiteRecord {
-                    callee: name,
-                    caller_file: self.file.clone(),
-                    caller_module: self.current_module.clone(),
-                    caller_fn_idx: None,
-                    line,
-                    is_method_call: false,
-                    is_in_test: false,
-                    is_in_expected_output: false,
-                    is_in_fallback: true,
-                    is_in_post_dispatch: false,
-                    is_in_op_reg: self.in_op_reg_depth > 0,
-                });
+                self.record_call(name, line, false, CallContext::FallbackFixture);
             }
         }
         self.in_synthetic_oracle_depth += 1;
@@ -1033,133 +984,28 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_expr_for_loop(&mut self, expr: &'ast syn::ExprForLoop) {
-        let contains_dispatch = self.is_dispatch_execution_expr(&expr.expr)
-            || expr
-                .body
-                .stmts
-                .iter()
-                .any(|s| self.is_dispatch_execution_stmt(s));
-        if self.in_gpu_dispatch_root
-            && self.post_dispatch_phase
-            && !contains_dispatch
-            && !is_pure_decoder_loop(expr)
-            && !self.in_test()
-        {
-            let line = expr.span().start().line as u32;
-            let current_fn_name = self
-                .current_fn_idx
-                .and_then(|idx| self.functions.get(idx).map(|f| f.name.clone()))
-                .unwrap_or_else(|| "<anonymous>".to_string());
-            self.direct_findings.push(Finding::at(
-                self.file.clone(),
-                line,
-                format!(
-                    "GPU dispatch function `{current_fn_name}` contains post-dispatch host loop/accumulation; \
-                     post-dispatch semantic reductions must be dispatched on GPU"
-                ),
-                FIX,
-            ));
+        if !self.for_loop_dispatches(expr) && !is_pure_decoder_loop(expr) {
+            self.report_post_dispatch_host_loop(expr.span());
         }
         syn::visit::visit_expr_for_loop(self, expr);
     }
 
     fn visit_expr_while(&mut self, expr: &'ast syn::ExprWhile) {
-        let contains_dispatch = self.is_dispatch_execution_expr(&expr.cond)
-            || expr
-                .body
-                .stmts
-                .iter()
-                .any(|s| self.is_dispatch_execution_stmt(s));
-        if self.in_gpu_dispatch_root
-            && self.post_dispatch_phase
-            && !contains_dispatch
-            && !self.in_test()
-        {
-            let line = expr.span().start().line as u32;
-            let current_fn_name = self
-                .current_fn_idx
-                .and_then(|idx| self.functions.get(idx).map(|f| f.name.clone()))
-                .unwrap_or_else(|| "<anonymous>".to_string());
-            self.direct_findings.push(Finding::at(
-                self.file.clone(),
-                line,
-                format!(
-                    "GPU dispatch function `{current_fn_name}` contains post-dispatch host loop/accumulation; \
-                     post-dispatch semantic reductions must be dispatched on GPU"
-                ),
-                FIX,
-            ));
+        if !self.while_loop_dispatches(expr) {
+            self.report_post_dispatch_host_loop(expr.span());
         }
         syn::visit::visit_expr_while(self, expr);
     }
 
     fn visit_expr_loop(&mut self, expr: &'ast syn::ExprLoop) {
-        let contains_dispatch = expr
-            .body
-            .stmts
-            .iter()
-            .any(|s| self.is_dispatch_execution_stmt(s));
-        if self.in_gpu_dispatch_root
-            && self.post_dispatch_phase
-            && !contains_dispatch
-            && !self.in_test()
-        {
-            let line = expr.span().start().line as u32;
-            let current_fn_name = self
-                .current_fn_idx
-                .and_then(|idx| self.functions.get(idx).map(|f| f.name.clone()))
-                .unwrap_or_else(|| "<anonymous>".to_string());
-            self.direct_findings.push(Finding::at(
-                self.file.clone(),
-                line,
-                format!(
-                    "GPU dispatch function `{current_fn_name}` contains post-dispatch host loop/accumulation; \
-                     post-dispatch semantic reductions must be dispatched on GPU"
-                ),
-                FIX,
-            ));
+        if !self.loop_dispatches(expr) {
+            self.report_post_dispatch_host_loop(expr.span());
         }
         syn::visit::visit_expr_loop(self, expr);
     }
+
     fn visit_expr_binary(&mut self, expr: &'ast syn::ExprBinary) {
-        if self.in_gpu_dispatch_root && self.post_dispatch_phase && !self.in_test() {
-            let reads_operands_as_data =
-                computes_from_operands(&expr.op) || compares_operands(&expr.op);
-            if reads_operands_as_data {
-                let line = expr.span().start().line as u32;
-                let is_dispatcher_call =
-                    self.is_dispatch_execution_expr(&syn::Expr::Binary(expr.clone()));
-                if !is_dispatcher_call {
-                    let is_permitted_codec = is_byte_unpack_codec_expr(expr);
-                    if !is_permitted_codec {
-                        let operates_on_dispatched = if !self.dispatched_data_vars.is_empty() {
-                            let reads =
-                                extract_read_idents_from_expr(&syn::Expr::Binary(expr.clone()));
-                            reads
-                                .iter()
-                                .any(|id| self.dispatched_data_vars.contains(id))
-                        } else {
-                            false
-                        };
-                        if operates_on_dispatched {
-                            let current_fn_name = self
-                                .current_fn_idx
-                                .and_then(|idx| self.functions.get(idx).map(|f| f.name.clone()))
-                                .unwrap_or_else(|| "<anonymous>".to_string());
-                            self.direct_findings.push(Finding::at(
-                                self.file.clone(),
-                                line,
-                                format!(
-                                    "GPU dispatch function `{current_fn_name}` executes post-dispatch host arithmetic / semantic derivation on GPU results; \
-                                     mathematical operations on dispatch output must be dispatched on GPU"
-                                ),
-                                FIX,
-                            ));
-                        }
-                    }
-                }
-            }
-        }
+        self.report_post_dispatch_host_arithmetic(expr);
         syn::visit::visit_expr_binary(self, expr);
     }
 
@@ -1170,19 +1016,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 .resolve_qualified_fn_path(&path_expr.path)
                 .unwrap_or_else(|| self.resolve_path_str(&path_expr.path));
             let line = expr.func.span().start().line as u32;
-            self.calls.push(CallSiteRecord {
-                callee: resolved.clone(),
-                caller_file: self.file.clone(),
-                caller_module: self.current_module.clone(),
-                caller_fn_idx: self.current_fn_idx,
-                line,
-                is_method_call: false,
-                is_in_test: self.in_test(),
-                is_in_expected_output: self.in_expected_output_depth > 0,
-                is_in_fallback: self.in_fallback_depth > 0,
-                is_in_post_dispatch: self.in_gpu_dispatch_root && self.post_dispatch_phase,
-                is_in_op_reg: self.in_op_reg_depth > 0,
-            });
+            self.record_call(resolved.clone(), line, false, CallContext::Walk);
             (raw_callee, resolved)
         } else {
             (String::new(), String::new())
@@ -1276,19 +1110,12 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         if self.in_op_reg_depth > 0 && self.in_expected_output_depth == 0 && !self.in_test() {
             // Function passed by name to OperationRegistration (e.g. Some(generate_deterministic_inputs), add_program)
-            self.calls.push(CallSiteRecord {
-                callee: path_str.clone(),
-                caller_file: self.file.clone(),
-                caller_module: self.current_module.clone(),
-                caller_fn_idx: self.current_fn_idx,
+            self.record_call(
+                path_str.clone(),
                 line,
-                is_method_call: false,
-                is_in_test: false,
-                is_in_expected_output: false,
-                is_in_fallback: false,
-                is_in_post_dispatch: false,
-                is_in_op_reg: true,
-            });
+                false,
+                CallContext::OperationRegistration,
+            );
         }
 
         syn::visit::visit_expr_path(self, expr);
@@ -1298,19 +1125,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         let method_name = expr.method.to_string();
         let line = expr.method.span().start().line as u32;
 
-        self.calls.push(CallSiteRecord {
-            callee: method_name.clone(),
-            caller_file: self.file.clone(),
-            caller_module: self.current_module.clone(),
-            caller_fn_idx: self.current_fn_idx,
-            line,
-            is_method_call: true,
-            is_in_test: self.in_test(),
-            is_in_expected_output: self.in_expected_output_depth > 0,
-            is_in_fallback: self.in_fallback_depth > 0,
-            is_in_post_dispatch: self.in_gpu_dispatch_root && self.post_dispatch_phase,
-            is_in_op_reg: self.in_op_reg_depth > 0,
-        });
+        self.record_call(method_name.clone(), line, true, CallContext::Walk);
 
         if self.in_expected_output_depth > 0 && !self.in_test() {
             let is_permitted_alloc = method_name == "to_vec" || method_name == "clone";
@@ -1411,19 +1226,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
         let line = path.span().start().line as u32;
 
         if path_str.contains("vyre_reference") || path_str.contains("SubgroupSimulator") {
-            self.calls.push(CallSiteRecord {
-                callee: "vyre_reference".to_string(),
-                caller_file: self.file.clone(),
-                caller_module: self.current_module.clone(),
-                caller_fn_idx: self.current_fn_idx,
-                line,
-                is_method_call: false,
-                is_in_test: self.in_test(),
-                is_in_expected_output: self.in_expected_output_depth > 0,
-                is_in_fallback: self.in_fallback_depth > 0,
-                is_in_post_dispatch: self.in_gpu_dispatch_root && self.post_dispatch_phase,
-                is_in_op_reg: self.in_op_reg_depth > 0,
-            });
+            self.record_call("vyre_reference".to_string(), line, false, CallContext::Walk);
         }
 
         if self.in_expected_output_depth > 0 {
@@ -1455,19 +1258,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 let resolved = self
                     .resolve_qualified_fn_path(path)
                     .unwrap_or_else(|| self.resolve_path_str(path));
-                self.calls.push(CallSiteRecord {
-                    callee: resolved,
-                    caller_file: self.file.clone(),
-                    caller_module: self.current_module.clone(),
-                    caller_fn_idx: self.current_fn_idx,
-                    line,
-                    is_method_call: false,
-                    is_in_test: self.in_test(),
-                    is_in_expected_output: true,
-                    is_in_fallback: false,
-                    is_in_post_dispatch: false,
-                    is_in_op_reg: self.in_op_reg_depth > 0,
-                });
+                self.record_call(resolved, line, false, CallContext::ExpectedOutputArgument);
             }
         }
 

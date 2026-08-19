@@ -3,22 +3,59 @@
 use crate::gate::Finding;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
+use syn::spanned::Spanned;
 use syn::visit::Visit;
 
-use super::host_oracle_elimination_classify::type_is_numeric_payload_input;
+use super::host_oracle_elimination_classify::{
+    is_byte_unpack_codec_expr, type_is_numeric_payload_input,
+};
 use super::host_oracle_elimination_extract::{
     extract_mutated_storage_from_stmt, extract_pat_bindings, extract_read_idents_from_expr,
     extract_read_idents_from_stmt,
 };
 use super::host_oracle_elimination_records::{
-    base_module_path, normalize_qualified_path, CallSiteRecord, FunctionParamRecord,
-    FunctionRecord, ParamCalleeFlow, StaticConstRecord, EXACT_CANONICAL_DISPATCHER_PATHS,
-    EXACT_CANONICAL_IR_BUILDER_PATHS, SCALAR_TYPES,
+    base_module_path, compares_operands, computes_from_operands, normalize_qualified_path,
+    CallSiteRecord, FunctionParamRecord, FunctionRecord, ParamCalleeFlow, StaticConstRecord,
+    EXACT_CANONICAL_DISPATCHER_PATHS, EXACT_CANONICAL_IR_BUILDER_PATHS, FIX, SCALAR_TYPES,
 };
 use super::host_oracle_elimination_scanners::{
     scan_block_for_param_dispatch_flow, stmt_contains_semantic_operation,
     type_is_exact_generic_param, ResidentUploadScanner,
 };
+
+/// Where a recorded call sits, which decides the context flags its
+/// [`CallSiteRecord`] carries.
+///
+/// The walk records a call from several places: the traversal itself, a
+/// fixture string it parsed, an argument of an operation registration. Each
+/// place answers the same six questions about the call, so the answers are
+/// named here once instead of being restated at every push.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum CallContext {
+    /// The walk's own position answers every question.
+    Walk,
+    /// A call parsed out of an expected-output fixture string, which has no
+    /// enclosing function of its own.
+    ExpectedOutputFixture,
+    /// A call parsed out of a fallback fixture string.
+    FallbackFixture,
+    /// An argument of an expected-output constructor, inside the function the
+    /// walk is in.
+    ExpectedOutputArgument,
+    /// A path named by an operation registration, which is neither test nor
+    /// dispatch context.
+    OperationRegistration,
+}
+
+/// Context flags one [`CallSiteRecord`] carries.
+struct CallSiteContext {
+    caller_fn_idx: Option<usize>,
+    is_in_test: bool,
+    is_in_expected_output: bool,
+    is_in_fallback: bool,
+    is_in_post_dispatch: bool,
+    is_in_op_reg: bool,
+}
 
 pub(super) struct AstAnalysisVisitor {
     pub(super) file: PathBuf,
@@ -108,6 +145,165 @@ impl AstAnalysisVisitor {
             || self.test_impl_depth > 0
             || self.test_trait_depth > 0
             || self.item_test_depth > 0
+    }
+
+    /// Name of the function the walk is in, or `<anonymous>` outside one.
+    pub(super) fn current_fn_name(&self) -> String {
+        self.current_fn_idx
+            .and_then(|idx| self.functions.get(idx).map(|f| f.name.clone()))
+            .unwrap_or_else(|| "<anonymous>".to_string())
+    }
+
+    /// Report a host loop that runs after a dispatch in the same function.
+    ///
+    /// A `for`, `while` and `loop` each reach this the same way: the walk is
+    /// inside a dispatch function past its dispatch, the loop itself dispatches
+    /// nothing, and the code is not a test. The three differ only in how they
+    /// find their body statements, so the condition and the finding are stated
+    /// here once.
+    pub(super) fn report_post_dispatch_host_loop(&mut self, span: proc_macro2::Span) {
+        if !self.in_gpu_dispatch_root || !self.post_dispatch_phase || self.in_test() {
+            return;
+        }
+        let current_fn_name = self.current_fn_name();
+        self.direct_findings.push(Finding::at(
+            self.file.clone(),
+            span.start().line as u32,
+            format!(
+                "GPU dispatch function `{current_fn_name}` contains post-dispatch host loop/accumulation; \
+                 post-dispatch semantic reductions must be dispatched on GPU"
+            ),
+            FIX,
+        ));
+    }
+
+    /// Whether any statement of `block` executes a dispatch.
+    fn block_dispatches(&self, block: &syn::Block) -> bool {
+        block
+            .stmts
+            .iter()
+            .any(|stmt| self.is_dispatch_execution_stmt(stmt))
+    }
+
+    /// Whether a `for` loop dispatches, in the sequence it walks or its body.
+    pub(super) fn for_loop_dispatches(&self, expr: &syn::ExprForLoop) -> bool {
+        self.is_dispatch_execution_expr(&expr.expr) || self.block_dispatches(&expr.body)
+    }
+
+    /// Whether a `while` loop dispatches, in its condition or its body.
+    pub(super) fn while_loop_dispatches(&self, expr: &syn::ExprWhile) -> bool {
+        self.is_dispatch_execution_expr(&expr.cond) || self.block_dispatches(&expr.body)
+    }
+
+    /// Whether a `loop` dispatches in its body.
+    pub(super) fn loop_dispatches(&self, expr: &syn::ExprLoop) -> bool {
+        self.block_dispatches(&expr.body)
+    }
+
+    /// Report host arithmetic over a dispatch result in a dispatch function.
+    ///
+    /// The operator must read its operands as data, the expression must not be
+    /// the dispatch call itself, it must not be a permitted byte-unpacking
+    /// codec, and it must read a value the walk saw a dispatch produce.
+    pub(super) fn report_post_dispatch_host_arithmetic(&mut self, expr: &syn::ExprBinary) {
+        if !self.in_gpu_dispatch_root || !self.post_dispatch_phase || self.in_test() {
+            return;
+        }
+        if !computes_from_operands(&expr.op) && !compares_operands(&expr.op) {
+            return;
+        }
+        let binary = syn::Expr::Binary(expr.clone());
+        if self.is_dispatch_execution_expr(&binary) || is_byte_unpack_codec_expr(expr) {
+            return;
+        }
+        if self.dispatched_data_vars.is_empty() {
+            return;
+        }
+        let operates_on_dispatched = extract_read_idents_from_expr(&binary)
+            .iter()
+            .any(|id| self.dispatched_data_vars.contains(id));
+        if !operates_on_dispatched {
+            return;
+        }
+        let current_fn_name = self.current_fn_name();
+        self.direct_findings.push(Finding::at(
+            self.file.clone(),
+            expr.span().start().line as u32,
+            format!(
+                "GPU dispatch function `{current_fn_name}` executes post-dispatch host arithmetic / semantic derivation on GPU results; \
+                 mathematical operations on dispatch output must be dispatched on GPU"
+            ),
+            FIX,
+        ));
+    }
+
+    /// Record a call to `callee` on `line`, in `context`.
+    pub(super) fn record_call(
+        &mut self,
+        callee: String,
+        line: u32,
+        is_method_call: bool,
+        context: CallContext,
+    ) {
+        let context = self.call_site_context(context);
+        self.calls.push(CallSiteRecord {
+            callee,
+            caller_file: self.file.clone(),
+            caller_module: self.current_module.clone(),
+            caller_fn_idx: context.caller_fn_idx,
+            line,
+            is_method_call,
+            is_in_test: context.is_in_test,
+            is_in_expected_output: context.is_in_expected_output,
+            is_in_fallback: context.is_in_fallback,
+            is_in_post_dispatch: context.is_in_post_dispatch,
+            is_in_op_reg: context.is_in_op_reg,
+        });
+    }
+
+    /// Answer the six context questions for a call recorded in `context`.
+    fn call_site_context(&self, context: CallContext) -> CallSiteContext {
+        let walk = CallSiteContext {
+            caller_fn_idx: self.current_fn_idx,
+            is_in_test: self.in_test(),
+            is_in_expected_output: self.in_expected_output_depth > 0,
+            is_in_fallback: self.in_fallback_depth > 0,
+            is_in_post_dispatch: self.in_gpu_dispatch_root && self.post_dispatch_phase,
+            is_in_op_reg: self.in_op_reg_depth > 0,
+        };
+        match context {
+            CallContext::Walk => walk,
+            CallContext::ExpectedOutputFixture => CallSiteContext {
+                caller_fn_idx: None,
+                is_in_test: false,
+                is_in_expected_output: true,
+                is_in_fallback: false,
+                is_in_post_dispatch: false,
+                ..walk
+            },
+            CallContext::FallbackFixture => CallSiteContext {
+                caller_fn_idx: None,
+                is_in_test: false,
+                is_in_expected_output: false,
+                is_in_fallback: true,
+                is_in_post_dispatch: false,
+                ..walk
+            },
+            CallContext::ExpectedOutputArgument => CallSiteContext {
+                is_in_expected_output: true,
+                is_in_fallback: false,
+                is_in_post_dispatch: false,
+                ..walk
+            },
+            CallContext::OperationRegistration => CallSiteContext {
+                is_in_test: false,
+                is_in_expected_output: false,
+                is_in_fallback: false,
+                is_in_post_dispatch: false,
+                is_in_op_reg: true,
+                ..walk
+            },
+        }
     }
 
     pub(super) fn clean_path_string(path: &syn::Path) -> String {
@@ -1185,20 +1381,7 @@ impl AstAnalysisVisitor {
                             && ident_str != "Some"
                         {
                             let line = ident.span().start().line as u32;
-                            self.calls.push(CallSiteRecord {
-                                callee: ident_str,
-                                caller_file: self.file.clone(),
-                                caller_module: self.current_module.clone(),
-                                caller_fn_idx: self.current_fn_idx,
-                                line,
-                                is_method_call: false,
-                                is_in_test: self.in_test(),
-                                is_in_expected_output: self.in_expected_output_depth > 0,
-                                is_in_fallback: self.in_fallback_depth > 0,
-                                is_in_post_dispatch: self.in_gpu_dispatch_root
-                                    && self.post_dispatch_phase,
-                                is_in_op_reg: self.in_op_reg_depth > 0,
-                            });
+                            self.record_call(ident_str, line, false, CallContext::Walk);
                         }
                     }
                     proc_macro2::TokenTree::Group(group) => {
