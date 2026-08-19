@@ -25,7 +25,7 @@
 //! and the ratchet engine belong here, and masking comments and string literals
 //! and finding the end of a brace-delimited block belong to `source_scan`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -848,6 +848,155 @@ pub fn is_test_only_attribute(code: &str) -> bool {
         .strip_prefix("all(")
         .and_then(|rest| rest.strip_suffix(')'))
         .is_some_and(|inner| inner.split(',').any(|term| term.trim() == "test"))
+}
+
+/// Whether a parsed attribute puts its item strictly in the test harness.
+///
+/// The text form above answers the same question for a gate that reads lines.
+/// This one answers it for a gate that parsed the file, so neither has to
+/// re-derive the other's representation.
+#[must_use]
+pub fn attribute_is_test_only(attr: &syn::Attribute) -> bool {
+    if attr.path().is_ident("test") {
+        return true;
+    }
+    if !attr.path().is_ident("cfg") {
+        return false;
+    }
+    let Ok(meta) = attr.parse_args::<syn::Meta>() else {
+        return false;
+    };
+    meta_is_test_only(&meta)
+}
+
+/// Whether a cfg predicate strictly requires test.
+fn meta_is_test_only(meta: &syn::Meta) -> bool {
+    match meta {
+        syn::Meta::Path(path) => path.is_ident("test"),
+        syn::Meta::List(list) => {
+            if list.path.is_ident("all") {
+                let Ok(nested) = list.parse_args_with(
+                    syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+                ) else {
+                    return false;
+                };
+                nested.iter().any(meta_is_test_only)
+            } else {
+                false
+            }
+        }
+        syn::Meta::NameValue(_) => false,
+    }
+}
+
+/// A `mod name;` declaration in a parent file, with the `#[path]` override when
+/// one is present.
+struct DeclaredModule {
+    name: String,
+    is_test_gated: bool,
+    declared_path: Option<String>,
+}
+
+/// The file a `#[path = "..."]` attribute names, relative to the directory of
+/// the file that declares the module.
+fn declared_module_path(attrs: &[syn::Attribute]) -> Option<String> {
+    for attr in attrs {
+        if let syn::Meta::NameValue(name_value) = &attr.meta {
+            if name_value.path.is_ident("path") {
+                if let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(literal),
+                    ..
+                }) = &name_value.value
+                {
+                    return Some(literal.value());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Every file in `sources` that a `#[cfg(test)] mod` declaration reaches.
+///
+/// A whole file can be test code: the attribute sits on the declaration in the
+/// parent, not in the file, so a gate that reads only the file itself sees
+/// shipped source. The walk is transitive, since a test module declares its own
+/// children, and it honors `#[path]`, which is how five `vyre-libs` test modules
+/// were read as production code.
+///
+/// A file that does not parse declares nothing this can trust, so it is skipped
+/// and the files it would have named stay in production scope. That is the
+/// direction that reports too much rather than too little, and the gate that
+/// owns whether source parses reports the file itself.
+pub fn test_module_files(tree: &Tree, sources: &[PathBuf]) -> Result<BTreeSet<PathBuf>, GateError> {
+    let mut test_scoped_files = BTreeSet::new();
+    let mut parent_to_children: BTreeMap<PathBuf, Vec<DeclaredModule>> = BTreeMap::new();
+
+    for path in sources {
+        let text = tree.read(path)?;
+        let Ok(file_ast) = syn::parse_file(&text) else {
+            continue;
+        };
+
+        for item in &file_ast.items {
+            if let syn::Item::Mod(item_mod) = item {
+                if item_mod.content.is_none() {
+                    parent_to_children
+                        .entry(path.clone())
+                        .or_default()
+                        .push(DeclaredModule {
+                            name: item_mod.ident.to_string(),
+                            is_test_gated: item_mod.attrs.iter().any(attribute_is_test_only),
+                            declared_path: declared_module_path(&item_mod.attrs),
+                        });
+                }
+            }
+        }
+    }
+
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for (parent_path, modules) in &parent_to_children {
+            let parent_is_test = test_scoped_files.contains(parent_path);
+            let parent_dir = parent_path.parent().unwrap_or_else(|| Path::new(""));
+
+            for module in modules {
+                if !parent_is_test && !module.is_test_gated {
+                    continue;
+                }
+                // `#[path]` states the file, so it replaces the search rather
+                // than adding to it: `#[cfg(test)] #[path = "x_tests.rs"] mod
+                // tests;` names `x_tests.rs`, and no `tests.rs` is consulted.
+                let candidates = match &module.declared_path {
+                    Some(declared) => vec![parent_dir.join(declared)],
+                    None => {
+                        let mod_name = &module.name;
+                        let stem = parent_path
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("");
+                        let sibling = parent_dir.join(format!("{mod_name}.rs"));
+                        let directory = parent_dir.join(mod_name).join("mod.rs");
+                        let nested = if stem != "mod" && stem != "lib" && stem != "main" {
+                            parent_dir.join(stem).join(format!("{mod_name}.rs"))
+                        } else {
+                            sibling.clone()
+                        };
+                        vec![sibling, directory, nested]
+                    }
+                };
+
+                for cand in candidates {
+                    if sources.contains(&cand) && test_scoped_files.insert(cand) {
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(test_scoped_files)
 }
 
 /// One line's runtime code and the nesting it contributes.

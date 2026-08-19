@@ -19,8 +19,9 @@ const BUDGET: &str = "xtask/unsafe-budget.txt";
 ///
 /// A panic message a reader cannot act on is a crash with extra words. The
 /// reader in question is whoever hit the panic in a shipped run, so the scan
-/// covers production code: `tests/` and `benches/` trees are out of scope and so
-/// is an inline `#[cfg(test)]` item, which is the same code in a different file.
+/// covers production code: `tests/` and `benches/` trees are out of scope, so is
+/// an inline `#[cfg(test)]` item, and so is a file a `#[cfg(test)] mod`
+/// declaration reaches, which is the same code with the attribute one file up.
 pub struct ExpectHasFix;
 
 impl crate::gate::GateBehavior for ExpectHasFix {
@@ -31,10 +32,11 @@ impl crate::gate::GateBehavior for ExpectHasFix {
         if let Some(note) = tree.absence_note() {
             report.note(note);
         }
-        let files: Vec<PathBuf> = tree
-            .all_rust()
+        let all_rust = tree.all_rust();
+        let test_modules = scan::test_module_files(&tree, &all_rust)?;
+        let files: Vec<PathBuf> = all_rust
             .into_iter()
-            .filter(|path| !is_outside_production(path))
+            .filter(|path| !is_outside_production(path) && !test_modules.contains(path))
             .collect();
         report.note(format!("scanned {} production source file(s)", files.len()));
         for file in &files {
@@ -568,6 +570,59 @@ mod tests {
         assert_eq!(
             lines,
             [2],
+            "only the production site owes a corrective action: {:?}",
+            report
+                .findings
+                .iter()
+                .map(|finding| finding.message.clone())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// WHY: a whole file can be the test module, declared `#[cfg(test)] mod
+    /// plain_tests;` or, with the file named outright, `#[cfg(test)] #[path =
+    /// "renamed_tests.rs"] mod tests;`. The attribute is in the parent, so a scan
+    /// that reads only the file sees shipped source, and 14 of the 16 findings
+    /// this gate reported were fixture panics in such files. The production site
+    /// in the same parent must still be reported, or the rule cannot fail.
+    #[test]
+    fn a_file_the_test_module_declaration_reaches_is_not_production() {
+        let (_directory, root) = checkout(&[
+            (
+                "lib.rs",
+                "pub fn load(path: &str) -> String {\n    std::fs::read_to_string(path).expect(\"the config file\")\n}\n\n#[cfg(test)]\nmod plain_tests;\n\n#[cfg(test)]\n#[path = \"renamed_tests.rs\"]\nmod tests;\n",
+            ),
+            (
+                "plain_tests.rs",
+                "fn fixture() -> String {\n    std::fs::read_to_string(\"fixture\").expect(\"a readable fixture\")\n}\n\n#[test]\nfn it_loads() {\n    assert!(!fixture().is_empty());\n}\n",
+            ),
+            (
+                "renamed_tests.rs",
+                "fn other_fixture() -> String {\n    std::fs::read_to_string(\"other\").expect(\"a second readable fixture\")\n}\n\n#[test]\nfn it_loads_again() {\n    assert!(!other_fixture().is_empty());\n}\n",
+            ),
+        ]);
+
+        let report = ExpectHasFix
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("Fix: the gate must read the fixture tree; check the fixture git step");
+        let reported: Vec<String> = report
+            .findings
+            .iter()
+            .map(|finding| {
+                format!(
+                    "{}:{}",
+                    finding
+                        .file
+                        .as_ref()
+                        .map(|path| path.display().to_string())
+                        .unwrap_or_default(),
+                    finding.line.unwrap_or_default()
+                )
+            })
+            .collect();
+        assert_eq!(
+            reported,
+            ["lib.rs:2"],
             "only the production site owes a corrective action: {:?}",
             report
                 .findings

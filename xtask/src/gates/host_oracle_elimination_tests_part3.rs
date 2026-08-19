@@ -2,12 +2,10 @@
 
 use std::path::PathBuf;
 
-use crate::gates::scan::Tree;
+use crate::gates::scan::{attribute_is_test_only, test_module_files, Tree};
 
 use super::host_oracle_elimination_eval::analyze_sources;
-use super::host_oracle_elimination_records::{
-    discover_test_scoped_files, is_test_only_attribute, TARGET_ROOTS,
-};
+use super::host_oracle_elimination_records::TARGET_ROOTS;
 use super::host_oracle_elimination_tests_part1::analyze_files;
 
 #[test]
@@ -1425,7 +1423,7 @@ fn test_workspace_findings() {
         .to_path_buf();
     let tree = Tree::open(&root).unwrap();
     let sources = tree.rust(TARGET_ROOTS).unwrap();
-    let test_scoped = discover_test_scoped_files(&tree, &sources).unwrap();
+    let test_scoped = test_module_files(&tree, &sources).unwrap();
     let findings = analyze_sources(&tree, &sources, &test_scoped).unwrap();
     assert_eq!(
         findings.len(),
@@ -1448,7 +1446,7 @@ fn a_cfg_test_module_named_by_a_path_attribute_is_test_scoped() {
         .to_path_buf();
     let tree = Tree::open(&root).unwrap();
     let sources = tree.rust(TARGET_ROOTS).unwrap();
-    let test_scoped = discover_test_scoped_files(&tree, &sources).unwrap();
+    let test_scoped = test_module_files(&tree, &sources).unwrap();
 
     let mut declared: Vec<PathBuf> = Vec::new();
     for path in &sources {
@@ -1461,7 +1459,7 @@ fn a_cfg_test_module_named_by_a_path_attribute_is_test_scoped() {
             if item_mod.content.is_some() {
                 continue;
             }
-            let is_test_gated = item_mod.attrs.iter().any(is_test_only_attribute);
+            let is_test_gated = item_mod.attrs.iter().any(attribute_is_test_only);
             if !is_test_gated {
                 continue;
             }

@@ -15,12 +15,12 @@ use super::host_oracle_elimination_classify::{
 };
 use super::host_oracle_elimination_extract::{extract_read_idents_from_expr, is_pure_decoder_loop};
 use super::host_oracle_elimination_records::{
-    extract_use_tree, is_test_only_attribute, CallSiteRecord, FunctionRecord, StaticConstRecord,
-    FIX, SCALAR_TYPES,
+    extract_use_tree, CallSiteRecord, FunctionRecord, StaticConstRecord, FIX, SCALAR_TYPES,
 };
 use super::host_oracle_elimination_scanners::{
     compute_known_dispatch_exec_fns, FileImportCollector,
 };
+use crate::gates::scan::attribute_is_test_only;
 
 impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     fn visit_file(&mut self, file: &'ast syn::File) {
@@ -84,7 +84,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
     fn visit_item_mod(&mut self, item: &'ast syn::ItemMod) {
         let mod_name = item.ident.to_string();
-        let is_test_mod = item.attrs.iter().any(is_test_only_attribute);
+        let is_test_mod = item.attrs.iter().any(attribute_is_test_only);
 
         self.current_module.push(mod_name);
         self.scope_imports.push(BTreeMap::new());
@@ -102,7 +102,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_item_impl(&mut self, item: &'ast syn::ItemImpl) {
-        let is_test_impl = item.attrs.iter().any(is_test_only_attribute);
+        let is_test_impl = item.attrs.iter().any(attribute_is_test_only);
         if is_test_impl {
             self.test_impl_depth += 1;
         }
@@ -184,7 +184,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_item_trait(&mut self, item: &'ast syn::ItemTrait) {
-        let is_test_trait = item.attrs.iter().any(is_test_only_attribute);
+        let is_test_trait = item.attrs.iter().any(attribute_is_test_only);
         if is_test_trait {
             self.test_trait_depth += 1;
         }
@@ -197,7 +197,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_item_const(&mut self, item: &'ast syn::ItemConst) {
-        let is_test = item.attrs.iter().any(is_test_only_attribute);
+        let is_test = item.attrs.iter().any(attribute_is_test_only);
         if is_test {
             self.item_test_depth += 1;
         }
@@ -225,7 +225,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_item_static(&mut self, item: &'ast syn::ItemStatic) {
-        let is_test = item.attrs.iter().any(is_test_only_attribute);
+        let is_test = item.attrs.iter().any(attribute_is_test_only);
         if is_test {
             self.item_test_depth += 1;
         }
@@ -327,7 +327,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     fn visit_item_fn(&mut self, item: &'ast syn::ItemFn) {
         let fn_name = item.sig.ident.to_string();
         let line = item.sig.ident.span().start().line as u32;
-        let is_fn_test_attr = item.attrs.iter().any(is_test_only_attribute);
+        let is_fn_test_attr = item.attrs.iter().any(attribute_is_test_only);
         let is_test_scoped = self.test_mod_depth > 0
             || self.test_impl_depth > 0
             || self.test_trait_depth > 0
@@ -462,7 +462,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     fn visit_impl_item_fn(&mut self, item: &'ast syn::ImplItemFn) {
         let fn_name = item.sig.ident.to_string();
         let line = item.sig.ident.span().start().line as u32;
-        let is_fn_test_attr = item.attrs.iter().any(is_test_only_attribute);
+        let is_fn_test_attr = item.attrs.iter().any(attribute_is_test_only);
         let is_test_scoped = self.test_mod_depth > 0
             || self.test_impl_depth > 0
             || self.test_trait_depth > 0
@@ -596,7 +596,7 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     fn visit_trait_item_fn(&mut self, item: &'ast syn::TraitItemFn) {
         let fn_name = item.sig.ident.to_string();
         let line = item.sig.ident.span().start().line as u32;
-        let is_fn_test_attr = item.attrs.iter().any(is_test_only_attribute);
+        let is_fn_test_attr = item.attrs.iter().any(attribute_is_test_only);
         let is_test_scoped = self.test_mod_depth > 0
             || self.test_impl_depth > 0
             || self.test_trait_depth > 0
