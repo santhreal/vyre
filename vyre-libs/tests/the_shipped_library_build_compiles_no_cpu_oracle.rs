@@ -23,6 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use structure_gate::workspace_manifest::string_list;
 use toml::{Table, Value};
 use vyre_test_support::monorepo::vyre_workspace_root;
 
@@ -283,16 +284,7 @@ impl Manifest {
                 features
                     .iter()
                     .map(|(name, entries)| {
-                        let entries = entries
-                            .as_array()
-                            .map(|entries| {
-                                entries
-                                    .iter()
-                                    .filter_map(Value::as_str)
-                                    .map(str::to_string)
-                                    .collect()
-                            })
-                            .unwrap_or_default();
+                        let entries = string_list(Some(entries));
                         (name.clone(), entries)
                     })
                     .collect()
@@ -442,17 +434,7 @@ impl Dependency {
             .flatten();
 
         let features = |source: Option<&Table>| -> Vec<String> {
-            source
-                .and_then(|source| source.get("features"))
-                .and_then(Value::as_array)
-                .map(|entries| {
-                    entries
-                        .iter()
-                        .filter_map(Value::as_str)
-                        .map(str::to_string)
-                        .collect()
-                })
-                .unwrap_or_default()
+            string_list(source.and_then(|source| source.get("features")))
         };
         let mut merged = features(base);
         merged.extend(features(Some(table)));

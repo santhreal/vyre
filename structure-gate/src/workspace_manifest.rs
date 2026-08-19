@@ -120,9 +120,23 @@ pub(crate) fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
         .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", manifest_path.display()));
     let table: toml::Table = toml::from_str(&text)
         .unwrap_or_else(|error| panic!("Fix: parse {}: {error}", manifest_path.display()));
-    Value::Table(table)
-        .get("workspace")
-        .and_then(|workspace| workspace.get(key))
+    string_list(
+        Value::Table(table)
+            .get("workspace")
+            .and_then(|workspace| workspace.get(key)),
+    )
+}
+
+/// Every string a TOML array holds, and nothing when it is not one.
+///
+/// A manifest states a roster, a feature list and a dependency's features all
+/// the same way, as an array of strings, and every reader of one wrote the same
+/// four-combinator chain to unwrap it. An absent key and a value of another type
+/// both answer with an empty list: a caller that needs to tell those apart reads
+/// the value itself.
+#[must_use]
+pub fn string_list(value: Option<&Value>) -> Vec<String> {
+    value
         .and_then(Value::as_array)
         .map(|entries| {
             entries
