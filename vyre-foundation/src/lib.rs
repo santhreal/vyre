@@ -128,6 +128,8 @@ pub mod lower;
 pub mod optimizer;
 /// Binary wire format + canonical text serialization.
 pub mod serial;
+/// Digest of a package's own source tree, for artifact-cache identity.
+pub mod source_digest;
 /// IR → IR passes: inline, cse, dce, parallelism, compiler primitives.
 pub mod transform;
 /// Structural + semantic validation of vyre `Program`s.

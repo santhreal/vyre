@@ -53,6 +53,7 @@ vyre-reference = { path = "../vyre-reference" }
 vyre = { path = "../vyre", default-features = false }
 proptest.workspace = true
 criterion.workspace = true
+tempfile.workspace = true
 vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 
 [[test]]

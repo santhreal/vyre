@@ -29,6 +29,12 @@ thiserror = { workspace = true }
 rustc-hash = { workspace = true }
 smallvec = { workspace = true }
 
+# build.rs stamps a digest of this package's own source; the walk, the hash, and
+# the rerun triggers live in vyre-foundation so the two emitter build scripts
+# read one implementation.
+[build-dependencies]
+vyre-foundation.workspace = true
+
 [features]
 default = []
 nvrtc = []

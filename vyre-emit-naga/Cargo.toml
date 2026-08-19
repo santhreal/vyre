@@ -30,6 +30,12 @@ serde_json.workspace = true
 tracing = { workspace = true }
 smallvec.workspace = true
 
+# build.rs stamps a digest of this package's own source; the walk, the hash, and
+# the rerun triggers live in vyre-foundation so the two emitter build scripts
+# read one implementation.
+[build-dependencies]
+vyre-foundation.workspace = true
+
 [dev-dependencies]
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 # `ir-fixtures` carries the per-Node-variant fixture set the atomic-scanner

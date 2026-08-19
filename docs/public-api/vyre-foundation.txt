@@ -576,6 +576,7 @@ pub const vyre_foundation::serial::wire::framing::MIN_SUPPORTED_WIRE_FORMAT_VERS
 pub const vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION: u16
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::MAGIC: [u8; 4]
 pub const vyre_foundation::serial::wire_round_trip::WireRoundTrip::VERSION: u32
+pub const vyre_foundation::source_digest::MAX_SOURCE_DIGEST_BYTES: u64
 pub const vyre_foundation::transform::FOUNDATION_TRANSFORM_CLASSIFICATIONS: &[vyre_foundation::transform::TransformDescriptor]
 pub const vyre_foundation::transform::HOST_REWRITES: &[vyre_foundation::transform::HostRewrite]
 pub const vyre_foundation::validate::DEFAULT_MAX_CALL_DEPTH: usize
@@ -643,6 +644,7 @@ pub enum vyre_foundation::serial::wire::encode::ScanDatabaseReaderCompatibility
 pub enum vyre_foundation::serial::wire::encode::ScanDatabaseSectionKind
 pub enum vyre_foundation::serial::wire::encode::WireEncodeErr
 pub enum vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError
+pub enum vyre_foundation::source_digest::SourceDigestError
 pub enum vyre_foundation::transform::TransformContractClass
 pub enum vyre_foundation::transform::collectives::CollectiveTransportKind
 pub enum vyre_foundation::transform::inline::UnresolvedCalls
@@ -2292,6 +2294,8 @@ pub fn vyre_foundation::serial::wire_round_trip::WireRoundTrip::to_bytes(&self) 
 pub fn vyre_foundation::serial::wire_round_trip::assert_envelope_error_kind(err: &vyre_foundation::serial::EnvelopeError, kind: vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError)
 pub fn vyre_foundation::serial::wire_round_trip::assert_envelope_roundtrip<T>(sample: &T) where T: vyre_foundation::serial::wire_round_trip::WireRoundTrip + core::fmt::Debug
 pub fn vyre_foundation::serial::wire_round_trip::header_only(magic: &[u8; 4], version: u32) -> alloc::vec::Vec<u8>
+pub fn vyre_foundation::source_digest::cargo_directives(package_root: &std::path::Path, env_var: &str, domain: &[u8]) -> core::result::Result<alloc::string::String, vyre_foundation::source_digest::SourceDigestError>
+pub fn vyre_foundation::source_digest::source_tree_digest(package_root: &std::path::Path, domain: &[u8]) -> core::result::Result<alloc::string::String, vyre_foundation::source_digest::SourceDigestError>
 pub fn vyre_foundation::transform::autodiff::AutodiffError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::transform::autodiff::grad(program: &vyre_foundation::ir::Program, outputs: &[&str], inputs: &[&str]) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::transform::autodiff::AutodiffError>
 pub fn vyre_foundation::transform::autodiff::grad_with_pullback(program: &vyre_foundation::ir::Program, outputs: &[&str], inputs: &[&str]) -> core::result::Result<(vyre_foundation::ir::Program, vyre_foundation::transform::autodiff::PullbackMap), vyre_foundation::transform::autodiff::AutodiffError>
@@ -2608,6 +2612,7 @@ pub mod vyre_foundation::serial::wire::encode
 pub mod vyre_foundation::serial::wire::framing
 pub mod vyre_foundation::serial::wire::tags
 pub mod vyre_foundation::serial::wire_round_trip
+pub mod vyre_foundation::source_digest
 pub mod vyre_foundation::transform
 pub mod vyre_foundation::transform::autodiff
 pub mod vyre_foundation::transform::autodiff::rules
@@ -4280,6 +4285,24 @@ pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::BadMagic
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::SectionTooLarge
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::Truncated
 pub vyre_foundation::serial::wire_round_trip::ExpectedEnvelopeError::VersionMismatch
+pub vyre_foundation::source_digest::SourceDigestError::Directory
+pub vyre_foundation::source_digest::SourceDigestError::Directory::path: std::path::PathBuf
+pub vyre_foundation::source_digest::SourceDigestError::Directory::source: core::io::error::Error
+pub vyre_foundation::source_digest::SourceDigestError::Empty
+pub vyre_foundation::source_digest::SourceDigestError::Empty::path: std::path::PathBuf
+pub vyre_foundation::source_digest::SourceDigestError::EnvVarName
+pub vyre_foundation::source_digest::SourceDigestError::EnvVarName::name: alloc::string::String
+pub vyre_foundation::source_digest::SourceDigestError::Escaped
+pub vyre_foundation::source_digest::SourceDigestError::Escaped::path: std::path::PathBuf
+pub vyre_foundation::source_digest::SourceDigestError::Escaped::root: std::path::PathBuf
+pub vyre_foundation::source_digest::SourceDigestError::File
+pub vyre_foundation::source_digest::SourceDigestError::File::path: std::path::PathBuf
+pub vyre_foundation::source_digest::SourceDigestError::File::source: core::io::error::Error
+pub vyre_foundation::source_digest::SourceDigestError::NonUtf8
+pub vyre_foundation::source_digest::SourceDigestError::NonUtf8::path: std::path::PathBuf
+pub vyre_foundation::source_digest::SourceDigestError::TooLarge
+pub vyre_foundation::source_digest::SourceDigestError::TooLarge::limit: u64
+pub vyre_foundation::source_digest::SourceDigestError::TooLarge::path: std::path::PathBuf
 pub vyre_foundation::transform::HostRewrite::apply: fn(&vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub vyre_foundation::transform::HostRewrite::name: &'static str
 pub vyre_foundation::transform::TransformContractClass::Analysis
