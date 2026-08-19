@@ -364,7 +364,10 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject missing symbols fail-closed.
     #[test]
     fn proof_identity_rejects_missing_symbol() {
-        let root = crate::checkout::checkout_root();
+        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
+            "xtask/src/gates/architecture_contract.rs",
+            "#[cfg(test)]\nmod tests {\n    #[test]\n    fn a_real_proof() {}\n}\n",
+        )]);
         let descriptor = GateDescriptor {
             name: "test-missing",
             help: "Help text",
@@ -419,7 +422,10 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject non-test functions fail-closed.
     #[test]
     fn proof_identity_rejects_non_test_symbol() {
-        let root = crate::checkout::checkout_root();
+        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
+            "xtask/src/gate_metadata.rs",
+            "pub fn owned_by() {}\n",
+        )]);
         let descriptor = GateDescriptor {
             name: "test-non-test",
             help: "Help text",
@@ -442,7 +448,10 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject symbols from other packages fail-closed.
     #[test]
     fn proof_identity_rejects_wrong_package_symbol() {
-        let root = crate::checkout::checkout_root();
+        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
+            "xtask/src/gates/architecture_contract.rs",
+            "#[cfg(test)]\nmod tests {\n    #[test]\n    fn a_real_proof() {}\n}\n",
+        )]);
         let descriptor = GateDescriptor {
             name: "test-wrong-pkg",
             help: "Help text",
@@ -465,7 +474,10 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject generic invented enforces_invariants placeholders.
     #[test]
     fn proof_identity_rejects_generic_enforces_invariants() {
-        let root = crate::checkout::checkout_root();
+        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
+            "xtask/src/gates/architecture_contract.rs",
+            "#[cfg(test)]\nmod tests {\n    #[test]\n    fn a_real_proof() {}\n}\n",
+        )]);
         let descriptor = GateDescriptor {
             name: "test-generic",
             help: "Help text",

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The gate proof-identity rejection tests built their inputs from the live checkout, so a missing symbol, a non-test symbol, and a wrong-package symbol were all asserted against whatever the workspace happened to contain that day. Each now writes a fixture checkout holding exactly the file its case needs."
