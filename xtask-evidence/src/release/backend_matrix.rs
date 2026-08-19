@@ -174,11 +174,16 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     BackendFeatureRequirement {
         id: "cuda-resident-io",
         relative: "vyre-driver-cuda/src/backend/resident_io.rs",
-        role: "CUDA resident input/output buffers and sparse readback batching",
+        role: "CUDA resident input buffer uploads and device pointers",
+        tokens: &["upload_resident_at_many", "resident_device_ptr"],
+    },
+    BackendFeatureRequirement {
+        id: "cuda-resident-readback",
+        relative: "vyre-driver-cuda/src/backend/resident_io_download.rs",
+        role: "CUDA resident sparse readback batching",
         tokens: &[
             "download_resident_readbacks_many",
-            "upload_resident_at_many",
-            "resident_device_ptr",
+            "download_resident_readbacks_many_into",
         ],
     },
     BackendFeatureRequirement {
@@ -571,7 +576,7 @@ fn collect_feature_markers(
         let path = workspace_root.join(requirement.relative);
         let exists = path.is_file();
         let (text, read_error) = if exists {
-            match read_text_bounded(&path) {
+            match read_marker_module(&path) {
                 Ok(text) => (text, None),
                 Err(error) => {
                     blockers.push(format!(
@@ -1222,6 +1227,44 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     xtask::output_arg::read_text_bounded(path, MAX_BACKEND_EVIDENCE_TEXT_BYTES, "backend evidence")
 }
 
+/// Read the source a feature marker names.
+///
+/// A citation ending in `mod.rs` or `lib.rs` names a module root, and every
+/// `.rs` file under its directory is part of that module. Splitting an oversized
+/// module into submodules moves an implementation token out of the root file
+/// without moving it out of the module, so reading the cited file alone reports
+/// a token the module still defines as missing. Each file is read through the
+/// bounded read; the walk is bounded by the module directory.
+fn read_marker_module(path: &Path) -> io::Result<String> {
+    let mut text = read_text_bounded(path)?;
+    let root = path.file_name().and_then(|name| name.to_str());
+    if !matches!(root, Some("mod.rs" | "lib.rs")) {
+        return Ok(text);
+    }
+    let Some(directory) = path.parent() else {
+        return Ok(text);
+    };
+    let mut pending = vec![directory.to_path_buf()];
+    while let Some(directory) = pending.pop() {
+        let mut children = fs::read_dir(&directory)?
+            .map(|entry| entry.map(|entry| entry.path()))
+            .collect::<io::Result<Vec<_>>>()?;
+        children.sort();
+        for child in children {
+            if child.is_dir() {
+                pending.push(child);
+                continue;
+            }
+            if child == path || child.extension().is_none_or(|extension| extension != "rs") {
+                continue;
+            }
+            text.push('\n');
+            text.push_str(&read_text_bounded(&child)?);
+        }
+    }
+    Ok(text)
+}
+
 #[cfg(test)]
 mod capability_contract_tests {
     use super::*;
@@ -1386,6 +1429,74 @@ mod tests {
         assert!(
             cuda_feature_marker_ids().contains(&"ldmatrix-cp-async"),
             "Fix: the async staging marker stays required."
+        );
+    }
+
+    /// WHY: a marker citation names a module, and a module spans a directory.
+    /// Splitting an oversized module into submodules moves an implementation
+    /// token out of `mod.rs` while the module still defines it, and reading the
+    /// cited file alone then reports the feature as deleted. This asserts both
+    /// halves: the union finds the token, and the cited file alone does not, so
+    /// it goes red against the single-file read. What it does not catch is a
+    /// token that moved to a different module entirely, which is a real finding.
+    #[test]
+    fn a_module_root_citation_reads_the_submodule_a_token_moved_into() {
+        let root = tempfile::tempdir().expect("Fix: the test needs a temporary directory.");
+        let module = root.path().join("disk_cache");
+        fs::create_dir_all(module.join("deep"))
+            .expect("Fix: the test needs a nested module directory.");
+        let cited = module.join("mod.rs");
+        fs::write(&cited, "pub mod io;\npub mod deep;\n").expect("Fix: the test needs a root file.");
+        fs::write(
+            module.join("io.rs"),
+            "pub const MAX_PENDING_DURABLE_CACHE_FILES: usize = 64;\n",
+        )
+        .expect("Fix: the test needs a submodule file.");
+        fs::write(module.join("deep").join("inner.rs"), "pub fn evict() {}\n")
+            .expect("Fix: the test needs a nested submodule file.");
+
+        let module_text = read_marker_module(&cited).expect("Fix: the module must be readable.");
+        let cited_text = read_text_bounded(&cited).expect("Fix: the cited file must be readable.");
+
+        assert!(
+            module_text.contains("MAX_PENDING_DURABLE_CACHE_FILES"),
+            "Fix: a token defined in a submodule is defined by the module: {module_text}"
+        );
+        assert!(
+            module_text.contains("pub fn evict"),
+            "Fix: the walk reaches a nested submodule: {module_text}"
+        );
+        assert!(
+            !cited_text.contains("MAX_PENDING_DURABLE_CACHE_FILES"),
+            "Fix: the single-file read is what this test must beat: {cited_text}"
+        );
+    }
+
+    /// WHY: a citation that names one implementation file means that file. If
+    /// the walk widened to every sibling, a marker could pass on a token its
+    /// own file never defines, which is the vacuous case the gate exists to
+    /// prevent.
+    #[test]
+    fn a_leaf_citation_reads_only_the_file_it_names() {
+        let root = tempfile::tempdir().expect("Fix: the test needs a temporary directory.");
+        let cited = root.path().join("resident_io.rs");
+        fs::write(&cited, "pub fn upload_resident_inputs() {}\n")
+            .expect("Fix: the test needs the cited file.");
+        fs::write(
+            root.path().join("resident_io_download.rs"),
+            "pub fn download_resident_readbacks_many() {}\n",
+        )
+        .expect("Fix: the test needs a sibling file.");
+
+        let text = read_marker_module(&cited).expect("Fix: the cited file must be readable.");
+
+        assert!(
+            text.contains("upload_resident_inputs"),
+            "Fix: the cited file is read: {text}"
+        );
+        assert!(
+            !text.contains("download_resident_readbacks_many"),
+            "Fix: a leaf citation does not absorb its siblings: {text}"
         );
     }
 }
