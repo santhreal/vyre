@@ -472,3 +472,82 @@ where
         self.ordered_indices.capacity()
     }
 }
+/// Declare a caller-owned scratch wrapper over [`ReusableIndexScratch`].
+///
+/// A planner exposes retained scratch under its own vocabulary: the key it
+/// deduplicates, the reservation policy it honors, the error it returns, and
+/// the noun it counts. The wrapper body around [`ReusableIndexScratch`] is the
+/// same in every case, so it is stated here once and each planner supplies its
+/// vocabulary. The expansion keeps the `index_scratch` field private to the
+/// invoking module, which is where that planner's own code reaches it.
+macro_rules! caller_owned_index_scratch {
+    (
+        $(#[$struct_doc:meta])*
+        $name:ident {
+            key: $key:ty,
+            error: $error:ty,
+            reservation: $reservation:expr,
+            reserve_failed: $reserve_failed:path,
+            seen_item: $seen_item:literal,
+            subject: $subject:literal,
+            counted: $counted:literal,
+            ordering: $ordering:literal,
+            reserve: $reserve:ident,
+            capacity: $capacity:ident,
+        }
+    ) => {
+        $(#[$struct_doc])*
+        #[derive(Debug, Default)]
+        pub struct $name {
+            index_scratch: $crate::reservation_policy::ReusableIndexScratch<$key>,
+        }
+
+        impl $name {
+            #[doc = concat!("Allocate empty reusable ", $subject, " scratch.")]
+            #[must_use]
+            pub fn new() -> Self {
+                Self::default()
+            }
+
+            #[doc = concat!("Allocate reusable ", $subject, " scratch for a known ", $counted, " count.")]
+            ///
+            /// # Errors
+            ///
+            #[doc = concat!("Returns [`", stringify!($error), "`] when scratch storage cannot be reserved.")]
+            pub fn try_with_capacity(count: usize) -> Result<Self, $error> {
+                let mut scratch = Self::default();
+                scratch.$reserve(count)?;
+                Ok(scratch)
+            }
+
+            #[doc = concat!("Reserve reusable ", $subject, " scratch for a known ", $counted, " count.")]
+            ///
+            /// # Errors
+            ///
+            #[doc = concat!("Returns [`", stringify!($error), "`] when scratch storage cannot be reserved.")]
+            pub fn $reserve(&mut self, count: usize) -> Result<(), $error> {
+                self.index_scratch.try_reserve_with(
+                    $reservation,
+                    count,
+                    $seen_item,
+                    "scratch.ordered_indices",
+                    $reserve_failed,
+                )
+            }
+
+            /// Retained duplicate-detection capacity.
+            #[must_use]
+            pub fn $capacity(&self) -> usize {
+                self.index_scratch.seen_capacity()
+            }
+
+            #[doc = concat!("Retained ", $ordering, " capacity.")]
+            #[must_use]
+            pub fn ordered_index_capacity(&self) -> usize {
+                self.index_scratch.ordered_index_capacity()
+            }
+        }
+    };
+}
+
+pub(crate) use caller_owned_index_scratch;

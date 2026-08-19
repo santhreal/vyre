@@ -12,8 +12,8 @@ use crate::accounting::{
 };
 use crate::numeric::BackendNumericPolicy;
 use crate::reservation_policy::{
-    reserved_typed_vec as reserved_vec, storage_reserve_failure_adapter, ReservationPolicy,
-    ReusableIndexScratch,
+    caller_owned_index_scratch, reserved_typed_vec as reserved_vec,
+    storage_reserve_failure_adapter, ReservationPolicy, ReusableIndexScratch,
 };
 
 const DEVICE_DIAGNOSTIC_AGGREGATION_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -83,58 +83,19 @@ pub struct DiagnosticAggregationPlan {
     pub final_only_host_readback: bool,
 }
 
-/// Caller-owned scratch for repeated device diagnostic aggregation planning.
-#[derive(Debug, Default)]
-pub struct DiagnosticAggregationScratch {
-    index_scratch: ReusableIndexScratch<u32>,
-}
-
-impl DiagnosticAggregationScratch {
-    /// Allocate empty reusable diagnostic aggregation scratch.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Allocate reusable diagnostic aggregation scratch for a known shard count.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`DiagnosticAggregationError`] when scratch storage cannot be reserved.
-    pub fn try_with_capacity(shard_count: usize) -> Result<Self, DiagnosticAggregationError> {
-        let mut scratch = Self::default();
-        scratch.try_reserve_shards(shard_count)?;
-        Ok(scratch)
-    }
-
-    /// Reserve reusable diagnostic aggregation scratch for a known shard count.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`DiagnosticAggregationError`] when scratch storage cannot be reserved.
-    pub fn try_reserve_shards(
-        &mut self,
-        shard_count: usize,
-    ) -> Result<(), DiagnosticAggregationError> {
-        self.index_scratch.try_reserve_with(
-            DEVICE_DIAGNOSTIC_AGGREGATION_RESERVATION,
-            shard_count,
-            "scratch.ids",
-            "scratch.ordered_indices",
-            storage_reserve_failed,
-        )
-    }
-
-    /// Retained duplicate-detection capacity.
-    #[must_use]
-    pub fn id_capacity(&self) -> usize {
-        self.index_scratch.seen_capacity()
-    }
-
-    /// Retained shard-ordering capacity.
-    #[must_use]
-    pub fn ordered_index_capacity(&self) -> usize {
-        self.index_scratch.ordered_index_capacity()
+caller_owned_index_scratch! {
+    /// Caller-owned scratch for repeated device diagnostic aggregation planning.
+    DiagnosticAggregationScratch {
+        key: u32,
+        error: DiagnosticAggregationError,
+        reservation: DEVICE_DIAGNOSTIC_AGGREGATION_RESERVATION,
+        reserve_failed: storage_reserve_failed,
+        seen_item: "scratch.ids",
+        subject: "diagnostic aggregation",
+        counted: "shard",
+        ordering: "shard-ordering",
+        reserve: try_reserve_shards,
+        capacity: id_capacity,
     }
 }
 

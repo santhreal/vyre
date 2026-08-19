@@ -6,8 +6,8 @@ use crate::accounting::{
 };
 use crate::numeric::BackendNumericPolicy;
 use crate::reservation_policy::{
-    reserved_typed_vec as reserved_vec, storage_reserve_failure_adapter, ReservationPolicy,
-    ReusableIndexScratch,
+    caller_owned_index_scratch, reserved_typed_vec as reserved_vec,
+    storage_reserve_failure_adapter, ReservationPolicy,
 };
 
 const RESULT_COMPACTION_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -61,55 +61,19 @@ pub struct ResultCompactionPlan {
     pub avoided_readback_basis_points: u32,
 }
 
-/// Caller-owned scratch for repeated result-compaction planning.
-#[derive(Debug, Default)]
-pub struct ResultCompactionScratch {
-    index_scratch: ReusableIndexScratch<u32>,
-}
-
-impl ResultCompactionScratch {
-    /// Allocate empty reusable compaction scratch.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Allocate reusable compaction scratch for a known output-slot count.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ResultCompactionError`] when scratch storage cannot be reserved.
-    pub fn try_with_capacity(slot_count: usize) -> Result<Self, ResultCompactionError> {
-        let mut scratch = Self::default();
-        scratch.try_reserve_slots(slot_count)?;
-        Ok(scratch)
-    }
-
-    /// Reserve reusable compaction scratch for a known output-slot count.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ResultCompactionError`] when scratch storage cannot be reserved.
-    pub fn try_reserve_slots(&mut self, slot_count: usize) -> Result<(), ResultCompactionError> {
-        self.index_scratch.try_reserve_with(
-            RESULT_COMPACTION_RESERVATION,
-            slot_count,
-            "scratch.ids",
-            "scratch.ordered_indices",
-            storage_reserve_failed,
-        )
-    }
-
-    /// Retained duplicate-detection capacity.
-    #[must_use]
-    pub fn id_capacity(&self) -> usize {
-        self.index_scratch.seen_capacity()
-    }
-
-    /// Retained slot-ordering capacity.
-    #[must_use]
-    pub fn ordered_index_capacity(&self) -> usize {
-        self.index_scratch.ordered_index_capacity()
+caller_owned_index_scratch! {
+    /// Caller-owned scratch for repeated result-compaction planning.
+    ResultCompactionScratch {
+        key: u32,
+        error: ResultCompactionError,
+        reservation: RESULT_COMPACTION_RESERVATION,
+        reserve_failed: storage_reserve_failed,
+        seen_item: "scratch.ids",
+        subject: "compaction",
+        counted: "output-slot",
+        ordering: "slot-ordering",
+        reserve: try_reserve_slots,
+        capacity: id_capacity,
     }
 }
 

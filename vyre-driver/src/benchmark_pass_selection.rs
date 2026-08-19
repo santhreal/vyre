@@ -11,8 +11,8 @@ use crate::accounting::{
 };
 use crate::numeric::checked_compose_basis_points_u64;
 use crate::reservation_policy::{
-    reserved_typed_vec as reserved_vec, storage_reserve_failure_adapter, ReservationPolicy,
-    ReusableIndexScratch,
+    caller_owned_index_scratch, reserved_typed_vec as reserved_vec,
+    storage_reserve_failure_adapter, ReservationPolicy,
 };
 
 const BENCHMARK_PASS_SELECTION_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -95,58 +95,19 @@ pub struct BenchmarkPassSelectionPlan {
     pub projected_speedup_bps: u64,
 }
 
-/// Caller-owned scratch for repeated benchmark pass selection.
-#[derive(Debug, Default)]
-pub struct BenchmarkPassSelectionScratch {
-    index_scratch: ReusableIndexScratch<&'static str>,
-}
-
-impl BenchmarkPassSelectionScratch {
-    /// Allocate empty reusable pass-selection scratch.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Allocate reusable pass-selection scratch for a known candidate count.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BenchmarkPassSelectionError`] when scratch storage cannot be reserved.
-    pub fn try_with_capacity(candidate_count: usize) -> Result<Self, BenchmarkPassSelectionError> {
-        let mut scratch = Self::default();
-        scratch.try_reserve_candidates(candidate_count)?;
-        Ok(scratch)
-    }
-
-    /// Reserve reusable pass-selection scratch for a known candidate count.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BenchmarkPassSelectionError`] when scratch storage cannot be reserved.
-    pub fn try_reserve_candidates(
-        &mut self,
-        candidate_count: usize,
-    ) -> Result<(), BenchmarkPassSelectionError> {
-        self.index_scratch.try_reserve_with(
-            BENCHMARK_PASS_SELECTION_RESERVATION,
-            candidate_count,
-            "scratch.seen",
-            "scratch.ordered_indices",
-            storage_reserve_failed,
-        )
-    }
-
-    /// Retained duplicate-detection capacity.
-    #[must_use]
-    pub fn seen_capacity(&self) -> usize {
-        self.index_scratch.seen_capacity()
-    }
-
-    /// Retained candidate-ordering capacity.
-    #[must_use]
-    pub fn ordered_index_capacity(&self) -> usize {
-        self.index_scratch.ordered_index_capacity()
+caller_owned_index_scratch! {
+    /// Caller-owned scratch for repeated benchmark pass selection.
+    BenchmarkPassSelectionScratch {
+        key: &'static str,
+        error: BenchmarkPassSelectionError,
+        reservation: BENCHMARK_PASS_SELECTION_RESERVATION,
+        reserve_failed: storage_reserve_failed,
+        seen_item: "scratch.seen",
+        subject: "pass-selection",
+        counted: "candidate",
+        ordering: "candidate-ordering",
+        reserve: try_reserve_candidates,
+        capacity: seen_capacity,
     }
 }
 
