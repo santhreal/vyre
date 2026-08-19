@@ -159,60 +159,9 @@ mod tests {
             m, n, iters, out, scratch,
         );
     }
-    fn reference_sinkhorn_quantized(
-        k: &[u32],
-        k_t: &[u32],
-        a: &[u32],
-        b: &[u32],
-        u_init: &[u32],
-        v_init: &[u32],
-        m: u32,
-        n: u32,
-        max_iterations: u32,
-    ) -> (Vec<u32>, Vec<u32>, u32) {
-        vyre_reference::composition_witness::sinkhorn_iterate_witness(
-            k,
-            k_t,
-            a,
-            b,
-            u_init,
-            v_init,
-            m,
-            n,
-            max_iterations,
-        )
-    }
-
-    fn reference_sinkhorn_quantized_into(
-        k: &[u32],
-        k_t: &[u32],
-        a: &[u32],
-        b: &[u32],
-        u_init: &[u32],
-        v_init: &[u32],
-        m: u32,
-        n: u32,
-        max_iterations: u32,
-        u: &mut Vec<u32>,
-        v: &mut Vec<u32>,
-        u_old: &mut Vec<u32>,
-    ) {
-        vyre_reference::composition_witness::try_sinkhorn_iterate_witness_into(
-            k,
-            k_t,
-            a,
-            b,
-            u_init,
-            v_init,
-            m,
-            n,
-            max_iterations,
-            u,
-            v,
-            u_old,
-        )
-        .unwrap_or_else(|error| panic!("{error}"));
-    }
+    use vyre_reference::composition_witness::{
+        sinkhorn_iterate_witness as reference_sinkhorn_quantized, try_sinkhorn_iterate_witness_into,
+    };
 
     use crate::math::sinkhorn_iterate::{
         sinkhorn_iterate_f64 as reference_sinkhorn_f64,
@@ -374,7 +323,7 @@ mod tests {
         let mut u_into = Vec::new();
         let mut v_into = Vec::new();
         let mut u_old = Vec::new();
-        reference_sinkhorn_quantized_into(
+        try_sinkhorn_iterate_witness_into(
             &[65536],
             &[65536],
             &[65536],
@@ -387,7 +336,8 @@ mod tests {
             &mut u_into,
             &mut v_into,
             &mut u_old,
-        );
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(u_into, u);
         assert_eq!(v_into, v);
 

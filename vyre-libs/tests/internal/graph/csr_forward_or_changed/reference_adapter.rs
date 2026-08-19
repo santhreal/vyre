@@ -2,7 +2,7 @@ use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use vyre_reference::composition_witness::{
     csr_forward_or_changed_closure_with_step_hook_witness_into,
     csr_forward_or_changed_closure_witness, csr_forward_or_changed_closure_witness_into,
-    csr_forward_or_changed_witness, csr_forward_or_changed_witness_into,
+    csr_forward_or_changed_witness_into,
 };
 
 pub(crate) fn cpu_ref(
@@ -124,27 +124,10 @@ pub(crate) fn cpu_ref_closure_into_with_step_hook(
     );
 }
 
-pub(crate) fn reference_forward_step_with_change_flag(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    frontier: &[u32],
-    allow_mask: u32,
-) -> (Vec<u32>, u32) {
-    csr_forward_or_changed_witness(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        frontier,
-        allow_mask,
-    )
-}
+/// The witness itself, under the name the contract tests read it by: one step
+/// of forward closure that reports whether the frontier changed.
+pub(crate) use vyre_reference::composition_witness::csr_forward_or_changed_witness as reference_forward_step_with_change_flag;
 
-pub(crate) fn reference_forward_closure_via_change_flag(
-    inputs: CsrClosureInputs<'_>,
-    seed: &[u32],
-) -> Vec<u32> {
-    cpu_ref_closure(inputs, seed)
-}
+/// The validating closure adapter, under the name the contract tests read it
+/// by: repeated forward steps driven by the change flag.
+pub(crate) use cpu_ref_closure as reference_forward_closure_via_change_flag;
