@@ -3847,6 +3847,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   document rather than as a single TOML value, and reports an unreadable,
   unparseable or crate-rootless manifest by name, so one broken file is no
   longer answered as every registered operation having no definition site.
+- Reading a backend feature marker as the module it cites absorbed that
+  module's test material, so a token only a test defined could satisfy a
+  production marker. The two existing guards do not cover it: one holds the
+  citation itself to a non-test path, and `strip_test_items` removes items
+  carrying `#[cfg(test)]` or `#[test]`, while a whole test module file wears no
+  attribute of its own because the root declares it as `#[cfg(test)] mod
+  tests;`. A bare helper const in `disk_cache/tests.rs` therefore survived into
+  the implementation text a marker is scored against. The module read now skips
+  `tests.rs` and any `tests` directory, and every marker still finds every
+  production token it declares.
 - The benchmark harness names its build profile from the optimization level
   cargo compiled it with and the assertion cfg together. It read the assertion
   cfg alone, so a profile that turns assertions off without optimizing reported

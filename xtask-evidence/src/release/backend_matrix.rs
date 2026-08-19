@@ -1230,11 +1230,15 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 /// Read the source a feature marker names.
 ///
 /// A citation ending in `mod.rs` or `lib.rs` names a module root, and every
-/// `.rs` file under its directory is part of that module. Splitting an oversized
-/// module into submodules moves an implementation token out of the root file
-/// without moving it out of the module, so reading the cited file alone reports
-/// a token the module still defines as missing. Each file is read through the
-/// bounded read; the walk is bounded by the module directory.
+/// production `.rs` file under its directory is part of that module. Splitting
+/// an oversized module into submodules moves an implementation token out of the
+/// root file without moving it out of the module, so reading the cited file
+/// alone reports a token the module still defines as missing. `tests.rs` and
+/// any `tests` directory are not read: their contents wear no `#[cfg(test)]`
+/// attribute of their own, so `strip_test_items` leaves a bare helper there
+/// standing, and a marker would pass on a token only a test defines. Each file
+/// is read through the bounded read; the walk is bounded by the module
+/// directory.
 fn read_marker_module(path: &Path) -> io::Result<String> {
     let mut text = read_text_bounded(path)?;
     let root = path.file_name().and_then(|name| name.to_str());
@@ -1252,10 +1256,15 @@ fn read_marker_module(path: &Path) -> io::Result<String> {
         children.sort();
         for child in children {
             if child.is_dir() {
-                pending.push(child);
+                if child.file_name().is_none_or(|name| name != "tests") {
+                    pending.push(child);
+                }
                 continue;
             }
-            if child == path || child.extension().is_none_or(|extension| extension != "rs") {
+            if child == path
+                || child.extension().is_none_or(|extension| extension != "rs")
+                || child.file_name().is_some_and(|name| name == "tests.rs")
+            {
                 continue;
             }
             text.push('\n');
@@ -1498,6 +1507,53 @@ mod tests {
         assert!(
             !text.contains("download_resident_readbacks_many"),
             "Fix: a leaf citation does not absorb its siblings: {text}"
+        );
+    }
+
+    /// WHY: `no_feature_marker_names_a_test_file` guards the citation, and
+    /// `strip_test_items` removes items carrying `#[cfg(test)]` or `#[test]`.
+    /// Neither covers a whole test module file: `disk_cache/tests.rs` is
+    /// declared `#[cfg(test)] mod tests;` in the root, so its own contents wear
+    /// no attribute, and a bare helper const there survives into
+    /// `implementation_source`. That would let a production marker pass on a
+    /// token only a test defines, which is the vacuous case this gate exists to
+    /// refuse. The module read excludes `tests.rs` and any `tests/` directory.
+    /// What it does not catch: test material in a file named something else.
+    #[test]
+    fn a_module_root_citation_reads_no_test_material() {
+        let root = tempfile::tempdir().expect("Fix: the test needs a temporary directory.");
+        let module = root.path().join("disk_cache");
+        fs::create_dir_all(module.join("tests"))
+            .expect("Fix: the test needs a test directory inside the module.");
+        let cited = module.join("mod.rs");
+        fs::write(&cited, "pub mod io;\n#[cfg(test)]\nmod tests;\n")
+            .expect("Fix: the test needs a root file.");
+        fs::write(module.join("io.rs"), "pub fn evict() {}\n")
+            .expect("Fix: the test needs a submodule file.");
+        fs::write(
+            module.join("tests.rs"),
+            "pub(crate) const ONLY_A_TEST_DEFINES_THIS: usize = 1;\n",
+        )
+        .expect("Fix: the test needs a test module file.");
+        fs::write(
+            module.join("tests").join("helper.rs"),
+            "pub(crate) const ONLY_A_TEST_HELPER_DEFINES_THIS: usize = 2;\n",
+        )
+        .expect("Fix: the test needs a test helper file.");
+
+        let text = read_marker_module(&cited).expect("Fix: the module must be readable.");
+
+        assert!(
+            text.contains("pub fn evict"),
+            "Fix: a production submodule is still read: {text}"
+        );
+        assert!(
+            !text.contains("ONLY_A_TEST_DEFINES_THIS"),
+            "Fix: a token only `tests.rs` defines must not satisfy a marker: {text}"
+        );
+        assert!(
+            !text.contains("ONLY_A_TEST_HELPER_DEFINES_THIS"),
+            "Fix: a token only a `tests/` file defines must not satisfy a marker: {text}"
         );
     }
 }
