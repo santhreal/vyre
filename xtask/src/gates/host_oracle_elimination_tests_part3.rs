@@ -5,7 +5,9 @@ use std::path::PathBuf;
 use crate::gates::scan::Tree;
 
 use super::host_oracle_elimination_eval::analyze_sources;
-use super::host_oracle_elimination_records::{discover_test_scoped_files, TARGET_ROOTS};
+use super::host_oracle_elimination_records::{
+    discover_test_scoped_files, is_test_only_attribute, TARGET_ROOTS,
+};
 use super::host_oracle_elimination_tests_part1::analyze_files;
 
 #[test]
@@ -1429,5 +1431,76 @@ fn test_workspace_findings() {
         findings.len(),
         0,
         "host oracle elimination gate must report 0 findings across workspace: {findings:#?}"
+    );
+}
+
+/// A `#[cfg(test)] #[path = "..."] mod tests;` declaration puts the named file
+/// wholly in test scope, so the gate must not read it as production code. Three
+/// `vyre-libs` modules use that form; before the resolver honoured `#[path]` it
+/// searched only for `tests.rs`, missed all three, and convicted their host
+/// reference helpers. The declaration set is enumerated from the workspace at
+/// run time, so a new one is covered without editing this test.
+#[test]
+fn a_cfg_test_module_named_by_a_path_attribute_is_test_scoped() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    let tree = Tree::open(&root).unwrap();
+    let sources = tree.rust(TARGET_ROOTS).unwrap();
+    let test_scoped = discover_test_scoped_files(&tree, &sources).unwrap();
+
+    let mut declared: Vec<PathBuf> = Vec::new();
+    for path in &sources {
+        let text = tree.read(path).unwrap();
+        let file_ast = syn::parse_file(&text).unwrap();
+        for item in &file_ast.items {
+            let syn::Item::Mod(item_mod) = item else {
+                continue;
+            };
+            if item_mod.content.is_some() {
+                continue;
+            }
+            let is_test_gated = item_mod.attrs.iter().any(is_test_only_attribute);
+            if !is_test_gated {
+                continue;
+            }
+            for attr in &item_mod.attrs {
+                if !attr.path().is_ident("path") {
+                    continue;
+                }
+                let syn::Meta::NameValue(name_value) = &attr.meta else {
+                    continue;
+                };
+                let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(literal),
+                    ..
+                }) = &name_value.value
+                else {
+                    continue;
+                };
+                let named = path
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new(""))
+                    .join(literal.value());
+                if sources.contains(&named) {
+                    declared.push(named);
+                }
+            }
+        }
+    }
+
+    assert!(
+        declared.len() >= 3,
+        "the workspace declares fewer `#[cfg(test)] #[path = ...]` modules than the three in vyre-libs; \
+         if they were removed, delete this test, otherwise the enumeration is broken: {declared:?}"
+    );
+    let missed: Vec<&PathBuf> = declared
+        .iter()
+        .filter(|path| !test_scoped.contains(*path))
+        .collect();
+    assert!(
+        missed.is_empty(),
+        "every file named by a `#[cfg(test)] #[path = ...]` module is test-scoped: {missed:?}"
     );
 }

@@ -45,26 +45,37 @@ pub(crate) const VERIFYING_KEY_HEX: &str =
 //    `Expr::call`, so the id is in its wire bytes: one character longer is one
 //    byte longer, 324 to 325, and a different bundle digest.
 
+// The three bundles whose entry is a plain statement list moved once more, and
+// only those three. `Program::wrapped` gives such an entry a synthetic root
+// region, and `Program::ROOT_REGION_GENERATOR` was respelled from
+// `vyre.program.root` to `anonymous::vyre.program.root` when region identities
+// were canonicalized. That name is in the wire bytes, eleven characters longer
+// is eleven bytes longer, and the bundle digest and signature moved with it.
+// `composed_nested` and `region_chain_intrinsic_dialect` pass `Node::Region`
+// nodes at the top level, take no synthetic root, and did not move. The pinned
+// reference output words held across the change, which is what says the framing
+// moved and the semantics did not.
+
 // --- trivial const ---
 pub(crate) const TRIVIAL_CONST_BUNDLE_BLAKE3: &str =
-    "be566351414e368a5e41dfb7850692326ae5aeec4287d412b6575be5594ab45d";
-pub(crate) const TRIVIAL_CONST_WIRE_LEN: usize = 197;
+    "7c043d3f71b03daf29c4ee3e3881aa3ecac18a0dbdcbd404a85c7433fdc0afed";
+pub(crate) const TRIVIAL_CONST_WIRE_LEN: usize = 208;
 pub(crate) const TRIVIAL_CONST_SIG_HEX: &str =
-    "260a5b784f180fc4990c7c38f3f662141cab6cf8c940f4f29c4536bcbc5a065ca23492c045d99ef23f0b52d12c1630b2d9000d13198102b28572bbeb08af7a03";
+    "41333198b0e00fc84852610bcb2485763fe7ea633231e352a1eaca8adc26ad284f36b32f69016e3f5b9a3eba2051f4c7d2df650bf9a44098decfa0711793ea03";
 
 // --- 1-op add ---
 pub(crate) const ONE_OP_ADD_BUNDLE_BLAKE3: &str =
-    "98c84692dec52b46d16b4766664277a7df006cfe28f09b317ce687b566c0bcf0";
-pub(crate) const ONE_OP_ADD_WIRE_LEN: usize = 204;
+    "571f0039b16d178740a1e20eb3daa054621d4511801a01d7d20eb070413d1fd0";
+pub(crate) const ONE_OP_ADD_WIRE_LEN: usize = 215;
 pub(crate) const ONE_OP_ADD_SIG_HEX: &str =
-    "ef679e5a4b8997bd066a99b22283eef6147eb3b6bcd1a19b568060162b7a3e4eec6c2f7cc2349b6b155b22024838ea5dc3155d8464bf3837edeed4956d116804";
+    "e659957783b637506819989d8a2e00e673f684b30db3bf036aaf86cec2b980926c4ec65695c919ff64816d018c26f4bc65dd825222ef813faef5b65dda278301";
 
 // --- loop-add ---
 pub(crate) const LOOP_ADD_BUNDLE_BLAKE3: &str =
-    "73b09f2cdf249b2ed6d40ce24e9c54771fa774373f51a753946f519e665798a9";
-pub(crate) const LOOP_ADD_WIRE_LEN: usize = 257;
+    "8fe6a8a71838ef9edbf772f676cd28f48a313d144c25a4373f8ad220f3a30dfb";
+pub(crate) const LOOP_ADD_WIRE_LEN: usize = 268;
 pub(crate) const LOOP_ADD_SIG_HEX: &str =
-    "6d6b070e4a592689b1330bd8c942acc97e9c119dd4bb8c7f53622340ba2b1838f9ca5b70dad69b35ba5029214a166edf84492b986ab235d62bc034ec44fba203";
+    "e15732a2c60737978bd89223921751504cc2d0b67288dcd44cd9431f677882ca535d1a456f3afe9b8f1797be73fe5641c718e664c585a936a7485dc3def21c02";
 
 // --- composed nested ---
 pub(crate) const COMPOSED_NESTED_BUNDLE_BLAKE3: &str =

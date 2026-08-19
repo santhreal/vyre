@@ -911,10 +911,16 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
             }
         }
 
+        // A closure body is host code the enclosing dispatch root does not
+        // execute, except when the closure is the argument of a combinator on the
+        // dispatch result: there the body is the post-dispatch phase itself.
+        let keeps_dispatch_phase = self.in_post_dispatch_combinator_depth > 0;
         let prev_in_gpu = self.in_gpu_dispatch_root;
         let prev_post_dispatch = self.post_dispatch_phase;
-        self.in_gpu_dispatch_root = false;
-        self.post_dispatch_phase = false;
+        if !keeps_dispatch_phase {
+            self.in_gpu_dispatch_root = false;
+            self.post_dispatch_phase = false;
+        }
         self.in_synthetic_oracle_depth += 1;
         syn::visit::visit_expr_closure(self, expr);
         self.in_synthetic_oracle_depth -= 1;
@@ -1402,6 +1408,11 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 || method_name == "or_else"
                 || method_name == "unwrap_or"
                 || method_name == "unwrap_or_default");
+        // A combinator chained onto the dispatch result runs its argument on the
+        // host with that result in hand, so `dispatch(..).map(|out| out.iter()
+        // .count())` is the same host reduction as the statement form. A fallback
+        // combinator keeps its own context, which the fallback rules own.
+        let carries_dispatch_result = receiver_is_dispatch && !is_fallback_combinator;
         for arg in &expr.args {
             if is_fallback_combinator {
                 self.in_fallback_depth += 1;
@@ -1411,6 +1422,10 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
                 self.in_expected_output_depth += 1;
                 syn::visit::visit_expr(self, arg);
                 self.in_expected_output_depth -= 1;
+            } else if carries_dispatch_result {
+                self.in_post_dispatch_combinator_depth += 1;
+                syn::visit::visit_expr(self, arg);
+                self.in_post_dispatch_combinator_depth -= 1;
             } else {
                 syn::visit::visit_expr(self, arg);
             }

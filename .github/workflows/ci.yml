@@ -26,6 +26,21 @@ jobs:
             --component rustfmt
           rustup default "${{ matrix.rust-toolchain }}"
 
+      # The AES-CTR baseline vendors OpenSSL, whose Configure script needs a perl
+      # with Locale::Maketext::Simple. The perl first on PATH on windows-latest is
+      # the Git for Windows MSYS build, which does not ship that module. Name the
+      # Strawberry perl the image installs, and fail loudly if the image drops it
+      # rather than falling back to a perl that cannot configure OpenSSL.
+      - name: Select the perl that configures vendored OpenSSL
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $perl = 'C:\Strawberry\perl\bin\perl.exe'
+          if (-not (Test-Path $perl)) {
+            throw "no Strawberry perl at $perl: vendored OpenSSL cannot be configured"
+          }
+          "OPENSSL_SRC_PERL=$perl" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: cargo_full fmt
         if: matrix.os != 'windows-latest'
         shell: bash

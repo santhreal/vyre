@@ -688,8 +688,11 @@ fn later_module_inputs_and_outputs_resolve_by_named_entry_identity() {
     assert_eq!(state[&ArtifactValueId(out1.0)], [40, 0, 0, 0]);
 }
 
+/// WHY: a payload that binds an `Output`-lifetime value `WriteOnly` names no
+/// input identity for it, because nothing reads it. The access on the payload
+/// binding decides that, not the lifetime.
 #[test]
-fn read_write_output_lifetime_is_output_only_and_not_module_input() {
+fn write_only_binding_of_an_output_value_is_output_only() {
     let mut graph = ProgramGraph::new();
     let val_in = graph
         .add_external_value(
@@ -965,4 +968,154 @@ fn retained_chain_identity_guard_accepts_only_one_lineage() {
         child,
         unrelated
     ));
+}
+
+/// Read and write halves of one payload access, matched exhaustively so a new
+/// `TargetResourceAccess` member stops compiling instead of silently inheriting
+/// one of these answers.
+fn reads_and_writes(access: TargetResourceAccess) -> (bool, bool) {
+    match access {
+        TargetResourceAccess::ReadOnly => (true, false),
+        TargetResourceAccess::WriteOnly => (false, true),
+        TargetResourceAccess::ReadWrite => (true, true),
+    }
+}
+
+/// WHY: the directional projection is what tells a module which canonical value
+/// carries the bytes of a buffer it reads. Classifying a `ReadWrite` binding by
+/// its resource lifetime instead of its access left an `Output`-lifetime
+/// resource out of the input projection, and every wgpu case whose witness binds
+/// its output buffer and reads it in the same pass
+/// (`vyre-libs::security::aliases_dataflow`, `flows_to_to_sink`,
+/// `flows_to_with_sanitizer`, `sink_intersection`, `taint_pollution`,
+/// `vyre-libs::llm::sample_token`) failed materialization before its first case
+/// ran. The contract is that the payload access decides membership and the
+/// lifetime decides nothing: a resource that is read names an input identity at
+/// every lifetime.
+///
+/// The loop covers every access against every lifetime a graph output can carry,
+/// so a rule reintroduced for one pair fails here. It does not cover
+/// `ResourceLifetime::Constant`, which no graph output can hold.
+#[test]
+fn payload_access_decides_projection_membership_at_every_lifetime() {
+    for access in [
+        TargetResourceAccess::ReadOnly,
+        TargetResourceAccess::WriteOnly,
+        TargetResourceAccess::ReadWrite,
+    ] {
+        for lifetime in [
+            ValueLifetime::Output,
+            ValueLifetime::Retained,
+            ValueLifetime::Invocation,
+        ] {
+            let mut graph = ProgramGraph::new();
+            let val_in = graph
+                .add_external_value(
+                    "input_val",
+                    contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                )
+                .unwrap();
+            let prog = Program::wrapped(
+                vec![
+                    BufferDecl::storage("in_buf", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(32),
+                    BufferDecl::storage("acc", 1, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(32),
+                ],
+                [32, 1, 1],
+                vec![Node::store(
+                    "acc",
+                    Expr::u32(0),
+                    Expr::load("acc", Expr::u32(0)),
+                )],
+            );
+            let (_, outputs) = graph
+                .add_node(
+                    "node0",
+                    prog.clone(),
+                    vec![GraphInput {
+                        buffer: "in_buf".into(),
+                        value: val_in,
+                        contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                    }],
+                    vec![GraphOutput {
+                        buffer: "acc".into(),
+                        name: "acc_val".into(),
+                        contract: contract(BufferAccess::ReadWrite, lifetime),
+                        retained_successor_of: None,
+                    }],
+                )
+                .unwrap();
+            let acc_id = ArtifactValueId(outputs[0].0);
+
+            let req = CompileRequest::new(
+                graph,
+                ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+                DeviceFacts::unknown(),
+                SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+                1_000_000,
+            )
+            .validate()
+            .unwrap();
+            let artifact = compile(&req).expect("compilation must succeed");
+            let payload = TargetPayload::new(
+                &artifact,
+                test_format(),
+                test_profile(),
+                vec![TargetEntryPoint {
+                    name: "entry0".into(),
+                    node: ArtifactNodeId(0),
+                    workgroup_size: [32, 1, 1],
+                    grid_size: [1, 1, 1],
+                    dynamic_shared_bytes: 0,
+                    resource_bindings: vec![
+                        TargetResourceBinding {
+                            resource: ArtifactValueId(val_in.0),
+                            group: 0,
+                            slot: 0,
+                            memory: TargetResourceMemory::Global,
+                            access: TargetResourceAccess::ReadOnly,
+                        },
+                        TargetResourceBinding {
+                            resource: acc_id,
+                            group: 0,
+                            slot: 1,
+                            memory: TargetResourceMemory::Global,
+                            access,
+                        },
+                    ],
+                }],
+                vec![1, 2, 3],
+            )
+            .unwrap();
+
+            let core = test_instance_core(&artifact, &payload).unwrap();
+            let (reads, writes) = reads_and_writes(access);
+            assert_eq!(
+                core.module_inputs[0].contains(&acc_id),
+                reads,
+                "Fix: a {access:?} binding at lifetime {lifetime:?} must appear in the input projection exactly when it reads"
+            );
+            assert_eq!(
+                core.module_outputs[0].contains(&acc_id),
+                writes,
+                "Fix: a {access:?} binding at lifetime {lifetime:?} must appear in the output projection exactly when it writes"
+            );
+            if !reads {
+                continue;
+            }
+
+            let plan = BindingPlan::build(&prog).unwrap();
+            let mut state = BTreeMap::new();
+            state.insert(ArtifactValueId(val_in.0), vec![42, 0, 0, 0]);
+            state.insert(acc_id, vec![7, 0, 0, 0]);
+            let gathered = core
+                .gather_inputs_for_module(0, &plan, &prog, &state, unbound_input)
+                .expect("a read binding must resolve to the bytes bound for it");
+            assert!(
+                gathered.contains(&&[7, 0, 0, 0][..]),
+                "Fix: the read-write buffer must gather the bytes bound to its canonical value"
+            );
+        }
+    }
 }

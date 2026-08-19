@@ -174,13 +174,40 @@ pub(super) fn is_test_only_meta(meta: &syn::Meta) -> bool {
     }
 }
 
+/// A `mod name;` declaration in a parent file, with the `#[path]` override when
+/// one is present.
+struct DeclaredModule {
+    name: String,
+    is_test_gated: bool,
+    declared_path: Option<String>,
+}
+
+/// The file a `#[path = "..."]` attribute names, relative to the directory of
+/// the file that declares the module.
+fn declared_module_path(attrs: &[syn::Attribute]) -> Option<String> {
+    for attr in attrs {
+        if let syn::Meta::NameValue(name_value) = &attr.meta {
+            if name_value.path.is_ident("path") {
+                if let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(literal),
+                    ..
+                }) = &name_value.value
+                {
+                    return Some(literal.value());
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Discover files that are wholly test-scoped because a parent file includes them via `#[cfg(test)] mod foo;`.
 pub(super) fn discover_test_scoped_files(
     tree: &Tree,
     sources: &[PathBuf],
 ) -> Result<BTreeSet<PathBuf>, GateError> {
     let mut test_scoped_files = BTreeSet::new();
-    let mut parent_to_children: BTreeMap<PathBuf, Vec<(String, bool)>> = BTreeMap::new();
+    let mut parent_to_children: BTreeMap<PathBuf, Vec<DeclaredModule>> = BTreeMap::new();
 
     for path in sources {
         let text = tree.read(path)?;
@@ -194,12 +221,14 @@ pub(super) fn discover_test_scoped_files(
         for item in &file_ast.items {
             if let syn::Item::Mod(item_mod) = item {
                 if item_mod.content.is_none() {
-                    let mod_name = item_mod.ident.to_string();
-                    let is_test = item_mod.attrs.iter().any(is_test_only_attribute);
                     parent_to_children
                         .entry(path.clone())
                         .or_default()
-                        .push((mod_name, is_test));
+                        .push(DeclaredModule {
+                            name: item_mod.ident.to_string(),
+                            is_test_gated: item_mod.attrs.iter().any(is_test_only_attribute),
+                            declared_path: declared_module_path(&item_mod.attrs),
+                        });
                 }
             }
         }
@@ -212,24 +241,35 @@ pub(super) fn discover_test_scoped_files(
             let parent_is_test = test_scoped_files.contains(parent_path);
             let parent_dir = parent_path.parent().unwrap_or_else(|| Path::new(""));
 
-            for (mod_name, is_test_attr) in modules {
-                if parent_is_test || *is_test_attr {
-                    let candidate1 = parent_dir.join(format!("{mod_name}.rs"));
-                    let candidate2 = parent_dir.join(format!("{mod_name}/mod.rs"));
-                    let stem = parent_path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("");
-                    let candidate3 = if stem != "mod" && stem != "lib" && stem != "main" {
-                        parent_dir.join(stem).join(format!("{mod_name}.rs"))
-                    } else {
-                        parent_dir.join(format!("{mod_name}.rs"))
-                    };
+            for module in modules {
+                if !parent_is_test && !module.is_test_gated {
+                    continue;
+                }
+                // `#[path]` states the file, so it replaces the search rather
+                // than adding to it: `#[cfg(test)] #[path = "x_tests.rs"] mod
+                // tests;` names `x_tests.rs`, and no `tests.rs` is consulted.
+                let candidates = match &module.declared_path {
+                    Some(declared) => vec![parent_dir.join(declared)],
+                    None => {
+                        let mod_name = &module.name;
+                        let stem = parent_path
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("");
+                        let sibling = parent_dir.join(format!("{mod_name}.rs"));
+                        let directory = parent_dir.join(mod_name).join("mod.rs");
+                        let nested = if stem != "mod" && stem != "lib" && stem != "main" {
+                            parent_dir.join(stem).join(format!("{mod_name}.rs"))
+                        } else {
+                            sibling.clone()
+                        };
+                        vec![sibling, directory, nested]
+                    }
+                };
 
-                    for cand in [candidate1, candidate2, candidate3] {
-                        if sources.contains(&cand) && test_scoped_files.insert(cand) {
-                            changed = true;
-                        }
+                for cand in candidates {
+                    if sources.contains(&cand) && test_scoped_files.insert(cand) {
+                        changed = true;
                     }
                 }
             }

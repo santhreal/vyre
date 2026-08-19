@@ -34,6 +34,10 @@ pub(super) struct AstAnalysisVisitor {
     pub(super) in_fallback_depth: usize,
     pub(super) in_op_reg_depth: usize,
     pub(super) in_synthetic_oracle_depth: usize,
+    /// Depth of closures passed to a combinator whose receiver executed a
+    /// dispatch. Such a closure runs on the host with the dispatch result in
+    /// hand, so the post-dispatch rules keep applying inside it.
+    pub(super) in_post_dispatch_combinator_depth: usize,
     pub(super) in_gpu_dispatch_root: bool,
     pub(super) post_dispatch_phase: bool,
     pub(super) dispatcher_params: BTreeSet<String>,
@@ -78,6 +82,7 @@ impl AstAnalysisVisitor {
             in_fallback_depth: 0,
             in_op_reg_depth: 0,
             in_synthetic_oracle_depth: 0,
+            in_post_dispatch_combinator_depth: 0,
             in_gpu_dispatch_root: false,
             post_dispatch_phase: false,
             dispatcher_params: BTreeSet::new(),

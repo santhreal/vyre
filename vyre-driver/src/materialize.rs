@@ -414,26 +414,30 @@ impl InstanceCore {
                         outputs.push(binding.resource);
                     }
                     vyre_megakernel::TargetResourceAccess::ReadWrite => {
-                        let is_output_lifetime = artifact.resources().iter().any(|resource| {
-                            resource.value == binding.resource
-                                && resource.lifetime == vyre_megakernel::ResourceLifetime::Output
-                        });
-                        if !is_output_lifetime {
-                            // A retained buffer is one allocation the caller binds
-                            // once, under the identity at the head of its chain;
-                            // the renamed successors are versions of that same
-                            // allocation. Reading the successor here made a module
-                            // demand an identity no caller can bind, so the input
-                            // projection names the root and the output projection
-                            // names the version this module writes.
-                            inputs.push(
-                                retained_predecessors
-                                    .get(&binding.resource)
-                                    .and_then(|priors| priors.last())
-                                    .copied()
-                                    .unwrap_or(binding.resource),
-                            );
-                        }
+                        // A read-write resource is read before it is written, so
+                        // the module needs an identity carrying its current bytes
+                        // whatever the resource's lifetime is. An `Output`
+                        // lifetime says where the bytes end up, not that nothing
+                        // reads them: `vyre-libs::security::aliases_dataflow`
+                        // binds `out` as one of its witnesses and reads it in the
+                        // same pass that writes it, and naming no input identity
+                        // for it failed the wgpu dispatch before the first case
+                        // ran.
+                        //
+                        // A retained buffer is one allocation the caller binds
+                        // once, under the identity at the head of its chain; the
+                        // renamed successors are versions of that same
+                        // allocation. Reading the successor here made a module
+                        // demand an identity no caller can bind, so the input
+                        // projection names the root and the output projection
+                        // names the version this module writes.
+                        inputs.push(
+                            retained_predecessors
+                                .get(&binding.resource)
+                                .and_then(|priors| priors.last())
+                                .copied()
+                                .unwrap_or(binding.resource),
+                        );
                         outputs.push(binding.resource);
                     }
                 }

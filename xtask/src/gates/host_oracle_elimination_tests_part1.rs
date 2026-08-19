@@ -1023,6 +1023,8 @@ pub fn motif_matches_via(
         .message
         .contains("post-dispatch host reduction/aggregation `.any`")));
 }
+
+#[test]
 fn mutation_catches_dispatcher_match_ok_post_dispatch_iter_any() {
     let code = r#"
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -1049,6 +1051,8 @@ pub fn motif_matches_via(
         .message
         .contains("post-dispatch host reduction/aggregation `.any`")));
 }
+
+#[test]
 fn mutation_catches_dispatcher_map_closure_post_dispatch_reduction() {
     let code = r#"
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -1071,6 +1075,8 @@ pub fn motif_count_via(
         .message
         .contains("post-dispatch host reduction/aggregation `.count`")));
 }
+
+#[test]
 fn mutation_catches_dispatcher_post_dispatch_loop_accumulation() {
     let code = r#"
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -1099,6 +1105,8 @@ pub fn motif_participation_count_via(
         .iter()
         .any(|f| f.message.contains("post-dispatch host loop/accumulation")));
 }
+
+#[test]
 fn mutation_catches_dispatcher_post_dispatch_filter_count_reduction() {
     let code = r#"
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
