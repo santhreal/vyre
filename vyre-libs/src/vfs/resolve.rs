@@ -25,15 +25,17 @@ pub const VFS_RESOLVE_OP_ID: &str = "vyre-libs::vfs::resolve";
 pub fn vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words: u32) -> Program {
     let words = block_words.max(1);
     let resolve_body = vec![
-        Node::let_bind("file_hash", Expr::load(include_hashes, Expr::u32(0))),
         // Async transfers pair on stable stream tags and execute as
         // workgroup-collective transfers where the leader issues the DMA and
-        // AsyncWait synchronizes the workgroup. The offset is a load from a
-        // read-only buffer at a literal index, so it is workgroup-uniform.
+        // AsyncWait synchronizes the workgroup. The offset names the load
+        // itself rather than a binding over it: a load from a read-only buffer
+        // at a literal index is workgroup-uniform in the operand it is written
+        // in, and `Let` records uniformity through the ordinary analysis, which
+        // refuses every load.
         Node::AsyncLoad {
             source: Ident::from("global_dma_pool"),
             destination: Ident::from(out_file_buffers),
-            offset: Box::new(Expr::var("file_hash")),
+            offset: Box::new(Expr::load(include_hashes, Expr::u32(0))),
             size: Box::new(Expr::u32(words * 4)),
             tag: Ident::from("vfs_req"),
         },

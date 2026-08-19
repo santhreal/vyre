@@ -209,3 +209,50 @@ fn async_load_with_read_only_and_uniform_buffer_loads_succeeds() {
         "AsyncLoad with uniform buffer loads must pass V139"
     );
 }
+
+/// WHY: the uniformity proof for a load belongs to the operand, not to a name.
+/// A load from a read-only buffer at a uniform index is workgroup-uniform in the
+/// offset position, and the same load bound to a `Let` is not: `Let` records
+/// uniformity through the ordinary analysis, which refuses every load. The
+/// asymmetry was untested, so a caller that hoisted a proven-uniform load into a
+/// binding for readability lost the proof with no test naming the rule.
+///
+/// Closes: the read-only and uniform load in the offset and the size position,
+/// once directly and once through a binding.
+#[test]
+fn a_uniform_load_proves_the_operand_it_is_written_in_not_a_binding() {
+    let direct = vec![
+        Node::AsyncLoad {
+            source: Ident::from("src"),
+            destination: Ident::from("dst"),
+            offset: Box::new(Expr::load("ro_buf", Expr::u32(0))),
+            size: Box::new(Expr::load("uni_buf", Expr::u32(1))),
+            tag: Ident::from("transfer"),
+        },
+        Node::AsyncWait {
+            tag: Ident::from("transfer"),
+        },
+    ];
+    assert!(
+        !reports_v139(standard_buffers(), direct),
+        "a read-only load at a literal index is uniform where it is written"
+    );
+
+    let bound = vec![
+        Node::let_bind("hoisted_offset", Expr::load("ro_buf", Expr::u32(0))),
+        Node::AsyncLoad {
+            source: Ident::from("src"),
+            destination: Ident::from("dst"),
+            offset: Box::new(Expr::var("hoisted_offset")),
+            size: Box::new(Expr::u32(16)),
+            tag: Ident::from("transfer"),
+        },
+        Node::AsyncWait {
+            tag: Ident::from("transfer"),
+        },
+    ];
+    assert!(
+        reports_v139(standard_buffers(), bound),
+        "a binding does not carry the load proof, so the transfer offset must name the load itself"
+    );
+}
