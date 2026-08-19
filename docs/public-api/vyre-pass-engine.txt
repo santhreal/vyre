@@ -78,11 +78,6 @@ pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError::fmt(
 pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::build_const_fold_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::build_const_fold_program_fused(expr_count: u32, max_depth_iter_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::const_fold_via_encoded::gpu_const_fold(program: vyre_foundation::ir_inner::model::program::definition::Program, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_pass_engine::optimizer::const_fold_via_encoded::ConstFoldError>
-pub fn vyre_pass_engine::optimizer::cse_cross_scope::apply_cross_scope_cse(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &[u32]) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_pass_engine::optimizer::cse_cross_scope::apply_cross_scope_cse_with_lookup<C: vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup + ?core::marker::Sized>(program: &vyre_foundation::ir_inner::model::program::definition::Program, arena: &vyre_pass_engine::optimizer::expr_arena::ExprArenaEncoding, canonical: &C) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_pass_engine::optimizer::cse_programs::build_canonical_delta_compact_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_pass_engine::optimizer::cse_programs::build_canonical_id_program(expr_count: u32, capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_pass_engine::optimizer::cse_programs::build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup::canonical_of(&self, id: u32) -> u32
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::CanonicalLookup::is_empty(&self) -> bool
 pub fn vyre_pass_engine::optimizer::cse_via_encoded::CseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -148,8 +143,6 @@ pub mod vyre_pass_engine
 pub mod vyre_pass_engine::optimizer
 pub mod vyre_pass_engine::optimizer::canonicalize_via_encoded
 pub mod vyre_pass_engine::optimizer::const_fold_via_encoded
-pub mod vyre_pass_engine::optimizer::cse_cross_scope
-pub mod vyre_pass_engine::optimizer::cse_programs
 pub mod vyre_pass_engine::optimizer::cse_via_encoded
 pub mod vyre_pass_engine::optimizer::dce_program
 pub mod vyre_pass_engine::optimizer::dce_via_encoded

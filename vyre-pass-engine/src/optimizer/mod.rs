@@ -26,8 +26,12 @@ mod arena_cursor;
 mod arena_kernel;
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;
-pub mod cse_cross_scope;
-pub mod cse_programs;
+// `cse_via_encoded` is the public path for cross-scope CSE and for the analysis
+// Programs it dispatches. These two submodules exist because that file was
+// split, so they stay private and the owner re-exports what they hold; a second
+// public path is a second name for one item.
+mod cse_cross_scope;
+mod cse_programs;
 pub mod cse_via_encoded;
 pub mod dce_program;
 pub mod dce_via_encoded;
