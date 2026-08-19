@@ -436,9 +436,54 @@ pub fn execute_sweep_selection(
     failures
 }
 
+/// Whether a runner command line asks for usage.
+///
+/// `--subset` and `--area` take the next word as their value, so a subset
+/// literally named `--help` is a name and not a request.
+fn help_requested_of_the_runner(args: &[String]) -> bool {
+    let mut words = args.iter();
+    while let Some(word) = words.next() {
+        match word.as_str() {
+            "--subset" | "--area" => {
+                words.next();
+            }
+            "--help" | "-h" => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
+/// What the runner accepts, rendered from the registry it would run.
+fn usage_text() -> String {
+    let mut text = String::from(
+        "usage: xtask gates [--subset <name>] [--list] [--write-baseline]\n\n\
+         With no flags every registered gate runs and its finding count is\n\
+         compared with the pinned count in xtask/gate-baselines.toml.\n\n\
+         --subset <name>   run one subset; --area is accepted for it\n\
+         --list            print every gate name and every subset\n\
+         --write-baseline  record the current finding counts as the pins\n\n\
+         subsets:\n",
+    );
+    for subset in subcommands::subsets() {
+        text.push_str(&format!("  {} {}\n", subset.name, subset.gates.join(" ")));
+    }
+    text
+}
+
 /// Run the gate sweep.
 pub fn run(args: &[String]) {
     let root = crate::checkout::checkout_root();
+
+    // Usage is an answer, not a run. `gates --help` executed the whole registry,
+    // which is the check running instead of describing itself, the same defect
+    // `bench-crossback --help` had. The runner takes flags, so the request is
+    // honored anywhere it is not the value of the subset flag, which is how
+    // `lego-audit --help` and `gates --subset lego-audit --help` reach it.
+    if help_requested_of_the_runner(args) {
+        print!("{}", usage_text());
+        return;
+    }
 
     if args.iter().any(|argument| argument == "--list") {
         for gate in subcommands::registry() {

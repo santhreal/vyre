@@ -261,3 +261,91 @@ fn a_no_argument_help_page_names_all_three_exit_codes() {
          1  the thing could not be done\n  2  command-line arguments are invalid\n"
     );
 }
+
+/// Run `executable` with `args` and fail if it has not exited within `bound`.
+///
+/// The failure this guards against is a help route that runs the check, which
+/// shows up as a command that never returns rather than as a wrong value, so the
+/// bound is the assertion.
+fn run_within(executable: &str, args: &[&str], bound: std::time::Duration) -> Output {
+    let mut child = Command::new(executable)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("Fix: the xtask binary must launch");
+    let deadline = std::time::Instant::now() + bound;
+    loop {
+        match child
+            .try_wait()
+            .expect("Fix: a spawned child must be waitable")
+        {
+            Some(_) => break,
+            None if std::time::Instant::now() >= deadline => {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!(
+                    "Fix: `{} {}` did not answer within {bound:?}; a help request must not run the \
+                     gates it describes",
+                    executable,
+                    args.join(" ")
+                );
+            }
+            None => std::thread::sleep(std::time::Duration::from_millis(20)),
+        }
+    }
+    child
+        .wait_with_output()
+        .expect("Fix: child output must be readable")
+}
+
+/// Every runner command line that asks for usage answers with usage.
+///
+/// WHY: `xtask gates --help` ran the entire gate registry, which is the check
+/// running instead of describing itself. Exit status alone cannot see it, since
+/// a green sweep also exits 0, so the contract is that the answer arrives in
+/// seconds and names the runner options. The subset roster comes from
+/// `gates --list` at run time, so a subset added tomorrow is covered without
+/// editing this test.
+#[test]
+fn every_runner_help_route_answers_without_running_the_gates() {
+    let bound = std::time::Duration::from_secs(60);
+    let listed = run_within(env!("CARGO_BIN_EXE_xtask"), &["gates", "--list"], bound);
+    assert!(listed.status.success(), "Fix: `gates --list` must exit 0");
+    let listing = String::from_utf8(listed.stdout).expect("Fix: gate listing must be UTF-8");
+    let subsets: Vec<&str> = listing
+        .lines()
+        .filter_map(|line| line.strip_prefix("subset "))
+        .filter_map(|line| line.split_whitespace().next())
+        .collect();
+    assert!(
+        !subsets.is_empty(),
+        "Fix: `gates --list` must name every subset: {listing}"
+    );
+
+    let mut command_lines: Vec<Vec<&str>> = vec![
+        vec!["gates", "--help"],
+        vec!["gates", "-h"],
+        vec!["lego-audit", "--help"],
+    ];
+    for subset in &subsets {
+        command_lines.push(vec!["gates", "--subset", subset, "--help"]);
+    }
+
+    for line in command_lines {
+        let output = run_within(env!("CARGO_BIN_EXE_xtask"), &line, bound);
+        assert!(
+            output.status.success(),
+            "Fix: `xtask {}` returned {:?}: {}",
+            line.join(" "),
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let text = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            text.contains("usage: xtask gates") && text.contains("--write-baseline"),
+            "Fix: `xtask {}` must print the runner usage, it printed:\n{text}",
+            line.join(" ")
+        );
+    }
+}
