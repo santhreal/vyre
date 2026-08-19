@@ -726,8 +726,8 @@ pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError::fmt(&
 pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch::new() -> Self
 pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch::ordered_index_capacity(&self) -> usize
 pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch::seen_capacity(&self) -> usize
-pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch::try_reserve_candidates(&mut self, candidate_count: usize) -> core::result::Result<(), vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError>
-pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch::try_with_capacity(candidate_count: usize) -> core::result::Result<Self, vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError>
+pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch::try_reserve_candidates(&mut self, count: usize) -> core::result::Result<(), vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError>
+pub fn vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch::try_with_capacity(count: usize) -> core::result::Result<Self, vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError>
 pub fn vyre_driver::benchmark_pass_selection::select_benchmark_passes(candidates: &[vyre_driver::benchmark_pass_selection::BenchmarkPassCandidate], sample: vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionSample) -> core::result::Result<vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionPlan, vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError>
 pub fn vyre_driver::benchmark_pass_selection::select_benchmark_passes_with_scratch(candidates: &[vyre_driver::benchmark_pass_selection::BenchmarkPassCandidate], sample: vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionSample, scratch: &mut vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch) -> core::result::Result<vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionPlan, vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError>
 pub fn vyre_driver::binding_plans_share_layout(a: &vyre_driver::BindingPlan, b: &vyre_driver::BindingPlan) -> bool
@@ -764,8 +764,8 @@ pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError::f
 pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch::id_capacity(&self) -> usize
 pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch::new() -> Self
 pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch::ordered_index_capacity(&self) -> usize
-pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch::try_reserve_shards(&mut self, shard_count: usize) -> core::result::Result<(), vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError>
-pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch::try_with_capacity(shard_count: usize) -> core::result::Result<Self, vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError>
+pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch::try_reserve_shards(&mut self, count: usize) -> core::result::Result<(), vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError>
+pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch::try_with_capacity(count: usize) -> core::result::Result<Self, vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError>
 pub fn vyre_driver::device_diagnostic_aggregation::diagnostic_compression_ratio_bps(host_readback_bytes: u64, raw_candidate_readback_bytes: u64) -> u32
 pub fn vyre_driver::device_diagnostic_aggregation::plan_device_diagnostic_aggregation(shards: &[vyre_driver::device_diagnostic_aggregation::DiagnosticShard], max_records_per_shard: u64, budget_bytes: u64) -> core::result::Result<vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationPlan, vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError>
 pub fn vyre_driver::device_diagnostic_aggregation::plan_device_diagnostic_aggregation_with_scratch(shards: &[vyre_driver::device_diagnostic_aggregation::DiagnosticShard], max_records_per_shard: u64, budget_bytes: u64, scratch: &mut vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationScratch) -> core::result::Result<vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationPlan, vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError>
@@ -1104,8 +1104,8 @@ pub fn vyre_driver::result_compaction::ResultCompactionError::fmt(&self, f: &mut
 pub fn vyre_driver::result_compaction::ResultCompactionScratch::id_capacity(&self) -> usize
 pub fn vyre_driver::result_compaction::ResultCompactionScratch::new() -> Self
 pub fn vyre_driver::result_compaction::ResultCompactionScratch::ordered_index_capacity(&self) -> usize
-pub fn vyre_driver::result_compaction::ResultCompactionScratch::try_reserve_slots(&mut self, slot_count: usize) -> core::result::Result<(), vyre_driver::result_compaction::ResultCompactionError>
-pub fn vyre_driver::result_compaction::ResultCompactionScratch::try_with_capacity(slot_count: usize) -> core::result::Result<Self, vyre_driver::result_compaction::ResultCompactionError>
+pub fn vyre_driver::result_compaction::ResultCompactionScratch::try_reserve_slots(&mut self, count: usize) -> core::result::Result<(), vyre_driver::result_compaction::ResultCompactionError>
+pub fn vyre_driver::result_compaction::ResultCompactionScratch::try_with_capacity(count: usize) -> core::result::Result<Self, vyre_driver::result_compaction::ResultCompactionError>
 pub fn vyre_driver::result_compaction::plan_result_compaction(slots: &[vyre_driver::result_compaction::ResultSlot], max_compact_record_bytes: u64) -> core::result::Result<vyre_driver::result_compaction::ResultCompactionPlan, vyre_driver::result_compaction::ResultCompactionError>
 pub fn vyre_driver::result_compaction::plan_result_compaction_with_scratch(slots: &[vyre_driver::result_compaction::ResultSlot], max_compact_record_bytes: u64, scratch: &mut vyre_driver::result_compaction::ResultCompactionScratch) -> core::result::Result<vyre_driver::result_compaction::ResultCompactionPlan, vyre_driver::result_compaction::ResultCompactionError>
 pub fn vyre_driver::select_sort_backend(distribution: vyre_driver::Distribution) -> vyre_driver::SortBackend
