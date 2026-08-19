@@ -57,7 +57,7 @@ const CORE_MEASURED: &[(&str, usize)] = &[
         "vyre-foundation/src/ir_inner/model/program/meta/mod.rs",
         940,
     ),
-    ("vyre-foundation/src/validate/expr_rules.rs", 646),
+    ("vyre-foundation/src/validate/expr_rules/mod.rs", 646),
     (
         "vyre-foundation/src/ir_inner/model/program/buffer_decl/mod.rs",
         725,

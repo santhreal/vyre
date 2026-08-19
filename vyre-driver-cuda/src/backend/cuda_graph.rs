@@ -53,7 +53,7 @@ use vyre_driver::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use super::allocations::alloc_cuda_ptr;
-use super::cuda_graph_types::*;
+use super::cuda_graph_lifecycle::*;
 use super::dispatch::CudaBackend;
 use super::output_range::cuda_output_readback_for_binding;
 use super::pinned_allocations::HostTransferAllocations;
@@ -61,7 +61,7 @@ use super::staging_reserve::reserve_smallvec;
 use crate::backend::copy::aligned_async_copy_len;
 use crate::numeric::CUDA_NUMERIC;
 
-pub use super::cuda_graph_types::CachedCudaGraph;
+pub use super::cuda_graph_lifecycle::CachedCudaGraph;
 
 fn cuda_graph_usize_to_u64(value: usize, label: &'static str) -> Result<u64, BackendError> {
     CUDA_NUMERIC.usize_to_u64(value, label)

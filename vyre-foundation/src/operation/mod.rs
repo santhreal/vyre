@@ -6,10 +6,10 @@ use self::registry_error::validate_identity;
 pub use self::registry_error::OperationRegistryError;
 
 mod target_facet;
-mod types;
+mod semantics;
 
 pub use self::target_facet::{TargetId, TargetOperationFacet};
-pub use self::types::{
+pub use self::semantics::{
     operation_id_namespace, IdNamespace, OperationEffects, OperationTier, TolerancePolicy,
 };
 

@@ -37,7 +37,7 @@ mirrors of it, the scheduling policy, and the in-kernel IO queue.
 - `workspace_adapter.rs`, `workspace_layout.rs`  -  consumer-owned
   resident workspace binding.
 
-### `artifact_admission.rs`
+### `artifact_admission/`
 Authenticates an artifact envelope and admits exactly the target payload
 format the registered backend requires.
 
@@ -56,7 +56,7 @@ retry class without parsing messages or recompiling.
 Circular on-disk log of every published ring slot, so a later run can
 diff epoch-by-epoch execution against a live backend.
 
-### `resource_residency.rs`
+### `resource_residency/`
 Backend-neutral immutable-resource and mutable-state residency.
 
 ### `routing/`

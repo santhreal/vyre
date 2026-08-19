@@ -1,6 +1,6 @@
 //! Bounded LRU cache for wgpu bind groups.
 
-mod inner;
+mod entry_store;
 #[cfg(test)]
 mod tests;
 
@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use smallvec::SmallVec;
 
-use self::inner::{push_bind_group_handle_key, BindGroupCacheInner, BindGroupCacheKey};
+use self::entry_store::{push_bind_group_handle_key, BindGroupCacheInner, BindGroupCacheKey};
 use super::handle::GpuBufferHandle;
 
 /// Default cap for the [`BindGroupCache`] LRU.

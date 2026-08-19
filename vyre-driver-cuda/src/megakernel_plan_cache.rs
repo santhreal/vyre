@@ -23,7 +23,7 @@ use vyre_driver::megakernel_execution::{
     MegakernelMemoryError, MegakernelTopologyDecision,
 };
 
-pub use crate::megakernel_plan_cache_types::*;
+pub use crate::megakernel_plan_cache_records::*;
 
 /// Bounded LRU cache for CUDA megakernel topology plans.
 #[derive(Debug)]

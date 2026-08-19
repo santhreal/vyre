@@ -17,7 +17,7 @@ pub(crate) mod copy;
 pub(crate) mod cuda_graph;
 /// cudaGraph replay path.
 pub(crate) mod cuda_graph_replay;
-pub(crate) mod cuda_graph_types;
+pub(crate) mod cuda_graph_lifecycle;
 /// CUDA backend handle, launch geometry, and kernel-launch orchestration  -
 /// including the cooperative-launch path that routes through
 /// `cuLaunchCooperativeKernel` when the caller opts in via

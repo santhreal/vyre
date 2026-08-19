@@ -238,7 +238,7 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     },
     BackendFeatureRequirement {
         id: "runtime-artifact-admission",
-        relative: "vyre-runtime/src/artifact_admission.rs",
+        relative: "vyre-runtime/src/artifact_admission/mod.rs",
         role: "Canonical runtime artifact admission and materialization",
         tokens: &["ArtifactSession", "materialize"],
     },

@@ -1,3 +1,6 @@
+//! Inputs and outputs of a resident launch decision: pressure, execution mode,
+//! topology, promotion evidence, request, and recommendation.
+
 use super::super::planner::ResidentLaunchGeometry;
 
 /// Host-side pressure classification for one megakernel launch.

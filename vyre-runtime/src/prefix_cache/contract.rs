@@ -1,3 +1,6 @@
+//! Values the prefix cache exchanges with a caller: key, layout, match result,
+//! limits, counters, and failure.
+
 use std::collections::BTreeMap;
 
 use thiserror::Error;

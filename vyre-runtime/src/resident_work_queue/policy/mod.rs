@@ -3,7 +3,7 @@
 mod cache;
 mod launch;
 mod priority;
-mod types;
+mod decision;
 
 #[cfg(test)]
 mod tests;
@@ -14,7 +14,7 @@ pub use priority::{
     PriorityDrainReason, PriorityDrainRecommendation, PriorityRequeueAccounting,
     PRIORITY_COUNTER_DRAIN_FIX, PRIORITY_COUNTER_DRAIN_HEADROOM,
 };
-pub use types::{
+pub use decision::{
     ResidentExecutionMode, ResidentGraphBlasSwitchClass, ResidentLaunchCacheStats,
     ResidentLaunchRecommendation, ResidentLaunchRequest, ResidentPromotionEvidence,
     ResidentPromotionRoute, ResidentQueuePressure, ResidentQueueTopology, ResidentTopologyEvidence,

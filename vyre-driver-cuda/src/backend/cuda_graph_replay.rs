@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
 use super::allocations::cuda_check;
-use super::cuda_graph_types::{CachedCudaGraph, GraphExecGuard, StreamGuard};
+use super::cuda_graph_lifecycle::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
 use super::ordering::{classify_dense_permutation, DensePermutationDefect};
 use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};

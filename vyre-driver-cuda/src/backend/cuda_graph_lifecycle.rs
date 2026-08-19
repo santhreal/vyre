@@ -1,3 +1,6 @@
+//! Ownership and lifecycle of CUDA graph resources: stream, capture, graph,
+//! graph exec, host buffers, and the cached graph a replay reuses.
+
 use std::ptr::NonNull;
 use std::sync::Arc;
 

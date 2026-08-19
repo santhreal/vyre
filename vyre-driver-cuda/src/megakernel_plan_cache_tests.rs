@@ -1,4 +1,4 @@
-use super::megakernel_plan_cache_types::{
+use super::megakernel_plan_cache_records::{
     CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCacheKey,
 };
 use super::CudaMegakernelPlanCache;
@@ -322,7 +322,7 @@ fn cache_pressure_bucket_uses_exact_u128_math() {
         CudaMegakernelAnalysisKind::Dataflow,
         device(),
         0.5,
-        super::megakernel_plan_cache_types::pressure_bps(1_u64 << 62, 1_u64 << 63),
+        super::megakernel_plan_cache_records::pressure_bps(1_u64 << 62, 1_u64 << 63),
         0,
         0,
         0.0,
@@ -332,7 +332,7 @@ fn cache_pressure_bucket_uses_exact_u128_math() {
         CudaMegakernelAnalysisKind::Dataflow,
         device(),
         0.5,
-        super::megakernel_plan_cache_types::pressure_bps(1_u64 << 63, 1_u64 << 63),
+        super::megakernel_plan_cache_records::pressure_bps(1_u64 << 63, 1_u64 << 63),
         0,
         0,
         0.0,

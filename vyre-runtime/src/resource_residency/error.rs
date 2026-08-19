@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use super::types::{ResourceSetKey, StateId};
+use super::admission::{ResourceSetKey, StateId};
 
 /// Resource residency admission or lifecycle failure.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]

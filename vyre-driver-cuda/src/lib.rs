@@ -49,7 +49,7 @@ mod materializer;
 pub(crate) mod megakernel_plan_cache;
 #[cfg(test)]
 mod megakernel_plan_cache_tests;
-pub(crate) mod megakernel_plan_cache_types;
+pub(crate) mod megakernel_plan_cache_records;
 mod numeric;
 /// Occupancy-aware empirical autotuning (I4): pure estimator that picks
 /// the workgroup size with the highest predicted hardware occupancy from

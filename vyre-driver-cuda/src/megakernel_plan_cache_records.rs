@@ -1,3 +1,5 @@
+//! Keys, cached plan, and counters the CUDA megakernel plan cache stores.
+
 use vyre_driver::megakernel_execution::{MegakernelExecutionTopology, MegakernelTopologyDecision};
 
 use crate::device::CudaDeviceCaps;

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::types::{
+use super::contract::{
     PhysicalPageRecord, PrefixCacheError, PrefixCacheKey, PrefixCacheKeyFingerprint,
     PrefixCacheLimits, PrefixCacheMetrics, PrefixMatchResult, RadixNode,
 };

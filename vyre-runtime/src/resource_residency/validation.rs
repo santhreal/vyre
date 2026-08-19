@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use super::error::ResourceResidencyError;
-use super::types::{
+use super::admission::{
     ArtifactInstanceBinding, ImmutableResourceUpload, MutableStateSpec, ResidencyState,
     ResidentResourceSet, ResidentStateSet, ResourceSetKey, StateLease,
 };

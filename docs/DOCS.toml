@@ -23,7 +23,7 @@ authority = "DOCS.toml"
 
 [[owner]]
 id = "operation-registry"
-authority = "../vyre-foundation/src/operation.rs"
+authority = "../vyre-foundation/src/operation/mod.rs"
 
 [[owner]]
 id = "optimization"
@@ -614,7 +614,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/geometry/**", "vyre-foundation/src/operation.rs", "vyre-driver/src/device_profile.rs"]
+covers = ["vyre-foundation/src/geometry/**", "vyre-foundation/src/operation/mod.rs", "vyre-driver/src/device_profile.rs"]
 nav = true
 
 [[page]]
@@ -724,7 +724,7 @@ kind = "reference"
 section = "API and operation reference"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/operation.rs"]
+covers = ["vyre-foundation/src/operation/mod.rs"]
 nav = true
 
 [[page]]

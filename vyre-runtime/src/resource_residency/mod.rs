@@ -2,18 +2,18 @@
 
 mod device;
 mod error;
-mod types;
+mod admission;
 mod validation;
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
 pub use device::{MaterializerResourceDevice, ResidentResourceDevice};
 pub use error::ResourceResidencyError;
-pub use types::{
+pub use admission::{
     ArtifactInstanceBinding, ImmutableResourceUpload, MutableStateSpec, ResourceAdmissionStatus,
     ResourceSetAdmission, ResourceSetKey, ResourceSetLease, StateId, StateLease,
 };
-use types::{
+use admission::{
     ResidencyState, ResidentArtifact, ResidentImmutableResource, ResidentResourceSet,
     ResidentStateSet,
 };

@@ -1,3 +1,6 @@
+//! Resource-set and mutable-state admission: keys, uploads, bindings, status,
+//! and leases.
+
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

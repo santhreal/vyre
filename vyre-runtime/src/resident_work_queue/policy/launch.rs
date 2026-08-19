@@ -3,7 +3,7 @@ use vyre_driver::BackendError;
 use super::super::planner::{ResidentGridLimits, ResidentGridRequest, ResidentSizingPolicy};
 use super::super::staging_reserve::try_reserve_vec_capacity;
 use super::cache;
-use super::types::{
+use super::decision::{
     ResidentExecutionMode, ResidentGraphBlasSwitchClass, ResidentLaunchCacheStats,
     ResidentLaunchRecommendation, ResidentLaunchRequest, ResidentPromotionEvidence,
     ResidentPromotionRoute, ResidentQueuePressure, ResidentQueueTopology, ResidentTopologyEvidence,

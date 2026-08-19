@@ -15,7 +15,7 @@ inventory::submit! {
 
 An operation exists because a crate submitted one `OperationRegistration`
 into the `inventory` collection declared at
-`vyre-foundation/src/operation.rs`. There is no central list to append to
+`vyre-foundation/src/operation/mod.rs`. There is no central list to append to
 and no second place to declare an operation.
 
 ## What a registration carries

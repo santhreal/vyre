@@ -1,3 +1,5 @@
+//! Cached bind groups and the LRU order that evicts them.
+
 use std::cmp::{Ordering as CmpOrdering, Reverse};
 use std::collections::BinaryHeap;
 use std::sync::Arc;

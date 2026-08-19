@@ -21,7 +21,7 @@
 //!   eviction never reclaims pinned or in-flight pages.
 
 mod manager;
-mod types;
+mod contract;
 
 #[cfg(test)]
 mod tests;
@@ -29,7 +29,7 @@ mod tests;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 pub use manager::PrefixCacheManager;
-pub use types::{
+pub use contract::{
     PrefixCacheError, PrefixCacheKey, PrefixCacheKeyFingerprint, PrefixCacheLayout,
     PrefixCacheLimits, PrefixCacheMetrics, PrefixMatchResult,
 };
