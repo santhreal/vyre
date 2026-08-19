@@ -83,6 +83,11 @@ subsets = ["ci-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "ci-shell"
+subsets = ["ci-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "ci-steps"
 subsets = ["ci-rules"]
 workflows = ["gates.yml"]

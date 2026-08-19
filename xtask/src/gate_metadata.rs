@@ -231,6 +231,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::ci_contract::tests::a_fan_in_job_that_ignores_its_dependency_results_is_reported",
     },
     GateDescriptor {
+        name: "ci-shell",
+        help: "Enforce ci-shell contracts",
+        package: "xtask",
+        areas: &["ci-rules"],
+        subject: "ci workflows",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::ci_contract::tests::a_step_declares_no_shell_when_no_key_at_its_depth_does",
+    },
+    GateDescriptor {
         name: "ci-steps",
         help: "Enforce ci-steps contracts",
         package: "xtask",

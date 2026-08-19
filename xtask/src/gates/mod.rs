@@ -104,6 +104,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("ci-required", &ci_contract::CiRequired),
     ("ci-registry", &ci_registry::CiRegistry),
     ("ci-steps", &ci_steps::CiSteps),
+    ("ci-shell", &ci_contract::CiShell),
     ("crate-pages", &crate_pages::CratePages),
     ("crate-readmes", &crate_readmes::CrateReadmes),
     ("crate-ownership", &crate_registry::CrateOwnership),

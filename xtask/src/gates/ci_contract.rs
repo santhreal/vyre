@@ -251,6 +251,166 @@ impl crate::gate::GateBehavior for CiRequired {
     }
 }
 
+/// The shell every step of a Windows-capable workflow is written for.
+const SHELL: &str = "bash";
+
+/// Every step of a workflow that runs on Windows declares the shell it is
+/// written for.
+///
+/// A `run:` step with no `shell:` key runs under `bash` on a Linux or macOS
+/// runner and under PowerShell on a Windows one, so the same script text is two
+/// different programs depending on the axis. The one step in this tree that ever
+/// named PowerShell could not run at all: `throw "no perl at $perl: ..."` reads
+/// `$perl:` as a scope-qualified variable, which is a parse error, so the step
+/// failed on every Windows job in the matrix and the failure said nothing about
+/// perl. A shell nobody here writes for is a shell nobody here reviews.
+pub struct CiShell;
+
+impl crate::gate::GateBehavior for CiShell {
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let tree = Tree::open(&ctx.root)?;
+        let mut report = Report::clean();
+        let mut steps = 0;
+
+        for path in tree.paths() {
+            let relative = path.to_string_lossy().to_string();
+            if !is_workflow(&relative) {
+                continue;
+            }
+            let text = tree.read(path)?;
+            if !runs_on_windows(&text) {
+                continue;
+            }
+            for step in run_steps(&text) {
+                steps += 1;
+                match step.shell.as_deref() {
+                    Some(SHELL) => {}
+                    Some(other) => report.find(Finding::at(
+                        &relative,
+                        step.line,
+                        format!("the step is written for `{other}`"),
+                        "write the step for bash and declare `shell: bash`; every Windows \
+                         runner carries the Git bash this tree already writes every other \
+                         step in, and a second dialect is a script the reviewer of this \
+                         file cannot read",
+                    )),
+                    None => report.find(Finding::at(
+                        &relative,
+                        step.line,
+                        "the step declares no shell",
+                        "declare `shell: bash`; a step with no shell runs under PowerShell on \
+                         a Windows runner, where the same text is a different program",
+                    )),
+                }
+            }
+        }
+
+        report.cover_complete("windows-capable workflow steps", steps);
+        Ok(report)
+    }
+}
+
+/// Whether the path is a workflow file, running or paused.
+fn is_workflow(relative: &str) -> bool {
+    let Some(name) = relative
+        .strip_prefix(".github/workflows/")
+        .or_else(|| relative.strip_prefix(".github/workflows-paused/"))
+    else {
+        return false;
+    };
+    !name.contains('/') && (name.ends_with(".yml") || name.ends_with(".yaml"))
+}
+
+/// Whether any job of the workflow can run on a Windows runner.
+///
+/// A label is a `runs-on:` value, an `os:` axis value, or a bare sequence entry,
+/// which is how a block-style axis writes one. Nothing else is a label: a
+/// sequence entry carrying a key is a step, so `- name: windows-latest notes`
+/// names a step and puts no job on Windows, and neither does a comment or a
+/// command that mentions the label.
+fn runs_on_windows(text: &str) -> bool {
+    text.lines().any(|line| {
+        let code = line.trim();
+        if code.starts_with('#') {
+            return false;
+        }
+        let value = if let Some(value) = code.strip_prefix("runs-on:") {
+            value
+        } else if let Some(value) = code.strip_prefix("os:") {
+            value
+        } else if let Some(entry) = code.strip_prefix("- ") {
+            if entry.contains(':') {
+                return false;
+            }
+            entry
+        } else {
+            return false;
+        };
+        value.contains("windows-")
+    })
+}
+
+/// One step of a workflow that runs a command.
+struct RunStep {
+    /// The line the `run:` key is on.
+    line: u32,
+    /// The shell the step declares, if it declares one.
+    shell: Option<String>,
+}
+
+/// Every step of the workflow that runs a command, with the shell it declares.
+///
+/// A step is a sequence entry, so an entry at the depth the current one opened
+/// starts the next step and a shallower line ends the list. Keys are read only at
+/// the step's own depth: the body of a `run:` block scalar is indented past it,
+/// and a line of shell that happens to read `shell: pwsh` or `- item` is script
+/// text rather than a key. The order of the keys inside a step does not matter,
+/// so a step that declares its shell after its command is read the same as one
+/// that declares it before.
+fn run_steps(text: &str) -> Vec<RunStep> {
+    let mut steps = Vec::new();
+    let mut open: Option<usize> = None;
+    let mut run: Option<u32> = None;
+    let mut shell: Option<String> = None;
+    for (number, line) in crate::gates::scan::numbered(text) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let column = indentation(line);
+        let entry = trimmed.starts_with("- ") && open.is_none_or(|start| column <= start);
+        let closed = open.is_some_and(|start| column < start);
+        if entry || closed {
+            if let Some(line) = run.take() {
+                steps.push(RunStep {
+                    line,
+                    shell: shell.take(),
+                });
+            }
+            run = None;
+            shell = None;
+            open = entry.then_some(column);
+        }
+        let Some(start) = open else {
+            continue;
+        };
+        if !entry && column != start + 2 {
+            continue;
+        }
+        let key = trimmed.strip_prefix("- ").unwrap_or(trimmed);
+        if key.starts_with("run:") {
+            run.get_or_insert(number);
+        }
+        if let Some(value) = key.strip_prefix("shell:") {
+            shell = Some(value.trim().to_string());
+        }
+    }
+    if let Some(line) = run {
+        steps.push(RunStep { line, shell });
+    }
+    steps
+}
+
 /// Every workflow that runs the gate sweep on a pull request, with the line it
 /// runs it on.
 ///
@@ -923,5 +1083,114 @@ jobs:
 ";
         let clean_findings = baseline_comparison_findings("bench.yml", passing_workflow);
         assert!(clean_findings.is_empty(), "clean workflow must pass");
+    }
+
+    /// A workflow whose steps are the four shapes the rule decides between: a
+    /// step that declares bash, one that declares another dialect, one that
+    /// declares nothing, and a step whose command body contains lines that read
+    /// like keys.
+    const SHELLS: &str = "\
+jobs:
+  matrix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: declared
+        shell: bash
+        run: ./cargo_full fmt --check
+
+      - name: other dialect
+        shell: pwsh
+        run: Write-Output 'hello'
+
+      - name: undeclared
+        run: ./cargo_full test --workspace
+
+      - name: body that reads like keys
+        run: |
+          shell: pwsh
+          - run: echo not a step
+        shell: bash
+";
+
+    /// WHY: a `run:` step with no `shell:` key runs under PowerShell on a Windows
+    /// runner, so the rule has to see the absence of a key rather than the
+    /// presence of a wrong one. This pins all three verdicts the gate acts on and
+    /// goes red if the reader stops at the first step or treats a missing key as
+    /// bash. What it does not catch is a step that declares bash and then writes
+    /// PowerShell in it.
+    #[test]
+    fn a_step_declares_no_shell_when_no_key_at_its_depth_does() {
+        let steps = run_steps(SHELLS);
+
+        let shells: Vec<Option<&str>> = steps.iter().map(|step| step.shell.as_deref()).collect();
+        assert_eq!(
+            shells,
+            vec![Some("bash"), Some("pwsh"), None, Some("bash")],
+            "Fix: every step's shell is the key at its own depth, or nothing."
+        );
+        assert_eq!(
+            steps.iter().map(|step| step.line).collect::<Vec<_>>(),
+            vec![9, 13, 16, 19],
+            "Fix: a finding names the line the command is on."
+        );
+    }
+
+    /// WHY: the body of a block scalar is shell text, and shell text that reads
+    /// like YAML is still shell text. Reading a body line as a key made the last
+    /// step of the fixture declare `pwsh` and swallowed the step boundary, which
+    /// is how a reader that scans for `shell:` per file reports the wrong step.
+    #[test]
+    fn a_run_body_line_that_reads_like_a_key_is_script_text() {
+        let steps = run_steps(SHELLS);
+
+        assert_eq!(
+            steps.len(),
+            4,
+            "Fix: the fixture has four steps; a body line is not a fifth."
+        );
+        assert_eq!(
+            steps[3].shell.as_deref(),
+            Some("bash"),
+            "Fix: the last step declares bash after its command, and its body \
+             names pwsh only as script text."
+        );
+    }
+
+    /// WHY: the rule only applies to a workflow a Windows runner executes, and
+    /// the word is not the runner. A step named after Windows, and a comment
+    /// about it, put no job on one, and reading either would hold every workflow
+    /// in the tree to a rule none of them needs.
+    #[test]
+    fn only_a_runner_label_puts_a_job_on_windows() {
+        assert!(
+            runs_on_windows(SHELLS),
+            "Fix: a matrix axis value is a runner label."
+        );
+        assert!(
+            runs_on_windows("jobs:\n  build:\n    runs-on: windows-latest\n"),
+            "Fix: a runs-on value is a runner label."
+        );
+        assert!(
+            !runs_on_windows(
+                "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      \
+                 - name: windows-latest notes\n        # windows-latest is discussed here\n        \
+                 run: echo windows-latest\n"
+            ),
+            "Fix: a step name, a comment and a command are not runner labels."
+        );
+    }
+
+    /// WHY: the workflow set is read from the two directories workflows live in,
+    /// so a paused workflow is held to the rule it has to satisfy to return, and
+    /// a file that is not a workflow is not read at all.
+    #[test]
+    fn a_workflow_is_a_yaml_file_in_one_of_the_two_workflow_directories() {
+        assert!(is_workflow(".github/workflows/ci.yml"));
+        assert!(is_workflow(".github/workflows-paused/strict.yaml"));
+        assert!(!is_workflow(".github/workflows/nested/ci.yml"));
+        assert!(!is_workflow(".github/CI_REQUIRED.md"));
+        assert!(!is_workflow("xtask/ci-registry.toml"));
     }
 }

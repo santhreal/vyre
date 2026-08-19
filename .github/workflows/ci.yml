@@ -27,19 +27,26 @@ jobs:
           rustup default "${{ matrix.rust-toolchain }}"
 
       # The AES-CTR baseline vendors OpenSSL, whose Configure script needs a perl
-      # with Locale::Maketext::Simple. The perl first on PATH on windows-latest is
-      # the Git for Windows MSYS build, which does not ship that module. Name the
-      # Strawberry perl the image installs, and fail loudly if the image drops it
-      # rather than falling back to a perl that cannot configure OpenSSL.
+      # that provides Locale::Maketext::Simple. The perl first on PATH on
+      # windows-latest is the Git for Windows MSYS build, which does not ship that
+      # module. Select a perl by loading the module rather than by naming an install
+      # path, so an image that moves or drops the Strawberry install still resolves,
+      # and fail loudly when no perl on the image can configure OpenSSL.
       - name: Select the perl that configures vendored OpenSSL
         if: matrix.os == 'windows-latest'
-        shell: pwsh
+        shell: bash
         run: |
-          $perl = 'C:\Strawberry\perl\bin\perl.exe'
-          if (-not (Test-Path $perl)) {
-            throw "no Strawberry perl at $perl: vendored OpenSSL cannot be configured"
-          }
-          "OPENSSL_SRC_PERL=$perl" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          for candidate in \
+            /c/Strawberry/perl/bin/perl.exe \
+            /c/hostedtoolcache/windows/strawberry-perl/*/x64/perl/bin/perl.exe \
+            "$(command -v perl || true)"; do
+            [ -x "$candidate" ] || continue
+            "$candidate" -MLocale::Maketext::Simple -e 1 >/dev/null 2>&1 || continue
+            echo "OPENSSL_SRC_PERL=$(cygpath -w "$candidate")" >> "$GITHUB_ENV"
+            exit 0
+          done
+          echo "no perl on this image provides Locale::Maketext::Simple; vendored OpenSSL cannot be configured" >&2
+          exit 1
 
       - name: cargo_full fmt
         if: matrix.os != 'windows-latest'
