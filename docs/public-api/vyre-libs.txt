@@ -2682,7 +2682,7 @@ pub fn vyre_libs::text::utf8_validate(source: &str, classes: &str, n: u32) -> vy
 pub fn vyre_libs::text::utf8_validate_u8(source: &str, classes: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::topology::simplicial::simplicial_triangle_message(edge_features: &str, triangle_edges: &str, triangle_messages: &str, n_edges: u32, n_triangles: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::topology::vietoris_rips::vietoris_rips_edge_filter(dist_matrix: &str, epsilon: &str, edge_mask: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, num_requests: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::visual::GaussianBlurStages::programs(&self) -> [&vyre_foundation::ir_inner::model::program::definition::Program; 2]
 pub fn vyre_libs::visual::GaussianKernel::new(radius: u32, sigma: f32) -> Self
 pub fn vyre_libs::visual::GaussianKernel::weights(&self) -> &[u32]
