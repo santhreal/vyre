@@ -49,11 +49,17 @@ pub const HIDDEN_FALLBACK_PATTERNS: &[&str] = &[
 ];
 
 /// Resource-bound pattern names the hygiene scan emits.
+///
+/// `truncating_duration_cast` sits here because the bound it enforces is on a
+/// reported number rather than on memory: a count that exceeds what a `u64`
+/// holds must clamp at the maximum, not wrap into a small value that reads as a
+/// fast sample.
 pub const RESOURCE_BOUND_PATTERNS: &[&str] = &[
     "std_thread_sleep",
     "thread_sleep",
     "tokio_sleep",
     "unbounded_read",
+    "truncating_duration_cast",
 ];
 
 /// Cargo-wrapper pattern names the hygiene scan emits.
@@ -207,31 +213,13 @@ fn release_surface_coverage(vyre_root: &Path) -> ReleaseSurfaceCoverage {
             && vyre_root
                 .join("scripts/apply-branch-protection.sh")
                 .is_file(),
-        resource_bound_patterns: vec![
-            "std_thread_sleep",
-            "thread_sleep",
-            "tokio_sleep",
-            "unbounded_read",
-        ],
-        hidden_fallback_patterns: vec![
-            "silent_gpu_skip",
-            "silent_gpu_skipped",
-            "gpu_unavailable_skip",
-            "cfg_not_gpu",
-            "cpu_fallback",
-            "software_fallback",
-            "fallback_dispatch",
-            "falling_back_to_cpu",
-            "fallback_to_cpu",
-            "synthetic_gpu_timing",
-            "fake_gpu_timing_formula",
-        ],
-        release_tooling_patterns: vec![
-            "raw_workspace_cargo",
-            "invalid_cargo_full_xtask",
-            "heredoc",
-            "missing_cargo_wrapper",
-        ],
+        // The three vocabularies above are the scan's output, and the recorded
+        // coverage is a claim about that output. Restating them here let a
+        // pattern be added to the scan while the evidence kept naming the older
+        // set.
+        resource_bound_patterns: RESOURCE_BOUND_PATTERNS.to_vec(),
+        hidden_fallback_patterns: HIDDEN_FALLBACK_PATTERNS.to_vec(),
+        release_tooling_patterns: CARGO_WRAPPER_PATTERNS.to_vec(),
     }
 }
 

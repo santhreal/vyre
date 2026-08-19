@@ -328,10 +328,10 @@ to build without that backend, which no run of the built artifact reports.
 file = "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs"
 tests = ["the_resident_layout_is_declared_in_exactly_one_crate"]
 reason = """
-Asserts the resident layout declarations exist in the owner and nowhere else. A
-second declaration in a crate this test does not depend on is linked into no
-program it could run, and diverges from the owner only once a device reads a
-buffer laid out by the other copy.
+Asserts each resident layout declaration exists exactly once in the workspace and
+that the one site is in the owning device module. A second declaration in a crate
+this test does not depend on is linked into no program it could run, and diverges
+from the owner only once a device reads a buffer laid out by the other copy.
 """
 
 [[gate]]
@@ -377,16 +377,14 @@ wrapper declared twice or not at all is a source fact.
 
 [[gate]]
 file = "vyre-bench/tests/case_declaration_contracts.rs"
-tests = [
-  "only_the_metric_owner_narrows_a_measured_span",
-  "no_nanosecond_count_is_narrowed_by_a_truncating_cast",
-]
+tests = ["only_the_metric_owner_narrows_a_measured_span"]
 reason = """
-Holds the narrowing of a measured span to api::metric, which saturates, and
-bans the truncating cast everywhere including the owner. The wrap it prevents
-needs a span past about 18.4 seconds to show up, and then reports the slowest
-sample as the fastest rather than failing, so a benchmark run witnesses nothing.
-Which file spells the cast has no run-time witness at all.
+Holds the reading of a measured span to api::metric, which saturates. The
+truncation it prevents needs a count past u64::MAX nanoseconds, which no
+monotonic clock on this hardware reaches, so no benchmark run witnesses the wrong
+number. Which file reads the span has no run-time witness at all. The cast itself
+is forbidden workspace-wide by the truncating_duration_cast rule of
+hygiene-matrix.
 """
 
 [[gate]]

@@ -4,9 +4,9 @@
 //! three things: the host time the reference took, the metrics record that time
 //! is published in, and the `BenchRun` that pairs the two samples. All three
 //! were hand-rolled per case, and the hand-rolled copies did not agree: some
-//! cast `as_nanos()` straight to `u64`, which truncates a reference slower than
-//! 18 seconds into a small number instead of a large one, and some published a
-//! baseline record with no byte accounting at all.
+//! cast `as_nanos()` straight to `u64`, which truncates a count past `u64::MAX`
+//! nanoseconds into an unrelated small number instead of clamping it at the
+//! maximum, and some published a baseline record with no byte accounting at all.
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
 use crate::api::metric::{elapsed_ns, BenchMetrics};

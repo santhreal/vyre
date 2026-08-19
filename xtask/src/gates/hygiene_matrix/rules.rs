@@ -61,6 +61,66 @@ pub(crate) fn line_contains_unbounded_read(path: &Path, line: &str) -> bool {
     line_contains_read_call(trimmed)
 }
 
+/// The `Duration` readers that answer a `u128`.
+const U128_DURATION_READERS: [&str; 3] = ["as_nanos()", "as_micros()", "as_millis()"];
+
+/// The `as` casts that discard high bits of a `u128`.
+const NARROWING_CASTS: [&str; 10] = [
+    "asu8", "asu16", "asu32", "asu64", "asusize", "asi8", "asi16", "asi32", "asi64", "asisize",
+];
+
+/// The 1-based lines of `text` that narrow a `u128` duration count with an `as`
+/// cast.
+///
+/// `Duration::as_nanos`, `as_micros` and `as_millis` all answer a `u128`, and an
+/// `as` cast to any integer discards the high bits instead of clamping, so a
+/// count past the target maximum is reported as an unrelated small number. Three
+/// spellings of the narrowing coexisted in `vyre-bench`, and the crate-local gate
+/// that closed them there cannot see the same cast in `vyre-foundation` or
+/// `vyre-runtime`, which is where two of them survived a year. The saturating
+/// spelling is `u64::try_from(count).unwrap_or(u64::MAX)`.
+///
+/// Comment lines and rule text are skipped, and the match runs over code with the
+/// whitespace removed, so a cast rustfmt split across two lines is caught the
+/// same as a cast written on one. `as_secs` is not read: it already answers a
+/// `u64`, so casting it to `u64` narrows nothing.
+pub(crate) fn truncating_duration_cast_lines(path: &Path, text: &str) -> Vec<usize> {
+    let normalized = path.to_string_lossy().replace('\\', "/");
+    if is_xtask_source_path(&normalized) {
+        return Vec::new();
+    }
+    let mut dense = String::with_capacity(text.len());
+    let mut source_line = Vec::with_capacity(text.len());
+    for (index, line) in text.lines().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("//") || is_release_rule_text(trimmed) {
+            continue;
+        }
+        for character in trimmed.chars().filter(|character| !character.is_whitespace()) {
+            dense.push(character);
+            source_line.push(index + 1);
+        }
+    }
+    let mut lines = Vec::new();
+    for reader in U128_DURATION_READERS {
+        for (at, _) in dense.match_indices(reader) {
+            let after = at + reader.len();
+            if !NARROWING_CASTS
+                .iter()
+                .any(|cast| dense[after..].starts_with(cast))
+            {
+                continue;
+            }
+            if let Some(line) = source_line.get(after) {
+                lines.push(*line);
+            }
+        }
+    }
+    lines.sort_unstable();
+    lines.dedup();
+    lines
+}
+
 /// True when the panicking call at `line_index` sits in a function whose docs declare a
 /// `# Panics` section.
 ///

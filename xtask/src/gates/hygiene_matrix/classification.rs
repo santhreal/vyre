@@ -332,6 +332,7 @@ pub(crate) fn hygiene_risk(
             | "unimplemented_macro"
             | "not_implemented_text"
             | "unbounded_read"
+            | "truncating_duration_cast"
             | "unreadable_source_file"
             | "unreadable_tooling_file"
             | "missing_cargo_wrapper"

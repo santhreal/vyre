@@ -9,7 +9,7 @@ use super::rules::{
     has_documented_panic_contract, is_hidden_fallback_guard_source, is_non_release_cfg_attr,
     line_contains_blocked_pattern, line_contains_heredoc, line_contains_invalid_cargo_full_xtask,
     line_contains_raw_workspace_cargo, line_contains_read_call, line_contains_unbounded_read,
-    read_text_bounded, BraceDepthState,
+    read_text_bounded, truncating_duration_cast_lines, BraceDepthState,
 };
 use super::syntax::scan_source_inspection_tests;
 use super::{CARGO_WRAPPER_PATTERNS, HIDDEN_FALLBACK_PATTERNS, RESOURCE_BOUND_PATTERNS};
@@ -352,6 +352,15 @@ pub(crate) fn scan_file(
         }
     };
     *scanned_files += 1;
+    for line in truncating_duration_cast_lines(path, &text) {
+        findings.push(HygieneFinding {
+            path: path.display().to_string(),
+            line,
+            pattern: "truncating_duration_cast",
+            text: text.lines().nth(line - 1).unwrap_or_default().trim().to_string(),
+            test: None,
+        });
+    }
     let mut pending_cfg_test = false;
     let mut pending_test_attr = false;
     let mut test_module_braces = BraceDepthState::default();

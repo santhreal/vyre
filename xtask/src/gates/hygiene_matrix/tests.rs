@@ -32,6 +32,71 @@ fn every_filesystem_read_spelling_is_still_a_read_call() {
     }
 }
 
+/// WHY: three spellings of one nanosecond narrowing coexisted in `vyre-bench`,
+/// and the crate-local gate that closed them there could not see the same
+/// truncating cast in `vyre-foundation` or `vyre-runtime`, where two survived.
+/// The rule is whole-tree, so the cast is a release blocker wherever it is
+/// written. The dense match is what catches the spelling rustfmt splits across
+/// two lines, which a per-line scan reads as a reader with no cast after it.
+///
+/// What it does not catch: a narrowing routed through a variable, and
+/// `as_secs()`, which already answers a `u64`.
+#[test]
+fn a_truncating_duration_cast_is_found_however_it_is_spelled() {
+    let path = Path::new("vyre-foundation/src/perf.rs");
+    for source in [
+        "let elapsed_ns = self.start.elapsed().as_nanos() as u64;",
+        "let millis = span.as_millis() as u32;",
+        "let micros = span.as_micros()\n    as u64;",
+        "let elapsed_ns = self\n    .start\n    .elapsed()\n    .as_nanos() as u64;",
+    ] {
+        assert!(
+            !truncating_duration_cast_lines(path, source).is_empty(),
+            "missed `{source}`"
+        );
+    }
+    for source in [
+        "let elapsed_ns = u64::try_from(span.as_nanos()).unwrap_or(u64::MAX);",
+        "let clamped = span.as_nanos().min(u128::from(u64::MAX)) as u64;",
+        "let seconds = span.as_secs() as u64;",
+        "let ratio = span.as_secs_f64() as f32;",
+        "// span.as_nanos() as u64 is the spelling this rule forbids",
+    ] {
+        assert!(
+            truncating_duration_cast_lines(path, source).is_empty(),
+            "false positive on `{source}`"
+        );
+    }
+}
+
+/// The reported line is the line the cast is written on, not the line the
+/// duration reader is written on: a reader whose cast rustfmt moved down reads
+/// correct at the reader and wrong at the cast.
+#[test]
+fn the_reported_line_is_where_the_cast_is_written() {
+    let source = "fn wall() -> u64 {\n    let span = start.elapsed();\n    span\n        .as_nanos() as u64\n}\n";
+    assert_eq!(
+        truncating_duration_cast_lines(Path::new("vyre-runtime/src/clock.rs"), source),
+        vec![4]
+    );
+}
+
+/// WHY: xtask owns the rule and its fixtures, so it spells what the rule
+/// forbids. Every other crate is read.
+#[test]
+fn the_rule_owner_is_exempt_and_nothing_else_is() {
+    let source = "let elapsed_ns = start.elapsed().as_nanos() as u64;";
+    assert!(truncating_duration_cast_lines(
+        Path::new("/w/xtask/src/gates/hygiene_matrix/rules.rs"),
+        source
+    )
+    .is_empty());
+    assert_eq!(
+        truncating_duration_cast_lines(Path::new("/w/vyre-bench/src/api/metric.rs"), source),
+        vec![1]
+    );
+}
+
 /// WHY: the wrapper rule read every line that spelled a cargo command, so a
 /// sentence describing what a build does was a finding a reader could only
 /// clear by describing the build less precisely. An instruction is what the

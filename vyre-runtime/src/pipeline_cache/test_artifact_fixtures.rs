@@ -1,4 +1,4 @@
-//! Shared canonical artifact and unique-name fixtures for pipeline-cache tests.
+//! Shared canonical artifact fixtures for pipeline-cache tests.
 //!
 //! Every pipeline-cache test needs the same input: a Program compiled into a
 //! neutral artifact under fixed facts and a bounded search. The unit tests reach
@@ -60,11 +60,4 @@ pub(crate) fn artifact_for_program(program: Program) -> Artifact {
     .validate()
     .unwrap();
     compile(&request).unwrap()
-}
-
-pub(crate) fn unique_u64() -> u64 {
-    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        Ok(duration) => duration.as_nanos() as u64,
-        Err(_) => 0,
-    }
 }

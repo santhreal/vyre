@@ -16,10 +16,14 @@
 //!    device module turns this red on the commit that adds it.
 //!
 //! 2. **Ownership.** The resident layout, the degree-profile ranks and the
-//!    profile bucket count are declared exactly once in the workspace, in
-//!    `vyre-libs`. Every other crate may read them; none may declare them. The
-//!    crate list is the workspace roster, so a new driver crate that reintroduces
-//!    the restatement is caught without being named here.
+//!    profile bucket count are declared exactly once in the workspace, in the
+//!    `vyre-libs` device module. Every other crate may read them; none may
+//!    declare them. The crate list is the workspace roster, so a new driver
+//!    crate that reintroduces the restatement is caught without being named
+//!    here. The owner is the directory rather than one file in it: splitting an
+//!    oversized module moves a declaration between siblings without changing who
+//!    owns it, and counting sites over the whole roster catches a second copy
+//!    inside the owning crate, which comparing against one file could not.
 //!
 //! What this does NOT catch: a backend that copies the arithmetic under
 //! different identifiers. Nothing short of reading the diff catches that, and
@@ -32,9 +36,6 @@ use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_root};
 
 /// Directory that owns every device-residency contract in the composition crate.
 const DEVICE_MODULE: &str = "src/device";
-
-/// Where the token/fact graph layout is declared, relative to `vyre-libs`.
-const OWNER_FILE: &str = "src/device/device_resident_token_fact_graph.rs";
 
 /// The crate that owns the layout. Everything else may only read it.
 const OWNER_CRATE: &str = "vyre-libs";
@@ -99,43 +100,58 @@ fn device_module_names_no_concrete_backend() {
 #[test]
 fn the_resident_layout_is_declared_in_exactly_one_crate() {
     let root = vyre_workspace_root();
-    let owner = vyre_crate_directory(OWNER_CRATE).join(OWNER_FILE);
-    let owner_text = std::fs::read_to_string(&owner)
-        .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", owner.display()));
+    let owner_module = vyre_crate_directory(OWNER_CRATE).join(DEVICE_MODULE);
+    let mut declaring: Vec<(&str, Vec<PathBuf>)> = Vec::new();
     for declaration in OWNED_DECLARATIONS {
-        assert!(
-            owner_text.contains(declaration),
-            "Fix: `{declaration}` must be declared in {}. If the owner moved, move this gate.",
-            owner.display()
-        );
-    }
-
-    let mut restatements = Vec::new();
-    for member in structure_gate::workspace_members(&root) {
-        let directory = root.join(&member);
-        if directory == vyre_crate_directory(OWNER_CRATE) {
-            continue;
-        }
-        for source in rust_sources(&directory.join("src")) {
-            let text = match std::fs::read_to_string(&source) {
-                Ok(text) => text,
-                Err(_) => continue,
-            };
-            for declaration in OWNED_DECLARATIONS {
+        let mut sites = Vec::new();
+        for member in structure_gate::workspace_members(&root) {
+            for source in rust_sources(&root.join(&member).join("src")) {
+                let Ok(text) = std::fs::read_to_string(&source) else {
+                    continue;
+                };
                 if text.contains(declaration) {
-                    restatements.push(format!("{}: {declaration}", source.display()));
+                    sites.push(source);
                 }
             }
         }
+        declaring.push((declaration, sites));
     }
 
+    let miscounted: Vec<String> = declaring
+        .iter()
+        .filter(|(_, sites)| sites.len() != 1)
+        .map(|(declaration, sites)| {
+            format!(
+                "{declaration}: {} site(s) {:?}",
+                sites.len(),
+                sites
+                    .iter()
+                    .map(|site| site.display().to_string())
+                    .collect::<Vec<_>>()
+            )
+        })
+        .collect();
     assert!(
-        restatements.is_empty(),
-        "Fix: the device-resident token/fact graph layout has one owner, {}. A backend crate \
-         converts it into its own scheduler types and issues its own device calls; it does not \
-         redeclare the envelope or the out-degree profile. Restatements:\n{}",
-        owner.display(),
-        restatements.join("\n")
+        miscounted.is_empty(),
+        "Fix: the device-resident token/fact graph layout has one declaration each. A backend \
+         crate converts it into its own scheduler types and issues its own device calls; it does \
+         not redeclare the envelope or the out-degree profile. Zero sites means the declaration \
+         was renamed and this gate no longer names anything:\n{}",
+        miscounted.join("\n")
+    );
+
+    let outside: Vec<String> = declaring
+        .iter()
+        .filter(|(_, sites)| sites.iter().any(|site| !site.starts_with(&owner_module)))
+        .map(|(declaration, sites)| format!("{declaration}: {}", sites[0].display()))
+        .collect();
+    assert!(
+        outside.is_empty(),
+        "Fix: the one declaration must live in {}. A file-size split may move it between modules \
+         of that directory; it may not leave the directory, and if the owner moved, move this \
+         gate:\n{}",
+        owner_module.display(),
+        outside.join("\n")
     );
 }
 

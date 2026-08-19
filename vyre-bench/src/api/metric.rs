@@ -73,9 +73,9 @@ pub struct MetricPoint {
 /// Every timed span in the benchmark reports nanoseconds as a `u64`, and
 /// `Duration::as_nanos` is a `u128`. Three spellings of the narrowing coexisted:
 /// a bare `as u64` cast, a `min(u64::MAX)` clamp, and a `try_from().unwrap_or`.
-/// The bare cast wraps: a span longer than about 18.4 seconds was reported as a
-/// short one, so the slowest samples read as the fastest. This is the single
-/// spelling, and it saturates.
+/// The bare cast truncates instead of saturating: a count past `u64::MAX`
+/// nanoseconds is reported as an unrelated small number rather than clamped at
+/// the maximum. This is the single spelling, and it saturates.
 #[must_use]
 pub fn elapsed_ns(started: std::time::Instant) -> u64 {
     narrow_nanos(started.elapsed().as_nanos())

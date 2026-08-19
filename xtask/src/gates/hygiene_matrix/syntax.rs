@@ -67,7 +67,7 @@ fn checkout_rooted_rust_read(tokens: &str) -> bool {
 /// several names reports none, so the value it destructures is not tracked and
 /// the finding is kept.
 fn bound_identifier(statement: &str) -> Option<String> {
-    let rest = statement.trim_start_matches(|c: char| c == '{' || c == '}');
+    let rest = statement.trim_start_matches(['{', '}']);
     let rest = rest.strip_prefix("let")?;
     let rest = rest.strip_prefix("mut").unwrap_or(rest);
     let name: String = rest

@@ -270,11 +270,17 @@ fn crate_source_files() -> Vec<PathBuf> {
 ///
 /// `Duration::as_nanos` is a `u128`. Three spellings of the narrowing coexisted
 /// across the crate: a bare `as u64` cast, a `min(u64::MAX)` clamp, and a
-/// `try_from().unwrap_or()`. The bare cast wraps, so a span past about 18.4
-/// seconds reported as a short one and the slowest samples read as the fastest.
-/// Whitespace is stripped before matching, so the multi-line spellings are caught
-/// too, and the walk covers the whole tree rather than the files that had the
-/// defect.
+/// `try_from().unwrap_or()`. The bare cast truncates, so a count past `u64::MAX`
+/// nanoseconds reads as an unrelated small number instead of clamping at the
+/// maximum. Whitespace is stripped before matching, so the multi-line spellings
+/// are caught too, and the walk covers the whole tree rather than the files that
+/// had the defect.
+///
+/// The truncating cast itself is forbidden workspace-wide by the
+/// `truncating_duration_cast` rule of `xtask hygiene-matrix`, which reads every
+/// crate rather than this one. What stays here is the narrower claim that rule
+/// cannot make: which file in this crate is allowed to read a measured span at
+/// all.
 ///
 /// A `SystemTime` timestamp formatted into a filename is not a measured span and
 /// does not match: it reads the clock through `duration_since`, never `elapsed`.
@@ -290,30 +296,7 @@ fn only_the_metric_owner_narrows_a_measured_span() {
 
     assert!(
         offenders.is_empty(),
-        "Fix: narrow a measured span with api::metric::elapsed_ns, which saturates. \
-         A bare `as u64` cast wraps past 18.4 seconds: {offenders:?}"
-    );
-}
-
-/// The truncating spelling appears nowhere, including inside the owner.
-///
-/// The gate above exempts `api::metric`, because that file is where the one
-/// legitimate read of a measured span lives. Nothing exempts it from the cast
-/// rule: writing the bare cast directly in `elapsed_ns` would reintroduce the
-/// wrap for every caller at once and leave `narrow_nanos` dead. This gate walks
-/// the whole tree with no exemption.
-#[test]
-fn no_nanosecond_count_is_narrowed_by_a_truncating_cast() {
-    let offenders: Vec<String> = crate_source_files()
-        .into_iter()
-        .filter(|path| stripped_code(path).contains("as_nanos()asu64"))
-        .map(|path| path.display().to_string())
-        .collect();
-
-    assert!(
-        offenders.is_empty(),
-        "Fix: a `Duration::as_nanos() as u64` cast wraps instead of saturating. \
-         Narrow through api::metric, which uses `u64::try_from`: {offenders:?}"
+        "Fix: narrow a measured span with api::metric::elapsed_ns, which saturates: {offenders:?}"
     );
 }
 
