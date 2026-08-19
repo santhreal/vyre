@@ -68,8 +68,8 @@ total_lines = 1513
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 964
-total_lines = 37310
+duplicate_lines = 948
+total_lines = 37360
 
 [[crate]]
 name = "vyre-debug"
@@ -78,18 +78,18 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 487
-total_lines = 39545
+duplicate_lines = 484
+total_lines = 40056
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 1637
-total_lines = 66564
+duplicate_lines = 1625
+total_lines = 66802
 
 [[crate]]
 name = "vyre-driver-metal"
-duplicate_lines = 27
-total_lines = 4438
+duplicate_lines = 18
+total_lines = 4535
 
 [[crate]]
 name = "vyre-driver-reference"
@@ -133,8 +133,8 @@ total_lines = 104820
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 5914
-total_lines = 214297
+duplicate_lines = 5904
+total_lines = 214775
 
 [[crate]]
 name = "vyre-lints"
@@ -163,8 +163,8 @@ total_lines = 3838
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 394
-total_lines = 30672
+duplicate_lines = 393
+total_lines = 30891
 
 [[crate]]
 name = "vyre-runtime"
