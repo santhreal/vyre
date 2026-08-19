@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=false",
+  "source_fingerprint": "git:0cc2b6a3878d1aaa33e24bbff84aa8a72cf2767a:dirty=true:worktree=e36fa659f178663d622122301e305a4cc0ad4d283c61384a786228d0eb599d7f",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -167,19 +167,19 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 199,
+      "line": 259,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/classification.rs",
-      "line": 350,
+      "line": 351,
       "pattern": "TODO",
       "text": "if matches!(pattern, \"TODO\" | \"FIXME\" | \"placeholder_text\" | \"stub_text\") {"
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/classification.rs",
-      "line": 350,
+      "line": 351,
       "pattern": "FIXME",
       "text": "if matches!(pattern, \"TODO\" | \"FIXME\" | \"placeholder_text\" | \"stub_text\") {"
     },

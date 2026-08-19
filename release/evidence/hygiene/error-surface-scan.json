@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=true:worktree=b2e0c3c0dc7846c33c22d2cfc562d2286e8c29eff61a8af57303e58327d2778f",
+  "source_fingerprint": "git:0cc2b6a3878d1aaa33e24bbff84aa8a72cf2767a:dirty=true:worktree=e36fa659f178663d622122301e305a4cc0ad4d283c61384a786228d0eb599d7f",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -119,7 +119,7 @@
     },
     {
       "path": "vyre-libs/src/nn/attention/tiled_online_softmax.rs",
-      "line": 434,
+      "line": 429,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the registered online-softmax witness must plan\");"
     },

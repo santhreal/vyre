@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=true:worktree=b4c40f65a32bd535f226ee7add243fbadee523d59d39500e09e95e67de94fd41",
+  "source_fingerprint": "git:0cc2b6a3878d1aaa33e24bbff84aa8a72cf2767a:dirty=true:worktree=e36fa659f178663d622122301e305a4cc0ad4d283c61384a786228d0eb599d7f",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -19,7 +19,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 3
+      "count": 2
     },
     {
       "owner_lane": "coordination",
