@@ -3556,6 +3556,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose backend is the reference interpreter and whose operation records no
   expected outputs now fails with that reason, because comparing the
   interpreter against itself is not evidence.
+- A backend feature marker that cites a module root is checked against the
+  whole module, so splitting an oversized module into submodules no longer
+  reports its implementation tokens as deleted. The CUDA resident readback path
+  is a marker of its own, citing the file that implements it.
 - The benchmark harness builds its compile request from the probed backend
   profile instead of unknown device facts, so a case that uses subgroup
   intrinsics is measured on a device that has them rather than recorded as a
@@ -4929,6 +4933,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
 - The release gate reports a requirement that reaches no semantic evidence
   check instead of passing it, and judges the documentation authority the docs
   evidence map requires.
+- The Windows leg of the hosted matrix selects its perl in bash. The PowerShell
+  step it replaced could not run at all: the interpolation `$perl:` is a
+  scope-qualified variable reference, so the step was a parse error on every
+  Windows job and its failure said nothing about perl. The new `ci-shell` gate
+  holds every step of a Windows-capable workflow to declaring `shell: bash`,
+  because a step with no shell key runs under PowerShell on a Windows runner.
 - An artifact under `release/evidence` is written only when the tree it records
   can be identified. The recorder captures one `git:<commit>:dirty=false` or
   `git:<commit>:dirty=true:worktree=<digest>` fingerprint per run, stamps it at
