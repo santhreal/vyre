@@ -22,6 +22,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 fn workspace_root() -> PathBuf {
     structure_gate::workspace_root()
@@ -73,6 +74,37 @@ fn rust_sources(dir: &Path) -> Vec<PathBuf> {
         .map(walkdir::DirEntry::into_path)
         .filter(|path| path.extension().is_some_and(|extension| extension == "rs"))
         .collect()
+}
+
+/// Macros whose expansion holds an `inventory::submit!`, derived from the whole
+/// workspace.
+///
+/// A macro defined in one crate and invoked from another submits on the
+/// caller's behalf, so the definitions are read from every member rather than
+/// from the crate under inspection. Reading them from the tree is what keeps
+/// this walker off a hand-written list of macro names: the last one held four of
+/// the eighteen submitting macros the workspace already had, and a new one is
+/// judged the day it is written.
+static SUBMITTING_MACROS: LazyLock<BTreeSet<String>> = LazyLock::new(|| {
+    let root = workspace_root();
+    let mut definitions: BTreeMap<String, String> = BTreeMap::new();
+    for member in structure_gate::workspace_members(&root) {
+        for file in rust_sources(&root.join(member).join("src")) {
+            let Ok(text) = fs::read_to_string(&file) else {
+                continue;
+            };
+            definitions.extend(structure_gate::registration_macro::macro_definitions(&text));
+        }
+    }
+    structure_gate::registration_macro::submitting_macros(&definitions)
+});
+
+/// True when `line` opens an invocation of a macro that submits a registration.
+fn opens_submitting_invocation(line: &str) -> bool {
+    line.starts_with("inventory::submit!")
+        || SUBMITTING_MACROS
+            .iter()
+            .any(|name| line.strip_prefix(name.as_str()).is_some_and(|rest| rest.starts_with('!')))
 }
 
 /// Features gating each module path in a crate, read from the `#[cfg(feature =
@@ -171,7 +203,7 @@ fn submitting_files(crate_dir: &Path) -> BTreeMap<String, Vec<BTreeSet<String>>>
         // questions are `structure_gate`'s, which is where the scan that reads
         // the same files answers them.
         let text = structure_gate::cfg_test::strip_cfg_test_items(&raw);
-        if !structure_gate::submits_registrations(&text) {
+        if !structure_gate::submits_registrations(&text, &SUBMITTING_MACROS) {
             continue;
         }
         let relative = file
@@ -197,12 +229,7 @@ fn submitting_files(crate_dir: &Path) -> BTreeMap<String, Vec<BTreeSet<String>>>
         let mut attribute: Option<&str> = None;
         for line in text.lines() {
             let line = line.trim();
-            if line.starts_with("inventory::submit!")
-                || line.starts_with("submit_hardware_intrinsic!")
-                || line.starts_with("submit_intrinsic_operation!")
-                || line.starts_with("define_unary_u32_hardware_intrinsic!")
-                || line.starts_with("define_barrier_u32_hardware_intrinsic!")
-            {
+            if opens_submitting_invocation(line) {
                 if let Some(gate) = attribute.filter(|gate| gate.contains("feature")) {
                     let features = feature_names(gate);
                     if !features.is_empty() {
