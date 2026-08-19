@@ -1417,10 +1417,7 @@ pub fn execute_two_stage_pipeline(
 
 #[test]
 fn test_workspace_findings() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf();
+    let root = structure_gate::workspace_root();
     let tree = Tree::open(&root).unwrap();
     let sources = tree.rust(TARGET_ROOTS).unwrap();
     let test_scoped = test_module_files(&tree, &sources).unwrap();
@@ -1440,10 +1437,7 @@ fn test_workspace_findings() {
 /// run time, so a new one is covered without editing this test.
 #[test]
 fn a_cfg_test_module_named_by_a_path_attribute_is_test_scoped() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf();
+    let root = structure_gate::workspace_root();
     let tree = Tree::open(&root).unwrap();
     let sources = tree.rust(TARGET_ROOTS).unwrap();
     let test_scoped = test_module_files(&tree, &sources).unwrap();
