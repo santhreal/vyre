@@ -1,56 +1,17 @@
 use std::collections::BTreeMap;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
+    ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DeviceFacts, Digest,
-    ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
-    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    ArtifactNodeId, ArtifactValueId, TargetResourceAccess, TargetResourceMemory,
 };
 
-use crate::materialize::{
-    retained_chain_relates, unbound_input, unbound_resident_buffer, InstanceCore, NEUTRAL_MESSAGES,
+use crate::materialize::materialize_test_fixtures::{
+    binding, compile_graph, contract, entry_point, test_instance_core, test_payload,
 };
-use crate::{BackendError, BindingPlan, DeviceIdentity, Resource};
-
-fn test_format() -> TargetPayloadFormat {
-    TargetPayloadFormat::new("test.target-binary", 1).unwrap()
-}
-
-fn test_profile() -> TargetProfile {
-    TargetProfile::new("test.target-binary", 1, [32, 1, 1], 32, 1024, 0).unwrap()
-}
-
-fn test_device() -> DeviceIdentity {
-    DeviceIdentity {
-        backend: "test",
-        device: "test-device".into(),
-        generation: 1,
-    }
-}
-
-fn test_instance_core(
-    artifact: &Artifact,
-    payload: &TargetPayload,
-) -> Result<InstanceCore, BackendError> {
-    InstanceCore::new_with_module_slots(
-        artifact,
-        payload,
-        test_device(),
-        NEUTRAL_MESSAGES,
-        vec![BTreeMap::new(); artifact.fusion().len()],
-    )
-}
-
-fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
-    ValueContract {
-        dtype: DataType::U32,
-        shape: vec![ShapeDim::Known(32)],
-        access,
-        lifetime,
-    }
-}
+use crate::materialize::{retained_chain_relates, unbound_input, unbound_resident_buffer};
+use crate::{BackendError, BindingPlan, Resource};
 
 #[test]
 fn sparse_and_reordered_module_binding_identities() {
@@ -111,57 +72,36 @@ fn sparse_and_reordered_module_binding_identities() {
         .unwrap();
     let res_id = outputs[0];
 
-    let req = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-
-    let artifact = compile(&req).expect("compilation must succeed");
+    let artifact = compile_graph(graph);
 
     let bindings = vec![
-        TargetResourceBinding {
-            resource: ArtifactValueId(val_y.0),
-            group: 0,
-            slot: 0,
-            memory: TargetResourceMemory::Global,
-            access: TargetResourceAccess::ReadOnly,
-        },
-        TargetResourceBinding {
-            resource: ArtifactValueId(val_x.0),
-            group: 0,
-            slot: 1,
-            memory: TargetResourceMemory::Global,
-            access: TargetResourceAccess::ReadOnly,
-        },
-        TargetResourceBinding {
-            resource: ArtifactValueId(res_id.0),
-            group: 0,
-            slot: 2,
-            memory: TargetResourceMemory::Global,
-            access: TargetResourceAccess::WriteOnly,
-        },
+        binding(
+            ArtifactValueId(val_y.0),
+            0,
+            0,
+            TargetResourceMemory::Global,
+            TargetResourceAccess::ReadOnly,
+        ),
+        binding(
+            ArtifactValueId(val_x.0),
+            0,
+            1,
+            TargetResourceMemory::Global,
+            TargetResourceAccess::ReadOnly,
+        ),
+        binding(
+            ArtifactValueId(res_id.0),
+            0,
+            2,
+            TargetResourceMemory::Global,
+            TargetResourceAccess::WriteOnly,
+        ),
     ];
 
-    let payload = TargetPayload::new(
+    let payload = test_payload(
         &artifact,
-        test_format(),
-        test_profile(),
-        vec![TargetEntryPoint {
-            name: "entry0".into(),
-            node: ArtifactNodeId(0),
-            workgroup_size: [32, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
-            resource_bindings: bindings,
-        }],
-        vec![1, 2, 3],
-    )
-    .unwrap();
+        vec![entry_point("entry0", ArtifactNodeId(0), bindings)],
+    );
 
     let core = test_instance_core(&artifact, &payload).unwrap();
     let plan0 = BindingPlan::build(&program0).unwrap();
@@ -337,64 +277,44 @@ fn transitive_retained_predecessor_lineage_preservation() {
     let state_final = seg1_outputs[0];
     let out_id = seg1_outputs[1];
 
-    let req = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
+    let artifact = compile_graph(graph);
 
-    let artifact = compile(&req).expect("compilation must succeed");
-
-    let payload = TargetPayload::new(
+    let payload = test_payload(
         &artifact,
-        test_format(),
-        test_profile(),
         vec![
-            TargetEntryPoint {
-                name: "seg0_entry".into(),
-                node: ArtifactNodeId(node0.0),
-                workgroup_size: [32, 1, 1],
-                grid_size: [1, 1, 1],
-                dynamic_shared_bytes: 0,
-                resource_bindings: vec![TargetResourceBinding {
-                    resource: ArtifactValueId(state_mid.0),
-                    group: 0,
-                    slot: 0,
-                    memory: TargetResourceMemory::Global,
-                    access: TargetResourceAccess::ReadWrite,
-                }],
-            },
-            TargetEntryPoint {
-                name: "seg1_entry".into(),
-                node: ArtifactNodeId(node1.0),
-                workgroup_size: [32, 1, 1],
-                grid_size: [1, 1, 1],
-                dynamic_shared_bytes: 0,
-                resource_bindings: vec![
-                    TargetResourceBinding {
-                        resource: ArtifactValueId(state_final.0),
-                        group: 0,
-                        slot: 0,
-                        memory: TargetResourceMemory::Global,
-                        access: TargetResourceAccess::ReadWrite,
-                    },
-                    TargetResourceBinding {
-                        resource: ArtifactValueId(out_id.0),
-                        group: 0,
-                        slot: 1,
-                        memory: TargetResourceMemory::Global,
-                        access: TargetResourceAccess::WriteOnly,
-                    },
+            entry_point(
+                "seg0_entry",
+                ArtifactNodeId(node0.0),
+                vec![binding(
+                    ArtifactValueId(state_mid.0),
+                    0,
+                    0,
+                    TargetResourceMemory::Global,
+                    TargetResourceAccess::ReadWrite,
+                )],
+            ),
+            entry_point(
+                "seg1_entry",
+                ArtifactNodeId(node1.0),
+                vec![
+                    binding(
+                        ArtifactValueId(state_final.0),
+                        0,
+                        0,
+                        TargetResourceMemory::Global,
+                        TargetResourceAccess::ReadWrite,
+                    ),
+                    binding(
+                        ArtifactValueId(out_id.0),
+                        0,
+                        1,
+                        TargetResourceMemory::Global,
+                        TargetResourceAccess::WriteOnly,
+                    ),
                 ],
-            },
+            ),
         ],
-        vec![1, 2, 3],
-    )
-    .unwrap();
+    );
 
     let core = test_instance_core(&artifact, &payload).unwrap();
     assert_eq!(
@@ -575,43 +495,31 @@ fn later_module_inputs_and_outputs_resolve_by_named_entry_identity() {
         )
         .unwrap();
     let out1 = outputs1[0];
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    let artifact = compile(&request).expect("compilation must succeed");
-    let entry = |node, input, output| TargetEntryPoint {
-        name: "main".into(),
-        node,
-        workgroup_size: [32, 1, 1],
-        grid_size: [1, 1, 1],
-        dynamic_shared_bytes: 0,
-        resource_bindings: vec![
-            TargetResourceBinding {
-                resource: input,
-                group: 0,
-                slot: 0,
-                memory: TargetResourceMemory::Global,
-                access: TargetResourceAccess::ReadOnly,
-            },
-            TargetResourceBinding {
-                resource: output,
-                group: 0,
-                slot: 1,
-                memory: TargetResourceMemory::Global,
-                access: TargetResourceAccess::WriteOnly,
-            },
-        ],
+    let artifact = compile_graph(graph);
+    let entry = |node, input, output| {
+        entry_point(
+            "main",
+            node,
+            vec![
+                binding(
+                    input,
+                    0,
+                    0,
+                    TargetResourceMemory::Global,
+                    TargetResourceAccess::ReadOnly,
+                ),
+                binding(
+                    output,
+                    0,
+                    1,
+                    TargetResourceMemory::Global,
+                    TargetResourceAccess::WriteOnly,
+                ),
+            ],
+        )
     };
-    let payload = TargetPayload::new(
+    let payload = test_payload(
         &artifact,
-        test_format(),
-        test_profile(),
         vec![
             entry(
                 ArtifactNodeId(node0.0),
@@ -624,9 +532,7 @@ fn later_module_inputs_and_outputs_resolve_by_named_entry_identity() {
                 ArtifactValueId(out1.0),
             ),
         ],
-        vec![1, 2, 3],
-    )
-    .unwrap();
+    );
     let core = test_instance_core(&artifact, &payload).unwrap();
     let module0 = core
         .module_named_resources
@@ -733,48 +639,31 @@ fn write_only_binding_of_an_output_value_is_output_only() {
         .unwrap();
     let out_id = outputs[0];
 
-    let req = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
+    let artifact = compile_graph(graph);
 
-    let artifact = compile(&req).expect("compilation must succeed");
-
-    let payload = TargetPayload::new(
+    let payload = test_payload(
         &artifact,
-        test_format(),
-        test_profile(),
-        vec![TargetEntryPoint {
-            name: "entry0".into(),
-            node: ArtifactNodeId(0),
-            workgroup_size: [32, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
-            resource_bindings: vec![
-                TargetResourceBinding {
-                    resource: ArtifactValueId(val_in.0),
-                    group: 0,
-                    slot: 0,
-                    memory: TargetResourceMemory::Global,
-                    access: TargetResourceAccess::ReadOnly,
-                },
-                TargetResourceBinding {
-                    resource: ArtifactValueId(out_id.0),
-                    group: 0,
-                    slot: 1,
-                    memory: TargetResourceMemory::Global,
-                    access: TargetResourceAccess::WriteOnly,
-                },
+        vec![entry_point(
+            "entry0",
+            ArtifactNodeId(0),
+            vec![
+                binding(
+                    ArtifactValueId(val_in.0),
+                    0,
+                    0,
+                    TargetResourceMemory::Global,
+                    TargetResourceAccess::ReadOnly,
+                ),
+                binding(
+                    ArtifactValueId(out_id.0),
+                    0,
+                    1,
+                    TargetResourceMemory::Global,
+                    TargetResourceAccess::WriteOnly,
+                ),
             ],
-        }],
-        vec![1, 2, 3],
-    )
-    .unwrap();
+        )],
+    );
 
     let core = test_instance_core(&artifact, &payload).unwrap();
     assert_eq!(core.module_inputs[0], vec![ArtifactValueId(val_in.0)]);
@@ -865,16 +754,7 @@ fn a_read_write_buffer_keeps_both_ends_of_its_retained_chain_under_one_name() {
         .unwrap();
     let state_next = outputs[0];
 
-    let req = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        DeviceFacts::unknown(),
-        SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-        1_000_000,
-    )
-    .validate()
-    .unwrap();
-    let artifact = compile(&req).expect("compilation must succeed");
+    let artifact = compile_graph(graph);
 
     // The ABI is what the guard reads: one name, two identities, one chain.
     let abi_entry = artifact
@@ -900,27 +780,20 @@ fn a_read_write_buffer_keeps_both_ends_of_its_retained_chain_under_one_name() {
         "the fixture must exercise two identities under one name"
     );
 
-    let payload = TargetPayload::new(
+    let payload = test_payload(
         &artifact,
-        test_format(),
-        test_profile(),
-        vec![TargetEntryPoint {
-            name: "step_entry".into(),
-            node: ArtifactNodeId(node.0),
-            workgroup_size: [32, 1, 1],
-            grid_size: [1, 1, 1],
-            dynamic_shared_bytes: 0,
-            resource_bindings: vec![TargetResourceBinding {
-                resource: ArtifactValueId(state_next.0),
-                group: 0,
-                slot: 0,
-                memory: TargetResourceMemory::Global,
-                access: TargetResourceAccess::ReadWrite,
-            }],
-        }],
-        vec![1, 2, 3],
-    )
-    .unwrap();
+        vec![entry_point(
+            "step_entry",
+            ArtifactNodeId(node.0),
+            vec![binding(
+                ArtifactValueId(state_next.0),
+                0,
+                0,
+                TargetResourceMemory::Global,
+                TargetResourceAccess::ReadWrite,
+            )],
+        )],
+    );
 
     let core = test_instance_core(&artifact, &payload)
         .expect("a ReadWrite buffer's own read and write identities are not a name collision");
@@ -1048,46 +921,24 @@ fn payload_access_decides_projection_membership_at_every_lifetime() {
                 .unwrap();
             let acc_id = ArtifactValueId(outputs[0].0);
 
-            let req = CompileRequest::new(
-                graph,
-                ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-                DeviceFacts::unknown(),
-                SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
-                1_000_000,
-            )
-            .validate()
-            .unwrap();
-            let artifact = compile(&req).expect("compilation must succeed");
-            let payload = TargetPayload::new(
+            let artifact = compile_graph(graph);
+            let payload = test_payload(
                 &artifact,
-                test_format(),
-                test_profile(),
-                vec![TargetEntryPoint {
-                    name: "entry0".into(),
-                    node: ArtifactNodeId(0),
-                    workgroup_size: [32, 1, 1],
-                    grid_size: [1, 1, 1],
-                    dynamic_shared_bytes: 0,
-                    resource_bindings: vec![
-                        TargetResourceBinding {
-                            resource: ArtifactValueId(val_in.0),
-                            group: 0,
-                            slot: 0,
-                            memory: TargetResourceMemory::Global,
-                            access: TargetResourceAccess::ReadOnly,
-                        },
-                        TargetResourceBinding {
-                            resource: acc_id,
-                            group: 0,
-                            slot: 1,
-                            memory: TargetResourceMemory::Global,
-                            access,
-                        },
+                vec![entry_point(
+                    "entry0",
+                    ArtifactNodeId(0),
+                    vec![
+                        binding(
+                            ArtifactValueId(val_in.0),
+                            0,
+                            0,
+                            TargetResourceMemory::Global,
+                            TargetResourceAccess::ReadOnly,
+                        ),
+                        binding(acc_id, 0, 1, TargetResourceMemory::Global, access),
                     ],
-                }],
-                vec![1, 2, 3],
-            )
-            .unwrap();
+                )],
+            );
 
             let core = test_instance_core(&artifact, &payload).unwrap();
             let (reads, writes) = reads_and_writes(access);

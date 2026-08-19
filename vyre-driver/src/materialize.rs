@@ -781,6 +781,10 @@ impl InstanceCore {
     }
 }
 
+#[path = "materialize_test_fixtures.rs"]
+#[cfg(test)]
+mod materialize_test_fixtures;
+
 #[path = "materialize_tests.rs"]
 #[cfg(test)]
 mod materialize_tests;
