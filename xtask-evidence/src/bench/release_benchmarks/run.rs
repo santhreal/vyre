@@ -25,6 +25,9 @@ use super::suite_inspect::{
 
 const MATRIX_ARTIFACT: &str = "release/evidence/benchmarks/release-workload-matrix.json";
 
+/// Where the refusal to measure on a shared device is reported.
+const BENCHMARK_EVIDENCE: &str = "release/evidence/benchmarks";
+
 pub(crate) struct ReleaseBenchmarksGate;
 
 impl xtask::gate::GateBehavior for ReleaseBenchmarksGate {
@@ -161,6 +164,10 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
         report.find(finding);
     }
     if !matrix_clean {
+        return;
+    }
+    if let Some(finding) = shared_device_finding() {
+        report.find(finding);
         return;
     }
     let Some(matrix) = read_matrix(&workspace_root, report) else {
@@ -438,6 +445,44 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
     } else {
         format!("wrote {ran} benchmark artifact(s)")
     });
+}
+
+/// Why this host cannot record a release baseline right now, if it cannot.
+///
+/// The telemetry the suite records says what the device was doing; it does not
+/// stop a measurement from being taken while another process owns the device. A
+/// model server holding most of the device and waking on every request moves a
+/// kernel's measured time by more than any optimization in this tree, and the
+/// recorded speedup is then a wrong number carrying a correct fingerprint. So
+/// exclusivity is a precondition of recording rather than a field in the result,
+/// and a device that cannot be asked is not idle either.
+fn shared_device_finding() -> Option<Finding> {
+    match vyre_bench::probes::foreign_compute_apps(std::process::id()) {
+        Ok(apps) if apps.is_empty() => None,
+        Ok(apps) => {
+            let holders = apps
+                .iter()
+                .map(vyre_bench::probes::ComputeApp::describe)
+                .collect::<Vec<_>>()
+                .join(", ");
+            Some(Finding::in_file(
+                std::path::PathBuf::from(BENCHMARK_EVIDENCE),
+                format!(
+                    "the device is held by {} other process(es): {holders}",
+                    apps.len()
+                ),
+                "Record the baseline on a device nothing else is using. A measurement taken \
+                 while another process owns the device is a wrong number with a correct source \
+                 fingerprint, which is worse than no baseline.",
+            ))
+        }
+        Err(error) => Some(Finding::in_file(
+            std::path::PathBuf::from(BENCHMARK_EVIDENCE),
+            format!("the device could not be asked whether it is idle: {error}"),
+            "Repair driver visibility on the release host. A device that cannot be asked \
+             cannot be shown to have been idle, and the baseline is not recorded against it.",
+        )),
+    }
 }
 
 /// Record one generator step's failure as a finding, and say whether it ran.
