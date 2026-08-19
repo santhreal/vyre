@@ -3560,6 +3560,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   whose backend is the reference interpreter and whose operation records no
   expected outputs now fails with that reason, because comparing the
   interpreter against itself is not evidence.
+- A backend feature marker names the module that implements a capability and
+  read only the single file it pointed at, so splitting that module reported
+  the capability gone while nothing about the capability had changed:
+  `runtime-artifact-admission` stopped seeing `materialize` and
+  `wgpu-disk-cache` stopped seeing `MAX_PENDING_DURABLE_CACHE_FILES` once each
+  moved into a submodule beside its `mod.rs`. A marker now reads every
+  production file of the module it names, `tests.rs` and any `tests/` directory
+  excluded, because a token only a test writes is not an implementation.
+  `cuda-resident-io` was a genuinely different case and is split: `resident_io`
+  and `resident_io_download` are sibling modules, so the sparse readback
+  batching path is its own marker rather than a token demanded of a module that
+  does not hold it.
 - The benchmark harness builds its compile request from the probed backend
   profile instead of unknown device facts, so a case that uses subgroup
   intrinsics is measured on a device that has them rather than recorded as a

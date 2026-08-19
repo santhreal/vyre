@@ -174,12 +174,14 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     BackendFeatureRequirement {
         id: "cuda-resident-io",
         relative: "vyre-driver-cuda/src/backend/resident_io.rs",
-        role: "CUDA resident input/output buffers and sparse readback batching",
-        tokens: &[
-            "download_resident_readbacks_many",
-            "upload_resident_at_many",
-            "resident_device_ptr",
-        ],
+        role: "CUDA resident input/output buffers",
+        tokens: &["upload_resident_at_many", "resident_device_ptr"],
+    },
+    BackendFeatureRequirement {
+        id: "cuda-resident-io-download",
+        relative: "vyre-driver-cuda/src/backend/resident_io_download.rs",
+        role: "CUDA sparse readback batching",
+        tokens: &["download_resident_readbacks_many"],
     },
     BackendFeatureRequirement {
         id: "cuda-graph-launch",
@@ -571,17 +573,27 @@ fn collect_feature_markers(
         let path = workspace_root.join(requirement.relative);
         let exists = path.is_file();
         let (text, read_error) = if exists {
-            match read_text_bounded(&path) {
-                Ok(text) => (text, None),
-                Err(error) => {
-                    blockers.push(format!(
-                        "backend feature marker `{}` could not be read at {}: {error}",
-                        requirement.id,
-                        path.display()
-                    ));
-                    (String::new(), Some(error.to_string()))
+            let mut module = String::new();
+            let mut first_error = None;
+            for file in module_source_files(&path) {
+                match read_text_bounded(&file) {
+                    Ok(part) => {
+                        module.push_str(&part);
+                        module.push('\n');
+                    }
+                    Err(error) => {
+                        blockers.push(format!(
+                            "backend feature marker `{}` could not be read at {}: {error}",
+                            requirement.id,
+                            file.display()
+                        ));
+                        if first_error.is_none() {
+                            first_error = Some(error.to_string());
+                        }
+                    }
                 }
             }
+            (module, first_error)
         } else {
             (String::new(), None)
         };
@@ -635,6 +647,45 @@ fn collect_feature_markers(
         });
     }
     markers
+}
+
+/// Every production source file of the module a marker names.
+///
+/// A marker names the module that implements a backend capability. While a
+/// module is one file that is the file, and once it is split the module is the
+/// directory its `mod.rs` heads, so reading only `mod.rs` would report a
+/// capability missing the moment its implementation moved into a submodule
+/// without anything about the capability changing. Test material is excluded:
+/// a token that only a test writes is not an implementation.
+fn module_source_files(root: &Path) -> Vec<std::path::PathBuf> {
+    if root.file_name().is_none_or(|name| name != "mod.rs") {
+        return vec![root.to_path_buf()];
+    }
+    let Some(directory) = root.parent() else {
+        return vec![root.to_path_buf()];
+    };
+    let mut files = Vec::new();
+    let mut pending = vec![directory.to_path_buf()];
+    while let Some(current) = pending.pop() {
+        let Ok(entries) = fs::read_dir(&current) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            if path.is_dir() {
+                if name != "tests" {
+                    pending.push(path);
+                }
+            } else if name.ends_with(".rs") && name != "tests.rs" {
+                files.push(path);
+            }
+        }
+    }
+    files.sort();
+    files
 }
 
 fn collect_backend_capability_rows(
@@ -1387,6 +1438,78 @@ mod tests {
             cuda_feature_marker_ids().contains(&"ldmatrix-cp-async"),
             "Fix: the async staging marker stays required."
         );
+    }
+
+    /// WHY: a marker names a capability's module, and a module that has been
+    /// split is a directory. Reading only `mod.rs` reported three capabilities
+    /// missing the moment their implementation moved into a submodule with
+    /// nothing about the capability changed. The fixture states the whole
+    /// class: the module root, a sibling submodule, and a nested submodule are
+    /// implementation; `tests.rs` and a `tests/` directory are not.
+    /// What it does not catch: a token a submodule spells differently from the
+    /// declaration.
+    #[test]
+    fn a_module_marker_reads_its_submodules_and_no_test_material() {
+        let fixture = tempfile::tempdir().expect("Fix: the fixture module needs a temp directory.");
+        let module = fixture.path().join("disk_cache");
+        fs::create_dir_all(module.join("nested")).expect("Fix: create the nested submodule.");
+        fs::create_dir_all(module.join("tests")).expect("Fix: create the test directory.");
+        for (relative, body) in [
+            ("mod.rs", "pub mod io;\n"),
+            ("io.rs", "const MAX_PENDING_DURABLE_CACHE_FILES: usize = 8;\n"),
+            ("nested/inner.rs", "fn inner() {}\n"),
+            ("tests.rs", "fn only_a_test() {}\n"),
+            ("tests/helper.rs", "fn only_a_helper() {}\n"),
+        ] {
+            fs::write(module.join(relative), body).expect("Fix: write the fixture file.");
+        }
+
+        let mut resolved = module_source_files(&module.join("mod.rs"));
+        resolved.sort();
+        let mut expected = vec![
+            module.join("mod.rs"),
+            module.join("io.rs"),
+            module.join("nested/inner.rs"),
+        ];
+        expected.sort();
+        assert_eq!(
+            resolved, expected,
+            "Fix: a module marker reads exactly the production files of the module it names."
+        );
+
+        let leaf = module.join("io.rs");
+        assert_eq!(
+            module_source_files(&leaf),
+            vec![leaf.clone()],
+            "Fix: a marker naming one file reads exactly that file."
+        );
+    }
+
+    /// WHY: the declarations are the population, so a marker added later is
+    /// held to the same two facts without anyone editing this test: it reads
+    /// the module root it names, and it never reads test material.
+    #[test]
+    fn every_declared_marker_reads_its_root_and_no_test_material() {
+        let root = xtask::checkout::checkout_root();
+        for requirement in CUDA_FEATURE_MARKERS.iter().chain(WGPU_FEATURE_MARKERS) {
+            let path = root.join(requirement.relative);
+            let files = module_source_files(&path);
+            assert!(
+                files.contains(&path),
+                "Fix: marker `{}` must still read the module root it names.",
+                requirement.id
+            );
+            for file in &files {
+                let name = file.file_name().and_then(|name| name.to_str()).unwrap_or("");
+                assert!(
+                    name != "tests.rs"
+                        && !file.components().any(|part| part.as_os_str() == "tests"),
+                    "Fix: marker `{}` must not read test material at {}.",
+                    requirement.id,
+                    file.display()
+                );
+            }
+        }
     }
 }
 
