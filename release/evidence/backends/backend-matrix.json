@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:290e9129a8ef746ebd78aa05369454e19de7a321:dirty=false",
+  "source_fingerprint": "git:7fa1d46aaa453f75e6946645e304b0bfb4078d04:dirty=false",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -29,7 +29,7 @@
       "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4509,
+      "source_bytes": 4510,
       "implementation_tokens": [
         "mma",
         "fragment"
@@ -43,7 +43,7 @@
       "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4881,
+      "source_bytes": 15567,
       "implementation_tokens": [
         "supports_async_copy",
         "supports_ldmatrix",
@@ -58,7 +58,7 @@
       "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14827,
+      "source_bytes": 14828,
       "implementation_tokens": [
         "predicate",
         "predicated"
@@ -72,7 +72,7 @@
       "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3598,
+      "source_bytes": 3599,
       "implementation_tokens": [
         "schedule",
         "latency"
@@ -86,7 +86,7 @@
       "path": "vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17725,
+      "source_bytes": 17726,
       "implementation_tokens": [
         "vector-load gap",
         "find_latency_filler_avoiding_results"
@@ -100,7 +100,7 @@
       "path": "vyre-emit-ptx/src/emitter/schedule.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4059,
+      "source_bytes": 4060,
       "implementation_tokens": [
         "KernelOpKind::Fma",
         "KernelOpKind::MatrixMma",
@@ -115,7 +115,7 @@
       "path": "vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14960,
+      "source_bytes": 14961,
       "implementation_tokens": [
         "ld.global",
         "v4"
@@ -129,7 +129,7 @@
       "path": "vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14960,
+      "source_bytes": 14961,
       "implementation_tokens": [
         "st.global",
         "v4"
@@ -143,7 +143,7 @@
       "path": "vyre-emit-ptx/src/emitter/async_copy.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 11322,
+      "source_bytes": 25764,
       "implementation_tokens": [
         "cp.async",
         "commit_group"
@@ -157,7 +157,7 @@
       "path": "vyre-emit-ptx/src/emitter/mma.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 3470,
+      "source_bytes": 3471,
       "implementation_tokens": [
         "mma",
         "sync"
@@ -171,7 +171,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_dispatch/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 13109,
+      "source_bytes": 128258,
       "implementation_tokens": [
         "dispatch_resident",
         "ptx"
@@ -185,22 +185,34 @@
       "path": "vyre-driver-cuda/src/backend/resident_io.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 42505,
+      "source_bytes": 18955,
       "implementation_tokens": [
-        "download_resident_readbacks_many",
         "upload_resident_at_many",
         "resident_device_ptr"
       ],
       "missing_tokens": [],
       "unresolved_markers": [],
-      "role": "CUDA resident input/output buffers and sparse readback batching"
+      "role": "CUDA resident input/output buffers"
+    },
+    {
+      "id": "cuda-resident-io-download",
+      "path": "vyre-driver-cuda/src/backend/resident_io_download.rs",
+      "exists": true,
+      "read_error": null,
+      "source_bytes": 24137,
+      "implementation_tokens": [
+        "download_resident_readbacks_many"
+      ],
+      "missing_tokens": [],
+      "unresolved_markers": [],
+      "role": "CUDA sparse readback batching"
     },
     {
       "id": "cuda-graph-launch",
       "path": "vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 51828,
+      "source_bytes": 29109,
       "implementation_tokens": [
         "record_cuda_graph",
         "cugraph"
@@ -214,7 +226,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache/module_registry.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 20949,
+      "source_bytes": 20950,
       "implementation_tokens": [
         "function_for_ptx",
         "ptx_target_sm"
@@ -228,7 +240,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache/ptx_source_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 20955,
+      "source_bytes": 20956,
       "implementation_tokens": [
         "CudaPtxSourceCache",
         "CudaPtxSourceCacheSnapshot",
@@ -246,7 +258,7 @@
       "path": "vyre-driver-cuda/src/backend/ptx_target.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4094,
+      "source_bytes": 4095,
       "implementation_tokens": [
         "select_loadable_ptx_target_sm",
         "cumoduleloaddata"
@@ -260,7 +272,7 @@
       "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9517,
+      "source_bytes": 9518,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
@@ -278,7 +290,7 @@
       "path": "vyre-driver-wgpu/src/materializer.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 16729,
+      "source_bytes": 16730,
       "implementation_tokens": [
         "impl ArtifactMaterializer",
         "fn materialize",
@@ -290,10 +302,10 @@
     },
     {
       "id": "runtime-artifact-admission",
-      "path": "vyre-runtime/src/artifact_admission.rs",
+      "path": "vyre-runtime/src/artifact_admission/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 43394,
+      "source_bytes": 44448,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"
@@ -307,7 +319,7 @@
       "path": "vyre-driver-wgpu/src/runtime/readback_ring/ring.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 19130,
+      "source_bytes": 19131,
       "implementation_tokens": [
         "ring",
         "readback"
@@ -321,7 +333,7 @@
       "path": "vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14566,
+      "source_bytes": 14575,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"
@@ -335,7 +347,7 @@
       "path": "vyre-driver-wgpu/src/engine/dispatch_scratch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 6266,
+      "source_bytes": 6267,
       "implementation_tokens": [
         "thread_local",
         "reset"
@@ -349,7 +361,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 49711,
+      "source_bytes": 23824,
       "implementation_tokens": [
         "cache",
         "pipeline",
@@ -364,7 +376,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/persistent.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 29349,
+      "source_bytes": 29350,
       "implementation_tokens": [
         "dispatch_persistent_batched",
         "dispatch_borrowed_persistent_batched",
@@ -379,7 +391,7 @@
       "path": "vyre-driver-wgpu/src/runtime/device/selector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 19484,
+      "source_bytes": 19485,
       "implementation_tokens": [
         "has_real_gpu_adapter",
         "DeviceType::Cpu"
@@ -393,7 +405,7 @@
       "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9517,
+      "source_bytes": 9518,
       "implementation_tokens": [
         "PairedSpeculationWindow",
         "record_sample",
