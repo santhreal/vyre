@@ -1,6 +1,6 @@
 //! # vyre-driver-cuda  -  CUDA/PTX backend for vyre
 //!
-//! Implements [`VyreBackend`] via the CUDA driver API through `cudarc`.
+//! Implements [`VyreBackend`](vyre_driver::VyreBackend) via the CUDA driver API through `cudarc`.
 //! Translates vyre `Program` IR into PTX kernels, loads them through
 //! the CUDA driver JIT, and dispatches on NVIDIA GPUs.
 //!

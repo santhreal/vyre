@@ -129,7 +129,7 @@ pub struct CudaMegakernelCachedPlan {
     pub decision: MegakernelTopologyDecision,
 }
 
-/// Runtime counters for [`CudaMegakernelPlanCache`].
+/// Runtime counters for [`CudaMegakernelPlanCache`](crate::CudaMegakernelPlanCache).
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct CudaMegakernelPlanCacheStats {
     /// Cache lookup hits.

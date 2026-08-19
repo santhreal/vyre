@@ -75,7 +75,7 @@ impl<'a> GpuMappedBuffer<'a> {
         concat!(
             "Construct from a raw pointer plus an explicit owner anchor.\n\n",
             "The borrow on `owner` forces the mapped region to outlive every derived ",
-            "[`AsyncUringStream`].\n\n",
+            "[`AsyncUringStream`](crate::uring::AsyncUringStream).\n\n",
             "# Safety\n\n",
             "The caller must ensure that `ptr` names a `len`-byte host-visible GPU ",
             "allocation owned by `owner`, and that no other code accesses the region ",
