@@ -238,6 +238,20 @@ mod tests {
         assert_eq!(crate::gate::usage_gaps(&registry()), Vec::<String>::new());
     }
 
+    /// WHY: a declared write argument exempts one invocation from the workspace
+    /// mutation guard, which is the guard that refuses a comparison run that
+    /// changed a tracked file. An undocumented exemption is unfindable, and a
+    /// gate with no declared artifact has nothing it is allowed to write, so the
+    /// roster is the registry and a gate that grows a write argument is judged
+    /// without being listed here.
+    #[test]
+    fn every_write_argument_is_documented_and_writes_a_declared_artifact() {
+        assert_eq!(
+            crate::gate::write_argument_gaps(&registry()),
+            Vec::<String>::new()
+        );
+    }
+
     /// WHY: a subset that names an unregistered gate silently runs fewer gates
     /// than its name promises, which is the exemption this whole registry
     /// exists to remove.

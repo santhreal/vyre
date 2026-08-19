@@ -600,6 +600,16 @@ pub trait GateBehavior: Sync {
     fn usage(&self) -> &'static [&'static str] {
         &[]
     }
+    /// Arguments besides `--write` that put this gate in write mode.
+    ///
+    /// The workspace mutation guard refuses a comparison run that changed a
+    /// tracked file. A gate that rewrites one owned artifact through an
+    /// argument of its own declares that argument here, so the guard reads the
+    /// invocation as the write it is instead of a comparison that mutated the
+    /// tree.
+    fn write_arguments(&self) -> &'static [&'static str] {
+        &[]
+    }
     /// Judge the tree and report what is wrong with it.
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError>;
 }
@@ -671,6 +681,26 @@ impl RegisteredGate {
         self.behavior.map_or(&[], |behavior| behavior.usage())
     }
 
+    /// Arguments besides `--write` that put this gate in write mode.
+    #[must_use]
+    pub fn write_arguments(&self) -> &'static [&'static str] {
+        self.behavior
+            .map_or(&[], |behavior| behavior.write_arguments())
+    }
+
+    /// Whether this invocation writes the workspace.
+    ///
+    /// `--write` says so for every gate, and a gate may also declare its own
+    /// argument that writes one owned artifact.
+    #[must_use]
+    pub fn writes(&self, ctx: &GateCtx) -> bool {
+        ctx.write
+            || self
+                .write_arguments()
+                .iter()
+                .any(|argument| ctx.has(argument))
+    }
+
     /// Judge the tree and report what is wrong with it.
     pub fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         match self.behavior {
@@ -740,6 +770,42 @@ pub fn usage_gaps(gates: &[RegisteredGate]) -> Vec<String> {
                 "gate `{}` names `{flag}` in its help line and does not answer `--help` with it",
                 gate.name()
             ));
+        }
+    }
+    gaps
+}
+
+/// Every write argument a gate declares that nothing else supports.
+///
+/// A declared write argument exempts that one invocation from the comparison
+/// mutation guard, so it has to be documented like any other option, and the
+/// gate has to own an artifact for it to write. The roster is the caller's gate
+/// table, so a gate added to it is judged without anyone listing it here.
+#[must_use]
+pub fn write_argument_gaps(gates: &[RegisteredGate]) -> Vec<String> {
+    let mut gaps = Vec::new();
+    for gate in gates {
+        let answered = gate.usage().join(" ");
+        for argument in gate.write_arguments() {
+            if *argument == "--write" {
+                gaps.push(format!(
+                    "gate `{}` declares `--write` as its own write argument, which skips the artifact-owner check every gate shares",
+                    gate.name()
+                ));
+                continue;
+            }
+            if !answered.contains(argument) {
+                gaps.push(format!(
+                    "gate `{}` writes through `{argument}` and does not answer `--help` with it",
+                    gate.name()
+                ));
+            }
+            if !gate.generates() {
+                gaps.push(format!(
+                    "gate `{}` writes through `{argument}` and its descriptor declares no artifact",
+                    gate.name()
+                ));
+            }
         }
     }
     gaps
@@ -833,6 +899,22 @@ mod tests {
         }
     }
 
+    struct WritesThroughOwnArgument;
+
+    impl GateBehavior for WritesThroughOwnArgument {
+        fn usage(&self) -> &'static [&'static str] {
+            &["--lower-pin CRATE lowers one pinned row"]
+        }
+
+        fn write_arguments(&self) -> &'static [&'static str] {
+            &["--lower-pin"]
+        }
+
+        fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+            Ok(Report::clean())
+        }
+    }
+
     /// WHY: usage is an answer, not an exit and not a run. A gate asked for its
     /// options printed a table and reported clean, so the caller who asked what
     /// the check takes got the check instead. The answer names the command, what
@@ -870,6 +952,37 @@ mod tests {
 
         assert_eq!(comparison.run(&ctx).unwrap().notes, ["false"]);
         assert_eq!(generator.run(&ctx).unwrap().notes, ["true"]);
+    }
+
+    /// WHY: the workspace mutation guard refuses a comparison run that changed a
+    /// tracked file, and it read `--write` alone. `dup-scan --lower-pin` writes
+    /// one pinned row by design, so every pin lowering was reported as a
+    /// violation and exited 1 after having already written the file. A gate that
+    /// writes through an argument of its own declares it, and only that argument
+    /// makes the invocation a write.
+    #[test]
+    fn a_declared_write_argument_makes_the_invocation_a_write() {
+        let descriptor = crate::gate_metadata::descriptor_by_name("dup-scan");
+        let declaring = RegisteredGate::new(descriptor, &WritesThroughOwnArgument);
+        let comparing = RegisteredGate::new(descriptor, &ReportsWrite);
+        let lowering = GateCtx::new(
+            PathBuf::from("."),
+            vec!["--lower-pin".to_string(), "vyre-libs".to_string()],
+        );
+        let reporting = GateCtx::new(PathBuf::from("."), vec!["--report".to_string()]);
+
+        assert!(declaring.writes(&lowering));
+        assert!(!declaring.writes(&reporting));
+        assert!(!comparing.writes(&lowering));
+        assert!(comparing.writes(&GateCtx::new(
+            PathBuf::from("."),
+            vec!["--write".to_string()]
+        )));
+        assert!(
+            write_argument_gaps(&[declaring]).is_empty(),
+            "{:?}",
+            write_argument_gaps(&[declaring])
+        );
     }
     /// WHY: only the leading flag is a usage request. `--only --help` names a
     /// case called `--help`, which is the gate's to refuse, and a gate that read

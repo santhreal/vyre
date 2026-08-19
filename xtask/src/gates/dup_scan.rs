@@ -484,6 +484,10 @@ impl crate::gate::GateBehavior for DupScan {
         ]
     }
 
+    fn write_arguments(&self) -> &'static [&'static str] {
+        &["--lower-pin"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
         let mut report = Report::clean();

@@ -51,7 +51,8 @@ fn main() {
     let declared_artifacts = descriptor.artifacts;
     let snapshot = xtask::artifact_gate::WorkspaceSnapshot::capture(&ctx.root);
     let result = gate.run(&ctx);
-    let mutations = snapshot.detect_mutations(&ctx.root, name, declared_artifacts, ctx.write);
+    let mutations =
+        snapshot.detect_mutations(&ctx.root, name, declared_artifacts, gate.writes(&ctx));
     if !mutations.is_empty() {
         for mutation in mutations {
             eprintln!("Fix: {mutation}");
