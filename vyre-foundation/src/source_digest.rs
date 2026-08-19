@@ -208,17 +208,33 @@ fn collect_files(
     Ok(())
 }
 
+/// Read `path` as digest input, refusing before the read crosses the cap.
+///
+/// The cap is applied to the read itself, not to the result: a single file
+/// larger than the remaining budget is never held in memory. The reader takes
+/// one byte more than the budget allows, so a file that exactly fills the
+/// budget is still accepted and the next byte is what reports the overrun.
 fn read_bounded(path: &Path, read: &mut u64) -> Result<Vec<u8>, SourceDigestError> {
-    let bytes = std::fs::read(path).map_err(|source| SourceDigestError::File {
+    use std::io::Read;
+
+    let remaining = MAX_SOURCE_DIGEST_BYTES.saturating_sub(*read);
+    let file = std::fs::File::open(path).map_err(|source| SourceDigestError::File {
         path: path.to_path_buf(),
         source,
     })?;
-    *read = read.saturating_add(bytes.len() as u64);
-    if *read > MAX_SOURCE_DIGEST_BYTES {
+    let mut bytes = Vec::new();
+    file.take(remaining.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|source| SourceDigestError::File {
+            path: path.to_path_buf(),
+            source,
+        })?;
+    if bytes.len() as u64 > remaining {
         return Err(SourceDigestError::TooLarge {
             path: path.to_path_buf(),
             limit: MAX_SOURCE_DIGEST_BYTES,
         });
     }
+    *read = read.saturating_add(bytes.len() as u64);
     Ok(bytes)
 }

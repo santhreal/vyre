@@ -178,6 +178,39 @@ fn the_cap_bounds_the_whole_tree_not_one_file() {
     );
 }
 
+/// WHY: the cap used to be checked after the file was already in memory, so the
+/// read itself was unbounded. A source path that names a stream with no end
+/// answers `read` forever: the walk never returns and the build hangs instead of
+/// refusing. The bound now belongs to the read, so an endless input terminates
+/// with the cap it crossed.
+///
+/// What this does not catch: a sparse regular file, which reports its length and
+/// ends on its own.
+#[cfg(unix)]
+#[test]
+fn an_endless_source_file_terminates_with_the_cap() {
+    let tree = package(&[("lib.rs", b"fn main() {}")]);
+    let endless = tree.path().join("src").join("endless.rs");
+    std::os::unix::fs::symlink("/dev/zero", &endless)
+        .expect("Fix: the test needs a symlink to an endless stream.");
+    let error = source_tree_digest(tree.path(), DOMAIN)
+        .expect_err("Fix: an endless source file must be refused, not read to its end.");
+    let SourceDigestError::TooLarge { path, limit } = error else {
+        panic!(
+            "Fix: an endless source file reported {error:?} instead of crossing the cap, so the \
+             read is not bounded by the budget."
+        );
+    };
+    assert_eq!(
+        limit, MAX_SOURCE_DIGEST_BYTES,
+        "Fix: the refusal must state the cap it applied."
+    );
+    assert_eq!(
+        path, endless,
+        "Fix: the refusal must name the file that crossed the cap."
+    );
+}
+
 #[test]
 fn the_directives_ask_cargo_to_rerun_for_the_tree_it_digested() {
     let tree = package(&[("lib.rs", b"fn main() {}")]);
