@@ -9,7 +9,7 @@
 //! What this does not catch: a cache that never mixes the digest in. The driver
 //! crates own that side.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use tempfile::TempDir;
 use vyre_foundation::source_digest::{
@@ -173,7 +173,7 @@ fn the_cap_bounds_the_whole_tree_not_one_file() {
     );
     assert_eq!(
         path,
-        PathBuf::from(tree.path().join("src").join("second.rs")),
+        tree.path().join("src").join("second.rs"),
         "Fix: the refusal must name the file that crossed the cap."
     );
 }
