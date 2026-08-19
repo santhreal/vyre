@@ -16,6 +16,7 @@
 
 #![forbid(unsafe_code)]
 
+use structure_gate::backend_vocabulary::is_test_source;
 use structure_gate::module_layout::{
     directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
     sibling_module_failures, source_test_directory_failures,
@@ -128,6 +129,30 @@ fn the_registration_scan_is_not_vacuous() {
         "expected the workspace to register far more than {} operations; the source scan is broken, \
          and every registration rule above is passing vacuously",
         registrations.len()
+    );
+}
+
+/// The scan reads production code only.
+///
+/// An integration test registers fixture operations to drive the registry it
+/// tests, and those ids ship in nothing. Counting them convicted seven crates
+/// of owning operations and told each to move its fixture into a category
+/// crate, where the fixture would then ship. The `#[cfg(test)]` half of this is
+/// stripped per file; a `tests/` directory carries no attribute the file can
+/// see, so it is judged by path.
+#[test]
+fn no_production_registration_comes_from_a_test_source() {
+    let registrations = workspace().registrations;
+    let from_tests: Vec<&str> = registrations
+        .iter()
+        .filter(|registration| is_test_source(&registration.file))
+        .map(|registration| registration.file.as_str())
+        .collect();
+
+    assert!(
+        from_tests.is_empty(),
+        "{from_tests:#?} are test sources, and their fixture registrations are being judged as \
+         production operations. Fix: skip a test source in the registration scan."
     );
 }
 

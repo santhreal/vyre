@@ -311,6 +311,72 @@ pub fn opaque_span(text: &str, at: usize) -> Option<NonZeroUsize> {
     prefixed_literal_len(text, at).and_then(at_least_one_byte)
 }
 
+/// Advance past whitespace and opaque spans, returning the next code offset.
+///
+/// Every text scanner in the gate walks a cursor over source it does not
+/// compile, and between two tokens it must step over comments, string literals
+/// and whitespace alike. Six copies of this loop once sat in the registration
+/// scanners, and a copy that stepped over whitespace but not a comment read the
+/// comment as the next token.
+///
+/// Use this only where the next token is code. Where a literal is the value
+/// being read, a walk that steps over it reads past the answer, which is what
+/// [`skip_comments_and_space`] exists for.
+///
+/// The answer is monotone: [`opaque_span`] measures at least one byte, so a
+/// cursor inside a span always advances and the walk terminates.
+pub fn skip_opaque(text: &str, at: usize) -> usize {
+    let bytes = text.as_bytes();
+    let mut cursor = at;
+    while cursor < bytes.len() {
+        if let Some(span) = opaque_span(text, cursor) {
+            cursor += span.get();
+            continue;
+        }
+        if bytes[cursor].is_ascii_whitespace() {
+            cursor += 1;
+        } else {
+            break;
+        }
+    }
+    cursor
+}
+
+/// Advance past whitespace and comments, leaving a literal where it is.
+///
+/// A struct-literal field is read as `name: value`, and the value is often a
+/// string. A walk that treated every opaque span as trivia would step over the
+/// value and report the next field's text as this field's value.
+pub fn skip_comments_and_space(text: &str, at: usize) -> usize {
+    let bytes = text.as_bytes();
+    let mut cursor = at;
+    while cursor < bytes.len() {
+        if let Some(span) = comment_span(text, cursor) {
+            cursor += span;
+            continue;
+        }
+        if bytes[cursor].is_ascii_whitespace() {
+            cursor += 1;
+        } else {
+            break;
+        }
+    }
+    cursor
+}
+
+/// Byte length of the comment starting at `at`, and `None` for anything else.
+///
+/// A literal is an opaque span but not a comment, so this refuses one: it is the
+/// predicate [`skip_comments_and_space`] needs and [`opaque_span`] is too wide
+/// for.
+pub fn comment_span(text: &str, at: usize) -> Option<usize> {
+    let rest = text.get(at..)?;
+    if !rest.starts_with("//") && !rest.starts_with("/*") {
+        return None;
+    }
+    opaque_span(text, at).map(NonZeroUsize::get)
+}
+
 /// The one place the non-zero guarantee is made.
 ///
 /// Every arm of [`opaque_span`] measures at least one byte: a line comment is

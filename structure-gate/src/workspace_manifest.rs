@@ -5,6 +5,7 @@
 //! module reads workspace manifests, locates member and crate source roots,
 //! and scans discarding imports and inventory registration submitters.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -259,16 +260,19 @@ pub fn workspace_root_from(start: &Path) -> Option<PathBuf> {
 /// True when this source text submits an inventory registration.
 ///
 /// Comments are skipped, so a doc comment explaining the linkage rule is not
-/// mistaken for a registration.
+/// mistaken for a registration. An invocation of a macro in `submitting_macros`
+/// counts: the expansion holds the `inventory::submit!` the caller never wrote,
+/// and a crate that only invokes one still needs its registrations linked.
+/// [`crate::registration_macro::submitting_macros`] derives that set from the
+/// tree.
 #[must_use]
-pub fn submits_registrations(text: &str) -> bool {
-    for offset in code_offsets(text) {
-        let rest = &text[offset..];
-        if rest.starts_with("inventory::submit!") {
-            return true;
-        }
+pub fn submits_registrations(text: &str, submitting_macros: &BTreeSet<String>) -> bool {
+    if crate::registration_macro::writes_inventory_submit(text) {
+        return true;
     }
-    false
+    submitting_macros
+        .iter()
+        .any(|name| !crate::registration_macro::find_macro_invocations(text, name).is_empty())
 }
 
 /// Crate identifiers named by a discarding import, as written.
@@ -340,18 +344,38 @@ mod tests {
 
     #[test]
     fn a_submission_inside_a_comment_does_not_make_a_crate_a_submitter() {
+        let submitting: BTreeSet<String> = [
+            "submit_hardware_intrinsic",
+            "define_unary_u32_hardware_intrinsic",
+        ]
+        .into_iter()
+        .map(str::to_string)
+        .collect();
+
         assert!(!submits_registrations(
-            "// This crate reads the registry; inventory::submit! lives in the driver.\n"
+            "// This crate reads the registry; inventory::submit! lives in the driver.\n",
+            &submitting
         ));
         assert!(submits_registrations(
-            "inventory::submit! {\n    ExampleRegistration { id: \"example\" }\n}\n"
+            "inventory::submit! {\n    ExampleRegistration { id: \"example\" }\n}\n",
+            &submitting
         ));
         assert!(submits_registrations(
-            "submit_hardware_intrinsic! {\n    id: \"example\",\n}\n"
+            "submit_hardware_intrinsic! {\n    id: \"example\",\n}\n",
+            &submitting
         ));
         assert!(submits_registrations(
-            "define_unary_u32_hardware_intrinsic!(foo, \"example\", expr);\n"
+            "define_unary_u32_hardware_intrinsic!(foo, \"example\", expr);\n",
+            &submitting
         ));
+        assert!(
+            !submits_registrations(
+                "define_unary_u32_hardware_intrinsic!(foo, \"example\", expr);\n",
+                &BTreeSet::new()
+            ),
+            "Fix: a macro outside the derived set must not count, or every macro invocation in \
+             the workspace reads as a registration submission."
+        );
     }
 
     #[test]

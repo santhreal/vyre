@@ -4,12 +4,115 @@
 //! whose bodies expand to `OperationRegistration` calls. This module scans macro
 //! invocations and splits delimiter-nested argument lists out of source text.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::registration_text::{
     field_value, identifier_continues_at, identifier_continues_before, resolve_id,
 };
-use crate::source_scan::opaque_span;
+use crate::source_scan::{is_word_byte, opaque_span, skip_opaque};
+
+/// Every `macro_rules!` definition in `text`, as `(name, body)`.
+///
+/// A definition is `macro_rules! NAME { .. }`: the name sits between the bang
+/// and the brace, so the invocation reader cannot find it and this walks the
+/// braces itself. Comments and literals are stepped over, so a brace inside
+/// either does not close the body early.
+pub fn macro_definitions(text: &str) -> Vec<(String, String)> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::new();
+    for at in crate::source_scan::code_offsets(text) {
+        if !text[at..].starts_with("macro_rules") || identifier_continues_before(text, at) {
+            continue;
+        }
+        let mut cursor = skip_opaque(text, at + "macro_rules".len());
+        if cursor >= bytes.len() || bytes[cursor] != b'!' {
+            continue;
+        }
+        cursor = skip_opaque(text, cursor + 1);
+        let name_start = cursor;
+        while cursor < bytes.len() && is_word_byte(bytes[cursor]) {
+            cursor += 1;
+        }
+        let name = &text[name_start..cursor];
+        cursor = skip_opaque(text, cursor);
+        if name.is_empty() || cursor >= bytes.len() || bytes[cursor] != b'{' {
+            continue;
+        }
+        let body_start = cursor + 1;
+        let mut depth = 1usize;
+        cursor = body_start;
+        while cursor < bytes.len() {
+            if let Some(span) = opaque_span(text, cursor) {
+                cursor += span.get();
+                continue;
+            }
+            match bytes[cursor] {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            cursor += 1;
+        }
+        out.push((name.to_string(), text[body_start..cursor].to_string()));
+    }
+    out
+}
+
+/// True when `text` calls `inventory::submit!` in code.
+///
+/// A comment explaining the linkage rule and a string literal holding the call
+/// both mention it and neither submits anything, so the search runs over code
+/// offsets rather than the raw text.
+#[must_use]
+pub fn writes_inventory_submit(text: &str) -> bool {
+    crate::source_scan::code_offsets(text).any(|at| text[at..].starts_with("inventory::submit!"))
+}
+
+/// Macros whose expansion submits an inventory registration.
+///
+/// A crate that invokes one of these submits registrations without writing
+/// `inventory::submit!` itself, so a linkage rule that reads only the literal
+/// call misses it. The set is a closure over the definitions in the tree: a
+/// body that writes `inventory::submit!` submits, and so does a body that
+/// invokes a macro that submits. `define_unary_u32_hardware_intrinsic` reaches
+/// the registry through `submit_hardware_intrinsic`, two links out.
+///
+/// Deriving it from the definitions rather than listing names means a macro
+/// added tomorrow is judged the day it is written. A hand-kept list held four
+/// of the eighteen macros this workspace already had.
+///
+/// What this does not see: a macro whose name is assembled by concatenation, and
+/// a submission written by a procedural macro, which has no `macro_rules!` body
+/// to read.
+#[must_use]
+pub fn submitting_macros(definitions: &BTreeMap<String, String>) -> BTreeSet<String> {
+    let mut submitting: BTreeSet<String> = definitions
+        .iter()
+        .filter(|(_, body)| writes_inventory_submit(body))
+        .map(|(name, _)| name.clone())
+        .collect();
+    loop {
+        let reached: BTreeSet<String> = definitions
+            .iter()
+            .filter(|(name, body)| {
+                !submitting.contains(*name)
+                    && submitting
+                        .iter()
+                        .any(|known| !find_macro_invocations(body, known).is_empty())
+            })
+            .map(|(name, _)| name.clone())
+            .collect();
+        if reached.is_empty() {
+            return submitting;
+        }
+        submitting.extend(reached);
+    }
+}
 
 /// Read hardware registration helpers whose operation id is a named argument.
 ///
@@ -66,30 +169,10 @@ pub fn find_macro_invocations<'a>(text: &'a str, macro_name: &str) -> Vec<(&'a s
             let after_name = offset + macro_name.len();
             if !identifier_continues_at(text, after_name) {
                 let mut cursor = after_name;
-                while cursor < bytes.len() {
-                    if let Some(span) = opaque_span(text, cursor) {
-                        cursor += span.get();
-                        continue;
-                    }
-                    if bytes[cursor].is_ascii_whitespace() {
-                        cursor += 1;
-                    } else {
-                        break;
-                    }
-                }
+                cursor = skip_opaque(text, cursor);
                 if cursor < bytes.len() && bytes[cursor] == b'!' {
                     cursor += 1;
-                    while cursor < bytes.len() {
-                        if let Some(span) = opaque_span(text, cursor) {
-                            cursor += span.get();
-                            continue;
-                        }
-                        if bytes[cursor].is_ascii_whitespace() {
-                            cursor += 1;
-                        } else {
-                            break;
-                        }
-                    }
+                    cursor = skip_opaque(text, cursor);
                     if cursor < bytes.len()
                         && (bytes[cursor] == b'(' || bytes[cursor] == b'{' || bytes[cursor] == b'[')
                     {
@@ -465,5 +548,96 @@ pub fn helper() {}
 
         assert_eq!(nth_argument(call, "::library(", 1), Some(r"'\''"));
         assert_eq!(nth_argument(call, "::library(", 2), Some("None"));
+    }
+
+    /// The submitting set is a closure over the tree, so a macro that reaches the
+    /// registry through another macro is in it. `define_unary_u32_hardware_intrinsic`
+    /// writes no `inventory::submit!` of its own; it expands
+    /// `submit_hardware_intrinsic!`, which does. A list of names would have to be
+    /// edited for each new helper, and the four names this workspace had listed
+    /// covered eighteen macros.
+    #[test]
+    fn a_macro_that_submits_through_another_macro_is_in_the_set() {
+        let text = r#"
+macro_rules! leaf_submit {
+    () => {
+        inventory::submit! { Registration { id: "example" } }
+    };
+}
+
+macro_rules! middle_submit {
+    () => {
+        leaf_submit! {}
+    };
+}
+
+macro_rules! outer_submit {
+    () => {
+        middle_submit! {}
+    };
+}
+
+macro_rules! unrelated {
+    () => {
+        // inventory::submit! in a comment is not a submission
+        let value = "inventory::submit!";
+    };
+}
+"#;
+        let definitions: BTreeMap<String, String> = macro_definitions(text).into_iter().collect();
+        assert_eq!(
+            definitions.keys().cloned().collect::<Vec<_>>(),
+            vec![
+                "leaf_submit".to_string(),
+                "middle_submit".to_string(),
+                "outer_submit".to_string(),
+                "unrelated".to_string()
+            ],
+            "Fix: the definition reader must find every `macro_rules!` in the text, or the closure \
+             is computed over a partial set and a submitting macro reads as inert."
+        );
+
+        let submitting = submitting_macros(&definitions);
+        assert_eq!(
+            submitting,
+            ["leaf_submit", "middle_submit", "outer_submit"]
+                .into_iter()
+                .map(str::to_string)
+                .collect::<BTreeSet<String>>(),
+            "Fix: the set must close over macro-to-macro submission and must not admit a macro \
+             whose only mention of the registry is a comment or a literal."
+        );
+    }
+
+    /// The derivation is run against the tree the gate judges, not only a
+    /// fixture: an empty set would make every linkage answer negative and the
+    /// rule vacuous.
+    #[test]
+    fn the_workspace_derivation_finds_the_hardware_registration_macros() {
+        let root = crate::workspace_manifest::workspace_root();
+        let mut definitions: BTreeMap<String, String> = BTreeMap::new();
+        for member in crate::workspace_manifest::workspace_members(&root) {
+            for path in crate::workspace_manifest::source_files(&root, &member) {
+                let Ok(text) = std::fs::read_to_string(&path) else {
+                    continue;
+                };
+                definitions.extend(macro_definitions(&text));
+            }
+        }
+        let submitting = submitting_macros(&definitions);
+
+        for expected in [
+            "submit_intrinsic_operation",
+            "submit_hardware_intrinsic",
+            "define_unary_u32_hardware_intrinsic",
+            "define_barrier_u32_hardware_intrinsic",
+        ] {
+            assert!(
+                submitting.contains(expected),
+                "Fix: the derivation missed `{expected}`, which submits a registration in this \
+                 tree, so a crate whose only submission is that macro reads as a non-submitter. \
+                 Derived set: {submitting:?}"
+            );
+        }
     }
 }

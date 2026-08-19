@@ -12,7 +12,10 @@ use crate::cfg_test::strip_cfg_test_items;
 use crate::registration_macro::{
     first_argument, nth_argument, parse_named_intrinsic_macros, parse_positional_intrinsic_macros,
 };
-use crate::source_scan::{is_word_byte, mask_comments_and_strings, opaque_span};
+use crate::source_scan::{
+    is_word_byte, mask_comments_and_strings, opaque_span, skip_comments_and_space, skip_opaque,
+};
+
 /// Tier implied by each `OperationRegistration` constructor.
 ///
 /// `new` takes the tier as its second argument, so it is read there rather
@@ -27,18 +30,6 @@ const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
     ("::new(", None),
 ];
 
-/// Treat every non-ASCII scalar conservatively as an identifier continuation.
-///
-/// Rust identifiers admit Unicode. Looking only at the adjacent byte mistakes
-/// the ASCII suffix of `λOperationRegistration` for the canonical type name.
-
-fn is_comment_span(text: &str, at: usize) -> Option<usize> {
-    let rest = text.get(at..)?;
-    if !rest.starts_with("//") && !rest.starts_with("/*") {
-        return None;
-    }
-    opaque_span(text, at).map(std::num::NonZeroUsize::get)
-}
 pub(crate) fn identifier_continues_before(text: &str, at: usize) -> bool {
     text.get(..at)
         .and_then(|prefix| prefix.chars().next_back())
@@ -51,6 +42,10 @@ pub(crate) fn identifier_continues_at(text: &str, at: usize) -> bool {
         .is_some_and(identifier_continuation)
 }
 
+/// Treat every non-ASCII scalar conservatively as an identifier continuation.
+///
+/// Rust identifiers admit Unicode. Looking only at the adjacent byte mistakes
+/// the ASCII suffix of `λOperationRegistration` for the canonical type name.
 fn identifier_continuation(character: char) -> bool {
     character == '_' || character.is_ascii_alphanumeric() || !character.is_ascii()
 }
@@ -178,33 +173,13 @@ fn string_consts(text: &str) -> BTreeMap<String, String> {
             let after_const = offset + "const".len();
             if after_const < bytes.len() && !identifier_continues_at(text, after_const) {
                 let mut cursor = after_const;
-                while cursor < bytes.len() {
-                    if let Some(span) = opaque_span(text, cursor) {
-                        cursor += span.get();
-                        continue;
-                    }
-                    if bytes[cursor].is_ascii_whitespace() {
-                        cursor += 1;
-                    } else {
-                        break;
-                    }
-                }
+                cursor = skip_opaque(text, cursor);
                 let name_start = cursor;
                 while cursor < bytes.len() && is_word_byte(bytes[cursor]) {
                     cursor += 1;
                 }
                 let name = text[name_start..cursor].trim();
-                while cursor < bytes.len() {
-                    if let Some(span) = opaque_span(text, cursor) {
-                        cursor += span.get();
-                        continue;
-                    }
-                    if bytes[cursor].is_ascii_whitespace() {
-                        cursor += 1;
-                    } else {
-                        break;
-                    }
-                }
+                cursor = skip_opaque(text, cursor);
                 if cursor < bytes.len() && bytes[cursor] == b':' {
                     cursor += 1;
                     let type_start = cursor;
@@ -281,31 +256,9 @@ pub(crate) fn field_value<'a>(block: &'a str, field: &str) -> Option<&'a str> {
         {
             let after_field = offset + field.len();
             if !identifier_continues_at(block, after_field) {
-                let mut cursor = after_field;
-                while cursor < bytes.len() {
-                    if let Some(c_span) = is_comment_span(block, cursor) {
-                        cursor += c_span;
-                        continue;
-                    }
-                    if bytes[cursor].is_ascii_whitespace() {
-                        cursor += 1;
-                    } else {
-                        break;
-                    }
-                }
+                let mut cursor = skip_comments_and_space(block, after_field);
                 if cursor < bytes.len() && bytes[cursor] == b':' {
-                    cursor += 1;
-                    while cursor < bytes.len() {
-                        if let Some(c_span) = is_comment_span(block, cursor) {
-                            cursor += c_span;
-                            continue;
-                        }
-                        if bytes[cursor].is_ascii_whitespace() {
-                            cursor += 1;
-                        } else {
-                            break;
-                        }
-                    }
+                    cursor = skip_comments_and_space(block, cursor + 1);
                     let val_start = cursor;
                     let mut depth = 0usize;
                     let mut val_end = cursor;

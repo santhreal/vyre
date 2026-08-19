@@ -36,6 +36,7 @@
 //! a per-file parser cannot do. An id written inline or through a file-local
 //! `const` is read, wherever in the file the `const` sits.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use std::process;
@@ -71,11 +72,13 @@ use crate::workspace_rules::{
     crate_declares_frontend, CATEGORY_A_CRATE, CATEGORY_C_CRATE, FRONTEND_OWNERS,
 };
 
+use crate::backend_vocabulary::is_test_source;
 use crate::module_layout::{
     directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
     sibling_module_failures, source_test_directory_failures, CrateRoot, PUBLIC_API_SNAPSHOT_DIR,
     SOURCE_TREES,
 };
+use crate::registration_macro::{macro_definitions, submitting_macros};
 use crate::registration_text::parse_registrations;
 
 /// Everything the structural rules judge, read once from source text.
@@ -225,15 +228,28 @@ pub fn run(args: &[String]) {
     process::exit(1);
 }
 
+/// Every production operation registration the workspace declares.
+///
+/// A file the tree reaches only as test support is skipped: an integration test
+/// registers fixture operations to drive the registry it is testing, and those
+/// ids exist in no shipped binary. Judging them as production registrations
+/// convicted a driver test of owning an operation and asked it to move its
+/// fixture into a category crate, where it would then ship. The `#[cfg(test)]`
+/// case is already stripped per file by [`parse_registrations`]; this is the
+/// other half, where the gate sits in the parent directory instead of an
+/// attribute.
 fn scan_registrations(root: &Path, members: &[String]) -> Vec<Registration> {
     let mut registrations = Vec::new();
     for member in members {
         let crate_name = member.rsplit('/').next().unwrap_or(member).to_string();
         for path in source_files(root, member) {
+            let file = relative(root, &path);
+            if is_test_source(&file) {
+                continue;
+            }
             let Ok(text) = read_source_bounded(&path) else {
                 continue;
             };
-            let file = relative(root, &path);
             for parsed in parse_registrations(&text) {
                 registrations.push(Registration {
                     crate_name: crate_name.clone(),
@@ -393,8 +409,22 @@ fn scan_materializers(root: &Path, members: &[String]) -> Vec<(String, String)> 
 /// Every member crate that submits into an `inventory` registry.
 ///
 /// Read from the tree rather than listed here: a new submitting crate joins the
-/// set the moment it submits, so the link rule judges it without an edit.
+/// set the moment it submits, so the link rule judges it without an edit. The
+/// macros that submit on a caller's behalf are read from the tree the same way,
+/// in a first pass over the same files, because a crate that only invokes one
+/// still needs its registrations linked.
 fn scan_registry_submitters(root: &Path, members: &[String]) -> Vec<String> {
+    let mut definitions: BTreeMap<String, String> = BTreeMap::new();
+    for member in members {
+        for path in source_files(root, member) {
+            let Ok(text) = read_source_bounded(&path) else {
+                continue;
+            };
+            definitions.extend(macro_definitions(&text));
+        }
+    }
+    let submitting = submitting_macros(&definitions);
+
     let mut submitters = Vec::new();
     for member in members {
         let crate_name = member.rsplit('/').next().unwrap_or(member);
@@ -402,7 +432,7 @@ fn scan_registry_submitters(root: &Path, members: &[String]) -> Vec<String> {
             let Ok(text) = read_source_bounded(&path) else {
                 continue;
             };
-            if submits_registrations(&text) {
+            if submits_registrations(&text, &submitting) {
                 submitters.push(crate_name.to_string());
                 break;
             }
