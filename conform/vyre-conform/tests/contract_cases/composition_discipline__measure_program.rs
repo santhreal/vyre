@@ -17,6 +17,9 @@
 #[path = "composition_discipline__every_op_is_under_complexity_budget.rs"]
 mod composition_discipline_every_op_is_under_complexity_budget;
 
+use std::collections::BTreeSet;
+use std::sync::LazyLock;
+
 use vyre::ir::{Expr, Node, Program};
 
 // ───────────────────────────────────────────────────────────────────
@@ -90,11 +93,14 @@ fn measure_node(node: &Node, depth: usize, stats: &mut Complexity) {
             }
         }
         Node::Region {
+            generator,
             source_region,
             body,
-            ..
         } => {
-            if is_child_composition(source_region.as_ref().map(|r| r.as_str())) {
+            if is_child_composition(
+                generator.as_str(),
+                source_region.as_ref().map(|r| r.as_str()),
+            ) {
                 return;
             }
             for n in body.iter() {
@@ -260,7 +266,10 @@ fn hash_node(node: &Node, h: &mut u64) {
             body,
         } => {
             mix(h, 7);
-            if is_child_composition(source_region.as_ref().map(|r| r.as_str())) {
+            if is_child_composition(
+                generator.as_str(),
+                source_region.as_ref().map(|r| r.as_str()),
+            ) {
                 hash_str(generator.as_str(), h);
             }
             for n in body.iter() {
@@ -407,8 +416,32 @@ fn hash_expr(expr: &Expr, h: &mut u64) {
     }
 }
 
-fn is_child_composition(source_region: Option<&str>) -> bool {
+/// Every operation id the catalog registers, which is the only vocabulary a
+/// region may name to be treated as a call to somebody else's composition.
+static REGISTERED_OP_IDS: LazyLock<BTreeSet<&'static str>> = LazyLock::new(|| {
+    vyre_libs::operation_catalog::all_entries()
+        .map(|entry| entry.id)
+        .collect()
+});
+
+/// True when a region delegates to another registered operation.
+///
+/// The exemption exists so a caller is not charged for a building block that
+/// carries its own budget row. That makes the generator the deciding field:
+/// it names the operation being invoked, while `source_region` only records
+/// the parent that reparented the region. Composition stamps `source_region`
+/// onto every entry region it moves, anonymous ones included, so reading it
+/// as consent let any operation drop under any cap by wrapping its own body
+/// in a region with an invented name, leaving the program byte-identical.
+///
+/// A generator earns the exemption only by naming an operation the catalog
+/// actually registers. `source_region` is still required, because a root
+/// region names its own operation and must never exempt that operation's
+/// entire body from its own budget.
+fn is_child_composition(generator: &str, source_region: Option<&str>) -> bool {
     source_region.is_some()
+        && !vyre_foundation::composition::is_anonymous_generator(generator)
+        && REGISTERED_OP_IDS.contains(generator)
 }
 
 fn hash_str(value: &str, h: &mut u64) {
@@ -421,4 +454,110 @@ fn hash_str(value: &str, h: &mut u64) {
 fn mix(h: &mut u64, v: u64) {
     *h ^= v;
     *h = h.wrapping_mul(0x100000001b3);
+}
+
+
+// ───────────────────────────────────────────────────────────────────
+// Gate integrity: the budget exemption must not be self-serve
+// ───────────────────────────────────────────────────────────────────
+
+/// A loop nest with enough shape to register on every budget axis.
+fn budgeted_body() -> Vec<Node> {
+    vec![Node::Loop {
+        var: vyre::ir::Ident::from("i"),
+        from: Expr::u32(0),
+        to: Expr::u32(8),
+        body: vec![Node::Let {
+            name: vyre::ir::Ident::from("t"),
+            value: Expr::u32(1),
+        }],
+    }]
+}
+
+fn measure_entry(entry: Vec<Node>) -> Complexity {
+    measure_program(&Program::wrapped(Vec::new(), [1, 1, 1], entry))
+}
+
+/// WHY: the exemption exists so a region delegating to another registered op
+/// is measured under that op's own budget row instead of twice. It said only
+/// `source_region.is_some()`, and composition stamps `source_region` onto
+/// every region it reparents, so any op could drop under any cap by wrapping
+/// its body in a region with an invented generator. The program is then
+/// byte-identical and only the attribution moved, which is a falsified gate
+/// rather than a fix. Complexity must be insensitive to a wrapper that names
+/// no registered operation.
+///
+/// Does not catch: a wrapper that reuses a *real* registered id it never
+/// calls. That is caught by the subsumption gate, not by this budget.
+#[test]
+fn an_unregistered_child_region_does_not_hide_complexity() {
+    let plain = measure_entry(budgeted_body());
+    let wrapped = measure_entry(vec![vyre_foundation::composition::wrap_child_region(
+        "vyre-libs::graph::dominator_frontier::pred_dominance",
+        vyre::ir::Ident::from("graph.dominator_frontier"),
+        budgeted_body(),
+    )]);
+
+    assert!(
+        plain.loop_count > 0 && plain.total_nodes > 2,
+        "Fix: the fixture must carry real complexity, measured {plain:?}",
+    );
+    assert_eq!(
+        wrapped.loop_count, plain.loop_count,
+        "an unregistered wrapper hid {} of {} loops",
+        plain.loop_count - wrapped.loop_count,
+        plain.loop_count,
+    );
+    // Both programs carry exactly one enclosing region over the same body:
+    // `Program::wrapped` adds a root region to the bare nodes, and leaves the
+    // already region-chained entry alone. So an honest measure counts the
+    // same nodes either way.
+    assert_eq!(
+        wrapped.total_nodes, plain.total_nodes,
+        "an unregistered wrapper must not erase the body it encloses",
+    );
+    assert_eq!(
+        wrapped.max_depth, plain.max_depth,
+        "an unregistered wrapper must not hide the nesting it encloses",
+    );
+}
+
+/// WHY: the tightened predicate must still exempt genuine reuse, or every op
+/// that calls a registered building block pays for it twice and the gate
+/// pushes authors back toward monoliths.
+#[test]
+fn a_registered_child_region_is_still_exempt() {
+    let registered = vyre_libs::operation_catalog::all_entries()
+        .next()
+        .expect("Fix: the operation catalog must register at least one op");
+
+    let wrapped = measure_entry(vec![vyre_foundation::composition::wrap_child_region(
+        registered.id,
+        vyre::ir::Ident::from("some.calling.op"),
+        budgeted_body(),
+    )]);
+
+    assert_eq!(
+        wrapped.loop_count, 0,
+        "delegating to registered op `{}` must not charge its loops twice",
+        registered.id,
+    );
+}
+
+/// WHY: an anonymous generator is minted by composition itself for a body
+/// that has no operation behind it. It carries a `source_region` like any
+/// other reparented region, so it must be counted, not exempted.
+#[test]
+fn an_anonymous_child_region_does_not_hide_complexity() {
+    for prefix in vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES {
+        let wrapped = measure_entry(vec![vyre_foundation::composition::wrap_child_region(
+            &format!("{prefix}graph.dominator_frontier"),
+            vyre::ir::Ident::from("graph.dominator_frontier"),
+            budgeted_body(),
+        )]);
+        assert_eq!(
+            wrapped.loop_count, 1,
+            "generator prefix `{prefix}` names no operation and must be counted",
+        );
+    }
 }
