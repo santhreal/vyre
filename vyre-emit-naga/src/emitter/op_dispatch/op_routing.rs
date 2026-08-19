@@ -466,14 +466,13 @@ impl BodyBuilder<'_> {
             ),
             OpDispatchRoute::AsyncLoad => self.emit_async_load(op),
             OpDispatchRoute::AsyncStore => self.emit_async_store(op),
-            // AsyncWait is a documented no-op in the Naga backend. The Naga
-            // backend lowers AsyncLoad and AsyncStore as fully synchronous
-            // counted copy loops, the copy completes before the next op
-            // executes. There is no deferred or out-of-order DMA in this path,
-            // so no fence or barrier is needed: the copy is already done.
-            // Backends that use real hardware async DMA (e.g. PTX cp.async)
-            // must emit a hardware-level wait instruction here.
-            OpDispatchRoute::AsyncWait => Ok(()),
+            OpDispatchRoute::AsyncWait => {
+                self.function.body.push(
+                    Statement::Barrier(naga::Barrier::STORAGE | naga::Barrier::WORK_GROUP),
+                    Span::UNDEFINED,
+                );
+                Ok(())
+            }
             OpDispatchRoute::Trap => with_route_kind!(
                 op,
                 route,

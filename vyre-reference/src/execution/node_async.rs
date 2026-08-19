@@ -29,7 +29,10 @@ pub(crate) fn eval_async_load(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), crate::ReferenceError> {
+)-> Result<(), crate::ReferenceError> {
+    if !invocation.is_leader() {
+        return Ok(());
+    }
     let start = eval_byte_count(
         request.offset,
         "async load source offset",
@@ -52,6 +55,9 @@ pub(crate) fn eval_async_store(
     memory: &mut Memory,
     program: &Program,
 ) -> Result<(), crate::ReferenceError> {
+    if !invocation.is_leader() {
+        return Ok(());
+    }
     let start = eval_byte_count(
         request.offset,
         "async store destination offset",
@@ -80,6 +86,9 @@ pub(crate) fn eval_async_wait(
     memory: &mut Memory,
     program: &Program,
 ) -> Result<(), crate::ReferenceError> {
+    if !invocation.is_leader() {
+        return Ok(());
+    }
     apply_async_transfer(invocation.finish_async(tag)?, memory, program)
 }
 

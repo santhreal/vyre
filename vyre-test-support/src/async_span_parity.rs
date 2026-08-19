@@ -32,15 +32,15 @@ pub const SOURCE_WORDS: u32 = 8;
 pub const DESTINATION_WORDS: u32 = 6;
 /// Workgroup widths under test.
 ///
-/// The emitted copy loop carries no invocation guard, so a dispatched program
-/// runs the whole copy in every invocation of the workgroup: that is the shape
-/// production dispatches, and a span whose ends fall inside a word has every
-/// invocation merging the same destination word under the same mask. The merge
-/// is idempotent by construction, since the bytes it preserves are the bytes it
-/// read, so every ordering must land on the same word. A single invocation
-/// proves the arithmetic alone; the wider width proves that claim on silicon,
-/// and a divergence between the two is a real defect rather than a fixture
-/// artifact.
+/// Async transfers execute as once-per-workgroup collective operations. The
+/// emitter predicates scalar and cp.async transfer loops to the workgroup leader
+/// (invocation (0, 0, 0)), and AsyncWait synchronizes the workgroup so destination
+/// writes become visible to all invocations before consumers proceed.
+///
+/// A single invocation `[1, 1, 1]` proves the span arithmetic and word assembly
+/// in isolation; the wider width `[16, 1, 1]` proves leader ownership and
+/// workgroup barrier synchronization on silicon without multi-lane write races or
+/// masked RMW hazards.
 pub const WORKGROUPS: [[u32; 3]; 2] = [[1, 1, 1], [16, 1, 1]];
 
 /// Byte offsets under test: every residue modulo four, a span that starts past
@@ -323,7 +323,7 @@ pub fn assert_matrix_covers_every_alignment() {
         cases().iter().any(|case| case.workgroup[0] == 1)
             && cases().iter().any(|case| case.workgroup[0] > 1),
         "Fix: the matrix must dispatch the transfer both with one invocation and with the wider \
-         workgroup a program really dispatches, so a redundant copy that disagrees with itself is \
-         a failure rather than an untested shape"
+         workgroup a program really dispatches, asserting leader ownership and race-free workgroup \
+         barrier synchronization"
     );
 }

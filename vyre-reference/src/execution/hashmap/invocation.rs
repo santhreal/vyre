@@ -149,6 +149,11 @@ impl<'a> HashmapInvocation<'a> {
     }
 
     #[inline]
+    pub(crate) fn is_leader(&self) -> bool {
+        self.linear_local_index == 0
+    }
+
+    #[inline]
     pub(crate) fn begin_async(
         &mut self,
         tag: &str,

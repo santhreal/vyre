@@ -650,6 +650,12 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         invariant: "Tile load operation references invalid or incompatible buffer",
         corrective_action: "Declare the buffer before loading tiles from it.",
     },
+    ValidationRule {
+        code: "V139",
+        phase: ValidationPhase::Node,
+        invariant: "async transfer offset and size expressions must be workgroup-uniform",
+        corrective_action: "Compute the transfer offset and size from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID.",
+    },
 ];
 
 /// Every registered validation rule, ordered by code.

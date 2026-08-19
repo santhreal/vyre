@@ -1209,6 +1209,15 @@ fn descriptor_async_load_emits_bounded_copy_loop() {
         block_has_loop(&module.entry_points[0].function.body),
         "descriptor AsyncLoad must emit a Naga loop for the synchronous copy fallback"
     );
+    let top_has_leader_if = module.entry_points[0]
+        .function
+        .body
+        .iter()
+        .any(|s| matches!(s, naga::Statement::If { accept, .. } if block_has_loop(accept)));
+    assert!(
+        top_has_leader_if,
+        "descriptor AsyncLoad must leader-predicate copy loop"
+    );
 }
 
 #[test]
@@ -1221,8 +1230,29 @@ fn descriptor_async_store_emits_bounded_copy_loop() {
         block_has_loop(&module.entry_points[0].function.body),
         "descriptor AsyncStore must emit a Naga loop for the synchronous copy fallback"
     );
+    let top_has_leader_if = module.entry_points[0]
+        .function
+        .body
+        .iter()
+        .any(|s| matches!(s, naga::Statement::If { accept, .. } if block_has_loop(accept)));
+    assert!(
+        top_has_leader_if,
+        "descriptor AsyncStore must leader-predicate copy loop"
+    );
 }
 
+#[test]
+fn descriptor_async_wait_emits_workgroup_barrier() {
+    let desc = descriptor("async_wait")
+        .dispatch(64, 1, 1)
+        .body(body().op(effect(KernelOpKind::AsyncWait { tag: "t".into() }, [])))
+        .build();
+    let module = emit(&desc).expect("descriptor AsyncWait must emit workgroup barrier");
+    assert!(
+        block_has_barrier(&module.entry_points[0].function.body),
+        "descriptor AsyncWait must emit workgroup barrier"
+    );
+}
 #[test]
 fn descriptor_trap_emits_sidecar_atomic_path() {
     let desc = descriptor("trap")

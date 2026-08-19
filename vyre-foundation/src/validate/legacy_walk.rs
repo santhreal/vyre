@@ -261,7 +261,15 @@ fn validate_node_inner(
             tag,
             ..
         } => {
-            node_rules::check_async_transfer(destination, tag, buffers, &mut report.errors);
+            node_rules::check_async_transfer(
+                destination,
+                offset,
+                size,
+                tag,
+                buffers,
+                scope,
+                &mut report.errors,
+            );
             validate_expr(offset, buffers, scope, options, report, 0);
             validate_expr(size, buffers, scope, options, report, 0);
         }

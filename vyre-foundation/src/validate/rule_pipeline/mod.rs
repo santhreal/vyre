@@ -667,7 +667,15 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
     ) -> ControlFlow<Infallible> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
-        node_rules::check_async_transfer(destination, tag, &self.buffers, &mut self.errors);
+        node_rules::check_async_transfer(
+            destination,
+            offset,
+            size,
+            tag,
+            &self.buffers,
+            &self.scope,
+            &mut self.errors,
+        );
         // The offset and size operands are expressions like any other, and
         // going unvalidated meant a load from an undeclared buffer inside a
         // transfer size was accepted while the same load in a store index was

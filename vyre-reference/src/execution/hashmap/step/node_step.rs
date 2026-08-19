@@ -156,17 +156,19 @@ pub(crate) fn step_nodes_frame<'a>(
             size,
             tag,
         } => {
-            let transfer = eval_async_load(
-                source,
-                destination,
-                offset,
-                size,
-                invocation,
-                memory,
-                #[cfg(feature = "subgroup-ops")]
-                snapshots,
-            )?;
-            invocation.begin_async(tag, transfer)?;
+            if invocation.is_leader() {
+                let transfer = eval_async_load(
+                    source,
+                    destination,
+                    offset,
+                    size,
+                    invocation,
+                    memory,
+                    #[cfg(feature = "subgroup-ops")]
+                    snapshots,
+                )?;
+                invocation.begin_async(tag, transfer)?;
+            }
         }
         Node::AsyncStore {
             source,
@@ -175,20 +177,25 @@ pub(crate) fn step_nodes_frame<'a>(
             size,
             tag,
         } => {
-            let transfer = eval_async_store(
-                source,
-                destination,
-                offset,
-                size,
-                invocation,
-                memory,
-                #[cfg(feature = "subgroup-ops")]
-                snapshots,
-            )?;
-            invocation.begin_async(tag, transfer)?;
+            if invocation.is_leader() {
+                let transfer = eval_async_store(
+                    source,
+                    destination,
+                    offset,
+                    size,
+                    invocation,
+                    memory,
+                    #[cfg(feature = "subgroup-ops")]
+                    snapshots,
+                )?;
+                invocation.begin_async(tag, transfer)?;
+            }
         }
         Node::AsyncWait { tag } => {
-            apply_async_transfer(invocation.finish_async(tag)?, memory)?;
+            if invocation.is_leader() {
+                apply_async_transfer(invocation.finish_async(tag)?, memory)?;
+            }
+            invocation.waiting_at_barrier = true;
         }
         Node::Trap { address, tag } => {
             let addr_val = eval_expr(

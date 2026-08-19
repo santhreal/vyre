@@ -71,6 +71,46 @@ fn async_transfer_without_wait_is_rejected() {
 }
 
 #[test]
+fn async_load_in_multi_invocation_workgroup_executes_once_and_synchronizes() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("src", 0, DataType::U32).with_count(4),
+            BufferDecl::output("dst", 1, DataType::U32).with_count(4),
+        ],
+        [16, 1, 1],
+        vec![
+            Node::async_load_gpu_driven("src", "dst", Expr::u32(0), Expr::u32(16), "copy"),
+            Node::async_wait("copy"),
+        ],
+    );
+
+    let src_bytes = [10_u32, 20, 30, 40]
+        .into_iter()
+        .flat_map(u32::to_le_bytes)
+        .collect();
+
+    let forward = run(&program, vec![src_bytes, vec![0; 16]])
+        .expect("multi-invocation workgroup async transfer must execute");
+    let words = forward[0]
+        .chunks_exact(4)
+        .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
+        .collect::<Vec<_>>();
+    assert_eq!(words, vec![10, 20, 30, 40], "AsyncLoad in wide workgroup must publish correctly");
+
+    // Reversed step order
+    let values = vec![Value::from(
+        [10_u32, 20, 30, 40]
+            .into_iter()
+            .flat_map(u32::to_le_bytes)
+            .collect::<Vec<u8>>(),
+    ), Value::from(vec![0u8; 16])];
+    let reversed = vyre_reference::reference_eval_lane_reversed(&program, &values)
+        .expect("reversed lane stepping must execute correctly");
+    let reversed_bytes: Vec<Vec<u8>> = reversed.into_iter().map(|v| v.to_bytes()).collect();
+    assert_eq!(forward, reversed_bytes, "Reversed lane order must produce identical output");
+}
+
+#[test]
 fn indirect_dispatch_returns_structured_reference_error() {
     let program = Program::wrapped(
         vec![BufferDecl::read("counts", 0, DataType::U32).with_count(3)],

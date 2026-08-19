@@ -18,12 +18,13 @@ pub fn vfs_resolve_dma(
     out_file_buffers: &str,
     num_requests: Expr,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let wg = Expr::WorkgroupId { axis: 0 };
 
     let loop_body = vec![
-        Node::let_bind("file_hash", Expr::load(include_hashes, t.clone())),
-        // Async transfers now pair on stable stream tags instead of transient
-        // handles, so both nodes use the same non-empty identifier.
+        Node::let_bind("file_hash", Expr::load(include_hashes, wg.clone())),
+        // Async transfers pair on stable stream tags and execute as
+        // workgroup-collective transfers where the leader issues DMA and
+        // AsyncWait synchronizes the workgroup.
         Node::AsyncLoad {
             source: Ident::from("global_dma_pool"),
             destination: Ident::from(out_file_buffers),
@@ -39,7 +40,7 @@ pub fn vfs_resolve_dma(
     let body = vec![wrap_anonymous_region(
         VFS_RESOLVE_OP_ID,
         vec![Node::if_then(
-            Expr::lt(t.clone(), num_requests.clone()),
+            Expr::lt(wg.clone(), num_requests.clone()),
             loop_body,
         )],
     )];

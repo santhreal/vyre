@@ -351,6 +351,7 @@ impl BodyCtx<'_> {
             );
             let _ = writeln!(self.text, "    cp.async.wait_group 0;");
             let _ = writeln!(self.text, "    membar.cta;");
+            let _ = writeln!(self.text, "    bar.sync 0;");
             self.pending_cp_async_tags.clear();
         }
         self.text.push_str("$L_exit:\n");

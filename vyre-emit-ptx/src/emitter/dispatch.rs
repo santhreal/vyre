@@ -506,6 +506,7 @@ impl BodyCtx<'_> {
                 let _ = writeln!(self.text, "    // async_wait tag={tag}");
                 if !self.emit_cp_async_wait_for_tag(tag) {
                     let _ = writeln!(self.text, "    membar.cta;");
+                    let _ = writeln!(self.text, "    bar.sync 0;");
                 }
             }
             SubgroupBallot => {

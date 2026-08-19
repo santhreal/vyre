@@ -19,7 +19,7 @@
 //! An offset and size that are literal multiples of four take neither path: the
 //! loop stays one load and one store per word.
 
-use naga::{Expression, Span, Statement};
+use naga::{BinaryOperator, Block, Expression, Span, Statement};
 use vyre_lower::KernelOp;
 
 use super::BodyBuilder;
@@ -39,6 +39,30 @@ struct ByteSpan {
 }
 
 impl BodyBuilder<'_> {
+    fn is_leader_invocation(&mut self) -> Result<naga::Handle<Expression>, EmitError> {
+        let local_arg = self.append_expr(Expression::FunctionArgument(self.builtins.local));
+        let lx = self.append_expr(Expression::AccessIndex {
+            base: local_arg,
+            index: 0,
+        });
+        let ly = self.append_expr(Expression::AccessIndex {
+            base: local_arg,
+            index: 1,
+        });
+        let lz = self.append_expr(Expression::AccessIndex {
+            base: local_arg,
+            index: 2,
+        });
+        let lxy = self.or_u32(lx, ly);
+        let lxyz = self.or_u32(lxy, lz);
+        let zero = self.literal_u32(0);
+        Ok(self.append_expr(Expression::Binary {
+            op: BinaryOperator::Equal,
+            left: lxyz,
+            right: zero,
+        }))
+    }
+
     pub(super) fn emit_async_load(&mut self, op: &KernelOp) -> Result<(), EmitError> {
         let source_slot = self.slot_operand(op, 0)?;
         let destination_slot = self.slot_operand(op, 1)?;
@@ -53,7 +77,9 @@ impl BodyBuilder<'_> {
         let destination_len = self.buffer_len_expr(destination_slot)?;
         let source_len = self.buffer_len_expr(source_slot)?;
         let copy_words = self.min_u32(requested_words, destination_len);
+        let is_leader = self.is_leader_invocation()?;
 
+        let outer = std::mem::replace(&mut self.function.body, Block::new());
         self.emit_counted_u32_loop("async_load_word", copy_words, |this, index| {
             let source_index = this.add_u32(span.word_start, index);
             let fetched = this.span_word(source_slot, source_index, source_len, &span)?;
@@ -73,7 +99,17 @@ impl BodyBuilder<'_> {
                 Span::UNDEFINED,
             );
             Ok(())
-        })
+        })?;
+        let leader_block = std::mem::replace(&mut self.function.body, outer);
+        self.function.body.push(
+            Statement::If {
+                condition: is_leader,
+                accept: leader_block,
+                reject: Block::new(),
+            },
+            Span::UNDEFINED,
+        );
+        Ok(())
     }
 
     pub(super) fn emit_async_store(&mut self, op: &KernelOp) -> Result<(), EmitError> {
@@ -113,6 +149,8 @@ impl BodyBuilder<'_> {
         let copy_words = self.min_u32(spanned_words, destination_remaining);
         let masked = !(span.word_aligned && whole_words);
 
+        let is_leader = self.is_leader_invocation()?;
+        let outer = std::mem::replace(&mut self.function.body, Block::new());
         self.emit_counted_u32_loop("async_store_word", copy_words, |this, index| {
             let destination_index = this.add_u32(span.word_start, index);
             let payload = this.payload_word(source_slot, index, source_len, &span)?;
@@ -133,7 +171,17 @@ impl BodyBuilder<'_> {
                 Span::UNDEFINED,
             );
             Ok(())
-        })
+        })?;
+        let leader_block = std::mem::replace(&mut self.function.body, outer);
+        self.function.body.push(
+            Statement::If {
+                condition: is_leader,
+                accept: leader_block,
+                reject: Block::new(),
+            },
+            Span::UNDEFINED,
+        );
+        Ok(())
     }
 
     /// Resolve a byte offset onto the word grid.

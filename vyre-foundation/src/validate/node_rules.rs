@@ -271,19 +271,53 @@ pub(crate) fn check_async_tag(tag: &Ident, errors: &mut Vec<ValidationError>) {
     }
 }
 
-/// Every per-node rule an `AsyncLoad` or an `AsyncStore` carries.
-///
-/// One entry point, because both the preorder validator and the differential
-/// walk apply it and a rule reached from only one of them is a rule the
-/// property test reports as a traversal disagreement.
+/// V128, V134, V139: an async transfer pairs with its wait, targets a writable
+/// buffer, and computes offset and size from workgroup-uniform expressions.
 pub(crate) fn check_async_transfer(
     destination: &Ident,
+    offset: &Expr,
+    size: &Expr,
     tag: &Ident,
     buffers: &BufferTable<'_>,
+    scope: &FxHashMap<Ident, Binding>,
     errors: &mut Vec<ValidationError>,
 ) {
     check_async_tag(tag, errors);
     bytes_rejection::check_async_destination(destination.as_str(), buffers, errors);
+    check_async_uniformity(offset, size, buffers, scope, errors);
+}
+
+/// V139: an async transfer offset and size must be workgroup-uniform expressions.
+pub(crate) fn check_async_uniformity(
+    offset: &Expr,
+    size: &Expr,
+    buffers: &BufferTable<'_>,
+    scope: &FxHashMap<Ident, Binding>,
+    errors: &mut Vec<ValidationError>,
+) {
+    let load_policy = |buf_ident: &Ident| {
+        buffers
+            .get(buf_ident.as_str())
+            .is_some_and(|b| b.access == BufferAccess::Uniform || b.access == BufferAccess::ReadOnly)
+    };
+    if !super::uniformity::is_uniform_with_load_policy(offset, scope, load_policy) {
+        errors.push(err(
+            "V139",
+            ValidationPhase::Node,
+            ValidationLocation::Program,
+            "async transfer offset expression is not workgroup-uniform".to_string(),
+            "compute the transfer offset from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID.".to_string(),
+        ));
+    }
+    if !super::uniformity::is_uniform_with_load_policy(size, scope, load_policy) {
+        errors.push(err(
+            "V139",
+            ValidationPhase::Node,
+            ValidationLocation::Program,
+            "async transfer size expression is not workgroup-uniform".to_string(),
+            "compute the transfer size from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID.".to_string(),
+        ));
+    }
 }
 
 /// The buffers a collective node names, in operand order.

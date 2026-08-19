@@ -386,6 +386,18 @@ impl BodyCtx<'_> {
         };
         let masked = !(span.word_aligned && whole_words);
 
+        let not_leader = self.alloc(PtxType::Bool);
+        let sum = self.alloc(PtxType::U32);
+        let tmp = self.alloc(PtxType::U32);
+        let skip_label = self.alloc_label("async_skip_non_leader");
+        let _ = writeln!(self.text, "    mov.u32    {sum}, %tid.x;");
+        let _ = writeln!(self.text, "    mov.u32    {tmp}, %tid.y;");
+        let _ = writeln!(self.text, "    or.b32     {sum}, {sum}, {tmp};");
+        let _ = writeln!(self.text, "    mov.u32    {tmp}, %tid.z;");
+        let _ = writeln!(self.text, "    or.b32     {sum}, {sum}, {tmp};");
+        let _ = writeln!(self.text, "    setp.ne.u32 {not_leader}, {sum}, 0;");
+        let _ = writeln!(self.text, "    @{not_leader} bra    {skip_label};");
+
         let loop_index = self.emit_u32_const(0);
         let loop_label = self.alloc_label("async_copy");
         let done_label = self.alloc_label("async_done");
@@ -396,7 +408,6 @@ impl BodyCtx<'_> {
             "    setp.ge.u32    {done_pred}, {loop_index}, {copy_words};"
         );
         let _ = writeln!(self.text, "    @{done_pred} bra    {done_label};");
-
         let (value, destination_index) = match direction {
             AsyncCopyDirection::Load => {
                 let source_index = self.emit_add_u32(span.word_start, loop_index);
@@ -463,6 +474,7 @@ impl BodyCtx<'_> {
         let _ = writeln!(self.text, "    add.u32    {loop_index}, {loop_index}, 1;");
         let _ = writeln!(self.text, "    bra    {loop_label};");
         let _ = writeln!(self.text, "{done_label}:");
+        let _ = writeln!(self.text, "{skip_label}:");
         let _ = writeln!(
             self.text,
             "    // async_copy tag={tag} lowered as bounded synchronous copy"
@@ -524,6 +536,18 @@ impl BodyCtx<'_> {
         let loop_label = self.alloc_label("cp_async");
         let done_label = self.alloc_label("cp_async_done");
 
+        let not_leader = self.alloc(PtxType::Bool);
+        let sum = self.alloc(PtxType::U32);
+        let tmp = self.alloc(PtxType::U32);
+        let skip_label = self.alloc_label("cp_async_skip_non_leader");
+        let _ = writeln!(self.text, "    mov.u32    {sum}, %tid.x;");
+        let _ = writeln!(self.text, "    mov.u32    {tmp}, %tid.y;");
+        let _ = writeln!(self.text, "    or.b32     {sum}, {sum}, {tmp};");
+        let _ = writeln!(self.text, "    mov.u32    {tmp}, %tid.z;");
+        let _ = writeln!(self.text, "    or.b32     {sum}, {sum}, {tmp};");
+        let _ = writeln!(self.text, "    setp.ne.u32 {not_leader}, {sum}, 0;");
+        let _ = writeln!(self.text, "    @{not_leader} bra    {skip_label};");
+
         let _ = writeln!(
             self.text,
             "    // cp.async_load tag={tag} src=slot{source_slot} dst=slot{destination_slot}"
@@ -535,7 +559,6 @@ impl BodyCtx<'_> {
             "    setp.ge.u32    {done_pred}, {loop_index}, {copy_words};"
         );
         let _ = writeln!(self.text, "    @{done_pred} bra    {done_label};");
-
         let source_index = self.alloc(PtxType::U32);
         let _ = writeln!(
             self.text,
@@ -571,6 +594,7 @@ impl BodyCtx<'_> {
         let _ = writeln!(self.text, "    bra    {loop_label};");
         let _ = writeln!(self.text, "{done_label}:");
         let _ = writeln!(self.text, "    cp.async.commit_group;");
+        let _ = writeln!(self.text, "{skip_label}:");
         self.pending_cp_async_tags.insert(tag.clone());
         Ok(true)
     }
@@ -581,6 +605,7 @@ impl BodyCtx<'_> {
         }
         let _ = writeln!(self.text, "    cp.async.wait_group 0;");
         let _ = writeln!(self.text, "    membar.cta;");
+        let _ = writeln!(self.text, "    bar.sync 0;");
         true
     }
 }

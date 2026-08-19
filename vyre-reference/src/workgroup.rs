@@ -522,6 +522,12 @@ impl<'a> Invocation<'a> {
         self.returned || self.frames.is_empty()
     }
 
+    /// Whether this invocation is the leader invocation in its workgroup.
+    #[inline]
+    pub(crate) fn is_leader(&self) -> bool {
+        self.ids.local == [0, 0, 0]
+    }
+
     /// Push a lexical scope.
     ///
     ///

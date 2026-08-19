@@ -624,3 +624,9 @@ code = "V138"
 phase = "node"
 invariant = "Tile load operation references invalid or incompatible buffer"
 corrective_action = "Declare the buffer before loading tiles from it."
+
+[[rule]]
+code = "V139"
+phase = "node"
+invariant = "async transfer offset and size expressions must be workgroup-uniform"
+corrective_action = "Compute the transfer offset and size from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID."
