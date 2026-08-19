@@ -26,12 +26,9 @@ vyre-driver-wgpu = { workspace = true, optional = true }
 [dev-dependencies]
 proptest.workspace = true
 
-[build-dependencies]
-
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
-
 
 [features]
 default = []
