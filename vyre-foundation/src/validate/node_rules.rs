@@ -306,7 +306,7 @@ pub(crate) fn check_async_uniformity(
             ValidationPhase::Node,
             ValidationLocation::Program,
             "async transfer offset expression is not workgroup-uniform".to_string(),
-            "compute the transfer offset from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID.".to_string(),
+            "compute the transfer offset from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID.".to_string(),
         ));
     }
     if !super::uniformity::is_uniform_with_load_policy(size, scope, load_policy) {
@@ -315,7 +315,7 @@ pub(crate) fn check_async_uniformity(
             ValidationPhase::Node,
             ValidationLocation::Program,
             "async transfer size expression is not workgroup-uniform".to_string(),
-            "compute the transfer size from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID.".to_string(),
+            "compute the transfer size from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID.".to_string(),
         ));
     }
 }

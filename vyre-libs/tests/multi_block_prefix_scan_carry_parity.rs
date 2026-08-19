@@ -19,6 +19,7 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{Program, PORTABLE_WORKGROUP_INVOCATIONS};
+use vyre_foundation::LaunchGeometry;
 use vyre_libs::reduce::multi_block_prefix_scan;
 
 const BLOCK_LANES: u32 = PORTABLE_WORKGROUP_INVOCATIONS;
@@ -36,20 +37,45 @@ use vyre_reference::value::Value;
 /// predicate (`vyre_reference::output_index`) so this can never drift from the real ABI.
 fn output_index(program: &Program, name: &str) -> usize {
     vyre_reference::output_index(program, name)
-        .expect("Fix: multi_block_prefix_scan must declare the `output` buffer")
+        .unwrap_or_else(|| panic!("Fix: the program must declare the `{name}` buffer"))
+}
+
+/// Run `program` once and return, for every requested buffer, its first `words`
+/// values. One evaluation answers every buffer a caller reads, so a chain that
+/// feeds one pass from another never runs the producing pass twice.
+fn eval_buffers(program: &Program, inputs: &[Value], requested: &[(&str, usize)]) -> Vec<Vec<u32>> {
+    let indices: Vec<usize> = requested
+        .iter()
+        .map(|(name, _)| output_index(program, name))
+        .collect();
+    let outputs = vyre_reference::reference_eval(program, inputs)
+        .expect("multi-block prefix scan must execute under reference_eval");
+    requested
+        .iter()
+        .zip(indices)
+        .map(|((_, words), index)| {
+            let mut values = unpack(&outputs[index].to_bytes());
+            values.truncate(*words);
+            values
+        })
+        .collect()
+}
+
+/// Run `program` and return the first `words` values of its `name` buffer.
+fn eval_buffer(program: &Program, inputs: &[Value], name: &str, words: usize) -> Vec<u32> {
+    let mut buffers = eval_buffers(program, inputs, &[(name, words)]);
+    buffers.pop().expect("one requested buffer answers one read")
 }
 
 /// Run the multi-block prefix-scan GPU program through the reference interpreter and
 /// return the first `n` words of the FINAL `output` buffer.
 fn gpu_scan(input: &[u32]) -> Vec<u32> {
-    let n = input.len() as u32;
-    let program = multi_block_prefix_scan::multi_block_prefix_scan_sum_u32("input", "output", n);
-    let out_idx = output_index(&program, "output");
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack(input))])
-        .expect("multi-block prefix scan must execute under reference_eval");
-    let mut out = unpack(&outputs[out_idx].to_bytes());
-    out.truncate(input.len());
-    out
+    let program = multi_block_prefix_scan::multi_block_prefix_scan_sum_u32(
+        "input",
+        "output",
+        input.len() as u32,
+    );
+    eval_buffer(&program, &[Value::from(pack(input))], "output", input.len())
 }
 
 #[test]
@@ -148,15 +174,12 @@ fn multi_block_gpu_program_matches_cpu_ref_across_block_boundary() {
 /// Run the multi-block EXCLUSIVE prefix-scan program and return the first `n` words
 /// of the final `output` buffer.
 fn gpu_scan_exclusive(input: &[u32]) -> Vec<u32> {
-    let n = input.len() as u32;
-    let program =
-        multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32("input", "output", n);
-    let out_idx = output_index(&program, "output");
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack(input))])
-        .expect("multi-block exclusive prefix scan must execute under reference_eval");
-    let mut out = unpack(&outputs[out_idx].to_bytes());
-    out.truncate(input.len());
-    out
+    let program = multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(
+        "input",
+        "output",
+        input.len() as u32,
+    );
+    eval_buffer(&program, &[Value::from(pack(input))], "output", input.len())
 }
 
 #[test]
@@ -186,22 +209,184 @@ fn multi_block_exclusive_scan_matches_cpu_ref_across_block_boundary() {
     }
 }
 
+/// One Pass-A or Pass-C builder at one lane count.
+type PassBuilder<'a> = &'a dyn Fn(u32, u32) -> Program;
+
+/// WHY: the family publishes six spellings of one chain, the canonical pair plus
+/// an explicit-lane pair and a geometry pair, and only the canonical pair and the
+/// inclusive explicit-lane form were ever executed. A spelling nobody runs is a
+/// public builder whose lane plumbing can be wrong with nothing red, and the
+/// geometry forms are the ones a backend calls after it has chosen a width.
+///
+/// Closes: every published spelling of the multi-block scan, inclusive and
+/// exclusive, at a lane count other than the portable default, enumerated
+/// together so a divergence names the spelling that produced it.
+///
+/// Does not catch: a wrong `grid` or `shared_bytes` field, which no builder in
+/// this family reads.
 #[test]
-fn multi_block_prefix_scan_matches_cpu_ref_with_256_block_lanes() {
-    for &n in &[257, 512, 1025, 2049] {
+fn every_published_scan_spelling_matches_its_witness() {
+    const LANES: u32 = 256;
+    let geometry = LaunchGeometry {
+        workgroup: [LANES, 1, 1],
+        ..LaunchGeometry::default()
+    };
+    for &n in &[LANES + 1, LANES * 2, LANES * 4 + 7] {
         let input: Vec<u32> = (0..n).map(|i| (i % 7) + 1).collect();
-        let program = multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes(
-            "input", "output", n, 256,
+        let inclusive = inclusive_prefix_sum_witness(&input);
+        let exclusive = exclusive_prefix_sum_witness(&input);
+        let cases: [(&str, Program, &[u32]); 4] = [
+            (
+                "sum_u32_with_block_lanes",
+                multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes(
+                    "input", "output", n, LANES,
+                ),
+                inclusive.as_slice(),
+            ),
+            (
+                "sum_u32_with_geometry",
+                multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_geometry(
+                    "input", "output", n, &geometry,
+                ),
+                inclusive.as_slice(),
+            ),
+            (
+                "sum_exclusive_u32_with_block_lanes",
+                multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(
+                    "input", "output", n, LANES,
+                ),
+                exclusive.as_slice(),
+            ),
+            (
+                "sum_exclusive_u32_with_geometry",
+                multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32_with_geometry(
+                    "input", "output", n, &geometry,
+                ),
+                exclusive.as_slice(),
+            ),
+        ];
+        for (spelling, program, expected) in cases {
+            let actual = eval_buffer(&program, &[Value::from(pack(&input))], "output", input.len());
+            assert_eq!(
+                actual, expected,
+                "{spelling} at n={n} over {LANES} lanes must match its witness"
+            );
+        }
+    }
+}
+
+/// WHY: Pass A and Pass C ship as public builders so a resident scheduler can
+/// drive the three-pass chain itself, and nothing in this crate executed either
+/// one. The fused program hides both: it wires the passes together with buffer
+/// names it chooses, so a Pass-A total written by the wrong lane or a Pass-C
+/// offset read one block off can only be seen by driving the passes separately
+/// and joining them by hand.
+///
+/// Closes: `pass_a_local_scan` and `pass_c_broadcast_offsets` in both the
+/// portable and the explicit-lane spelling, composed through the host scan of the
+/// block totals that Pass B computes on the device.
+///
+/// Does not catch: the GridSync ordering between the passes, which only the fused
+/// program declares and which
+/// `multi_block_intermediates_are_globally_ordered` pins.
+#[test]
+fn the_published_passes_compose_into_the_fused_scan() {
+    let spellings: [(&str, u32, PassBuilder<'_>, PassBuilder<'_>); 2] = [
+        (
+            "portable",
+            BLOCK_LANES,
+            &|n, blocks| {
+                multi_block_prefix_scan::pass_a_local_scan(
+                    "input",
+                    "partials",
+                    "block_totals",
+                    n,
+                    blocks,
+                )
+            },
+            &|n, blocks| {
+                multi_block_prefix_scan::pass_c_broadcast_offsets(
+                    "partials", "scanned", "output", n, blocks,
+                )
+            },
+        ),
+        (
+            "256 lanes",
+            256,
+            &|n, blocks| {
+                multi_block_prefix_scan::pass_a_local_scan_with_block_lanes(
+                    "input",
+                    "partials",
+                    "block_totals",
+                    n,
+                    blocks,
+                    256,
+                )
+            },
+            &|n, blocks| {
+                multi_block_prefix_scan::pass_c_broadcast_offsets_with_block_lanes(
+                    "partials", "scanned", "output", n, blocks, 256,
+                )
+            },
+        ),
+    ];
+
+    for (spelling, lanes, pass_a, pass_c) in spellings {
+        let n = lanes * 3 + 5;
+        let blocks = n.div_ceil(lanes);
+        let input: Vec<u32> = (0..n).map(|i| (i % 5) + 1).collect();
+
+        // Pass A stages a whole block of lanes and zeroes what lies past `n`, so
+        // the witness scans the padded block and the elements past `n` stay
+        // unwritten in `partials`.
+        let mut expected_partials: Vec<u32> = Vec::with_capacity((blocks * lanes) as usize);
+        let mut expected_totals: Vec<u32> = Vec::with_capacity(blocks as usize);
+        for block in 0..blocks {
+            let start = (block * lanes) as usize;
+            let padded: Vec<u32> = (start..start + lanes as usize)
+                .map(|index| input.get(index).copied().unwrap_or(0))
+                .collect();
+            let scanned = inclusive_prefix_sum_witness(&padded);
+            expected_totals.push(*scanned.last().expect("a block spans its lanes"));
+            for (lane, value) in scanned.iter().enumerate() {
+                let global = start + lane;
+                expected_partials.push(if global < input.len() { *value } else { 0 });
+            }
+        }
+
+        let program_a = pass_a(n, blocks);
+        let staged = [Value::from(pack(&input))];
+        let words = (blocks * lanes) as usize;
+        let buffers = eval_buffers(
+            &program_a,
+            &staged,
+            &[("partials", words), ("block_totals", blocks as usize)],
         );
-        let out_idx = output_index(&program, "output");
-        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack(&input))])
-            .expect("multi-block prefix scan with 256 lanes must execute under reference_eval");
-        let mut out = unpack(&outputs[out_idx].to_bytes());
-        out.truncate(input.len());
-        let cpu = inclusive_prefix_sum_witness(&input);
+        let (partials, totals) = (&buffers[0], &buffers[1]);
         assert_eq!(
-            out, cpu,
-            "256-block-lanes prefix scan matches cpu_ref at n={n}"
+            partials, &expected_partials,
+            "{spelling}: Pass A must write every in-range per-element partial at n={n}"
+        );
+        assert_eq!(
+            totals, &expected_totals,
+            "{spelling}: Pass A must write every per-block total at n={n}"
+        );
+
+        let scanned_totals = inclusive_prefix_sum_witness(totals);
+        let program_c = pass_c(n, blocks);
+        let output = eval_buffer(
+            &program_c,
+            &[
+                Value::from(pack(partials)),
+                Value::from(pack(&scanned_totals)),
+            ],
+            "output",
+            input.len(),
+        );
+        assert_eq!(
+            output,
+            inclusive_prefix_sum_witness(&input),
+            "{spelling}: Pass C must add each block's carry at n={n}"
         );
     }
 }

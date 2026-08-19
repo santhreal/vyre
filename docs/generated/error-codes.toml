@@ -1,4 +1,5 @@
 # Generated from vyre_foundation::validate::catalog. Do not hand-edit.
+# Regenerate: ./cargo_full run -p xtask --bin xtask -- error-codes --write
 schema_version = 1
 
 [[rule]]
@@ -629,4 +630,4 @@ corrective_action = "Declare the buffer before loading tiles from it."
 code = "V139"
 phase = "node"
 invariant = "async transfer offset and size expressions must be workgroup-uniform"
-corrective_action = "Compute the transfer offset and size from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID."
+corrective_action = "Compute the transfer offset and size from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID."

@@ -211,33 +211,20 @@ fn async_load_with_read_only_and_uniform_buffer_loads_succeeds() {
 }
 
 /// WHY: the uniformity proof for a load belongs to the operand, not to a name.
-/// A load from a read-only buffer at a uniform index is workgroup-uniform in the
-/// offset position, and the same load bound to a `Let` is not: `Let` records
-/// uniformity through the ordinary analysis, which refuses every load. The
-/// asymmetry was untested, so a caller that hoisted a proven-uniform load into a
-/// binding for readability lost the proof with no test naming the rule.
+/// `async_load_with_read_only_and_uniform_buffer_loads_succeeds` above pins the
+/// direct spelling; this one pins the other half of the asymmetry. `Node::Let`
+/// records uniformity through the ordinary analysis, which has no buffer table
+/// in scope and so refuses every load, and hoisting a proven-uniform read-only
+/// load into a binding for readability silently loses the proof. The rule was
+/// untested in that direction, and a registered operation shipped with the
+/// hoisted spelling because nothing named it.
 ///
-/// Closes: the read-only and uniform load in the offset and the size position,
-/// once directly and once through a binding.
+/// Closes: a read-only load used as a transfer offset through a `Let` binding.
+///
+/// Does not catch: the same hoist through a buffer store and reload, which is a
+/// different expression and is refused for the ordinary reason.
 #[test]
 fn a_uniform_load_proves_the_operand_it_is_written_in_not_a_binding() {
-    let direct = vec![
-        Node::AsyncLoad {
-            source: Ident::from("src"),
-            destination: Ident::from("dst"),
-            offset: Box::new(Expr::load("ro_buf", Expr::u32(0))),
-            size: Box::new(Expr::load("uni_buf", Expr::u32(1))),
-            tag: Ident::from("transfer"),
-        },
-        Node::AsyncWait {
-            tag: Ident::from("transfer"),
-        },
-    ];
-    assert!(
-        !reports_v139(standard_buffers(), direct),
-        "a read-only load at a literal index is uniform where it is written"
-    );
-
     let bound = vec![
         Node::let_bind("hoisted_offset", Expr::load("ro_buf", Expr::u32(0))),
         Node::AsyncLoad {

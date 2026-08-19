@@ -654,7 +654,7 @@ pub(crate) const VALIDATION_RULES: &[ValidationRule] = &[
         code: "V139",
         phase: ValidationPhase::Node,
         invariant: "async transfer offset and size expressions must be workgroup-uniform",
-        corrective_action: "Compute the transfer offset and size from workgroup-uniform expressions (such as literals, buffer lengths, or workgroup ID), and avoid thread-divergent expressions like invocation ID.",
+        corrective_action: "Compute the transfer offset and size from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID.",
     },
 ];
 
@@ -673,6 +673,7 @@ pub fn rules() -> &'static [ValidationRule] {
 pub fn render_catalog_toml() -> String {
     let mut out = String::with_capacity(VALIDATION_RULES.len() * 256);
     out.push_str("# Generated from vyre_foundation::validate::catalog. Do not hand-edit.\n");
+    out.push_str("# Regenerate: ./cargo_full run -p xtask --bin xtask -- error-codes --write\n");
     out.push_str("schema_version = 1\n");
     for rule in VALIDATION_RULES {
         out.push_str("\n[[rule]]\ncode = ");

@@ -437,13 +437,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "error-codes",
-        help: "Hold docs/generated/driver-error-codes.toml to the live driver error-code inventory; --write regenerates it",
+        help: "Hold docs/generated/driver-error-codes.toml and docs/generated/error-codes.toml to the live driver and validation inventories; --write regenerates them",
         package: "xtask-registry",
         areas: &["prepublish"],
-        subject: "driver error codes",
-        artifacts: &["docs/generated/driver-error-codes.toml"],
+        subject: "driver and validation error codes",
+        artifacts: &[
+            "docs/generated/driver-error-codes.toml",
+            "docs/generated/error-codes.toml",
+        ],
         prerequisites: &[],
-        proof: "xtask_registry::docs::error_codes::tests::driver_error_catalog_uses_canonical_renderer",
+        proof: "xtask_registry::docs::error_codes::tests::each_catalog_uses_the_renderer_of_the_crate_that_owns_it",
     },
     GateDescriptor {
         name: "evidence-paths",
