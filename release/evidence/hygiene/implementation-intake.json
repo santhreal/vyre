@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:7c0e8ec1bac18699c231f5dc4782314c6b18168e:dirty=true:worktree=37d2ffa17cd132f2f74eb6ca58cbc46bdce3b634aa756d93d83ad6af55010095",
+  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=true:worktree=b4c40f65a32bd535f226ee7add243fbadee523d59d39500e09e95e67de94fd41",
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -11,6 +11,15 @@
       "pattern": "TODO",
       "release_blocker": false,
       "count": 1
+    },
+    {
+      "owner_lane": "bench_harness",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -37,7 +46,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 12
+      "count": 34
     },
     {
       "owner_lane": "coordination",
@@ -46,7 +55,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 21
+      "count": 23
     },
     {
       "owner_lane": "coordination",
@@ -121,6 +130,15 @@
       "count": 1
     },
     {
+      "owner_lane": "driver_cuda",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
       "owner_lane": "driver_shared",
       "surface": "production",
       "risk": "informational",
@@ -139,11 +157,29 @@
       "count": 4
     },
     {
+      "owner_lane": "driver_shared",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
       "owner_lane": "driver_wgpu",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
       "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "owner_lane": "driver_wgpu",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
       "release_blocker": false,
       "count": 1
     },
@@ -199,7 +235,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 7
+      "count": 11
     },
     {
       "owner_lane": "nn_math",
@@ -289,7 +325,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 135
+      "count": 2
     },
     {
       "owner_lane": "testing_evidence",
@@ -361,7 +397,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 5
+      "count": 33
     },
     {
       "owner_lane": "testing_evidence",

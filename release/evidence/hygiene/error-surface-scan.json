@@ -1,37 +1,37 @@
 {
-  "source_fingerprint": "git:e686bc9b48e352c3da6863059c59aac18d756348:dirty=false",
+  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=true:worktree=b2e0c3c0dc7846c33c22d2cfc562d2286e8c29eff61a8af57303e58327d2778f",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
     {
-      "path": "structure-gate/src/lib.rs",
-      "line": 287,
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 74,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 120,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest_path.display()));"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 122,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest_path.display()));"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 250,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
-      "path": "structure-gate/src/lib.rs",
-      "line": 289,
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 252,
       "pattern": "documented_panic_contract",
       "text": "panic!("
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 672,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 718,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 720,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
     {
       "path": "vyre-driver/src/resident_transfer_fixtures.rs",
@@ -137,9 +137,15 @@
     },
     {
       "path": "vyre-libs/src/graph/dominator_frontier.rs",
-      "line": 409,
+      "line": 80,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
+    },
+    {
+      "path": "vyre-libs/src/graph/csr_bidirectional_plan.rs",
+      "line": 602,
+      "pattern": "documented_panic_contract",
+      "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/graph/persistent_bfs/program.rs",
@@ -176,12 +182,6 @@
       "line": 114,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
-    },
-    {
-      "path": "vyre-libs/src/graph/csr_bidirectional.rs",
-      "line": 645,
-      "pattern": "documented_panic_contract",
-      "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/security/predicate_catalog.rs",
@@ -329,99 +329,99 @@
     },
     {
       "path": "vyre-foundation/src/optimizer/rewrite_proof.rs",
-      "line": 288,
+      "line": 295,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"select requires an Array sort\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 564,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: registered callee must have transitive effect state\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 568,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: registered callee must have transitive capability state\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 576,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_effects\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 585,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_capabilities\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 714,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan traversal node must have an adjacency entry\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 723,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan visited child node must have a lowlink entry\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 727,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 735,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan on-stack node must have an index entry\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 739,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 747,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 752,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan active node must have an index entry\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 759,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: Tarjan component stack must contain its root\");"
+    },
+    {
+      "path": "vyre-foundation/src/operation/mod.rs",
+      "line": 884,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
+    },
+    {
+      "path": "vyre-foundation/src/operation/target_facet.rs",
+      "line": 48,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
     {
       "path": "vyre-foundation/src/diagnostics.rs",
       "line": 423,
       "pattern": "documented_panic_contract",
       "text": "serde_json::to_string(self).expect("
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 822,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: registered callee must have transitive effect state\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 826,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: registered callee must have transitive capability state\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 834,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_effects\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 843,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: caller node in direct_callees must be registered in transitive_capabilities\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 972,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan traversal node must have an adjacency entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 981,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan visited child node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 985,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 993,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan on-stack node must have an index entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 997,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 1005,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have a lowlink entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 1010,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan active node must have an index entry\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 1017,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: Tarjan component stack must contain its root\");"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 1142,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
-    },
-    {
-      "path": "vyre-foundation/src/operation.rs",
-      "line": 1240,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
     {
       "path": "vyre-foundation/fuzz/fuzz_targets/program_wire.rs",
@@ -574,26 +574,38 @@
       "text": "let b_bits = u32::from_le_bytes(back_bytes[i * 4..(i + 1) * 4].try_into().unwrap());"
     },
     {
+      "path": "vyre-test-support/src/async_span_parity.rs",
+      "line": 188,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: the reference evaluator must run the async transfer fixture\")"
+    },
+    {
+      "path": "vyre-test-support/src/async_span_parity.rs",
+      "line": 226,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 299,
+      "line": 301,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 342,
+      "line": 344,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 437,
+      "line": 439,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 445,
+      "line": 447,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -602,6 +614,132 @@
       "line": 50,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: a LoaderInstance is only empty while it is being dropped\")"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 168,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: provide charges and cell assignments with matching lengths and representable cell ids\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 252,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: provide representable cell ids and sufficient memory capacity for P2M moment aggregation\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 278,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: provide a square cell_distances matrix matching cell_moments.len() * cell_moments.len()\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 337,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: provide cell assignments matching region_count and indexing valid cells in cell_local\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 488,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 539,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 573,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: choose block encoding dimension such that dimension * dimension does not overflow usize\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_physics.rs",
+      "line": 593,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: choose block encoding dimension such that dimension * dimension does not overflow usize\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/graph_vector.rs",
+      "line": 162,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|err| panic!(\"tensor_flow_forward_witness failed: {err}\"))"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_amg.rs",
+      "line": 264,
+      "pattern": "documented_panic_contract",
+      "text": ".expect("
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_amg.rs",
+      "line": 329,
+      "pattern": "documented_panic_contract",
+      "text": ".expect("
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_amg.rs",
+      "line": 518,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: supply matching fine/coarse AMG operator buffers and a finite positive tolerance\")"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_amg.rs",
+      "line": 598,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: supply matching fine/coarse AMG operator buffers and a finite positive tolerance\")"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_amg.rs",
+      "line": 737,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: provide a square matrix of size n*n, vectors of size n, and a finite positive tolerance\")"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_analysis.rs",
+      "line": 37,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Grünwald-Letnikov kernel witness failed: {error}\"))"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_analysis.rs",
+      "line": 94,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Fractional derivative witness failed: {error}\"))"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_analysis.rs",
+      "line": 131,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"kernel_to_fixed_16_16 witness failed: {error}\"));"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_quant.rs",
+      "line": 229,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Sinkhorn witness failed: {error}\"))"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_quant.rs",
+      "line": 672,
+      "pattern": "documented_panic_contract",
+      "text": "try_argmin_cost_witness(costs).expect(\"Fix: pick_best_config requires at least one candidate.\")"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_quant.rs",
+      "line": 709,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: supply a finite positive temperature parameter for differentiable autotune score gradient calculation\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_quant.rs",
+      "line": 760,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: supply a finite positive temperature parameter for differentiable autotune configuration selection\");"
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
@@ -617,159 +755,15 @@
     },
     {
       "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 696,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tt_contract_step_cpu_into failed: invalid TT contraction shape\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 795,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: scratch allocation must succeed for declared sizes; shrink test fixture or return Err - tt_full_chain_cpu_with_scratch failed: scratch allocation failed\")"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 868,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: ensure adjacent tensor train rank products fit within usize bounds\")"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 984,
+      "line": 731,
       "pattern": "documented_panic_contract",
       "text": ".expect("
     },
     {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 1321,
+      "path": "vyre-reference/src/composition_witness/graph_matroid.rs",
+      "line": 206,
       "pattern": "documented_panic_contract",
-      "text": ".expect("
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 1386,
-      "pattern": "documented_panic_contract",
-      "text": ".expect("
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 1575,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: supply matching fine/coarse AMG operator buffers and a finite positive tolerance\")"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 1655,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: supply matching fine/coarse AMG operator buffers and a finite positive tolerance\")"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 1794,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: provide a square matrix of size n*n, vectors of size n, and a finite positive tolerance\")"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2109,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"Sinkhorn witness failed: {error}\"))"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2552,
-      "pattern": "documented_panic_contract",
-      "text": "try_argmin_cost_witness(costs).expect(\"Fix: pick_best_config requires at least one candidate.\")"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2589,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: supply a finite positive temperature parameter for differentiable autotune score gradient calculation\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2640,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: supply a finite positive temperature parameter for differentiable autotune configuration selection\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2824,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: provide charges and cell assignments with matching lengths and representable cell ids\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2908,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: provide representable cell ids and sufficient memory capacity for P2M moment aggregation\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2934,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: provide a square cell_distances matrix matching cell_moments.len() * cell_moments.len()\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 2993,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: provide cell assignments matching region_count and indexing valid cells in cell_local\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3144,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3195,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: provide positive n and k, assignments of length n with values less than k, and n * n within usize bounds\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3229,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: choose block encoding dimension such that dimension * dimension does not overflow usize\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3249,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: choose block encoding dimension such that dimension * dimension does not overflow usize\");"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3722,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"Sinkhorn f64 witness failed: {error}\"))"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3864,
-      "pattern": "documented_panic_contract",
-      "text": "try_sinkhorn_iter_f64_in_place_witness_into(k, a, b, u, v, m, n, kv, ktu).expect("
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3903,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"Grünwald-Letnikov kernel witness failed: {error}\"))"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3960,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"Fractional derivative witness failed: {error}\"))"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/math.rs",
-      "line": 3997,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"kernel_to_fixed_16_16 witness failed: {error}\"));"
+      "text": "let expected_adj = element_count.checked_mul(element_count).expect("
     },
     {
       "path": "vyre-reference/src/composition_witness/csr.rs",
@@ -784,28 +778,22 @@
       "text": ".unwrap_or_else(|error| panic!(\"invalid segment reduce witness input: {error}\"));"
     },
     {
-      "path": "vyre-reference/src/composition_witness/graph.rs",
-      "line": 1489,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|error| panic!(\"invalid d-DNNF witness input: {error}\"))"
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/graph.rs",
-      "line": 1591,
-      "pattern": "documented_panic_contract",
-      "text": "let expected_adj = element_count.checked_mul(element_count).expect("
-    },
-    {
-      "path": "vyre-reference/src/composition_witness/graph.rs",
-      "line": 2084,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|err| panic!(\"tensor_flow_forward_witness failed: {err}\"))"
-    },
-    {
       "path": "vyre-reference/src/composition_witness/pattern.rs",
       "line": 206,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"post-process contract failed: {error}\"))"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_schedule.rs",
+      "line": 308,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"Sinkhorn f64 witness failed: {error}\"))"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_schedule.rs",
+      "line": 450,
+      "pattern": "documented_panic_contract",
+      "text": "try_sinkhorn_iter_f64_in_place_witness_into(k, a, b, u, v, m, n, kv, ktu).expect("
     },
     {
       "path": "vyre-reference/src/composition_witness/bitset.rs",
@@ -868,50 +856,74 @@
       "text": ".unwrap_or_else(|error| panic!(\"RLE decode witness failed: {error}\"));"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 484,
+      "path": "vyre-reference/src/composition_witness/graph_dataflow.rs",
+      "line": 361,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"invalid d-DNNF witness input: {error}\"))"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_tensor.rs",
+      "line": 53,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - tt_contract_step_cpu_into failed: invalid TT contraction shape\");"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_tensor.rs",
+      "line": 152,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: scratch allocation must succeed for declared sizes; shrink test fixture or return Err - tt_full_chain_cpu_with_scratch failed: scratch allocation failed\")"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/math_tensor.rs",
+      "line": 225,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: ensure adjacent tensor train rank products fit within usize bounds\")"
+    },
+    {
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 13,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"sparse FFT bin-hash witness failed: {error}\"),"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 501,
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 30,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"sparse FFT bin-hash witness failed: {error}\");"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 552,
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 81,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"sparse FFT voting recovery witness failed: {error}\"),"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 572,
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 101,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"sparse FFT voting recovery witness failed: {error}\");"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 753,
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 282,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"hypervector XOR bind witness failed: {error}\"),"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 764,
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 293,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"hypervector XOR bind witness failed: {error}\");"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 792,
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 321,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"hypervector majority bundle witness failed: {error}\"),"
     },
     {
-      "path": "vyre-reference/src/composition_witness/hash.rs",
-      "line": 803,
+      "path": "vyre-reference/src/composition_witness/hash_transform.rs",
+      "line": 332,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"hypervector majority bundle witness failed: {error}\");"
     },
@@ -938,6 +950,18 @@
       "line": 233,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
+    },
+    {
+      "path": "vyre-emit-ptx/build.rs",
+      "line": 21,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: CARGO_MANIFEST_DIR names the package root; restore it before building.\");"
+    },
+    {
+      "path": "vyre-emit-ptx/build.rs",
+      "line": 27,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
     },
     {
       "path": "vyre-lower/src/rewrites/vector_memory.rs",
@@ -1064,6 +1088,18 @@
       "line": 93,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
+    },
+    {
+      "path": "vyre-emit-naga/build.rs",
+      "line": 23,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: CARGO_MANIFEST_DIR names the package root; restore it before building.\");"
+    },
+    {
+      "path": "vyre-emit-naga/build.rs",
+      "line": 29,
+      "pattern": "documented_panic_contract",
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
     },
     {
       "path": "xtask/src/fixture_checkout.rs",

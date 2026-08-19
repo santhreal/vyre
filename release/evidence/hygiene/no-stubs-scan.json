@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:7c0e8ec1bac18699c231f5dc4782314c6b18168e:dirty=true:worktree=4d20f206f2c31501d7246745cd74f71cb0de2798bd3bcbc286a3e984df6219cf",
+  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=false",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -53,7 +53,7 @@
     },
     {
       "path": "vyre-reference/src/execution/mod.rs",
-      "line": 72,
+      "line": 74,
       "pattern": "placeholder_text",
       "text": "// lowering table's placeholder, which cleared the output buffer instead"
     },

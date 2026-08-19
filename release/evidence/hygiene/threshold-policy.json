@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:fbee0b6e6c17a364b42cffab381f36c93d6c0339:dirty=true:worktree=c768c66d122670599138b5a439342ae2e1a855268eb9effcf3fcb5edbd1407a8",
+  "source_fingerprint": "git:00da3989f3d836301c2176546db7d76135fa46ae:dirty=false",
   "schema_version": 1,
   "source_manifest": "docs/optimization/THRESHOLD_POLICY.toml",
   "evidence_artifact": "release/evidence/hygiene/threshold-policy.json",
@@ -10,7 +10,7 @@
     {
       "id": "VX475-BIND_GROUP_CACHE_CAP",
       "path": "vyre-driver-wgpu/src/buffer/bind_group_cache/mod.rs",
-      "line": 14,
+      "line": 16,
       "name": "BIND_GROUP_CACHE_CAP",
       "observed_value": "256",
       "unit": "bind group entries",
