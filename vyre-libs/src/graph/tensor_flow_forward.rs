@@ -12,7 +12,8 @@ use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS,
 };
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
 
 /// Canonical op id.
@@ -79,17 +80,21 @@ fn tensor_flow_edge_scan_body(
     tensor_lane_count: u32,
     allow_mask: u32,
 ) -> Vec<Node> {
-    edge_scan_body(
-        allow_mask,
-        vec![Node::let_bind(
-            "dst",
-            Expr::load(NAME_EDGE_TARGETS, Expr::var("e")),
-        )],
-        vec![Node::if_then(
-            Expr::lt(Expr::var("dst"), Expr::u32(node_count)),
-            mark_tensor_bit(tensor_out, field_limit, tensor_lane_count),
-        )],
-    )
+    vec![wrap_child_region(
+        "vyre-libs::graph::tensor_flow_forward::edge_scan",
+        Ident::from(OP_ID),
+        edge_scan_body(
+            allow_mask,
+            vec![Node::let_bind(
+                "dst",
+                Expr::load(NAME_EDGE_TARGETS, Expr::var("e")),
+            )],
+            vec![Node::if_then(
+                Expr::lt(Expr::var("dst"), Expr::u32(node_count)),
+                mark_tensor_bit(tensor_out, field_limit, tensor_lane_count),
+            )],
+        ),
+    )]
 }
 
 fn mark_tensor_bit(tensor_out: &str, field_limit: u32, tensor_lane_count: u32) -> Vec<Node> {

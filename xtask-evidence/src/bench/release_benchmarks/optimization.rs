@@ -229,7 +229,8 @@ pub(super) fn optimization_semantic_win(
 }
 
 pub(super) fn write_release_axes(workspace_root: &Path) -> Result<(), String> {
-    let suite_path = workspace_root.join("release/evidence/benchmarks/cuda-release-suite.json");
+    const CUDA_RELEASE_SUITE_REL: &str = "release/evidence/benchmarks/cuda-release-suite.json";
+    let suite_path = workspace_root.join(CUDA_RELEASE_SUITE_REL);
     let mut reports = Vec::new();
     let mut source_artifacts = Vec::new();
     let mut blockers = Vec::new();
@@ -237,8 +238,7 @@ pub(super) fn write_release_axes(workspace_root: &Path) -> Result<(), String> {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
-                "failed to read CUDA release suite `{}`: {error}",
-                suite_path.display()
+                "failed to read CUDA release suite `{CUDA_RELEASE_SUITE_REL}`: {error}"
             ));
             String::new()
         }
@@ -250,8 +250,7 @@ pub(super) fn write_release_axes(workspace_root: &Path) -> Result<(), String> {
             Ok(value) => value,
             Err(error) => {
                 blockers.push(format!(
-                    "invalid CUDA release suite JSON `{}`: {error}",
-                    suite_path.display()
+                    "invalid CUDA release suite JSON `{CUDA_RELEASE_SUITE_REL}`: {error}"
                 ));
                 Value::Null
             }

@@ -120,7 +120,11 @@ pub(super) fn tiled_online_softmax_body(
             Expr::sub(Expr::var("tile_end"), Expr::var("tile_start")),
         ),
     ];
-    tile_body.extend(compute_tile_scores);
+    tile_body.push(wrap_child_region(
+        "vyre-libs::nn::attention::tile_scores",
+        Ident::from(OP_ID),
+        compute_tile_scores,
+    ));
     tile_body.extend(find_tile_max);
     tile_body.push(Node::let_bind(
         "m_new",
@@ -168,7 +172,11 @@ pub(super) fn tiled_online_softmax_body(
             Expr::fma(Expr::var("rescale"), Expr::var("l"), Expr::var("tile_sum")),
         ),
     ]);
-    tile_body.extend(update_o_acc);
+    tile_body.push(wrap_child_region(
+        "vyre-libs::nn::attention::absorb_tile_values",
+        Ident::from(OP_ID),
+        update_o_acc,
+    ));
     tile_body.push(Node::assign("m", Expr::var("m_new")));
 
     let mut per_item = vec![

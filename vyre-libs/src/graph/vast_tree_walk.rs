@@ -1,7 +1,7 @@
 //! VAST first-child / next-sibling tree traversal primitives.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::vast::{NODE_STRIDE_U32, SENTINEL};
 
@@ -378,23 +378,27 @@ fn valid_node_expr(expr: Expr, node_count: u32) -> Expr {
 }
 
 fn descend_to_leftmost_leaf_node(nodes_name: &str, node_count: u32, stride: u32) -> Node {
-    Node::loop_for(
-        "descend",
-        Expr::u32(0),
-        Expr::u32(node_count),
-        vec![Node::if_then(
-            valid_node_expr(Expr::var("n"), node_count),
-            vec![
-                Node::let_bind(
-                    "fc_idx",
-                    Expr::add(Expr::mul(Expr::var("n"), Expr::u32(stride)), Expr::u32(2)),
-                ),
-                Node::let_bind("fc", Expr::load(nodes_name, Expr::var("fc_idx"))),
-                Node::if_then(
-                    valid_node_expr(Expr::var("fc"), node_count),
-                    vec![Node::assign("n", Expr::var("fc"))],
-                ),
-            ],
+    wrap_child_region(
+        "vyre-libs::graph::vast_walk::descend",
+        Ident::from(POSTORDER_OP_ID),
+        vec![Node::loop_for(
+            "descend",
+            Expr::u32(0),
+            Expr::u32(node_count),
+            vec![Node::if_then(
+                valid_node_expr(Expr::var("n"), node_count),
+                vec![
+                    Node::let_bind(
+                        "fc_idx",
+                        Expr::add(Expr::mul(Expr::var("n"), Expr::u32(stride)), Expr::u32(2)),
+                    ),
+                    Node::let_bind("fc", Expr::load(nodes_name, Expr::var("fc_idx"))),
+                    Node::if_then(
+                        valid_node_expr(Expr::var("fc"), node_count),
+                        vec![Node::assign("n", Expr::var("fc"))],
+                    ),
+                ],
+            )],
         )],
     )
 }

@@ -21,5 +21,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Run loom tests
         run: |
-          # Only run tests named loom_* under cfg loom. If a crate has none, it is a no-op.
-          ./cargo_full test --workspace --release -- --test-threads=1 loom_
+          # Only run tests named loom_* under cfg loom in crates with concurrency logic.
+          ./cargo_full test -p vyre-foundation -p vyre-runtime --release -- --test-threads=1 loom_

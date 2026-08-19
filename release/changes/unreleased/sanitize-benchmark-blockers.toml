@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The benchmark producer and release evidence generators sanitize host absolute paths in failed command outputs and artifact path validation issues, preventing environment-specific absolute paths from leaking into evidence blockers."

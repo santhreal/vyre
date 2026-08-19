@@ -74,40 +74,44 @@ pub fn dominator_tree_intersect_step_body(
                             vec![Node::if_then_else(
                                 Expr::eq(Expr::var("new_idom"), Expr::u32(IDOM_NONE)),
                                 vec![Node::assign("new_idom", Expr::var("p"))],
-                                vec![
-                                    Node::let_bind("a", Expr::var("new_idom")),
-                                    Node::let_bind("b", Expr::var("p")),
-                                    Node::loop_for(
-                                        "lca_step",
-                                        Expr::u32(0),
-                                        Expr::u32(node_count),
-                                        vec![Node::if_then(
-                                            Expr::ne(Expr::var("a"), Expr::var("b")),
-                                            vec![
-                                                Node::let_bind(
-                                                    "da",
-                                                    Expr::load(depth, Expr::var("a")),
-                                                ),
-                                                Node::let_bind(
-                                                    "db",
-                                                    Expr::load(depth, Expr::var("b")),
-                                                ),
-                                                Node::if_then_else(
-                                                    Expr::gt(Expr::var("da"), Expr::var("db")),
-                                                    vec![Node::assign(
-                                                        "a",
-                                                        Expr::load(idom, Expr::var("a")),
-                                                    )],
-                                                    vec![Node::assign(
-                                                        "b",
-                                                        Expr::load(idom, Expr::var("b")),
-                                                    )],
-                                                ),
-                                            ],
-                                        )],
-                                    ),
-                                    Node::assign("new_idom", Expr::var("a")),
-                                ],
+                                vec![wrap_child_region(
+                                    "vyre-libs::graph::dominator_tree::lca",
+                                    Ident::from(OP_ID),
+                                    vec![
+                                        Node::let_bind("a", Expr::var("new_idom")),
+                                        Node::let_bind("b", Expr::var("p")),
+                                        Node::loop_for(
+                                            "lca_step",
+                                            Expr::u32(0),
+                                            Expr::u32(node_count),
+                                            vec![Node::if_then(
+                                                Expr::ne(Expr::var("a"), Expr::var("b")),
+                                                vec![
+                                                    Node::let_bind(
+                                                        "da",
+                                                        Expr::load(depth, Expr::var("a")),
+                                                    ),
+                                                    Node::let_bind(
+                                                        "db",
+                                                        Expr::load(depth, Expr::var("b")),
+                                                    ),
+                                                    Node::if_then_else(
+                                                        Expr::gt(Expr::var("da"), Expr::var("db")),
+                                                        vec![Node::assign(
+                                                            "a",
+                                                            Expr::load(idom, Expr::var("a")),
+                                                        )],
+                                                        vec![Node::assign(
+                                                            "b",
+                                                            Expr::load(idom, Expr::var("b")),
+                                                        )],
+                                                    ),
+                                                ],
+                                            )],
+                                        ),
+                                        Node::assign("new_idom", Expr::var("a")),
+                                    ],
+                                )],
                             )],
                         ),
                     ],

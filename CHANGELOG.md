@@ -6116,6 +6116,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   interpreter. The leaf table is checked against the operation ids declared
   under `vyre-libs/src/rule` on each run, so a twelfth predicate turns the
   suite red until it is pinned.
+- The benchmark producer and release evidence generators sanitize host absolute
+  paths in failed command outputs and artifact path validation issues,
+  preventing environment-specific absolute paths from leaking into evidence
+  blockers.
 - The scalar storage-graph matrix declares every operation the scalar oracle
   defines. It declared 40 and the oracle defines 76: the four bit-unpack ops at
   both 32-bit integer widths, the whole bitwise set at `i32`, and the

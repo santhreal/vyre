@@ -1,6 +1,7 @@
 //! Queue-driven CSR frontier step program builder and lane decomposition.
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::graph::frontier_bits::bind_bit_address;
@@ -544,40 +545,44 @@ fn csr_queue_edge_guard_nodes(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
     let dst = spec.var("dst");
     let dst_word = spec.var("dst_word");
     let dst_bit = spec.var("dst_bit");
-    vec![Node::if_then(
-        Expr::lt(Expr::var(edge.as_str()), Expr::u32(spec.edge_count)),
-        vec![
-            Node::let_bind(
-                kind.as_str(),
-                Expr::load(spec.inputs.edge_kind_mask, Expr::var(edge.as_str())),
-            ),
-            Node::if_then(
-                Expr::ne(
-                    Expr::bitand(Expr::var(kind.as_str()), Expr::u32(spec.allow_mask)),
-                    Expr::u32(0),
+    vec![wrap_child_region(
+        "vyre-libs::graph::csr_queue::edge_guard",
+        Ident::from(spec.op_id),
+        vec![Node::if_then(
+            Expr::lt(Expr::var(edge.as_str()), Expr::u32(spec.edge_count)),
+            vec![
+                Node::let_bind(
+                    kind.as_str(),
+                    Expr::load(spec.inputs.edge_kind_mask, Expr::var(edge.as_str())),
                 ),
-                vec![
-                    Node::let_bind(
-                        dst.as_str(),
-                        Expr::load(spec.inputs.edge_targets, Expr::var(edge.as_str())),
+                Node::if_then(
+                    Expr::ne(
+                        Expr::bitand(Expr::var(kind.as_str()), Expr::u32(spec.allow_mask)),
+                        Expr::u32(0),
                     ),
-                    Node::if_then(
-                        Expr::lt(Expr::var(dst.as_str()), Expr::u32(spec.node_count)),
-                        {
-                            let mut body = bind_bit_address(
-                                &Expr::var(dst.as_str()),
-                                dst_word.as_str(),
-                                dst_bit.as_str(),
-                                |word| word,
-                            )
-                            .to_vec();
-                            body.extend(csr_queue_emit_nodes(spec, &dst, &dst_word, &dst_bit));
-                            body
-                        },
-                    ),
-                ],
-            ),
-        ],
+                    vec![
+                        Node::let_bind(
+                            dst.as_str(),
+                            Expr::load(spec.inputs.edge_targets, Expr::var(edge.as_str())),
+                        ),
+                        Node::if_then(
+                            Expr::lt(Expr::var(dst.as_str()), Expr::u32(spec.node_count)),
+                            {
+                                let mut body = bind_bit_address(
+                                    &Expr::var(dst.as_str()),
+                                    dst_word.as_str(),
+                                    dst_bit.as_str(),
+                                    |word| word,
+                                )
+                                .to_vec();
+                                body.extend(csr_queue_emit_nodes(spec, &dst, &dst_word, &dst_bit));
+                                body
+                            },
+                        ),
+                    ],
+                ),
+            ],
+        )],
     )]
 }
 

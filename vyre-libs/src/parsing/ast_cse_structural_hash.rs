@@ -1,7 +1,7 @@
 //! Structural-hash CSE probe/insert wave.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::ast_ops::{AST_ADD, AST_PTR_DEREF, AST_VAR};
@@ -172,85 +172,89 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
                                 Expr::rem(Expr::var("h"), Expr::u32(hash_set_capacity)),
                             ),
                             Node::let_bind("active", Expr::bool(true)),
-                            Node::loop_for(
-                                "probe",
-                                Expr::u32(0),
-                                Expr::u32(hash_set_capacity),
-                                vec![Node::if_then(
-                                    Expr::var("active"),
-                                    vec![
-                                        Node::let_bind(
-                                            "slot_hash",
-                                            Expr::mul(Expr::var("slot"), Expr::u32(2)),
-                                        ),
-                                        Node::let_bind(
-                                            "slot_idx",
-                                            Expr::add(Expr::var("slot_hash"), Expr::u32(1)),
-                                        ),
-                                        Node::let_bind(
-                                            "old_hash",
-                                            Expr::load("hash_set", Expr::var("slot_hash")),
-                                        ),
-                                        Node::if_then(
-                                            Expr::eq(Expr::var("old_hash"), Expr::u32(0)),
-                                            vec![
-                                                Node::store(
-                                                    "hash_set",
-                                                    Expr::var("slot_hash"),
-                                                    Expr::var("h"),
-                                                ),
-                                                Node::store(
-                                                    "hash_set",
-                                                    Expr::var("slot_idx"),
-                                                    Expr::var("node_idx"),
-                                                ),
-                                                Node::assign("active", Expr::bool(false)),
-                                            ],
-                                        ),
-                                        Node::if_then(
-                                            Expr::eq(Expr::var("old_hash"), Expr::var("h")),
-                                            vec![
-                                                Node::let_bind(
-                                                    "earliest",
-                                                    Expr::load("hash_set", Expr::var("slot_idx")),
-                                                ),
-                                                Node::if_then(
-                                                    Expr::lt(
-                                                        Expr::var("earliest"),
+                            wrap_child_region(
+                                "vyre-libs::parsing::ast_cse_structural_hash::probe",
+                                Ident::from(OP_ID),
+                                vec![Node::loop_for(
+                                    "probe",
+                                    Expr::u32(0),
+                                    Expr::u32(hash_set_capacity),
+                                    vec![Node::if_then(
+                                        Expr::var("active"),
+                                        vec![
+                                            Node::let_bind(
+                                                "slot_hash",
+                                                Expr::mul(Expr::var("slot"), Expr::u32(2)),
+                                            ),
+                                            Node::let_bind(
+                                                "slot_idx",
+                                                Expr::add(Expr::var("slot_hash"), Expr::u32(1)),
+                                            ),
+                                            Node::let_bind(
+                                                "old_hash",
+                                                Expr::load("hash_set", Expr::var("slot_hash")),
+                                            ),
+                                            Node::if_then(
+                                                Expr::eq(Expr::var("old_hash"), Expr::u32(0)),
+                                                vec![
+                                                    Node::store(
+                                                        "hash_set",
+                                                        Expr::var("slot_hash"),
+                                                        Expr::var("h"),
+                                                    ),
+                                                    Node::store(
+                                                        "hash_set",
+                                                        Expr::var("slot_idx"),
                                                         Expr::var("node_idx"),
                                                     ),
-                                                    vec![
-                                                        Node::store(
-                                                            "ast_opcodes",
-                                                            Expr::var("node_idx"),
-                                                            Expr::u32(AST_VAR),
-                                                        ),
-                                                        Node::store(
-                                                            "ast_vals",
-                                                            Expr::var("node_idx"),
-                                                            Expr::var("earliest"),
-                                                        ),
-                                                        Node::let_bind(
-                                                            "_",
-                                                            Expr::atomic_add(
-                                                                "out_modified_flag",
-                                                                Expr::u32(0),
-                                                                Expr::u32(1),
-                                                            ),
-                                                        ),
-                                                    ],
-                                                ),
-                                                Node::assign("active", Expr::bool(false)),
-                                            ],
-                                        ),
-                                        Node::assign(
-                                            "slot",
-                                            Expr::rem(
-                                                Expr::add(Expr::var("slot"), Expr::u32(1)),
-                                                Expr::u32(hash_set_capacity),
+                                                    Node::assign("active", Expr::bool(false)),
+                                                ],
                                             ),
-                                        ),
-                                    ],
+                                            Node::if_then(
+                                                Expr::eq(Expr::var("old_hash"), Expr::var("h")),
+                                                vec![
+                                                    Node::let_bind(
+                                                        "earliest",
+                                                        Expr::load("hash_set", Expr::var("slot_idx")),
+                                                    ),
+                                                    Node::if_then(
+                                                        Expr::lt(
+                                                            Expr::var("earliest"),
+                                                            Expr::var("node_idx"),
+                                                        ),
+                                                        vec![
+                                                            Node::store(
+                                                                "ast_opcodes",
+                                                                Expr::var("node_idx"),
+                                                                Expr::u32(AST_VAR),
+                                                            ),
+                                                            Node::store(
+                                                                "ast_vals",
+                                                                Expr::var("node_idx"),
+                                                                Expr::var("earliest"),
+                                                            ),
+                                                            Node::let_bind(
+                                                                "_",
+                                                                Expr::atomic_add(
+                                                                    "out_modified_flag",
+                                                                    Expr::u32(0),
+                                                                    Expr::u32(1),
+                                                                ),
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    Node::assign("active", Expr::bool(false)),
+                                                ],
+                                            ),
+                                            Node::assign(
+                                                "slot",
+                                                Expr::rem(
+                                                    Expr::add(Expr::var("slot"), Expr::u32(1)),
+                                                    Expr::u32(hash_set_capacity),
+                                                ),
+                                            ),
+                                        ],
+                                    )],
                                 )],
                             ),
                         ],

@@ -316,23 +316,47 @@ pub(super) fn copy_artifact(
     source: &str,
     target: &str,
 ) -> Result<(), String> {
-    let source = workspace_root.join(source);
-    let target = workspace_root.join(target);
-    if let Some(parent) = target.parent() {
+    let source_path = workspace_root.join(source);
+    let target_path = workspace_root.join(target);
+    if let Some(parent) = target_path.parent() {
+        let parent_display = parent
+            .strip_prefix(workspace_root)
+            .unwrap_or(parent)
+            .display();
         fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create `{}`: {error}", parent.display()))?;
+            .map_err(|error| format!("failed to create `{parent_display}`: {error}"))?;
     }
-    fs::copy(&source, &target).map(|_| ()).map_err(|error| {
-        format!(
-            "failed to copy `{}` to `{}`: {error}",
-            source.display(),
-            target.display()
-        )
+    fs::copy(&source_path, &target_path).map(|_| ()).map_err(|error| {
+        format!("failed to copy `{source}` to `{target}`: {error}")
     })
 }
 
 /// Bytes of a failed child's output carried into the error.
 const MAX_CHILD_OUTPUT_BYTES: usize = 4096;
+
+/// Sanitize host-specific absolute paths out of child output or error text.
+pub(super) fn sanitize_host_paths(text: &str, workspace_root: &Path) -> String {
+    let mut sanitized = text.to_string();
+    let root_str = workspace_root.to_string_lossy();
+    if !root_str.is_empty() {
+        let root_with_slash = format!("{root_str}/");
+        let root_with_backslash = format!("{root_str}\\");
+        sanitized = sanitized.replace(&root_with_slash, "./");
+        sanitized = sanitized.replace(&root_with_backslash, ".\\");
+        sanitized = sanitized.replace(&*root_str, ".");
+    }
+    if let Ok(canonical) = workspace_root.canonicalize() {
+        let canonical_str = canonical.to_string_lossy();
+        if !canonical_str.is_empty() && canonical_str != root_str {
+            let canon_with_slash = format!("{canonical_str}/");
+            let canon_with_backslash = format!("{canonical_str}\\");
+            sanitized = sanitized.replace(&canon_with_slash, "./");
+            sanitized = sanitized.replace(&canon_with_backslash, ".\\");
+            sanitized = sanitized.replace(&*canonical_str, ".");
+        }
+    }
+    sanitized
+}
 
 /// Run one child command, keeping its output out of this process's stdout.
 ///
@@ -348,19 +372,36 @@ pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result
         .args(args)
         .current_dir(workspace_root)
         .output();
-    let display = format!("{} {}", runner.display(), args.join(" "));
+    let runner_display = runner
+        .strip_prefix(workspace_root)
+        .map(|rel| format!("./{}", rel.display()))
+        .unwrap_or_else(|_| {
+            runner
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| format!("./{name}"))
+                .unwrap_or_else(|| runner.display().to_string())
+        });
+    let display = format!("{runner_display} {}", args.join(" "));
     match status {
         Ok(output) if output.status.success() => Ok(()),
-        Ok(output) => Err(format!(
-            "Fix: `{display}` failed with {}: {}",
-            output.status,
-            child_output_tail(&output.stdout, &output.stderr)
-        )),
-        Err(error) => Err(format!(
-            "Fix: failed to run `{display}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
-        )),
+        Ok(output) => {
+            let tail = child_output_tail(&output.stdout, &output.stderr);
+            let sanitized_tail = sanitize_host_paths(&tail, workspace_root);
+            Err(format!(
+                "Fix: `{display}` failed with {}: {}",
+                output.status, sanitized_tail
+            ))
+        }
+        Err(error) => {
+            let sanitized_error = sanitize_host_paths(&error.to_string(), workspace_root);
+            Err(format!(
+                "Fix: failed to run `{display}`: {sanitized_error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
+            ))
+        }
     }
 }
+
 
 /// The last `MAX_CHILD_OUTPUT_BYTES` of what a failed child said, stderr first.
 ///
@@ -1104,6 +1145,25 @@ mod tests {
         assert!(
             tail.ends_with('o'),
             "Fix: the tail keeps what was said last."
+        );
+    }
+    /// WHY: failing benchmark runs must not embed host absolute paths into
+    /// error messages or blocker strings which are written into release evidence.
+    #[test]
+    fn failing_benchmark_output_does_not_leak_host_absolute_paths() {
+        let workspace_root = Path::new("/media/mukund-thiru/SanthData/Santh/libs/vyre");
+        let raw_output = format!(
+            "error: failed to compile `{root}/vyre-bench/src/main.rs` in `{root}`",
+            root = workspace_root.display()
+        );
+        let sanitized = sanitize_host_paths(&raw_output, workspace_root);
+        assert!(
+            !sanitized.contains(&workspace_root.to_string_lossy().to_string()),
+            "Fix: sanitized text `{sanitized}` must not contain workspace root absolute path"
+        );
+        assert!(
+            sanitized.contains("./vyre-bench/src/main.rs"),
+            "Fix: sanitized text `{sanitized}` must relativize path"
         );
     }
 }

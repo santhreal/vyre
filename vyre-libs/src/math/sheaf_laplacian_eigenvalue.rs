@@ -194,20 +194,26 @@ inventory::submit! {
             Program::wrapped(
                 vec![
                     BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                        .with_count(1),
+                        .with_count(2),
                     BufferDecl::output("out", 1, DataType::U32).with_count(1),
                 ],
                 [1, 1, 1],
-                vec![wrap_anonymous_region(POWER_ITERATION_PHASE_OP_ID, vec![Node::store(
+                vec![wrap_anonymous_region(
+                    POWER_ITERATION_PHASE_OP_ID,
+                    vec![Node::store(
                         "out",
                         Expr::u32(0),
-                        Expr::load("input", Expr::u32(0)),
-                    )])],
+                        Expr::max(
+                            Expr::load("input", Expr::u32(0)),
+                            Expr::load("input", Expr::u32(1)),
+                        ),
+                    )],
+                )],
             )
         },
         Some(|| {
             let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
-            vec![vec![to_bytes(&[11])]]
+            vec![vec![to_bytes(&[5, 11])]]
         }),
         Some(|| {
             vec![vec![vec![0x0b, 0x00, 0x00, 0x00]]]

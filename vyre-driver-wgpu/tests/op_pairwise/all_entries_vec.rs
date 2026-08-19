@@ -339,6 +339,43 @@ pub(crate) fn rename_buffer_in_node(node: &Node, old: &str, new: &str) -> Node {
     }
 }
 
+fn expr_loads_from_buffer(expr: &Expr, buffer_name: &str) -> bool {
+    match expr {
+        Expr::Load { buffer, .. } => buffer.as_str() == buffer_name,
+        Expr::BinOp { left, right, .. } => {
+            expr_loads_from_buffer(left, buffer_name) || expr_loads_from_buffer(right, buffer_name)
+        }
+        Expr::UnOp { operand, .. } => expr_loads_from_buffer(operand, buffer_name),
+        Expr::Select { cond, then, otherwise } => {
+            expr_loads_from_buffer(cond, buffer_name)
+                || expr_loads_from_buffer(then, buffer_name)
+                || expr_loads_from_buffer(otherwise, buffer_name)
+        }
+        Expr::Call { args, .. } => args.iter().any(|arg| expr_loads_from_buffer(arg, buffer_name)),
+        _ => false,
+    }
+}
+
+fn node_has_async_transfer_from(node: &Node, buffer_name: &str) -> bool {
+    match node {
+        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
+            expr_loads_from_buffer(offset, buffer_name) || expr_loads_from_buffer(size, buffer_name)
+        }
+        Node::If { then, otherwise, .. } => {
+            then.iter().any(|n| node_has_async_transfer_from(n, buffer_name))
+                || otherwise.iter().any(|n| node_has_async_transfer_from(n, buffer_name))
+        }
+        Node::Loop { body, .. } => body.iter().any(|n| node_has_async_transfer_from(n, buffer_name)),
+        Node::Block(nodes) => nodes.iter().any(|n| node_has_async_transfer_from(n, buffer_name)),
+        Node::Region { body, .. } => body.iter().any(|n| node_has_async_transfer_from(n, buffer_name)),
+        _ => false,
+    }
+}
+
+fn program_has_async_transfer_from(program: &Program, buffer_name: &str) -> bool {
+    program.entry().iter().any(|n| node_has_async_transfer_from(n, buffer_name))
+}
+
 /// Rename one buffer throughout a program, preserving program metadata.
 ///
 /// This rebuilds through `with_rewritten_buffers` / `with_rewritten_entry`
@@ -609,6 +646,13 @@ pub(crate) fn try_compose(a: &UnifiedEntry, b: &UnifiedEntry) -> Result<Composit
     // Wire op_b's first input to op_a's output buffer name.
     prog_b_prepared = rename_buffer_in_program(&prog_b_prepared, b_in.name(), a_out.name());
     b_renames.push((b_in.name().to_string(), a_out.name().to_string()));
+
+    if program_has_async_transfer_from(&prog_b_prepared, a_out.name()) {
+        return Err(format!(
+            "Fix: {} -> {} cannot be fused into a single dispatch: {} uses an async transfer loading from `{}`. Async transfer offsets must come from ReadOnly/Uniform inputs, not intermediate buffers.",
+            a.id, b.id, b.id, b_in.name()
+        ));
+    }
 
     // ---- fuse ----
     let wired_name = a_out.name().to_string();

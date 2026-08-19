@@ -298,10 +298,11 @@ impl ReductionComposer {
         ];
 
         // Workgroup-local tree reduction for Welford triples.
+        let mut tree_nodes = Vec::new();
         let wg0_guard = Expr::is_first_workgroup();
         let mut stride = tile.next_power_of_two() / 2;
         while stride > 0 {
-            body.push(Node::if_then(
+            tree_nodes.push(Node::if_then(
                 Expr::and(
                     wg0_guard.clone(),
                     Expr::lt(Expr::var("local"), Expr::u32(stride)),
@@ -426,10 +427,14 @@ impl ReductionComposer {
                     ],
                 )],
             ));
-            body.push(Node::barrier());
+            tree_nodes.push(Node::barrier());
             stride /= 2;
         }
-
+        body.push(vyre_foundation::composition::wrap_child_region(
+            "vyre-libs::math::reduce_variance::welford_tree",
+            vyre_foundation::ir::Ident::from(generator),
+            tree_nodes,
+        ));
         // Publish: lane 0 of workgroup 0 computes variance from accumulated M2.
         let divisor = if bessel {
             if n > 1 {

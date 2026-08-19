@@ -24,8 +24,8 @@
 //! | cellular automata | parallel CA stepping with rewrite rules |
 //! | document layout | layout extraction grammars |
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -90,37 +90,41 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
                         vec![
                             Node::let_bind("conflict", Expr::u32(0)),
                             // Exclusion zone scan
-                            Node::loop_for(
-                                "di",
-                                Expr::u32(0),
-                                Expr::u32(k),
+                            wrap_child_region(
+                                "vyre-libs::parsing::planar_rewrite::exclusion_scan",
+                                Ident::from(OP_ID),
                                 vec![Node::loop_for(
-                                    "dj",
+                                    "di",
                                     Expr::u32(0),
                                     Expr::u32(k),
-                                    vec![Node::if_then(
-                                        Expr::and(
-                                            Expr::ge(Expr::var("r"), Expr::var("di")),
-                                            Expr::ge(Expr::var("c"), Expr::var("dj")),
-                                        ),
+                                    vec![Node::loop_for(
+                                        "dj",
+                                        Expr::u32(0),
+                                        Expr::u32(k),
                                         vec![Node::if_then(
-                                            Expr::ne(
-                                                Expr::load(
-                                                    chosen,
-                                                    Expr::add(
-                                                        Expr::mul(
-                                                            Expr::sub(
-                                                                Expr::var("r"),
-                                                                Expr::var("di"),
-                                                            ),
-                                                            Expr::u32(w),
-                                                        ),
-                                                        Expr::sub(Expr::var("c"), Expr::var("dj")),
-                                                    ),
-                                                ),
-                                                Expr::u32(0),
+                                            Expr::and(
+                                                Expr::ge(Expr::var("r"), Expr::var("di")),
+                                                Expr::ge(Expr::var("c"), Expr::var("dj")),
                                             ),
-                                            vec![Node::assign("conflict", Expr::u32(1))],
+                                            vec![Node::if_then(
+                                                Expr::ne(
+                                                    Expr::load(
+                                                        chosen,
+                                                        Expr::add(
+                                                            Expr::mul(
+                                                                Expr::sub(
+                                                                    Expr::var("r"),
+                                                                    Expr::var("di"),
+                                                                ),
+                                                                Expr::u32(w),
+                                                            ),
+                                                            Expr::sub(Expr::var("c"), Expr::var("dj")),
+                                                        ),
+                                                    ),
+                                                    Expr::u32(0),
+                                                ),
+                                                vec![Node::assign("conflict", Expr::u32(1))],
+                                            )],
                                         )],
                                     )],
                                 )],

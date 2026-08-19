@@ -157,17 +157,11 @@ impl BenchmarkArtifactPathIssue {
             Self::ParentTraversal => {
                 format!("{label} `{artifact}` must not contain parent directory traversal")
             }
-            Self::Missing { artifact_path } => format!(
-                "{label} `{artifact}` is not a readable file at {}",
-                artifact_path.display()
+            Self::Missing { .. } => format!(
+                "{label} `{artifact}` is not a readable file"
             ),
-            Self::OutsideWorkspace {
-                artifact_path,
-                workspace_root,
-            } => format!(
-                "{label} `{artifact}` resolves outside workspace: {} is outside {}",
-                artifact_path.display(),
-                workspace_root.display()
+            Self::OutsideWorkspace { .. } => format!(
+                "{label} `{artifact}` resolves outside workspace"
             ),
         }
     }
