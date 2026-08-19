@@ -1533,10 +1533,10 @@ responsibility = "Consume verified lowering products and emit the primary text r
 
 [[crate.dependency]]
 package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps"
 features = []
 conditions = ["always"]
-kinds = ["normal"]
+kinds = ["build", "normal"]
 optional = false
 default_features = true
 boundary = "public"
@@ -1562,10 +1562,10 @@ responsibility = "Consume verified lowering products and emit the primary binary
 
 [[crate.dependency]]
 package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps"
 features = []
 conditions = ["always"]
-kinds = ["normal"]
+kinds = ["build", "normal"]
 optional = false
 default_features = true
 boundary = "private"

@@ -266,7 +266,7 @@ Consume verified lowering products and emit the primary text representation and 
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps | `public` | `foundation-ir` |
 | `vyre-lower` | verified backend-neutral representation lowering | `public` | `lowering` |
 
 ### `vyre-emit-ptx`
@@ -280,7 +280,7 @@ Consume verified lowering products and emit the primary binary backend text arti
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
+| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps | `private` | `foundation-ir` |
 | `vyre-lower` | verified backend-neutral representation lowering | `public` | `lowering` |
 
 ### `vyre-emit-spirv`

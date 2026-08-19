@@ -264,9 +264,9 @@ graph TD
 | `vyre-emit-metal` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-text-emitter` |
 | `vyre-emit-metal` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-emit-metal` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-emit-naga` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-emit-naga` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps | None | `always` | `build`, `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-emit-naga` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-emit-ptx` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
+| `vyre-emit-ptx` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps | None | `always` | `build`, `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-emit-ptx` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
 | `vyre-emit-spirv` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `public` | `primary-text-emitter` |
 | `vyre-emit-spirv` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
