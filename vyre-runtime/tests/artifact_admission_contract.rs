@@ -1196,6 +1196,43 @@ fn retained_and_ephemeral_sessions_share_artifact_identity() {
     assert_eq!(completion.artifact, digest);
 }
 
+/// WHY: concurrent submit_and_wait calls on one RetainedArtifactSession must serialize atomically.
+#[test]
+fn concurrent_retained_submissions_are_serialized_and_atomic() {
+    use std::sync::Arc;
+    use std::thread;
+
+    let neutral = neutral_artifact([8, 1, 1]);
+    let digest = neutral.digest();
+    let bytes = envelope_bytes(
+        neutral.clone(),
+        [payload(
+            &neutral,
+            format("test.cache-target", 1),
+            &[9, 8, 7],
+        )],
+    );
+    let retained_session = ArtifactSession::from_bytes(&TEST_REGISTRATION, &bytes).unwrap();
+    let retained = Arc::new(RetainedArtifactSession::new(retained_session, BTreeMap::new()).unwrap());
+
+    let mut handles = Vec::new();
+    for _ in 0..8 {
+        let retained_clone = Arc::clone(&retained);
+        handles.push(thread::spawn(move || {
+            for _ in 0..10 {
+                let completion = retained_clone
+                    .submit_and_wait(retained_session_bindings(digest))
+                    .unwrap();
+                assert_eq!(completion.artifact, digest);
+            }
+        }));
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
 /// WHY: the shipped persistent route must authenticate, retain, submit, and recover one artifact.
 #[test]
 fn persistent_executor_uses_retained_artifact_lifecycle() {

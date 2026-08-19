@@ -6112,6 +6112,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   interpreter. The leaf table is checked against the operation ids declared
   under `vyre-libs/src/rule` on each run, so a twelfth predicate turns the
   suite red until it is pinned.
+- Retained artifact session submissions now hold the retained state mutex
+  across submission to ensure serialized atomic transitions, tenant quiesce
+  validates drain conditions before declaring a timeout and prevents
+  subtraction underflow on concurrent drain observation, and resident IO loop
+  automatically stops detached polling threads on drop.
 - The scalar storage-graph matrix declares every operation the scalar oracle
   defines. It declared 40 and the oracle defines 76: the four bit-unpack ops at
   both 32-bit integer widths, the whole bitwise set at `i32`, and the
