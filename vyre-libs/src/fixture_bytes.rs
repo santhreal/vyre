@@ -55,6 +55,58 @@ pub(crate) fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(slice)
 }
 
+/// Run a one-in one-out f32 program through the reference interpreter.
+///
+/// The argument shape is the one every elementwise and per-row nn program under
+/// test declares: the packed input, then a zeroed output buffer of the same
+/// length. `label` names the program in the failure.
+#[cfg(test)]
+pub(crate) fn eval_f32_unary(
+    label: &str,
+    input: &[f32],
+    program: &vyre_foundation::ir::Program,
+) -> Vec<f32> {
+    let outputs = vyre_reference::reference_eval(
+        program,
+        &[
+            vyre_reference::value::Value::from(f32_bytes(input)),
+            vyre_reference::value::Value::from(vec![0u8; input.len() * 4]),
+        ],
+    )
+    .unwrap_or_else(|error| {
+        panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+    });
+    decode_f32(&outputs[0].to_bytes())
+}
+
+/// Compare a tiled f32 program against its scalar reference, lane by lane.
+///
+/// The lane counts are compared first: a tiled program that wrote fewer lanes
+/// than the reference would otherwise pass the elementwise comparison, because
+/// zipping two sequences stops at the shorter one.
+#[cfg(test)]
+pub(crate) fn assert_tiled_matches_reference(
+    label: &str,
+    input: &[f32],
+    tolerance: f32,
+    tiled: &vyre_foundation::ir::Program,
+    reference: &vyre_foundation::ir::Program,
+) {
+    let actual = eval_f32_unary(label, input, tiled);
+    let expected = eval_f32_unary(label, input, reference);
+    assert_eq!(
+        actual.len(),
+        expected.len(),
+        "Fix: {label} must write the same lane count as its reference."
+    );
+    for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
+        assert!(
+            (lhs - rhs).abs() <= tolerance,
+            "{label} mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

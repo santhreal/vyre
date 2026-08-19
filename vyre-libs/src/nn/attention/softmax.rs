@@ -230,6 +230,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::assert_tiled_matches_reference;
     use crate::fixture_bytes::decode_f32;
     use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
@@ -332,26 +333,13 @@ mod tests {
         let input = (0..n)
             .map(|i| ((i as f32) * 0.03125).sin() * 4.0 - ((i % 7) as f32))
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: softmax program must execute in the reference interpreter.");
-
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(softmax("input", "output", n));
-        let expected = run(softmax_reference("input", "output", n));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 1.0e-6,
-                "softmax mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "softmax",
+            &input,
+            1.0e-6,
+            &softmax("input", "output", n),
+            &softmax_reference("input", "output", n),
+        );
     }
 
     #[test]
@@ -364,25 +352,13 @@ mod tests {
                 wave - saw
             })
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: generated softmax program must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(softmax("input", "output", n));
-        let expected = run(softmax_reference("input", "output", n));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 2.0e-5,
-                "generated softmax mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "generated softmax",
+            &input,
+            2.0e-5,
+            &softmax("input", "output", n),
+            &softmax_reference("input", "output", n),
+        );
     }
 
     #[test]

@@ -375,6 +375,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::assert_tiled_matches_reference;
     use crate::fixture_bytes::decode_f32;
     use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
@@ -448,25 +449,13 @@ mod tests {
         let input = (0..n)
             .map(|i| ((i as f32) * 0.031).sin() * 2.5 + (i % 13) as f32 * 0.0625)
             .collect::<Vec<_>>();
-        let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; n as usize * 4]),
-                ],
-            )
-            .expect("Fix: layer_norm program must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
-        };
-        let actual = run(layer_norm("input", "output", n, eps));
-        let expected = run(layer_norm_reference_program("input", "output", n, eps));
-        for (idx, (lhs, rhs)) in actual.iter().zip(expected.iter()).enumerate() {
-            assert!(
-                (lhs - rhs).abs() <= 1.0e-4,
-                "layer_norm mismatch at lane {idx}: tiled={lhs:?} reference={rhs:?}"
-            );
-        }
+        assert_tiled_matches_reference(
+            "layer_norm",
+            &input,
+            1.0e-4,
+            &layer_norm("input", "output", n, eps),
+            &layer_norm_reference_program("input", "output", n, eps),
+        );
     }
 
     // Adversarial float tests: expose tolerance misconfiguration gaps.
