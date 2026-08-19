@@ -1,4 +1,4 @@
-use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
+use super::byte_pack::{rate_per_second_x1000, read_word, write_word};
 use crate::api::case::{
     prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
@@ -7,7 +7,9 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
 use crate::api::suite::SuiteKind;
 use crate::cases::reference_sample::{reference_metrics, timed_reference};
-use crate::cases::resident_queue::{account, queue_buffers, resident_pool_sets_metric};
+use crate::cases::resident_queue::{
+    account, accounted_metrics, queue_buffers, resident_pool_sets_metric,
+};
 use rayon::prelude::*;
 use std::sync::Arc;
 use vyre_foundation::ir::{Expr, Node};
@@ -128,22 +130,7 @@ impl BenchCase for MegakernelCondition {
 
         Ok(BenchRun {
             metrics: BenchMetrics {
-                wall_ns: Some(sample.wall_ns),
-                dispatch_ns: sample.dispatch_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(sample.output_bytes_total),
-                bytes_touched: Some(sample.accounting.bytes_touched),
-                bytes_read: Some(sample.accounting.bytes_read),
-                bytes_written: Some(sample.accounting.bytes_written),
                 atomic_op_count: Some(u64::from(SLOT_COUNT + prepared.expected_fired)),
-                wall_throughput_gb_s: Some(gb_per_second(
-                    sample.accounting.bytes_touched,
-                    sample.wall_ns,
-                )),
-                device_throughput_gb_s: Some(gb_per_second(
-                    sample.accounting.bytes_touched,
-                    sample.device_ns,
-                )),
                 custom: vec![
                     MetricPoint {
                         name: "megakernel_condition_slots".to_string(),
@@ -159,7 +146,7 @@ impl BenchCase for MegakernelCondition {
                     },
                     resident_pool_sets_metric(sample.resident_used, RESIDENT_SAMPLE_SETS),
                 ],
-                ..Default::default()
+                ..accounted_metrics(&sample, prepared.input_bytes_total)
             },
             baseline_metrics: Some(reference_metrics(
                 baseline_ns,

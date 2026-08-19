@@ -1,0 +1,2 @@
+category = "Changed"
+text = "An accounted megakernel sample reports its byte counts, timings and throughput from one helper. cases::resident_queue::accounted_metrics fills those fields and a case states only what it measures beyond them. The truth case keeps its own block because it records a different set of fields."

@@ -12,8 +12,9 @@
 //! module reads a clock at all: `account` is arithmetic over timings the
 //! dispatch already returned.
 
+use super::byte_pack::gb_per_second;
 use crate::api::case::{BenchContext, BenchError};
-use crate::api::metric::MetricPoint;
+use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
     input_bytes_total, transfer_accounting, ResidentDispatch, ResidentInputPool, TransferAccounting,
 };
@@ -91,6 +92,44 @@ pub(crate) fn account(dispatch: ResidentDispatch, input_bytes_total: u64) -> Que
         output_bytes_total,
         accounting: transfer_accounting(input_bytes_total, output_bytes_total, resident_used),
         resident_used,
+    }
+}
+
+/// The metrics an accounted sample reports, before the case adds its own.
+///
+/// Every field here is a byte count or a timing the dispatch already returned,
+/// or throughput arithmetic over those two. A case states only what it measures
+/// beyond them, through struct update syntax over this value:
+///
+/// ```text
+/// BenchMetrics {
+///     atomic_op_count: Some(slots),
+///     custom: vec![point],
+///     ..accounted_metrics(&sample, prepared.input_bytes_total)
+/// }
+/// ```
+///
+/// A case that reports a different set of fields keeps its own block rather
+/// than overriding this one, so what a case records stays visible where it is
+/// measured.
+pub(crate) fn accounted_metrics(sample: &QueueSample, input_bytes_total: u64) -> BenchMetrics {
+    BenchMetrics {
+        wall_ns: Some(sample.wall_ns),
+        dispatch_ns: sample.dispatch_ns,
+        input_bytes: Some(input_bytes_total),
+        output_bytes: Some(sample.output_bytes_total),
+        bytes_touched: Some(sample.accounting.bytes_touched),
+        bytes_read: Some(sample.accounting.bytes_read),
+        bytes_written: Some(sample.accounting.bytes_written),
+        wall_throughput_gb_s: Some(gb_per_second(
+            sample.accounting.bytes_touched,
+            sample.wall_ns,
+        )),
+        device_throughput_gb_s: Some(gb_per_second(
+            sample.accounting.bytes_touched,
+            sample.device_ns,
+        )),
+        ..Default::default()
     }
 }
 

@@ -1,4 +1,4 @@
-use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
+use super::byte_pack::{rate_per_second_x1000, read_word, write_word};
 use crate::api::case::{
     prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
@@ -6,7 +6,9 @@ use crate::api::case::{
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
 use crate::cases::reference_sample::{reference_metrics, timed_reference};
-use crate::cases::resident_queue::{account, queue_buffers, resident_pool_sets_metric};
+use crate::cases::resident_queue::{
+    account, accounted_metrics, queue_buffers, resident_pool_sets_metric,
+};
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
 use vyre_driver::speculation_verdict::SpeculationVerdict;
 use vyre_driver::SpecCacheKey;
@@ -103,8 +105,6 @@ impl BenchCase for MegakernelLatency {
             &config,
         )?;
         let sample = account(dispatch, prepared.input_bytes_total);
-        let wall_gb_s = gb_per_second(sample.accounting.bytes_touched, sample.wall_ns);
-        let device_gb_s = gb_per_second(sample.accounting.bytes_touched, sample.device_ns);
         let (baseline, baseline_ns) =
             timed_reference(|| simulate_sharded_once_outputs(&prepared.inputs));
         let baseline_outputs = baseline?;
@@ -113,16 +113,7 @@ impl BenchCase for MegakernelLatency {
 
         Ok(BenchRun {
             metrics: BenchMetrics {
-                wall_ns: Some(sample.wall_ns),
-                dispatch_ns: sample.dispatch_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(sample.output_bytes_total),
-                bytes_touched: Some(sample.accounting.bytes_touched),
-                bytes_read: Some(sample.accounting.bytes_read),
-                bytes_written: Some(sample.accounting.bytes_written),
                 atomic_op_count: Some(u64::from(SLOT_COUNT).saturating_mul(2)),
-                wall_throughput_gb_s: Some(wall_gb_s),
-                device_throughput_gb_s: Some(device_gb_s),
                 custom: vec![
                     MetricPoint {
                         name: "megakernel_slots".to_string(),
@@ -162,7 +153,7 @@ impl BenchCase for MegakernelLatency {
                         value: speculation.autotune_records,
                     },
                 ],
-                ..Default::default()
+                ..accounted_metrics(&sample, prepared.input_bytes_total)
             },
             baseline_metrics: Some(reference_metrics(
                 baseline_ns,
