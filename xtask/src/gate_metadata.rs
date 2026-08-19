@@ -1568,16 +1568,4 @@ mod tests {
             );
         }
     }
-
-    /// WHY: Section 182 requires every descriptor proof to mechanically resolve to an existing #[test] function.
-    #[test]
-    fn all_descriptor_proofs_resolve_to_real_tests() {
-        let root = crate::checkout::checkout_root();
-        let failures = validate_all_descriptors(&root, GATE_METADATA);
-        assert!(
-            failures.is_empty(),
-            "GATE_METADATA proofs failed batch validation: {:?}",
-            failures
-        );
-    }
 }

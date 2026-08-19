@@ -15,7 +15,8 @@ use super::host_oracle_elimination_classify::{
 };
 use super::host_oracle_elimination_extract::{extract_read_idents_from_expr, is_pure_decoder_loop};
 use super::host_oracle_elimination_records::{
-    extract_use_tree, CallSiteRecord, FunctionRecord, StaticConstRecord, FIX, SCALAR_TYPES,
+    compares_operands, computes_from_operands, extract_use_tree, CallSiteRecord, FunctionRecord,
+    StaticConstRecord, FIX, SCALAR_TYPES,
 };
 use super::host_oracle_elimination_scanners::{
     compute_known_dispatch_exec_fns, FileImportCollector,
@@ -1122,36 +1123,9 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
     fn visit_expr_binary(&mut self, expr: &'ast syn::ExprBinary) {
         if self.in_gpu_dispatch_root && self.post_dispatch_phase && !self.in_test() {
-            let is_arithmetic_or_bitwise = matches!(
-                expr.op,
-                syn::BinOp::Add(_)
-                    | syn::BinOp::Sub(_)
-                    | syn::BinOp::Mul(_)
-                    | syn::BinOp::Div(_)
-                    | syn::BinOp::Rem(_)
-                    | syn::BinOp::BitAnd(_)
-                    | syn::BinOp::BitOr(_)
-                    | syn::BinOp::BitXor(_)
-                    | syn::BinOp::Shl(_)
-                    | syn::BinOp::Shr(_)
-                    | syn::BinOp::AddAssign(_)
-                    | syn::BinOp::SubAssign(_)
-                    | syn::BinOp::MulAssign(_)
-                    | syn::BinOp::DivAssign(_)
-                    | syn::BinOp::RemAssign(_)
-                    | syn::BinOp::BitAndAssign(_)
-                    | syn::BinOp::BitOrAssign(_)
-                    | syn::BinOp::BitXorAssign(_)
-                    | syn::BinOp::ShlAssign(_)
-                    | syn::BinOp::ShrAssign(_)
-                    | syn::BinOp::Eq(_)
-                    | syn::BinOp::Ne(_)
-                    | syn::BinOp::Lt(_)
-                    | syn::BinOp::Le(_)
-                    | syn::BinOp::Gt(_)
-                    | syn::BinOp::Ge(_)
-            );
-            if is_arithmetic_or_bitwise {
+            let reads_operands_as_data =
+                computes_from_operands(&expr.op) || compares_operands(&expr.op);
+            if reads_operands_as_data {
                 let line = expr.span().start().line as u32;
                 let is_dispatcher_call =
                     self.is_dispatch_execution_expr(&syn::Expr::Binary(expr.clone()));

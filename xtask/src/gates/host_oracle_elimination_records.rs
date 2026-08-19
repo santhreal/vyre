@@ -27,6 +27,68 @@ pub(super) const SCALAR_TYPES: &[&str] = &[
     "f64", "bool",
 ];
 
+/// True when `op` writes the place on its left.
+///
+/// A compound assignment reads both operands and stores the result back, so a
+/// mutation scan records the left operand as written. It is the only reason this
+/// family is named apart from [`computes_from_operands`], which holds it too.
+pub(super) fn assigns_left_operand(op: &syn::BinOp) -> bool {
+    matches!(
+        op,
+        syn::BinOp::AddAssign(_)
+            | syn::BinOp::SubAssign(_)
+            | syn::BinOp::MulAssign(_)
+            | syn::BinOp::DivAssign(_)
+            | syn::BinOp::RemAssign(_)
+            | syn::BinOp::BitAndAssign(_)
+            | syn::BinOp::BitOrAssign(_)
+            | syn::BinOp::BitXorAssign(_)
+            | syn::BinOp::ShlAssign(_)
+            | syn::BinOp::ShrAssign(_)
+    )
+}
+
+/// True when `op` computes a value from its operands.
+///
+/// Arithmetic, bitwise and the assigning forms of both read their operands as
+/// data. Three readers ask a question over this enum: the body classifier, the
+/// post-dispatch visitor and the mutation scan, and each used to enumerate the
+/// variants itself. `syn::BinOp` is non-exhaustive, so an operator syn adds
+/// later answers `false` until it is listed.
+pub(super) fn computes_from_operands(op: &syn::BinOp) -> bool {
+    assigns_left_operand(op)
+        || matches!(
+            op,
+            syn::BinOp::Add(_)
+                | syn::BinOp::Sub(_)
+                | syn::BinOp::Mul(_)
+                | syn::BinOp::Div(_)
+                | syn::BinOp::Rem(_)
+                | syn::BinOp::BitAnd(_)
+                | syn::BinOp::BitOr(_)
+                | syn::BinOp::BitXor(_)
+                | syn::BinOp::Shl(_)
+                | syn::BinOp::Shr(_)
+        )
+}
+
+/// True when `op` compares its operands.
+///
+/// A comparison reads both operands as data the same way an arithmetic operator
+/// does; it is named apart because the body classifier records the two
+/// differently.
+pub(super) fn compares_operands(op: &syn::BinOp) -> bool {
+    matches!(
+        op,
+        syn::BinOp::Eq(_)
+            | syn::BinOp::Ne(_)
+            | syn::BinOp::Lt(_)
+            | syn::BinOp::Le(_)
+            | syn::BinOp::Gt(_)
+            | syn::BinOp::Ge(_)
+    )
+}
+
 /// Corrective action for a production host oracle finding.
 pub(super) const FIX: &str = "move the host reference implementation into a #[cfg(test)] module or vyre-reference, \
                    or replace dynamic registration evaluation with exact byte fixtures; production code \

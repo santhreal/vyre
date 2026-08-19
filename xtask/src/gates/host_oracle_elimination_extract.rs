@@ -2,6 +2,8 @@
 
 use std::collections::BTreeSet;
 
+use super::host_oracle_elimination_records::assigns_left_operand;
+
 pub(super) fn extract_pat_bindings(pat: &syn::Pat, out: &mut BTreeSet<String>) {
     match pat {
         syn::Pat::Ident(pi) => {
@@ -141,20 +143,8 @@ impl<'ast> syn::visit::Visit<'ast> for MutatedStorageCollector {
     }
 
     fn visit_expr_binary(&mut self, expr: &'ast syn::ExprBinary) {
-        match expr.op {
-            syn::BinOp::AddAssign(_)
-            | syn::BinOp::SubAssign(_)
-            | syn::BinOp::MulAssign(_)
-            | syn::BinOp::DivAssign(_)
-            | syn::BinOp::RemAssign(_)
-            | syn::BinOp::BitAndAssign(_)
-            | syn::BinOp::BitOrAssign(_)
-            | syn::BinOp::BitXorAssign(_)
-            | syn::BinOp::ShlAssign(_)
-            | syn::BinOp::ShrAssign(_) => {
-                extract_root_ident_from_expr(&expr.left, &mut self.mutated);
-            }
-            _ => {}
+        if assigns_left_operand(&expr.op) {
+            extract_root_ident_from_expr(&expr.left, &mut self.mutated);
         }
         syn::visit::visit_expr_binary(self, expr);
     }

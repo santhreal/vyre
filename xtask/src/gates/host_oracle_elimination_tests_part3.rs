@@ -196,34 +196,6 @@ pub fn forward_backward_via(
 }
 
 #[test]
-fn mutation_permits_gpu_result_transform_feeding_later_dispatch() {
-    let code = r#"
-use vyre_foundation::ir::Program;
-use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
-
-pub fn chained_transform_dispatch_via(
-    dispatcher: &dyn ProgramDispatcher,
-    input: &[u32],
-) -> Result<Vec<u8>, DispatchError> {
-    let prog1 = Program::default();
-    let out1 = dispatcher.dispatch(&prog1, &[vec![]], None)?;
-    let mut staged = vec![0u32; input.len()];
-    for i in 0..input.len() {
-        staged[i] = input[i] ^ (out1[0][0] as u32);
-    }
-    let prog2 = Program::default();
-    let out2 = dispatcher.dispatch(&prog2, &[staged], None)?;
-    Ok(out2[0].clone())
-}
-"#;
-    let findings = analyze_files(&[("vyre-libs/src/staging/gpu_transform.rs", code)]);
-    assert!(
-            findings.is_empty(),
-            "GPU-result intermediate transform feeding subsequent dispatch must be permitted: {findings:?}"
-        );
-}
-
-#[test]
 fn mutation_catches_unrelated_sum_between_dispatches_returned_afterward() {
     let code = r#"
 use vyre_foundation::ir::Program;

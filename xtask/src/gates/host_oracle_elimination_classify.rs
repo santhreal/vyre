@@ -4,7 +4,9 @@ use std::collections::BTreeSet;
 use syn::visit::Visit;
 
 use super::host_oracle_elimination_extract::{extract_pat_bindings, IdentReadCollector};
-use super::host_oracle_elimination_records::SCALAR_TYPES;
+use super::host_oracle_elimination_records::{
+    compares_operands, computes_from_operands, SCALAR_TYPES,
+};
 
 /// Recursively check if type is a scalar or data collection.
 pub(super) fn type_is_data_output(ty: &syn::Type) -> bool {
@@ -672,38 +674,10 @@ impl BodyFeatureVisitor {
 
 impl<'ast> Visit<'ast> for BodyFeatureVisitor {
     fn visit_expr_binary(&mut self, expr: &'ast syn::ExprBinary) {
-        match expr.op {
-            syn::BinOp::Add(_)
-            | syn::BinOp::Sub(_)
-            | syn::BinOp::Mul(_)
-            | syn::BinOp::Div(_)
-            | syn::BinOp::Rem(_)
-            | syn::BinOp::BitAnd(_)
-            | syn::BinOp::BitOr(_)
-            | syn::BinOp::BitXor(_)
-            | syn::BinOp::Shl(_)
-            | syn::BinOp::Shr(_)
-            | syn::BinOp::AddAssign(_)
-            | syn::BinOp::SubAssign(_)
-            | syn::BinOp::MulAssign(_)
-            | syn::BinOp::DivAssign(_)
-            | syn::BinOp::RemAssign(_)
-            | syn::BinOp::BitAndAssign(_)
-            | syn::BinOp::BitOrAssign(_)
-            | syn::BinOp::BitXorAssign(_)
-            | syn::BinOp::ShlAssign(_)
-            | syn::BinOp::ShrAssign(_) => {
-                self.has_payload_arithmetic = true;
-            }
-            syn::BinOp::Eq(_)
-            | syn::BinOp::Ne(_)
-            | syn::BinOp::Lt(_)
-            | syn::BinOp::Le(_)
-            | syn::BinOp::Gt(_)
-            | syn::BinOp::Ge(_) => {
-                self.has_comparison = true;
-            }
-            _ => {}
+        if computes_from_operands(&expr.op) {
+            self.has_payload_arithmetic = true;
+        } else if compares_operands(&expr.op) {
+            self.has_comparison = true;
         }
         syn::visit::visit_expr_binary(self, expr);
     }
