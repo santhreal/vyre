@@ -10,10 +10,7 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use super::atomic_relaxed::atomic_load_relaxed;
 use super::handlers::{claimed_slot_bindings, claimed_slot_body, load_miss_body, OpcodeHandler};
-use super::io::{
-    io_word, IO_DESTINATION_CAPABILITY_TABLE, IO_QUEUE_DMA_TAG, IO_SLOT_COUNT, IO_SLOT_WORDS,
-    IO_SOURCE_CAPABILITY_TABLE,
-};
+use super::io::io_completion_poll_body;
 use super::protocol::*;
 use super::workspace_adapter::ResidentWorkspaceAdapter;
 mod cache;
@@ -173,10 +170,14 @@ pub fn build_program_sharded_no_io(workgroup_size_x: u32, opcodes: &[OpcodeHandl
     build_program_sharded_slots(workgroup_size_x, workgroup_size_x.max(1), opcodes)
 }
 
-/// Build the megakernel IR with the experimental IO polling sidecar.
+/// Build the megakernel IR with the IO completion polling sidecar.
 ///
-/// The returned Program contains `AsyncLoad` nodes and must be lowered through
-/// a runtime scheduler pass before reaching a concrete backend lowering path.
+/// The lane body gains the IO queue recycler: every iteration scans the
+/// compiled poll window and returns each slot the host completed with
+/// `io_status::OK` or `io_status::ERROR` to `slot::EMPTY`. The device side
+/// never claims a published request and never services the transfer; the
+/// host pump owns both, so the returned program contains no async transfer
+/// and needs no async-lowering pass.
 #[must_use]
 pub fn build_program_sharded_with_io_polling(
     workgroup_size_x: u32,
@@ -417,7 +418,7 @@ fn push_lane_body(body: &mut Vec<Node>, slot_body: Vec<Node>, include_io_polling
     body.push(direct_slot_base_binding());
     body.push(Node::Block(slot_body));
     if include_io_polling {
-        body.push(Node::Block(process_io_requests()));
+        body.push(Node::Block(io_completion_poll_body()));
     }
 }
 
@@ -489,80 +490,6 @@ fn persistent_body_with_workspace_adapter(
     body
 }
 
-fn process_io_requests() -> Vec<Node> {
-    let nodes = vec![Node::loop_for(
-        "io_idx",
-        Expr::u32(0),
-        Expr::u32(IO_SLOT_COUNT),
-        vec![
-            Node::let_bind(
-                "io_base",
-                Expr::mul(Expr::var("io_idx"), Expr::u32(IO_SLOT_WORDS)),
-            ),
-            Node::let_bind(
-                "io_status_idx",
-                Expr::add(Expr::var("io_base"), Expr::u32(io_word::STATUS)),
-            ),
-            // CAS PUBLISHED -> CLAIMED
-            Node::let_bind(
-                "prev_io_status",
-                Expr::atomic_compare_exchange(
-                    "io_queue",
-                    Expr::var("io_status_idx"),
-                    Expr::u32(slot::PUBLISHED),
-                    Expr::u32(slot::CLAIMED),
-                ),
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("prev_io_status"), Expr::u32(slot::PUBLISHED)),
-                vec![
-                    Node::let_bind(
-                        "io_src_handle",
-                        Expr::load(
-                            "io_queue",
-                            Expr::add(Expr::var("io_base"), Expr::u32(io_word::SRC_HANDLE)),
-                        ),
-                    ),
-                    Node::let_bind(
-                        "io_dst_handle",
-                        Expr::load(
-                            "io_queue",
-                            Expr::add(Expr::var("io_base"), Expr::u32(io_word::DST_HANDLE)),
-                        ),
-                    ),
-                    Node::AsyncLoad {
-                        source: IO_SOURCE_CAPABILITY_TABLE.into(),
-                        destination: IO_DESTINATION_CAPABILITY_TABLE.into(),
-                        offset: Box::new(Expr::load(
-                            "io_queue",
-                            Expr::add(Expr::var("io_base"), Expr::u32(io_word::OFFSET_LO)),
-                        )),
-                        size: Box::new(Expr::load(
-                            "io_queue",
-                            Expr::add(Expr::var("io_base"), Expr::u32(io_word::BYTE_COUNT)),
-                        )),
-                        tag: IO_QUEUE_DMA_TAG.into(),
-                    },
-                    // The DMA must land before the slot is published as DONE: a
-                    // consumer that sees DONE reads the destination bytes, and
-                    // without the wait those bytes are whatever the copy has
-                    // managed so far. Waiting inside the loop body also keeps
-                    // the tag free for the next published slot, so a second
-                    // trip does not restart a tag already in flight.
-                    Node::async_wait(IO_QUEUE_DMA_TAG),
-                    Node::store(
-                        "io_queue",
-                        Expr::var("io_status_idx"),
-                        Expr::u32(slot::DONE),
-                    ),
-                ],
-            ),
-        ],
-    )];
-
-    nodes
-}
-
 fn execute_slot_body(opcodes: &[OpcodeHandler]) -> Vec<Node> {
     execute_published_slot_body(claimed_slot_body(opcodes))
 }
@@ -625,39 +552,6 @@ fn execute_already_claimed_slot_body(tenant_id: Expr, claimed_body: Vec<Node>) -
 mod tests {
     use super::super::body_preorder::{let_names_preorder, walk_body_preorder};
     use super::*;
-
-    fn async_load_bindings(nodes: &[Node]) -> Vec<(String, String, String)> {
-        let mut bindings = Vec::new();
-        walk_body_preorder(nodes, &mut |node| {
-            if let Node::AsyncLoad {
-                source,
-                destination,
-                tag,
-                ..
-            } = node
-            {
-                bindings.push((
-                    source.as_str().to_string(),
-                    destination.as_str().to_string(),
-                    tag.as_str().to_string(),
-                ));
-            }
-        });
-        bindings
-    }
-
-    #[test]
-    fn io_polling_uses_capability_tables_not_fake_resource_names() {
-        let program = build_program_sharded_with_io_polling(64, &[]);
-        let bindings = async_load_bindings(&program.entry);
-        assert_eq!(bindings.len(), 1);
-        let (source, destination, tag) = &bindings[0];
-        assert_eq!(source, "io_source_capability_table");
-        assert_eq!(destination, "io_destination_capability_table");
-        assert_eq!(tag, "io_queue_dma");
-        assert_ne!(source, "ssd_weights");
-        assert_ne!(destination, "vram_cache");
-    }
 
     #[test]
     fn priority_builder_declares_explicit_ring_slots() {
@@ -740,33 +634,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn self_loading_miss_handler_does_not_include_async_load_nodes() {
-        let program = build_program_with_self_loading_miss_handler(64, 256, &[]);
-        let bindings = async_load_bindings(program.entry());
-        assert_eq!(
-            bindings.len(),
-            0,
-            "Fix: self-loading miss handler must not introduce AsyncLoad nodes; it writes to the IO queue and polls instead."
-        );
-    }
-
-    /// WHY: the IO polling megakernel started a DMA under `io_queue_dma` inside
-    /// the slot loop, published the slot as DONE, and never waited the transfer.
-    /// A consumer that observes DONE reads the destination buffer, so it read
-    /// whatever the copy had managed so far, and a second published slot in the
-    /// same invocation restarted a tag that was still in flight. The reference
-    /// interpreter refuses such a program outright, so this was also a program
-    /// the crate could build and never run against its own oracle.
+    /// WHY: the IO polling megakernel serviced the DMA itself. It CAS-claimed a
+    /// PUBLISHED slot the host pump also claims, read the transfer offset and
+    /// size out of a GPU-writable queue word, started a workgroup-collective
+    /// transfer under the divergent control flow of the single CAS winner, and
+    /// published `slot::DONE`, a status no reader in the IO protocol accepts:
+    /// the requesting lane in the LOAD_MISS handler polls for `io_status::OK`,
+    /// so it spun to `u32::MAX` and the slot never returned to EMPTY. The IR
+    /// validator refuses that offset and size under V139, so three builders
+    /// produced a program the crate could build and never run.
     ///
-    /// Closes: an async start with no matching wait anywhere in the built
-    /// program, for every builder the module re-exports, plus the publish order
-    /// for the IO slot specifically.
+    /// Closes: for every builder the module re-exports, a program the IR
+    /// validator refuses and any device-side async transfer start; plus the
+    /// status vocabulary and the claim the sidecar writes into an IO slot.
     ///
-    /// Does not catch: a wait present on one path and missing on another, or a
-    /// wait that runs before the transfer it names. Path-sensitive matching
-    /// needs a dataflow pass and lives in `vyre-foundation` validation.
-    mod async_transfer_pairing {
+    /// Does not catch: an IO slot leak the validator cannot see, such as a host
+    /// completion no lane ever recycles. Slot lifetime is host-observable state
+    /// and belongs to the queue tests in `super::super::io`.
+    mod built_program_contracts {
         use super::*;
 
         const PAIRING_WORKSPACE_BUFFER: &str = "pairing_resident_workspace";
@@ -859,29 +744,35 @@ mod tests {
             ]
         }
 
-        fn started_and_waited_tags(nodes: &[Node]) -> (Vec<&str>, Vec<&str>) {
+        fn async_transfer_tags(nodes: &[Node]) -> Vec<&str> {
             let mut started: Vec<&str> = Vec::new();
-            let mut waited: Vec<&str> = Vec::new();
-            walk_body_preorder(nodes, &mut |node| match node {
-                Node::AsyncLoad { tag, .. } | Node::AsyncStore { tag, .. } => {
+            walk_body_preorder(nodes, &mut |node| {
+                if let Node::AsyncLoad { tag, .. } | Node::AsyncStore { tag, .. } = node {
                     started.push(tag.as_str());
                 }
-                Node::AsyncWait { tag } => waited.push(tag.as_str()),
-                _ => {}
             });
-            (started, waited)
+            started
         }
 
         #[test]
-        fn no_builder_starts_an_async_transfer_it_never_waits() {
+        fn every_built_program_passes_ir_validation() {
             for (name, program) in built_programs() {
-                let (started, waited) = started_and_waited_tags(program.entry());
-                for tag in started {
-                    assert!(
-                        waited.contains(&tag),
-                        "Fix: `{name}` starts async transfer tag `{tag}` and never waits it, so the destination bytes are unsynchronized when the invocation ends and the reference interpreter refuses the program."
-                    );
-                }
+                let errors = vyre_foundation::validate::validate(&program);
+                assert!(
+                    errors.is_empty(),
+                    "Fix: `{name}` builds a program the IR validator refuses: {errors:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn no_built_program_starts_a_device_side_transfer() {
+            for (name, program) in built_programs() {
+                let started = async_transfer_tags(program.entry());
+                assert!(
+                    started.is_empty(),
+                    "Fix: `{name}` starts async transfer tags {started:?} on the device. The host pump claims a published IO slot and services the copy, so a device-side request is published into the queue and its completion polled instead."
+                );
             }
         }
 
@@ -900,44 +791,39 @@ mod tests {
 
             assert_eq!(
                 exported, covered,
-                "Fix: call every re-exported `build_program*` builder in built_programs; an uncalled one has no async-pairing coverage."
+                "Fix: call every re-exported `build_program*` builder in built_programs; an uncalled one has no validation or device-transfer coverage."
             );
         }
 
         #[test]
-        fn the_io_slot_is_published_done_only_after_its_transfer_is_waited() {
-            #[derive(Debug, PartialEq, Eq)]
-            enum IoEvent {
-                DmaStarted,
-                DmaWaited,
-                SlotPublishedDone,
-            }
-
+        fn the_io_sidecar_recycles_completions_without_claiming_them() {
             let program = build_program_sharded_with_io_polling(64, &[]);
-            let mut events: Vec<IoEvent> = Vec::new();
-            walk_body_preorder(program.entry(), &mut |node| match node {
-                Node::AsyncLoad { tag, .. } if tag.as_str() == IO_QUEUE_DMA_TAG => {
-                    events.push(IoEvent::DmaStarted);
-                }
-                Node::AsyncWait { tag } if tag.as_str() == IO_QUEUE_DMA_TAG => {
-                    events.push(IoEvent::DmaWaited);
-                }
-                Node::Store { buffer, value, .. }
-                    if buffer.as_str() == "io_queue" && *value == Expr::u32(slot::DONE) =>
-                {
-                    events.push(IoEvent::SlotPublishedDone);
-                }
-                _ => {}
-            });
 
+            let mut atomics: Vec<String> = Vec::new();
+            vyre_foundation::visit::walk_exprs(&program, |expr| {
+                if let Expr::Atomic { op, buffer, .. } = expr {
+                    if buffer.as_str() == "io_queue" {
+                        atomics.push(format!("{op:?}"));
+                    }
+                }
+            });
+            assert!(
+                atomics.is_empty(),
+                "Fix: the IO sidecar runs {atomics:?} on io_queue. Claiming a published request is the host pump's transition, and a device claim the host never sees strands the request."
+            );
+
+            let mut written: Vec<Expr> = Vec::new();
+            walk_body_preorder(program.entry(), &mut |node| {
+                if let Node::Store { buffer, value, .. } = node {
+                    if buffer.as_str() == "io_queue" {
+                        written.push(value.clone());
+                    }
+                }
+            });
             assert_eq!(
-                events,
-                vec![
-                    IoEvent::DmaStarted,
-                    IoEvent::DmaWaited,
-                    IoEvent::SlotPublishedDone
-                ],
-                "Fix: the IO slot must be published DONE only after its DMA is waited; a consumer that sees DONE reads the destination bytes."
+                written,
+                vec![Expr::u32(slot::EMPTY)],
+                "Fix: the IO sidecar must write exactly one IO slot status, `slot::EMPTY`, recycling a slot the host completed. Any other value is a device-side lifecycle transition the host protocol has no reader for."
             );
         }
     }

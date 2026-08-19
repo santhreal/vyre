@@ -1,6 +1,6 @@
 use super::{
-    claimed_slot_body, execute_already_claimed_slot_body, persistent_lane_prologue,
-    process_io_requests, wrap_persistent_megakernel_program,
+    claimed_slot_body, execute_already_claimed_slot_body, io_completion_poll_body,
+    persistent_lane_prologue, wrap_persistent_megakernel_program,
 };
 use super::{Expr, Node, OpcodeHandler, Program};
 
@@ -73,8 +73,8 @@ pub fn persistent_body_priority_slots(
         },
     ));
 
-    // -- IO poll (same as base variant). --------------------------------
-    body.push(Node::Block(process_io_requests()));
+    // -- IO completion poll (same as base variant). ---------------------
+    body.push(Node::Block(io_completion_poll_body()));
 
     body
 }

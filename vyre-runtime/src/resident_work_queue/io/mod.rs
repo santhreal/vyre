@@ -410,10 +410,55 @@ mod tests {
         }
     }
 
+    /// WHY: the only test for the GPU-side completion poll asserted the body was
+    /// one node, which cannot fail on a body that scans the wrong window,
+    /// accepts a status the host never writes, or writes the wrong word. The
+    /// megakernel composes this body, so either mistake leaks every IO slot.
+    ///
+    /// Closes: the scanned window, the statuses the recycler accepts, the word
+    /// it reads, and the word and value it writes.
     #[test]
-    fn io_completion_poll_produces_valid_ir() {
+    fn io_completion_poll_recycles_only_the_statuses_the_host_writes() {
+        use vyre_foundation::ir::{Expr, Node};
+
         let nodes = io_completion_poll_body();
-        assert_eq!(nodes.len(), 1); // one loop_for
+        assert_eq!(nodes.len(), 1, "Fix: the completion poll is one loop over the compiled poll window, got {nodes:?}");
+        let Some(Node::Loop { from, to, body, .. }) = nodes.first() else {
+            panic!("Fix: the completion poll is one loop over the compiled poll window, got {nodes:?}");
+        };
+        assert_eq!(*from, Expr::u32(0));
+        assert_eq!(
+            *to,
+            Expr::u32(IO_SLOT_COUNT),
+            "Fix: the recycler must scan the whole compiled poll window; a shorter scan strands the slots past its end."
+        );
+
+        let status_index = Expr::add(Expr::var("io_poll_base"), Expr::u32(io_word::STATUS));
+        assert!(
+            body.contains(&Node::let_bind(
+                "io_poll_base",
+                Expr::mul(Expr::var("io_poll_idx"), Expr::u32(IO_SLOT_WORDS))
+            )),
+            "Fix: the slot base is the loop index scaled by the slot width, got {body:?}"
+        );
+        assert!(
+            body.contains(&Node::let_bind(
+                "io_poll_status",
+                Expr::load("io_queue", status_index.clone())
+            )),
+            "Fix: the recycler reads the status word of the slot it scans, got {body:?}"
+        );
+        assert_eq!(
+            body.last(),
+            Some(&Node::if_then(
+                Expr::or(
+                    Expr::eq(Expr::var("io_poll_status"), Expr::u32(io_status::OK)),
+                    Expr::eq(Expr::var("io_poll_status"), Expr::u32(io_status::ERROR)),
+                ),
+                vec![Node::store("io_queue", status_index, Expr::u32(slot::EMPTY))]
+            )),
+            "Fix: a slot returns to EMPTY exactly when the host completed it with OK or ERROR. Recycling any other status takes a slot away from its owner."
+        );
     }
 
     #[test]
