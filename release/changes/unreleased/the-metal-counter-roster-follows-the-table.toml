@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Metal parity gate reads its counter roster from every non-test source in the driver crate. It read one named file, the counter table moved into a submodule when that file was split, and the gate then reported an empty subject universe instead of comparing the seventeen counters the driver publishes."

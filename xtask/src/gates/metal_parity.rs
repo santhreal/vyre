@@ -21,13 +21,13 @@ use std::collections::BTreeSet;
 use std::process::Command;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::Tree;
+use crate::gates::scan::{self, Tree};
 
 /// Crate that owns the Metal backend and publishes its counters.
 const METAL_CRATE: &str = "vyre-driver-metal";
 
-/// File that assembles the metric snapshot, relative to the driver crate.
-const SNAPSHOT_SOURCE: &str = "src/runtime.rs";
+/// Directory that assembles the metric snapshot, relative to the driver crate.
+const SNAPSHOT_SOURCE: &str = "src";
 
 /// Crate whose suite proves conformance against the reference.
 const CONFORM_CRATE: &str = "vyre-conform";
@@ -61,8 +61,7 @@ impl crate::gate::GateBehavior for MetalParity {
 
         let metal_dir = tree.member_directory(METAL_CRATE)?;
         let snapshot_source = format!("{metal_dir}/{SNAPSHOT_SOURCE}");
-        let snapshot = tree.read(&snapshot_source)?;
-        let published = published_counters(&snapshot);
+        let published = published_counters_in(&tree, &snapshot_source)?;
         report.cover_complete("published Metal counters", published.len());
         report.cover_complete("measured Metal cases", MEASURED_CASES.len());
         report.cover_complete("Metal conformance feature", 1);
@@ -165,7 +164,37 @@ impl crate::gate::GateBehavior for MetalParity {
     }
 }
 
-/// Counter names the metric snapshot publishes, read from the driver.
+/// Counter names the driver publishes, read from every non-test source in the
+/// crate.
+///
+/// The roster used to be read from one named file. The counter table then moved
+/// into a submodule, the named file published nothing, and the gate reported an
+/// empty universe instead of a drift. A whole-tree read survives a file split,
+/// and a name that appears only under `#[cfg(test)]` is not published, so those
+/// lines are dropped before the scan.
+fn published_counters_in(tree: &Tree, directory: &str) -> Result<BTreeSet<String>, GateError> {
+    let mut found = BTreeSet::new();
+    for path in tree.rust(&[directory])? {
+        let name = path.to_string_lossy();
+        if name.contains("/tests/") || name.ends_with("_tests.rs") || name.ends_with("/tests.rs") {
+            continue;
+        }
+        let text = tree.read(&path)?;
+        let lines: Vec<&str> = text.lines().collect();
+        let in_test_item = scan::cfg_test_lines(&lines);
+        let shipped: String = lines
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| !in_test_item.get(*index).copied().unwrap_or(false))
+            .map(|(_, line)| *line)
+            .collect::<Vec<&str>>()
+            .join("\n");
+        found.extend(published_counters(&shipped));
+    }
+    Ok(found)
+}
+
+/// Counter names in one source text.
 ///
 /// One spelling reaches the snapshot in two places: a row in the counter table,
 /// and a direct push for the resident buffer table, which is read under a lock
@@ -359,5 +388,30 @@ mod tests {
         assert_eq!(destination("ci@apple").expect("a plain host"), "ci@apple");
         assert!(destination("-oProxyCommand=touch /tmp/pwned").is_err());
         assert!(destination("").is_err());
+    }
+
+    /// WHY: the roster was read from one named file. `runtime.rs` was split, the
+    /// counter table moved into `runtime/metrics.rs`, and the named file
+    /// published nothing, so the gate stopped reporting drift and started
+    /// reporting an empty universe. The roster is now every non-test source in
+    /// the crate, and a name that exists only under `#[cfg(test)]` is not
+    /// published, or the gate would demand an assertion for a fixture.
+    #[test]
+    fn the_roster_follows_the_counter_table_into_a_submodule() {
+        let (_directory, root) = crate::gates::fixture_checkout::checkout(&[
+            ("src/runtime.rs", "pub mod metrics;\n"),
+            (
+                "src/runtime/metrics.rs",
+                "pub const METAL_COUNTERS: [(&str, u8); 1] = [(\"metal_pipeline_cache_hits\", 0)];\n\nfn push(metrics: &mut Vec<(&str, u64)>) {\n    metrics.push((\"metal_resident_buffer_error\", 1_u64));\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn fixture() {\n        let _ = (\"metal_counter_that_only_a_test_names\", 0);\n    }\n}\n",
+            ),
+        ]);
+        let tree = Tree::open(&root).expect("Fix: the fixture tree must open; check the git step");
+        let found =
+            published_counters_in(&tree, "src").expect("Fix: the fixture sources must read");
+        assert_eq!(
+            found.iter().map(String::as_str).collect::<Vec<_>>(),
+            vec!["metal_pipeline_cache_hits", "metal_resident_buffer_error"],
+            "the roster follows the table into the submodule and stops at test code"
+        );
     }
 }
