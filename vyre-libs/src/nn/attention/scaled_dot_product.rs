@@ -48,21 +48,19 @@ pub(super) fn attention_score_nodes(q: &str, k: &str, d: u32, scale_expr: Expr) 
             Expr::u32(d),
             vec![Node::assign(
                 "dot_val",
-                Expr::add(
-                    Expr::var("dot_val"),
-                    Expr::mul(
-                        Expr::load(
-                            q,
-                            Expr::add(
-                                Expr::mul(Expr::var("row"), Expr::u32(d)),
-                                Expr::var("k_idx"),
-                            ),
-                        ),
-                        Expr::load(
-                            k,
-                            Expr::add(Expr::mul(Expr::var("j"), Expr::u32(d)), Expr::var("k_idx")),
+                Expr::fma(
+                    Expr::load(
+                        q,
+                        Expr::add(
+                            Expr::mul(Expr::var("row"), Expr::u32(d)),
+                            Expr::var("k_idx"),
                         ),
                     ),
+                    Expr::load(
+                        k,
+                        Expr::add(Expr::mul(Expr::var("j"), Expr::u32(d)), Expr::var("k_idx")),
+                    ),
+                    Expr::var("dot_val"),
                 ),
             )],
         ),
@@ -151,9 +149,10 @@ pub(crate) fn direct_attention_program(
                     },
                     denom_expr.clone(),
                 );
-                accum = Expr::add(
+                accum = Expr::fma(
+                    weight,
+                    Expr::load(v, Expr::u32(col * d + dim)),
                     accum,
-                    Expr::mul(weight, Expr::load(v, Expr::u32(col * d + dim))),
                 );
             }
             nodes.push(Node::store(
@@ -499,9 +498,10 @@ fn attention_program(
                         ),
                         Node::assign(
                             "accum",
-                            Expr::add(
+                            Expr::fma(
+                                Expr::var("weight"),
+                                Expr::var("value"),
                                 Expr::var("accum"),
-                                Expr::mul(Expr::var("weight"), Expr::var("value")),
                             ),
                         ),
                     ]);

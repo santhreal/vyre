@@ -165,8 +165,9 @@ pub(super) fn tiled_online_softmax_body(
         ),
         Node::assign(
             "l",
-            Expr::add(
-                Expr::mul(Expr::var("rescale"), Expr::var("l")),
+            Expr::fma(
+                Expr::var("rescale"),
+                Expr::var("l"),
                 Expr::var("tile_sum"),
             ),
         ),
@@ -232,24 +233,22 @@ fn tile_scores(k: &str, head_dim: u32, tile_size: u32, scale: Expr) -> Vec<Node>
                 Expr::u32(head_dim),
                 vec![Node::assign(
                     "dot_val",
-                    Expr::add(
-                        Expr::var("dot_val"),
-                        Expr::mul(
-                            Expr::load(
-                                "q_scratch",
-                                q_idx(Expr::var("local"), Expr::var("score_d")),
-                            ),
-                            Expr::load(
-                                k,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::var("tile_start"), Expr::var("tile_j")),
-                                        Expr::u32(head_dim),
-                                    ),
-                                    Expr::var("score_d"),
+                    Expr::fma(
+                        Expr::load(
+                            "q_scratch",
+                            q_idx(Expr::var("local"), Expr::var("score_d")),
+                        ),
+                        Expr::load(
+                            k,
+                            Expr::add(
+                                Expr::mul(
+                                    Expr::add(Expr::var("tile_start"), Expr::var("tile_j")),
+                                    Expr::u32(head_dim),
                                 ),
+                                Expr::var("score_d"),
                             ),
                         ),
+                        Expr::var("dot_val"),
                     ),
                 )],
             ),
@@ -280,41 +279,37 @@ fn absorb_tile_values(v: &str, head_dim: u32, tile_size: u32) -> Vec<Node> {
                 Expr::var("tile_len"),
                 vec![Node::assign(
                     "weighted_v",
-                    Expr::add(
-                        Expr::var("weighted_v"),
-                        Expr::mul(
-                            Expr::UnOp {
-                                op: UnOp::Exp,
-                                operand: Box::new(bounded_exp_arg(Expr::sub(
-                                    Expr::load(
-                                        "score_tile",
-                                        score_idx(Expr::var("local"), Expr::var("v_j")),
-                                    ),
-                                    Expr::var("m_new"),
-                                ))),
-                            },
-                            Expr::load(
-                                v,
-                                Expr::add(
-                                    Expr::mul(
-                                        Expr::add(Expr::var("tile_start"), Expr::var("v_j")),
-                                        Expr::u32(head_dim),
-                                    ),
-                                    Expr::var("out_d"),
+                    Expr::fma(
+                        Expr::UnOp {
+                            op: UnOp::Exp,
+                            operand: Box::new(bounded_exp_arg(Expr::sub(
+                                Expr::load(
+                                    "score_tile",
+                                    score_idx(Expr::var("local"), Expr::var("v_j")),
                                 ),
+                                Expr::var("m_new"),
+                            ))),
+                        },
+                        Expr::load(
+                            v,
+                            Expr::add(
+                                Expr::mul(
+                                    Expr::add(Expr::var("tile_start"), Expr::var("v_j")),
+                                    Expr::u32(head_dim),
+                                ),
+                                Expr::var("out_d"),
                             ),
                         ),
+                        Expr::var("weighted_v"),
                     ),
                 )],
             ),
             Node::store(
                 "o_acc",
                 o_idx(Expr::var("local"), Expr::var("out_d")),
-                Expr::add(
-                    Expr::mul(
-                        Expr::var("rescale"),
-                        Expr::load("o_acc", o_idx(Expr::var("local"), Expr::var("out_d"))),
-                    ),
+                Expr::fma(
+                    Expr::var("rescale"),
+                    Expr::load("o_acc", o_idx(Expr::var("local"), Expr::var("out_d"))),
                     Expr::var("weighted_v"),
                 ),
             ),

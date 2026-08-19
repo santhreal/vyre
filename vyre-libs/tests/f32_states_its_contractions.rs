@@ -214,7 +214,6 @@ fn every_registered_float_op_states_its_fused_multiply_adds() {
 /// Operations that still leave a float multiply feeding an add, and how many
 /// sites each leaves. Shrink-only: see the module comment.
 const UNSTATED_CONTRACTIONS: &[(&str, usize)] = &[
-    ("vyre-libs::math::dot_partial", 2),
     ("vyre-libs::math::fft::fft_convolve_circular_complex", 32),
     ("vyre-libs::math::fft::fft_radix2", 8),
     (
@@ -239,10 +238,7 @@ const UNSTATED_CONTRACTIONS: &[(&str, usize)] = &[
     ("vyre-libs::math::quantized::i4x8_matvec_f32_scaled", 1),
     ("vyre-libs::math::reduce_variance", 17),
     ("vyre-libs::math::symmetric_eigen_jacobi", 8),
-    ("vyre-libs::math::tensor_train_decompose", 10),
-    ("vyre-libs::nn::attention_max_pass", 96),
-    ("vyre-libs::nn::attention_sum_pass", 160),
-    ("vyre-libs::nn::attention_write_pass", 164),
+    ("vyre-libs::math::tensor_train_decompose", 8),
     ("vyre-libs::nn::gelu", 1),
     ("vyre-libs::nn::layer_norm", 2),
     ("vyre-libs::nn::linear_relu", 1),
@@ -252,7 +248,6 @@ const UNSTATED_CONTRACTIONS: &[(&str, usize)] = &[
     ("vyre-libs::nn::mlp_4x_leaky_sq::output_projection", 1),
     ("vyre-libs::nn::mlp_backward", 3),
     ("vyre-libs::nn::partial_rope_backward", 3),
-    ("vyre-libs::nn::quest_score_pages", 2),
     ("vyre-libs::nn::rms_norm", 1),
     ("vyre-libs::nn::rms_norm_linear", 2),
     ("vyre-libs::nn::skip_gate", 2),

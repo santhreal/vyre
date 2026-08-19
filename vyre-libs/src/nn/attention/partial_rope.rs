@@ -178,11 +178,18 @@ fn build_partial_rope_at_offset(
     );
     let cos_v = Expr::load(cos_table, table_idx.clone());
     let sin_v = Expr::load(sin_table, table_idx);
-    let rotated_even = Expr::sub(
+    // Each rotation states one fused multiply-add. The pair a backend would
+    // otherwise contract on its own is the product feeding the sum, and the
+    // reference takes two roundings where a device takes one. Negating the
+    // operand instead of the sum keeps the subtraction exact: multiplying by
+    // -1.0 is representable, so the even rotation is the odd one with a flipped
+    // sine operand.
+    let rotated_even = Expr::fma(
+        Expr::mul(x1.clone(), Expr::f32(-1.0)),
+        sin_v.clone(),
         Expr::mul(x0.clone(), cos_v.clone()),
-        Expr::mul(x1.clone(), sin_v.clone()),
     );
-    let rotated_odd = Expr::add(Expr::mul(x0, sin_v), Expr::mul(x1, cos_v));
+    let rotated_odd = Expr::fma(x0, sin_v, Expr::mul(x1, cos_v));
     let rotated = Expr::select(Expr::eq(parity, Expr::u32(0)), rotated_even, rotated_odd);
     let value = Expr::cast(
         activation_dtype.clone(),

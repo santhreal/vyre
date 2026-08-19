@@ -400,9 +400,10 @@ pub fn attention_write_pass_bounded_typed(
                         ),
                         Node::assign(
                             "accum",
-                            Expr::add(
+                            Expr::fma(
+                                Expr::var("weight"),
+                                Expr::var("value"),
                                 Expr::var("accum"),
-                                Expr::mul(Expr::var("weight"), Expr::var("value")),
                             ),
                         ),
                     ],
@@ -468,7 +469,7 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
                     denom.clone(),
                 );
                 let value = finite_or(Expr::load(v, Expr::u32(col * d + dim)), Expr::f32(0.0));
-                accum = Expr::add(accum, Expr::mul(weight, value));
+                accum = Expr::fma(weight, value, accum);
             }
             stores.push(Node::store(out, Expr::u32(dim), flush_tiny(accum)));
         }

@@ -240,11 +240,11 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "mla_decode",
-        "5b34a3f1d4ebe1b18088c6bf69620ff255463d75b0b551086c96d531ed0db727",
+        "cb69d981fbb62eeffb8b84dafc6a04284281bd82aafee0b0502c3ccb606a04e3",
     ),
     (
         "flash_attention_2",
-        "10a1dc02c3b6e2ef48fd402b52db4907146d847716809f99e22cd2df620d9cd1",
+        "195b5164dbd04fb0cac9a1ad7cc12b850af40612803ca45484a5c3612d537f4d",
     ),
     (
         "softmax",
@@ -256,35 +256,35 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "flash_attention",
-        "dceed3138564486365ba11f6999208d0f9a66fad867d700a3b39f1314dac2901",
+        "918d2d3f7053c17ce12edf0dcc387bb7b0808540cb813e8c0e42e0880fed9c44",
     ),
     (
         "flash_attention/direct",
-        "bf2e8fba28b731acbfc4ff559040de942321460dbabd11d6967f3a7abef5a65a",
+        "4a277768597960cf686844d7ac398e09991fbc616c438bf5fb4c4fa7326363f2",
     ),
     (
         "attention",
-        "d33dfa83d78cf9867f01c4757e84e1e4afd3dc78fbde32e62d5489e86fb3ac2a",
+        "ac08103ff84292714c0f476ad65827006e61c61afa0dc5669e40aaf1a8037f98",
     ),
     (
         "attention/direct",
-        "0de30076910ee5335eb78c3989f8f38be0a6c7b7158f6eb832e56cd6b09f602e",
+        "514240c2d5ec2fce566d2a3c3cc4359b037f466a653df9a73f357c6e5349cce6",
     ),
     (
         "attention_reference",
-        "ec12030c188ecdf4b4485c0b1f8614049ffad1112ba3d2f627f2dbd55728aa69",
+        "56499d8f1c4b50d2dc14a2b58bea386cf129bba8cbb8e03f9f448de0310e9e81",
     ),
     (
         "gqa_attention",
-        "9aebaeb44deeb5cdd413a99f60edb6313a328d094407899c9af160a63e5ad4f2",
+        "c28f389e6c6ef79dc5f16f71cbe1b771445dcf4e0db0627e8f05f3751d5f21cb",
     ),
     (
         "gqa_attention_causal",
-        "71bdc26cdebe639588f2b67a0295ed39aa3e857387e2aca36c33a22189100815",
+        "1732d07ea3ee4a67a56206bff92a034916e2717b22e5ea8dd1ea2afaceb88106",
     ),
     (
         "gqa_attention_causal/f16",
-        "1701741cfeb6b8eb03e4fa05c5459dbc540ad1c220c030e16467d721dc2b68b7",
+        "414f71575b504f9d87994410e3c3886e55441df8b998eaeea1117250c54d1cda",
     ),
     (
         "kv_cache_append",
@@ -308,11 +308,11 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "quest_paging",
-        "bccb13ded6645e5c01d69298ef904fc8029a6a750815c7aae013da6b83409ad6",
+        "75169e0495b1fa25ec835237ec6bd09c0158e0f6374bb266b46b148e1bb42a2d",
     ),
     (
         "partial_rope",
-        "a9e5a56c30371af7e76097fd1b20f72c0b575f98a01925b936dd9a9ae76a7a75",
+        "2ecebe1bdc45e1f8192e7970a780648d1ca2cbdb4de83d2ee7fcda6e19baf37b",
     ),
     (
         "qk_gain",
@@ -320,7 +320,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "turboquant_attention",
-        "ff71ec2aa2f56f9e2a1be7356bab97f730721b64b31ee0906578283fd3f1e666",
+        "66b2497f36135d83c98c22a8e388469626cbfef5f47eb9c2f313488834ad5426",
     ),
     (
         "mla_compress_kv",

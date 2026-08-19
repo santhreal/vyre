@@ -27,24 +27,22 @@ pub fn dot_partial(
                 .map(|lane| {
                     Node::assign(
                         accum_var,
-                        Expr::add(
-                            Expr::var(accum_var),
-                            Expr::mul(
-                                Expr::cast(
-                                    DataType::F32,
-                                    Expr::load(
-                                        q_buffer,
-                                        Expr::add(q_base.clone(), Expr::u32(lane)),
-                                    ),
-                                ),
-                                Expr::cast(
-                                    DataType::F32,
-                                    Expr::load(
-                                        k_buffer,
-                                        Expr::add(k_base.clone(), Expr::u32(lane)),
-                                    ),
+                        Expr::fma(
+                            Expr::cast(
+                                DataType::F32,
+                                Expr::load(
+                                    q_buffer,
+                                    Expr::add(q_base.clone(), Expr::u32(lane)),
                                 ),
                             ),
+                            Expr::cast(
+                                DataType::F32,
+                                Expr::load(
+                                    k_buffer,
+                                    Expr::add(k_base.clone(), Expr::u32(lane)),
+                                ),
+                            ),
+                            Expr::var(accum_var),
                         ),
                     )
                 })
@@ -58,18 +56,16 @@ pub fn dot_partial(
         Expr::u32(d),
         vec![Node::assign(
             accum_var,
-            Expr::add(
-                Expr::var(accum_var),
-                Expr::mul(
-                    Expr::cast(
-                        DataType::F32,
-                        Expr::load(q_buffer, Expr::add(q_base, Expr::var("dk"))),
-                    ),
-                    Expr::cast(
-                        DataType::F32,
-                        Expr::load(k_buffer, Expr::add(k_base, Expr::var("dk"))),
-                    ),
+            Expr::fma(
+                Expr::cast(
+                    DataType::F32,
+                    Expr::load(q_buffer, Expr::add(q_base, Expr::var("dk"))),
                 ),
+                Expr::cast(
+                    DataType::F32,
+                    Expr::load(k_buffer, Expr::add(k_base, Expr::var("dk"))),
+                ),
+                Expr::var(accum_var),
             ),
         )],
     )

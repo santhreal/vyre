@@ -67,9 +67,10 @@ pub fn linear_4bit(
                     Expr::u32(in_dim),
                     vec![Node::assign(
                         "acc",
-                        Expr::add(
+                        Expr::fma(
+                            Expr::load(x, k.clone()),
+                            weight_f32.clone(),
                             Expr::var("acc"),
-                            Expr::mul(Expr::load(x, k.clone()), weight_f32.clone()),
                         ),
                     )],
                 ),

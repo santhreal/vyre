@@ -71,18 +71,16 @@ pub fn quest_score_pages_body(
             .map(|lane| {
                 Node::assign(
                     "score",
-                    Expr::add(
-                        Expr::var("score"),
-                        Expr::mul(
-                            Expr::load(query, Expr::u32(lane)),
-                            Expr::load(
-                                page_metadata,
-                                Expr::add(
-                                    Expr::mul(Expr::var("p"), Expr::u32(d_head)),
-                                    Expr::u32(lane),
-                                ),
+                    Expr::fma(
+                        Expr::load(query, Expr::u32(lane)),
+                        Expr::load(
+                            page_metadata,
+                            Expr::add(
+                                Expr::mul(Expr::var("p"), Expr::u32(d_head)),
+                                Expr::u32(lane),
                             ),
                         ),
+                        Expr::var("score"),
                     ),
                 )
             })
@@ -94,15 +92,13 @@ pub fn quest_score_pages_body(
             Expr::u32(d_head),
             vec![Node::assign(
                 "score",
-                Expr::add(
-                    Expr::var("score"),
-                    Expr::mul(
-                        Expr::load(query, Expr::var("d")),
-                        Expr::load(
-                            page_metadata,
-                            Expr::add(Expr::mul(Expr::var("p"), Expr::u32(d_head)), Expr::var("d")),
-                        ),
+                Expr::fma(
+                    Expr::load(query, Expr::var("d")),
+                    Expr::load(
+                        page_metadata,
+                        Expr::add(Expr::mul(Expr::var("p"), Expr::u32(d_head)), Expr::var("d")),
                     ),
+                    Expr::var("score"),
                 ),
             )],
         )]

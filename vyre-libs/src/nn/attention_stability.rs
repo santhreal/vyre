@@ -27,12 +27,10 @@ pub fn direct_score_expr(
 ) -> Expr {
     let mut dot = Expr::f32(0.0);
     for component in 0..dimension {
-        dot = Expr::add(
+        dot = Expr::fma(
+            Expr::load(q, Expr::u32(row * dimension + component)),
+            Expr::load(k, Expr::u32(col * dimension + component)),
             dot,
-            Expr::mul(
-                Expr::load(q, Expr::u32(row * dimension + component)),
-                Expr::load(k, Expr::u32(col * dimension + component)),
-            ),
         );
     }
     bounded_score(Expr::mul(dot, scale))

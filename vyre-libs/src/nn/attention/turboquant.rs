@@ -97,36 +97,32 @@ pub fn turboquant_attention(
                     Expr::u32(d_head),
                     vec![Node::assign(
                         "score",
-                        Expr::add(
-                            Expr::var("score"),
-                            Expr::mul(
-                                Expr::load(q, Expr::var("e")),
-                                unpack_3bit(
-                                    k_packed,
-                                    Expr::add(
-                                        Expr::mul(Expr::var("i"), Expr::u32(d_head)),
-                                        Expr::var("e"),
-                                    ),
+                        Expr::fma(
+                            Expr::load(q, Expr::var("e")),
+                            unpack_3bit(
+                                k_packed,
+                                Expr::add(
+                                    Expr::mul(Expr::var("i"), Expr::u32(d_head)),
+                                    Expr::var("e"),
                                 ),
                             ),
+                            Expr::var("score"),
                         ),
                     )],
                 ),
                 // acc += score * dequant_v[i, d]
                 Node::assign(
                     "acc",
-                    Expr::add(
-                        Expr::var("acc"),
-                        Expr::mul(
-                            Expr::var("score"),
-                            unpack_3bit(
-                                v_packed,
-                                Expr::add(
-                                    Expr::mul(Expr::var("i"), Expr::u32(d_head)),
-                                    Expr::var("d"),
-                                ),
+                    Expr::fma(
+                        Expr::var("score"),
+                        unpack_3bit(
+                            v_packed,
+                            Expr::add(
+                                Expr::mul(Expr::var("i"), Expr::u32(d_head)),
+                                Expr::var("d"),
                             ),
                         ),
+                        Expr::var("acc"),
                     ),
                 ),
             ],
