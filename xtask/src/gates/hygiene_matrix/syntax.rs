@@ -6,12 +6,115 @@ use syn::visit::Visit;
 
 use super::records::{HygieneFinding, STRUCTURAL_GATE_SOURCE};
 
+/// Markers for a function that resolves the checkout this test run reads.
+///
+/// A source-inspecting gate has to name the tree it judges, and the workspace
+/// has three resolvers plus the compiled-in manifest directory. A function that
+/// names none of them reads whatever root its caller handed it.
+const CHECKOUT_RESOLVERS: &[&str] = &[
+    "checkout_root",
+    "workspace_root",
+    "vyre_crate_directory",
+    "CARGO_MANIFEST_DIR",
+];
+
+/// Markers for a temporary root a test creates for itself.
+const TEMPORARY_ROOTS: &[&str] = &["temp_dir", "tempdir", "TempDir", "tempfile"];
+
+/// Markers for a function that writes the tree it later reads.
+const TREE_WRITERS: &[&str] = &["fs::write", "create_dir_all"];
+
+/// Whether `tokens` reads Rust source out of a root the checkout resolved.
+///
+/// A resolver and a Rust path anywhere in one function is not enough. A test
+/// that writes a fixture workspace and copies one tool out of the checkout into
+/// it names both, and every Rust path it names is a file it wrote. The statement
+/// naming the Rust path has to be the statement naming a checkout-rooted value,
+/// which is either the resolver call or a binding taken from one.
+///
+/// `tokens` is a whitespace-free token string, so statements are split on `;`.
+/// A `for` header and the first statement of its body land in one chunk, which
+/// widens the answer rather than narrowing it: this decides whether a finding is
+/// kept, so an uncertain read stays a finding.
+fn checkout_rooted_rust_read(tokens: &str) -> bool {
+    let mut rooted: Vec<String> = Vec::new();
+    for statement in tokens.split(';') {
+        let names_root = CHECKOUT_RESOLVERS
+            .iter()
+            .any(|resolver| statement.contains(resolver))
+            || rooted
+                .iter()
+                .any(|name| mentions_identifier(statement, name));
+        if !names_root {
+            continue;
+        }
+        if statement.contains("\"rs\"")
+            || statement.contains(".rs\"")
+            || (statement.contains("extension()") && statement.contains("==\"rs\""))
+        {
+            return true;
+        }
+        if let Some(bound) = bound_identifier(statement) {
+            rooted.push(bound);
+        }
+    }
+    false
+}
+
+/// The name a `let` statement binds, from a whitespace-free token string.
+///
+/// Reads `letname=`, `letmutname=`, and `letname:Type=`. A pattern that binds
+/// several names reports none, so the value it destructures is not tracked and
+/// the finding is kept.
+fn bound_identifier(statement: &str) -> Option<String> {
+    let rest = statement.trim_start_matches(|c: char| c == '{' || c == '}');
+    let rest = rest.strip_prefix("let")?;
+    let rest = rest.strip_prefix("mut").unwrap_or(rest);
+    let name: String = rest
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+        .collect();
+    if name.is_empty() {
+        return None;
+    }
+    let tail = &rest[name.len()..];
+    if tail.starts_with('=') || tail.starts_with(':') {
+        Some(name)
+    } else {
+        None
+    }
+}
+
+/// Whether `name` appears in `haystack` as a whole identifier.
+fn mentions_identifier(haystack: &str, name: &str) -> bool {
+    haystack.match_indices(name).any(|(at, _)| {
+        let before = haystack[..at]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !c.is_ascii_alphanumeric() && c != '_');
+        let after = haystack[at + name.len()..]
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_ascii_alphanumeric() && c != '_');
+        before && after
+    })
+}
+
 #[derive(Default)]
 pub(crate) struct RustSourceFactsVisitor {
     pub(crate) reads_rust_source: bool,
     pub(crate) calls_read_to_string: bool,
     pub(crate) mentions_rust_path: bool,
     pub(crate) inspects_text: bool,
+    /// Names a temporary root, its own or one a helper made.
+    pub(crate) creates_temporary_root: bool,
+    /// Writes files into whatever root it was handed.
+    pub(crate) writes_source_tree: bool,
+    /// Reads Rust source out of the checkout under test, rather than out of a
+    /// root its caller supplied. Both halves have to appear in one function: a
+    /// fixture builder that reads a generated JSON artifact from the checkout is
+    /// not reading this tree's source.
+    pub(crate) reads_checkout_rust_source: bool,
     pub(crate) callees: BTreeSet<String>,
     pub(crate) aliases: BTreeMap<String, String>,
 }
@@ -193,6 +296,12 @@ impl SourceInspectionFunctionCollector {
         if !is_test && facts.calls_read_to_string && facts.mentions_rust_path {
             facts.reads_rust_source = true;
         }
+        let fixture_checkout = tokens.contains("fixture_checkout");
+        facts.creates_temporary_root |=
+            fixture_checkout || TEMPORARY_ROOTS.iter().any(|root| tokens.contains(root));
+        facts.writes_source_tree |=
+            fixture_checkout || TREE_WRITERS.iter().any(|writer| tokens.contains(writer));
+        facts.reads_checkout_rust_source |= checkout_rooted_rust_read(&tokens);
         self.functions.push(SourceInspectionFunction {
             line,
             name,
@@ -278,6 +387,9 @@ pub(crate) fn source_inspection_test_findings(file: &syn::File) -> Vec<(usize, S
         let mut calls_read_to_string = false;
         let mut mentions_rust_path = false;
         let mut inspects_text = false;
+        let mut creates_temporary_root = false;
+        let mut writes_source_tree = false;
+        let mut reads_checkout_rust_source = false;
         while let Some(index) = stack.pop() {
             if !visited.insert(index) {
                 continue;
@@ -287,6 +399,9 @@ pub(crate) fn source_inspection_test_findings(file: &syn::File) -> Vec<(usize, S
             calls_read_to_string |= facts.calls_read_to_string;
             mentions_rust_path |= facts.mentions_rust_path;
             inspects_text |= facts.inspects_text;
+            creates_temporary_root |= facts.creates_temporary_root;
+            writes_source_tree |= facts.writes_source_tree;
+            reads_checkout_rust_source |= facts.reads_checkout_rust_source;
             for callee in &facts.callees {
                 if let Some(indices) = by_name.get(callee.as_str()) {
                     stack.extend(indices);
@@ -294,7 +409,15 @@ pub(crate) fn source_inspection_test_findings(file: &syn::File) -> Vec<(usize, S
             }
         }
         reads_rust_source |= calls_read_to_string && mentions_rust_path;
-        if reads_rust_source && inspects_text {
+        // A test that wrote the tree it reads is exercising the analyzer against
+        // a fixture, which is behavior, and the analyzer's subject happens to be
+        // source text. The root and the writes may sit in different helpers, so
+        // the two facts are collected separately and combined here. A test that
+        // authors a fixture and ALSO reads Rust source out of the resolved
+        // checkout keeps the finding: the fixture does not excuse that walk.
+        let authors_source_tree = creates_temporary_root && writes_source_tree;
+        let inspects_this_checkout = !authors_source_tree || reads_checkout_rust_source;
+        if reads_rust_source && inspects_text && inspects_this_checkout {
             findings.push((test.line, test.name.clone()));
         }
     }

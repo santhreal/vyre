@@ -348,6 +348,145 @@ fn source_inspection_test_scanner_is_syntax_aware_and_fail_closed() {
     assert!(findings.is_empty());
 }
 
+/// WHY: the rule condemns a test that reads this checkout's source instead of
+/// asserting behavior. A test that WRITES a source tree in a temporary
+/// directory and runs the analyzer over it is asserting behavior, and the
+/// analyzer's subject happens to be source text. Every unit test of every
+/// source-reading gate was reported as a release blocker on that account: 25 of
+/// them, including the tests that prove this scanner itself. A test that writes
+/// a fixture and ALSO resolves the checkout keeps the finding, so the fixture
+/// cannot be used to cover a walk over the real tree.
+#[test]
+fn a_test_that_authors_its_own_source_tree_is_not_inspecting_this_checkout() {
+    let fixture_only = r#"
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn a_copied_block_is_measured() {
+                    let root = std::env::temp_dir().join("scan-fixture");
+                    std::fs::create_dir_all(root.join("crate-a/src")).unwrap();
+                    std::fs::write(root.join("crate-a/src/lib.rs"), "let a = 1;\n").unwrap();
+                    let text = std::fs::read_to_string(root.join("crate-a/src/lib.rs")).unwrap();
+                    assert!(text.contains("let a"));
+                }
+            }
+        "#;
+    let fixture_and_checkout = r#"
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn a_copied_block_is_measured_in_the_tree_too() {
+                    let root = std::env::temp_dir().join("scan-fixture");
+                    std::fs::create_dir_all(root.join("crate-a/src")).unwrap();
+                    std::fs::write(root.join("crate-a/src/lib.rs"), "let a = 1;\n").unwrap();
+                    let live = std::fs::read_to_string(
+                        crate::checkout::checkout_root().join("crate-a/src/lib.rs"),
+                    )
+                    .unwrap();
+                    assert!(live.contains("let a"));
+                }
+            }
+        "#;
+
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(
+        Path::new("xtask/src/gates/scan.rs"),
+        fixture_only,
+        &mut findings,
+    );
+    assert!(
+        findings.is_empty(),
+        "a fixture the test wrote is not this checkout: {:?}",
+        findings
+            .iter()
+            .map(|finding| finding.text.clone())
+            .collect::<Vec<_>>()
+    );
+
+    let root_and_writes_in_separate_helpers = r#"
+            fn enforced_schema_shape() -> String {
+                std::fs::read_to_string(workspace_root().join("docs/generated/OP_SCHEMA.json"))
+                    .unwrap()
+            }
+
+            fn write_fixture(root: &std::path::Path) {
+                let schema = enforced_schema_shape();
+                std::fs::write(root.join("crate-a/src/lib.rs"), schema).unwrap();
+            }
+
+            fn fixture() -> tempfile::TempDir {
+                let temp = tempfile::tempdir().unwrap();
+                write_fixture(temp.path());
+                temp
+            }
+
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn a_stale_claim_fails_closed() {
+                    let temp = fixture();
+                    let text =
+                        std::fs::read_to_string(temp.path().join("crate-a/src/lib.rs")).unwrap();
+                    assert!(text.contains("let a"));
+                }
+            }
+        "#;
+    scan_source_inspection_tests(
+        Path::new("xtask/tests/tree_contracts/architecture_docs.rs"),
+        root_and_writes_in_separate_helpers,
+        &mut findings,
+    );
+    assert!(
+        findings.is_empty(),
+        "a fixture builder that reads a generated artifact from the checkout is not reading this tree's source: {:?}",
+        findings
+            .iter()
+            .map(|finding| finding.text.clone())
+            .collect::<Vec<_>>()
+    );
+
+    let fixture_borrows_one_tool = r#"
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn the_extraction_covers_a_gated_module() {
+                    let temp = tempfile::tempdir().unwrap();
+                    let root = temp.path();
+                    std::fs::create_dir_all(root.join("fixture/src")).unwrap();
+                    std::fs::write(root.join("fixture/src/lib.rs"), "pub mod public;\n").unwrap();
+                    std::fs::copy(workspace_root().join("cargo_full"), root.join("cargo_full"))
+                        .unwrap();
+                    let snapshot =
+                        std::fs::read_to_string(root.join("docs/public-api/fixture.txt")).unwrap();
+                    assert!(snapshot.contains("pub mod fixture::public"));
+                }
+            }
+        "#;
+    scan_source_inspection_tests(
+        Path::new("xtask/tests/tree_contracts/public_api_snapshot_inventory.rs"),
+        fixture_borrows_one_tool,
+        &mut findings,
+    );
+    assert!(
+        findings.is_empty(),
+        "the Rust paths this test names are the fixture's; the one file it takes from the checkout is a tool: {:?}",
+        findings
+            .iter()
+            .map(|finding| finding.text.clone())
+            .collect::<Vec<_>>()
+    );
+
+    scan_source_inspection_tests(
+        Path::new("xtask/src/gates/scan.rs"),
+        fixture_and_checkout,
+        &mut findings,
+    );
+    assert_eq!(findings.len(), 1);
+    assert!(findings[0]
+        .text
+        .contains("a_copied_block_is_measured_in_the_tree_too"));
+}
+
 /// A macro body reaches the callee graph through raw tokens, and the
 /// scanner used to render those tokens to a string and split on every
 /// non-identifier character. That split the CONTENTS of string literals,
