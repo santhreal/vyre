@@ -1446,7 +1446,8 @@ mod tests {
         fs::create_dir_all(module.join("deep"))
             .expect("Fix: the test needs a nested module directory.");
         let cited = module.join("mod.rs");
-        fs::write(&cited, "pub mod io;\npub mod deep;\n").expect("Fix: the test needs a root file.");
+        fs::write(&cited, "pub mod io;\npub mod deep;\n")
+            .expect("Fix: the test needs a root file.");
         fs::write(
             module.join("io.rs"),
             "pub const MAX_PENDING_DURABLE_CACHE_FILES: usize = 64;\n",

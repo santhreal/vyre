@@ -296,9 +296,9 @@ pub(crate) fn check_async_uniformity(
     errors: &mut Vec<ValidationError>,
 ) {
     let load_policy = |buf_ident: &Ident| {
-        buffers
-            .get(buf_ident.as_str())
-            .is_some_and(|b| b.access == BufferAccess::Uniform || b.access == BufferAccess::ReadOnly)
+        buffers.get(buf_ident.as_str()).is_some_and(|b| {
+            b.access == BufferAccess::Uniform || b.access == BufferAccess::ReadOnly
+        })
     };
     if !super::uniformity::is_uniform_with_load_policy(offset, scope, load_policy) {
         errors.push(err(

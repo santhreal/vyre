@@ -15,9 +15,9 @@ pub(crate) mod copy;
 /// cudaGraph capture-and-replay path. Records one full Program dispatch into
 /// a `CUgraph` then replays it on demand to reduce hot-path launch overhead.
 pub(crate) mod cuda_graph;
+pub(crate) mod cuda_graph_lifecycle;
 /// cudaGraph replay path.
 pub(crate) mod cuda_graph_replay;
-pub(crate) mod cuda_graph_lifecycle;
 /// CUDA backend handle, launch geometry, and kernel-launch orchestration  -
 /// including the cooperative-launch path that routes through
 /// `cuLaunchCooperativeKernel` when the caller opts in via

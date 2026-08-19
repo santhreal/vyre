@@ -1,14 +1,12 @@
 //! Backend-neutral immutable-resource, artifact, and mutable-state residency ownership.
 
+mod admission;
 mod device;
 mod error;
-mod admission;
 mod validation;
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
-pub use device::{MaterializerResourceDevice, ResidentResourceDevice};
-pub use error::ResourceResidencyError;
 pub use admission::{
     ArtifactInstanceBinding, ImmutableResourceUpload, MutableStateSpec, ResourceAdmissionStatus,
     ResourceSetAdmission, ResourceSetKey, ResourceSetLease, StateId, StateLease,
@@ -17,6 +15,8 @@ use admission::{
     ResidencyState, ResidentArtifact, ResidentImmutableResource, ResidentResourceSet,
     ResidentStateSet,
 };
+pub use device::{MaterializerResourceDevice, ResidentResourceDevice};
+pub use error::ResourceResidencyError;
 use validation::{
     accounted_resource_set_bytes, ensure_budget, release_state_accounting, validate_artifacts,
     validate_immutable_resources, validate_key, validate_state, validate_state_specs,

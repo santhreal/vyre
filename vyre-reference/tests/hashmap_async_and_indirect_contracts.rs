@@ -95,19 +95,29 @@ fn async_load_in_multi_invocation_workgroup_executes_once_and_synchronizes() {
         .chunks_exact(4)
         .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
         .collect::<Vec<_>>();
-    assert_eq!(words, vec![10, 20, 30, 40], "AsyncLoad in wide workgroup must publish correctly");
+    assert_eq!(
+        words,
+        vec![10, 20, 30, 40],
+        "AsyncLoad in wide workgroup must publish correctly"
+    );
 
     // Reversed step order
-    let values = vec![Value::from(
-        [10_u32, 20, 30, 40]
-            .into_iter()
-            .flat_map(u32::to_le_bytes)
-            .collect::<Vec<u8>>(),
-    ), Value::from(vec![0u8; 16])];
+    let values = vec![
+        Value::from(
+            [10_u32, 20, 30, 40]
+                .into_iter()
+                .flat_map(u32::to_le_bytes)
+                .collect::<Vec<u8>>(),
+        ),
+        Value::from(vec![0u8; 16]),
+    ];
     let reversed = vyre_reference::reference_eval_lane_reversed(&program, &values)
         .expect("reversed lane stepping must execute correctly");
     let reversed_bytes: Vec<Vec<u8>> = reversed.into_iter().map(|v| v.to_bytes()).collect();
-    assert_eq!(forward, reversed_bytes, "Reversed lane order must produce identical output");
+    assert_eq!(
+        forward, reversed_bytes,
+        "Reversed lane order must produce identical output"
+    );
 }
 
 #[test]

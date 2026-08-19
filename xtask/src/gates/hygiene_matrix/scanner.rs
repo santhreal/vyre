@@ -357,7 +357,12 @@ pub(crate) fn scan_file(
             path: path.display().to_string(),
             line,
             pattern: "truncating_duration_cast",
-            text: text.lines().nth(line - 1).unwrap_or_default().trim().to_string(),
+            text: text
+                .lines()
+                .nth(line - 1)
+                .unwrap_or_default()
+                .trim()
+                .to_string(),
             test: None,
         });
     }

@@ -102,9 +102,10 @@ static SUBMITTING_MACROS: LazyLock<BTreeSet<String>> = LazyLock::new(|| {
 /// True when `line` opens an invocation of a macro that submits a registration.
 fn opens_submitting_invocation(line: &str) -> bool {
     line.starts_with("inventory::submit!")
-        || SUBMITTING_MACROS
-            .iter()
-            .any(|name| line.strip_prefix(name.as_str()).is_some_and(|rest| rest.starts_with('!')))
+        || SUBMITTING_MACROS.iter().any(|name| {
+            line.strip_prefix(name.as_str())
+                .is_some_and(|rest| rest.starts_with('!'))
+        })
 }
 
 /// Features gating each module path in a crate, read from the `#[cfg(feature =

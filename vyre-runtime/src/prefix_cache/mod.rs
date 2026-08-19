@@ -20,19 +20,19 @@
 //!   queued tokens, and per-tenant usage. Admission fails closed under saturation;
 //!   eviction never reclaims pinned or in-flight pages.
 
-mod manager;
 mod contract;
+mod manager;
 
 #[cfg(test)]
 mod tests;
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
-pub use manager::PrefixCacheManager;
 pub use contract::{
     PrefixCacheError, PrefixCacheKey, PrefixCacheKeyFingerprint, PrefixCacheLayout,
     PrefixCacheLimits, PrefixCacheMetrics, PrefixMatchResult,
 };
+pub use manager::PrefixCacheManager;
 
 /// Thread-safe wrapper around [`PrefixCacheManager`].
 #[derive(Debug, Clone)]

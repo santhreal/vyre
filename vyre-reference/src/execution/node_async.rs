@@ -29,7 +29,7 @@ pub(crate) fn eval_async_load(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-)-> Result<(), crate::ReferenceError> {
+) -> Result<(), crate::ReferenceError> {
     if !invocation.is_leader() {
         return Ok(());
     }

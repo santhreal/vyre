@@ -149,11 +149,7 @@ pub(crate) fn direct_attention_program(
                     },
                     denom_expr.clone(),
                 );
-                accum = Expr::fma(
-                    weight,
-                    Expr::load(v, Expr::u32(col * d + dim)),
-                    accum,
-                );
+                accum = Expr::fma(weight, Expr::load(v, Expr::u32(col * d + dim)), accum);
             }
             nodes.push(Node::store(
                 out,
@@ -498,11 +494,7 @@ fn attention_program(
                         ),
                         Node::assign(
                             "accum",
-                            Expr::fma(
-                                Expr::var("weight"),
-                                Expr::var("value"),
-                                Expr::var("accum"),
-                            ),
+                            Expr::fma(Expr::var("weight"), Expr::var("value"), Expr::var("accum")),
                         ),
                     ]);
                     score

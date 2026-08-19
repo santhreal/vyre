@@ -96,7 +96,10 @@ pub(crate) fn truncating_duration_cast_lines(path: &Path, text: &str) -> Vec<usi
         if trimmed.starts_with("//") || is_release_rule_text(trimmed) {
             continue;
         }
-        for character in trimmed.chars().filter(|character| !character.is_whitespace()) {
+        for character in trimmed
+            .chars()
+            .filter(|character| !character.is_whitespace())
+        {
             dense.push(character);
             source_line.push(index + 1);
         }

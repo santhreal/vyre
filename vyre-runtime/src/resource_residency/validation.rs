@@ -1,10 +1,10 @@
 use std::collections::BTreeSet;
 
-use super::error::ResourceResidencyError;
 use super::admission::{
     ArtifactInstanceBinding, ImmutableResourceUpload, MutableStateSpec, ResidencyState,
     ResidentResourceSet, ResidentStateSet, ResourceSetKey, StateLease,
 };
+use super::error::ResourceResidencyError;
 
 pub(super) struct PreparedImmutableResource {
     pub(super) name: String,

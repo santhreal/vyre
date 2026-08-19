@@ -165,11 +165,7 @@ pub(super) fn tiled_online_softmax_body(
         ),
         Node::assign(
             "l",
-            Expr::fma(
-                Expr::var("rescale"),
-                Expr::var("l"),
-                Expr::var("tile_sum"),
-            ),
+            Expr::fma(Expr::var("rescale"), Expr::var("l"), Expr::var("tile_sum")),
         ),
     ]);
     tile_body.extend(update_o_acc);
@@ -234,10 +230,7 @@ fn tile_scores(k: &str, head_dim: u32, tile_size: u32, scale: Expr) -> Vec<Node>
                 vec![Node::assign(
                     "dot_val",
                     Expr::fma(
-                        Expr::load(
-                            "q_scratch",
-                            q_idx(Expr::var("local"), Expr::var("score_d")),
-                        ),
+                        Expr::load("q_scratch", q_idx(Expr::var("local"), Expr::var("score_d"))),
                         Expr::load(
                             k,
                             Expr::add(

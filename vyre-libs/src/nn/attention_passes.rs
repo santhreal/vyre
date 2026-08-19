@@ -400,11 +400,7 @@ pub fn attention_write_pass_bounded_typed(
                         ),
                         Node::assign(
                             "accum",
-                            Expr::fma(
-                                Expr::var("weight"),
-                                Expr::var("value"),
-                                Expr::var("accum"),
-                            ),
+                            Expr::fma(Expr::var("weight"), Expr::var("value"), Expr::var("accum")),
                         ),
                     ],
                 )],

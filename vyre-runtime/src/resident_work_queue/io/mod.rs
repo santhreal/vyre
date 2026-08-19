@@ -422,9 +422,15 @@ mod tests {
         use vyre_foundation::ir::{Expr, Node};
 
         let nodes = io_completion_poll_body();
-        assert_eq!(nodes.len(), 1, "Fix: the completion poll is one loop over the compiled poll window, got {nodes:?}");
+        assert_eq!(
+            nodes.len(),
+            1,
+            "Fix: the completion poll is one loop over the compiled poll window, got {nodes:?}"
+        );
         let Some(Node::Loop { from, to, body, .. }) = nodes.first() else {
-            panic!("Fix: the completion poll is one loop over the compiled poll window, got {nodes:?}");
+            panic!(
+                "Fix: the completion poll is one loop over the compiled poll window, got {nodes:?}"
+            );
         };
         assert_eq!(*from, Expr::u32(0));
         assert_eq!(

@@ -30,17 +30,11 @@ pub fn dot_partial(
                         Expr::fma(
                             Expr::cast(
                                 DataType::F32,
-                                Expr::load(
-                                    q_buffer,
-                                    Expr::add(q_base.clone(), Expr::u32(lane)),
-                                ),
+                                Expr::load(q_buffer, Expr::add(q_base.clone(), Expr::u32(lane))),
                             ),
                             Expr::cast(
                                 DataType::F32,
-                                Expr::load(
-                                    k_buffer,
-                                    Expr::add(k_base.clone(), Expr::u32(lane)),
-                                ),
+                                Expr::load(k_buffer, Expr::add(k_base.clone(), Expr::u32(lane))),
                             ),
                             Expr::var(accum_var),
                         ),

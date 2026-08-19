@@ -117,10 +117,7 @@ pub fn turboquant_attention(
                         Expr::var("score"),
                         unpack_3bit(
                             v_packed,
-                            Expr::add(
-                                Expr::mul(Expr::var("i"), Expr::u32(d_head)),
-                                Expr::var("d"),
-                            ),
+                            Expr::add(Expr::mul(Expr::var("i"), Expr::u32(d_head)), Expr::var("d")),
                         ),
                         Expr::var("acc"),
                     ),

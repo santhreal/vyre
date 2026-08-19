@@ -47,9 +47,9 @@ mod materializer;
 /// Bounded CUDA megakernel plan cache keyed by graph, analysis, device, and
 /// runtime pressure buckets.
 pub(crate) mod megakernel_plan_cache;
+pub(crate) mod megakernel_plan_cache_records;
 #[cfg(test)]
 mod megakernel_plan_cache_tests;
-pub(crate) mod megakernel_plan_cache_records;
 mod numeric;
 /// Occupancy-aware empirical autotuning (I4): pure estimator that picks
 /// the workgroup size with the highest predicted hardware occupancy from

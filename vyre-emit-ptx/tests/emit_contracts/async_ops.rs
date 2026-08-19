@@ -32,7 +32,10 @@ fn async_load_emits_bounded_sync_copy() {
     assert!(s.contains(".shared .align 4 .b8 shared_buf_1[256];"));
     assert!(s.contains("ld.global.u32"));
     assert!(s.contains("st.shared.u32"));
-    assert!(s.contains("%tid.x") && s.contains("setp.ne.u32"), "must leader predicate scalar copy");
+    assert!(
+        s.contains("%tid.x") && s.contains("setp.ne.u32"),
+        "must leader predicate scalar copy"
+    );
     assert!(s.contains("lowered as bounded synchronous copy"));
 }
 
@@ -59,8 +62,14 @@ fn async_load_uses_cp_async_on_sm_80() {
     assert!(s.contains("cp.async.ca.shared.global"));
     assert!(s.contains("cp.async.commit_group"));
     assert!(s.contains("cp.async.wait_group 0"));
-    assert!(s.contains("%tid.x") && s.contains("setp.ne.u32"), "must leader predicate cp.async issue");
-    assert!(s.contains("bar.sync 0"), "implicit drain must synchronize CTA");
+    assert!(
+        s.contains("%tid.x") && s.contains("setp.ne.u32"),
+        "must leader predicate cp.async issue"
+    );
+    assert!(
+        s.contains("bar.sync 0"),
+        "implicit drain must synchronize CTA"
+    );
     assert!(
         !s.contains("lowered as bounded synchronous copy"),
         "sm_80 global-to-shared U32 AsyncLoad must use the native cp.async path"
@@ -144,5 +153,8 @@ fn async_wait_emits_workgroup_memory_barrier() {
         .build();
     let s = emit_with_target(&kernel, ComputeCapability::SM_80).unwrap();
     assert!(s.contains("membar.cta"));
-    assert!(s.contains("bar.sync 0"), "AsyncWait must synchronize workgroup with bar.sync 0");
+    assert!(
+        s.contains("bar.sync 0"),
+        "AsyncWait must synchronize workgroup with bar.sync 0"
+    );
 }

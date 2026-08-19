@@ -64,7 +64,9 @@ fn eval_buffers(program: &Program, inputs: &[Value], requested: &[(&str, usize)]
 /// Run `program` and return the first `words` values of its `name` buffer.
 fn eval_buffer(program: &Program, inputs: &[Value], name: &str, words: usize) -> Vec<u32> {
     let mut buffers = eval_buffers(program, inputs, &[(name, words)]);
-    buffers.pop().expect("one requested buffer answers one read")
+    buffers
+        .pop()
+        .expect("one requested buffer answers one read")
 }
 
 /// Run the multi-block prefix-scan GPU program through the reference interpreter and
@@ -266,7 +268,12 @@ fn every_published_scan_spelling_matches_its_witness() {
             ),
         ];
         for (spelling, program, expected) in cases {
-            let actual = eval_buffer(&program, &[Value::from(pack(&input))], "output", input.len());
+            let actual = eval_buffer(
+                &program,
+                &[Value::from(pack(&input))],
+                "output",
+                input.len(),
+            );
             assert_eq!(
                 actual, expected,
                 "{spelling} at n={n} over {LANES} lanes must match its witness"
