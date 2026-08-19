@@ -10,6 +10,14 @@
 //! `vyre_foundation::source_digest` owns the walk, the hash, and the rerun
 //! triggers. This script names the package, the variable, and the domain.
 
+/// Stamp the digest of this package into `VYRE_NAGA_LOWERING_DIGEST`.
+///
+/// # Panics
+///
+/// Panics when `CARGO_MANIFEST_DIR` is absent or when the package cannot be
+/// digested. A build script has no caller to hand an error to, and a build that
+/// continued without the digest would pin the previous value and serve a
+/// pipeline the previous emitter compiled.
 fn main() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
         .expect("Fix: CARGO_MANIFEST_DIR names the package root; restore it before building.");

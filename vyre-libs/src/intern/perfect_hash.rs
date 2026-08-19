@@ -118,8 +118,8 @@ impl PerfectHash {
 
 /// Build a CHD perfect hash from `(key, value)` pairs.
 ///
-/// Panics if construction fails. Use [`try_build_chd`] when the caller needs
-/// recoverable diagnostics for duplicate or adversarial keys.
+/// A construction failure yields an empty table. Use [`try_build_chd`] when the
+/// caller needs the duplicate or adversarial key that failed.
 pub fn build_chd<I, S>(entries: I) -> PerfectHash
 where
     I: IntoIterator<Item = (S, u32)>,

@@ -443,15 +443,21 @@ pub(super) struct DivMagic {
 
 /// Compute Granlund-Montgomery magic numbers for unsigned 32-bit division.
 ///
-/// Panics if `d` is 0 or 1 or a power of two (use `power_of_two_shift`
-/// for those cases  -  they're even cheaper).
-///
 /// Algorithm D from Hacker's Delight, Chapter 10 (Henry S. Warren Jr.).
 /// Uses u32 wrapping arithmetic matching Warren's original C code.
+///
+/// # Panics
+///
+/// Panics if `d` is 0, 1, or a power of two. Those divisors belong to
+/// `power_of_two_shift`, which is cheaper, and the sequence derived here is
+/// wrong for them: the check holds in release builds because a magic number
+/// computed outside the domain emits a division that returns wrong results
+/// instead of failing.
 pub(super) fn compute_div_magic(d: u32) -> DivMagic {
-    debug_assert!(
+    assert!(
         d >= 2 && !d.is_power_of_two(),
-        "d must be >= 2 and not a power of 2"
+        "Fix: {d} is outside the Granlund-Montgomery domain; route 0, 1, and powers of two \
+         through power_of_two_shift."
     );
 
     let mut needs_fixup = false;

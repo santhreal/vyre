@@ -189,6 +189,8 @@ pub fn matroid_select_optimal_subset_witness_into(
 
 /// One dense matroid-exchange BFS frontier expansion writing into caller storage.
 ///
+/// # Panics
+///
 /// Panics if `frontier` or `visited` lengths do not equal `element_count`,
 /// if `element_count * element_count` overflows `usize`, or if `exchange_adjacency`
 /// length does not match `element_count * element_count`.
