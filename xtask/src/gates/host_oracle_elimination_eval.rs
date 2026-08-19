@@ -70,15 +70,32 @@ pub(super) fn analyze_sources(
         let is_test_scoped = test_scoped_files.contains(path);
         parsed_sources.push((path.clone(), file_ast, is_test_scoped));
     }
+    Ok(analyze_parsed(
+        &parsed_sources,
+        &canonical_trait_methods,
+        &canonical_resident_upload_methods,
+    ))
+}
 
+/// Run the visitor over parsed sources and evaluate every rule over the union.
+///
+/// The gate parses the tree and its fixtures parse strings, and both analyze
+/// through here. A second copy of this walk once sat in the fixtures, which is
+/// the shape that lets a rule pass its fixture and never fire on the tree: the
+/// copy is what the fixture proves, and nothing proves the copy still matches.
+pub(super) fn analyze_parsed(
+    parsed_sources: &[(PathBuf, syn::File, bool)],
+    canonical_trait_methods: &BTreeSet<String>,
+    canonical_resident_upload_methods: &BTreeSet<String>,
+) -> Vec<Finding> {
     let file_asts: Vec<(&Path, &syn::File)> = parsed_sources
         .iter()
-        .map(|(p, ast, _)| (p.as_path(), ast))
+        .map(|(path, ast, _)| (path.as_path(), ast))
         .collect();
     let global_known_dispatch_exec_fns = compute_known_dispatch_exec_fns_multi(
         &file_asts,
-        &canonical_trait_methods,
-        &canonical_resident_upload_methods,
+        canonical_trait_methods,
+        canonical_resident_upload_methods,
     );
 
     let mut all_functions = Vec::new();
@@ -86,7 +103,7 @@ pub(super) fn analyze_sources(
     let mut all_static_consts = Vec::new();
     let mut all_findings = Vec::new();
     let mut all_types_with_public_fields = BTreeSet::new();
-    for (path, file_ast, is_test_scoped) in &parsed_sources {
+    for (path, file_ast, is_test_scoped) in parsed_sources {
         let fn_offset = all_functions.len();
         let mut visitor = AstAnalysisVisitor::new(
             path.clone(),
@@ -144,8 +161,7 @@ pub(super) fn analyze_sources(
             deduped_findings.push(finding);
         }
     }
-
-    Ok(deduped_findings)
+    deduped_findings
 }
 
 /// Evaluate zero-baseline host oracle and transitive reachability rules.

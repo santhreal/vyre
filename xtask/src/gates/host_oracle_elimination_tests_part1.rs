@@ -1,16 +1,12 @@
 //! Unit tests for host oracle elimination gate (Part 1).
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
-use syn::visit::Visit;
+use std::path::PathBuf;
 
 use crate::gate::Finding;
 
-use super::host_oracle_elimination_ast::AstAnalysisVisitor;
-use super::host_oracle_elimination_eval::evaluate_rules;
-use super::host_oracle_elimination_scanners::{
-    compute_known_dispatch_exec_fns_multi, derive_canonical_dispatcher_methods,
-};
+use super::host_oracle_elimination_eval::analyze_parsed;
+use super::host_oracle_elimination_scanners::derive_canonical_dispatcher_methods;
 
 pub(super) fn analyze_files(files: &[(&str, &str)]) -> Vec<Finding> {
     let canonical_source = include_str!("../../../vyre-foundation/src/program_dispatch/mod.rs");
@@ -32,84 +28,19 @@ pub(super) fn analyze_files(files: &[(&str, &str)]) -> Vec<Finding> {
         "canonical ProgramDispatcher must yield non-empty resident upload methods"
     );
 
-    let mut parsed_files = Vec::new();
-    for &(path, code) in files {
-        let parsed = syn::parse_file(code).expect("test code must parse as Rust");
-        parsed_files.push((path, parsed));
-    }
-
-    let file_asts: Vec<(&Path, &syn::File)> = parsed_files
+    let parsed_sources: Vec<(PathBuf, syn::File, bool)> = files
         .iter()
-        .map(|(p, ast)| (Path::new(*p), ast))
+        .map(|&(path, code)| {
+            let parsed = syn::parse_file(code).expect("test code must parse as Rust");
+            (PathBuf::from(path), parsed, false)
+        })
         .collect();
-    let global_known_dispatch_exec_fns = compute_known_dispatch_exec_fns_multi(
-        &file_asts,
+
+    analyze_parsed(
+        &parsed_sources,
         &canonical_trait_methods,
         &canonical_resident_upload_methods,
-    );
-
-    let mut all_functions = Vec::new();
-    let mut all_calls = Vec::new();
-    let mut all_static_consts = Vec::new();
-    let mut all_findings = Vec::new();
-    let mut all_types_with_public_fields = BTreeSet::new();
-    for (path, parsed) in &parsed_files {
-        let fn_offset = all_functions.len();
-        let mut visitor = AstAnalysisVisitor::new(
-            PathBuf::from(*path),
-            false,
-            fn_offset,
-            canonical_trait_methods.clone(),
-            canonical_resident_upload_methods.clone(),
-        );
-        visitor.known_dispatch_exec_fns = global_known_dispatch_exec_fns.clone();
-
-        for item in &parsed.items {
-            match item {
-                syn::Item::Struct(s) => {
-                    visitor.local_declared_types.insert(s.ident.to_string());
-                }
-                syn::Item::Enum(e) => {
-                    visitor.local_declared_types.insert(e.ident.to_string());
-                }
-                syn::Item::Type(t) => {
-                    visitor.local_declared_types.insert(t.ident.to_string());
-                }
-                syn::Item::Trait(tr) => {
-                    visitor.local_declared_types.insert(tr.ident.to_string());
-                }
-                syn::Item::Union(u) => {
-                    visitor.local_declared_types.insert(u.ident.to_string());
-                }
-                _ => {}
-            }
-        }
-
-        visitor.visit_file(parsed);
-        all_functions.extend(visitor.functions);
-        all_calls.extend(visitor.calls);
-        all_static_consts.extend(visitor.static_consts);
-        all_findings.extend(visitor.direct_findings);
-        all_types_with_public_fields.extend(visitor.types_with_public_fields);
-    }
-
-    let evaluated = evaluate_rules(
-        &all_functions,
-        &all_calls,
-        &all_static_consts,
-        &all_types_with_public_fields,
-    );
-    all_findings.extend(evaluated);
-
-    let mut deduped_findings = Vec::new();
-    let mut seen_findings = BTreeSet::new();
-    for finding in all_findings {
-        let key = (finding.file.clone(), finding.line, finding.message.clone());
-        if seen_findings.insert(key) {
-            deduped_findings.push(finding);
-        }
-    }
-    deduped_findings
+    )
 }
 
 #[test]
