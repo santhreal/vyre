@@ -421,8 +421,8 @@ impl InstanceCore {
                         // reads them: `vyre-libs::security::aliases_dataflow`
                         // binds `out` as one of its witnesses and reads it in the
                         // same pass that writes it, and naming no input identity
-                        // for it failed the wgpu dispatch before the first case
-                        // ran.
+                        // for it failed the backend dispatch before the first
+                        // case ran.
                         //
                         // A retained buffer is one allocation the caller binds
                         // once, under the identity at the head of its chain; the

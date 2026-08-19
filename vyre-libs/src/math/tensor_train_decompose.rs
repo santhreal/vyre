@@ -133,8 +133,8 @@ pub fn tensor_train_decompose_step(
                         // that: `gqa_attention -> tensor_train_decompose` measured
                         // 503 ULP on `tt_ata` against the reference run on the
                         // device's own intermediate, four times this operation's
-                        // budget. `Expr::fma` fixes one rounding on the reference,
-                        // the naga emitter and the PTX emitter alike.
+                        // budget. `Expr::fma` fixes one rounding on the reference
+                        // and in every emitter alike.
                         Expr::fma(
                             Expr::load(
                                 input_matrix,

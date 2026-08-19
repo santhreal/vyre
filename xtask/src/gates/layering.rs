@@ -344,6 +344,71 @@ fn optional_backend_interfaces_from_manifest(
     interfaces
 }
 
+/// True when `statement` is the private function pointer that keeps an optional
+/// backend's `registered_backend_id` in the linked image.
+///
+/// `pub static` is not the shape: a public one is a second backend API, which is
+/// the thing the anchor exists to avoid.
+fn is_optional_backend_anchor(statement: &str, interfaces: &OptionalBackendInterfaces) -> bool {
+    statement.starts_with("static ")
+        && statement.contains(": fn() -> Option<&'static str>")
+        && interfaces.dependency_idents.iter().any(|dependency| {
+            statement.ends_with(&format!(" = {dependency}::registered_backend_id;"))
+        })
+}
+
+/// Blank every optional-backend dependency spelling in `line`.
+fn mask_dependency_idents(line: &str, interfaces: &OptionalBackendInterfaces) -> String {
+    let mut masked = line.to_string();
+    for dependency in &interfaces.dependency_idents {
+        while let Some(at) = masked.find(dependency.as_str()) {
+            masked.replace_range(at..at + dependency.len(), &" ".repeat(dependency.len()));
+        }
+    }
+    masked
+}
+
+/// The lines, indexed from zero, that a private backend link anchor spans.
+///
+/// The anchor is one statement, and rustfmt breaks it after the `=` as soon as
+/// the static's name makes the line long enough. Judged line by line, the
+/// continuation holds nothing but the dependency path and reads as prose, so the
+/// facade went red for a formatting reason and the only fix on offer was a
+/// shorter name. The statement is rejoined before its shape is judged, and every
+/// line it spans gets the same answer.
+fn optional_backend_anchor_lines(
+    lines: &[&str],
+    interfaces: &OptionalBackendInterfaces,
+) -> Vec<bool> {
+    let mut anchor = vec![false; lines.len()];
+    let mut opened: Option<usize> = None;
+    let mut statement = String::new();
+    for (index, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        match opened {
+            None => {
+                if !trimmed.starts_with("static ") {
+                    continue;
+                }
+                opened = Some(index);
+                statement.clear();
+            }
+            Some(_) => statement.push(' '),
+        }
+        statement.push_str(trimmed);
+        if !trimmed.ends_with(';') {
+            continue;
+        }
+        let start = opened.take().unwrap_or(index);
+        if is_optional_backend_anchor(&statement, interfaces) {
+            for flag in &mut anchor[start..=index] {
+                *flag = true;
+            }
+        }
+    }
+    anchor
+}
+
 /// Mask only compiler interfaces proven by the manifest.
 ///
 /// A whole `cfg(feature = ...)` line is a Cargo selector rather than domain
@@ -359,23 +424,10 @@ fn mask_optional_backend_interface(line: &str, interfaces: &OptionalBackendInter
             return " ".repeat(line.len());
         }
     }
-
-    let mut masked = line.to_string();
-    if !trimmed.starts_with("static ") {
-        return masked;
+    if is_optional_backend_anchor(trimmed, interfaces) {
+        return mask_dependency_idents(line, interfaces);
     }
-    for dependency in &interfaces.dependency_idents {
-        let suffix = format!(" = {dependency}::registered_backend_id;");
-        if trimmed.ends_with(&suffix)
-            && trimmed.contains(": fn() -> Option<&'static str>")
-            && masked.contains(dependency)
-        {
-            while let Some(at) = masked.find(dependency) {
-                masked.replace_range(at..at + dependency.len(), &" ".repeat(dependency.len()));
-            }
-        }
-    }
-    masked
+    line.to_string()
 }
 
 /// Backend words in the production source under `directory`, one entry per line.
@@ -402,6 +454,7 @@ fn backend_vocabulary(
         let text = tree.read(relative)?;
         let lines: Vec<&str> = text.lines().collect();
         let test_only = scan::cfg_test_lines(&lines);
+        let anchor = optional_backend_anchor_lines(&lines, link_interfaces);
         for (number, line) in scan::numbered(&text) {
             let index = usize::try_from(number)
                 .unwrap_or(usize::MAX)
@@ -410,7 +463,12 @@ fn backend_vocabulary(
                 continue;
             }
             let line = mask_interface_names(line, relative);
-            let words = words_in(&mask_optional_backend_interface(&line, link_interfaces));
+            let masked = if anchor.get(index).copied().unwrap_or(false) {
+                mask_dependency_idents(&line, link_interfaces)
+            } else {
+                mask_optional_backend_interface(&line, link_interfaces)
+            };
+            let words = words_in(&masked);
             if !words.is_empty() {
                 found.push((relative.to_string(), number, words.join(", ")));
             }
@@ -1280,6 +1338,57 @@ mod tests {
                 "Fix: only the declared feature selector and exact private anchor may be masked: {line}"
             );
         }
+    }
+
+    /// WHY: the anchor is one statement, and rustfmt breaks it after the `=` as
+    /// soon as the static's name makes the line long enough. Read line by line,
+    /// the continuation holds nothing but the dependency path, so the facade
+    /// went red for a formatting reason and the only fix on offer was a shorter
+    /// name. The statement is rejoined before its shape is judged.
+    ///
+    /// What it does not excuse: a multi-line `static` that is not the anchor
+    /// shape, whose dependency spelling stays vocabulary on every line.
+    #[test]
+    fn a_link_anchor_broken_across_lines_is_still_the_anchor() {
+        let manifest = table(
+            r#"
+            [features]
+            concrete = ["dep:vyre-driver-cuda"]
+
+            [dependencies]
+            vyre-driver-cuda = { workspace = true, optional = true }
+            "#,
+        );
+        let workspace_deps = table(
+            r#"
+            vyre-driver-cuda = { package = "vyre-driver-cuda", path = "driver" }
+            "#,
+        );
+        let interfaces = optional_backend_interfaces_from_manifest(&manifest, &workspace_deps);
+
+        let broken = [
+            "#[cfg(feature = \"concrete\")]",
+            "#[used]",
+            "static PRIMARY_PROVIDER_LINK: fn() -> Option<&'static str> =",
+            "    vyre_driver_cuda::registered_backend_id;",
+        ];
+        assert_eq!(
+            optional_backend_anchor_lines(&broken, &interfaces),
+            vec![false, false, true, true]
+        );
+        assert!(
+            words_in(&mask_dependency_idents(broken[3], &interfaces)).is_empty(),
+            "Fix: the continuation of a proven anchor carries the dependency path and nothing else."
+        );
+
+        let not_the_shape = [
+            "static PRIMARY_PROVIDER_TABLE: [&str; 1] =",
+            "    [vyre_driver_cuda::BACKEND_ID];",
+        ];
+        assert_eq!(
+            optional_backend_anchor_lines(&not_the_shape, &interfaces),
+            vec![false, false]
+        );
     }
 
     #[test]

@@ -798,7 +798,7 @@ fn reads_and_writes(access: TargetResourceAccess) -> (bool, bool) {
 /// WHY: the directional projection is what tells a module which canonical value
 /// carries the bytes of a buffer it reads. Classifying a `ReadWrite` binding by
 /// its resource lifetime instead of its access left an `Output`-lifetime
-/// resource out of the input projection, and every wgpu case whose witness binds
+/// resource out of the input projection, and every device case whose witness binds
 /// its output buffer and reads it in the same pass
 /// (`vyre-libs::security::aliases_dataflow`, `flows_to_to_sink`,
 /// `flows_to_with_sanitizer`, `sink_intersection`, `taint_pollution`,

@@ -121,8 +121,8 @@ pub fn newton_schulz_y_step(y_curr: &str, yzy: &str, y_next: &str, n: u32) -> Pr
 /// reference, which over five chained steps amplified into a 46 ULP disagreement
 /// on the composition `givens_rotate_pair -> newton_schulz_poly5_f32` while each
 /// individual step stayed inside the elementary window. An `Fma` node states the
-/// single rounding, and the reference, the naga emitter and the PTX emitter all
-/// answer it with one fused instruction.
+/// single rounding, and the reference and every emitter answer it with one fused
+/// instruction.
 #[must_use]
 pub fn newton_schulz_poly5_f32(mat: &str, output: &str, rows: u32, cols: u32) -> Program {
     let total = rows * cols;
