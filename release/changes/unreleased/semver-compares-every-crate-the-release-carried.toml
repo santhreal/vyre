@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The semver check compares each publishable member the baseline release also declared, and names the members shipping for the first time. Passing a member the baseline revision never carried aborted the tool before any rule ran, so one new crate suppressed the comparison for every released crate beside it."

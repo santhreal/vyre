@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:0cc2b6a3878d1aaa33e24bbff84aa8a72cf2767a:dirty=true:worktree=e36fa659f178663d622122301e305a4cc0ad4d283c61384a786228d0eb599d7f",
+  "source_fingerprint": "git:aaa92ef9765a41119bef5bb95b5e5852e24c6f65:dirty=true:worktree=af4788061382720abb2a880a5561ef28abad55844c847a0250a5cad9c4114c80",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -167,7 +167,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 259,
+      "line": 262,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },

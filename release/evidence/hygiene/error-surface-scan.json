@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:6a9f9558377a822622ae09a124a9676afc747438:dirty=false",
+  "source_fingerprint": "git:aaa92ef9765a41119bef5bb95b5e5852e24c6f65:dirty=true:worktree=af4788061382720abb2a880a5561ef28abad55844c847a0250a5cad9c4114c80",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -119,7 +119,7 @@
     },
     {
       "path": "vyre-libs/src/nn/attention/tiled_online_softmax.rs",
-      "line": 429,
+      "line": 422,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the registered online-softmax witness must plan\");"
     },
@@ -1121,7 +1121,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1456,
+      "line": 1466,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },

@@ -6170,6 +6170,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   budget types in vyre-foundation, lower and WORKGROUP_SLOT_BASE in vyre-lower,
   and public submodule paths in vyre-spec to maintain SemVer compatibility with
   published releases.
+- The semver check compares each publishable member the baseline release also
+  declared, and names the members shipping for the first time. Passing a member
+  the baseline revision never carried aborted the tool before any rule ran, so
+  one new crate suppressed the comparison for every released crate beside it.
 - Megakernel selection charges a workgroup tile once per fusion group instead
   of once per member, so a group whose members share a tile by name is no
   longer pushed over the device scratch budget and ranked below the pair it

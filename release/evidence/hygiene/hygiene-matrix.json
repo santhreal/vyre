@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:6a9f9558377a822622ae09a124a9676afc747438:dirty=false",
+  "source_fingerprint": "git:aaa92ef9765a41119bef5bb95b5e5852e24c6f65:dirty=true:worktree=af4788061382720abb2a880a5561ef28abad55844c847a0250a5cad9c4114c80",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4276,
+  "scanned_files": 4277,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -1616,7 +1616,7 @@
     },
     {
       "path": "vyre-libs/src/nn/attention/tiled_online_softmax.rs",
-      "line": 429,
+      "line": 422,
       "pattern": "documented_panic_contract",
       "owner_lane": "nn_math",
       "surface": "production",
@@ -4126,7 +4126,7 @@
     },
     {
       "path": "xtask-registry/tests/registry_contracts/registration_visibility.rs",
-      "line": 337,
+      "line": 338,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4136,7 +4136,7 @@
     },
     {
       "path": "xtask-registry/tests/registry_contracts/registration_visibility.rs",
-      "line": 380,
+      "line": 381,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -4196,7 +4196,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1456,
+      "line": 1466,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4536,7 +4536,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 259,
+      "line": 262,
       "pattern": "stub_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4799,7 +4799,7 @@
     },
     {
       "path": "vyre-libs/src/nn/attention/tiled_online_softmax.rs",
-      "line": 429,
+      "line": 422,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the registered online-softmax witness must plan\");"
     },
@@ -6378,14 +6378,14 @@
     },
     {
       "path": "xtask-registry/tests/registry_contracts/registration_visibility.rs",
-      "line": 337,
+      "line": 338,
       "pattern": "source_inspection_test",
       "text": "test `every_submitted_registration_is_reachable_from_this_walker` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_submitted_registration_is_reachable_from_this_walker"
     },
     {
       "path": "xtask-registry/tests/registry_contracts/registration_visibility.rs",
-      "line": 380,
+      "line": 381,
       "pattern": "source_inspection_test",
       "text": "test `each_source_aggregate_covers_every_feature_that_gates_a_registration` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "each_source_aggregate_covers_every_feature_that_gates_a_registration"
@@ -6423,7 +6423,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1456,
+      "line": 1466,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },
@@ -6628,7 +6628,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 259,
+      "line": 262,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },

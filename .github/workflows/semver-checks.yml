@@ -18,12 +18,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
-      - id: packages
-        name: Read the publishable package list from the workspace manifests
-        run: |
-          packages="$(./cargo_full run -q -p xtask --bin publishable_packages | cut -d: -f2 | paste -sd,)"
-          test -n "$packages" || { echo "Fix: no publishable workspace members found." >&2; exit 2; }
-          echo "packages=$packages" >> "$GITHUB_OUTPUT"
       # The baseline is the git revision of the last release, not the registry
       # copy of it. Every published 0.7.1 crate resolves its sibling
       # dependencies to whatever the registry offers now, and rustdoc fails on
@@ -36,8 +30,30 @@ jobs:
           rev="$(git tag --list 'vyre-v*' --sort=-v:refname | grep -v -- '-rc' | head -1)"
           test -n "$rev" || { echo "Fix: no released vyre-v* tag to baseline against." >&2; exit 2; }
           echo "rev=$rev" >> "$GITHUB_OUTPUT"
-      # Both lists are derived, so a new publishable member and a new release
-      # tag are covered without editing this job.
+      # A member the baseline revision does not declare has no released surface to
+      # compare against, and passing one to the tool aborts the whole run before
+      # any rule is checked: `vyre-megakernel` did not exist at 0.7.1 and took
+      # every other crate's comparison down with it. The compared set is the
+      # intersection, both halves derived, so a new publishable member and a new
+      # release tag are covered without editing this job. Members with no
+      # baseline are named in the log rather than silently dropped.
+      - id: packages
+        name: Read the publishable members the baseline revision also declares
+        run: |
+          rev='${{ steps.baseline.outputs.rev }}'
+          compared=""
+          unreleased=""
+          for package in $(./cargo_full run -q -p xtask --bin publishable_packages | cut -d: -f2); do
+            if git grep -q "^name = \"$package\"\$" "$rev" -- '*/Cargo.toml' Cargo.toml; then
+              compared="${compared:+$compared,}$package"
+            else
+              unreleased="${unreleased:+$unreleased }$package"
+            fi
+          done
+          test -n "$compared" || { echo "Fix: no publishable member is declared by $rev." >&2; exit 2; }
+          echo "compared against $rev: $compared"
+          echo "no baseline in $rev, first release for: ${unreleased:-none}"
+          echo "packages=$compared" >> "$GITHUB_OUTPUT"
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           manifest-path: Cargo.toml
