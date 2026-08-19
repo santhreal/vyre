@@ -4015,6 +4015,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   from the workspace tree, which is the closure over macro definitions that
   submit and macros that invoke one; the earlier list held four of the eighteen
   submitting macros this workspace already had.
+- Recording release benchmark evidence refuses a device another process holds
+  for compute, naming each holder and the memory it holds. The telemetry probe
+  already recorded clocks, power and utilization alongside every sample, but
+  nothing stopped a measurement taken while a model server owned the device, so
+  a wrong number could carry a correct source fingerprint. A device the driver
+  cannot be asked about is refused on the same grounds.
 - The compiler-grade thesis axes and the CPU-SOTA 100x contract page name the
   workloads the suite measures: AST motif traversal replaces the deleted C
   parser axis, e-graph saturation points at workload 17, and the required 100x
