@@ -45,7 +45,7 @@ pub(super) fn is_internal_phase_op(id: &str) -> bool {
 /// Region, a Region is a scope, so naming either pass would push those two
 /// scalars through a scratch buffer to satisfy the shape of the rule and emit a
 /// worse program than the one it judges.
-pub(crate) const DECLARED_TIER3_LEAVES: [&str; 39] = [
+pub(crate) const DECLARED_TIER3_LEAVES: [&str; 40] = [
     "vyre-libs::graph::ast_walk_postorder",
     "vyre-libs::graph::ast_walk_preorder",
     "vyre-libs::graph::csr_backward_or_changed",
@@ -81,6 +81,11 @@ pub(crate) const DECLARED_TIER3_LEAVES: [&str; 39] = [
     "vyre-libs::nn::linear_4bit_affine_grouped",
     "vyre-libs::nn::softmax_top_k",
     "vyre-libs::nn::top_k",
+    // The bounded linear probe itself: one loop over a table of
+    // (hash, earliest index) pairs, with no sub-body another op could name.
+    // `ast_cse_structural_hash` is the wave that composes it and is a leaf for
+    // the same reason one level up.
+    "vyre-libs::parsing::ast_cse_hash_probe",
     "vyre-libs::parsing::ast_cse_structural_hash",
     "vyre-libs::parsing::core_delimiter_match",
     "vyre-libs::parsing::ssa_dominance_scan",

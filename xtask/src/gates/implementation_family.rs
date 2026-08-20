@@ -528,6 +528,14 @@ pub const REVIEWED_DISTINCT_OPERATIONS: &[(&str, &str, &str)] = &[
         "p-adic Hensel lift root refinement step over polynomial ideals versus homotopy \
          continuation Euler predictor step along curve tangents",
     ),
+    (
+        "vyre-libs::nn::attention::absorb_values",
+        "vyre-libs::nn::attention::tile_scores",
+        "two nested loops accumulating with an FMA, over the same tile scratch; the scores pass \
+         reduces Q against K over the head dimension and writes one scaled, clamped score per \
+         key, the absorb pass reduces over keys for each output channel and weights V by \
+         exp(score - running max), so the loops are even nested in the opposite order",
+    ),
 ];
 
 /// Reason two registered operations were reviewed and kept apart, read in both

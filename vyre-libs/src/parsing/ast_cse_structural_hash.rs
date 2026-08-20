@@ -25,100 +25,35 @@ pub fn ast_cse_structural_hash(
     out_modified_flag: &str,
     t: Expr,
 ) -> Vec<Node> {
+    let mut body = vec![
+        Node::let_bind("l_idx2", Expr::load(ast_lefts, t.clone())),
+        Node::let_bind("r_idx2", Expr::load(ast_rights, t.clone())),
+        Node::let_bind(
+            "h",
+            fnv1a32_mul_xor_word_expr(Expr::var("op"), Expr::var("l_idx2")),
+        ),
+        Node::assign(
+            "h",
+            fnv1a32_mul_xor_word_expr(Expr::var("h"), Expr::var("r_idx2")),
+        ),
+    ];
+    body.extend(ast_cse_hash_probe_body(
+        ast_opcodes,
+        ast_vals,
+        hash_set,
+        hash_set_capacity,
+        out_modified_flag,
+        t,
+        Expr::var("h"),
+        Expr::rem(Expr::var("h"), Expr::u32(hash_set_capacity)),
+        SlotAccess::Contended,
+    ));
     vec![Node::if_then(
         Expr::or(
             Expr::eq(Expr::var("op"), Expr::u32(AST_ADD)),
             Expr::eq(Expr::var("op"), Expr::u32(AST_PTR_DEREF)),
         ),
-        vec![
-            Node::let_bind("l_idx2", Expr::load(ast_lefts, t.clone())),
-            Node::let_bind("r_idx2", Expr::load(ast_rights, t.clone())),
-            Node::let_bind(
-                "h",
-                fnv1a32_mul_xor_word_expr(Expr::var("op"), Expr::var("l_idx2")),
-            ),
-            Node::assign(
-                "h",
-                fnv1a32_mul_xor_word_expr(Expr::var("h"), Expr::var("r_idx2")),
-            ),
-            Node::let_bind(
-                "slot",
-                Expr::rem(Expr::var("h"), Expr::u32(hash_set_capacity)),
-            ),
-            Node::let_bind("active", Expr::bool(true)),
-            Node::loop_for(
-                "probe",
-                Expr::u32(0),
-                Expr::u32(hash_set_capacity),
-                vec![Node::if_then(
-                    Expr::var("active"),
-                    vec![
-                        Node::let_bind("slot_hash", Expr::mul(Expr::var("slot"), Expr::u32(2))),
-                        Node::let_bind("slot_idx", Expr::add(Expr::var("slot_hash"), Expr::u32(1))),
-                        Node::let_bind(
-                            "old_hash",
-                            Expr::atomic_compare_exchange(
-                                hash_set,
-                                Expr::var("slot_hash"),
-                                Expr::u32(0),
-                                Expr::var("h"),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::eq(Expr::var("old_hash"), Expr::u32(0)),
-                            vec![
-                                Node::let_bind(
-                                    "_",
-                                    Expr::atomic_exchange(
-                                        hash_set,
-                                        Expr::var("slot_idx"),
-                                        t.clone(),
-                                    ),
-                                ),
-                                Node::assign("active", Expr::bool(false)),
-                            ],
-                        ),
-                        Node::let_bind(
-                            "earliest",
-                            Expr::Select {
-                                cond: Box::new(Expr::eq(Expr::var("old_hash"), Expr::var("h"))),
-                                true_val: Box::new(Expr::atomic_add(
-                                    hash_set,
-                                    Expr::var("slot_idx"),
-                                    Expr::u32(0),
-                                )),
-                                false_val: Box::new(Expr::u32(u32::MAX)),
-                            },
-                        ),
-                        Node::if_then(
-                            Expr::and(
-                                Expr::eq(Expr::var("old_hash"), Expr::var("h")),
-                                Expr::lt(Expr::var("earliest"), t.clone()),
-                            ),
-                            vec![
-                                Node::store(ast_opcodes, t.clone(), Expr::u32(AST_VAR)),
-                                Node::store(ast_vals, t.clone(), Expr::var("earliest")),
-                                Node::let_bind(
-                                    "_",
-                                    Expr::atomic_add(out_modified_flag, Expr::u32(0), Expr::u32(1)),
-                                ),
-                            ],
-                        ),
-                        Node::if_then(
-                            Expr::eq(Expr::var("old_hash"), Expr::var("h")),
-                            vec![Node::assign("active", Expr::bool(false))],
-                        ),
-                        Node::assign(
-                            "slot",
-                            Expr::rem(
-                                Expr::add(Expr::var("slot"), Expr::u32(1)),
-                                Expr::u32(hash_set_capacity),
-                            ),
-                        ),
-                    ],
-                )],
-            ),
-        ],
+        body,
     )]
 }
 
@@ -181,6 +116,7 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
                                     Expr::var("node_idx"),
                                     Expr::var("h"),
                                     Expr::rem(Expr::var("h"), Expr::u32(hash_set_capacity)),
+                                    SlotAccess::SingleLane,
                                 ),
                             ),
                         ],
@@ -214,8 +150,73 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
     )
 }
 
+/// How a lane claims and reads a probe slot.
+///
+/// The dedup wave runs one lane per AST node and races for slots, so it claims
+/// with compare-exchange and reads the winner's index atomically. The standalone
+/// probe runs under `InvocationId == 0`, where a plain load and store observe
+/// the same order and an atomic would only buy a fence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SlotAccess {
+    /// Every lane in the dispatch races for the same table.
+    Contended,
+    /// One lane owns the table for the whole probe.
+    SingleLane,
+}
+
+impl SlotAccess {
+    /// Read the slot's hash word, claiming it for `h` when it is free.
+    ///
+    /// `Contended` claims and reads in one compare-exchange; `SingleLane` reads
+    /// and leaves the claim to [`Self::claim_nodes`].
+    fn read_hash(self, hash_set: &str, slot_hash: Expr, h: Expr) -> Expr {
+        match self {
+            Self::Contended => Expr::atomic_compare_exchange(hash_set, slot_hash, Expr::u32(0), h),
+            Self::SingleLane => Expr::load(hash_set, slot_hash),
+        }
+    }
+
+    /// Finish claiming a free slot for `node_idx`.
+    fn claim_nodes(
+        self,
+        hash_set: &str,
+        slot_hash: Expr,
+        slot_idx: Expr,
+        node_idx: Expr,
+        h: Expr,
+    ) -> Vec<Node> {
+        match self {
+            // The compare-exchange already wrote the hash word.
+            Self::Contended => vec![Node::let_bind(
+                "_",
+                Expr::atomic_exchange(hash_set, slot_idx, node_idx),
+            )],
+            Self::SingleLane => vec![
+                Node::store(hash_set, slot_hash, h),
+                Node::store(hash_set, slot_idx, node_idx),
+            ],
+        }
+    }
+
+    /// Read the index the slot's winner recorded.
+    fn read_index(self, hash_set: &str, slot_idx: Expr) -> Expr {
+        match self {
+            Self::Contended => Expr::atomic_add(hash_set, slot_idx, Expr::u32(0)),
+            Self::SingleLane => Expr::load(hash_set, slot_idx),
+        }
+    }
+}
+
 /// Body of the hash-table probe and deduplication step.
+///
+/// One bounded linear probe over a table of `(hash, earliest index)` pairs: the
+/// lane claims the first free slot for its own hash, or finds its hash already
+/// there and rewrites its node into a reference to the earlier one. Both the
+/// contended dedup wave and the standalone probe walk exactly this, and each
+/// carried its own copy until the pair drifted in the order of the equal-hash
+/// branch.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn ast_cse_hash_probe_body(
     ast_opcodes: &str,
     ast_vals: &str,
@@ -225,7 +226,11 @@ pub fn ast_cse_hash_probe_body(
     node_idx: Expr,
     h: Expr,
     slot_init: Expr,
+    access: SlotAccess,
 ) -> Vec<Node> {
+    let slot_hash = || Expr::var("slot_hash");
+    let slot_idx = || Expr::var("slot_idx");
+    let probe_h = || Expr::var("probe_h");
     vec![
         Node::let_bind("probe_h", h),
         Node::let_bind("slot", slot_init),
@@ -238,20 +243,26 @@ pub fn ast_cse_hash_probe_body(
                 Expr::var("active"),
                 vec![
                     Node::let_bind("slot_hash", Expr::mul(Expr::var("slot"), Expr::u32(2))),
-                    Node::let_bind("slot_idx", Expr::add(Expr::var("slot_hash"), Expr::u32(1))),
-                    Node::let_bind("old_hash", Expr::load(hash_set, Expr::var("slot_hash"))),
-                    Node::if_then(
-                        Expr::eq(Expr::var("old_hash"), Expr::u32(0)),
-                        vec![
-                            Node::store(hash_set, Expr::var("slot_hash"), Expr::var("probe_h")),
-                            Node::store(hash_set, Expr::var("slot_idx"), node_idx.clone()),
-                            Node::assign("active", Expr::bool(false)),
-                        ],
+                    Node::let_bind("slot_idx", Expr::add(slot_hash(), Expr::u32(1))),
+                    Node::let_bind(
+                        "old_hash",
+                        access.read_hash(hash_set, slot_hash(), probe_h()),
                     ),
+                    Node::if_then(Expr::eq(Expr::var("old_hash"), Expr::u32(0)), {
+                        let mut claimed = access.claim_nodes(
+                            hash_set,
+                            slot_hash(),
+                            slot_idx(),
+                            node_idx.clone(),
+                            probe_h(),
+                        );
+                        claimed.push(Node::assign("active", Expr::bool(false)));
+                        claimed
+                    }),
                     Node::if_then(
-                        Expr::eq(Expr::var("old_hash"), Expr::var("probe_h")),
+                        Expr::eq(Expr::var("old_hash"), probe_h()),
                         vec![
-                            Node::let_bind("earliest", Expr::load(hash_set, Expr::var("slot_idx"))),
+                            Node::let_bind("earliest", access.read_index(hash_set, slot_idx())),
                             Node::if_then(
                                 Expr::lt(Expr::var("earliest"), node_idx.clone()),
                                 vec![
@@ -295,6 +306,7 @@ pub fn ast_cse_hash_probe_program(hash_set_capacity: u32) -> Program {
         Expr::u32(0),
         Expr::u32(100),
         Expr::u32(0),
+        SlotAccess::SingleLane,
     );
     let guarded = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),

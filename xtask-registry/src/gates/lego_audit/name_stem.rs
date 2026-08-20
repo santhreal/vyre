@@ -20,7 +20,7 @@ pub(super) const STEM_COLLISION_MIN: usize = 4;
 /// `check_0_every_exemption_is_live` holds each row to a stem that would be
 /// reported without it, so a row outliving its family fails instead of reading
 /// as a reviewed decision. The `opt` row was already dead when that rule landed.
-pub(super) const KNOWN_STEM_FAMILIES: [&str; 12] = [
+pub(super) const KNOWN_STEM_FAMILIES: [&str; 13] = [
     "and",
     "ast",
     "attention",
@@ -32,6 +32,12 @@ pub(super) const KNOWN_STEM_FAMILIES: [&str; 12] = [
     "matmul",
     "python312",
     "quest",
+    // Not one family: `graph::tensor_flow_*` is dataflow analysis over an AST,
+    // `math::tensor_network_pair_contract` and `math::tensor_train_decompose`
+    // are tensor-network algebra. They share the English word and nothing else,
+    // so a `tensor::` segment would name a family that does not exist and would
+    // rename four registered ids to do it.
+    "tensor",
     "workgroup",
 ];
 
