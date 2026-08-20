@@ -26,20 +26,47 @@ pub fn grid_stride_tree_sum_u32(
     tile: u32,
 ) -> Program {
     let tile = tile.max(1);
+    let items_per_thread = 16u32;
+    let chunk_tile = tile.saturating_mul(items_per_thread);
     let scratch = "__grid_stride_tree_scratch";
     let local = Expr::LocalId { axis: 0 };
-    let global = Expr::InvocationId { axis: 0 };
+    let block = Expr::WorkgroupId { axis: 0 };
 
     let body = vec![
         Node::let_bind("local", local.clone()),
-        Node::let_bind("global", global.clone()),
-        Node::let_bind(
-            "acc",
-            Expr::select(
-                Expr::lt(global, Expr::u32(count)),
-                Expr::load(values, Expr::var("global")),
-                Expr::u32(0),
+        Node::let_bind("block", block.clone()),
+        Node::let_bind("acc", Expr::u32(0)),
+        Node::if_then(
+            Expr::lt(
+                Expr::mul(block.clone(), Expr::u32(chunk_tile)),
+                Expr::u32(count),
             ),
+            vec![
+                Node::loop_for(
+                    "item",
+                    Expr::u32(0),
+                    Expr::u32(items_per_thread),
+                    vec![
+                        Node::let_bind(
+                            "idx",
+                            Expr::add(
+                                Expr::add(
+                                    Expr::mul(block.clone(), Expr::u32(chunk_tile)),
+                                    Expr::mul(Expr::var("item"), Expr::u32(tile)),
+                                ),
+                                local.clone(),
+                            ),
+                        ),
+                        Node::if_then(
+                            Expr::lt(Expr::var("idx"), Expr::u32(count)),
+                            vec![Node::assign(
+                                "acc",
+                                Expr::add(Expr::var("acc"), Expr::load(values, Expr::var("idx"))),
+                            )],
+                        ),
+                    ],
+                ),
+            ],
         ),
         Node::store(scratch, local.clone(), Expr::var("acc")),
         Node::barrier(),
@@ -50,7 +77,13 @@ pub fn grid_stride_tree_sum_u32(
             WorkgroupReductionScope::EveryWorkgroup,
         ),
         Node::if_then(
-            Expr::eq(local, Expr::u32(0)),
+            Expr::and(
+                Expr::eq(local, Expr::u32(0)),
+                Expr::lt(
+                    Expr::mul(block, Expr::u32(chunk_tile)),
+                    Expr::u32(count),
+                ),
+            ),
             vec![Node::let_bind(
                 "_prev",
                 Expr::atomic_add(
