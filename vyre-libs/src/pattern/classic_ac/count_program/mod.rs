@@ -1,3 +1,6 @@
+//! Bounded-window Aho-Corasick counting, and the prefilter variants that skip
+//! windows a candidate cannot end in.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

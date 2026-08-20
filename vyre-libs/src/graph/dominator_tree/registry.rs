@@ -1,3 +1,6 @@
+//! Catalog registrations for the dominator tree, its depth pass, and its
+//! intersect step, with the witness bytes each is checked against.
+
 use super::depth::dominator_tree_depth;
 use super::intersect_step::dominator_tree_intersect_step;
 use super::program::{dominator_tree_program, IDOM_NONE};

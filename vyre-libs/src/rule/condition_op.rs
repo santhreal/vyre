@@ -1,4 +1,7 @@
-// Shared builders for rule condition operations.
+//! The shape every rule condition operation shares: its input types, its
+//! algebraic laws, and the macro that emits a constant-valued leaf.
+//!
+//! Shared builders for rule condition operations.
 
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};

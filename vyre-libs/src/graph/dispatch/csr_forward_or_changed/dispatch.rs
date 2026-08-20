@@ -1,3 +1,9 @@
+//! Host-side dispatch of the forward-or-changed fixpoint on a device.
+//!
+//! The scratch owns the input buffers, the readback of the convergence flag,
+//! and the program cache keyed by launch plan, so a loop that runs to
+//! convergence allocates once and rebuilds no IR per iteration.
+
 use crate::graph::csr_forward_or_changed::{
     copy_csr_forward_seed_frontier_into, plan_csr_forward_or_changed_launch,
     validate_csr_forward_or_changed_flag, CsrForwardOrChangedLaunchPlan,

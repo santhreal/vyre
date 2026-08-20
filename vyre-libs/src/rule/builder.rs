@@ -1,4 +1,10 @@
-// Rule set program builder.
+//! Lowering of a rule set to one program.
+//!
+//! The whole set is emitted under a single region so the optimizer and the
+//! region-chain discipline treat it as one compile unit rather than as a chain
+//! of unrelated predicates.
+//!
+//! Rule set program builder.
 
 use crate::rule::ast::{RuleCondition, RuleFormula};
 use std::sync::LazyLock;

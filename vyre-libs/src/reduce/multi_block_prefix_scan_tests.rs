@@ -1,3 +1,5 @@
+//! Tests for the multi-block prefix scan against a host oracle.
+
 use super::*;
 use vyre_foundation::visit::any_descendant;
 

@@ -1,3 +1,5 @@
+//! Extraction of Python definitions, imports, and `with` bindings.
+
 use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, find_matching_delimiter_into, load_u32, search_next_token,

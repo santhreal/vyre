@@ -1,3 +1,6 @@
+//! Host-side dispatch of the exploded IFDS CSR build, including readback
+//! validation and row canonicalisation.
+
 use super::{CachedIfdsCsrProgram, IfdsCsrGpuScratch};
 use crate::graph::exploded::{
     canonicalize_csr_within_rows_in_place as primitive_canonicalize_csr_within_rows_in_place,

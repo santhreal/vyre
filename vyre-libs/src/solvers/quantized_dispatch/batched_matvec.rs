@@ -1,3 +1,8 @@
+//! Device dispatch of packed INT4 batched matrix-vector products.
+//!
+//! One weight matrix is reused across the batch, so the packed rows are
+//! uploaded once and only the activations vary per item.
+
 use super::*;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

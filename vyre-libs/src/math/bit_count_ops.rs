@@ -1,3 +1,9 @@
+//! The population-count family, generated from one macro.
+//!
+//! Every member differs only in which bits it counts, so the program, the
+//! registration, and the witness bytes are written once and instantiated per
+//! kind rather than copied per operation.
+
 use super::bit_count_u32::{bit_count_u32_program, BitCountKind};
 use vyre_foundation::ir::Program;
 

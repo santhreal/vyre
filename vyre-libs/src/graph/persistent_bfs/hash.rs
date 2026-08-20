@@ -1,3 +1,9 @@
+//! Stable FNV-1a hashes of a persistent-BFS graph layout and program shape.
+//!
+//! The hash is a cache identity, not a digest of program text: it mixes the
+//! facts a built program actually depends on, so two graphs that produce the
+//! same kernel share one entry.
+
 use super::layout::PersistentBfsPlanCacheKind;
 use crate::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 

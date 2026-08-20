@@ -1,3 +1,9 @@
+//! A single queue-based traversal query over a resident graph.
+//!
+//! The materializer and traversal kind are selected from frontier statistics
+//! measured on the device, so the choice reflects the frontier the query
+//! actually has.
+
 use super::{ResidentCsrQueueGraph, ResidentCsrQueueScratch, ResidentCsrQueueScratchShape};
 use crate::graph::csr_frontier_queue::validate_frontier_queue_query;
 

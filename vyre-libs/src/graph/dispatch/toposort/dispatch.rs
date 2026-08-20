@@ -1,3 +1,8 @@
+//! Host-side dispatch of the CSR topological sort.
+//!
+//! The returned order is validated against the graph before it is handed back,
+//! so a cycle surfaces as a rejected order rather than as a plausible one.
+
 use super::{CachedToposortProgram, ToposortGpuScratch};
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,

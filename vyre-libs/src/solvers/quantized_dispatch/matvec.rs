@@ -1,3 +1,5 @@
+//! Device dispatch of packed INT4 row-scaled matrix-vector products.
+
 use super::*;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

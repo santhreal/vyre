@@ -1,3 +1,5 @@
+//! Static LR tables: productions and the action and goto slices a parse reads.
+
 use super::Action;
 
 /// A single grammar production: `lhs nonterminal -> rhs_len symbols`.

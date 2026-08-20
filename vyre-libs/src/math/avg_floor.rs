@@ -1,3 +1,8 @@
+//! Floor of the average of two u32 lanes, computed without overflowing.
+//!
+//! `(a & b) + ((a ^ b) >> 1)` is exact for the whole u32 range, where
+//! `(a + b) / 2` wraps.
+
 use vyre_foundation::ir::{Expr, Program};
 
 const OP_ID: &str = "vyre-libs::math::avg_floor";

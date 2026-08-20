@@ -1,3 +1,8 @@
+//! The whole-buffer regex program with origin-derived exact match starts.
+//!
+//! Its buffer ABI matches the classic bounded-range program on purpose, so a
+//! caller can swap the two without re-marshalling.
+
 use crate::pattern::dfa::aho_corasick::OP_ID as AHO_CORASICK_OP_ID;
 use crate::pattern::regex_dfa::REGEX_DFA_OP_ID;
 use vyre_foundation::composition::wrap_child_region;

@@ -1,3 +1,8 @@
+//! The Go lexer program.
+//!
+//! Token numbering is owned by `vyre_spec::go_token`, which is the wire contract
+//! between this program and every host matcher that reads its rows.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

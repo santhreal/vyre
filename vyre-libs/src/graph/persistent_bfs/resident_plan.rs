@@ -1,3 +1,8 @@
+//! Dispatch plans for the resident forms, single frontier and batch.
+//!
+//! A resident plan carries the frontier layout rather than the graph, because
+//! the topology already lives on the device by the time the plan is built.
+
 use super::layout::{
     persistent_bfs_batch_dispatch_grid, persistent_bfs_batch_program_cache_key,
     persistent_bfs_program_shape, persistent_bfs_single_cache_key,

@@ -1,3 +1,6 @@
+//! The one-time upload of a CSR graph into the resident buffers a queue
+//! traversal binds.
+
 use super::ResidentCsrQueueGraph;
 use crate::graph::csr_frontier_queue::scratch::resident_csr_queue_high_degree_source_count;
 use crate::graph::csr_frontier_queue::validate_csr_queue_graph;

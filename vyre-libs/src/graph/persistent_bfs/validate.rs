@@ -1,3 +1,8 @@
+//! Graph, frontier, and flag validation for persistent BFS.
+//!
+//! The flag checks exist so a device word that is neither zero nor one is a
+//! reported fault rather than a silently truthy convergence.
+
 use super::layout::{PersistentBfsBatchLayout, PersistentBfsFrontierLayout, PersistentBfsLayout};
 use crate::bitset::bitset_words;
 

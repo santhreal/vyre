@@ -1,3 +1,9 @@
+//! Assembly of a tiled matmul program: buffers, tile shape, and the body the
+//! selected kernel path supplies.
+//!
+//! The tensor-core body is chosen only when the capability record admits it;
+//! the cooperative body is the path every device can run.
+
 use crate::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
 use vyre_foundation::composition::{wrap_child_region, wrap_region};
 use vyre_foundation::ir::Ident;

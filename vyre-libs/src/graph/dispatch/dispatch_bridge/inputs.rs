@@ -1,3 +1,9 @@
+//! Staging of dispatch inputs, and the fingerprint that decides when a large
+//! static buffer can stay staged across launches.
+//!
+//! The fingerprint stores the word count beside the hash, so two buffers that
+//! collide on the hash but differ in width cannot alias one another's storage.
+
 use crate::dispatch_buffers::{ensure_input_slots, write_u32_slice_le_bytes, write_zero_u32_words};
 use vyre_foundation::program_dispatch::DispatchError;
 

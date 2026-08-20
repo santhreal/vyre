@@ -1,3 +1,6 @@
+//! Reusable frontier and counter scratch for adaptive traversal, plus the plan
+//! cache keyed by graph content hash.
+
 use crate::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey;
 use crate::graph::dispatch::plan_cache::GraphPlanCache;
 use crate::graph::dispatch::resident_handles::free_unique_resident_handles;

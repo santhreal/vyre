@@ -1,3 +1,5 @@
+//! Tests for the region post-processing programs against host oracles.
+
 use super::region::*;
 
 fn cluster_metadata_for_sorted(input: &[RegionTriple]) -> (Vec<u32>, Vec<u32>) {

@@ -1,3 +1,8 @@
+//! Host-side dispatch of persistent BFS over a device-resident graph.
+//!
+//! The CSR topology is uploaded once and reused, so a run of queries over the
+//! same graph pays the transfer once rather than per query.
+
 use super::resident_scratch::{
     copy_frontier_batch_seed_and_clear_changed, copy_frontier_seed_into,
     PersistentBfsResidentScratch, ResidentBfsGraph,

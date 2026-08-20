@@ -1,3 +1,5 @@
+//! Tests for the analysis fact table: identity, ordering, and merge.
+
 use super::*;
 
 fn span(offset: u32) -> AnalysisSourceSpan {

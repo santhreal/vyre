@@ -1,3 +1,10 @@
+//! The persistent-BFS kernel itself, single-frontier and batched.
+//!
+//! The loop runs on the device to a fixpoint instead of returning to the host
+//! per step. The convergence flag is published after a grid-wide barrier, so a
+//! dispatch wider than one workgroup reports convergence only once every
+//! workgroup has finished its step.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 
 use super::layout::{PersistentBfsBuffers, BATCH_OP_ID, OP_ID, PERSISTENT_BFS_WORKGROUP_SIZE};

@@ -1,3 +1,5 @@
+//! Host-side dispatch of path reconstruction, single path and batched.
+
 use super::{CachedBatchedPathProgram, CachedSinglePathProgram, PathReconstructGpuScratch};
 use crate::graph::path_reconstruct::{
     plan_batched_path_reconstruct_dispatch, plan_path_reconstruct_dispatch,

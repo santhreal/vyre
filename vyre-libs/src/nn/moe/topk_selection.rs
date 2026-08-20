@@ -1,3 +1,8 @@
+//! Top-k slot selection for mixture-of-experts routing.
+//!
+//! The slots are kept in registers and updated in rank order, so a router picks
+//! its experts without a sort over the full expert axis.
+
 use vyre_foundation::ir::{Expr, Node};
 
 pub(super) const BEST_VALS: &str = "best_vals";

@@ -1,3 +1,6 @@
+//! One bidirectional CSR step on a device, with the input staging a closure
+//! loop reuses across iterations.
+
 use super::{BidirectionalGpuScratch, CachedBidirectionalProgram};
 use crate::graph::csr_bidirectional::{
     plan_csr_bidirectional_step, CsrBidirectionalDispatchPlan, CsrBidirectionalStaticInputKey,

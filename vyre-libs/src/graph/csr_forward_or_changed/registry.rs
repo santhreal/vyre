@@ -1,3 +1,10 @@
+//! The catalog registration for this operation, with the witness inputs and
+//! expected bytes a conformance run compares against.
+//!
+//! The witness is a four-node graph whose fixpoint is known by hand, so a
+//! backend that reorders or drops an atomic fails on a value rather than on a
+//! shape.
+
 const OP_ID: &str = "vyre-libs::graph::csr_forward_or_changed";
 use super::program_serial::csr_forward_or_changed;
 use crate::graph::program_graph::ProgramGraphShape;

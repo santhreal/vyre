@@ -1,3 +1,9 @@
+//! The IR the exploded-supergraph CSR build emits.
+//!
+//! Count, prefix, and fill run on invocation zero because the row offsets must
+//! be produced in a fixed order for the output bytes to be deterministic; the
+//! grid in [`super::abi`] holds the launch to one block for that reason.
+
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use super::abi::{IFDS_CSR_WORKGROUP_SIZE, OP_ID};

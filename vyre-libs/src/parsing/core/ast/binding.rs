@@ -1,3 +1,9 @@
+//! Binding-strength computation for expression parsing.
+//!
+//! Token depth is computed with a parallel prefix scan and combined with
+//! operator precedence, which replaces the serial expression stack with a
+//! divergence-free map-reduce.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::c11_token::*;

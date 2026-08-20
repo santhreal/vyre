@@ -1,3 +1,6 @@
+//! The bidirectional closure loop: alternate forward and backward steps until
+//! the two frontiers meet or stop growing.
+
 use super::{BidirectionalGpuScratch, CachedBidirectionalProgram};
 use crate::graph::csr_bidirectional::plan_csr_bidirectional_step;
 use crate::graph::csr_closure_inputs::CsrClosureInputs;

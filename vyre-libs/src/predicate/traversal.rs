@@ -1,3 +1,5 @@
+//! Witness inputs for the traversal predicate registrations.
+
 #[cfg(test)]
 use vyre_foundation::ir::Program;
 

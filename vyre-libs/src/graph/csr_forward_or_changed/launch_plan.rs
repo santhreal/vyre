@@ -1,3 +1,9 @@
+//! The launch decision on its own: layout, program key, and dispatch grid.
+//!
+//! A fixpoint loop re-launches the same program every iteration. Keeping the
+//! decision `Copy` and free of a [`Program`] lets the loop carry it without
+//! rebuilding or cloning IR per iteration.
+
 use vyre_foundation::ir::Program;
 
 use super::layout::{

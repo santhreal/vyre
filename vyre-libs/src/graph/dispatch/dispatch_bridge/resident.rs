@@ -1,3 +1,8 @@
+//! Resident buffer allocation and multi-step resident dispatch.
+//!
+//! A group of buffers is allocated as one unit and released whole on failure,
+//! so a partial allocation cannot leak handles.
+
 use super::inputs::{prepare_dispatch_inputs, DispatchInput};
 use crate::dispatch_buffers::decode_u32_output_exact;
 use vyre_foundation::ir::Program;

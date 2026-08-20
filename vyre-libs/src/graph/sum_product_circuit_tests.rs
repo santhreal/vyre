@@ -1,3 +1,5 @@
+//! Tests for sum-product circuit evaluation against the reference witness.
+
 use super::*;
 use vyre_reference::composition_witness::sum_product_evaluate_witness_into;
 

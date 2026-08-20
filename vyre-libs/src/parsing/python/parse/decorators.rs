@@ -1,3 +1,5 @@
+//! Extraction of Python decorators and the definitions they attach to.
+
 use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, load_u32, search_next_token, search_next_token_into, store_words,

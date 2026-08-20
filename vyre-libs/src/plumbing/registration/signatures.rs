@@ -1,3 +1,6 @@
+//! The type signatures registrations reuse, named once so two operations with
+//! the same shape cannot declare it differently.
+
 use vyre_foundation::ir::DataType;
 
 /// Type signature constant: single `Bytes` input.

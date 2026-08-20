@@ -1,3 +1,8 @@
+//! Go keyword-call extractors, generated from one macro.
+//!
+//! Every extractor differs only in the keyword it anchors on, so the span
+//! recording is written once.
+
 use crate::parsing::go::parse::token_predicates::{
     emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_chan_keyword,
     token_is_keyword, token_is_receive_leading_keyword, token_type_eq,

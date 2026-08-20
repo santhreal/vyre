@@ -1,3 +1,8 @@
+//! A launch plan paired with the program it selected.
+//!
+//! Building the program allocates, so the plan is resolved first and the
+//! program attached only where a caller needs to run it.
+
 use vyre_foundation::ir::Program;
 
 use super::launch_plan::CsrForwardOrChangedLaunchPlan;

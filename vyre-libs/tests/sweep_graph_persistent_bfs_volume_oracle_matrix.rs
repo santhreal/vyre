@@ -1,7 +1,7 @@
 //! Volume oracle matrix - independent reference vs production cpu_ref.
 //! Volume testing.volume - do NOT weaken to shape-only asserts.
 #![forbid(unsafe_code)]
-#![cfg(feature = "graph")]
+#![cfg(feature = "graph-dispatch")]
 #[path = "../../tests/support/csr_sweep/mod.rs"]
 mod csr_sweep;
 

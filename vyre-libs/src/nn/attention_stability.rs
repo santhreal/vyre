@@ -1,3 +1,9 @@
+//! Score bounding that keeps a softmax recurrence finite.
+//!
+//! An overflowed dot product is clamped so `inf - inf` cannot poison a whole
+//! row, while an explicit NaN still propagates: a NaN input is the caller's
+//! defect and hiding it would be worse than the row it spoils.
+
 use vyre_foundation::ir::Expr;
 
 use super::f32_stability::finite_or;

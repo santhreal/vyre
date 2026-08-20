@@ -1,3 +1,9 @@
+//! Device dispatch of packed INT4 batched matmul reduced to a top-1 score and
+//! row index per batch item.
+//!
+//! The reduction happens on the device, so a caller that only needs the winning
+//! row never reads back the full score matrix.
+
 use super::*;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

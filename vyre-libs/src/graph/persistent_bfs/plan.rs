@@ -1,3 +1,9 @@
+//! Input validation and plan selection for every persistent-BFS form:
+//! non-resident, resident single frontier, and resident batch.
+//!
+//! Validation happens before any IR is built, so a malformed graph costs a
+//! diagnostic rather than a program.
+
 use super::dispatch_plan::PersistentBfsDispatchPlan;
 use super::hash::persistent_bfs_layout_hash;
 use super::resident_plan::{

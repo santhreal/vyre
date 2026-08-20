@@ -1,3 +1,6 @@
+//! The node bodies the shunting-yard reducer emits: value leaves, binary
+//! reductions, closing parentheses, and the final sweep.
+
 use crate::parsing::core::ast::node::{AST_CONST_INT, AST_VAR};
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;

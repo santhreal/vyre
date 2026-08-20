@@ -1,3 +1,5 @@
+//! Host-side dispatch of union-find component emission.
+
 use crate::graph::union_find::{
     union_find_dispatch_grid, union_find_program, validate_union_find_inputs,
 };

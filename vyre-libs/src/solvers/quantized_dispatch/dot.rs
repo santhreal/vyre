@@ -1,3 +1,8 @@
+//! Device dispatch of the packed INT4 scaled dot product.
+//!
+//! The result is bit-exact with the CPU oracle for the same lane order and
+//! scales, which is what makes the oracle usable as a parity reference.
+
 use super::*;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

@@ -1,3 +1,5 @@
+//! Device dispatch of packed INT4 batched matmul.
+
 use super::*;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

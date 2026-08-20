@@ -1,3 +1,10 @@
+//! The fixed facts every form of this operation shares: op id, workgroup
+//! shapes, the changed-history iteration ceiling, and the grid derived from a
+//! node count.
+//!
+//! One owner for these constants keeps the serial, parallel, and batched forms
+//! from drifting into three different notions of a lane.
+
 /// Canonical op id.
 pub(crate) const OP_ID: &str = "vyre-libs::graph::csr_forward_or_changed";
 /// Canonical one-lane workgroup for CSR forward-or-changed programs.

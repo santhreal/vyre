@@ -1,3 +1,6 @@
+//! Go declaration and span extraction, and the record widths a host reader
+//! decodes them with.
+
 use crate::parsing::go::parse::token_predicates::{
     emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_ident, token_is_keyword,
     token_len, token_start, token_type_eq,

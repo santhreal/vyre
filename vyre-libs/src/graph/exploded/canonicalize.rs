@@ -1,3 +1,8 @@
+//! Row-canonical ordering for an exploded IFDS CSR.
+//!
+//! Two runs that discover the same edges in a different order must produce the
+//! same bytes, so each row is sorted before anything compares or hashes it.
+
 /// Sort each CSR row in place after validating row ranges.
 pub fn canonicalize_csr_within_rows_in_place(
     row_ptr: &[u32],

@@ -1,3 +1,6 @@
+//! Catalog registrations for the security bitset operations, generated from one
+//! macro so every member declares the same witness shape.
+
 use vyre_foundation::operation::OperationRegistration;
 
 macro_rules! bitset_and_entry {

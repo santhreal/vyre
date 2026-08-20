@@ -1,3 +1,8 @@
+//! Token classification and precedence for the shunting-yard reducer.
+//!
+//! Precedence is expressed as IR over the token id rather than as a host table
+//! lookup, so the comparison runs in the same kernel as the reduction.
+
 use crate::parsing::core::ast::node::*;
 use vyre_foundation::ir::Expr;
 use vyre_spec::c11_token::*;

@@ -1,3 +1,9 @@
+//! The checked layout of an IFDS CSR build: domain sizes, rule counts, and the
+//! padded word width of every buffer the dispatch binds.
+//!
+//! Nothing here is derived twice; the plan, the program builder, and the
+//! readback validator all read these fields.
+
 /// Checked dispatch layout for an exploded IFDS CSR build.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IfdsCsrLayout {

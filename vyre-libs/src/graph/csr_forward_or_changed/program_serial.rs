@@ -1,3 +1,8 @@
+//! The single-lane form, kept for primitive conformance.
+//!
+//! It computes the same fixpoint step as the parallel form from one invocation,
+//! which is what makes it usable as a reference and useless as a hot path.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{Expr, Node, Program};

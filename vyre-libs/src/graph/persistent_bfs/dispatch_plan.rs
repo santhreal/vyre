@@ -1,3 +1,9 @@
+//! The non-resident persistent-BFS dispatch plan: layout, layout hash, edge
+//! mask, and iteration budget.
+//!
+//! The layout hash is what a program cache keys on, so a graph with the same
+//! shape reuses a built program instead of rebuilding it.
+
 use super::layout::{
     persistent_bfs_program_shape, persistent_bfs_single_cache_key,
     persistent_bfs_single_dispatch_grid, persistent_bfs_single_program_cache_key,

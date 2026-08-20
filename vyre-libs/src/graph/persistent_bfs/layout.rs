@@ -1,3 +1,10 @@
+//! The binding contract of persistent BFS: op ids, buffer indices, workgroup
+//! shape, and the frontier and batch layouts derived from a graph.
+//!
+//! The converged binding is the one a caller must read: it separates a reached
+//! fixpoint from a frontier that was still growing when the iteration budget
+//! ran out.
+
 use vyre_foundation::ir::{BufferAccess, BufferDecl};
 
 use super::hash::persistent_bfs_program_layout_hash;

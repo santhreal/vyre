@@ -1,3 +1,9 @@
+//! The packed node id: procedure, basic block, and fact in one u32.
+//!
+//! The field widths are asserted to sum to 32 at compile time, and the
+//! per-workgroup fact budget is set to match the subgroup NFA window so both
+//! subsystems price occupancy the same way.
+
 /// Bits reserved for each component of the packed node id.
 pub const PROC_BITS: u32 = 12;
 /// Bits reserved for the basic-block component of the packed node id.

@@ -1,3 +1,6 @@
+//! The catalog registration for persistent BFS, with the witness graph and the
+//! frontier, changed, and converged bytes a conformance run expects.
+
 const OP_ID: &str = "vyre-libs::graph::persistent_bfs";
 use super::program::persistent_bfs;
 use crate::graph::program_graph::ProgramGraphShape;

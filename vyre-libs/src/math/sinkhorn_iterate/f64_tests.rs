@@ -1,3 +1,9 @@
+//! Convergence tests for the f64 Sinkhorn oracle.
+//!
+//! The cases pin the balanced, degenerate, and non-converging shapes, because
+//! a scaling loop that silently returns after its iteration budget looks the
+//! same as one that converged.
+
 use super::*;
 
 #[test]

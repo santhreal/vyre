@@ -1,3 +1,9 @@
+//! The batched form with one global convergence flag, and the slot-indexed
+//! variants a changed-history loop uses.
+//!
+//! Writing history into a distinct slot per iteration is what lets a bounded
+//! loop skip zeroing the flag between dispatches.
+
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::layout::{CSR_FORWARD_OR_CHANGED_PARALLEL_WORKGROUP_SIZE, OP_ID};

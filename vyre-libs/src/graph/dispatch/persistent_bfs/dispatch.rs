@@ -1,3 +1,8 @@
+//! Host-side dispatch of a non-resident persistent BFS.
+//!
+//! Every launch re-uploads the graph. Callers that run many queries over one
+//! topology use the resident form in [`super::resident`] instead.
+
 use super::resident_scratch::{copy_frontier_seed_into, PersistentBfsGpuScratch};
 
 use crate::dispatch_buffers::decode_u32_output_exact;

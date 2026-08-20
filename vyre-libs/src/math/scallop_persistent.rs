@@ -1,3 +1,9 @@
+//! Lineage fixpoint bodies for provenance-tracking datalog.
+//!
+//! Four bodies differ only in word width and in whether they synchronise across
+//! a workgroup or the grid, so they share one description of the buffers and
+//! geometry instead of restating a nine-argument list four times.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 
 use crate::fixpoint::persistent_fixpoint::grid_sync_barrier;

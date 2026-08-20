@@ -1,3 +1,10 @@
+//! One traversal step against a resident graph, in each mode, plus the
+//! automatic selection between them.
+//!
+//! The mode is chosen from measured frontier statistics rather than a fixed
+//! threshold, so a graph that changes density mid-traversal changes strategy
+//! with it.
+
 use super::resident_scratch::AdaptiveTraversalResidentScratch;
 use super::{
     AdaptiveTraversalMode, ResidentAdaptiveFourRussiansDenseGraph,

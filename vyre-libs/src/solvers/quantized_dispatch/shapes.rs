@@ -1,3 +1,10 @@
+//! Shape validation and buffer marshalling shared by every packed INT4
+//! dispatch in this module.
+//!
+//! Each entry point would otherwise repeat the same word-count arithmetic, and
+//! a single wrong `ceil_div` is the difference between a short readback and a
+//! silent truncation.
+
 use crate::dispatch_buffers::{
     ceil_div_u32, decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
     write_u32_slice_le_bytes,

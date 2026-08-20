@@ -1,3 +1,8 @@
+//! Input and readback validation for the IFDS CSR build.
+//!
+//! A backend that returns a malformed CSR is rejected here rather than in the
+//! consumer that would otherwise index off the end of a row.
+
 use super::encoding::fits;
 use super::layout::IfdsCsrLayout;
 

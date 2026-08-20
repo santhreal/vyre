@@ -1,3 +1,5 @@
+//! Extraction of Python call sites and their top-level keyword arguments.
+
 use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words};
 use crate::parsing::python::{CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS};

@@ -1,11 +1,17 @@
-// Typed rule conditions and formula trees.
-// TAG RESERVATIONS: PatternExists=0x01, PatternCountGt=0x02,
-// PatternCountGte=0x03, FileSizeLt=0x04, FileSizeLte=0x05,
-// FileSizeGt=0x06, FileSizeGte=0x07, FileSizeEq=0x08, FileSizeNe=0x09,
-// LiteralTrue=0x0A, LiteralFalse=0x0B, RegexMatch=0x0C,
-// SubstringMatch=0x0D, PrefixMatch=0x0E, SuffixMatch=0x0F,
-// RangeMatch=0x10, SetMembership=0x11, 0x12..=0x7F reserved,
-// Opaque=0x80.
+//! The typed rule tree: leaf conditions and the boolean formulas over them.
+//!
+//! Every leaf carries a reserved wire tag, listed below, because a rule tree is
+//! serialized and a tag reused for a second condition would decode as the
+//! first.
+//!
+//! Typed rule conditions and formula trees.
+//! TAG RESERVATIONS: PatternExists=0x01, PatternCountGt=0x02,
+//! PatternCountGte=0x03, FileSizeLt=0x04, FileSizeLte=0x05,
+//! FileSizeGt=0x06, FileSizeGte=0x07, FileSizeEq=0x08, FileSizeNe=0x09,
+//! LiteralTrue=0x0A, LiteralFalse=0x0B, RegexMatch=0x0C,
+//! SubstringMatch=0x0D, PrefixMatch=0x0E, SuffixMatch=0x0F,
+//! RangeMatch=0x10, SetMembership=0x11, 0x12..=0x7F reserved,
+//! Opaque=0x80.
 
 use std::sync::Arc;
 

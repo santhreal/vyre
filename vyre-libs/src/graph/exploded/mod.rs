@@ -45,7 +45,6 @@ mod dispatch_plan;
 mod encoding;
 mod layout;
 mod program_ir;
-mod program_key;
 #[cfg(test)]
 #[path = "../../../tests/internal/graph/exploded/reference_adapter.rs"]
 mod reference_adapter;

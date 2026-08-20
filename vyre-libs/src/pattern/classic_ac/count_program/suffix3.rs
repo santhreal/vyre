@@ -1,3 +1,8 @@
+//! The three-byte suffix prefilter: a hashed bloom mask.
+//!
+//! Three bytes do not fit an exact mask, so this one admits false positives and
+//! the scan behind it still confirms every hit.
+
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::pattern::CompiledDfa;

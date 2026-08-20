@@ -1,3 +1,8 @@
+//! Batched queue-based traversal over a resident graph.
+//!
+//! Queries in a batch share the graph and the scratch arena, so the per-query
+//! cost is the frontier work rather than another upload.
+
 use super::{ResidentCsrQueueBatchScratch, ResidentCsrQueueBatchShape};
 use crate::graph::csr_frontier_queue::validate_frontier_queue_batch;
 

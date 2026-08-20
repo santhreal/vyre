@@ -1,3 +1,9 @@
+//! Input validation and program selection, with no IR built yet.
+//!
+//! The changed-history fast path is chosen here, from the iteration ceiling in
+//! [`super::layout`], so the selection rule lives beside the validation that
+//! makes it legal rather than inside a program builder.
+
 #[cfg(test)]
 use super::dispatch_plan::CsrForwardOrChangedDispatchPlan;
 use super::launch_plan::CsrForwardOrChangedLaunchPlan;

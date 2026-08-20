@@ -1,3 +1,9 @@
+//! The shunting-yard AST builder: a per-statement operator stack reduced on the
+//! device.
+//!
+//! Each statement owns a fixed slot budget, so the whole pass is one launch with
+//! no per-statement allocation.
+
 use crate::parsing::composition::child_phase;
 use emit::{binary_token_body, emit_value_leaf, final_sweep_body, rparen_body};
 use operator::{is_assignment_token, is_value_token, precedence};

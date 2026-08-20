@@ -1,3 +1,9 @@
+//! The caller-owned buffers a persistent-BFS dispatch reuses: inputs, the
+//! changed and converged readbacks, the static-input key, and the plan cache.
+//!
+//! A fixpoint loop runs to convergence without allocating per iteration only
+//! because this scratch outlives the loop.
+
 use crate::graph::dispatch::plan_cache::GraphPlanCache;
 use crate::graph::dispatch::resident_handles::{
     free_unique_resident_handles, impl_resident_graph_free,

@@ -1,3 +1,10 @@
+//! The expansion pass itself: the node list an in-place forward step emits.
+//!
+//! Every program form in this module reuses this body, so the traversal rule
+//! is stated once and the forms differ only in how they launch it. The
+//! prefixed variants exist because a driver that inlines the body twice would
+//! otherwise shadow its own locals.
+
 use vyre_foundation::composition::wrap_child_region;
 
 use vyre_foundation::ir::Ident;

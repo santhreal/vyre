@@ -1,3 +1,5 @@
+//! Device dispatch that expands packed INT4 lanes back to i32.
+
 use super::*;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
 

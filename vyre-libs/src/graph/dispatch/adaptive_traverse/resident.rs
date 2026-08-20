@@ -1,3 +1,9 @@
+//! Device-resident graph handles for adaptive traversal.
+//!
+//! Sparse-queue, dense four-Russians, and the mode selector each need different
+//! resident buffers; the handle records which ones a graph was uploaded with so
+//! a step cannot bind a layout the upload never produced.
+
 use crate::graph::dispatch::resident_handles::{
     impl_resident_graph_accessors, impl_resident_graph_free,
 };

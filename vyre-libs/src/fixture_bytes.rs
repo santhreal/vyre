@@ -1,3 +1,8 @@
+//! Expected output bytes shared by several conformance registrations.
+//!
+//! A witness answer written twice is a witness that can disagree with itself,
+//! so the shared ones are stated here once.
+
 pub(crate) fn u32_bytes(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
 }

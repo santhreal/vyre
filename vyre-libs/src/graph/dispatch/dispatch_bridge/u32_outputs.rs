@@ -1,3 +1,8 @@
+//! Dispatch helpers that decode a fixed number of u32 output buffers.
+//!
+//! The expected word count is passed in and checked, so a short readback is an
+//! error rather than a silently truncated result.
+
 use crate::dispatch_buffers::decode_u32_output_exact;
 use vyre_foundation::ir::Program;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};

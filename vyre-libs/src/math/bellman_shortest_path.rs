@@ -1,3 +1,8 @@
+//! Bellman-Ford shortest paths as a persistent device fixpoint.
+//!
+//! Relaxation runs to convergence inside one kernel rather than one dispatch
+//! per round, so the iteration count costs no host round trips.
+
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

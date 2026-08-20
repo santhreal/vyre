@@ -1,3 +1,8 @@
+//! Control-flow assembly from flattened statements.
+//!
+//! Each statement resolves its own header token and conditional expression from
+//! spatial boundaries computed earlier, so no host-side tree is built.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::c11_token::*;

@@ -1069,7 +1069,7 @@ required-features = ["graph"]
 [[test]]
 name = "sweep_graph_persistent_bfs_volume_oracle_matrix"
 path = "tests/sweep_graph_persistent_bfs_volume_oracle_matrix.rs"
-required-features = ["graph"]
+required-features = ["graph-dispatch"]
 
 [[test]]
 name = "sweep_math_prefix_scan_inclusive_volume_oracle_matrix"

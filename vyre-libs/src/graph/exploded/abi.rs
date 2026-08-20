@@ -1,3 +1,9 @@
+//! The wire contract of the IFDS CSR build: op id, buffer labels, workgroup
+//! shape, and dispatch grid.
+//!
+//! A consumer marshals rules against these names, so they are declared once
+//! here rather than spelled again at each call site.
+
 /// Canonical op id for the IFDS CSR construction program.
 pub const OP_ID: &str = "vyre-libs::graph::exploded_build_ifds_csr";
 

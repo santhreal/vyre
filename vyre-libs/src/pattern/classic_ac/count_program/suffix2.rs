@@ -1,3 +1,8 @@
+//! The two-byte suffix prefilter: an exact 65,536-bit mask.
+//!
+//! Two bytes fit an exact mask, so this filter has no false positives and the
+//! scan it guards runs only on real candidates.
+
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 use crate::pattern::CompiledDfa;

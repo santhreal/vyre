@@ -1,3 +1,6 @@
+//! Host-side dispatch of motif matching, with the reductions that turn per-node
+//! match flags into a count and a witness.
+
 use super::{CachedMotifProgram, MotifGpuScratch};
 use crate::graph::motif::{
     plan_motif_launch, validate_motif_witness, MotifEdge, MotifStaticInputKey,

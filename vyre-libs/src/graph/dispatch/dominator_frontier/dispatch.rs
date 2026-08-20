@@ -1,3 +1,5 @@
+//! Host-side dispatch of the dominance-frontier query.
+
 use super::{
     CachedDominanceFrontierProgram, DominanceFrontierGpuScratch, DominatorFrontierStaticInputKey,
 };

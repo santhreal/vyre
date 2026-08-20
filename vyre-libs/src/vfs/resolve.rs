@@ -1,3 +1,8 @@
+//! The virtual filesystem path resolver program.
+//!
+//! Resolution runs on the device against a resident directory image, so a path
+//! lookup costs no host round trip.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

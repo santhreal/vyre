@@ -1,3 +1,6 @@
+//! The f32 guards shared by the network layers: replace a non-finite value,
+//! and floor a scale to the smallest positive normal.
+
 use vyre_foundation::ir::Expr;
 
 /// Preserve finite values and replace non-finite values with `replacement`.

@@ -1,3 +1,9 @@
+//! Tests for the regex DFA pipeline.
+//!
+//! Conformance accepts registered bytes as proof for every backend row, so the
+//! registered fixture is checked against an independent reference execution
+//! rather than merely for being present.
+
 use super::*;
 
 /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex

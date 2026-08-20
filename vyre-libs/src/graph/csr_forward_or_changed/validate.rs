@@ -1,3 +1,8 @@
+//! Input checks and seed-frontier copying.
+//!
+//! The frontier reservation happens before any mutation, so a failed allocation
+//! leaves a reusable buffer intact instead of half-overwritten.
+
 use super::layout::CsrForwardOrChangedLayout;
 
 /// Validate and copy a seed frontier into caller-owned frontier storage.

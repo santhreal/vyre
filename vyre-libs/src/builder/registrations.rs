@@ -1,3 +1,6 @@
+//! Catalog registrations for the generic builder operations, with the witness
+//! inputs and expected bytes each one is checked against.
+
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

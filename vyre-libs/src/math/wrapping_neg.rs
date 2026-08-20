@@ -1,3 +1,5 @@
+//! Two's-complement negation of u32 lanes, wrapping at zero.
+
 use vyre_foundation::ir::{Expr, Program};
 
 const OP_ID: &str = "vyre-libs::math::wrapping_neg";

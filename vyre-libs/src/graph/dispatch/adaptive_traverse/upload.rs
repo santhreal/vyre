@@ -1,3 +1,6 @@
+//! Uploads that turn a host CSR graph into the resident buffers each traversal
+//! mode binds, including the dense four-Russians lookup table.
+
 use super::resident_scratch::{adaptive_four_russians_layout_hash, adaptive_traversal_layout_hash};
 use super::{
     ResidentAdaptiveFourRussiansDenseGraph, ResidentAdaptiveSparseQueueGraph,

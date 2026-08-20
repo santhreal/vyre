@@ -1,3 +1,8 @@
+//! The one place a program key turns into a program.
+//!
+//! The key records everything the choice depends on, so a cache can answer
+//! from the key alone and only a miss reaches this builder.
+
 use vyre_foundation::ir::Program;
 
 use super::layout::CsrForwardOrChangedProgramKey;

@@ -1,3 +1,8 @@
+//! The node-parallel form: one invocation per source node.
+//!
+//! This is what production fixpoint drivers dispatch. The serial form walks the
+//! whole CSR from one lane and exists for conformance, not for throughput.
+
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 
 use vyre_foundation::ir::Ident;

@@ -1,3 +1,5 @@
+//! Tests for tensor-flow forward propagation against the reference witness.
+
 use super::program_graph::ProgramGraphShape;
 use super::tensor_flow_forward::{
     tensor_flow_forward_dispatch_grid, tensor_words, try_tensor_flow_forward,

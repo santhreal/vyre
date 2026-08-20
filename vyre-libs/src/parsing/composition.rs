@@ -1,3 +1,6 @@
+//! The one helper every parsing phase uses to nest itself under its pipeline's
+//! region, so a phase is attributed to the pipeline that invoked it.
+
 use vyre_foundation::composition::wrap_child_region;
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::Node;
