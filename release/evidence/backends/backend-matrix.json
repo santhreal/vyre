@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:00f06ae331db4bf821680caf907bbc1bf130f02c:dirty=true:worktree=894c159459d6765240cd060de98738f6cd76b2c594dbecb4d718a3cf55e818a5",
+  "source_fingerprint": "git:1eead476cab0c82ed6c69a2ec336ac3275076a34:dirty=false",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -362,7 +362,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 48037,
+      "source_bytes": 23823,
       "implementation_tokens": [
         "cache",
         "pipeline",
