@@ -43,6 +43,7 @@ jobs:
             [ -x "$candidate" ] || continue
             "$candidate" -MLocale::Maketext::Simple -e 1 >/dev/null 2>&1 || continue
             echo "OPENSSL_SRC_PERL=$(cygpath -w "$candidate")" >> "$GITHUB_ENV"
+            echo "CC=cl" >> "$GITHUB_ENV"
             exit 0
           done
           echo "no perl on this image provides Locale::Maketext::Simple; vendored OpenSSL cannot be configured" >&2
