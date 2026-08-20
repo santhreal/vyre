@@ -16,6 +16,15 @@ jobs:
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-07
+      - name: Install dependencies for registered gates
+        run: |
+          if ! command -v z3 >/dev/null; then
+            sudo apt-get update && sudo apt-get install -y z3
+          fi
+          cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
 
       # Runs every registered gate and holds each to the number pinned in
       # xtask/gate-baselines.toml. Registering a gate without a pin fails, and a
