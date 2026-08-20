@@ -18,6 +18,13 @@ runs:
     - name: Reclaim runner disk
       shell: bash
       run: |
+        # These paths are part of the hosted image and are recreated with the
+        # next runner. On a persistent host they are the machine's own system
+        # directories, so the step refuses rather than deleting them.
+        if [ "${RUNNER_ENVIRONMENT:-}" != "github-hosted" ]; then
+          echo "::error::reclaim-runner-disk deletes hosted-image directories and must not run on a self-hosted runner (RUNNER_ENVIRONMENT=${RUNNER_ENVIRONMENT:-unset})"
+          exit 1
+        fi
         avail() { df -k / | awk 'NR==2 { printf "%.1f", $4 / 1048576 }'; }
         before="$(avail)"
         sudo rm -rf \
