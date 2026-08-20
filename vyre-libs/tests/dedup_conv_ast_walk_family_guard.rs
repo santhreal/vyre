@@ -68,11 +68,13 @@ enum AstWalkFamilyMember {
     VastTryPlan,
     VastPreorder,
     VastPostorder,
+    VastDescendLeftmostLeafBody,
+    VastDescendLeftmostLeafProgram,
 }
 
 impl AstWalkFamilyMember {
     #[allow(dead_code)]
-    const ALL: [Self; 15] = [
+    const ALL: [Self; 17] = [
         Self::AstWalkGeneric,
         Self::AstWalkPreorder,
         Self::AstWalkPostorderNodes,
@@ -88,6 +90,8 @@ impl AstWalkFamilyMember {
         Self::VastTryPlan,
         Self::VastPreorder,
         Self::VastPostorder,
+        Self::VastDescendLeftmostLeafBody,
+        Self::VastDescendLeftmostLeafProgram,
     ];
 }
 
@@ -253,6 +257,12 @@ fn ast_walk_family_roster_is_exhaustively_classified() {
             }
             "ast_walk_postorder" => {
                 covered_vast.insert(AstWalkFamilyMember::VastPostorder);
+            }
+            "descend_to_leftmost_leaf_body" => {
+                covered_vast.insert(AstWalkFamilyMember::VastDescendLeftmostLeafBody);
+            }
+            "vast_descend_leftmost_leaf_program" => {
+                covered_vast.insert(AstWalkFamilyMember::VastDescendLeftmostLeafProgram);
             }
             "primitive_op_ids" => {} // metadata helper
             other => unclassified_vast.push(other.to_string()),

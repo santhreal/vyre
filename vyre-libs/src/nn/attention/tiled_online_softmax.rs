@@ -24,6 +24,11 @@ use crate::nn::f32_stability::flush_tiny;
 /// Registered owner of the online-softmax attention recurrence.
 pub const OP_ID: &str = "vyre-libs::nn::attention::online_softmax";
 
+/// Stable op id for computing KV tile dot-product scores.
+pub const ATTENTION_TILE_SCORES_OP_ID: &str = "vyre-libs::nn::attention::tile_scores";
+
+/// Stable op id for absorbing KV tile values into the running accumulator.
+pub const ATTENTION_ABSORB_VALUES_OP_ID: &str = "vyre-libs::nn::attention::absorb_values";
 pub(super) struct TiledOnlineSoftmaxSpec<'a> {
     pub(super) q: &'a str,
     pub(super) out: &'a str,
@@ -214,7 +219,8 @@ pub(super) fn tiled_online_softmax_body(
 ///
 /// The query is read from workgroup scratch, so a row's `head_dim` values
 /// cross the memory bus once per invocation instead of once per key.
-fn tile_scores(k: &str, head_dim: u32, tile_size: u32, scale: Expr) -> Vec<Node> {
+/// Body of computing KV tile dot-product scores.
+pub(super) fn tile_scores_body(k: &str, head_dim: u32, tile_size: u32, scale: Expr) -> Vec<Node> {
     let q_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
     let score_idx = |local: Expr, j: Expr| scratch_index(tile_size, local, j);
     vec![Node::loop_for(
@@ -256,8 +262,16 @@ fn tile_scores(k: &str, head_dim: u32, tile_size: u32, scale: Expr) -> Vec<Node>
     )]
 }
 
-/// Absorb one KV tile's values into the running accumulator.
-fn absorb_tile_values(v: &str, head_dim: u32, tile_size: u32) -> Vec<Node> {
+fn tile_scores(k: &str, head_dim: u32, tile_size: u32, scale: Expr) -> Vec<Node> {
+    vec![wrap_child_region(
+        ATTENTION_TILE_SCORES_OP_ID,
+        Ident::from(OP_ID),
+        tile_scores_body(k, head_dim, tile_size, scale),
+    )]
+}
+
+/// Body of absorbing KV tile values into running accumulator.
+pub(super) fn absorb_tile_values_body(v: &str, head_dim: u32, tile_size: u32) -> Vec<Node> {
     let score_idx = |local: Expr, j: Expr| scratch_index(tile_size, local, j);
     let o_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
     vec![Node::loop_for(
@@ -310,6 +324,13 @@ fn absorb_tile_values(v: &str, head_dim: u32, tile_size: u32) -> Vec<Node> {
     )]
 }
 
+fn absorb_tile_values(v: &str, head_dim: u32, tile_size: u32) -> Vec<Node> {
+    vec![wrap_child_region(
+        ATTENTION_ABSORB_VALUES_OP_ID,
+        Ident::from(OP_ID),
+        absorb_tile_values_body(v, head_dim, tile_size),
+    )]
+}
 /// The whole `[s, d]` online-softmax attention body for one work plan.
 fn attention_body(
     q: &str,
@@ -440,6 +461,101 @@ inventory::submit! {
         Some(|| {
             vec![vec![EXPECTED_ONLINE_SOFTMAX_ATTENTION_OUTPUT_BYTES.to_vec()]]
         }),
+    )
+    .with_category("nn")
+}
+
+/// Build standalone tile score computation program.
+#[must_use]
+pub fn attention_tile_scores_program() -> Program {
+    let mut body = vec![
+        Node::let_bind("local", Expr::u32(0)),
+        Node::let_bind("tile_start", Expr::u32(0)),
+        Node::let_bind("tile_len", Expr::u32(1)),
+        Node::store("q_scratch", Expr::u32(0), Expr::f32(2.0)),
+        Node::store("q_scratch", Expr::u32(1), Expr::f32(4.0)),
+    ];
+    body.extend(tile_scores_body("k", 2, 2, Expr::f32(0.5)));
+    body.push(Node::store("out_scores", Expr::u32(0), Expr::load("score_tile", Expr::u32(0))));
+    body.push(Node::store("out_scores", Expr::u32(1), Expr::load("score_tile", Expr::u32(1))));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("k", 0, BufferAccess::ReadOnly, DataType::F32).with_count(2),
+            BufferDecl::output("out_scores", 1, DataType::F32).with_count(2),
+            BufferDecl::workgroup("q_scratch", 2, DataType::F32),
+            BufferDecl::workgroup("score_tile", 2, DataType::F32),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            ATTENTION_TILE_SCORES_OP_ID,
+            guarded,
+        )],
+    )
+}
+
+/// Build standalone absorb values program.
+#[must_use]
+pub fn attention_absorb_values_program() -> Program {
+    let mut body = vec![
+        Node::let_bind("local", Expr::u32(0)),
+        Node::let_bind("tile_start", Expr::u32(0)),
+        Node::let_bind("tile_len", Expr::u32(1)),
+        Node::let_bind("m_new", Expr::f32(0.0)),
+        Node::let_bind("rescale", Expr::f32(1.0)),
+        Node::store("score_tile", Expr::u32(0), Expr::f32(0.0)),
+        Node::store("o_acc", Expr::u32(0), Expr::f32(0.0)),
+        Node::store("o_acc", Expr::u32(1), Expr::f32(0.0)),
+    ];
+    body.extend(absorb_tile_values_body("v", 2, 2));
+    body.push(Node::store("out_acc", Expr::u32(0), Expr::load("o_acc", Expr::u32(0))));
+    body.push(Node::store("out_acc", Expr::u32(1), Expr::load("o_acc", Expr::u32(1))));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("v", 0, BufferAccess::ReadOnly, DataType::F32).with_count(2),
+            BufferDecl::output("out_acc", 1, DataType::F32).with_count(2),
+            BufferDecl::workgroup("score_tile", 2, DataType::F32),
+            BufferDecl::workgroup("o_acc", 2, DataType::F32),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            ATTENTION_ABSORB_VALUES_OP_ID,
+            guarded,
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        ATTENTION_TILE_SCORES_OP_ID,
+        attention_tile_scores_program,
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_f32_slice(&[1.0, 3.0]),
+        ]]),
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_f32_slice(&[7.0, 0.0]),
+        ]]),
+    )
+    .with_category("nn")
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        ATTENTION_ABSORB_VALUES_OP_ID,
+        attention_absorb_values_program,
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_f32_slice(&[2.0, 5.0]),
+        ]]),
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_f32_slice(&[2.0, 5.0]),
+        ]]),
     )
     .with_category("nn")
 }

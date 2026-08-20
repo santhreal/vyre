@@ -299,137 +299,157 @@ impl ReductionComposer {
 
         // Workgroup-local tree reduction for Welford triples.
         let wg0_guard = Expr::is_first_workgroup();
-        let mut stride = tile.next_power_of_two() / 2;
-        while stride > 0 {
-            body.push(Node::if_then(
-                Expr::and(
-                    wg0_guard.clone(),
-                    Expr::lt(Expr::var("local"), Expr::u32(stride)),
+        let base_stride = tile.next_power_of_two() / 2;
+        let steps = (base_stride as f32).log2() as u32 + 1;
+        body.push(Node::loop_for(
+            "step",
+            Expr::u32(0),
+            Expr::u32(steps),
+            vec![
+                Node::let_bind(
+                    "stride",
+                    Expr::shr(Expr::u32(base_stride), Expr::var("step")),
                 ),
-                vec![Node::if_then(
-                    Expr::lt(
-                        Expr::add(Expr::var("local"), Expr::u32(stride)),
-                        Expr::u32(tile),
+                Node::if_then(
+                    Expr::and(
+                        wg0_guard.clone(),
+                        Expr::lt(Expr::var("local"), Expr::var("stride")),
                     ),
-                    vec![
-                        Node::let_bind(
-                            "other_idx",
-                            Expr::add(Expr::var("local"), Expr::u32(stride)),
+                    vec![Node::if_then(
+                        Expr::lt(
+                            Expr::add(Expr::var("local"), Expr::var("stride")),
+                            Expr::u32(tile),
                         ),
-                        Node::let_bind("n_a", Expr::load("var_n_scratch", Expr::var("local"))),
-                        Node::let_bind("n_b", Expr::load("var_n_scratch", Expr::var("other_idx"))),
-                        Node::if_then(
-                            Expr::gt(Expr::var("n_b"), Expr::u32(0)),
-                            vec![Node::if_then_else(
-                                Expr::eq(Expr::var("n_a"), Expr::u32(0)),
-                                vec![
-                                    Node::store(
-                                        "var_n_scratch",
-                                        Expr::var("local"),
-                                        Expr::var("n_b"),
-                                    ),
-                                    Node::store(
-                                        "var_m1_scratch",
-                                        Expr::var("local"),
-                                        Expr::load("var_m1_scratch", Expr::var("other_idx")),
-                                    ),
-                                    Node::store(
-                                        "var_m2_scratch",
-                                        Expr::var("local"),
-                                        Expr::load("var_m2_scratch", Expr::var("other_idx")),
-                                    ),
-                                ],
-                                vec![
-                                    Node::let_bind(
-                                        "m1_a",
-                                        Expr::load("var_m1_scratch", Expr::var("local")),
-                                    ),
-                                    Node::let_bind(
-                                        "m1_b",
-                                        Expr::load("var_m1_scratch", Expr::var("other_idx")),
-                                    ),
-                                    Node::let_bind(
-                                        "m2_a",
-                                        Expr::load("var_m2_scratch", Expr::var("local")),
-                                    ),
-                                    Node::let_bind(
-                                        "m2_b",
-                                        Expr::load("var_m2_scratch", Expr::var("other_idx")),
-                                    ),
-                                    Node::let_bind(
-                                        "n_ab",
-                                        Expr::add(Expr::var("n_a"), Expr::var("n_b")),
-                                    ),
-                                    Node::let_bind(
-                                        "n_ab_f",
-                                        Expr::cast(DataType::F32, Expr::var("n_ab")),
-                                    ),
-                                    Node::let_bind(
-                                        "n_a_f",
-                                        Expr::cast(DataType::F32, Expr::var("n_a")),
-                                    ),
-                                    Node::let_bind(
-                                        "n_b_f",
-                                        Expr::cast(DataType::F32, Expr::var("n_b")),
-                                    ),
-                                    Node::let_bind(
-                                        "delta_ab",
-                                        Expr::sub(Expr::var("m1_b"), Expr::var("m1_a")),
-                                    ),
-                                    Node::let_bind(
-                                        "m1_comb",
-                                        Expr::add(
-                                            Expr::var("m1_a"),
-                                            Expr::mul(
-                                                Expr::var("delta_ab"),
-                                                Expr::div(Expr::var("n_b_f"), Expr::var("n_ab_f")),
+                        vec![
+                            Node::let_bind(
+                                "other_idx",
+                                Expr::add(Expr::var("local"), Expr::var("stride")),
+                            ),
+                            Node::let_bind("n_a", Expr::load("var_n_scratch", Expr::var("local"))),
+                            Node::let_bind("n_b", Expr::load("var_n_scratch", Expr::var("other_idx"))),
+                            Node::if_then(
+                                Expr::gt(Expr::var("n_b"), Expr::u32(0)),
+                                vec![Node::if_then_else(
+                                    Expr::eq(Expr::var("n_a"), Expr::u32(0)),
+                                    vec![
+                                        Node::store(
+                                            "var_n_scratch",
+                                            Expr::var("local"),
+                                            Expr::var("n_b"),
+                                        ),
+                                        Node::store(
+                                            "var_m1_scratch",
+                                            Expr::var("local"),
+                                            Expr::load(
+                                                "var_m1_scratch",
+                                                Expr::var("other_idx"),
                                             ),
                                         ),
-                                    ),
-                                    Node::let_bind(
-                                        "m2_comb",
-                                        Expr::add(
-                                            Expr::add(Expr::var("m2_a"), Expr::var("m2_b")),
-                                            Expr::mul(
+                                        Node::store(
+                                            "var_m2_scratch",
+                                            Expr::var("local"),
+                                            Expr::load(
+                                                "var_m2_scratch",
+                                                Expr::var("other_idx"),
+                                            ),
+                                        ),
+                                    ],
+                                    vec![
+                                        Node::let_bind(
+                                            "m1_a",
+                                            Expr::load("var_m1_scratch", Expr::var("local")),
+                                        ),
+                                        Node::let_bind(
+                                            "m1_b",
+                                            Expr::load(
+                                                "var_m1_scratch",
+                                                Expr::var("other_idx"),
+                                            ),
+                                        ),
+                                        Node::let_bind(
+                                            "m2_a",
+                                            Expr::load("var_m2_scratch", Expr::var("local")),
+                                        ),
+                                        Node::let_bind(
+                                            "m2_b",
+                                            Expr::load(
+                                                "var_m2_scratch",
+                                                Expr::var("other_idx"),
+                                            ),
+                                        ),
+                                        Node::let_bind(
+                                            "n_ab",
+                                            Expr::add(Expr::var("n_a"), Expr::var("n_b")),
+                                        ),
+                                        Node::let_bind(
+                                            "n_ab_f",
+                                            Expr::cast(DataType::F32, Expr::var("n_ab")),
+                                        ),
+                                        Node::let_bind(
+                                            "n_a_f",
+                                            Expr::cast(DataType::F32, Expr::var("n_a")),
+                                        ),
+                                        Node::let_bind(
+                                            "n_b_f",
+                                            Expr::cast(DataType::F32, Expr::var("n_b")),
+                                        ),
+                                        Node::let_bind(
+                                            "delta_ab",
+                                            Expr::sub(Expr::var("m1_b"), Expr::var("m1_a")),
+                                        ),
+                                        Node::let_bind(
+                                            "m1_comb",
+                                            Expr::add(
+                                                Expr::var("m1_a"),
                                                 Expr::mul(
                                                     Expr::var("delta_ab"),
-                                                    Expr::var("delta_ab"),
-                                                ),
-                                                Expr::div(
-                                                    Expr::mul(
-                                                        Expr::var("n_a_f"),
-                                                        Expr::var("n_b_f"),
-                                                    ),
-                                                    Expr::var("n_ab_f"),
+                                                    Expr::div(Expr::var("n_b_f"), Expr::var("n_ab_f")),
                                                 ),
                                             ),
                                         ),
-                                    ),
-                                    Node::store(
-                                        "var_n_scratch",
-                                        Expr::var("local"),
-                                        Expr::var("n_ab"),
-                                    ),
-                                    Node::store(
-                                        "var_m1_scratch",
-                                        Expr::var("local"),
-                                        Expr::var("m1_comb"),
-                                    ),
-                                    Node::store(
-                                        "var_m2_scratch",
-                                        Expr::var("local"),
-                                        Expr::var("m2_comb"),
-                                    ),
-                                ],
-                            )],
-                        ),
-                    ],
-                )],
-            ));
-            body.push(Node::barrier());
-            stride /= 2;
-        }
-
+                                        Node::let_bind(
+                                            "m2_comb",
+                                            Expr::add(
+                                                Expr::add(Expr::var("m2_a"), Expr::var("m2_b")),
+                                                Expr::mul(
+                                                    Expr::mul(
+                                                        Expr::var("delta_ab"),
+                                                        Expr::var("delta_ab"),
+                                                    ),
+                                                    Expr::div(
+                                                        Expr::mul(
+                                                            Expr::var("n_a_f"),
+                                                            Expr::var("n_b_f"),
+                                                        ),
+                                                        Expr::var("n_ab_f"),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                        Node::store(
+                                            "var_n_scratch",
+                                            Expr::var("local"),
+                                            Expr::var("n_ab"),
+                                        ),
+                                        Node::store(
+                                            "var_m1_scratch",
+                                            Expr::var("local"),
+                                            Expr::var("m1_comb"),
+                                        ),
+                                        Node::store(
+                                            "var_m2_scratch",
+                                            Expr::var("local"),
+                                            Expr::var("m2_comb"),
+                                        ),
+                                    ],
+                                )],
+                            ),
+                        ],
+                    )],
+                ),
+                Node::barrier(),
+            ],
+        ));
         // Publish: lane 0 of workgroup 0 computes variance from accumulated M2.
         let divisor = if bessel {
             if n > 1 {

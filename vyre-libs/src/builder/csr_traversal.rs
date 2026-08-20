@@ -285,21 +285,23 @@ impl<'a> CsrTraversalComposer<'a> {
                         kind_mask.as_str(),
                         Expr::load(kind_buf, Expr::var(edge_iter.as_str())),
                     ),
-                    Node::if_then(
-                        Expr::ne(
-                            Expr::bitand(Expr::var(kind_mask.as_str()), Expr::u32(self.allow_mask)),
-                            Expr::u32(0),
+                    Node::let_bind(
+                        dst.as_str(),
+                        Expr::select(
+                            Expr::ne(
+                                Expr::bitand(
+                                    Expr::var(kind_mask.as_str()),
+                                    Expr::u32(self.allow_mask),
+                                ),
+                                Expr::u32(0),
+                            ),
+                            Expr::load(self.buffers.targets, Expr::var(edge_iter.as_str())),
+                            Expr::u32(self.node_count),
                         ),
-                        vec![
-                            Node::let_bind(
-                                dst.as_str(),
-                                Expr::load(self.buffers.targets, Expr::var(edge_iter.as_str())),
-                            ),
-                            Node::if_then(
-                                Expr::lt(Expr::var(dst.as_str()), Expr::u32(self.node_count)),
-                                on_bounded,
-                            ),
-                        ],
+                    ),
+                    Node::if_then(
+                        Expr::lt(Expr::var(dst.as_str()), Expr::u32(self.node_count)),
+                        on_bounded,
                     ),
                 ],
             ),

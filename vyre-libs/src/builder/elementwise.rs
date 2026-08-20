@@ -451,7 +451,7 @@ impl ElementwiseComposer {
             .with_workgroup_size([256, 1, 1])
             .add_input_storage(lhs, BufferAccess::ReadOnly, dtype.clone(), count)
             .add_input_storage(rhs, BufferAccess::ReadOnly, dtype.clone(), rhs_count)
-            .add_output_storage(out, BufferAccess::WriteOnly, dtype, count)
+            .add_output(out, dtype, count)
             .build_pointwise(out, |i| {
                 let r_idx = rhs_index(&i);
                 let l = Expr::load(lhs, i);

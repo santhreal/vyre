@@ -10,15 +10,18 @@
 //! correctly computed (the caller is responsible for that  -  usually
 //! via `vyre-libs::dataflow::ssa::compute_dominators`).
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
 use crate::bitset::bitset_words;
 use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::dominator_frontier";
+
+/// Stable op id for the predecessor-dominance check.
+pub const DOMINATOR_FRONTIER_PRED_CHECK_OP_ID: &str =
+    "vyre-libs::graph::dominator_frontier_pred_check";
 
 /// Dominance-closure CSR offsets input binding.
 pub const DOMINATOR_FRONTIER_DOM_OFFSETS_BUFFER: u32 = 0;
@@ -104,94 +107,65 @@ pub fn try_dominator_frontier(
         "seed_word",
         "seed_bit",
         |word| word,
-        vec![
-            Node::let_bind(
-                "pred_start",
-                Expr::load("pred_offsets", Expr::var("candidate")),
-            ),
-            Node::let_bind(
-                "pred_end",
-                Expr::load(
-                    "pred_offsets",
-                    Expr::add(Expr::var("candidate"), Expr::u32(1)),
+        {
+            let mut nodes = vec![
+                Node::let_bind("dominates_a_predecessor", Expr::u32(0)),
+                wrap_child_region(
+                    DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
+                    Ident::from(OP_ID),
+                    dominator_frontier_pred_check_body(Expr::var("candidate"), Expr::var("n")),
                 ),
-            ),
-            Node::let_bind("dominates_a_predecessor", Expr::u32(0)),
-            Node::loop_for(
-                "p",
-                Expr::var("pred_start"),
-                Expr::var("pred_end"),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("dominates_a_predecessor"), Expr::u32(0)),
-                    vec![
-                        Node::let_bind("pred", Expr::load("pred_targets", Expr::var("p"))),
-                        Node::let_bind("dom_start_pred", Expr::load("dom_offsets", Expr::var("n"))),
-                        Node::let_bind(
-                            "dom_end_pred",
-                            Expr::load("dom_offsets", Expr::add(Expr::var("n"), Expr::u32(1))),
+            ];
+            nodes.extend(vec![
+                Node::let_bind("dominates_candidate", Expr::u32(0)),
+                Node::let_bind(
+                    "dom_start_candidate",
+                    Expr::load("dom_offsets", Expr::var("n")),
+                ),
+                Node::let_bind(
+                    "dom_end_candidate",
+                    Expr::load("dom_offsets", Expr::add(Expr::var("n"), Expr::u32(1))),
+                ),
+                Node::loop_for(
+                    "d_candidate",
+                    Expr::var("dom_start_candidate"),
+                    Expr::var("dom_end_candidate"),
+                    vec![Node::if_then(
+                        Expr::eq(
+                            Expr::load("dom_targets", Expr::var("d_candidate")),
+                            Expr::var("candidate"),
                         ),
-                        Node::loop_for(
-                            "d_pred",
-                            Expr::var("dom_start_pred"),
-                            Expr::var("dom_end_pred"),
-                            vec![Node::if_then(
-                                Expr::eq(
-                                    Expr::load("dom_targets", Expr::var("d_pred")),
-                                    Expr::var("pred"),
-                                ),
-                                vec![Node::assign("dominates_a_predecessor", Expr::u32(1))],
-                            )],
-                        ),
-                    ],
-                )],
-            ),
-            Node::let_bind("dominates_candidate", Expr::u32(0)),
-            Node::let_bind(
-                "dom_start_candidate",
-                Expr::load("dom_offsets", Expr::var("n")),
-            ),
-            Node::let_bind(
-                "dom_end_candidate",
-                Expr::load("dom_offsets", Expr::add(Expr::var("n"), Expr::u32(1))),
-            ),
-            Node::loop_for(
-                "d_candidate",
-                Expr::var("dom_start_candidate"),
-                Expr::var("dom_end_candidate"),
-                vec![Node::if_then(
-                    Expr::eq(
-                        Expr::load("dom_targets", Expr::var("d_candidate")),
-                        Expr::var("candidate"),
+                        vec![Node::assign("dominates_candidate", Expr::u32(1))],
+                    )],
+                ),
+                Node::let_bind("strictly_dominates_candidate", Expr::u32(0)),
+                Node::if_then(
+                    Expr::and(
+                        Expr::eq(Expr::var("dominates_candidate"), Expr::u32(1)),
+                        Expr::ne(Expr::var("n"), Expr::var("candidate")),
                     ),
-                    vec![Node::assign("dominates_candidate", Expr::u32(1))],
-                )],
-            ),
-            Node::let_bind("strictly_dominates_candidate", Expr::u32(0)),
-            Node::if_then(
-                Expr::and(
-                    Expr::eq(Expr::var("dominates_candidate"), Expr::u32(1)),
-                    Expr::ne(Expr::var("n"), Expr::var("candidate")),
+                    vec![Node::assign("strictly_dominates_candidate", Expr::u32(1))],
                 ),
-                vec![Node::assign("strictly_dominates_candidate", Expr::u32(1))],
-            ),
-            Node::if_then(
-                Expr::and(
-                    Expr::eq(Expr::var("dominates_a_predecessor"), Expr::u32(1)),
-                    Expr::eq(Expr::var("strictly_dominates_candidate"), Expr::u32(0)),
+                Node::if_then(
+                    Expr::and(
+                        Expr::eq(Expr::var("dominates_a_predecessor"), Expr::u32(1)),
+                        Expr::eq(Expr::var("strictly_dominates_candidate"), Expr::u32(0)),
+                    ),
+                    set_bit(
+                        out,
+                        &Expr::var("candidate"),
+                        BitAccess {
+                            word: "candidate_word",
+                            mask: "candidate_bit",
+                            value: "_prev",
+                        },
+                        |word| word,
+                        Vec::new(),
+                    ),
                 ),
-                set_bit(
-                    out,
-                    &Expr::var("candidate"),
-                    BitAccess {
-                        word: "candidate_word",
-                        mask: "candidate_bit",
-                        value: "_prev",
-                    },
-                    |word| word,
-                    Vec::new(),
-                ),
-            ),
-        ],
+            ]);
+            nodes
+        },
     );
     Ok(Program::wrapped(
         vec![
@@ -250,6 +224,99 @@ pub fn try_dominator_frontier(
             )],
         )],
     ))
+}
+
+/// Body of the predecessor-dominance check.
+#[must_use]
+pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node> {
+    vec![
+        Node::let_bind(
+            "pred_start",
+            Expr::load("pred_offsets", candidate.clone()),
+        ),
+        Node::let_bind(
+            "pred_end",
+            Expr::load(
+                "pred_offsets",
+                Expr::add(candidate, Expr::u32(1)),
+            ),
+        ),
+        Node::loop_for(
+            "p",
+            Expr::var("pred_start"),
+            Expr::var("pred_end"),
+            vec![Node::if_then(
+                Expr::eq(Expr::var("dominates_a_predecessor"), Expr::u32(0)),
+                vec![
+                    Node::let_bind("pred", Expr::load("pred_targets", Expr::var("p"))),
+                    Node::let_bind("dom_start_pred", Expr::load("dom_offsets", n.clone())),
+                    Node::let_bind(
+                        "dom_end_pred",
+                        Expr::load("dom_offsets", Expr::add(n, Expr::u32(1))),
+                    ),
+                    Node::loop_for(
+                        "d_pred",
+                        Expr::var("dom_start_pred"),
+                        Expr::var("dom_end_pred"),
+                        vec![Node::if_then(
+                            Expr::eq(
+                                Expr::load("dom_targets", Expr::var("d_pred")),
+                                Expr::var("pred"),
+                            ),
+                            vec![Node::assign("dominates_a_predecessor", Expr::u32(1))],
+                        )],
+                    ),
+                ],
+            )],
+        ),
+    ]
+}
+
+/// Build the standalone predecessor-dominance check sub-operation.
+#[must_use]
+pub fn dominator_frontier_pred_check_program() -> Program {
+    let mut body = vec![Node::let_bind("dominates_a_predecessor", Expr::u32(0))];
+    body.extend(dominator_frontier_pred_check_body(Expr::u32(0), Expr::u32(0)));
+    body.push(Node::store("out_flag", Expr::u32(0), Expr::var("dominates_a_predecessor")));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("dom_offsets", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(2),
+            BufferDecl::storage("dom_targets", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(2),
+            BufferDecl::storage("pred_offsets", 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(2),
+            BufferDecl::storage("pred_targets", 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(2),
+            BufferDecl::output("out_flag", 4, DataType::U32)
+                .with_count(1),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
+            guarded,
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
+        dominator_frontier_pred_check_program,
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0, 1]),
+            vyre_primitives::wire::pack_u32_slice(&[5, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 1]),
+            vyre_primitives::wire::pack_u32_slice(&[5, 0]),
+        ]]),
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[1]),
+        ]]),
+    )
 }
 
 /// Number of nodes flagged in a dominance-frontier bitset.

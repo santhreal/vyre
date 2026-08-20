@@ -9,8 +9,11 @@ mod emit;
 mod operator;
 mod shunting_witness;
 
-const OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard";
-// Phase boundary inside the one operation, not an operation of its own. The
+/// Stable op id for the shunting-yard AST builder.
+pub const OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard";
+/// Stable op id for the shunting-yard operator stack reduction step.
+pub const AST_SHUNTING_YARD_REDUCE_OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard_reduce";
+pub use emit::ast_shunting_yard_reduce_program;
 // `anonymous::` prefix is what says so: see
 // `vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES`.
 const STATEMENT_PASS_GENERATOR: &str = "anonymous::shunting_yard_statement_pass";
@@ -250,4 +253,41 @@ fn ast_shunting_yard_program(
     )
     .with_entry_op_id(OP_ID)
     .with_non_composable_with_self(true)
+}
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        AST_SHUNTING_YARD_REDUCE_OP_ID,
+        ast_shunting_yard_reduce_program,
+        Some(|| {
+            let mut op_stack = vec![0u32; STACK_SLOTS_PER_STATEMENT as usize];
+            op_stack[0] = TOK_PLUS;
+            let mut val_stack = vec![0u32; STACK_SLOTS_PER_STATEMENT as usize];
+            val_stack[0] = 10;
+            val_stack[1] = 20;
+            vec![vec![
+                vyre_primitives::wire::pack_u32_slice(&op_stack),
+                vyre_primitives::wire::pack_u32_slice(&val_stack),
+                vyre_primitives::wire::pack_u32_slice(&[0u32; 64]),
+                vyre_primitives::wire::pack_u32_slice(&[0u32]),
+            ]]
+        }),
+        Some(|| {
+            let mut op_stack = vec![0u32; STACK_SLOTS_PER_STATEMENT as usize];
+            op_stack[0] = TOK_PLUS;
+            let mut val_stack = vec![0u32; STACK_SLOTS_PER_STATEMENT as usize];
+            val_stack[0] = 0;
+            val_stack[1] = 20;
+            let mut out_nodes = vec![0u32; 64];
+            out_nodes[0] = 3; // AST_ADD
+            out_nodes[1] = 10; // left
+            out_nodes[2] = 20; // right
+            out_nodes[3] = 0;
+            vec![vec![
+                vyre_primitives::wire::pack_u32_slice(&op_stack),
+                vyre_primitives::wire::pack_u32_slice(&val_stack),
+                vyre_primitives::wire::pack_u32_slice(&out_nodes),
+                vyre_primitives::wire::pack_u32_slice(&[4u32]),
+            ]]
+        }),
+    )
 }

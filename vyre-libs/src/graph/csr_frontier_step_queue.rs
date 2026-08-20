@@ -357,14 +357,14 @@ fn csr_queue_team_lane_split(spec: &CsrQueueStepSpec<'_>, lanes: u32, logical: &
 /// Guard a queue index against the static capacity and the resident length.
 fn csr_queue_slot_guard(spec: &CsrQueueStepSpec<'_>, index: &str, body: Vec<Node>) -> Node {
     Node::if_then(
-        Expr::lt(Expr::var(index), Expr::u32(spec.queue_capacity)),
-        vec![Node::if_then(
+        Expr::and(
+            Expr::lt(Expr::var(index), Expr::u32(spec.queue_capacity)),
             Expr::lt(
                 Expr::var(index),
                 Expr::load(spec.inputs.queue_len, Expr::u32(0)),
             ),
-            body,
-        )],
+        ),
+        body,
     )
 }
 
@@ -544,41 +544,41 @@ fn csr_queue_edge_guard_nodes(spec: &CsrQueueStepSpec<'_>) -> Vec<Node> {
     let dst = spec.var("dst");
     let dst_word = spec.var("dst_word");
     let dst_bit = spec.var("dst_bit");
-    vec![Node::if_then(
-        Expr::lt(Expr::var(edge.as_str()), Expr::u32(spec.edge_count)),
-        vec![
-            Node::let_bind(
-                kind.as_str(),
+    vec![
+        Node::let_bind(
+            kind.as_str(),
+            Expr::select(
+                Expr::lt(Expr::var(edge.as_str()), Expr::u32(spec.edge_count)),
                 Expr::load(spec.inputs.edge_kind_mask, Expr::var(edge.as_str())),
+                Expr::u32(0),
             ),
-            Node::if_then(
+        ),
+        Node::let_bind(
+            dst.as_str(),
+            Expr::select(
                 Expr::ne(
                     Expr::bitand(Expr::var(kind.as_str()), Expr::u32(spec.allow_mask)),
                     Expr::u32(0),
                 ),
-                vec![
-                    Node::let_bind(
-                        dst.as_str(),
-                        Expr::load(spec.inputs.edge_targets, Expr::var(edge.as_str())),
-                    ),
-                    Node::if_then(
-                        Expr::lt(Expr::var(dst.as_str()), Expr::u32(spec.node_count)),
-                        {
-                            let mut body = bind_bit_address(
-                                &Expr::var(dst.as_str()),
-                                dst_word.as_str(),
-                                dst_bit.as_str(),
-                                |word| word,
-                            )
-                            .to_vec();
-                            body.extend(csr_queue_emit_nodes(spec, &dst, &dst_word, &dst_bit));
-                            body
-                        },
-                    ),
-                ],
+                Expr::load(spec.inputs.edge_targets, Expr::var(edge.as_str())),
+                Expr::u32(spec.node_count),
             ),
-        ],
-    )]
+        ),
+        Node::if_then(
+            Expr::lt(Expr::var(dst.as_str()), Expr::u32(spec.node_count)),
+            {
+                let mut body = bind_bit_address(
+                    &Expr::var(dst.as_str()),
+                    dst_word.as_str(),
+                    dst_bit.as_str(),
+                    |word| word,
+                )
+                .to_vec();
+                body.extend(csr_queue_emit_nodes(spec, &dst, &dst_word, &dst_bit));
+                body
+            },
+        ),
+    ]
 }
 
 fn csr_queue_emit_nodes(
