@@ -32,6 +32,9 @@ use super::program::IDOM_NONE;
 /// Canonical op id for one predecessor-intersection sweep.
 pub const OP_ID: &str = "vyre-libs::graph::dominator_tree_intersect_step";
 
+/// Stable op id for dominator tree LCA intersection.
+pub const DOMINATOR_TREE_LCA_OP_ID: &str = "vyre-libs::graph::dominator_tree_lca";
+
 /// Buffer name the standalone operation reports its movement through.
 const CHANGED_BUFFER: &str = "dt_changed";
 
@@ -75,36 +78,16 @@ pub fn dominator_tree_intersect_step_body(
                                 Expr::eq(Expr::var("new_idom"), Expr::u32(IDOM_NONE)),
                                 vec![Node::assign("new_idom", Expr::var("p"))],
                                 vec![
-                                    Node::let_bind("a", Expr::var("new_idom")),
-                                    Node::let_bind("b", Expr::var("p")),
-                                    Node::loop_for(
-                                        "lca_step",
-                                        Expr::u32(0),
-                                        Expr::u32(node_count),
-                                        vec![Node::if_then(
-                                            Expr::ne(Expr::var("a"), Expr::var("b")),
-                                            vec![
-                                                Node::let_bind(
-                                                    "da",
-                                                    Expr::load(depth, Expr::var("a")),
-                                                ),
-                                                Node::let_bind(
-                                                    "db",
-                                                    Expr::load(depth, Expr::var("b")),
-                                                ),
-                                                Node::if_then_else(
-                                                    Expr::gt(Expr::var("da"), Expr::var("db")),
-                                                    vec![Node::assign(
-                                                        "a",
-                                                        Expr::load(idom, Expr::var("a")),
-                                                    )],
-                                                    vec![Node::assign(
-                                                        "b",
-                                                        Expr::load(idom, Expr::var("b")),
-                                                    )],
-                                                ),
-                                            ],
-                                        )],
+                                    wrap_child_region(
+                                        DOMINATOR_TREE_LCA_OP_ID,
+                                        Ident::from(OP_ID),
+                                        dominator_tree_lca_body(
+                                            node_count,
+                                            idom,
+                                            depth,
+                                            Expr::var("new_idom"),
+                                            Expr::var("p"),
+                                        ),
                                     ),
                                     Node::assign("new_idom", Expr::var("a")),
                                 ],
@@ -143,6 +126,73 @@ pub fn dominator_tree_intersect_step_child(
         OP_ID,
         Ident::from(parent_op_id),
         dominator_tree_intersect_step_body(node_count, idom, depth, changed),
+    )
+}
+
+/// Body of the dominator tree LCA intersection.
+#[must_use]
+pub fn dominator_tree_lca_body(
+    node_count: u32,
+    idom: &str,
+    depth: &str,
+    a_init: Expr,
+    b_init: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind("a", a_init),
+        Node::let_bind("b", b_init),
+        Node::loop_for(
+            "lca_step",
+            Expr::u32(0),
+            Expr::u32(node_count),
+            vec![Node::if_then(
+                Expr::ne(Expr::var("a"), Expr::var("b")),
+                vec![
+                    Node::let_bind("da", Expr::load(depth, Expr::var("a"))),
+                    Node::let_bind("db", Expr::load(depth, Expr::var("b"))),
+                    Node::if_then_else(
+                        Expr::gt(Expr::var("da"), Expr::var("db")),
+                        vec![Node::assign("a", Expr::load(idom, Expr::var("a")))],
+                        vec![Node::assign("b", Expr::load(idom, Expr::var("b")))],
+                    ),
+                ],
+            )],
+        ),
+    ]
+}
+
+/// Build the standalone LCA intersection sub-operation.
+#[must_use]
+pub fn dominator_tree_lca_program(node_count: u32) -> Program {
+    let count = node_count.max(1);
+    let body = dominator_tree_lca_body(node_count, "idom", "depth", Expr::u32(1), Expr::u32(2));
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("idom", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(count),
+            BufferDecl::storage("depth", 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(count),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            DOMINATOR_TREE_LCA_OP_ID,
+            body,
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        DOMINATOR_TREE_LCA_OP_ID,
+        || dominator_tree_lca_program(4),
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 1, 1, 2]),
+        ]]),
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 1, 1, 2]),
+        ]]),
     )
 }
 

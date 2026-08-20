@@ -1,7 +1,7 @@
 //! Structural-hash CSE probe/insert wave.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::ast_ops::{AST_ADD, AST_PTR_DEREF, AST_VAR};
@@ -10,6 +10,8 @@ use crate::hash::fnv1a::fnv1a32_mul_xor_word_expr;
 /// Stable op id for the structural CSE child region.
 pub const OP_ID: &str = "vyre-libs::parsing::ast_cse_structural_hash";
 
+/// Stable op id for the hash-table probe and deduplication step.
+pub const AST_CSE_HASH_PROBE_OP_ID: &str = "vyre-libs::parsing::ast_cse_hash_probe";
 /// Emit the structural-hash deduplication phase.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
@@ -171,87 +173,19 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
                                 "slot",
                                 Expr::rem(Expr::var("h"), Expr::u32(hash_set_capacity)),
                             ),
-                            Node::let_bind("active", Expr::bool(true)),
-                            Node::loop_for(
-                                "probe",
-                                Expr::u32(0),
-                                Expr::u32(hash_set_capacity),
-                                vec![Node::if_then(
-                                    Expr::var("active"),
-                                    vec![
-                                        Node::let_bind(
-                                            "slot_hash",
-                                            Expr::mul(Expr::var("slot"), Expr::u32(2)),
-                                        ),
-                                        Node::let_bind(
-                                            "slot_idx",
-                                            Expr::add(Expr::var("slot_hash"), Expr::u32(1)),
-                                        ),
-                                        Node::let_bind(
-                                            "old_hash",
-                                            Expr::load("hash_set", Expr::var("slot_hash")),
-                                        ),
-                                        Node::if_then(
-                                            Expr::eq(Expr::var("old_hash"), Expr::u32(0)),
-                                            vec![
-                                                Node::store(
-                                                    "hash_set",
-                                                    Expr::var("slot_hash"),
-                                                    Expr::var("h"),
-                                                ),
-                                                Node::store(
-                                                    "hash_set",
-                                                    Expr::var("slot_idx"),
-                                                    Expr::var("node_idx"),
-                                                ),
-                                                Node::assign("active", Expr::bool(false)),
-                                            ],
-                                        ),
-                                        Node::if_then(
-                                            Expr::eq(Expr::var("old_hash"), Expr::var("h")),
-                                            vec![
-                                                Node::let_bind(
-                                                    "earliest",
-                                                    Expr::load("hash_set", Expr::var("slot_idx")),
-                                                ),
-                                                Node::if_then(
-                                                    Expr::lt(
-                                                        Expr::var("earliest"),
-                                                        Expr::var("node_idx"),
-                                                    ),
-                                                    vec![
-                                                        Node::store(
-                                                            "ast_opcodes",
-                                                            Expr::var("node_idx"),
-                                                            Expr::u32(AST_VAR),
-                                                        ),
-                                                        Node::store(
-                                                            "ast_vals",
-                                                            Expr::var("node_idx"),
-                                                            Expr::var("earliest"),
-                                                        ),
-                                                        Node::let_bind(
-                                                            "_",
-                                                            Expr::atomic_add(
-                                                                "out_modified_flag",
-                                                                Expr::u32(0),
-                                                                Expr::u32(1),
-                                                            ),
-                                                        ),
-                                                    ],
-                                                ),
-                                                Node::assign("active", Expr::bool(false)),
-                                            ],
-                                        ),
-                                        Node::assign(
-                                            "slot",
-                                            Expr::rem(
-                                                Expr::add(Expr::var("slot"), Expr::u32(1)),
-                                                Expr::u32(hash_set_capacity),
-                                            ),
-                                        ),
-                                    ],
-                                )],
+                            wrap_child_region(
+                                AST_CSE_HASH_PROBE_OP_ID,
+                                Ident::from(OP_ID),
+                                ast_cse_hash_probe_body(
+                                    "ast_opcodes",
+                                    "ast_vals",
+                                    "hash_set",
+                                    hash_set_capacity,
+                                    "out_modified_flag",
+                                    Expr::var("node_idx"),
+                                    Expr::var("h"),
+                                    Expr::var("slot"),
+                                ),
                             ),
                         ],
                     ),
@@ -281,6 +215,128 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
         ],
         [num_nodes.max(hash_set_capacity).max(1), 1, 1],
         vec![wrap_anonymous_region(OP_ID, body)],
+    )
+}
+
+/// Body of the hash-table probe and deduplication step.
+#[must_use]
+pub fn ast_cse_hash_probe_body(
+    ast_opcodes: &str,
+    ast_vals: &str,
+    hash_set: &str,
+    hash_set_capacity: u32,
+    out_modified_flag: &str,
+    node_idx: Expr,
+    h: Expr,
+    slot_init: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind("probe_h", h),
+        Node::let_bind("slot", slot_init),
+        Node::let_bind("active", Expr::bool(true)),
+        Node::loop_for(
+            "probe",
+            Expr::u32(0),
+            Expr::u32(hash_set_capacity),
+            vec![Node::if_then(
+                Expr::var("active"),
+                vec![
+                    Node::let_bind("slot_hash", Expr::mul(Expr::var("slot"), Expr::u32(2))),
+                    Node::let_bind("slot_idx", Expr::add(Expr::var("slot_hash"), Expr::u32(1))),
+                    Node::let_bind("old_hash", Expr::load(hash_set, Expr::var("slot_hash"))),
+                    Node::if_then(
+                        Expr::eq(Expr::var("old_hash"), Expr::u32(0)),
+                        vec![
+                            Node::store(hash_set, Expr::var("slot_hash"), Expr::var("probe_h")),
+                            Node::store(hash_set, Expr::var("slot_idx"), node_idx.clone()),
+                            Node::assign("active", Expr::bool(false)),
+                        ],
+                    ),
+                    Node::if_then(
+                        Expr::eq(Expr::var("old_hash"), Expr::var("probe_h")),
+                        vec![
+                            Node::let_bind("earliest", Expr::load(hash_set, Expr::var("slot_idx"))),
+                            Node::if_then(
+                                Expr::lt(Expr::var("earliest"), node_idx.clone()),
+                                vec![
+                                    Node::store(ast_opcodes, node_idx.clone(), Expr::u32(AST_VAR)),
+                                    Node::store(ast_vals, node_idx, Expr::var("earliest")),
+                                    Node::let_bind(
+                                        "_",
+                                        Expr::atomic_add(
+                                            out_modified_flag,
+                                            Expr::u32(0),
+                                            Expr::u32(1),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            Node::assign("active", Expr::bool(false)),
+                        ],
+                    ),
+                    Node::assign(
+                        "slot",
+                        Expr::rem(
+                            Expr::add(Expr::var("slot"), Expr::u32(1)),
+                            Expr::u32(hash_set_capacity),
+                        ),
+                    ),
+                ],
+            )],
+        ),
+    ]
+}
+
+/// Build the standalone probe operation.
+#[must_use]
+pub fn ast_cse_hash_probe_program(hash_set_capacity: u32) -> Program {
+    let body = ast_cse_hash_probe_body(
+        "ast_opcodes",
+        "ast_vals",
+        "hash_set",
+        hash_set_capacity,
+        "out_modified_flag",
+        Expr::u32(0),
+        Expr::u32(100),
+        Expr::u32(0),
+    );
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("ast_opcodes", 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
+            BufferDecl::storage("ast_vals", 1, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(1),
+            BufferDecl::storage("hash_set", 2, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(hash_set_capacity.saturating_mul(2)),
+            BufferDecl::storage(
+                "out_modified_flag",
+                3,
+                BufferAccess::ReadWrite,
+                DataType::U32,
+            )
+            .with_count(1),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(AST_CSE_HASH_PROBE_OP_ID, body)],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        AST_CSE_HASH_PROBE_OP_ID,
+        || ast_cse_hash_probe_program(8),
+        Some(|| vec![vec![
+            fixture_u32(&[AST_ADD]),
+            fixture_u32(&[0]),
+            fixture_u32(&[0; 16]),
+            fixture_u32(&[0]),
+        ]]),
+        Some(|| vec![vec![
+            fixture_u32(&[AST_ADD]),
+            fixture_u32(&[0]),
+            fixture_u32(&[100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            fixture_u32(&[0]),
+        ]]),
     )
 }
 

@@ -1,7 +1,7 @@
 //! VAST first-child / next-sibling tree traversal primitives.
 
-use vyre_foundation::composition::wrap_anonymous_region;
-
+use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::vast::{NODE_STRIDE_U32, SENTINEL};
 
@@ -9,7 +9,8 @@ use vyre_foundation::vast::{NODE_STRIDE_U32, SENTINEL};
 pub const PREORDER_OP_ID: &str = "vyre-libs::graph::vast_walk_preorder";
 /// Primitive op id for postorder VAST tree traversal.
 pub const POSTORDER_OP_ID: &str = "vyre-libs::graph::vast_walk_postorder";
-
+/// Primitive op id for descending to the leftmost leaf in VAST traversal.
+pub const VAST_DESCEND_LEFTMOST_LEAF_OP_ID: &str = "vyre-libs::graph::vast_descend_leftmost_leaf";
 /// Traversal order for VAST first-child / next-sibling tree walks.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VastWalkOrder {
@@ -296,7 +297,7 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
         Node::let_bind("oi", Expr::u32(0)),
         Node::let_bind("n", Expr::u32(0)),
         Node::let_bind("active", Expr::bool(true)),
-        descend_to_leftmost_leaf_node(nodes, node_count, stride),
+        descend_to_leftmost_leaf_node(nodes, node_count, stride, POSTORDER_OP_ID),
         Node::loop_for(
             "emit",
             Expr::u32(0),
@@ -328,7 +329,7 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
                                 valid_node(Expr::var("sib")),
                                 vec![
                                     Node::assign("n", Expr::var("sib")),
-                                    descend_to_leftmost_leaf_node(nodes, node_count, stride),
+                                    descend_to_leftmost_leaf_node(nodes, node_count, stride, POSTORDER_OP_ID),
                                 ],
                             ),
                             Node::if_then(
@@ -358,7 +359,6 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
         ),
     ]
 }
-
 fn checked_tree_walk_shape(
     node_count: u32,
     out_cap: u32,
@@ -377,8 +377,18 @@ fn valid_node_expr(expr: Expr, node_count: u32) -> Expr {
     )
 }
 
-fn descend_to_leftmost_leaf_node(nodes_name: &str, node_count: u32, stride: u32) -> Node {
-    Node::loop_for(
+fn descend_to_leftmost_leaf_node(nodes_name: &str, node_count: u32, stride: u32, parent_op_id: &str) -> Node {
+    wrap_child_region(
+        VAST_DESCEND_LEFTMOST_LEAF_OP_ID,
+        Ident::from(parent_op_id),
+        descend_to_leftmost_leaf_body(nodes_name, node_count, stride),
+    )
+}
+
+/// Body of the descend to leftmost leaf traversal step.
+#[must_use]
+pub fn descend_to_leftmost_leaf_body(nodes_name: &str, node_count: u32, stride: u32) -> Vec<Node> {
+    vec![Node::loop_for(
         "descend",
         Expr::u32(0),
         Expr::u32(node_count),
@@ -396,6 +406,37 @@ fn descend_to_leftmost_leaf_node(nodes_name: &str, node_count: u32, stride: u32)
                 ),
             ],
         )],
+    )]
+}
+
+/// Build the standalone descend to leftmost leaf sub-operation.
+#[must_use]
+pub fn vast_descend_leftmost_leaf_program(node_count: u32) -> Program {
+    let count = node_count.max(1);
+    let body = descend_to_leftmost_leaf_body("nodes", count, NODE_STRIDE_U32 as u32);
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("nodes", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(count.saturating_mul(NODE_STRIDE_U32 as u32)),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            VAST_DESCEND_LEFTMOST_LEAF_OP_ID,
+            body,
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        VAST_DESCEND_LEFTMOST_LEAF_OP_ID,
+        || vast_descend_leftmost_leaf_program(3),
+        Some(|| vec![vec![
+            fixture_u32(&fixture_tree_words()),
+        ]]),
+        Some(|| vec![vec![
+            fixture_u32(&fixture_tree_words()),
+        ]]),
     )
 }
 

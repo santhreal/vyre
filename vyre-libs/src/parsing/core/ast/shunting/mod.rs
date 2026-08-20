@@ -9,8 +9,11 @@ mod emit;
 mod operator;
 mod shunting_witness;
 
-const OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard";
-// Phase boundary inside the one operation, not an operation of its own. The
+/// Stable op id for the shunting-yard AST builder.
+pub const OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard";
+/// Stable op id for the shunting-yard operator stack reduction step.
+pub const AST_SHUNTING_YARD_REDUCE_OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard_reduce";
+pub use emit::ast_shunting_yard_reduce_program;
 // `anonymous::` prefix is what says so: see
 // `vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES`.
 const STATEMENT_PASS_GENERATOR: &str = "anonymous::shunting_yard_statement_pass";
@@ -250,4 +253,22 @@ fn ast_shunting_yard_program(
     )
     .with_entry_op_id(OP_ID)
     .with_non_composable_with_self(true)
+}
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        AST_SHUNTING_YARD_REDUCE_OP_ID,
+        ast_shunting_yard_reduce_program,
+        Some(|| vec![vec![
+            vec![0u8; 256],
+            vec![0u8; 256],
+            vec![0u8; 256],
+            vec![0u8; 4],
+        ]]),
+        Some(|| vec![vec![
+            vec![0u8; 256],
+            vec![0u8; 256],
+            vec![0u8; 256],
+            vec![0u8; 4],
+        ]]),
+    )
 }

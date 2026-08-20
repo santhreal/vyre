@@ -24,13 +24,16 @@
 //! | cellular automata | parallel CA stepping with rewrite rules |
 //! | document layout | layout extraction grammars |
 
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
 pub const OP_ID: &str = "vyre-libs::parsing::planar_rewrite_schedule";
 
+/// Stable op id for the 2D window exclusion zone conflict check.
+pub const PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID: &str =
+    "vyre-libs::parsing::planar_rewrite_exclusion_check";
 /// Schedule a maximal non-overlapping set of `k × k` candidate matches
 /// in a single wave.
 ///
@@ -88,42 +91,16 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
                     Node::if_then(
                         Expr::ne(Expr::load(candidates, Expr::var("addr")), Expr::u32(0)),
                         vec![
-                            Node::let_bind("conflict", Expr::u32(0)),
-                            // Exclusion zone scan
-                            Node::loop_for(
-                                "di",
-                                Expr::u32(0),
-                                Expr::u32(k),
-                                vec![Node::loop_for(
-                                    "dj",
-                                    Expr::u32(0),
-                                    Expr::u32(k),
-                                    vec![Node::if_then(
-                                        Expr::and(
-                                            Expr::ge(Expr::var("r"), Expr::var("di")),
-                                            Expr::ge(Expr::var("c"), Expr::var("dj")),
-                                        ),
-                                        vec![Node::if_then(
-                                            Expr::ne(
-                                                Expr::load(
-                                                    chosen,
-                                                    Expr::add(
-                                                        Expr::mul(
-                                                            Expr::sub(
-                                                                Expr::var("r"),
-                                                                Expr::var("di"),
-                                                            ),
-                                                            Expr::u32(w),
-                                                        ),
-                                                        Expr::sub(Expr::var("c"), Expr::var("dj")),
-                                                    ),
-                                                ),
-                                                Expr::u32(0),
-                                            ),
-                                            vec![Node::assign("conflict", Expr::u32(1))],
-                                        )],
-                                    )],
-                                )],
+                            wrap_child_region(
+                                PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
+                                Ident::from(OP_ID),
+                                planar_rewrite_exclusion_check_body(
+                                    chosen,
+                                    w,
+                                    k,
+                                    Expr::var("r"),
+                                    Expr::var("c"),
+                                ),
                             ),
                             Node::if_then(
                                 Expr::eq(Expr::var("conflict"), Expr::u32(0)),
@@ -145,6 +122,81 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
         ],
         [256, 1, 1],
         vec![wrap_anonymous_region(OP_ID, body)],
+    )
+}
+
+/// Body of the exclusion zone conflict check.
+#[must_use]
+pub fn planar_rewrite_exclusion_check_body(
+    chosen: &str,
+    w: u32,
+    k: u32,
+    r: Expr,
+    c: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind("conflict", Expr::u32(0)),
+        // Exclusion zone scan
+        Node::loop_for(
+            "di",
+            Expr::u32(0),
+            Expr::u32(k),
+            vec![Node::loop_for(
+                "dj",
+                Expr::u32(0),
+                Expr::u32(k),
+                vec![Node::if_then(
+                    Expr::and(
+                        Expr::ge(r.clone(), Expr::var("di")),
+                        Expr::ge(c.clone(), Expr::var("dj")),
+                    ),
+                    vec![Node::if_then(
+                        Expr::ne(
+                            Expr::load(
+                                chosen,
+                                Expr::add(
+                                    Expr::mul(
+                                        Expr::sub(r.clone(), Expr::var("di")),
+                                        Expr::u32(w),
+                                    ),
+                                    Expr::sub(c.clone(), Expr::var("dj")),
+                                ),
+                            ),
+                            Expr::u32(0),
+                        ),
+                        vec![Node::assign("conflict", Expr::u32(1))],
+                    )],
+                )],
+            )],
+        ),
+    ]
+}
+
+/// Build the standalone exclusion check sub-operation.
+#[must_use]
+pub fn planar_rewrite_exclusion_check_program(w: u32, k: u32) -> Program {
+    let body = planar_rewrite_exclusion_check_body("chosen", w, k, Expr::u32(1), Expr::u32(1));
+    Program::wrapped(
+        vec![BufferDecl::storage("chosen", 0, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(w.saturating_mul(w))],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
+            body,
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
+        || planar_rewrite_exclusion_check_program(4, 2),
+        Some(|| vec![vec![
+            vec![0u8; 64],
+        ]]),
+        Some(|| vec![vec![
+            vec![0u8; 64],
+        ]]),
     )
 }
 

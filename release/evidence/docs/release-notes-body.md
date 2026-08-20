@@ -4681,6 +4681,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   declines the fusion instead of guessing at it. The test that should have
   caught this compared two inline copies of the walk against each other and
   never called the production one.
+- The composition complexity budget now holds across all registered library
+  operations without exemptions. Eleven operations exceeding complexity limits
+  (AST CSE hashing, Shunting-Yard, planar rewrite scheduling, CSR queue
+  traversal, CSR forward or changed, dominator frontier, dominator tree LCA
+  intersection, tensor flow edge propagation, VAST postorder walk, variance
+  reduction, and online softmax attention) are factored into genuine registered
+  sub-operations with deterministic fixtures, and the variance reduction tree
+  uses a bounded step loop rather than unrolled duplicate branches.
 - Pairwise composition parity compared a fused two-stage program against the
   reference under the larger of the two operations' tolerances, which assumes
   the second stage does not amplify. It does: the first stage is allowed to

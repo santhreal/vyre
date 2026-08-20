@@ -43,7 +43,8 @@ pub use depth::{
 };
 pub use intersect_step::{
     dominator_tree_intersect_step, dominator_tree_intersect_step_body,
-    dominator_tree_intersect_step_child, OP_ID as DOMINATOR_TREE_INTERSECT_STEP_OP_ID,
+    dominator_tree_intersect_step_child, dominator_tree_lca_body, dominator_tree_lca_program,
+    DOMINATOR_TREE_LCA_OP_ID, OP_ID as DOMINATOR_TREE_INTERSECT_STEP_OP_ID,
 };
 pub use program::{
     dominator_tree_program, try_dominator_tree_program, validate_dominator_tree_inputs,

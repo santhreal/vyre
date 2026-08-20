@@ -12,11 +12,17 @@ use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use crate::graph::program_graph::{
     word_buffer, ProgramGraphShape, BINDING_PRIMITIVE_START, NAME_EDGE_TARGETS,
 };
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
-use vyre_foundation::ir::{BufferAccess, DataType, Expr, Node, Program};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::tensor_flow_forward";
+
+/// Stable op id for tensor-flow edge propagation.
+pub const TENSOR_FLOW_PROPAGATE_EDGES_OP_ID: &str =
+    "vyre-libs::graph::tensor_flow_propagate_edges";
+
 /// Source-lane workgroup for context/field-sensitive tensor propagation.
 pub const TENSOR_FLOW_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -206,13 +212,17 @@ pub fn try_tensor_flow_forward(
                         "src_word",
                         "bit_mask",
                         |word| word,
-                        tensor_flow_edge_scan_body(
-                            tensor_out,
-                            shape.node_count,
-                            field_limit,
-                            tensor_lane_count,
-                            allow_mask,
-                        ),
+                        vec![wrap_child_region(
+                            TENSOR_FLOW_PROPAGATE_EDGES_OP_ID,
+                            Ident::from(OP_ID),
+                            tensor_flow_propagate_edges_body(
+                                tensor_out,
+                                shape.node_count,
+                                field_limit,
+                                tensor_lane_count,
+                                allow_mask,
+                            ),
+                        )],
                     ));
                     lane
                 },
@@ -245,6 +255,66 @@ pub fn try_tensor_flow_forward(
             )],
         )],
     ))
+}
+
+/// Body of the tensor-flow edge propagation step.
+#[must_use]
+pub fn tensor_flow_propagate_edges_body(
+    tensor_out: &str,
+    node_count: u32,
+    field_limit: u32,
+    tensor_lane_count: u32,
+    allow_mask: u32,
+) -> Vec<Node> {
+    tensor_flow_edge_scan_body(
+        tensor_out,
+        node_count,
+        field_limit,
+        tensor_lane_count,
+        allow_mask,
+    )
+}
+
+/// Build the standalone tensor-flow edge propagation sub-operation.
+#[must_use]
+pub fn tensor_flow_propagate_edges_program() -> Program {
+    use crate::graph::program_graph::{NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS};
+    let body = tensor_flow_propagate_edges_body("tout", 4, 2, 4, 0xFFFF_FFFF);
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(NAME_EDGE_OFFSETS, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(5),
+            BufferDecl::storage(NAME_EDGE_TARGETS, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(4),
+            BufferDecl::storage(NAME_EDGE_KIND_MASK, 2, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(4),
+            BufferDecl::storage("tout", 3, BufferAccess::ReadWrite, DataType::U32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(
+            TENSOR_FLOW_PROPAGATE_EDGES_OP_ID,
+            body,
+        )],
+    )
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        TENSOR_FLOW_PROPAGATE_EDGES_OP_ID,
+        tensor_flow_propagate_edges_program,
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 3, 4]),
+            vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[1, 1, 1, 1]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
+        ]]),
+        Some(|| vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 3, 4]),
+            vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[1, 1, 1, 1]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
+        ]]),
+    )
 }
 
 const EXPECTED_TENSOR_FLOW_FORWARD_OUTPUT_BYTES: [u8; 4] = [0x10, 0x11, 0x00, 0x00];
