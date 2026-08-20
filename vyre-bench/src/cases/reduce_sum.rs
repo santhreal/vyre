@@ -6,13 +6,13 @@ use crate::api::case::{
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
 use vyre_driver::TimedDispatchResult;
-use vyre_libs::reduce::{sum, workgroup_tree};
+use vyre_libs::reduce::{grid_stride_tree, sum};
 
 pub struct ReduceSumBench;
 
 const SMALL_COUNT: u32 = 32;
 const LARGE_COUNT: u32 = 1 << 20;
-const MAX_TREE_TILE: u32 = 256;
+const MAX_TREE_TILE: u32 = 1024;
 const ROUTE_ATOMIC: u64 = 0;
 const ROUTE_TREE: u64 = 1;
 
@@ -137,8 +137,8 @@ impl BenchCase for ReduceSumBench {
             _ => None,
         };
         let outputs = vec![
-            small.selected.outputs[0].clone(),
-            large.selected.outputs[0].clone(),
+            small.selected.outputs.last().cloned().unwrap_or_default(),
+            large.selected.outputs.last().cloned().unwrap_or_default(),
         ];
         let baseline_outputs = vec![
             prepared.small.expected.clone(),
@@ -228,7 +228,7 @@ fn prepare_size(count: u32) -> ReductionSizePrepared {
         tree_tile,
         values: values.clone(),
         atomic_program: sum::reduce_sum("values", "out", count),
-        tree_program: workgroup_tree::workgroup_sum_u32("values", "out", count, tree_tile),
+        tree_program: grid_stride_tree::grid_stride_tree_sum_u32("values", "out", count, tree_tile),
         inputs: [
             crate::cases::byte_pack::u32_bytes(&values),
             crate::cases::byte_pack::u32_bytes(&[0]),
@@ -254,7 +254,7 @@ fn measure_size(
     let tree = ctx
         .dispatch_timed(
             &prepared.tree_program,
-            std::slice::from_ref(&prepared.inputs[0]),
+            &prepared.inputs,
             &ctx.dispatch_config,
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
@@ -299,7 +299,7 @@ fn verify_route_output(
     outputs: &[Vec<u8>],
     expected: &[u8],
 ) -> Result<(), BenchError> {
-    if outputs == [expected] {
+    if outputs.last().map(Vec::as_slice) == Some(expected) {
         return Ok(());
     }
     Err(BenchError::CorrectnessViolation(format!(
