@@ -280,6 +280,10 @@ name = "lego-semantic-organization"
 findings = 0
 
 [[gate]]
+name = "lego-tier-claims"
+findings = 0
+
+[[gate]]
 name = "lego-trend"
 findings = 0
 

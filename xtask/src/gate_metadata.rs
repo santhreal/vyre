@@ -836,6 +836,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "xtask_registry::gates::lego_audit::semantic_organization::tests::overlapping_file_roles_fails_role_closure",
     },
     GateDescriptor {
+        name: "lego-tier-claims",
+        help: "Enforce LegoCheck 12: no file claims a tier its placement contradicts",
+        package: "xtask-registry",
+        areas: &["lego-audit"],
+        subject: "registered operations",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "xtask_registry::gates::lego_audit::tier_claim::tests::every_tier_maps_to_the_prefix_that_derives_it",
+    },
+    GateDescriptor {
         name: "lego-trend",
         help: "Enforce LegoCheck 7: composition trend ratchet",
         package: "xtask-registry",

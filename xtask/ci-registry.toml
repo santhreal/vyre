@@ -358,6 +358,11 @@ subsets = ["lego-audit"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "lego-tier-claims"
+subsets = ["lego-audit"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "lego-trend"
 subsets = ["lego-audit"]
 workflows = ["gates.yml"]

@@ -88,6 +88,7 @@ pub const LEGO_LAW_GATES: &[&str] = &[
     "lego-operand-shapes",
     "lego-primitive-coverage",
     "lego-semantic-organization",
+    "lego-tier-claims",
     "lego-trend",
 ];
 

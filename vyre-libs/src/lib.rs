@@ -10,14 +10,16 @@
 //! ```
 //!
 //! Product dialects include `math`, `nn`, `pattern`, `hash`, `decode`, `parsing`,
-//! `security`, `visual`, `logical`, and `rule`. `hash` replaced `crypto`.
-//! `pattern` replaced `matching` and `scan`. Compiler-internal domains (`device`,
-//! `solvers`, `encoding`, `analysis`, `scheduling`, `reasoning`,
+//! `security`, `visual`, `logical`, and `rule`. Compiler-internal domains
+//! (`device`, `solvers`, `encoding`, `analysis`, `scheduling`, `reasoning`,
 //! `graph-dispatch`, `telemetry`) are compositions too. They are feature-gated
 //! and are not in `full` because they submit no `OperationRegistration`.
 //!
-//! The sole Category B exception is the `math::atomic` family, which needs
-//! the backend `Expr::Atomic` emitter arm.
+//! Every operation here is Category A: a composition over IR variants that
+//! already exist. `math::atomic` is no exception, because `Expr::Atomic` is one
+//! of those variants and every backend already emits it. An operation that
+//! needs its own emitter arm added to every backend is Category C and lives in
+//! `vyre-primitives`. `docs/lego-block-rule.md` owns that placement rule.
 //!
 //! A domain may move to a dedicated crate only through a clean public cutover
 //! that migrates every caller and removes the old path.
@@ -27,15 +29,15 @@
 //! optimizer treats regions as atomic until an explicit inline pass unrolls
 //! them.
 //!
-//! Defaults enable a math / linear / pattern / decode core. `crypto` and
-//! `pattern-regex` are opt-in. Turn defaults off with
+//! `default` enables a math, linear, pattern, decode and hash core. `crypto`
+//! and `pattern-regex` are opt-in. Turn defaults off with
 //! `default-features = false` and enable the dialect you need.
 
 // Semantic catalog entries are immutable values over static identifiers and
 // function pointers, so the standard auto-traits provide Send + Sync without
 // unsafe code.
 
-/// The declared seam one Tier 3 dialect crosses to compose another.
+/// The declared seam one dialect crosses to compose another.
 pub mod prelude;
 
 /// Shared builder helpers every Cat-A composition reuses.
@@ -134,22 +136,19 @@ pub mod llm;
 ))]
 pub mod pattern;
 
-/// Decode / decompression compositions  -  base64, hex, DEFLATE (stored),
-/// more coming. Pairs with `vyre-libs::pattern::dfa` in the fused
-/// decode→scan pipeline (Innovation I.1).
+/// Decode / decompression compositions  -  base64, hex, DEFLATE (stored).
+/// Pairs with `vyre-libs::pattern::dfa` in the fused decode-to-scan pipeline.
 #[cfg(feature = "decode")]
 pub mod decode;
 
 /// Hash / checksum dialect  -  FNV-1a-32, FNV-1a-64, CRC-32, Adler-32,
-/// BLAKE3 compression. Consolidated from the former `vyre-libs::crypto`
-/// module per Migration 3. Every op lives here as a pure Cat-A
-/// composition over existing IR primitives (no dedicated target builder emitter
-/// arm required, per the intrinsic-vs-library rule).
+/// BLAKE3 compression. Every op is a Category A composition over existing IR,
+/// so none of them adds an emitter arm to any backend.
 #[cfg(feature = "hash")]
 pub mod hash;
 
-/// Text-processing compositions for the GPU C parser pipeline
-/// (Phase L1+): byte classification, UTF-8 validation, line index.
+/// Text-processing compositions: byte classification, UTF-8 validation, line
+/// index.
 #[cfg(feature = "text")]
 pub mod text;
 
@@ -157,9 +156,8 @@ pub mod text;
 #[cfg(feature = "representation")]
 pub mod representation;
 
-/// GPU parser infrastructure (Phase L3+): bracket matching, DFA
-/// lexer driver, LR(1) table walker. Grammar tables are generated
-/// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
+/// Parser infrastructure: bracket matching, DFA lexer driver, LR(1) table
+/// walker. Grammar tables are built on the host and loaded as ReadOnly buffers.
 // `parsing-kernels` and `go-parser` are the two roots. `parsing` names both
 // language pipelines and `python-parser` names `parsing-kernels`, so a build
 // that asks for either of those already sets one of the two.
@@ -183,10 +181,8 @@ pub mod graph;
 #[cfg(feature = "security")]
 pub mod security;
 
-/// GPU-accelerated visual effects  -  blur, shadow, filter chain,
-/// gradient, compositing, and glass material. Tier 3 compositions
-/// over `math::conv1d` (Tier 2.5) and bare IR expressions. The
-/// Molten web engine's visual effect substrate.
+/// Visual effects  -  blur, shadow, filter chain, gradient, compositing, and
+/// glass material. Compositions over `math::conv1d` and bare IR expressions.
 #[cfg(feature = "visual")]
 pub mod visual;
 
@@ -252,27 +248,14 @@ pub(crate) use math::linalg::{
     MatmulKernelPath, MatmulKernelPlan, MatrixShape,
 };
 
-// vyre-libs::hardware removed (audit 2026-04-21 BLOCKER-1/6).
-// An intrinsic needs its own emitter arm and its own reference-interpreter
-// arm, so every one of them lives in `vyre-primitives::hardware`. The atomic,
-// clamp, lzcnt and tzcnt compositions live in `vyre-libs::math::*` and reach
-// `Expr::Atomic`, `Expr::min`, `Expr::max` and `Expr::popcount` directly.
-//
-// vyre-libs::crypto removed (audit 2026-04-21 BLOCKER-3). Deprecated
-// shim deleted in favor of the canonical path at `vyre-libs::hash`.
-//
-// vyre-libs::composite removed (audit 2026-04-21 BLOCKER-3). The three
-// hash ops that lived there (adler32, crc32, fnv1a64) are canonical at
-// `vyre-libs::hash::*`.
-
 /// Rule-engine dialect  -  typed conditions, formulas, and program builder used
 /// by detection rule compilers.
 #[cfg(feature = "rule")]
 pub mod rule;
 
-/// Vector-widened string interning. CHD perfect hash
-/// over Tier-B label families  -  60k+ function-name strings reduce
-/// to one subgroup-shuffle + one DRAM load on the GPU.
+/// Vector-widened string interning. CHD perfect hash over label families  -
+/// 60k+ function-name strings reduce to one subgroup-shuffle + one DRAM load
+/// on the GPU.
 #[cfg(feature = "intern")]
 pub mod intern;
 

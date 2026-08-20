@@ -68,6 +68,7 @@ pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
         "lego-semantic-organization",
         &gates::lego_audit::LegoSemanticOrganization,
     ),
+    ("lego-tier-claims", &gates::lego_audit::LegoTierClaims),
     ("lego-trend", &gates::lego_audit::LegoTrend),
     (
         "verify-rewrite-proofs",

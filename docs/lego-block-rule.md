@@ -131,6 +131,23 @@ fingerprint no-reinvention, depth of composition, primitive coverage, and
 cross-dialect reach-through. `./cargo_full run --bin xtask -- dup-scan`
 reports duplicated line counts per crate against their pins.
 
+### Tiers
+
+Those gates report in tiers. A tier is not a property a source file declares;
+it is derived from the registered op id alone, in
+`xtask-registry/src/gates/lego_audit/ops.rs`:
+
+| Tier | Op id prefix | Meaning |
+| --- | --- | --- |
+| 2 | `vyre-primitives::hardware::` | Hardware intrinsic. |
+| 2.5 | any other `vyre-primitives::` | Intrinsic: needs an emitter arm in every backend. |
+| 3 | `vyre-libs::` | Composition over existing IR. |
+
+So the tier follows placement, and a doc comment claiming a tier its crate
+contradicts is wrong by construction. Tier 2 and 2.5 must not compose child
+regions, tier 3 must, and the promotion contract below is what moves an op
+between them.
+
 ## Cross-crate promotion patch contract
 
 Promoting a primitive across a crate boundary changes the published

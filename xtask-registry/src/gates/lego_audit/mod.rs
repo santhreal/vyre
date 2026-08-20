@@ -4,7 +4,7 @@
 //! OR composed_fraction ≥ 60%. That's table stakes. vyre's thesis is
 //! composition, so the real measurement is harder.
 //!
-//! This xtask runs ten stricter audits:
+//! This xtask runs twelve stricter audits:
 //!
 //! 1. **No-reinvention check**  -  IR fingerprint every op body; any two
 //!    ops with >80% fingerprint overlap where one doesn't invoke the
@@ -34,11 +34,13 @@
 //!    requires a discoverable namespace, merge, or explicit reviewed family.
 //! 10. **Operand-shape advisory**  -  identical fingerprint prefixes and
 //!     bigram-cosine ≥ 0.55 identify registered operations for semantic review.
+//! 12. **Tier claims**  -  a source file may not name a tier its registered
+//!     op ids contradict; the tier is derived from the id, never declared.
 //!
 //! Exit code 0 when every hard check passes. Advisories remain visible.
 //! Intended to run in CI after Gate 1.
 
-//! The eleven numbered checks live one per module. A check reads the `OpInfo`
+//! The numbered checks live one per module. A check reads the `OpInfo`
 //! summary this module builds and reports through the shared `Report`, so a new
 //! check is a module and a call in `run` and nothing else. Helpers more than one
 //! check reads stay here.
@@ -56,6 +58,7 @@ mod operand_shape;
 mod ops;
 mod primitive_coverage;
 mod semantic_organization;
+mod tier_claim;
 mod trend;
 
 use self::composability::*;
@@ -72,6 +75,7 @@ use self::ops::*;
 pub(crate) use self::ops::{collect_ops, OpInfo, Tier};
 use self::primitive_coverage::*;
 use self::semantic_organization::*;
+use self::tier_claim::*;
 use self::trend::*;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -86,7 +90,7 @@ use xtask::gates::dedup_report::{
 };
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
-/// All 11 discrete registered LEGO law gates whose results LegoAudit aggregates.
+/// All 12 discrete registered LEGO law gates whose results LegoAudit aggregates.
 pub static LEGO_LAW_GATES: &[&dyn xtask::gate::GateBehavior] = &[
     &LegoExemptionLiveness,
     &LegoNoReinvention,
@@ -99,6 +103,7 @@ pub static LEGO_LAW_GATES: &[&dyn xtask::gate::GateBehavior] = &[
     &LegoNameStems,
     &LegoOperandShapes,
     &LegoSemanticOrganization,
+    &LegoTierClaims,
 ];
 
 /// Check 0: every exemption is live.
@@ -240,6 +245,19 @@ impl xtask::gate::GateBehavior for LegoSemanticOrganization {
         let ops = collect_ops(&mut report);
         report.cover(Coverage::complete("registered operations", ops.len()));
         check_semantic_organization(&mut report, &ops);
+        Ok(report)
+    }
+}
+
+/// Check 12: no source file claims a tier its placement contradicts.
+pub struct LegoTierClaims;
+
+impl xtask::gate::GateBehavior for LegoTierClaims {
+    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+        let mut report = Report::clean();
+        let ops = collect_ops(&mut report);
+        report.cover(Coverage::complete("registered operations", ops.len()));
+        check_12_tier_claims(&mut report, &ops);
         Ok(report)
     }
 }
