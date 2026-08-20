@@ -1,4 +1,7 @@
 //! Finite resident-queue artifact compilation contracts.
+// vyre-driver-cuda is a vyre-bench dependency only under
+// cfg(not(target_os = "macos")), so this file cannot name it on macOS.
+#![cfg(not(target_os = "macos"))]
 
 use std::collections::BTreeMap;
 use vyre::compiler::{self, CompileRequest, DeviceFacts, Digest, ExternalFacts, SearchBudget};

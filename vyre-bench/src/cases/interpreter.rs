@@ -321,6 +321,9 @@ mod tests {
         );
     }
 
+    // vyre-driver-cuda is a dependency only under cfg(not(target_os = "macos")),
+    // so the crate is not nameable on macOS and the test cannot be written there.
+    #[cfg(not(target_os = "macos"))]
     #[test]
     fn bytecode_program_cuda_matches_seeded_cpu_trace() {
         let _gpu_guard = GPU_TEST_LOCK.lock().unwrap_or_else(|error| {

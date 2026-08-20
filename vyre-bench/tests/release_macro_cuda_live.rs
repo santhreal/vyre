@@ -1,4 +1,7 @@
 //! Live CUDA validation for generated compiler-grade release macro workloads.
+// vyre-driver-cuda is a vyre-bench dependency only under
+// cfg(not(target_os = "macos")), so this file cannot name it on macOS.
+#![cfg(not(target_os = "macos"))]
 
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,
