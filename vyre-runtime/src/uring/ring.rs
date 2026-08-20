@@ -503,7 +503,7 @@ impl IoUringState {
     }
 
     /// Register fixed files via `IORING_REGISTER_FILES`. After
-    /// registration, SQEs that set [`IOSQE_FIXED_FILE`] treat `fd` as
+    /// registration, SQEs that set `IOSQE_FIXED_FILE` treat `fd` as
     /// the index into this table, skipping the per-SQE fd refcount
     /// bump.
     ///

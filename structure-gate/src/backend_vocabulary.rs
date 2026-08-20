@@ -475,7 +475,7 @@ fn interface_name_is_used(root: &Path, interface: &Interface) -> bool {
 /// Reject a neutral crate that names a concrete backend in production source.
 ///
 /// The lines come from the caller so the rule is judged the same way whatever
-/// produced them: [`production_lines`] over the live tree for the gate, and a
+/// produced them: `production_lines` over the live tree for the gate, and a
 /// synthesised line for the tests that prove each crate in the roster is reached.
 #[must_use]
 pub fn vocabulary_failures<I>(neutrality: &Neutrality, lines: I) -> Vec<String>

@@ -15,7 +15,7 @@
 //! The check reads the source rather than running anything. For each gate it
 //! finds the definition site that names it, then asks whether a `Finding`
 //! construction is reachable from the body of that site through the functions
-//! the body calls. Reachability stops at [`CALL_DEPTH`] levels, which is enough
+//! the body calls. Reachability stops at `CALL_DEPTH` levels, which is enough
 //! for every shape in the tree: the rule inline in `run`, the rule in a helper
 //! beside it, and the rule in a shared runner such as
 //! [`crate::gates::scan::ratchet`].
@@ -30,7 +30,7 @@
 //! across the two: the invocation supplies the inspection and the macro supplies
 //! the call that settles it.
 //!
-//! A gate whose honest output is a note declares that in [`NOTE_ONLY_GATES`]
+//! A gate whose honest output is a note declares that in `NOTE_ONLY_GATES`
 //! with the gate that carries the failing form, and a row there whose gate can
 //! in fact fail is itself a failure: the reason has outlived the shape it
 //! described.

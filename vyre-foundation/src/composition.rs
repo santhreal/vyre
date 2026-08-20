@@ -24,7 +24,7 @@ pub fn mark_self_exclusive_region(generator: &str) -> String {
 ///
 /// Two producers mint them and they mean the same thing:
 ///
-/// - `inline::<parent>` comes from [`reparent_entry_node`] below, for a body
+/// - `inline::<parent>` comes from `reparent_entry_node` below, for a body
 ///   the composer reparented onto its caller because it had no region of its
 ///   own.
 /// - `anonymous::<label>` is written by a builder that needs a named phase

@@ -2,7 +2,7 @@
 //!
 //! The payload, the CPU baseline timing, the dispatch and its transfer
 //! accounting, and the run assembly are owned by
-//! [`crate::cases::frontier_step`]. What is this case's own: the fixture, the
+//! `crate::cases::frontier_step`. What is this case's own: the fixture, the
 //! edge-kind filter it propagates under, and its metric points.
 
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, WorkloadClass};

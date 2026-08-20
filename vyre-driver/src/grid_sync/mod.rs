@@ -90,7 +90,7 @@ pub(crate) use vyre_foundation::transform::grid_sync_split::entry_sequence;
 /// split itself fails.
 ///
 /// Every dispatch route rejects an empty segment list through
-/// [`reject_empty_grid_sync_split`], so a failed split cannot be mistaken for a
+/// `reject_empty_grid_sync_split`, so a failed split cannot be mistaken for a
 /// program that had nothing to run.
 #[must_use]
 pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
