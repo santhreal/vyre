@@ -12,7 +12,7 @@ pub struct ReduceSumBench;
 
 const SMALL_COUNT: u32 = 32;
 const LARGE_COUNT: u32 = 1 << 20;
-const MAX_TREE_TILE: u32 = 256;
+const MAX_TREE_TILE: u32 = 1024;
 const ROUTE_ATOMIC: u64 = 0;
 const ROUTE_TREE: u64 = 1;
 
