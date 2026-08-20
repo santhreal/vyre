@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workspace cargo configuration pinned sixteen build jobs on every host. A 32-thread workstation was held to half its cores and a four-vCPU CI runner ran sixteen concurrent linkers against 16 GiB of memory. Parallelism is now cargo's default, which is the logical CPU count of whichever machine is building."
