@@ -464,7 +464,9 @@ pub(crate) fn resident_input_lengths(
     Ok(input_lengths)
 }
 
-fn allocation_len_for_output(layout: &OutputBindingLayout) -> Result<usize, BackendError> {
+pub(crate) fn allocation_len_for_output(
+    layout: &OutputBindingLayout,
+) -> Result<usize, BackendError> {
     layout
         .layout
         .copy_offset

@@ -4634,6 +4634,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   provenance gates enforce runtime path derivation across all member sources
   and test binaries, catching both `env!` and `option_env!` variants without
   waivers.
+- Fixed compilation of vyre-driver-metal output allocation sizing, gated
+  Linux-only uring ingest telemetry invariant test on target_os, and set MSVC
+  compiler environment for Windows CI vendored OpenSSL.
 - CI now uses compatible benchmark, nightly tool, and vendored OpenSSL
   configuration across supported hosts. Unused crate dependencies were deleted
   and indirect test dependencies are declared for the dependency audit.
@@ -5886,6 +5889,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   scan left the recorded coverage naming the older set. The record now reads
   `RESOURCE_BOUND_PATTERNS`, `HIDDEN_FALLBACK_PATTERNS` and
   `CARGO_WRAPPER_PATTERNS` directly.
+- Bypass materialized output cache lookup on timed CUDA dispatches so device
+  timing events are always recorded. Require distinct, non-zero device timings
+  before reduction route selection on large workloads, and measure a Rayon CPU
+  baseline for reduction crossover benchmarks.
 - The reduction benchmark now measures atomic-scalar and workgroup-tree sums on
   the same GPU at 32 and 1,048,576 elements. It verifies both routes exactly,
   selects the measured winner per size, and records contention and barrier
@@ -6112,6 +6119,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   interpreter. The leaf table is checked against the operation ids declared
   under `vyre-libs/src/rule` on each run, so a twelfth predicate turns the
   suite red until it is pinned.
+- Retained artifact session submissions now hold the retained state mutex
+  across submission to ensure serialized atomic transitions, tenant quiesce
+  validates drain conditions before declaring a timeout and prevents
+  subtraction underflow on concurrent drain observation, and resident IO loop
+  automatically stops detached polling threads on drop.
+- A failed benchmark no longer writes host absolute paths into an evidence
+  blocker. The workspace root is rewritten relative to the workspace at path
+  boundaries, so a sibling checkout keeps its own name and an artifact path
+  issue names the declared artifact rather than the host that resolved it.
 - The scalar storage-graph matrix declares every operation the scalar oracle
   defines. It declared 40 and the oracle defines 76: the four bit-unpack ops at
   both 32-bit integer widths, the whole bitwise set at `i32`, and the
@@ -6174,6 +6190,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   declared, and names the members shipping for the first time. Passing a member
   the baseline revision never carried aborted the tool before any rule ran, so
   one new crate suppressed the comparison for every released crate beside it.
+- Restored public visibility on vyre-spec specification submodules to maintain
+  SemVer compatibility with published releases.
 - Megakernel selection charges a workgroup tile once per fusion group instead
   of once per member, so a group whose members share a tile by name is no
   longer pushed over the device scratch budget and ranked below the pair it

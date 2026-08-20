@@ -87,14 +87,12 @@ impl RetainedArtifactSession {
             }
             .into());
         }
-        {
-            let retained = self
-                .retained
-                .lock()
-                .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-            for (value, bytes) in retained.iter() {
-                bindings.insert(*value, BoundResource::Host(bytes.clone()));
-            }
+        let mut retained = self
+            .retained
+            .lock()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        for (value, bytes) in retained.iter() {
+            bindings.insert(*value, BoundResource::Host(bytes.clone()));
         }
         let completion = self.session.submit_and_wait(bindings)?;
         if completion.retained.keys().copied().collect::<BTreeSet<_>>() != self.retained_values {
@@ -104,11 +102,7 @@ impl RetainedArtifactSession {
             }
             .into());
         }
-        *self
-            .retained
-            .lock()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))? =
-            completion.retained.clone();
+        *retained = completion.retained.clone();
         Ok(completion)
     }
 }

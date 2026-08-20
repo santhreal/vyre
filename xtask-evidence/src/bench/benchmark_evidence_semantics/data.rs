@@ -136,13 +136,11 @@ pub(crate) enum BenchmarkArtifactPathIssue {
     AbsolutePath,
     NonReleasePath,
     ParentTraversal,
-    Missing {
-        artifact_path: PathBuf,
-    },
-    OutsideWorkspace {
-        artifact_path: PathBuf,
-        workspace_root: PathBuf,
-    },
+    // The resolved absolute path is deliberately not carried. It named the
+    // host that produced the evidence, and the declared artifact string plus
+    // the workspace root already identify what was checked.
+    Missing,
+    OutsideWorkspace,
 }
 
 impl BenchmarkArtifactPathIssue {
@@ -157,18 +155,10 @@ impl BenchmarkArtifactPathIssue {
             Self::ParentTraversal => {
                 format!("{label} `{artifact}` must not contain parent directory traversal")
             }
-            Self::Missing { artifact_path } => format!(
-                "{label} `{artifact}` is not a readable file at {}",
-                artifact_path.display()
-            ),
-            Self::OutsideWorkspace {
-                artifact_path,
-                workspace_root,
-            } => format!(
-                "{label} `{artifact}` resolves outside workspace: {} is outside {}",
-                artifact_path.display(),
-                workspace_root.display()
-            ),
+            Self::Missing => format!("{label} `{artifact}` is not a readable file"),
+            Self::OutsideWorkspace => {
+                format!("{label} `{artifact}` resolves outside the workspace")
+            }
         }
     }
 }

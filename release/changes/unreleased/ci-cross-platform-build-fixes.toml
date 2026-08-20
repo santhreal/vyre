@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Fixed compilation of vyre-driver-metal output allocation sizing, gated Linux-only uring ingest telemetry invariant test on target_os, and set MSVC compiler environment for Windows CI vendored OpenSSL."

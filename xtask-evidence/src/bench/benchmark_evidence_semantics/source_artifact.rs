@@ -99,19 +99,16 @@ fn benchmark_release_artifact_path_issue(
     }
     let artifact_path = workspace_root.join(&candidate);
     if !artifact_path.is_file() {
-        return Some(BenchmarkArtifactPathIssue::Missing { artifact_path });
+        return Some(BenchmarkArtifactPathIssue::Missing);
     }
     let Ok(canonical_root) = workspace_root.canonicalize() else {
-        return Some(BenchmarkArtifactPathIssue::Missing { artifact_path });
+        return Some(BenchmarkArtifactPathIssue::Missing);
     };
     let Ok(canonical_artifact) = artifact_path.canonicalize() else {
-        return Some(BenchmarkArtifactPathIssue::Missing { artifact_path });
+        return Some(BenchmarkArtifactPathIssue::Missing);
     };
     if !canonical_artifact.starts_with(&canonical_root) {
-        return Some(BenchmarkArtifactPathIssue::OutsideWorkspace {
-            artifact_path: canonical_artifact,
-            workspace_root: canonical_root,
-        });
+        return Some(BenchmarkArtifactPathIssue::OutsideWorkspace);
     }
     None
 }
@@ -321,7 +318,7 @@ mod tests {
         std::os::unix::fs::symlink(&outside_artifact, &link)
             .expect("Fix: create source artifact symlink.");
 
-        let Some(BenchmarkArtifactPathIssue::OutsideWorkspace { .. }) =
+        let Some(BenchmarkArtifactPathIssue::OutsideWorkspace) =
             benchmark_source_artifact_path_issue(
                 workspace.path(),
                 "release/evidence/benchmarks/source.json",

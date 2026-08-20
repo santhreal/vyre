@@ -8,18 +8,18 @@
   "gpu_probe": {
     "nvidia_smi_ok": true,
     "nvidia_smi_devices": [
-      "GPU 0: NVIDIA GeForce RTX 5090 (UUID: GPU-2b1cf7db-1c55-23e8-5324-5342631e4ef5)"
+      "GPU 0: NVIDIA GeForce RTX 4090 (UUID: GPU-8859fa47-56e3-5c4c-27dd-f537b778ca37)"
     ],
     "nvidia_smi_device_details": [
       {
-        "name": "NVIDIA GeForce RTX 5090",
-        "driver_version": "580.178.04",
-        "memory_total_mib": 32607,
-        "compute_capability_major": 12,
-        "compute_capability_minor": 0
+        "name": "NVIDIA GeForce RTX 4090",
+        "driver_version": "580.173.02",
+        "memory_total_mib": 24564,
+        "compute_capability_major": 8,
+        "compute_capability_minor": 9
       }
     ],
-    "nvidia_driver_version": "580.178.04",
+    "nvidia_driver_version": "580.173.02",
     "nvidia_cuda_version": "13.0",
     "nvidia_smi_error": null
   },
@@ -441,7 +441,7 @@
       "backend_id": "cuda",
       "capability_id": "live-sm-release-floor",
       "probe_source": "nvidia-smi --query-gpu=compute_cap",
-      "probed_value": "sm_120",
+      "probed_value": "sm_89",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: repair CUDA driver/device visibility or route release benchmarks to a supported NVIDIA GPU."
@@ -450,7 +450,7 @@
       "backend_id": "cuda",
       "capability_id": "live-memory-release-floor",
       "probe_source": "nvidia-smi --query-gpu=memory.total",
-      "probed_value": "32607 MiB",
+      "probed_value": "24564 MiB",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: run release benchmark evidence on a CUDA GPU with at least 16 GiB VRAM."

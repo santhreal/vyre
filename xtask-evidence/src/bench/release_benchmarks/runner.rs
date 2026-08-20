@@ -316,23 +316,80 @@ pub(super) fn copy_artifact(
     source: &str,
     target: &str,
 ) -> Result<(), String> {
-    let source = workspace_root.join(source);
-    let target = workspace_root.join(target);
-    if let Some(parent) = target.parent() {
+    let source_path = workspace_root.join(source);
+    let target_path = workspace_root.join(target);
+    if let Some(parent) = target_path.parent() {
+        let parent_display = parent
+            .strip_prefix(workspace_root)
+            .unwrap_or(parent)
+            .display();
         fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create `{}`: {error}", parent.display()))?;
+            .map_err(|error| format!("failed to create `{parent_display}`: {error}"))?;
     }
-    fs::copy(&source, &target).map(|_| ()).map_err(|error| {
-        format!(
-            "failed to copy `{}` to `{}`: {error}",
-            source.display(),
-            target.display()
-        )
-    })
+    fs::copy(&source_path, &target_path)
+        .map(|_| ())
+        .map_err(|error| format!("failed to copy `{source}` to `{target}`: {error}"))
 }
 
 /// Bytes of a failed child's output carried into the error.
 const MAX_CHILD_OUTPUT_BYTES: usize = 4096;
+
+/// Rewrite every occurrence of `root` in `text` as a workspace-relative path.
+///
+/// The match has to end at a path boundary. A plain substring replacement
+/// turns a sibling checkout `<root>-old/b.json` into `.-old/b.json`, which
+/// invents a path that never existed and is harder to read than the one it
+/// replaced. A separator becomes `./`, a root that ends there becomes `.`,
+/// and a root that merely prefixes a longer name is left alone.
+fn relativize_root(text: &str, root: &str) -> String {
+    if root.is_empty() || !text.contains(root) {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(offset) = rest.find(root) {
+        out.push_str(&rest[..offset]);
+        let after = &rest[offset + root.len()..];
+        match after.chars().next() {
+            Some('/') => {
+                out.push_str("./");
+                rest = &after['/'.len_utf8()..];
+            }
+            Some('\\') => {
+                out.push_str(".\\");
+                rest = &after['\\'.len_utf8()..];
+            }
+            // Part of a longer name, so it is a different directory.
+            Some(next) if next.is_alphanumeric() || matches!(next, '-' | '_' | '.') => {
+                out.push_str(root);
+                rest = after;
+            }
+            _ => {
+                out.push('.');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Strip host-specific absolute paths out of child output or error text.
+///
+/// Both spellings of the root are removed. A workspace reached through a
+/// symlink appears in a child's diagnostics as the resolved path, which shares
+/// no prefix with the path this process was given.
+pub(super) fn sanitize_host_paths(text: &str, workspace_root: &Path) -> String {
+    let root = workspace_root.to_string_lossy();
+    let mut sanitized = relativize_root(text, &root);
+    if let Ok(canonical) = workspace_root.canonicalize() {
+        let canonical = canonical.to_string_lossy().to_string();
+        if canonical != *root {
+            sanitized = relativize_root(&sanitized, &canonical);
+        }
+    }
+    sanitized
+}
 
 /// Run one child command, keeping its output out of this process's stdout.
 ///
@@ -348,18 +405,54 @@ pub(super) fn run_command_status(workspace_root: &Path, args: &[&str]) -> Result
         .args(args)
         .current_dir(workspace_root)
         .output();
-    let display = format!("{} {}", runner.display(), args.join(" "));
+    let display = format!(
+        "{} {}",
+        runner_display(&runner, workspace_root),
+        args.join(" ")
+    );
     match status {
         Ok(output) if output.status.success() => Ok(()),
-        Ok(output) => Err(format!(
-            "Fix: `{display}` failed with {}: {}",
-            output.status,
-            child_output_tail(&output.stdout, &output.stderr)
+        Ok(output) => Err(child_failure_message(
+            &display,
+            &output.status.to_string(),
+            &output.stdout,
+            &output.stderr,
+            workspace_root,
         )),
         Err(error) => Err(format!(
-            "Fix: failed to run `{display}`: {error}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`."
+            "Fix: failed to run `{display}`: {}. Set VYRE_CARGO_RUNNER to the bounded workspace cargo wrapper if it is not named `cargo_full`.",
+            sanitize_host_paths(&error.to_string(), workspace_root),
         )),
     }
+}
+
+/// Name the runner without naming the host that installed it.
+fn runner_display(runner: &Path, workspace_root: &Path) -> String {
+    if let Ok(relative) = runner.strip_prefix(workspace_root) {
+        return format!("./{}", relative.display());
+    }
+    match runner.file_name().and_then(|name| name.to_str()) {
+        Some(name) => format!("./{name}"),
+        None => sanitize_host_paths(&runner.display().to_string(), workspace_root),
+    }
+}
+
+/// The blocker text a failed child produces, with the host root stripped.
+///
+/// Separate from the spawn so it can be proven without an ambient runner: the
+/// leak this closes was in the text, not in the process handling.
+fn child_failure_message(
+    display: &str,
+    status: &str,
+    stdout: &[u8],
+    stderr: &[u8],
+    workspace_root: &Path,
+) -> String {
+    let tail = child_output_tail(stdout, stderr);
+    format!(
+        "Fix: `{display}` failed with {status}: {}",
+        sanitize_host_paths(&tail, workspace_root),
+    )
 }
 
 /// The last `MAX_CHILD_OUTPUT_BYTES` of what a failed child said, stderr first.
@@ -1104,6 +1197,84 @@ mod tests {
         assert!(
             tail.ends_with('o'),
             "Fix: the tail keeps what was said last."
+        );
+    }
+
+    /// WHY: a failed benchmark carries its child's output into a blocker, and
+    /// the blocker is written verbatim into release evidence that ships. A run
+    /// on one workstation put an absolute `/media/<user>/...` path into
+    /// `release/evidence/benchmarks/cuda-release-suite.json`, so the producer
+    /// has to strip the root rather than the case having to pass.
+    ///
+    /// Drives the message builder rather than the spawn: the resolved runner
+    /// depends on `VYRE_CARGO_RUNNER`, and a case that reads ambient
+    /// environment proves something different on each host.
+    #[test]
+    fn a_failed_child_carries_no_absolute_root_into_its_blocker() {
+        let root = Path::new("/srv/build/vyre");
+        let stderr = b"error: could not read /srv/build/vyre/vyre-bench/Cargo.toml";
+
+        let message =
+            child_failure_message("./cargo_full bench", "exit status: 101", b"", stderr, root);
+
+        assert!(
+            !message.contains("/srv/build/vyre/"),
+            "Fix: the blocker names the host root: {message}",
+        );
+        assert!(
+            message.contains("./vyre-bench/Cargo.toml"),
+            "Fix: the blocker must keep the workspace-relative path: {message}",
+        );
+    }
+
+    /// WHY: a runner resolved outside the workspace, which is what
+    /// `VYRE_CARGO_RUNNER` and the `CARGO` fallback both produce, must not put
+    /// its install prefix into the blocker either.
+    #[test]
+    fn a_runner_outside_the_workspace_is_named_without_its_prefix() {
+        assert_eq!(
+            runner_display(
+                Path::new("/home/somebody/.cargo/bin/cargo"),
+                Path::new("/srv/build/vyre"),
+            ),
+            "./cargo",
+            "Fix: an out-of-tree runner must be named by its file name alone.",
+        );
+        assert_eq!(
+            runner_display(
+                Path::new("/srv/build/vyre/cargo_full"),
+                Path::new("/srv/build/vyre"),
+            ),
+            "./cargo_full",
+            "Fix: an in-tree runner must be named relative to the workspace.",
+        );
+    }
+
+    /// WHY: the root has to match at a path boundary. A plain substring
+    /// replacement rewrites a sibling checkout `<root>-old/b.json` as
+    /// `.-old/b.json`, inventing a path that never existed and is harder to
+    /// read than the absolute one it replaced.
+    ///
+    /// Scope: this relativizes the workspace root only. A path outside the
+    /// workspace, a toolchain path for instance, is left exactly as the child
+    /// wrote it, because rewriting it relative to a root it does not live
+    /// under would state something false.
+    #[test]
+    fn sanitizing_a_root_matches_only_at_a_path_boundary() {
+        let root = Path::new("/srv/build/vyre");
+        let sanitized = sanitize_host_paths(
+            "read /srv/build/vyre/release/a.json and /srv/build/vyre-old/b.json",
+            root,
+        );
+        assert_eq!(
+            sanitized, "read ./release/a.json and /srv/build/vyre-old/b.json",
+            "Fix: the root must be relativized and the sibling left alone.",
+        );
+
+        assert_eq!(
+            sanitize_host_paths("built in `/srv/build/vyre` today", root),
+            "built in `.` today",
+            "Fix: a root that ends at a boundary becomes the workspace itself.",
         );
     }
 }
