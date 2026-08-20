@@ -13,7 +13,8 @@
 use super::*;
 use std::collections::BTreeMap;
 
-/// The tier vocabulary, spelled the way `docs/lego-block-rule.md` spells it.
+/// The tier vocabulary a comment may claim: 2, 2.5 and 3. A tier this gate
+/// cannot name is not a claim it can judge, so `Other` reads as no claim.
 fn tier_number(tier: Tier) -> Option<&'static str> {
     match tier {
         Tier::T2 => Some("2"),

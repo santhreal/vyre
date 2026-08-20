@@ -64,3 +64,33 @@ fn library_fixtures_are_canonical_semantic_registrations() {
         .get("unknown-operation")
         .is_none());
 }
+
+/// Every linked registration is usable through the registry alone.
+///
+/// WHY: these three assertions lived in `vyre-test-support`, whose own binary
+/// links nothing that registers, so they ran against an empty registry and the
+/// two tests that called them could not pass. They belong wherever the
+/// registrations are, and the roster is the registry itself rather than a
+/// hardcoded floor, so a dialect added tomorrow is checked without an edit.
+#[test]
+fn every_registration_carries_a_version_and_a_way_to_build_itself() {
+    let mut checked = 0usize;
+    for entry in OperationRegistry::global().iter() {
+        assert!(!entry.id.is_empty(), "Fix: a registration has an empty id.");
+        assert!(
+            entry.semantic_version > 0,
+            "Fix: operation `{}` registers semantic_version 0; version a registration from 1.",
+            entry.id
+        );
+        assert!(
+            entry.build.is_some() || entry.signature.is_some(),
+            "Fix: operation `{}` registers neither a builder nor a signature, so nothing can be done with it through the registry.",
+            entry.id
+        );
+        checked += 1;
+    }
+    assert!(
+        checked > 0,
+        "Fix: the registry is empty in a binary that links vyre-libs, so inventory submissions are not reaching the link."
+    );
+}

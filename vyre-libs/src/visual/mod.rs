@@ -8,7 +8,11 @@
 //! (one pixel per u32 word, little-endian RGBA: bits `[7:0]` = R,
 //! `[15:8]` = G, `[23:16]` = B, `[31:24]` = A).
 //!
-//! # Discovery checklist (docs/lego-block-rule.md)
+//! # Discovery checklist
+//!
+//! Each entry names the existing composition the sub-module reuses. A new
+//! sub-op is invented only when nothing here maps and two or more callers will
+//! use it; a helper with one caller stays private to that sub-module.
 //!
 //! - `blur`  -  composes `math::conv1d` (horizontal + vertical weight tables)
 //! - `shadow`  -  private SDF helper (single caller, stays inline)

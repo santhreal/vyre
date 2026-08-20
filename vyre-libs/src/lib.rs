@@ -18,8 +18,8 @@
 //! Every operation here is Category A: a composition over IR variants that
 //! already exist. `math::atomic` is no exception, because `Expr::Atomic` is one
 //! of those variants and every backend already emits it. An operation that
-//! needs its own emitter arm added to every backend is Category C and lives in
-//! `vyre-primitives`. `docs/lego-block-rule.md` owns that placement rule.
+//! needs its own emitter arm added to every backend, and its own arm in the
+//! reference interpreter, is Category C and lives in `vyre-primitives`.
 //!
 //! A domain may move to a dedicated crate only through a clean public cutover
 //! that migrates every caller and removes the old path.

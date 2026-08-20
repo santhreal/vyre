@@ -68,10 +68,6 @@ name = "memory_order_coverage"
 required-features = ["ir-fixtures"]
 
 [[test]]
-name = "operation_registration_coverage"
-required-features = ["ir-fixtures"]
-
-[[test]]
 name = "extension_variant_coverage"
 required-features = ["ir-fixtures"]
 

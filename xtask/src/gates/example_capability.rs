@@ -265,6 +265,10 @@ fn template_findings(
             return Ok(findings);
         }
     };
+    findings.extend(stale_pin_findings(root, &manifest, &rendered_manifest_text));
+    if !findings.is_empty() {
+        return Ok(findings);
+    }
     for (relative, text) in &rendered {
         let path = target.join(relative);
         if let Some(parent) = path.parent() {
@@ -291,11 +295,25 @@ fn template_findings(
         )
     })?;
     let manifest_argument = rendered_manifest.to_string_lossy().into_owned();
-    findings.extend(cargo_findings(
+    // The workspace runner appends --locked to every resolving subcommand, and
+    // a template ships no lockfile because the crate it renders does not exist
+    // yet. Resolving once here is the explicit `cargo update` step that rule
+    // asks for: generate-lockfile takes no --locked, so the runner leaves it
+    // alone, and the test that follows then builds exactly what was resolved.
+    let resolution = cargo_findings(
         root,
         &manifest,
-        &["test", "--manifest-path", &manifest_argument],
-    ));
+        &["generate-lockfile", "--manifest-path", &manifest_argument],
+    );
+    let resolved = resolution.is_empty();
+    findings.extend(resolution);
+    if resolved {
+        findings.extend(cargo_findings(
+            root,
+            &manifest,
+            &["test", "--manifest-path", &manifest_argument],
+        ));
+    }
     std::fs::remove_dir_all(&target).map_err(|error| {
         GateError::new(
             format!("could not remove `{}`: {error}", target.display()),
@@ -436,6 +454,70 @@ fn checkout_patch_section(root: &Path, manifest: &str) -> Result<String, String>
     }
     Ok(section)
 }
+/// Every workspace-member dependency the template pins, held to the version
+/// that member declares.
+///
+/// `[patch.crates-io]` only replaces a dependency whose requirement the patched
+/// version satisfies. A template left pinned at 0.7.2 while the checkout moved
+/// to 0.8.0 is therefore compiled against the published crate with the patch
+/// silently inert, so the gate reported a template that was fine and hid the
+/// surface it was supposed to prove.
+fn stale_pin_findings(root: &Path, subject: &str, manifest: &str) -> Vec<Finding> {
+    let Ok(parsed) = toml::from_str::<toml::Table>(manifest) else {
+        return Vec::new();
+    };
+    let mut findings = Vec::new();
+    for name in crate::manifest_walk::dependency_names(&parsed) {
+        let member = root.join(&name).join("Cargo.toml");
+        if !member.is_file() {
+            continue;
+        }
+        let Some(declared) = manifest_version(&member) else {
+            continue;
+        };
+        let Some(required) = dependency_requirement(&parsed, &name) else {
+            continue;
+        };
+        if required != declared {
+            findings.push(Finding::in_file(
+                subject,
+                format!(
+                    "`{subject}` pins `{name} = \"{required}\"`, but this checkout declares {declared}"
+                ),
+                "pin the template at the version the workspace ships; a requirement the checkout cannot satisfy leaves [patch.crates-io] inert and compiles the template against the published crate instead",
+            ));
+        }
+    }
+    findings
+}
+
+/// The `version` a member manifest declares, when it declares a literal one.
+fn manifest_version(path: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(path).ok()?;
+    let parsed: toml::Table = toml::from_str(&text).ok()?;
+    parsed
+        .get("package")?
+        .get("version")?
+        .as_str()
+        .map(str::to_string)
+}
+
+/// The version requirement a manifest states for one dependency, in either the
+/// bare-string or the table form.
+fn dependency_requirement(document: &toml::Table, name: &str) -> Option<String> {
+    for section in ["dependencies", "dev-dependencies", "build-dependencies"] {
+        let Some(entry) = document.get(section).and_then(|table| table.get(name)) else {
+            continue;
+        };
+        if let Some(literal) = entry.as_str() {
+            return Some(literal.to_string());
+        }
+        if let Some(version) = entry.get("version").and_then(toml::Value::as_str) {
+            return Some(version.to_string());
+        }
+    }
+    None
+}
 
 #[cfg(test)]
 mod tests {
@@ -451,6 +533,45 @@ mod tests {
         let found = unknown_placeholders("name = \"{{crate_name}}\"\nlicense = \"{{license}}\"\n");
 
         assert_eq!(found, vec!["{{license}}".to_string()]);
+    }
+
+    /// WHY: `[patch.crates-io]` is silently inert when the patched version does
+    /// not satisfy the requirement, so a template pinned one release behind
+    /// compiles against the published crate and the gate proves nothing about
+    /// the surface in this checkout. That is exactly how a template kept
+    /// importing two functions the shipping crate exports and the published one
+    /// does not. The check reads the requirement from the rendered manifest and
+    /// the version from the member beside it, so a workspace bump turns it red
+    /// until the template follows.
+    #[test]
+    fn a_template_pinned_off_the_checkout_version_is_named() {
+        let root = std::env::temp_dir().join(format!(
+            "vyre-example-pin-test-{}-{}",
+            std::process::id(),
+            line!()
+        ));
+        let member = root.join("vyre-libs");
+        std::fs::create_dir_all(&member).expect("create member directory");
+        std::fs::write(
+            member.join("Cargo.toml"),
+            "[package]\nname = \"vyre-libs\"\nversion = \"0.8.0\"\n",
+        )
+        .expect("write member manifest");
+
+        let stale = stale_pin_findings(
+            &root,
+            "template",
+            "[dependencies]\nvyre-libs = { version = \"0.7.2\", default-features = false }\n",
+        );
+        let current =
+            stale_pin_findings(&root, "template", "[dependencies]\nvyre-libs = \"0.8.0\"\n");
+        let foreign = stale_pin_findings(&root, "template", "[dependencies]\nthiserror = \"2\"\n");
+        std::fs::remove_dir_all(&root).expect("remove test root");
+
+        assert_eq!(stale.len(), 1, "{stale:?}");
+        assert!(stale[0].message.contains("0.7.2"), "{:?}", stale[0]);
+        assert!(current.is_empty(), "{current:?}");
+        assert!(foreign.is_empty(), "{foreign:?}");
     }
 
     /// WHY: rendering must leave nothing behind. A single unrendered

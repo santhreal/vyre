@@ -178,8 +178,6 @@ pub mod monorepo;
 #[cfg(feature = "ir-fixtures")]
 pub mod mutation_testing;
 #[cfg(feature = "ir-fixtures")]
-pub mod operation_registration_universe;
-#[cfg(feature = "ir-fixtures")]
 pub mod pass_programs;
 pub mod replay_capsule;
 #[cfg(feature = "ir-fixtures")]
