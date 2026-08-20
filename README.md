@@ -13,7 +13,7 @@ byte-identical against. It is not a backend and not a fallback.
 
 ```toml
 [dependencies]
-vyre = { version = "0.7.2", features = ["cuda"] }
+vyre = { version = "0.8.0", features = ["cuda"] }
 ```
 
 The default feature set is empty and links no device. `cuda` and `wgpu` are

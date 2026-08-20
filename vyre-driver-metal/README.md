@@ -70,7 +70,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-This crate is active on supported Apple targets in the 0.7.2 train. Non-Apple targets retain an explicit unsupported acquisition result.
+This crate is active on supported Apple targets in the 0.8.0 train. Non-Apple targets retain an explicit unsupported acquisition result.
 
 ### Ownership
 

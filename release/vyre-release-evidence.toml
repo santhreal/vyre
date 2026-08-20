@@ -9,7 +9,7 @@ schema_version = 2
 release_contract_path = "release-train.toml"
 
 [release]
-vyre = "0.7.2"
+vyre = "0.8.0"
 
 [[requirements]]
 id = "version-story"

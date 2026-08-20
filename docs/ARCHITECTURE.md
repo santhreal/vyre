@@ -2,7 +2,7 @@
 
 Last verified: 2026-08-17
 
-Vyre 0.7.2 is a GPU compiler. You build a `Program` from registered
+Vyre 0.8.0 is a GPU compiler. You build a `Program` from registered
 operations, compile the whole graph into one immutable `Artifact`, emit a
 target payload, and run it on the device. There is no host execution path
 and no bytecode interpreter. `vyre-reference` is the only crate allowed to

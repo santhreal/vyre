@@ -2,7 +2,7 @@
 
 ```toml
 [dependencies]
-vyre = "0.7.2"
+vyre = "0.8.0"
 ```
 
 That gets the IR, the whole-program compiler, artifact admission and typed
@@ -14,12 +14,12 @@ A concrete backend is a cargo feature on the facade:
 
 ```toml
 [dependencies]
-vyre = { version = "0.7.2", features = ["cuda"] }
+vyre = { version = "0.8.0", features = ["cuda"] }
 ```
 
 ```toml
 [dependencies]
-vyre = { version = "0.7.2", features = ["wgpu"] }
+vyre = { version = "0.8.0", features = ["wgpu"] }
 ```
 
 `cuda` pulls in `vyre-driver-cuda`. `wgpu` pulls in `vyre-driver-wgpu`.

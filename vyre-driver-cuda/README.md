@@ -2,7 +2,7 @@
 
 CUDA/PTX backend for vyre through `cudarc`.
 
-This crate is the NVIDIA backend implementation point and the `0.7.2` release
+This crate is the NVIDIA backend implementation point and the `0.8.0` release
 fast path. It owns CUDA device probing, hardware capability reporting, PTX
 lowering, and dispatch integration behind the frozen `VyreBackend` contract.
 
@@ -19,7 +19,7 @@ is never silently downgraded to CPU execution.
 CUDA is release-preferred on NVIDIA systems. WGPU remains the portable GPU
 fallback backend for non-CUDA deployments. Release evidence must prove CUDA
 conformance, performance, feature-surface coverage, and metadata publication
-for `vyre-driver-cuda@0.7.2`.
+for `vyre-driver-cuda@0.8.0`.
 
 ## Quick start
 
@@ -94,7 +94,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-driver-cuda@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-driver-cuda@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
 
 ### Ownership
 

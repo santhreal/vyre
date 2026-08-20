@@ -2,7 +2,7 @@
 
 wgpu backend for Vyre IR. It implements `vyre_driver::VyreBackend` and the registered target compiler and materializer facets on any wgpu-capable GPU (Vulkan, DX12, Metal, WebGPU).
 
-This crate is the `0.7.2` portable GPU backend. It targets systems
+This crate is the `0.8.0` portable GPU backend. It targets systems
 where WebGPU/Vulkan/Metal/DX12 is the driver path.
 
 ```
@@ -30,7 +30,7 @@ for completion before readback.
 - Buffer pool: reuses GPU buffer allocations across dispatches.
 - Validation cache: skips repeated capability checks for already-validated programs.
 - Lowering happens in the registered target compiler. Materialization admits authenticated target payload bytes rather than compiling a caller-owned `Program`.
-- Release evidence must prove feature-surface coverage, backend metadata, and conformance for `vyre-driver-wgpu@0.7.2`.
+- Release evidence must prove feature-surface coverage, backend metadata, and conformance for `vyre-driver-wgpu@0.8.0`.
 
 ## Requirements
 
@@ -117,7 +117,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-driver-wgpu@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-driver-wgpu@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
 
 ### Ownership
 

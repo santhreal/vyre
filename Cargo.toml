@@ -237,40 +237,40 @@ private_intra_doc_links = "warn"
 # version (the `version` is required so a published crate can resolve its
 # workspace siblings from crates.io after publication).
 [workspace.dependencies]
-vyre = { version = "0.7.2", path = "vyre", default-features = false }
-vyre-foundation = { version = "0.7.2", path = "vyre-foundation" }
-vyre-megakernel = { version = "0.7.2", path = "vyre-megakernel" }
-vyre-driver = { version = "0.7.2", path = "vyre-driver" }
-vyre-driver-metal = { version = "0.7.2", path = "vyre-driver-metal" }
-vyre-driver-wgpu = { version = "0.7.2", path = "vyre-driver-wgpu" }
-vyre-driver-cuda = { version = "0.7.2", path = "vyre-driver-cuda" }
-vyre-driver-reference = { version = "0.7.2", path = "vyre-driver-reference" }
-vyre-driver-spirv = { version = "0.7.2", path = "vyre-driver-spirv" }
+vyre = { version = "0.8.0", path = "vyre", default-features = false }
+vyre-foundation = { version = "0.8.0", path = "vyre-foundation" }
+vyre-megakernel = { version = "0.8.0", path = "vyre-megakernel" }
+vyre-driver = { version = "0.8.0", path = "vyre-driver" }
+vyre-driver-metal = { version = "0.8.0", path = "vyre-driver-metal" }
+vyre-driver-wgpu = { version = "0.8.0", path = "vyre-driver-wgpu" }
+vyre-driver-cuda = { version = "0.8.0", path = "vyre-driver-cuda" }
+vyre-driver-reference = { version = "0.8.0", path = "vyre-driver-reference" }
+vyre-driver-spirv = { version = "0.8.0", path = "vyre-driver-spirv" }
 # publish = false, so no version.
 vyre-registry-link = { path = "vyre-registry-link", default-features = false }
-vyre-reference = { version = "0.7.2", path = "vyre-reference" }
-vyre-spec = { version = "0.7.2", path = "vyre-spec" }
-vyre-macros = { version = "0.7.2", path = "vyre-macros" }
-vyre-primitives = { version = "0.7.2", path = "vyre-primitives", default-features = false }
+vyre-reference = { version = "0.8.0", path = "vyre-reference" }
+vyre-spec = { version = "0.8.0", path = "vyre-spec" }
+vyre-macros = { version = "0.8.0", path = "vyre-macros" }
+vyre-primitives = { version = "0.8.0", path = "vyre-primitives", default-features = false }
 # Dev-only shared harness (publish = false). PATH-ONLY (no version): cargo strips
 # path-only dev-deps at publish, so this never joins/blocks the publish train.
 vyre-test-support = { path = "vyre-test-support" }
-vyre-runtime = { version = "0.7.2", path = "vyre-runtime" }
-vyre-safetensors = { version = "0.7.2", path = "vyre-safetensors" }
-vyre-libs = { version = "0.7.2", path = "vyre-libs" }
-vyre-pass-engine = { version = "0.7.2", path = "vyre-pass-engine" }
-vyre-aot = { version = "0.7.2", path = "vyre-aot" }
+vyre-runtime = { version = "0.8.0", path = "vyre-runtime" }
+vyre-safetensors = { version = "0.8.0", path = "vyre-safetensors" }
+vyre-libs = { version = "0.8.0", path = "vyre-libs" }
+vyre-pass-engine = { version = "0.8.0", path = "vyre-pass-engine" }
+vyre-aot = { version = "0.8.0", path = "vyre-aot" }
 # publish = false, so no version: a version requirement here is one a registry
 # can never satisfy, and any member writing `workspace = true` inherits it.
 vyre-bench = { path = "vyre-bench" }
 vyre-conform = { path = "conform/vyre-conform", default-features = false }
-vyre-lower = { version = "0.7.2", path = "vyre-lower" }
-vyre-emit-naga = { version = "0.7.2", path = "vyre-emit-naga" }
-vyre-emit-ptx = { version = "0.7.2", path = "vyre-emit-ptx" }
-vyre-emit-spirv = { version = "0.7.2", path = "vyre-emit-spirv" }
-vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
-vyre-lints = { version = "0.7.2", path = "vyre-lints" }
-vyre-debug = { version = "0.7.2", path = "vyre-debug" }
+vyre-lower = { version = "0.8.0", path = "vyre-lower" }
+vyre-emit-naga = { version = "0.8.0", path = "vyre-emit-naga" }
+vyre-emit-ptx = { version = "0.8.0", path = "vyre-emit-ptx" }
+vyre-emit-spirv = { version = "0.8.0", path = "vyre-emit-spirv" }
+vyre-emit-metal = { version = "0.8.0", path = "vyre-emit-metal" }
+vyre-lints = { version = "0.8.0", path = "vyre-lints" }
+vyre-debug = { version = "0.8.0", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
 
 # Shared third-party pins; every member agrees on versions.

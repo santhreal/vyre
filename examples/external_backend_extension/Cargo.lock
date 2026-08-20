@@ -581,7 +581,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vyre"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "vyre-driver",
  "vyre-foundation",
@@ -592,7 +592,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -613,7 +613,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-foundation"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "arrayvec",
  "blake3",
@@ -636,7 +636,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-lower"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "imbl",
  "rustc-hash",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-macros"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -657,7 +657,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-megakernel"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "blake3",
  "serde",
@@ -669,14 +669,14 @@ dependencies = [
 
 [[package]]
 name = "vyre-primitives"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "bytemuck",
 ]
 
 [[package]]
 name = "vyre-reference"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "blake3",
  "imbl",
@@ -692,7 +692,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-runtime"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -709,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-spec"
-version = "0.7.2"
+version = "0.8.0"
 dependencies = [
  "serde",
  "serde_json",

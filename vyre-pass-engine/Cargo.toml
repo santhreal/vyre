@@ -1,6 +1,6 @@
 [package]
 name = "vyre-pass-engine"
-version = "0.7.2"
+version = "0.8.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -42,7 +42,7 @@ vyre-foundation.workspace = true
 # primitive domains into every optimizer-only consumer. Declared explicitly rather
 # than through `workspace = true`, which silently ignores `default-features = false`
 # unless the workspace entry states a `default-features` value of its own.
-vyre-libs = { version = "0.7.2", path = "../vyre-libs", default-features = false }
+vyre-libs = { version = "0.8.0", path = "../vyre-libs", default-features = false }
 vyre-primitives = { workspace = true }
 rustc-hash.workspace = true
 

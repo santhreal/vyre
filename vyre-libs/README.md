@@ -99,7 +99,7 @@ crates, not by this one.
 
 ```toml
 [dependencies]
-vyre-libs = { version = "0.7.2", default-features = false, features = ["nn-linear"] }
+vyre-libs = { version = "0.8.0", default-features = false, features = ["nn-linear"] }
 ```
 
 Defaults (`cargo add vyre-libs`) enable `math-linalg`, `math-scan`,
@@ -155,7 +155,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-libs@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-libs@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
 
 ### Ownership
 

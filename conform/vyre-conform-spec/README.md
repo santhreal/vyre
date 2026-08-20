@@ -137,7 +137,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-conform-spec@0.7.2` is workspace-internal on the current Vyre release train and is not published as a standalone crate.
+`vyre-conform-spec@0.8.0` is workspace-internal on the current Vyre release train and is not published as a standalone crate.
 
 ### Ownership
 

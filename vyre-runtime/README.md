@@ -151,7 +151,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-This crate is an active experimental runtime surface in the 0.7.2 workspace. Its public contracts follow the Vyre release train.
+This crate is an active experimental runtime surface in the 0.8.0 workspace. Its public contracts follow the Vyre release train.
 
 ### Ownership
 

@@ -254,7 +254,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-This crate is internal benchmark tooling for the 0.7.2 train and is not published to crates.io.
+This crate is internal benchmark tooling for the 0.8.0 train and is not published to crates.io.
 
 ### Ownership
 

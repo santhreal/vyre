@@ -12,10 +12,10 @@ decided outside it.
 
 ## The manifest
 
-`[versions]` carries one version per product. `vyre` is at `0.7.2`.
+`[versions]` carries one version per product. `vyre` is at `0.8.0`.
 
-`[tags]` carries product-scoped tags, `vyre-v0.7.2-rc.1` and
-`vyre-v0.7.2`. A bare `v0.7.2` tag is rejected by policy: this repository
+`[tags]` carries product-scoped tags, `vyre-v0.8.0-rc.1` and
+`vyre-v0.8.0`. A bare `v0.8.0` tag is rejected by policy: this repository
 is one product among several under one account, and a bare tag is ambiguous
 about which.
 
