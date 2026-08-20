@@ -505,6 +505,30 @@ mod tests {
         );
     }
 
+    /// A backend that overrides `supports_grid_sync` and leaves the residency
+    /// check on its default must still take the native route. The two defaults
+    /// disagreed: `cooperative_grid_sync_fits` answered a bare `false`, the
+    /// wrapper read that as "the native launch does not fit", and every
+    /// dispatch went through the host split the backend had just said it did
+    /// not need. The test above only sees it because the split then rejects the
+    /// input shape; this one asserts the contradiction directly, so overriding
+    /// one of the pair without the other stays red on its own.
+    #[test]
+    fn a_native_grid_sync_claim_answers_the_cooperative_fit_query() {
+        let probe = NativeGridSyncProbe {
+            calls: Mutex::new(0),
+        };
+
+        assert_eq!(
+            probe
+                .cooperative_grid_sync_fits(&grid_sync_program(), &[], &DispatchConfig::default())
+                .expect("Fix: the default cooperative-fit query must not error"),
+            probe.supports_grid_sync(),
+            "the default cooperative-fit answer contradicts supports_grid_sync, so the wrapper \
+             emulates a barrier the backend lowers natively"
+        );
+    }
+
     struct ResidentUploadProbe {
         uploads: Mutex<Vec<(u64, usize, usize)>>,
     }

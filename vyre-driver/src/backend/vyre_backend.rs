@@ -672,10 +672,18 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     /// avoiding a wasted allocate/upload that would otherwise end in
     /// [`crate::backend::ErrorCode::CooperativeResidencyExceeded`].
     ///
-    /// Default: `Ok(false)` (no native cooperative launch). Backends that lower
-    /// grid sync override this with the real residency check. Returns `Ok(false)`
-    ///: not an error, when the program carries no grid-sync barrier, since
-    /// there is then nothing to launch cooperatively.
+    /// Default: [`VyreBackend::supports_grid_sync`]. A backend that does not
+    /// lower a whole-grid barrier can fit no cooperative launch, and one that
+    /// does and has declared no residency limit fits every launch it is handed.
+    /// The default was a bare `Ok(false)`, which read as "no native cooperative
+    /// launch" and was correct only for the first of those: a backend that
+    /// reported `supports_grid_sync()` and left the residency check alone was
+    /// routed to the host split on every dispatch, which is the opposite of
+    /// what it asked for. Overriding one of the two without the other is the
+    /// defect this default closes. Answers `Ok(false)` for a program carrying
+    /// no grid-sync barrier only because a backend that lowers none reports no
+    /// support; a native backend answers for the launch it was given, and
+    /// callers ask only when the program has a barrier.
     ///
     /// # Errors
     ///
@@ -687,7 +695,7 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
         _inputs: &[&[u8]],
         _config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        Ok(false)
+        Ok(self.supports_grid_sync())
     }
 
     /// Whether the shared registry wrapper may emulate whole-grid
