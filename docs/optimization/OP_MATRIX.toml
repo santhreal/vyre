@@ -859,6 +859,20 @@ release_blocking_notes = "Source-backed row generated from vyre-foundation::oper
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
+family = "vyre-libs::graph::dominator_frontier_pred_check"
+tier = "libs"
+owners = ["vyre-libs/src/graph"]
+ops = ["vyre-libs::graph::dominator_frontier_pred_check"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
 family = "vyre-libs::graph::dominator_tree"
 tier = "libs"
 owners = ["vyre-libs/src/graph"]
@@ -891,6 +905,20 @@ family = "vyre-libs::graph::dominator_tree_intersect_step"
 tier = "libs"
 owners = ["vyre-libs/src/graph"]
 ops = ["vyre-libs::graph::dominator_tree_intersect_step"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
+family = "vyre-libs::graph::dominator_tree_lca"
+tier = "libs"
+owners = ["vyre-libs/src/graph"]
+ops = ["vyre-libs::graph::dominator_tree_lca"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
 foundation_ir = "supported"
@@ -1069,10 +1097,38 @@ release_blocking_notes = "Source-backed row generated from vyre-foundation::oper
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
+family = "vyre-libs::graph::tensor_flow_propagate_edges"
+tier = "libs"
+owners = ["vyre-libs/src/graph"]
+ops = ["vyre-libs::graph::tensor_flow_propagate_edges"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
 family = "vyre-libs::graph::union_find"
 tier = "libs"
 owners = ["vyre-libs/src/graph"]
 ops = ["vyre-libs::graph::union_find"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
+family = "vyre-libs::graph::vast_descend_leftmost_leaf"
+tier = "libs"
+owners = ["vyre-libs/src/graph"]
+ops = ["vyre-libs::graph::vast_descend_leftmost_leaf"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
 foundation_ir = "supported"
@@ -2511,6 +2567,20 @@ release_blocking_notes = "Source-backed row generated from vyre-foundation::oper
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
+family = "vyre-libs::nn::attention::absorb_values"
+tier = "libs"
+owners = ["vyre-libs/src/nn"]
+ops = ["vyre-libs::nn::attention::absorb_values"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
 family = "vyre-libs::nn::attention::online_softmax"
 tier = "libs"
 owners = ["vyre-libs/src/nn"]
@@ -2529,6 +2599,20 @@ family = "vyre-libs::nn::attention::quest_paging"
 tier = "libs"
 owners = ["vyre-libs/src/nn"]
 ops = ["vyre-libs::nn::attention::quest_paging"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
+family = "vyre-libs::nn::attention::tile_scores"
+tier = "libs"
+owners = ["vyre-libs/src/nn"]
+ops = ["vyre-libs::nn::attention::tile_scores"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
 foundation_ir = "supported"
@@ -3365,6 +3449,20 @@ release_blocking_notes = "Source-backed row generated from vyre-foundation::oper
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
+family = "vyre-libs::parsing::ast_cse_hash_probe"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::ast_cse_hash_probe"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
 family = "vyre-libs::parsing::ast_cse_structural_hash"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
@@ -3393,6 +3491,20 @@ release_blocking_notes = "Source-backed row generated from vyre-foundation::oper
 tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
 
 [[op]]
+family = "vyre-libs::parsing::ast_shunting_yard_reduce"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::ast_shunting_yard_reduce"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
 family = "vyre-libs::parsing::core_delimiter_match"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
@@ -3411,6 +3523,20 @@ family = "vyre-libs::parsing::line_splice_classify"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
 ops = ["vyre-libs::parsing::line_splice_classify"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
+family = "vyre-libs::parsing::planar_rewrite_exclusion_check"
+tier = "libs"
+owners = ["vyre-libs/src/parsing"]
+ops = ["vyre-libs::parsing::planar_rewrite_exclusion_check"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
 foundation_ir = "supported"
@@ -4041,6 +4167,20 @@ family = "vyre-libs::reduce::gather"
 tier = "libs"
 owners = ["vyre-libs/src/reduce"]
 ops = ["vyre-libs::reduce::gather"]
+registry_sources = ["vyre-foundation::operation"]
+reference = "supported"
+foundation_ir = "supported"
+cuda = "supported"
+wgpu = "supported"
+spirv = "experimental"
+release_blocking_notes = "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace."
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth/mod.rs"]
+
+[[op]]
+family = "vyre-libs::reduce::grid_stride_tree_sum_u32"
+tier = "libs"
+owners = ["vyre-libs/src/reduce"]
+ops = ["vyre-libs::reduce::grid_stride_tree_sum_u32"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"
 foundation_ir = "supported"
