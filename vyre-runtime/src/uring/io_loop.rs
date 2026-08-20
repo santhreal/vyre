@@ -212,3 +212,9 @@ impl ResidentIoLoop {
         }
     }
 }
+
+impl Drop for ResidentIoLoop {
+    fn drop(&mut self) {
+        let _ = self.stop();
+    }
+}

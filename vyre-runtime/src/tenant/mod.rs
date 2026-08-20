@@ -483,4 +483,15 @@ mod tests {
         let err = h1.publish_slot(&mut ring, 0, 0, &[]).unwrap_err();
         assert!(matches!(err, TenantError::Revoked { .. }));
     }
+    #[test]
+    fn quiesce_on_fully_drained_tenant_with_zero_spins_succeeds() {
+        let reg = TenantRegistry::new();
+        let handle = reg.register("test").unwrap();
+        assert!(
+            handle.quiesce(0).is_ok(),
+            "quiesce(0) on empty tenant must succeed"
+        );
+        let counters = handle.runtime_counters();
+        assert_eq!(counters.quiesce_timeouts, 0);
+    }
 }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A failed benchmark no longer writes host absolute paths into an evidence blocker. The workspace root is rewritten relative to the workspace at path boundaries, so a sibling checkout keeps its own name and an artifact path issue names the declared artifact rather than the host that resolved it."

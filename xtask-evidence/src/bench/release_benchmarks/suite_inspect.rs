@@ -36,25 +36,27 @@ pub(super) fn run_workload_benchmark(
     let borrowed = owned_args.iter().map(String::as_str).collect::<Vec<_>>();
     run_command_status(workspace_root, &borrowed)?;
     if case_id == "compound.pipeline.fused_filter.1m" {
-        attach_fused_execution_dag(&workspace_root.join(output), case_id)?;
+        attach_fused_execution_dag(workspace_root, output, case_id)?;
     }
     Ok(())
 }
 
-fn attach_fused_execution_dag(path: &Path, case_id: &str) -> Result<(), String> {
-    let text = read_text_bounded(path, MAX_RELEASE_BENCHMARK_TEXT_BYTES)
-        .map_err(|error| format!("could not read `{}`: {error}", path.display()))?;
+fn attach_fused_execution_dag(
+    workspace_root: &Path,
+    output: &str,
+    case_id: &str,
+) -> Result<(), String> {
+    let path = workspace_root.join(output);
+    let text = read_text_bounded(&path, MAX_RELEASE_BENCHMARK_TEXT_BYTES)
+        .map_err(|error| format!("could not read `{output}`: {error}"))?;
     let mut report = serde_json::from_str::<Value>(&text)
-        .map_err(|error| format!("could not parse `{}`: {error}", path.display()))?;
+        .map_err(|error| format!("could not parse `{output}`: {error}"))?;
     let dag = fused_execution_dag_from_report(&report, case_id)?;
-    let report_object = report.as_object_mut().ok_or_else(|| {
-        format!(
-            "benchmark artifact `{}` must be a JSON object",
-            path.display()
-        )
-    })?;
+    let report_object = report
+        .as_object_mut()
+        .ok_or_else(|| format!("benchmark artifact `{output}` must be a JSON object"))?;
     report_object.insert("fused_execution_dag".to_string(), dag);
-    xtask::json_document::write(path, &report)
+    xtask::json_document::write(&path, &report)
 }
 
 fn fused_execution_dag_from_report(report: &Value, case_id: &str) -> Result<Value, String> {

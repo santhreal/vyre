@@ -354,15 +354,14 @@ impl TenantHandle {
         }
         let pub_count = self.state.published_count.load(Ordering::Acquire);
         let drained = self.state.drained_count.load(Ordering::Acquire);
+        if drained >= pub_count {
+            self.record_quiesce(started, false);
+            return Ok(());
+        }
         self.record_quiesce(started, true);
         Err(TenantError::QuiesceTimeout {
             tenant_id: self.state.id,
-            outstanding: vyre_driver::accounting::checked_sub_u64_lazy(pub_count, drained, || {
-                TenantError::Pipeline(PipelineError::QueueFull {
-                    queue: "tenant",
-                    fix: "tenant drained_count exceeded published_count during quiesce; rebuild tenant accounting state",
-                })
-            })?,
+            outstanding: pub_count.saturating_sub(drained),
         })
     }
 

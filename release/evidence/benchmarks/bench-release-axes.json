@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "warm_us_per_file": 3.012,
-  "cold_pipeline_build_ms": 1.21711,
-  "gbs_scan_throughput": 3531.88,
+  "warm_us_per_file": 2.345,
+  "cold_pipeline_build_ms": 0.845675,
+  "gbs_scan_throughput": 4535.169,
   "ulp_drift_max": 0,
   "max_vram_mib": 24564,
   "source_artifacts": [
@@ -24,5 +24,8 @@
     "release/evidence/benchmarks/workload-16-quantized-linear.json",
     "release/evidence/benchmarks/workload-17-egraph-saturation.json"
   ],
-  "blockers": []
+  "blockers": [
+    "CUDA release axis artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` has nonzero or missing summary.failed",
+    "source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` summary.failed must be 0"
+  ]
 }

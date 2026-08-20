@@ -22,6 +22,9 @@ use super::*;
 /// end of the range where `u32::MAX / d` is small and the Lemire limit is
 /// tightest.
 fn candidate_divisors() -> Vec<u32> {
+    if cfg!(miri) {
+        return vec![3, 5, 6, 7, 9, 10, 11, 12, 100, 65_535, 1_000_000_007];
+    }
     (0u32..=512)
         .chain((1u32..=64).map(|i| u32::MAX / i))
         .chain([65_535, 65_536, 65_537, 1_000_000_007])
@@ -30,6 +33,9 @@ fn candidate_divisors() -> Vec<u32> {
 
 /// Operand values the single-divisor sweeps use.
 fn sample_operands() -> Vec<u32> {
+    if cfg!(miri) {
+        return vec![0, 1, 2, 3, 4, 15, 16, 17, 255, 256, 1000, u32::MAX - 1, u32::MAX];
+    }
     let mut values: Vec<u32> = (0u32..=600).collect();
     values.extend((0..32).map(|bit| 1u32 << bit));
     values.extend((0..32).map(|bit| (1u32 << bit).wrapping_sub(1)));
@@ -48,6 +54,9 @@ fn sample_operands() -> Vec<u32> {
 
 /// Smaller sweep for the tests that enumerate thousands of constant pairs.
 fn coarse_operands() -> Vec<u32> {
+    if cfg!(miri) {
+        return vec![0, 1, 2, 15, 16, 255, u32::MAX];
+    }
     let mut values: Vec<u32> = (0u32..=64).collect();
     values.extend((0..32).map(|bit| 1u32 << bit));
     values.extend((0..32).map(|bit| (1u32 << bit).wrapping_sub(1)));
@@ -97,8 +106,9 @@ fn divisibility_test_agrees_with_the_remainder_it_replaces() {
             );
         }
     }
+    let min_admitted = if cfg!(miri) { 8 } else { 400 };
     assert!(
-        admitted >= 400,
+        admitted >= min_admitted,
         "recognition admitted only {admitted} divisors; the divisibility rewrite is not firing"
     );
 }
@@ -121,8 +131,9 @@ fn non_divisibility_test_agrees_with_the_remainder_it_replaces() {
             );
         }
     }
+    let min_admitted = if cfg!(miri) { 8 } else { 400 };
     assert!(
-        admitted >= 400,
+        admitted >= min_admitted,
         "the non-divisibility rewrite is not firing"
     );
 }
@@ -156,10 +167,13 @@ fn masked_product_over(mask: u32, multiplier: u32, divisor: u32) -> Expr {
 fn cancelling_a_common_factor_preserves_the_quotient() {
     let operands = coarse_operands();
     let mut fired = 0usize;
-    for mask_bits in 1u32..=24 {
+    let max_mask = if cfg!(miri) { 4 } else { 24 };
+    let max_mult = if cfg!(miri) { 4 } else { 24 };
+    let max_div = if cfg!(miri) { 4 } else { 24 };
+    for mask_bits in 1u32..=max_mask {
         let mask = (1u32 << mask_bits) - 1;
-        for multiplier in 1u32..=24 {
-            for divisor in 2u32..=24 {
+        for multiplier in 1u32..=max_mult {
+            for divisor in 2u32..=max_div {
                 let source = masked_product_over(mask, multiplier, divisor);
                 let Some(rewritten) = recognize_source_shape(&source) else {
                     continue;
@@ -176,7 +190,8 @@ fn cancelling_a_common_factor_preserves_the_quotient() {
             }
         }
     }
-    assert!(fired >= 100, "factor cancellation fired only {fired} times");
+    let min_fired = if cfg!(miri) { 5 } else { 100 };
+    assert!(fired >= min_fired, "factor cancellation fired only {fired} times");
 }
 
 #[test]
@@ -203,8 +218,10 @@ fn a_product_that_can_wrap_blocks_cancellation() {
 #[test]
 fn a_constant_division_chain_fuses_into_one_division() {
     let operands = coarse_operands();
-    for outer in 1u32..=40 {
-        for inner in 1u32..=40 {
+    let max_outer = if cfg!(miri) { 6 } else { 40 };
+    let max_inner = if cfg!(miri) { 6 } else { 40 };
+    for outer in 1u32..=max_outer {
+        for inner in 1u32..=max_inner {
             let source = Expr::div(
                 Expr::div(Expr::var("x"), Expr::u32(inner)),
                 Expr::u32(outer),
@@ -226,8 +243,9 @@ fn a_constant_division_chain_fuses_into_one_division() {
 #[test]
 fn a_nested_modulus_narrows_only_when_the_outer_divides_the_inner() {
     let operands = coarse_operands();
-    for inner in 1u32..=48 {
-        for outer in 1u32..=48 {
+    let max_bound = if cfg!(miri) { 8 } else { 48 };
+    for inner in 1u32..=max_bound {
+        for outer in 1u32..=max_bound {
             let source = Expr::rem(
                 Expr::rem(Expr::var("x"), Expr::u32(inner)),
                 Expr::u32(outer),
