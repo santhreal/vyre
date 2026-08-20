@@ -77,7 +77,7 @@ label = ["bitset"]
 graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels", "telemetry"]
 predicate = ["graph", "bitset", "label"]
 # `math-kernels` names `reduce` because `math/prefix_scan.rs` sweeps
-# `reduce::workgroup_tree::blelloch_inclusive_sum_nodes`.
+# `reduce::workgroup_scan::blelloch_inclusive_sum_nodes`.
 math-kernels = ["reduce"]
 nn-kernels = ["math-kernels"]
 # `pattern-kernels` names `hash` because `pattern/nfa_to_dfa.rs` imports

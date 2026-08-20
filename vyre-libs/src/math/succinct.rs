@@ -14,7 +14,7 @@ use vyre_foundation::ir::{
 };
 
 use crate::builder::cooperative::chunks;
-use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
+use crate::reduce::workgroup_scan::blelloch_inclusive_sum_nodes;
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
 const RANK_QUERY_OP_ID: &str = "vyre-libs::math::succinct::rank1_query";

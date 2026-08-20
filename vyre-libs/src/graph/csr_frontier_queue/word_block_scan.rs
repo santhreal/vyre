@@ -104,7 +104,7 @@ pub fn frontier_word_counts_scan_pass_a(
         Expr::popcount(Expr::var("fwcs_word")),
     ));
 
-    let body = crate::reduce::workgroup_tree::BlockScanPass {
+    let body = crate::reduce::workgroup_scan::BlockScanPass {
         lane,
         block: "fwcs_block",
         global: "fwcs_global",
@@ -204,7 +204,7 @@ fn frontier_word_block_offsets_single_workgroup(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+    body.extend(crate::reduce::workgroup_scan::blelloch_inclusive_sum_nodes(
         &scratch_a, &scratch_b, &lane, 1024,
     ));
 

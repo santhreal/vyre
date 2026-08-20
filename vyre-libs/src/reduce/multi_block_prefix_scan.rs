@@ -412,7 +412,7 @@ fn try_guarded_single_block_scan(
         ordering: MemoryOrdering::SeqCst,
     });
 
-    scan_body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
+    scan_body.extend(crate::reduce::workgroup_scan::blelloch_inclusive_sum_nodes(
         &scratch_a,
         &scratch_b,
         &lane,
@@ -501,7 +501,7 @@ fn try_pass_a_local_scan(
     let scratch_a = format!("__{partials}_pass_a_scratch_a");
     let scratch_b = format!("__{partials}_pass_a_scratch_b");
 
-    let pass = crate::reduce::workgroup_tree::BlockScanPass {
+    let pass = crate::reduce::workgroup_scan::BlockScanPass {
         lane,
         block: "block",
         global: "global",

@@ -36,7 +36,7 @@ use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes;
+use crate::reduce::workgroup_scan::blelloch_inclusive_sum_nodes;
 use vyre_primitives::ir_safe::clamped_load_to;
 
 /// Canonical op id for inclusive sum-scan.
