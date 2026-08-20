@@ -92,15 +92,8 @@ fn measure_node(node: &Node, depth: usize, stats: &mut Complexity) {
                 measure_node(n, depth, stats);
             }
         }
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            if is_child_composition(
-                generator.as_str(),
-                source_region.as_ref().map(|r| r.as_str()),
-            ) {
+        Node::Region { body, .. } => {
+            if exempt_child_generator(node).is_some() {
                 return;
             }
             for n in body.iter() {
@@ -450,6 +443,27 @@ fn is_child_composition(generator: &str, source_region: Option<&str>) -> bool {
     source_region.is_some()
         && !vyre_foundation::composition::is_anonymous_generator(generator)
         && REGISTERED_OP_IDS.contains(generator)
+}
+
+/// The generator an exempt child region names, if this node is one.
+///
+/// Both readers of the rule ask the same question of the same node shape, so
+/// the destructure and the test live here once instead of at each call site.
+fn exempt_child_generator(node: &Node) -> Option<&str> {
+    match node {
+        Node::Region {
+            generator,
+            source_region,
+            ..
+        } if is_child_composition(
+            generator.as_str(),
+            source_region.as_ref().map(|r| r.as_str()),
+        ) =>
+        {
+            Some(generator.as_str())
+        }
+        _ => None,
+    }
 }
 
 fn hash_str(value: &str, h: &mut u64) {

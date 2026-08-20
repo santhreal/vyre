@@ -39,6 +39,13 @@ pub fn grid_stride_tree_sum_u32_blocks(count: u32, tile: u32, blocks: u32) -> u3
 /// carries a whole-grid fence, so it runs as one cooperative launch whose grid
 /// must be fully co-resident. Only the caller knows that device limit, so the
 /// caller fixes the grid and pass 1 strides over the input to cover it.
+///
+/// # Panics
+///
+/// Both passes are built here from the same shape, so fusing them fails only
+/// when this module builds a pair the fuser rejects. That is a defect in the
+/// builder rather than a caller error, and it panics with the fuser's reason
+/// instead of returning a `Result` no caller could act on.
 #[must_use]
 pub fn grid_stride_tree_sum_u32(
     values: &str,

@@ -140,16 +140,9 @@ fn same_canonical_generators(a: &Program, b: &Program) -> bool {
 fn collect_region_generators<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
     for node in nodes {
         match node {
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => {
-                if is_child_composition(
-                    generator.as_str(),
-                    source_region.as_ref().map(|r| r.as_str()),
-                ) {
-                    out.push(generator.as_str());
+            Node::Region { body, .. } => {
+                if let Some(generator) = exempt_child_generator(node) {
+                    out.push(generator);
                 }
                 collect_region_generators(body, out);
             }
