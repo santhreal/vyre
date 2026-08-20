@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre-bench/tests/release_macro_cuda_live.rs acquired a real CUDA backend on every hosted matrix leg, where cudarc aborts the process rather than returning an error, so the whole leg went red with a panic from inside a dependency. The test is now behind the device-tests feature that gpu-parity.yml turns on, and a new device-test-gating gate holds the class: test code calls a backend constructor only under that feature or #[ignore], with the backend roster read from the pub struct *Backend declarations in the vyre-driver-* members."

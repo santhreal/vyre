@@ -1,7 +1,14 @@
 //! Live CUDA validation for generated compiler-grade release macro workloads.
+//
+// `device-tests` because this acquires a real CUDA backend. On a hosted runner
+// with no driver `CudaBackend::acquire` does not return an error this test can
+// report: cudarc aborts the process, so the whole matrix leg went red with a
+// panic from inside a dependency. `gpu-parity.yml` enables the feature on the
+// runner that has the device.
+//
 // vyre-driver-cuda is a vyre-bench dependency only under
 // cfg(not(target_os = "macos")), so this file cannot name it on macOS.
-#![cfg(not(target_os = "macos"))]
+#![cfg(all(not(target_os = "macos"), feature = "device-tests"))]
 
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,

@@ -20,6 +20,7 @@ pub mod crate_readmes;
 pub mod crate_registry;
 pub mod dedup_report;
 pub mod dep_drift;
+pub mod device_test_gating;
 pub mod dispatch_surface;
 pub mod doc_contract;
 pub mod docs_references;
@@ -110,6 +111,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("crate-readmes", &crate_readmes::CrateReadmes),
     ("crate-ownership", &crate_registry::CrateOwnership),
     ("dep-drift", &dep_drift::DepDrift),
+    ("device-test-gating", &device_test_gating::DeviceTestGating),
     ("hot-path-nested-rows", &dispatch_surface::NestedRows),
     ("hot-path-owned-dispatch", &dispatch_surface::OwnedDispatch),
     ("contract-in-source", &doc_contract::ContractInSource),

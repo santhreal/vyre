@@ -396,6 +396,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::dep_drift::tests::dep_drift_detects_mismatched_dependency_versions_and_ignores_workspace_inheritance",
     },
     GateDescriptor {
+        name: "device-test-gating",
+        help: "Enforce device-test-gating contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "rust sources",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::device_test_gating::tests::a_per_test_device_cfg_admits_that_test_and_not_its_neighbour",
+    },
+    GateDescriptor {
         name: "doc-claims",
         help: "Enforce doc-claims contracts",
         package: "xtask",

@@ -112,6 +112,10 @@ name = "dep-drift"
 findings = 0
 
 [[gate]]
+name = "device-test-gating"
+findings = 0
+
+[[gate]]
 name = "doc-claims"
 findings = 0
 
