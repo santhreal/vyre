@@ -1094,7 +1094,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
     }
 
     fn max_workgroup_size(&self) -> [u32; 3] {
-        self.enabled_features.max_workgroup_size
+        crate::target_compiler::admissible_workgroup_size(self.enabled_features.max_workgroup_size)
     }
 
     fn max_compute_workgroups_per_dimension(&self) -> u32 {
@@ -1102,7 +1102,9 @@ impl vyre_driver::VyreBackend for WgpuBackend {
     }
 
     fn max_compute_invocations_per_workgroup(&self) -> u32 {
-        self.device_limits.max_compute_invocations_per_workgroup
+        crate::target_compiler::admissible_invocations_per_workgroup(
+            self.device_limits.max_compute_invocations_per_workgroup,
+        )
     }
 
     fn subgroup_size(&self) -> Option<u32> {

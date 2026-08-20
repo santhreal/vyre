@@ -92,6 +92,35 @@ impl TargetDialect {
         }))
     }
 
+    /// Largest workgroup this backend can actually run, per dimension.
+    ///
+    /// A device reports what its adapter allows; the target compiler admits
+    /// what this dialect declares. When they disagree the smaller one is the
+    /// only true fact, because geometry the dialect refuses never reaches the
+    /// device. Reporting the raw adapter limit makes every composition that
+    /// reads the device profile emit a payload the envelope rejects.
+    #[must_use]
+    pub fn admissible_workgroup_size(&self, adapter: [u32; 3]) -> [u32; 3] {
+        let mut admitted = adapter;
+        for (axis, limit) in admitted.iter_mut().zip(self.max_workgroup_size) {
+            *axis = (*axis).min(limit);
+        }
+        admitted
+    }
+
+    /// Largest invocation count in one workgroup this backend can actually run.
+    ///
+    /// Same intersection as [`Self::admissible_workgroup_size`], for the total
+    /// the envelope checks after multiplying the extents out.
+    #[must_use]
+    pub const fn admissible_invocations_per_workgroup(&self, adapter: u32) -> u32 {
+        if adapter < self.max_invocations_per_workgroup {
+            adapter
+        } else {
+            self.max_invocations_per_workgroup
+        }
+    }
+
     fn invalid(&self, part: &str, fix: &str, error: &impl std::fmt::Display) -> BackendError {
         BackendError::KernelCompileFailed {
             backend: self.backend_id.to_string(),

@@ -60,3 +60,16 @@ pub(crate) fn target_profile() -> Result<TargetProfile, BackendError> {
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
     WGPU_DIALECT.compiler()
 }
+
+/// The workgroup extents this backend can actually run: the adapter limit
+/// intersected with what WGSL emission admits. The dialect caps at the WebGPU
+/// spec baseline, which is below what most native adapters report, and a
+/// composition that believes the adapter emits a payload the envelope rejects.
+pub(crate) fn admissible_workgroup_size(adapter: [u32; 3]) -> [u32; 3] {
+    WGPU_DIALECT.admissible_workgroup_size(adapter)
+}
+
+/// The invocation count per workgroup this backend can actually run.
+pub(crate) const fn admissible_invocations_per_workgroup(adapter: u32) -> u32 {
+    WGPU_DIALECT.admissible_invocations_per_workgroup(adapter)
+}

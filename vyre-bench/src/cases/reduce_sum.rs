@@ -12,7 +12,6 @@ pub struct ReduceSumBench;
 
 const SMALL_COUNT: u32 = 32;
 const LARGE_COUNT: u32 = 1 << 20;
-const MAX_TREE_TILE: u32 = 1024;
 const ROUTE_ATOMIC: u64 = 0;
 const ROUTE_TREE: u64 = 1;
 
@@ -84,9 +83,11 @@ impl BenchCase for ReduceSumBench {
         // per compute unit is the widest grid that holds at this tile, and it
         // is read from the probed device so the grid is a fact of the machine
         // being measured rather than a constant baked into the composition.
-        let tree_blocks = ctx.preferred_backend.device_profile().compute_units.max(1);
-        let small = prepare_size(SMALL_COUNT, tree_blocks);
-        let large = prepare_size(LARGE_COUNT, tree_blocks);
+        let profile = ctx.preferred_backend.device_profile();
+        let tree_blocks = profile.compute_units.max(1);
+        let tile_ceiling = tree_tile_ceiling(&profile);
+        let small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling);
+        let large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling);
 
         let pool = crate::cases::cpu_baselines::baseline_pool();
         let mut durations = Vec::with_capacity(11);
@@ -225,12 +226,26 @@ struct MeasuredSize {
     selected: TimedDispatchResult,
 }
 
-fn prepare_size(count: u32, tree_blocks: u32) -> ReductionSizePrepared {
+/// Largest tile the tree reduction may launch on the measured device.
+///
+/// The tree halves its active lanes each round, so the tile is the admitted
+/// workgroup extent floored to a power of two. Both limits come from the
+/// probed device: a backend whose target dialect admits fewer invocations than
+/// its adapter advertises rejects a payload sized for the adapter's number,
+/// and WGSL admits the WebGPU spec baseline of 256 where CUDA admits 1024.
+fn tree_tile_ceiling(profile: &vyre_driver::DeviceProfile) -> u32 {
+    let admitted = profile.max_workgroup_size[0]
+        .min(profile.max_invocations_per_workgroup)
+        .max(1);
+    1u32 << admitted.ilog2()
+}
+
+fn prepare_size(count: u32, tree_blocks: u32, tile_ceiling: u32) -> ReductionSizePrepared {
     let values: Vec<u32> = (0..count)
         .map(|index| index.wrapping_mul(17).wrapping_add(3) & 0xff)
         .collect();
     let expected = values.iter().copied().fold(0u32, u32::wrapping_add);
-    let tree_tile = count.min(MAX_TREE_TILE).max(1).next_power_of_two();
+    let tree_tile = count.min(tile_ceiling).max(1).next_power_of_two();
     let tree_blocks =
         grid_stride_tree::grid_stride_tree_sum_u32_blocks(count, tree_tile, tree_blocks);
     ReductionSizePrepared {
@@ -343,39 +358,76 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    fn profile_with(max_workgroup_x: u32, max_invocations: u32) -> vyre_driver::DeviceProfile {
+        let mut profile = vyre_driver::DeviceProfile::conservative("test");
+        profile.max_workgroup_size = [max_workgroup_x, 1, 1];
+        profile.max_invocations_per_workgroup = max_invocations;
+        profile
+    }
+
+    #[test]
+    fn the_tile_ceiling_is_the_smaller_of_the_two_workgroup_facts() {
+        assert_eq!(tree_tile_ceiling(&profile_with(1024, 1024)), 1024);
+        assert_eq!(
+            tree_tile_ceiling(&profile_with(1024, 256)),
+            256,
+            "Fix: a dialect that admits 256 invocations rejects a 1024-wide tile the adapter allows"
+        );
+        assert_eq!(tree_tile_ceiling(&profile_with(256, 1024)), 256);
+        assert_eq!(
+            tree_tile_ceiling(&profile_with(768, 768)),
+            512,
+            "Fix: the tree halves its lanes each round, so a tile must be a power of two"
+        );
+        assert_eq!(
+            tree_tile_ceiling(&vyre_driver::DeviceProfile::conservative("unprobed")),
+            1,
+            "Fix: an unprobed backend admits one invocation, not a baked-in default"
+        );
+    }
+
     #[test]
     fn small_and_large_reduction_sizes_prepare_expected_values() {
         // The block count a 4090-class device reports; the clamp is what turns
-        // it into a legal grid for each size.
+        // it into a legal grid for each size. Both tile ceilings are real: CUDA
+        // admits 1024 invocations per workgroup, WGSL admits 256.
         let compute_units = 170;
 
-        let small = prepare_size(SMALL_COUNT, compute_units);
-        assert_eq!(small.count, 32);
-        assert_eq!(small.tree_tile, 32);
-        assert_eq!(small.inputs[0].len(), 32 * 4);
-        assert_eq!(small.expected.len(), 4);
-        assert_eq!(
-            small.tree_grid, None,
-            "Fix: 32 elements at tile 32 need one block, and a one-block tree infers its own grid"
-        );
+        for tile_ceiling in [1024, 256] {
+            let small = prepare_size(SMALL_COUNT, compute_units, tile_ceiling);
+            assert_eq!(small.count, 32);
+            assert_eq!(small.tree_tile, 32);
+            assert_eq!(small.inputs[0].len(), 32 * 4);
+            assert_eq!(small.expected.len(), 4);
+            assert_eq!(
+                small.tree_grid, None,
+                "Fix: 32 elements at tile 32 need one block, and a one-block tree infers its own grid"
+            );
 
-        let large = prepare_size(LARGE_COUNT, compute_units);
-        assert_eq!(large.count, 1 << 20);
-        assert_eq!(large.tree_tile, MAX_TREE_TILE);
-        assert_eq!(large.inputs[0].len(), (1 << 20) * 4);
-        assert_eq!(large.expected.len(), 4);
-        assert_eq!(
-            large.tree_grid,
-            Some([compute_units, 1, 1]),
-            "Fix: the launch must pin the block count the pass-one loop was built for"
-        );
+            let large = prepare_size(LARGE_COUNT, compute_units, tile_ceiling);
+            assert_eq!(large.count, 1 << 20);
+            assert_eq!(
+                large.tree_tile, tile_ceiling,
+                "Fix: a million elements fill whatever tile the device admits"
+            );
+            assert_eq!(large.inputs[0].len(), (1 << 20) * 4);
+            assert_eq!(large.expected.len(), 4);
+            assert_eq!(
+                large.tree_grid,
+                Some([compute_units, 1, 1]),
+                "Fix: the launch must pin the block count the pass-one loop was built for"
+            );
 
-        let saturated = prepare_size(LARGE_COUNT, 100_000);
-        assert_eq!(
-            saturated.tree_grid,
-            Some([LARGE_COUNT / MAX_TREE_TILE, 1, 1]),
-            "Fix: more blocks than tiles leaves blocks with nothing to reduce"
-        );
+            // Pass two reduces the per-block partials inside one tile-wide
+            // workgroup, so the block count is capped by the tile as well as by
+            // the number of tiles the input fills.
+            let saturated = prepare_size(LARGE_COUNT, 100_000, tile_ceiling);
+            assert_eq!(
+                saturated.tree_grid,
+                Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
+                "Fix: more blocks than tiles leaves blocks with nothing to reduce"
+            );
+        }
     }
 
     #[test]

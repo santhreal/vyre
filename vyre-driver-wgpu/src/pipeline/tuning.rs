@@ -67,12 +67,17 @@ pub(crate) fn wgpu_launch_limits(device: &wgpu::Device) -> LaunchGeometryLimits 
     let limits = device.limits();
     LaunchGeometryLimits {
         backend: "wgpu",
-        max_threads_per_block: limits.max_compute_invocations_per_workgroup,
-        max_block_dim: [
+        // The dialect compiles what it declares, not what the adapter allows,
+        // so a geometry above its ceiling is rejected at payload construction
+        // rather than launched.
+        max_threads_per_block: crate::target_compiler::admissible_invocations_per_workgroup(
+            limits.max_compute_invocations_per_workgroup,
+        ),
+        max_block_dim: crate::target_compiler::admissible_workgroup_size([
             limits.max_compute_workgroup_size_x,
             limits.max_compute_workgroup_size_y,
             limits.max_compute_workgroup_size_z,
-        ],
+        ]),
         max_grid_dim: [limits.max_compute_workgroups_per_dimension; 3],
         // WebGPU exposes no per-compute-unit thread budget, so wgpu reports
         // none. Zero keeps residency-aware launch decisions inert here rather
