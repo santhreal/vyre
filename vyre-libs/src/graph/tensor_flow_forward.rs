@@ -20,8 +20,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 pub const OP_ID: &str = "vyre-libs::graph::tensor_flow_forward";
 
 /// Stable op id for tensor-flow edge propagation.
-pub const TENSOR_FLOW_PROPAGATE_EDGES_OP_ID: &str =
-    "vyre-libs::graph::tensor_flow_propagate_edges";
+pub const TENSOR_FLOW_PROPAGATE_EDGES_OP_ID: &str = "vyre-libs::graph::tensor_flow_propagate_edges";
 
 /// Source-lane workgroup for context/field-sensitive tensor propagation.
 pub const TENSOR_FLOW_FORWARD_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
@@ -284,15 +283,26 @@ pub fn tensor_flow_propagate_edges_program() -> Program {
         Node::let_bind("ctx", Expr::u32(0)),
         Node::let_bind("fld", Expr::u32(0)),
     ];
-    body.extend(tensor_flow_propagate_edges_body("tout", 4, 2, 4, 0xFFFF_FFFF));
+    body.extend(tensor_flow_propagate_edges_body(
+        "tout",
+        4,
+        2,
+        4,
+        0xFFFF_FFFF,
+    ));
     Program::wrapped(
         vec![
             BufferDecl::storage(NAME_EDGE_OFFSETS, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(5),
             BufferDecl::storage(NAME_EDGE_TARGETS, 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(4),
-            BufferDecl::storage(NAME_EDGE_KIND_MASK, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(4),
+            BufferDecl::storage(
+                NAME_EDGE_KIND_MASK,
+                2,
+                BufferAccess::ReadOnly,
+                DataType::U32,
+            )
+            .with_count(4),
             BufferDecl::storage("tout", 3, BufferAccess::ReadWrite, DataType::U32).with_count(4),
         ],
         [1, 1, 1],

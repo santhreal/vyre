@@ -326,7 +326,10 @@ impl ReductionComposer {
                                 Expr::add(Expr::var("local"), Expr::var("stride")),
                             ),
                             Node::let_bind("n_a", Expr::load("var_n_scratch", Expr::var("local"))),
-                            Node::let_bind("n_b", Expr::load("var_n_scratch", Expr::var("other_idx"))),
+                            Node::let_bind(
+                                "n_b",
+                                Expr::load("var_n_scratch", Expr::var("other_idx")),
+                            ),
                             Node::if_then(
                                 Expr::gt(Expr::var("n_b"), Expr::u32(0)),
                                 vec![Node::if_then_else(
@@ -340,18 +343,12 @@ impl ReductionComposer {
                                         Node::store(
                                             "var_m1_scratch",
                                             Expr::var("local"),
-                                            Expr::load(
-                                                "var_m1_scratch",
-                                                Expr::var("other_idx"),
-                                            ),
+                                            Expr::load("var_m1_scratch", Expr::var("other_idx")),
                                         ),
                                         Node::store(
                                             "var_m2_scratch",
                                             Expr::var("local"),
-                                            Expr::load(
-                                                "var_m2_scratch",
-                                                Expr::var("other_idx"),
-                                            ),
+                                            Expr::load("var_m2_scratch", Expr::var("other_idx")),
                                         ),
                                     ],
                                     vec![
@@ -361,10 +358,7 @@ impl ReductionComposer {
                                         ),
                                         Node::let_bind(
                                             "m1_b",
-                                            Expr::load(
-                                                "var_m1_scratch",
-                                                Expr::var("other_idx"),
-                                            ),
+                                            Expr::load("var_m1_scratch", Expr::var("other_idx")),
                                         ),
                                         Node::let_bind(
                                             "m2_a",
@@ -372,10 +366,7 @@ impl ReductionComposer {
                                         ),
                                         Node::let_bind(
                                             "m2_b",
-                                            Expr::load(
-                                                "var_m2_scratch",
-                                                Expr::var("other_idx"),
-                                            ),
+                                            Expr::load("var_m2_scratch", Expr::var("other_idx")),
                                         ),
                                         Node::let_bind(
                                             "n_ab",
@@ -403,7 +394,10 @@ impl ReductionComposer {
                                                 Expr::var("m1_a"),
                                                 Expr::mul(
                                                     Expr::var("delta_ab"),
-                                                    Expr::div(Expr::var("n_b_f"), Expr::var("n_ab_f")),
+                                                    Expr::div(
+                                                        Expr::var("n_b_f"),
+                                                        Expr::var("n_ab_f"),
+                                                    ),
                                                 ),
                                             ),
                                         ),

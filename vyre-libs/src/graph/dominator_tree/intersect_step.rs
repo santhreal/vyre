@@ -164,7 +164,12 @@ pub fn dominator_tree_lca_body(
 pub fn dominator_tree_lca_program(node_count: u32) -> Program {
     let count = node_count.max(1);
     let mut body = vec![Node::let_bind("a", Expr::u32(1))];
-    body.extend(dominator_tree_lca_body(node_count, "idom", "depth", Expr::u32(2)));
+    body.extend(dominator_tree_lca_body(
+        node_count,
+        "idom",
+        "depth",
+        Expr::u32(2),
+    ));
     body.push(Node::store("out_lca", Expr::u32(0), Expr::var("a")));
     let guarded = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -172,18 +177,13 @@ pub fn dominator_tree_lca_program(node_count: u32) -> Program {
     )];
     Program::wrapped(
         vec![
-            BufferDecl::storage("idom", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(count),
+            BufferDecl::storage("idom", 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
             BufferDecl::storage("depth", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(count),
-            BufferDecl::output("out_lca", 2, DataType::U32)
-                .with_count(1),
+            BufferDecl::output("out_lca", 2, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(
-            DOMINATOR_TREE_LCA_OP_ID,
-            guarded,
-        )],
+        vec![wrap_anonymous_region(DOMINATOR_TREE_LCA_OP_ID, guarded)],
     )
 }
 

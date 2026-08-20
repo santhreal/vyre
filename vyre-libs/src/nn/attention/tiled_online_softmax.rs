@@ -476,8 +476,16 @@ pub fn attention_tile_scores_program() -> Program {
         Node::store("q_scratch", Expr::u32(1), Expr::f32(4.0)),
     ];
     body.extend(tile_scores_body("k", 2, 2, Expr::f32(0.5)));
-    body.push(Node::store("out_scores", Expr::u32(0), Expr::load("score_tile", Expr::u32(0))));
-    body.push(Node::store("out_scores", Expr::u32(1), Expr::load("score_tile", Expr::u32(1))));
+    body.push(Node::store(
+        "out_scores",
+        Expr::u32(0),
+        Expr::load("score_tile", Expr::u32(0)),
+    ));
+    body.push(Node::store(
+        "out_scores",
+        Expr::u32(1),
+        Expr::load("score_tile", Expr::u32(1)),
+    ));
     let guarded = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         body,
@@ -490,10 +498,7 @@ pub fn attention_tile_scores_program() -> Program {
             BufferDecl::workgroup("score_tile", 2, DataType::F32),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(
-            ATTENTION_TILE_SCORES_OP_ID,
-            guarded,
-        )],
+        vec![wrap_anonymous_region(ATTENTION_TILE_SCORES_OP_ID, guarded)],
     )
 }
 
@@ -511,8 +516,16 @@ pub fn attention_absorb_values_program() -> Program {
         Node::store("o_acc", Expr::u32(1), Expr::f32(0.0)),
     ];
     body.extend(absorb_tile_values_body("v", 2, 2));
-    body.push(Node::store("out_acc", Expr::u32(0), Expr::load("o_acc", Expr::u32(0))));
-    body.push(Node::store("out_acc", Expr::u32(1), Expr::load("o_acc", Expr::u32(1))));
+    body.push(Node::store(
+        "out_acc",
+        Expr::u32(0),
+        Expr::load("o_acc", Expr::u32(0)),
+    ));
+    body.push(Node::store(
+        "out_acc",
+        Expr::u32(1),
+        Expr::load("o_acc", Expr::u32(1)),
+    ));
     let guarded = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         body,

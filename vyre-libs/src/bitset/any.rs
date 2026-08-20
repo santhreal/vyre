@@ -129,5 +129,4 @@ mod tests {
         let cpu_ref = reference_bitset_any(&[0, 1]);
         assert_eq!(cpu_ref.to_le_bytes(), EXPECTED_BITSET_ANY_OUTPUT_BYTES);
     }
-
 }

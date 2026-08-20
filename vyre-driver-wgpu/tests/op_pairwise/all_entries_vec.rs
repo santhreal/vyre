@@ -355,7 +355,9 @@ fn expr_loads_from_buffer(expr: &Expr, buffer_name: &str) -> bool {
                 || expr_loads_from_buffer(true_val, buffer_name)
                 || expr_loads_from_buffer(false_val, buffer_name)
         }
-        Expr::Call { args, .. } => args.iter().any(|arg| expr_loads_from_buffer(arg, buffer_name)),
+        Expr::Call { args, .. } => args
+            .iter()
+            .any(|arg| expr_loads_from_buffer(arg, buffer_name)),
         _ => false,
     }
 }
@@ -365,19 +367,33 @@ fn node_has_async_transfer_from(node: &Node, buffer_name: &str) -> bool {
         Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
             expr_loads_from_buffer(offset, buffer_name) || expr_loads_from_buffer(size, buffer_name)
         }
-        Node::If { then, otherwise, .. } => {
-            then.iter().any(|n| node_has_async_transfer_from(n, buffer_name))
-                || otherwise.iter().any(|n| node_has_async_transfer_from(n, buffer_name))
+        Node::If {
+            then, otherwise, ..
+        } => {
+            then.iter()
+                .any(|n| node_has_async_transfer_from(n, buffer_name))
+                || otherwise
+                    .iter()
+                    .any(|n| node_has_async_transfer_from(n, buffer_name))
         }
-        Node::Loop { body, .. } => body.iter().any(|n| node_has_async_transfer_from(n, buffer_name)),
-        Node::Block(nodes) => nodes.iter().any(|n| node_has_async_transfer_from(n, buffer_name)),
-        Node::Region { body, .. } => body.iter().any(|n| node_has_async_transfer_from(n, buffer_name)),
+        Node::Loop { body, .. } => body
+            .iter()
+            .any(|n| node_has_async_transfer_from(n, buffer_name)),
+        Node::Block(nodes) => nodes
+            .iter()
+            .any(|n| node_has_async_transfer_from(n, buffer_name)),
+        Node::Region { body, .. } => body
+            .iter()
+            .any(|n| node_has_async_transfer_from(n, buffer_name)),
         _ => false,
     }
 }
 
 fn program_has_async_transfer_from(program: &Program, buffer_name: &str) -> bool {
-    program.entry().iter().any(|n| node_has_async_transfer_from(n, buffer_name))
+    program
+        .entry()
+        .iter()
+        .any(|n| node_has_async_transfer_from(n, buffer_name))
 }
 
 /// Rename one buffer throughout a program, preserving program metadata.

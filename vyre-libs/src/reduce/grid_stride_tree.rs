@@ -63,12 +63,7 @@ pub fn grid_stride_tree_sum_u32(
     }
 }
 
-fn single_block_tree_sum_u32(
-    values: &str,
-    out: &str,
-    count: u32,
-    tile: u32,
-) -> Program {
+fn single_block_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> Program {
     let scratch = "__single_tree_scratch";
     let local = Expr::LocalId { axis: 0 };
 
@@ -102,11 +97,9 @@ fn single_block_tree_sum_u32(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(count),
+            BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
             BufferDecl::workgroup(scratch, tile, DataType::U32),
-            BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [tile, 1, 1],
         vec![wrap_anonymous_region(SUM_U32_OP_ID, body)],
@@ -189,8 +182,7 @@ fn pass1_block_reduction(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(count),
+            BufferDecl::storage(values, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
             BufferDecl::workgroup(scratch, tile, DataType::U32),
             BufferDecl::storage(partials, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(blocks)
@@ -201,47 +193,40 @@ fn pass1_block_reduction(
     )
 }
 
-fn pass2_combine_reduction(
-    partials: &str,
-    out: &str,
-    num_blocks: u32,
-    tile: u32,
-) -> Program {
+fn pass2_combine_reduction(partials: &str, out: &str, num_blocks: u32, tile: u32) -> Program {
     let scratch = "__gst_pass2_scratch";
     let local = Expr::LocalId { axis: 0 };
 
-    let body = vec![
-        Node::if_then(
-            Expr::is_first_workgroup(),
-            vec![
-                Node::let_bind("local", local.clone()),
-                Node::let_bind(
-                    "val",
-                    Expr::select(
-                        Expr::lt(local.clone(), Expr::u32(num_blocks)),
-                        Expr::load(partials, local.clone()),
-                        Expr::u32(0),
-                    ),
+    let body = vec![Node::if_then(
+        Expr::is_first_workgroup(),
+        vec![
+            Node::let_bind("local", local.clone()),
+            Node::let_bind(
+                "val",
+                Expr::select(
+                    Expr::lt(local.clone(), Expr::u32(num_blocks)),
+                    Expr::load(partials, local.clone()),
+                    Expr::u32(0),
                 ),
-                Node::store(scratch, local.clone(), Expr::var("val")),
-                Node::barrier(),
-                sum_u32_child(
-                    SUM_U32_OP_ID,
-                    tile,
-                    scratch,
-                    WorkgroupReductionScope::FirstWorkgroup,
-                ),
-                Node::if_then(
-                    Expr::eq(local, Expr::u32(0)),
-                    vec![Node::store(
-                        out,
-                        Expr::u32(0),
-                        Expr::load(scratch, Expr::u32(0)),
-                    )],
-                ),
-            ],
-        ),
-    ];
+            ),
+            Node::store(scratch, local.clone(), Expr::var("val")),
+            Node::barrier(),
+            sum_u32_child(
+                SUM_U32_OP_ID,
+                tile,
+                scratch,
+                WorkgroupReductionScope::FirstWorkgroup,
+            ),
+            Node::if_then(
+                Expr::eq(local, Expr::u32(0)),
+                vec![Node::store(
+                    out,
+                    Expr::u32(0),
+                    Expr::load(scratch, Expr::u32(0)),
+                )],
+            ),
+        ],
+    )];
 
     Program::wrapped(
         vec![
@@ -249,8 +234,7 @@ fn pass2_combine_reduction(
                 .with_count(num_blocks)
                 .with_pipeline_live_out(true),
             BufferDecl::workgroup(scratch, tile, DataType::U32),
-            BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
         ],
         [tile, 1, 1],
         vec![wrap_anonymous_region(SUM_U32_OP_ID, body)],
@@ -288,7 +272,10 @@ mod tests {
     fn multi_block_tree_sum_u32_fuses_two_passes() {
         let program = grid_stride_tree_sum_u32("values", "out", 1048576, 1024, 128);
         assert_eq!(program.workgroup_size(), [1024, 1, 1]);
-        assert!(program.buffers().iter().any(|b| b.name.as_ref() == "values"));
+        assert!(program
+            .buffers()
+            .iter()
+            .any(|b| b.name.as_ref() == "values"));
         assert!(program.buffers().iter().any(|b| b.name.as_ref() == "out"));
     }
 }

@@ -34,7 +34,21 @@ fn candidate_divisors() -> Vec<u32> {
 /// Operand values the single-divisor sweeps use.
 fn sample_operands() -> Vec<u32> {
     if cfg!(miri) {
-        return vec![0, 1, 2, 3, 4, 15, 16, 17, 255, 256, 1000, u32::MAX - 1, u32::MAX];
+        return vec![
+            0,
+            1,
+            2,
+            3,
+            4,
+            15,
+            16,
+            17,
+            255,
+            256,
+            1000,
+            u32::MAX - 1,
+            u32::MAX,
+        ];
     }
     let mut values: Vec<u32> = (0u32..=600).collect();
     values.extend((0..32).map(|bit| 1u32 << bit));
@@ -191,7 +205,10 @@ fn cancelling_a_common_factor_preserves_the_quotient() {
         }
     }
     let min_fired = if cfg!(miri) { 5 } else { 100 };
-    assert!(fired >= min_fired, "factor cancellation fired only {fired} times");
+    assert!(
+        fired >= min_fired,
+        "factor cancellation fired only {fired} times"
+    );
 }
 
 #[test]

@@ -56,7 +56,10 @@ fn parse_module_declarations(source: &str) -> Vec<ModuleDecl> {
             let after = trimmed[mod_pos + 4..].trim();
             if let Some(semicolon_pos) = after.find(';') {
                 let mod_name = after[..semicolon_pos].trim().to_string();
-                if !mod_name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                if !mod_name
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_')
+                {
                     continue;
                 }
 

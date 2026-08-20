@@ -70,7 +70,10 @@ fn every_storage_buffer_binding_is_unique() {
         assert!(
             !seen.iter().any(|(b, _)| *b == binding),
             "binding {binding} claimed by both `{}` and `{}`",
-            seen.iter().find(|(b, _)| *b == binding).map(|(_, n)| n.as_str()).unwrap_or("?"),
+            seen.iter()
+                .find(|(b, _)| *b == binding)
+                .map(|(_, n)| n.as_str())
+                .unwrap_or("?"),
             buffer.name()
         );
         seen.push((binding, buffer.name().to_string()));
@@ -130,7 +133,9 @@ fn pass_one_strides_far_enough_to_cover_every_element() {
                 }
                 Node::Region { body, .. } => loop_bounds(body, out),
                 Node::Block(body) => loop_bounds(body, out),
-                Node::If { then, otherwise, .. } => {
+                Node::If {
+                    then, otherwise, ..
+                } => {
                     loop_bounds(then, out);
                     loop_bounds(otherwise, out);
                 }

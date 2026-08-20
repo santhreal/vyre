@@ -155,10 +155,7 @@ pub fn planar_rewrite_exclusion_check_body(
                             Expr::load(
                                 chosen,
                                 Expr::add(
-                                    Expr::mul(
-                                        Expr::sub(r.clone(), Expr::var("di")),
-                                        Expr::u32(w),
-                                    ),
+                                    Expr::mul(Expr::sub(r.clone(), Expr::var("di")), Expr::u32(w)),
                                     Expr::sub(c.clone(), Expr::var("dj")),
                                 ),
                             ),
@@ -183,7 +180,11 @@ pub fn planar_rewrite_exclusion_check_program(w: u32, k: u32) -> Program {
         Expr::u32(1),
         Expr::u32(1),
     ));
-    body.push(Node::store("out_conflict", Expr::u32(0), Expr::var("conflict")));
+    body.push(Node::store(
+        "out_conflict",
+        Expr::u32(0),
+        Expr::var("conflict"),
+    ));
     let guarded = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         body,
@@ -192,8 +193,7 @@ pub fn planar_rewrite_exclusion_check_program(w: u32, k: u32) -> Program {
         vec![
             BufferDecl::storage("chosen", 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(w.saturating_mul(w)),
-            BufferDecl::output("out_conflict", 1, DataType::U32)
-                .with_count(1),
+            BufferDecl::output("out_conflict", 1, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(

@@ -1249,11 +1249,14 @@ fn concurrent_retained_submissions_are_serialized_and_atomic() {
         handle.join().unwrap();
     }
 
-    let final_completion = retained
-        .submit_and_wait(BindingSet::new(digest))
-        .unwrap();
+    let final_completion = retained.submit_and_wait(BindingSet::new(digest)).unwrap();
     let final_bytes = &final_completion.retained[&retained_val];
-    let final_count = u32::from_le_bytes([final_bytes[0], final_bytes[1], final_bytes[2], final_bytes[3]]);
+    let final_count = u32::from_le_bytes([
+        final_bytes[0],
+        final_bytes[1],
+        final_bytes[2],
+        final_bytes[3],
+    ]);
     assert_eq!(
         final_count,
         TOTAL_SUBMISSIONS + 1,

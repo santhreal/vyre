@@ -242,7 +242,11 @@ fn prepare_size(count: u32, tree_blocks: u32) -> ReductionSizePrepared {
         values: values.clone(),
         atomic_program: sum::reduce_sum("values", "out", count),
         tree_program: grid_stride_tree::grid_stride_tree_sum_u32(
-            "values", "out", count, tree_tile, tree_blocks,
+            "values",
+            "out",
+            count,
+            tree_tile,
+            tree_blocks,
         ),
         inputs: [
             crate::cases::byte_pack::u32_bytes(&values),

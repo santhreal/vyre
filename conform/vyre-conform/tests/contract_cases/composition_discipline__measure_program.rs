@@ -464,7 +464,6 @@ fn mix(h: &mut u64, v: u64) {
     *h = h.wrapping_mul(0x100000001b3);
 }
 
-
 // ───────────────────────────────────────────────────────────────────
 // Gate integrity: the budget exemption must not be self-serve
 // ───────────────────────────────────────────────────────────────────
@@ -514,7 +513,8 @@ fn an_unregistered_child_region_does_not_hide_complexity() {
         "Fix: the fixture must carry real complexity, measured {plain:?}",
     );
     assert_eq!(
-        wrapped.loop_count, plain.loop_count,
+        wrapped.loop_count,
+        plain.loop_count,
         "an unregistered wrapper hid {} of {} loops",
         plain.loop_count - wrapped.loop_count,
         plain.loop_count,

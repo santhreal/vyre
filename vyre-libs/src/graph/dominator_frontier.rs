@@ -10,11 +10,11 @@
 //! correctly computed (the caller is responsible for that  -  usually
 //! via `vyre-libs::dataflow::ssa::compute_dominators`).
 
+use crate::bitset::bitset_words;
+use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use crate::bitset::bitset_words;
-use crate::graph::frontier_bits::{set_bit, when_bit_set, BitAccess};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::dominator_frontier";
@@ -230,16 +230,10 @@ pub fn try_dominator_frontier(
 #[must_use]
 pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node> {
     vec![
-        Node::let_bind(
-            "pred_start",
-            Expr::load("pred_offsets", candidate.clone()),
-        ),
+        Node::let_bind("pred_start", Expr::load("pred_offsets", candidate.clone())),
         Node::let_bind(
             "pred_end",
-            Expr::load(
-                "pred_offsets",
-                Expr::add(candidate, Expr::u32(1)),
-            ),
+            Expr::load("pred_offsets", Expr::add(candidate, Expr::u32(1))),
         ),
         Node::loop_for(
             "p",
@@ -276,8 +270,15 @@ pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node>
 #[must_use]
 pub fn dominator_frontier_pred_check_program() -> Program {
     let mut body = vec![Node::let_bind("dominates_a_predecessor", Expr::u32(0))];
-    body.extend(dominator_frontier_pred_check_body(Expr::u32(0), Expr::u32(0)));
-    body.push(Node::store("out_flag", Expr::u32(0), Expr::var("dominates_a_predecessor")));
+    body.extend(dominator_frontier_pred_check_body(
+        Expr::u32(0),
+        Expr::u32(0),
+    ));
+    body.push(Node::store(
+        "out_flag",
+        Expr::u32(0),
+        Expr::var("dominates_a_predecessor"),
+    ));
     let guarded = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
         body,
@@ -292,8 +293,7 @@ pub fn dominator_frontier_pred_check_program() -> Program {
                 .with_count(2),
             BufferDecl::storage("pred_targets", 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(2),
-            BufferDecl::output("out_flag", 4, DataType::U32)
-                .with_count(1),
+            BufferDecl::output("out_flag", 4, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(

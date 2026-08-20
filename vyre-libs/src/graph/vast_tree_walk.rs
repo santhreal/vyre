@@ -329,7 +329,12 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
                                 valid_node(Expr::var("sib")),
                                 vec![
                                     Node::assign("n", Expr::var("sib")),
-                                    descend_to_leftmost_leaf_node(nodes, node_count, stride, POSTORDER_OP_ID),
+                                    descend_to_leftmost_leaf_node(
+                                        nodes,
+                                        node_count,
+                                        stride,
+                                        POSTORDER_OP_ID,
+                                    ),
                                 ],
                             ),
                             Node::if_then(
@@ -377,7 +382,12 @@ fn valid_node_expr(expr: Expr, node_count: u32) -> Expr {
     )
 }
 
-fn descend_to_leftmost_leaf_node(nodes_name: &str, node_count: u32, stride: u32, parent_op_id: &str) -> Node {
+fn descend_to_leftmost_leaf_node(
+    nodes_name: &str,
+    node_count: u32,
+    stride: u32,
+    parent_op_id: &str,
+) -> Node {
     wrap_child_region(
         VAST_DESCEND_LEFTMOST_LEAF_OP_ID,
         Ident::from(parent_op_id),
@@ -414,7 +424,11 @@ pub fn descend_to_leftmost_leaf_body(nodes_name: &str, node_count: u32, stride: 
 pub fn vast_descend_leftmost_leaf_program(node_count: u32) -> Program {
     let count = node_count.max(1);
     let mut body = vec![Node::let_bind("n", Expr::u32(0))];
-    body.extend(descend_to_leftmost_leaf_body("nodes", count, NODE_STRIDE_U32 as u32));
+    body.extend(descend_to_leftmost_leaf_body(
+        "nodes",
+        count,
+        NODE_STRIDE_U32 as u32,
+    ));
     body.push(Node::store("out_leaf", Expr::u32(0), Expr::var("n")));
     let guarded = vec![Node::if_then(
         Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
@@ -424,8 +438,7 @@ pub fn vast_descend_leftmost_leaf_program(node_count: u32) -> Program {
         vec![
             BufferDecl::storage("nodes", 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(count.saturating_mul(NODE_STRIDE_U32 as u32)),
-            BufferDecl::output("out_leaf", 1, DataType::U32)
-                .with_count(1),
+            BufferDecl::output("out_leaf", 1, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
