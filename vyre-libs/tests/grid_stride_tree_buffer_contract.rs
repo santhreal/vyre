@@ -69,3 +69,33 @@ fn every_storage_buffer_binding_is_unique() {
         seen.push((binding, buffer.name().to_string()));
     }
 }
+
+/// The two fused passes need a grid-level fence between them.
+///
+/// Pass 1 writes `partials[workgroup_id]` and pass 2 reads every entry, so a
+/// workgroup-scoped barrier orders only the block that wrote its own slot. A
+/// `SeqCst` barrier here lets pass 2 read slots no block has written yet, which
+/// surfaces as a wrong sum rather than as a dispatch error.
+#[test]
+fn the_fused_reduction_carries_a_grid_level_fence() {
+    use vyre_foundation::ir::Node;
+
+    fn orderings(nodes: &[Node], out: &mut Vec<String>) {
+        for node in nodes {
+            match node {
+                Node::Barrier { ordering } => out.push(format!("{ordering:?}")),
+                Node::Region { body, .. } => orderings(body, out),
+                Node::Block(body) => orderings(body, out),
+                _ => {}
+            }
+        }
+    }
+
+    let program = grid_stride_tree_sum_u32("values", "out", 1 << 20, 1024);
+    let mut found = Vec::new();
+    orderings(program.entry(), &mut found);
+    assert!(
+        found.iter().any(|o| o == "GridSync"),
+        "barriers were {found:?}; pass 2 reads partials every workgroup writes"
+    );
+}

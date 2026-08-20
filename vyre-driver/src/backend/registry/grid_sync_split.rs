@@ -42,14 +42,16 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        if self.should_split_grid_sync(program) {
+        if crate::grid_sync::contains_grid_sync(program) {
             let borrowed = borrowed_inputs_from_owned(inputs)?;
-            return crate::grid_sync::dispatch_with_grid_sync_split(
-                self.inner.as_ref(),
-                program,
-                &borrowed,
-                config,
-            );
+            if self.should_split_grid_sync_for(program, &borrowed, config)? {
+                return crate::grid_sync::dispatch_with_grid_sync_split(
+                    self.inner.as_ref(),
+                    program,
+                    &borrowed,
+                    config,
+                );
+            }
         }
         self.inner.dispatch(program, inputs, config)
     }
@@ -60,7 +62,7 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        if self.should_split_grid_sync(program) {
+        if self.should_split_grid_sync_for(program, inputs, config)? {
             return crate::grid_sync::dispatch_with_grid_sync_split(
                 self.inner.as_ref(),
                 program,
@@ -77,7 +79,7 @@ impl VyreBackend for GridSyncSplitBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        if self.should_split_grid_sync(program) {
+        if self.should_split_grid_sync_for(program, inputs, config)? {
             return crate::grid_sync::dispatch_with_grid_sync_split_timed(
                 self.inner.as_ref(),
                 program,
@@ -95,7 +97,7 @@ impl VyreBackend for GridSyncSplitBackend {
         config: &DispatchConfig,
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
-        if self.should_split_grid_sync(program) {
+        if self.should_split_grid_sync_for(program, inputs, config)? {
             return crate::grid_sync::dispatch_with_grid_sync_split_into(
                 self.inner.as_ref(),
                 program,
@@ -238,6 +240,35 @@ impl GridSyncSplitBackend {
         crate::grid_sync::contains_grid_sync(program)
             && !self.inner.supports_grid_sync()
             && self.inner.allows_host_grid_sync_split()
+    }
+
+    /// Whether this dispatch must take the host split rather than a native
+    /// cooperative launch.
+    ///
+    /// [`VyreBackend::supports_grid_sync`] answers whether the backend lowers a
+    /// whole-grid barrier at all. It does not answer whether THIS launch fits:
+    /// a cooperative grid must be fully co-resident, so a block count above the
+    /// device's cooperative residency is rejected by the driver rather than run
+    /// slowly. Routing on availability alone sent every oversized grid into a
+    /// launch that could only fail, which is what
+    /// [`crate::backend::ErrorCode::CooperativeResidencyExceeded`] reports.
+    fn should_split_grid_sync_for(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if !crate::grid_sync::contains_grid_sync(program)
+            || !self.inner.allows_host_grid_sync_split()
+        {
+            return Ok(false);
+        }
+        if !self.inner.supports_grid_sync() {
+            return Ok(true);
+        }
+        Ok(!self
+            .inner
+            .cooperative_grid_sync_fits(program, inputs, config)?)
     }
 }
 

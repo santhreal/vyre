@@ -144,11 +144,17 @@ impl BenchContext {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-        let _ = dispatch_config_with_inferred_grid(prog, inputs, config)?;
+        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
         let session = self.artifact_session_for(prog)?;
         let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        let mut bindings = session
+            .host_bindings(&borrowed_inputs)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        if let Some(grid) = config.grid_override {
+            bindings.set_invocation_grid(grid)?;
+        }
         let completion = session
-            .submit_host_inputs(&borrowed_inputs)
+            .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         session
             .program_outputs(prog, &completion)
@@ -161,12 +167,18 @@ impl BenchContext {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
-        let _ = dispatch_config_with_inferred_grid(prog, inputs, config)?;
+        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
         let session = self.artifact_session_for(prog)?;
         let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        let mut bindings = session
+            .host_bindings(&borrowed_inputs)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        if let Some(grid) = config.grid_override {
+            bindings.set_invocation_grid(grid)?;
+        }
         let start = Instant::now();
         let completion = session
-            .submit_host_inputs(&borrowed_inputs)
+            .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         let outputs = session
             .program_outputs(prog, &completion)
