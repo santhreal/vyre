@@ -55,7 +55,7 @@ workflows = ["gates.yml", "release-evidence.yml"]
 [[gate]]
 name = "bench-smoke-runtime"
 subsets = ["contract-rules"]
-workflows = ["bench-regression.yml", "gates.yml"]
+workflows = ["gates.yml", "gpu-parity.yml"]
 
 [[gate]]
 name = "catalog"

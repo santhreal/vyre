@@ -8,7 +8,10 @@ on:
 jobs:
   registered-gates:
     name: Every registered gate
-    runs-on: ubuntu-latest
+    # The registry holds device-requiring gates (bench-smoke-runtime times a
+    # real dispatch), and a GPU-required gate fails closed on an empty probe
+    # rather than skipping, so the job that runs every gate needs an adapter.
+    runs-on: [self-hosted, axiomexec, gpu]
     steps:
       # docs-coupling compares this head against the base branch, so this job
       # reads history rather than one tree. Every other job here clones shallow.
@@ -65,7 +68,8 @@ jobs:
 
   tree-rules:
     name: Rules the sweep owns, named by domain
-    runs-on: ubuntu-latest
+    # contract-rules owns bench-smoke-runtime, which dispatches on a device.
+    runs-on: [self-hosted, axiomexec, gpu]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

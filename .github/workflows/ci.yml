@@ -17,6 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Reclaim runner disk
+        if: matrix.os == 'ubuntu-latest'
+        uses: ./.github/actions/reclaim-runner-disk
+
       - name: Install Rust
         shell: bash
         run: |
@@ -33,6 +37,25 @@ jobs:
       - name: Enter the MSVC developer environment
         if: matrix.os == 'windows-latest'
         uses: ilammy/msvc-dev-cmd@v1
+
+      # Git for Windows ships a coreutils `link.exe` in `usr/bin`, and that
+      # directory sits ahead of the MSVC toolchain on the PATH every `shell:
+      # bash` step inherits. rustc spawns the linker by bare name, so it gets
+      # the coreutils one, which rejects the object list with `extra operand`
+      # and fails the build script of the first C-adjacent dependency it
+      # reaches. Deleting the shadow is the only fix that survives PATH being
+      # rebuilt per step. The resolution is asserted, so an image that changes
+      # where the shadow lives fails here rather than in a linker error.
+      - name: Remove the coreutils link.exe that shadows the MSVC linker
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          rm -f "/c/Program Files/Git/usr/bin/link.exe"
+          resolved="$(command -v link || true)"
+          case "$resolved" in
+            *MSVC*) echo "link resolves to $resolved" ;;
+            *) echo "link resolves to '${resolved:-nothing}', not the MSVC linker" >&2; exit 1 ;;
+          esac
 
       # The AES-CTR baseline vendors OpenSSL, whose Configure script needs a perl
       # that provides Locale::Maketext::Simple. The perl first on PATH on

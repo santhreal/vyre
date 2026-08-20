@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: ./.github/actions/rust-bench-setup
 
       - name: Compile non-GPU bench targets
@@ -30,5 +31,3 @@ jobs:
           ./cargo_full bench -p vyre-runtime --no-run
           ./cargo_full bench -p vyre-driver-wgpu --no-run
 
-      - name: Enforce smoke benchmark runtime budget
-        run: ./cargo_full run -q -p xtask --bin xtask -- bench-smoke-runtime

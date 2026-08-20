@@ -1,6 +1,6 @@
-#![cfg(target_os = "linux")]
-
 //! Public invariant tests for NVMe to GPU ingest telemetry.
+
+#![cfg(target_os = "linux")]
 
 use vyre_runtime::uring::{NativeReadPath, NvmeGpuIngestTelemetry};
 

@@ -18,6 +18,10 @@ jobs:
       RUSTDOCFLAGS: -D warnings
     steps:
       - uses: actions/checkout@v4
+
+      - name: Reclaim runner disk
+        uses: ./.github/actions/reclaim-runner-disk
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every CI lane that builds every target of the workspace deletes the preinstalled .NET, Android, Haskell, Swift, PowerShell and CodeQL trees first, because a hosted Linux runner ships too little free space for that build and dies mid-compile reporting only that it received a shutdown signal. The step prints the free space before and after, so a lane that still dies names a number instead of a symptom."

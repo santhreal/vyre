@@ -1,0 +1,31 @@
+name: reclaim-runner-disk
+description: Delete preinstalled toolchains a Rust build never reads, so a whole-workspace build has room on the runner's root filesystem.
+
+# A hosted Linux runner ships around 21 GB free on the filesystem that holds
+# the checkout, and a debug build of every target in this workspace does not
+# fit in it: the runner dies mid-compile and the job reports `The runner has
+# received a shutdown signal`, which names the symptom and not the cause. The
+# lanes that only `cargo check` or build a subset stay green, which is what
+# makes the failure look intermittent. The deleted trees are .NET, Android,
+# Haskell, Swift, PowerShell and CodeQL, none of which a cargo build reads.
+#
+# The free space is printed before and after, so a lane that still dies has a
+# number in its log and the next reader does not have to guess again.
+
+runs:
+  using: composite
+  steps:
+    - name: Reclaim runner disk
+      shell: bash
+      run: |
+        avail() { df -k / | awk 'NR==2 { printf "%.1f", $4 / 1048576 }'; }
+        before="$(avail)"
+        sudo rm -rf \
+          /usr/share/dotnet \
+          /usr/local/lib/android \
+          /opt/ghc \
+          /usr/local/.ghcup \
+          /usr/share/swift \
+          /usr/local/share/powershell \
+          /opt/hostedtoolcache/CodeQL
+        echo "root filesystem: ${before} GiB free before, $(avail) GiB free after"

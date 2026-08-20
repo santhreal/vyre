@@ -208,6 +208,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      # The smoke budget times one real dispatch, so it belongs on the device
+      # rather than in the build-only bench lane, where it measured a panic.
+      - name: Enforce smoke benchmark runtime budget
+        run: ./cargo_full run -q -p xtask --bin xtask -- bench-smoke-runtime
       - name: Semantic optimizer evidence
         run: ./cargo_full run -p vyre-bench --release -- run --suite release --case foundation.optimizer.impact --format json --backend cuda --measured-samples 30
       - name: CUDA PTX pattern evidence

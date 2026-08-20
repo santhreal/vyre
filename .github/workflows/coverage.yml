@@ -16,11 +16,15 @@ env:
 
 jobs:
   llvm-cov:
-    runs-on: ubuntu-latest
+    # --all-features enables the CUDA and WGPU backends, so the workspace suite
+    # dispatches real device work and fails closed on a probe with no adapter.
+    # A hosted runner therefore measures a panic, not coverage.
+    runs-on: [self-hosted, axiomexec, gpu]
     env:
       RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
