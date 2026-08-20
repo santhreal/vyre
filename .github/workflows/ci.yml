@@ -26,6 +26,14 @@ jobs:
             --component rustfmt
           rustup default "${{ matrix.rust-toolchain }}"
 
+      # cc-rs and openssl-src both invoke `cl` by bare name on the MSVC target,
+      # and `cl` is only on PATH inside a Visual Studio developer environment.
+      # Without this step every C dependency in the tree (pcre2-sys,
+      # libsqlite3-sys, openssl-src) fails with `failed to find tool "cl"`.
+      - name: Enter the MSVC developer environment
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
       # The AES-CTR baseline vendors OpenSSL, whose Configure script needs a perl
       # that provides Locale::Maketext::Simple. The perl first on PATH on
       # windows-latest is the Git for Windows MSYS build, which does not ship that
