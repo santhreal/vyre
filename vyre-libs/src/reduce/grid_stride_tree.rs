@@ -35,13 +35,13 @@ pub fn grid_stride_tree_sum_u32(
     let body = vec![
         Node::let_bind("local", local.clone()),
         Node::let_bind("block", block.clone()),
-        Node::let_bind("acc", Expr::u32(0)),
         Node::if_then(
             Expr::lt(
                 Expr::mul(block.clone(), Expr::u32(chunk_tile)),
                 Expr::u32(count),
             ),
             vec![
+                Node::let_bind("acc", Expr::u32(0)),
                 Node::loop_for(
                     "item",
                     Expr::u32(0),
@@ -66,32 +66,26 @@ pub fn grid_stride_tree_sum_u32(
                         ),
                     ],
                 ),
+                Node::store(scratch, local.clone(), Expr::var("acc")),
+                Node::barrier(),
+                sum_u32_child(
+                    SUM_U32_OP_ID,
+                    tile,
+                    scratch,
+                    WorkgroupReductionScope::EveryWorkgroup,
+                ),
+                Node::if_then(
+                    Expr::eq(local, Expr::u32(0)),
+                    vec![Node::let_bind(
+                        "_prev",
+                        Expr::atomic_add(
+                            out,
+                            Expr::u32(0),
+                            Expr::load(scratch, Expr::u32(0)),
+                        ),
+                    )],
+                ),
             ],
-        ),
-        Node::store(scratch, local.clone(), Expr::var("acc")),
-        Node::barrier(),
-        sum_u32_child(
-            SUM_U32_OP_ID,
-            tile,
-            scratch,
-            WorkgroupReductionScope::EveryWorkgroup,
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(local, Expr::u32(0)),
-                Expr::lt(
-                    Expr::mul(block, Expr::u32(chunk_tile)),
-                    Expr::u32(count),
-                ),
-            ),
-            vec![Node::let_bind(
-                "_prev",
-                Expr::atomic_add(
-                    out,
-                    Expr::u32(0),
-                    Expr::load(scratch, Expr::u32(0)),
-                ),
-            )],
         ),
     ];
 
