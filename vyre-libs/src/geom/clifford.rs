@@ -12,8 +12,7 @@
 //!   (a · b)_12  = a_s b_12 + a_12 b_s + a_1 b_2 - a_2 b_1
 //! ```
 //!
-//! Twelve mul-adds per product. Already GPU-trivial; the moat is
-//! that no GPU IR has packaged this as a Tier-2.5 primitive.
+//! Twelve mul-adds per product.
 //!
 //! # Why this primitive is dual-use
 //!

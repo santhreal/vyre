@@ -4,10 +4,8 @@
 //! building block for molecules, cryo-EM, robotics. Each layer is a
 //! contraction over Clebsch-Gordan coefficients between irreducible
 //! representations (irreps) `(l_in, l_filter) → l_out`. The CG
-//! product is structured shuffles + fused multiply-add  -  same
-//! hardware as matmul, so the substrate is GPU-trivial; the moat is
-//! that nobody has packaged it as a Tier-2.5 primitive at the IR
-//! level.
+//! product is structured shuffles + fused multiply-add  -  the same
+//! hardware as matmul.
 //!
 //! This file ships the **scalar (l = 0) channel mixing step**  -
 //! given per-node scalar features and a learnable mixing weight,

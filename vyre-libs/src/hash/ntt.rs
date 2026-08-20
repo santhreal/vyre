@@ -14,11 +14,6 @@
 //! - **Reed-Solomon codes**  -  error correction over GF(p),
 //! - **Lattice-based crypto**  -  Kyber, Dilithium core operations.
 //!
-//! As FHE & zk become production primitives (Apple PCC, Worldcoin,
-//! attested-compute markets), whoever ships the GPU NTT primitive
-//! controls the substrate. Today: nobody has it as a Tier-2.5
-//! reusable primitive. Vyre will.
-//!
 //! # Why this primitive is dual-use
 //!
 //! | Composition role | Use |

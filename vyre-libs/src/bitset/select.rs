@@ -1,8 +1,8 @@
 //! Select navigation for packed bitvectors.
 //!
-//! `select1_query` maps one-based ranks to zero-based bit positions. It is a
-//! Tier-2.5 primitive because succinct AST, graph, parser, and security
-//! structures all need the same packed-bit navigation substrate.
+//! `select1_query` maps one-based ranks to zero-based bit positions. It has one
+//! owner because succinct AST, graph, parser, and security structures all need
+//! the same packed-bit navigation substrate.
 
 use vyre_foundation::composition::wrap_anonymous_region;
 

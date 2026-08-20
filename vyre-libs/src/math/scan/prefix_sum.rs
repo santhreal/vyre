@@ -1,7 +1,7 @@
 //! Prefix-sum scan  -  inclusive scan over a u32 buffer.
 //!
-//! Category A composition and the one size contract over the Tier-2.5 scan
-//! primitives. `scan_prefix_sum` is where an element count picks an algorithm:
+//! Category A composition and the one size contract over the scan primitives.
+//! `scan_prefix_sum` is where an element count picks an algorithm:
 //! at or under [`MAX_SINGLE_BLOCK_SCAN`] the compact workgroup scan, above it
 //! the multi-block chain. The primitives own the two bodies and neither of them
 //! chooses.

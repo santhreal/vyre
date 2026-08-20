@@ -1,6 +1,6 @@
 //! Packed INT4 inference primitives.
 //!
-//! The dot-product wrapper delegates to the Tier-2.5 primitive so packed
+//! The dot-product wrapper delegates to `math::quantized` so packed
 //! weights stay packed through the inner product. This avoids the extra global
 //! memory traffic of materializing an unpacked i32 lane buffer before a dot.
 
