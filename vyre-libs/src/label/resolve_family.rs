@@ -98,9 +98,46 @@ mod tests {
         assert_eq!(cpu_ref, vec![0b0110]);
     }
 
+    /// Identity travels in the region generator, not in `entry_op_id`.
+    /// `Program::wrapped` clears that field on every program it builds, and
+    /// only the handful of builders that call `with_entry_op_id` carry one, so
+    /// the assertion this replaces could not pass for any program this builder
+    /// produces. What a composition audit reads is the region tree: this op's
+    /// own generator wrapping the shared `nodeset_filter` skeleton, attributed
+    /// back to this op. A future rewrite that inlines the skeleton instead of
+    /// composing it drops the child and turns this red.
     #[test]
-    fn resolve_family_program_constructs_cleanly() {
+    fn resolve_family_wraps_the_shared_nodeset_filter_under_its_own_id() {
+        use vyre_foundation::ir::{Ident, Node};
+
+        fn regions(nodes: &[Node], out: &mut Vec<(String, Option<Ident>)>) {
+            for node in nodes {
+                if let Node::Region {
+                    generator,
+                    source_region,
+                    body,
+                } = node
+                {
+                    out.push((generator.to_string(), source_region.clone()));
+                    regions(body, out);
+                }
+            }
+        }
+
         let program = resolve_family("tags", "out", 4, 0x02);
-        assert_eq!(program.entry_op_id.as_deref(), Some(OP_ID));
+        let mut found = Vec::new();
+        regions(&program.entry, &mut found);
+
+        assert!(
+            found.iter().any(|(generator, source)| generator
+                == crate::label::nodeset_filter::OP_ID
+                && source.as_deref() == Some(OP_ID)),
+            "the shared nodeset_filter skeleton must appear as a child region attributed to \
+             {OP_ID}, so a composition audit sees the reuse: {found:?}"
+        );
+        assert!(
+            found.iter().any(|(generator, _)| generator == OP_ID),
+            "the program must name its own op as a region generator: {found:?}"
+        );
     }
 }

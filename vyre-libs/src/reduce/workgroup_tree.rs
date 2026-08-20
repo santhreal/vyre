@@ -666,6 +666,93 @@ pub(crate) fn blelloch_inclusive_sum_nodes(
     nodes
 }
 
+/// One pass of a multi-block scan: bind, stage, sweep, publish.
+///
+/// A pass-A kernel binds `lane`, `block` and `global`, zero-fills the workgroup
+/// scratch so the sweep never reads an uninitialized slot, stages one value per
+/// lane under `global < in_range`, runs [`blelloch_inclusive_sum_nodes`], then
+/// writes the per-element inclusive partial for the in-range lanes and the
+/// block total from the last lane of the block.
+///
+/// Only the staging differs between callers: `reduce::multi_block_prefix_scan`
+/// loads an input element, `graph::csr_frontier_queue::word_block_scan` loads a
+/// frontier word, masks the tail and takes its population count. Everything
+/// around that was written twice, including the detail that the block total
+/// comes from lane `block_lanes - 1` reading `scratch_a` after the sweep rather
+/// than from a separate accumulator.
+pub(crate) struct BlockScanPass<'a> {
+    /// Name bound to `LocalId { axis: 0 }`.
+    pub lane: &'a str,
+    /// Name bound to `WorkgroupId { axis: 0 }`.
+    pub block: &'a str,
+    /// Name bound to `block * block_lanes + lane`.
+    pub global: &'a str,
+    /// Workgroup scratch the sweep scans in place.
+    pub scratch_a: &'a str,
+    /// Workgroup scratch the sweep keeps the staged value in.
+    pub scratch_b: &'a str,
+    /// Buffer receiving one inclusive partial per in-range element.
+    pub partials: &'a str,
+    /// Buffer receiving one total per block.
+    pub block_totals: &'a str,
+    /// Lanes per block. Must be a power of two, as the sweep requires.
+    pub block_lanes: u32,
+    /// Element count; a lane whose `global` is at or past this stages nothing
+    /// and publishes nothing, and its scratch slot stays the zero fill.
+    pub in_range: u32,
+}
+
+impl BlockScanPass<'_> {
+    /// Emit the pass. `stage` runs under `global < in_range` and must leave the
+    /// lane's value in `scratch_a[lane]`.
+    pub(crate) fn nodes(&self, stage: Vec<Node>) -> Vec<Node> {
+        let lane = Expr::var(self.lane);
+        let block = Expr::var(self.block);
+        let global = Expr::var(self.global);
+        let in_range = Expr::lt(global.clone(), Expr::u32(self.in_range));
+
+        let mut nodes = vec![
+            Node::let_bind(self.lane, Expr::LocalId { axis: 0 }),
+            Node::let_bind(self.block, Expr::WorkgroupId { axis: 0 }),
+            Node::let_bind(
+                self.global,
+                Expr::add(
+                    Expr::mul(block.clone(), Expr::u32(self.block_lanes)),
+                    lane.clone(),
+                ),
+            ),
+            Node::store(self.scratch_a, lane.clone(), Expr::u32(0)),
+            Node::if_then(in_range.clone(), stage),
+            Node::barrier(),
+        ];
+
+        nodes.extend(blelloch_inclusive_sum_nodes(
+            self.scratch_a,
+            self.scratch_b,
+            &lane,
+            self.block_lanes,
+        ));
+
+        nodes.push(Node::if_then(
+            in_range,
+            vec![Node::store(
+                self.partials,
+                global,
+                Expr::load(self.scratch_a, lane.clone()),
+            )],
+        ));
+        nodes.push(Node::if_then(
+            Expr::eq(lane.clone(), Expr::u32(self.block_lanes - 1)),
+            vec![Node::store(
+                self.block_totals,
+                block,
+                Expr::load(self.scratch_a, lane),
+            )],
+        ));
+        nodes
+    }
+}
+
 /// Scratch slot lane `lane` owns in a sweep round of stride `s`: `(lane+1)*2s-1`.
 ///
 /// Active lanes are the contiguous prefix `0..lanes/(2s)`, so the divergence

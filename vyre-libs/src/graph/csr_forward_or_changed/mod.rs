@@ -59,9 +59,6 @@ pub(crate) use {
     },
     plan::plan_csr_forward_or_changed_dispatch,
     program_parallel_batch_global::try_csr_forward_or_changed_parallel_batch_global_dynamic_slot,
-    reference_adapter::{
-        cpu_ref, cpu_ref_closure, cpu_ref_closure_into, cpu_ref_into,
-        reference_forward_closure_via_change_flag, reference_forward_step_with_change_flag,
-    },
+    reference_adapter::{cpu_ref, cpu_ref_closure, cpu_ref_closure_into, cpu_ref_into},
     validate::validate_csr_inputs,
 };

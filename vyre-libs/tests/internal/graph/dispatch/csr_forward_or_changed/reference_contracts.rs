@@ -1,9 +1,12 @@
 use super::*;
 use crate::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
+// The two descriptive names live here rather than in the adapter: the adapter
+// file is `#[path]`-included into the `vyre-libs` lib test as well, where these
+// have no reader and an alias with no reader is an unused import.
 use crate::graph::csr_forward_or_changed::{
-    cpu_ref as csr_foc_cpu, reference_forward_closure_via_change_flag,
-    reference_forward_step_with_change_flag,
+    cpu_ref as csr_foc_cpu, cpu_ref_closure as reference_forward_closure_via_change_flag,
 };
+use vyre_reference::composition_witness::csr_forward_or_changed_witness as reference_forward_step_with_change_flag;
 
 #[test]
 fn step_flips_change_flag_when_new_bits_added() {

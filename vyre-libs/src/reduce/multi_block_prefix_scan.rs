@@ -497,63 +497,26 @@ fn try_pass_a_local_scan(
     num_blocks: u32,
     block_lanes: u32,
 ) -> Result<Program, String> {
-    let lane = Expr::var("lane");
-    let block = Expr::var("block");
-    let global = Expr::var("global");
+    let lane = "lane";
     let scratch_a = format!("__{partials}_pass_a_scratch_a");
     let scratch_b = format!("__{partials}_pass_a_scratch_b");
 
-    let mut body: Vec<Node> = Vec::new();
-    body.push(Node::let_bind("lane", Expr::LocalId { axis: 0 }));
-    body.push(Node::let_bind("block", Expr::WorkgroupId { axis: 0 }));
-    body.push(Node::let_bind(
-        "global",
-        Expr::add(
-            Expr::mul(block.clone(), Expr::u32(block_lanes)),
-            lane.clone(),
-        ),
-    ));
-
-    // Stage input into shared scratch, zero past `n`.
-    body.push(Node::store(&scratch_a, lane.clone(), Expr::u32(0)));
-    body.push(Node::if_then(
-        Expr::lt(global.clone(), Expr::u32(n)),
-        vec![Node::store(
-            &scratch_a,
-            lane.clone(),
-            Expr::load(input, global.clone()),
-        )],
-    ));
-    body.push(Node::Barrier {
-        ordering: MemoryOrdering::SeqCst,
-    });
-
-    body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
-        &scratch_a,
-        &scratch_b,
-        &lane,
+    let pass = crate::reduce::workgroup_tree::BlockScanPass {
+        lane,
+        block: "block",
+        global: "global",
+        scratch_a: &scratch_a,
+        scratch_b: &scratch_b,
+        partials,
+        block_totals,
         block_lanes,
-    ));
-
-    // Write per-element partial out (only for lanes whose global id is in range).
-    body.push(Node::if_then(
-        Expr::lt(global.clone(), Expr::u32(n)),
-        vec![Node::store(
-            partials,
-            global.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        )],
-    ));
-
-    // Lane (block_lanes - 1) of each block writes the block's total.
-    body.push(Node::if_then(
-        Expr::eq(lane.clone(), Expr::u32(block_lanes - 1)),
-        vec![Node::store(
-            block_totals,
-            block.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        )],
-    ));
+        in_range: n,
+    };
+    let body = pass.nodes(vec![Node::store(
+        &scratch_a,
+        Expr::var(lane),
+        Expr::load(input, Expr::var("global")),
+    )]);
 
     let total_partials = total_partial_words(num_blocks, block_lanes, "Pass A")?;
     let total_partial_bytes = output_byte_range(

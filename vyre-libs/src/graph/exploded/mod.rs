@@ -107,7 +107,6 @@ pub fn round_trip_dense(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -
 pub use canonicalize::canonicalize_csr_within_rows as reference_canonicalize_csr_within_rows;
 #[cfg(test)]
 pub(crate) use reference_adapter::{
-    build_cpu_reference, build_cpu_reference as reference_build_ifds_csr, try_build_cpu_reference,
-    try_build_cpu_reference as try_reference_build_ifds_csr, try_build_cpu_reference_into,
+    build_cpu_reference, try_build_cpu_reference, try_build_cpu_reference_into,
     ExplodedIfdsCpuScratch,
 };

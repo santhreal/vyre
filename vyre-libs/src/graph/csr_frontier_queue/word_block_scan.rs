@@ -79,72 +79,43 @@ pub fn frontier_word_counts_scan_pass_a(
         (1_u32 << tail_bits) - 1
     };
 
-    let lane = Expr::var("fwcs_lane");
-    let block = Expr::var("fwcs_block");
-    let global = Expr::var("fwcs_global");
+    let lane = "fwcs_lane";
     let scratch_a = format!("__{word_partials}_fwcs_scratch_a");
     let scratch_b = format!("__{word_partials}_fwcs_scratch_b");
 
-    let mut body = Vec::new();
-    body.push(Node::let_bind("fwcs_lane", Expr::LocalId { axis: 0 }));
-    body.push(Node::let_bind("fwcs_block", Expr::WorkgroupId { axis: 0 }));
-    body.push(Node::let_bind(
-        "fwcs_global",
-        Expr::add(
-            Expr::mul(block.clone(), Expr::u32(block_lanes)),
-            lane.clone(),
-        ),
-    ));
-    body.push(Node::store(&scratch_a, lane.clone(), Expr::u32(0)));
-    let mut load_word = vec![Node::let_bind(
+    // Stage: the frontier word this lane owns, with the tail word masked to the
+    // bits that name real nodes, reduced to its population count.
+    let mut stage = vec![Node::let_bind(
         "fwcs_word",
-        Expr::load(frontier_in, global.clone()),
+        Expr::load(frontier_in, Expr::var("fwcs_global")),
     )];
     if tail_bits != 0 {
-        load_word.push(Node::if_then(
-            Expr::eq(global.clone(), Expr::u32(words - 1)),
+        stage.push(Node::if_then(
+            Expr::eq(Expr::var("fwcs_global"), Expr::u32(words - 1)),
             vec![Node::assign(
                 "fwcs_word",
                 Expr::bitand(Expr::var("fwcs_word"), Expr::u32(tail_mask)),
             )],
         ));
     }
-    load_word.push(Node::store(
+    stage.push(Node::store(
         &scratch_a,
-        lane.clone(),
+        Expr::var(lane),
         Expr::popcount(Expr::var("fwcs_word")),
     ));
-    body.push(Node::if_then(
-        Expr::lt(global.clone(), Expr::u32(words)),
-        load_word,
-    ));
-    body.push(Node::Barrier {
-        ordering: MemoryOrdering::SeqCst,
-    });
 
-    body.extend(crate::reduce::workgroup_tree::blelloch_inclusive_sum_nodes(
-        &scratch_a,
-        &scratch_b,
-        &lane,
+    let body = crate::reduce::workgroup_tree::BlockScanPass {
+        lane,
+        block: "fwcs_block",
+        global: "fwcs_global",
+        scratch_a: &scratch_a,
+        scratch_b: &scratch_b,
+        partials: word_partials,
+        block_totals,
         block_lanes,
-    ));
-
-    body.push(Node::if_then(
-        Expr::lt(global.clone(), Expr::u32(words)),
-        vec![Node::store(
-            word_partials,
-            global.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        )],
-    ));
-    body.push(Node::if_then(
-        Expr::eq(lane.clone(), Expr::u32(block_lanes - 1)),
-        vec![Node::store(
-            block_totals,
-            block.clone(),
-            Expr::load(&scratch_a, lane.clone()),
-        )],
-    ));
+        in_range: words,
+    }
+    .nodes(stage);
 
     Program::wrapped(
         vec![

@@ -123,11 +123,3 @@ pub(crate) fn cpu_ref_closure_into_with_step_hook(
         next,
     );
 }
-
-/// The witness itself, under the name the contract tests read it by: one step
-/// of forward closure that reports whether the frontier changed.
-pub(crate) use vyre_reference::composition_witness::csr_forward_or_changed_witness as reference_forward_step_with_change_flag;
-
-/// The validating closure adapter, under the name the contract tests read it
-/// by: repeated forward steps driven by the change flag.
-pub(crate) use cpu_ref_closure as reference_forward_closure_via_change_flag;

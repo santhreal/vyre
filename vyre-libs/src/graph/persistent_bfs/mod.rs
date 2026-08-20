@@ -52,8 +52,8 @@ pub(crate) use {
         PersistentBfsPlanCacheKind,
     },
     reference_adapter::{
-        cpu_ref, cpu_ref as bfs_expand, cpu_ref_into, try_cpu_ref, try_cpu_ref_converged,
-        try_cpu_ref_density, try_cpu_ref_into, try_cpu_ref_into_with_scratch,
-        PersistentBfsConvergence, PersistentBfsCpuScratch,
+        cpu_ref, cpu_ref_into, try_cpu_ref, try_cpu_ref_converged, try_cpu_ref_density,
+        try_cpu_ref_into, try_cpu_ref_into_with_scratch, PersistentBfsConvergence,
+        PersistentBfsCpuScratch,
     },
 };
