@@ -167,7 +167,8 @@ fn pass1_grid_stride_reduction(
                 .with_count(count),
             BufferDecl::workgroup(scratch, tile, DataType::U32),
             BufferDecl::storage(partials, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(num_blocks),
+                .with_count(num_blocks)
+                .with_pipeline_live_out(true),
         ],
         [tile, 1, 1],
         vec![wrap_anonymous_region(SUM_U32_OP_ID, body)],
@@ -219,7 +220,8 @@ fn pass2_combine_reduction(
     Program::wrapped(
         vec![
             BufferDecl::storage(partials, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(num_blocks),
+                .with_count(num_blocks)
+                .with_pipeline_live_out(true),
             BufferDecl::workgroup(scratch, tile, DataType::U32),
             BufferDecl::storage(out, 1, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(1),
