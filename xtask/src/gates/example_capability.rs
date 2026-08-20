@@ -139,23 +139,29 @@ fn tracked_example_paths(root: &Path) -> Result<BTreeMap<String, Vec<String>>, G
 /// The tracked Rust of one example, held to the review cap.
 fn line_cap_findings(root: &Path, directory: &str, paths: &[String]) -> Vec<Finding> {
     let mut lines = 0usize;
+    let mut findings = Vec::new();
     for path in paths.iter().filter(|path| path.ends_with(".rs")) {
         // Counted, never skipped: a file dropped on a read error lowers the
         // measured line count, and the cap is a maximum, so the silent version
         // let an unreadable example pass a bound it may well exceed.
-        let text = std::fs::read_to_string(root.join(path)).unwrap_or_else(|error| {
-            panic!("tracked example source `{path}` must be readable to hold it to the line cap: {error}")
-        });
-        lines += text.lines().count();
+        match std::fs::read_to_string(root.join(path)) {
+            Ok(text) => lines += text.lines().count(),
+            Err(error) => findings.push(Finding::in_file(
+                path,
+                format!("tracked example source `{path}` is unreadable: {error}"),
+                "restore the file or untrack it; a source the cap cannot measure is a cap that \
+                 passes on nothing",
+            )),
+        }
     }
     if lines > MAX_EXAMPLE_RUST_LINES {
-        return vec![Finding::in_file(
+        findings.push(Finding::in_file(
             directory,
             format!("`{directory}` tracks {lines} Rust lines, over the {MAX_EXAMPLE_RUST_LINES} line cap"),
             "move what the example is teaching into the crate that owns it, and keep the example to the recipe",
-        )];
+        ));
     }
-    Vec::new()
+    findings
 }
 
 /// One standalone example crate: isolated, locked, and passing what it asserts.

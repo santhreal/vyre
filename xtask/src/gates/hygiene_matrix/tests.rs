@@ -137,6 +137,36 @@ fn a_cargo_command_is_a_finding_when_a_comment_tells_a_reader_to_run_it() {
     }
 }
 
+/// WHY: `cargo +<toolchain> <command>` was matched by a blanket `cargo +`
+/// fallback that ran before any exemption, so installing a gate's own
+/// dependency on a pinned nightly was a release blocker while the identical
+/// `cargo install` line was exempt. The selector chooses a compiler, not a
+/// command, and the rule now reads the command underneath it. This does not
+/// catch a selector spelled through a shell variable, which no workflow uses.
+#[test]
+fn a_toolchain_selector_does_not_change_which_cargo_command_a_line_runs() {
+    for exempt in [
+        "cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0",
+        "cargo +stable install cargo-deny",
+        "./cargo_full +nightly build -p xtask",
+    ] {
+        assert!(
+            !line_contains_raw_workspace_cargo(exempt),
+            "reported the exempt line `{exempt}`"
+        );
+    }
+    for raw in [
+        "cargo +stable build -p xtask",
+        "cargo +nightly-2026-08-07 test -p vyre-libs",
+        "cargo +nightly public-api",
+    ] {
+        assert!(
+            line_contains_raw_workspace_cargo(raw),
+            "missed the raw workspace command `{raw}`"
+        );
+    }
+}
+
 /// WHY: widening the release scan to every xtask source made each gate that
 /// detects a stub report itself: the pattern table row `text: "todo!(",` is
 /// how the hot-path scan spells the thing it looks for. A string literal

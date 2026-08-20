@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io;
 use std::path::Path;
 
@@ -365,8 +366,37 @@ pub(crate) fn is_comment_line(trimmed: &str) -> bool {
     trimmed.starts_with("//") || trimmed.starts_with("* ") || trimmed == "*"
 }
 
+/// A line with every `cargo +<toolchain>` selector reduced to plain `cargo`.
+///
+/// The selector picks a compiler, not a different program: `cargo +nightly
+/// install` installs a tool exactly as `cargo install` does, and `cargo
+/// +stable build` is the workspace build the wrapper owns. Reading the
+/// selector as part of the command name left the pinned-toolchain form
+/// outside every exemption and inside a blanket `cargo +` fallback, so the
+/// one line that installs a gate's own dependency was reported as a release
+/// blocker while `cargo +stable build` was caught only by accident.
+fn without_toolchain_selector(line: &str) -> Cow<'_, str> {
+    if !line.contains("cargo +") {
+        return Cow::Borrowed(line);
+    }
+    let mut normalized = String::with_capacity(line.len());
+    let mut rest = line;
+    while let Some(start) = rest.find("cargo +") {
+        let after = &rest[start + "cargo +".len()..];
+        let Some(space) = after.find(' ') else {
+            break;
+        };
+        normalized.push_str(&rest[..start]);
+        normalized.push_str("cargo ");
+        rest = &after[space + 1..];
+    }
+    normalized.push_str(rest);
+    Cow::Owned(normalized)
+}
+
 pub(crate) fn line_contains_raw_workspace_cargo(line: &str) -> bool {
-    let trimmed = line.trim();
+    let normalized = without_toolchain_selector(line.trim());
+    let trimmed = normalized.trim();
     if trimmed.is_empty()
         || trimmed.starts_with('#')
         || trimmed.starts_with("name:")

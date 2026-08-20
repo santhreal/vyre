@@ -262,7 +262,10 @@ fn ast_shunting_yard_program(
 }
 /// One reduction of `10 + 20`. The pending `+` stays on the operator stack,
 /// the left operand slot is consumed, the emitted node occupies the first four
-/// words of the node buffer, and the node cursor lands on word four.
+/// words of the node buffer, and the node cursor lands on word four. The
+/// node's fourth word is the source-token index, and an internal node has no
+/// source token, so `reduce_loaded_operator` writes the `u32::MAX` sentinel
+/// there exactly as `emit_value_leaf` writes it for an absent child.
 const EXPECTED_SHUNTING_REDUCE_OP_STACK_BYTES: [u8; 256] = {
     let mut bytes = [0u8; 256];
     bytes[0] = TOK_PLUS as u8;
@@ -278,6 +281,10 @@ const EXPECTED_SHUNTING_REDUCE_OUT_NODES_BYTES: [u8; 256] = {
     bytes[0] = 3;
     bytes[4] = 10;
     bytes[8] = 20;
+    bytes[12] = 0xff;
+    bytes[13] = 0xff;
+    bytes[14] = 0xff;
+    bytes[15] = 0xff;
     bytes
 };
 const EXPECTED_SHUNTING_REDUCE_OUT_LEN_BYTES: [u8; 4] = [4, 0, 0, 0];
