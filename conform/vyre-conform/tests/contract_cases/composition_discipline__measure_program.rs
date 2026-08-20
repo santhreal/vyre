@@ -416,10 +416,18 @@ fn hash_expr(expr: &Expr, h: &mut u64) {
     }
 }
 
-/// Every operation id the catalog registers, which is the only vocabulary a
-/// region may name to be treated as a call to somebody else's composition.
+/// Every operation id the registry carries, which is the only vocabulary a
+/// region may name to be treated as a call to somebody else's operation.
+///
+/// Every tier counts, not just the library one. A composition is free to
+/// delegate to a foundation or intrinsic operation, and charging it for that
+/// body would push the author back toward inlining the very thing the budget
+/// wants factored out. `Unknown` is excluded because it means the id matched
+/// no accepted namespace, which is not a registration.
 static REGISTERED_OP_IDS: LazyLock<BTreeSet<&'static str>> = LazyLock::new(|| {
-    vyre_libs::operation_catalog::all_entries()
+    vyre_foundation::operation::OperationRegistry::global()
+        .iter()
+        .filter(|entry| entry.tier != vyre_foundation::operation::OperationTier::Unknown)
         .map(|entry| entry.id)
         .collect()
 });
@@ -487,8 +495,11 @@ fn measure_entry(entry: Vec<Node>) -> Complexity {
 /// rather than a fix. Complexity must be insensitive to a wrapper that names
 /// no registered operation.
 ///
-/// Does not catch: a wrapper that reuses a *real* registered id it never
-/// calls. That is caught by the subsumption gate, not by this budget.
+/// Does not catch: a wrapper that names a *real* registered id while holding
+/// a body that operation does not contain. Nothing checks that today. The
+/// subsumption gate compares whole operations pairwise by fingerprint, so it
+/// never inspects whether a region's body matches the operation it names.
+/// Closing that needs a body-to-operation comparison this budget does not do.
 #[test]
 fn an_unregistered_child_region_does_not_hide_complexity() {
     let plain = measure_entry(budgeted_body());
