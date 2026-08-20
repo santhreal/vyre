@@ -302,12 +302,8 @@ impl CudaBackend {
 
     /// Replay a cached CUDA graph with CUDA event timing.
     ///
-    /// Returns `Some(device_ns)` when a kernel was actually dispatched and CUDA
-    /// event timing measured its device execution time.  Returns `None` when the
-    /// materialized output cache was served directly (no kernel launched, no
-    /// device timing available).  Callers must route `None` to
-    /// `timed_dispatches_missing_device_time` rather than treating it as a
-    /// 0-nanosecond measurement.
+    /// Dispatches the graph on the GPU and measures device execution time via
+    /// CUDA timing events. Returns `Some(device_ns)` of measured device time.
     pub(crate) fn dispatch_via_cuda_graph_timed_into(
         &self,
         cached: &mut CachedCudaGraph,
@@ -330,23 +326,6 @@ impl CudaBackend {
         input_state: &CudaGraphReplayInputState,
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<Option<u64>, BackendError> {
-        if self.try_cuda_graph_materialized_cache_with_input_state_into(
-            cached,
-            inputs,
-            &input_state,
-            outputs,
-        )? {
-            // Materialized output cache hit: outputs were copied from host-side
-            // cache without launching any kernel.  Zero kernels launched means
-            // the device performed exactly zero work, so report Some(0) -- the
-            // exact, non-fabricated device time for a hit.  None would mean
-            // "device time unknown" and route this to
-            // timed_dispatches_missing_device_time, which is wrong: we know the
-            // device did nothing.  Some(0) also lets the release perf gate see
-            // the cache eliminate device work (0 ns) rather than an ambiguous
-            // missing measurement.
-            return Ok(Some(0));
-        }
         self.warmup()?;
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?;
 

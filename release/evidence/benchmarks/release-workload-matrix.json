@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:e686bc9b48e352c3da6863059c59aac18d756348:dirty=false",
+  "source_fingerprint": "git:2b4bee0bed55087a8241a852b9066017c11357d0:dirty=true:worktree=697fa5c236371e3d27d14963221c303b908b26ca31686a6fe014dd4c529e8348",
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -469,23 +469,14 @@
       "bench_target_ids": [
         "release.optimization.foundation_optimizer_impact"
       ],
-      "cpu_sota_contracts": [
-        "foundation.optimizer.impact => the same Program submitted without semantic optimization 1x"
-      ],
+      "cpu_sota_contracts": [],
       "cpu_sota_100x_cases": [],
-      "cpu_sota_baseline_names": [
-        "the same Program submitted without semantic optimization"
-      ],
-      "cpu_sota_baseline_crates": [
-        "vyre-bench"
-      ],
-      "cpu_sota_backend_ids": [
-        "cuda",
-        "wgpu"
-      ],
-      "fair_cpu_sota_baseline_count": 1,
+      "cpu_sota_baseline_names": [],
+      "cpu_sota_baseline_crates": [],
+      "cpu_sota_backend_ids": [],
+      "fair_cpu_sota_baseline_count": 0,
       "reproducible_cuda_command": true,
-      "max_cpu_sota_min_speedup_x": 1.0
+      "max_cpu_sota_min_speedup_x": null
     },
     {
       "id": "sparse-output-compaction",
