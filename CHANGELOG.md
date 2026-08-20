@@ -251,6 +251,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   read-write directly above the read-write frontier it reports on. A count of
   zero is deliberately not a signal: it is the documented sentinel for a
   runtime-sized storage buffer.
+- Add multi-workgroup grid-stride tree reduction composition in vyre-libs,
+  enabling parallel tree reduction across all compute units with warp-level
+  subgroup collectives and atomic partial combining.
 - Grouped affine INT4 linear now provides a typed batched program builder that
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference

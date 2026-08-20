@@ -6,7 +6,7 @@ use crate::api::case::{
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
 use vyre_driver::TimedDispatchResult;
-use vyre_libs::reduce::{sum, workgroup_tree};
+use vyre_libs::reduce::{grid_stride_tree, sum};
 
 pub struct ReduceSumBench;
 
@@ -228,7 +228,7 @@ fn prepare_size(count: u32) -> ReductionSizePrepared {
         tree_tile,
         values: values.clone(),
         atomic_program: sum::reduce_sum("values", "out", count),
-        tree_program: workgroup_tree::workgroup_sum_u32("values", "out", count, tree_tile),
+        tree_program: grid_stride_tree::grid_stride_tree_sum_u32("values", "out", count, tree_tile),
         inputs: [
             crate::cases::byte_pack::u32_bytes(&values),
             crate::cases::byte_pack::u32_bytes(&[0]),
@@ -254,7 +254,7 @@ fn measure_size(
     let tree = ctx
         .dispatch_timed(
             &prepared.tree_program,
-            std::slice::from_ref(&prepared.inputs[0]),
+            &prepared.inputs,
             &ctx.dispatch_config,
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
