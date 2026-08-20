@@ -104,8 +104,9 @@ jobs:
       - name: cargo_full test
         shell: bash
         run: |
-          target_dir="$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)"
-          for package in $(cargo metadata --format-version 1 --no-deps | jq -r '.packages[].name' | sort); do
+          metadata="$(./cargo_full metadata --format-version 1 --no-deps)"
+          target_dir="$(printf '%s' "$metadata" | jq -r .target_directory)"
+          for package in $(printf '%s' "$metadata" | jq -r '.packages[].name' | sort); do
             ./cargo_full test -p "$package"
             # A test executable is the only artifact in deps/ with no file
             # extension (or `.exe` on Windows). Every rlib, rmeta and depfile

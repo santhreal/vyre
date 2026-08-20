@@ -5,11 +5,34 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 
 export CC="${CC:-gcc}"
-# Build parallelism is declared once, in .cargo/config.toml ([build] jobs).
-# An env var here would override that file for every invocation, which is how
-# this wrapper spent months serializing a 32-thread machine to one job.
+# Build parallelism is not set here. It is cargo's default, the host's logical
+# CPU count, so a workstation and a CI runner each get what they have. An env
+# var here would override that for every invocation, which is how this wrapper
+# spent months serializing a 32-thread machine to one job.
 
 
 export VYRE_CARGO_RUNNER="${VYRE_CARGO_RUNNER:-$script_dir/cargo_full}"
+
+# Every resolving subcommand runs against the committed Cargo.lock and nothing
+# else. Without this a CI step re-resolves from the registry at run time, so a
+# dependency published minutes ago is compiled and its build script executed on
+# the runner before any gate has seen it. That is not hypothetical: arrayref
+# yanked every release from 0.3.5 to 0.3.9 and published 0.3.10 on the same
+# day, and 0.3.10 pulls `proc-macro1`, whose build script downloads and spawns
+# a remote binary. A lockfile that no command honours is documentation.
+#
+# A dependency change is now an explicit `cargo update` plus a committed lock,
+# which is what the lockfile is for. Subcommands that do not accept the flag,
+# `fmt` and `update` among them, are left alone.
+case "${1:-}" in
+    bench | build | check | clippy | doc | fix | metadata | package | rustc | rustdoc | run | test | tree)
+        for arg in "$@"; do
+            case "$arg" in
+                --locked | --frozen | --offline) exec cargo "$@" ;;
+            esac
+        done
+        exec cargo "$1" --locked "${@:2}"
+        ;;
+esac
 
 exec cargo "$@"
