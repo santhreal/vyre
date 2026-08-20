@@ -144,18 +144,11 @@ impl ElementwiseComposer {
         count: u32,
     ) -> Self {
         let idx = self.buffers.len() as u32;
-        let elem_size = dtype.size_bytes().unwrap_or(4);
-        let range = 0..(count as usize).saturating_mul(elem_size);
-        let decl = match access {
-            BufferAccess::ReadWrite => BufferDecl::output(name, idx, dtype),
-            other => BufferDecl::storage(name, idx, other, dtype),
-        };
-        let decl = if count == 0 {
-            decl
-        } else {
-            decl.with_count(count)
-        };
-        self.add_buffer(decl.with_output_byte_range(range))
+        self.add_buffer(
+            BufferDecl::written(name, idx, access, dtype)
+                .with_count(count)
+                .with_full_output_byte_range(),
+        )
     }
 
     /// Build a custom loop kernel given a body generator closure `Fn(Expr) -> Vec<Node>`.

@@ -787,6 +787,7 @@ pub fn vyre_foundation::ir::BufferDecl::storage(name: &str, binding: u32, access
 pub fn vyre_foundation::ir::BufferDecl::uniform(name: &str, binding: u32, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_bytes_extraction(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_count(self, count: u32) -> Self
+pub fn vyre_foundation::ir::BufferDecl::with_full_output_byte_range(self) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_hints(self, hints: vyre_foundation::ir::MemoryHints) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_kind(self, kind: vyre_foundation::ir::MemoryKind) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_linear_type(self, linear_type: vyre_foundation::ir::LinearType) -> Self
@@ -794,6 +795,7 @@ pub fn vyre_foundation::ir::BufferDecl::with_output_byte_range(self, range: core
 pub fn vyre_foundation::ir::BufferDecl::with_pipeline_live_out(self, flag: bool) -> Self
 pub fn vyre_foundation::ir::BufferDecl::with_shape_predicate(self, predicate: vyre_foundation::ir::ShapePredicate) -> Self
 pub fn vyre_foundation::ir::BufferDecl::workgroup(name: &str, count: u32, element: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_foundation::ir::BufferDecl::written(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, element: vyre_spec::data_type::DataType) -> Self
 pub fn vyre_foundation::ir::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::ir::EvalError::message(&self) -> &str
 pub fn vyre_foundation::ir::EvalError::new(message: impl core::convert::Into<alloc::string::String>) -> Self

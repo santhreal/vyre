@@ -127,6 +127,29 @@ impl BufferDecl {
         }
     }
 
+    /// A buffer the program writes, declared for the access the caller needs.
+    ///
+    /// `ReadWrite` is the access an output buffer already carries, so it takes
+    /// the output form; every other access is a storage declaration the
+    /// backend still reads back. The choice belongs here, with the two
+    /// constructors it picks between, rather than at each builder that needs
+    /// a written buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use vyre::ir::{BufferAccess, BufferDecl, DataType};
+    /// let _ = BufferDecl::written("a", 0, BufferAccess::WriteOnly, DataType::U32);
+    /// ```
+    #[must_use]
+    #[inline]
+    pub fn written(name: &str, binding: u32, access: BufferAccess, element: DataType) -> Self {
+        match access {
+            BufferAccess::ReadWrite => Self::output(name, binding, element),
+            other => Self::storage(name, binding, other, element),
+        }
+    }
+
     /// Shorthand for a read-only storage buffer.
     ///
     /// # Examples
@@ -187,6 +210,21 @@ impl BufferDecl {
     pub fn with_output_byte_range(mut self, range: Range<usize>) -> Self {
         self.output_byte_range = Some(range);
         self
+    }
+
+    /// Attach the output byte range that covers the whole declared buffer.
+    ///
+    /// The range is `count * element size`, read from this declaration rather
+    /// than recomputed by the caller, so the readback size cannot drift from
+    /// the layout it describes. `DataType::Bytes` has no fixed element size
+    /// and is measured in four-byte words here, which is the width the wire
+    /// format gives it.
+    #[must_use]
+    #[inline]
+    pub fn with_full_output_byte_range(self) -> Self {
+        let element = self.element.size_bytes().unwrap_or(4);
+        let end = (self.count as usize).saturating_mul(element);
+        self.with_output_byte_range(0..end)
     }
 
     /// Set the static element count for storage-style buffers.
