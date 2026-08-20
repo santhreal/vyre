@@ -448,19 +448,24 @@ fn child_failure_message(
     stderr: &[u8],
     workspace_root: &Path,
 ) -> String {
-    let tail = child_output_tail(stdout, stderr);
-    format!(
-        "Fix: `{display}` failed with {status}: {}",
-        sanitize_host_paths(&tail, workspace_root),
-    )
+    let tail = child_output_tail(stdout, stderr, workspace_root);
+    format!("Fix: `{display}` failed with {status}: {tail}")
 }
 
-/// The last `MAX_CHILD_OUTPUT_BYTES` of what a failed child said, stderr first.
+/// The last `MAX_CHILD_OUTPUT_BYTES` of what a failed child said, stderr first,
+/// with the host root already stripped.
 ///
 /// The bound is on the text the report carries, so the streams are joined
 /// before the cut. Cutting each stream to the bound and then joining them lets
 /// a child that writes on both put twice the bound into the report.
-fn child_output_tail(stdout: &[u8], stderr: &[u8]) -> String {
+///
+/// Sanitizing before the cut is what keeps the host out. A child echoes its own
+/// command line with an absolute path, and cutting first can land inside that
+/// path: the root no longer matches its own spelling, nothing is stripped, and
+/// the surviving suffix names the operator's directory tree. That shipped once,
+/// as `SanthData/.../vyre/cargo_full run …` inside a recorded benchmark
+/// blocker.
+fn child_output_tail(stdout: &[u8], stderr: &[u8], workspace_root: &Path) -> String {
     let mut text = String::new();
     for stream in [stderr, stdout] {
         let said = String::from_utf8_lossy(stream);
@@ -476,6 +481,7 @@ fn child_output_tail(stdout: &[u8], stderr: &[u8]) -> String {
     if text.is_empty() {
         return "the child said nothing".to_string();
     }
+    let mut text = sanitize_host_paths(&text, workspace_root);
     let start = text.len().saturating_sub(MAX_CHILD_OUTPUT_BYTES);
     let start = text
         .char_indices()
@@ -1167,7 +1173,7 @@ mod tests {
         assert_eq!(said.len(), 6000);
         assert!(!said.is_char_boundary(said.len() - MAX_CHILD_OUTPUT_BYTES));
 
-        let tail = child_output_tail(&[], said.as_bytes());
+        let tail = child_output_tail(&[], said.as_bytes(), Path::new("/srv/build/vyre"));
 
         assert!(
             tail.len() <= MAX_CHILD_OUTPUT_BYTES,
@@ -1187,7 +1193,7 @@ mod tests {
         let out = "o".repeat(MAX_CHILD_OUTPUT_BYTES);
         let err = "e".repeat(MAX_CHILD_OUTPUT_BYTES);
 
-        let tail = child_output_tail(out.as_bytes(), err.as_bytes());
+        let tail = child_output_tail(out.as_bytes(), err.as_bytes(), Path::new("/srv/build/vyre"));
 
         assert!(
             tail.len() <= MAX_CHILD_OUTPUT_BYTES,
@@ -1224,6 +1230,35 @@ mod tests {
         assert!(
             message.contains("./vyre-bench/Cargo.toml"),
             "Fix: the blocker must keep the workspace-relative path: {message}",
+        );
+    }
+
+    /// WHY: the previous sanitizer ran on the already-cut tail, so a root that
+    /// sat before the cut was never matched and its suffix shipped. That is the
+    /// exact shape the leak took: a child echoed its own absolute command line,
+    /// the 4096-byte cut landed inside `/media/<user>/`, and the remainder named
+    /// the operator's directory tree in released evidence. Sanitizing the whole
+    /// stream before the cut is what closes it, so the case has to be longer
+    /// than the bound with the root ahead of the cut point.
+    #[test]
+    fn a_root_before_the_output_cut_is_still_stripped() {
+        let root = Path::new("/srv/build/vyre");
+        let mut said = String::from("running /srv/build/vyre/cargo_full bench --release ");
+        said.push_str(&"noise ".repeat(MAX_CHILD_OUTPUT_BYTES));
+        assert!(said.len() > MAX_CHILD_OUTPUT_BYTES);
+
+        let message = child_failure_message(
+            "./cargo_full bench",
+            "exit status: 101",
+            b"",
+            said.as_bytes(),
+            root,
+        );
+
+        assert!(
+            !message.contains("build/vyre/cargo_full"),
+            "Fix: the cut must not leave a fragment of the host root: {}",
+            &message[..message.len().min(200)],
         );
     }
 
