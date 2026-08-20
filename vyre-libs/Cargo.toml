@@ -577,7 +577,7 @@ required-features = ["nn-inference"]
 [[test]]
 name = "fingerprint_lock"
 path = "tests/fingerprint_lock.rs"
-required-features = ["nn-activation", "nn-attention", "nn-linear", "nn-norm"]
+required-features = ["nn-activation", "nn-attention", "nn-linear", "nn-norm", "hash"]
 
 [[test]]
 name = "gated_rms_norm_contract"
@@ -721,7 +721,7 @@ required-features = ["nn-activation"]
 [[test]]
 name = "surface_contracts"
 path = "tests/surface_contracts.rs"
-required-features = ["nn-attention", "nn-norm"]
+required-features = ["nn-attention", "nn-norm", "hash"]
 
 [[test]]
 name = "workgroup_cooperative_tiling"
