@@ -25,9 +25,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - name: Build every crate with -D warnings
+      # `check` runs the full rustc analysis phase, which is where every
+      # warning is produced, and stops before codegen. `build --all-targets`
+      # additionally links this workspace's 1219 integration test binaries at
+      # roughly 56 MiB each, which exhausts a hosted runner's disk mid-compile
+      # and reports only that the runner received a shutdown signal. Linking is
+      # proved by the test lanes; this lane owns warnings.
+      - name: Check every crate and target with -D warnings
         run: |
-          ./cargo_full build --workspace --all-targets --all-features --locked
+          ./cargo_full check --workspace --all-targets --all-features --locked
       - name: Abstraction gate
         run: |
           ./cargo_full run -p xtask -- abstraction-gate
