@@ -43,9 +43,16 @@ jobs:
           ./cargo_full llvm-cov clean --workspace
           packages=$(./cargo_full metadata --no-deps --format-version 1 \
             | python3 -c 'import json,sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
+          # `--tests --examples` rather than the default. cargo-llvm-cov selects
+          # `--tests`, which builds no example, and `wire_harness_smoke_test`
+          # runs the `wire_harness_smoke` example as a subprocess to hold its
+          # stdin/stdout contract. Plain `cargo test` builds examples, so the
+          # test passes everywhere else and this lane was the only one that
+          # reported the binary missing. Examples default to `test = false`, so
+          # naming them here builds them and runs nothing extra.
           for package in $packages; do
             echo "::group::coverage $package"
-            ./cargo_full llvm-cov --no-report --locked --all-features -p "$package"
+            ./cargo_full llvm-cov --no-report --locked --all-features --tests --examples -p "$package"
             echo "::endgroup::"
           done
           ./cargo_full llvm-cov report --lcov --output-path lcov.info \

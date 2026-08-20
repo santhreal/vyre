@@ -1,15 +1,14 @@
 use crate::graph::csr_closure_inputs::{graphs, CsrClosureInputs, CsrGraphView};
-use crate::graph::persistent_bfs::cpu_ref as reference_persistent_bfs;
-use crate::graph::persistent_bfs::{bfs_expand, try_cpu_ref as try_bfs_expand};
+use crate::graph::persistent_bfs::{cpu_ref, try_cpu_ref};
 
 fn forward_reach(graph: CsrGraphView<'_>, seed: &[u32], max_iters: u32) -> Vec<u32> {
-    let (out, _) = bfs_expand(CsrClosureInputs::allow_all(graph, max_iters), seed);
+    let (out, _) = cpu_ref(CsrClosureInputs::allow_all(graph, max_iters), seed);
     out
 }
 #[test]
 fn checked_reference_surfaces_bad_frontier_width() {
     let offsets = vec![0u32; 65];
-    let err = try_bfs_expand(
+    let err = try_cpu_ref(
         CsrClosureInputs::allow_all(
             CsrGraphView {
                 node_count: 64,
@@ -31,46 +30,34 @@ fn checked_reference_surfaces_bad_frontier_width() {
 
 #[test]
 fn expand_chain_saturates() {
-    let (out, changed) = bfs_expand(CsrClosureInputs::allow_all(graphs::CHAIN_4, 8), &[0b0001]);
+    let (out, changed) = cpu_ref(CsrClosureInputs::allow_all(graphs::CHAIN_4, 8), &[0b0001]);
     assert_eq!(out, vec![0b1111]);
     assert_eq!(changed, 1);
 }
 
 #[test]
 fn empty_seed_yields_empty_with_no_change() {
-    let (out, changed) = bfs_expand(CsrClosureInputs::allow_all(graphs::CHAIN_4, 4), &[0u32]);
+    let (out, changed) = cpu_ref(CsrClosureInputs::allow_all(graphs::CHAIN_4, 4), &[0u32]);
     assert_eq!(out, vec![0u32]);
     assert_eq!(changed, 0);
 }
 
 #[test]
 fn saturated_seed_reports_no_change() {
-    let (out, changed) = bfs_expand(CsrClosureInputs::allow_all(graphs::CHAIN_4, 4), &[0b1111]);
+    let (out, changed) = cpu_ref(CsrClosureInputs::allow_all(graphs::CHAIN_4, 4), &[0b1111]);
     assert_eq!(out, vec![0b1111]);
     assert_eq!(changed, 0);
 }
 
 #[test]
-fn matches_primitive_directly() {
-    let seed = vec![0b0001];
-    let inputs = CsrClosureInputs::allow_all(graphs::CHAIN_4, 5);
-    let via_substrate = bfs_expand(inputs, &seed);
-    let via_primitive = reference_persistent_bfs(inputs, &seed);
-    assert_eq!(
-        via_substrate, via_primitive,
-        "Fix: the substrate persistent-BFS wrapper must return exactly what the primitive returns"
-    );
-}
-
-#[test]
 fn max_iters_bound_honored() {
-    let (out, _) = bfs_expand(CsrClosureInputs::allow_all(graphs::CHAIN_4, 1), &[0b0001]);
+    let (out, _) = cpu_ref(CsrClosureInputs::allow_all(graphs::CHAIN_4, 1), &[0b0001]);
     assert_eq!(out[0] & 0b1111, 0b0011);
 }
 
 #[test]
 fn allow_mask_filters_all_edges() {
-    let (out, changed) = bfs_expand(
+    let (out, changed) = cpu_ref(
         CsrClosureInputs {
             graph: graphs::CHAIN_4,
             allow_mask: 0b0010,
@@ -93,7 +80,7 @@ fn self_loop_terminates() {
     let off = vec![0, 1, 1];
     let tgt = vec![0];
     let msk = vec![1];
-    let (out, _) = bfs_expand(
+    let (out, _) = cpu_ref(
         CsrClosureInputs::allow_all(
             CsrGraphView {
                 node_count: 2,

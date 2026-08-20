@@ -1,8 +1,6 @@
 use super::*;
 use crate::dispatch_buffers::u32_slice_to_le_bytes;
-use crate::graph::exploded::{
-    build_cpu_reference, reference_build_ifds_csr, try_reference_build_ifds_csr,
-};
+use crate::graph::exploded::{build_cpu_reference, try_build_cpu_reference};
 use std::sync::Mutex;
 use vyre_driver_reference::ReferenceEvalDispatcher;
 use vyre_foundation::program_dispatch::{DispatchError, ProgramDispatcher};
@@ -32,7 +30,7 @@ fn substrate_exploded_ifds_arms_cover_every_declared_case_group() {
     for group in declared_groups() {
         match group.name {
             "mixed_flow_stream" => assert_via_dispatch_matches_reference(&group.cases),
-            "dense_chain" | "flow_rule_edges" => assert_reference_matches_primitive(&group.cases),
+            "dense_chain" | "flow_rule_edges" => assert_reference_csr_holds(&group.cases),
             "empty_domain" => assert_domain_rejected(&group.cases),
             _ => continue,
         }
@@ -79,11 +77,18 @@ fn assert_via_dispatch_matches_reference(cases: &[ExplodedIfdsCase]) {
     }
 }
 
-/// Closure bar: the substrate reference is the primitive reference, and the node
-/// count helper agrees with the CSR it sizes.
-fn assert_reference_matches_primitive(cases: &[ExplodedIfdsCase]) {
+/// Closure bar: the CSR the reference builds is the one the case declares, and
+/// the node-count helper agrees with the row count it sizes.
+///
+/// This once also compared `reference_build_ifds_csr` against
+/// `build_cpu_reference` and called the result a substrate-versus-primitive
+/// agreement. The first name was a re-export alias of the second, so the
+/// assertion compared a function with itself and could not fail on any defect
+/// in either. What the substrate actually owes is that the reference it hands a
+/// dispatch comparison is the declared CSR, which is what is asserted now.
+fn assert_reference_csr_holds(cases: &[ExplodedIfdsCase]) {
     for case in cases {
-        let via_substrate = reference_build_ifds_csr(
+        let (row_ptr, col_idx) = build_cpu_reference(
             case.num_procs,
             case.blocks_per_proc,
             case.facts_per_proc,
@@ -91,20 +96,6 @@ fn assert_reference_matches_primitive(cases: &[ExplodedIfdsCase]) {
             &case.inter_edges,
             &case.flow_gen,
             &case.flow_kill,
-        );
-        let via_primitive = build_cpu_reference(
-            case.num_procs,
-            case.blocks_per_proc,
-            case.facts_per_proc,
-            &case.intra_edges,
-            &case.inter_edges,
-            &case.flow_gen,
-            &case.flow_kill,
-        );
-        assert_eq!(
-            via_substrate, via_primitive,
-            "Fix: substrate exploded IFDS reference diverged from the primitive owner at {}.",
-            case.label
         );
         assert_eq!(
             ifds_node_count(case.num_procs, case.blocks_per_proc, case.facts_per_proc) as usize,
@@ -112,11 +103,13 @@ fn assert_reference_matches_primitive(cases: &[ExplodedIfdsCase]) {
             "Fix: substrate node-count helper disagrees with the CSR row count at {}.",
             case.label
         );
-        case.assert_csr(
-            "reference_build_ifds_csr",
-            &via_substrate.0,
-            &via_substrate.1,
+        assert_eq!(
+            row_ptr.len(),
+            case.node_count() + 1,
+            "Fix: the reference CSR must carry one row offset per node plus the terminator at {}.",
+            case.label
         );
+        case.assert_csr("build_cpu_reference", &row_ptr, &col_idx);
     }
 }
 
@@ -124,7 +117,7 @@ fn assert_reference_matches_primitive(cases: &[ExplodedIfdsCase]) {
 /// parity needs a real exploded-supergraph domain.
 fn assert_domain_rejected(cases: &[ExplodedIfdsCase]) {
     for case in cases {
-        let message = try_reference_build_ifds_csr(
+        let message = try_build_cpu_reference(
             case.num_procs,
             case.blocks_per_proc,
             case.facts_per_proc,

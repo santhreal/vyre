@@ -1,5 +1,5 @@
 use super::*;
-use crate::graph::exploded::{canonicalize_csr_within_rows_in_place, reference_build_ifds_csr};
+use crate::graph::exploded::{build_cpu_reference, canonicalize_csr_within_rows_in_place};
 use vyre_foundation::ir::Program;
 
 pub(super) fn canonical_expected(
@@ -11,7 +11,7 @@ pub(super) fn canonical_expected(
     gen_edges: &[(u32, u32, u32)],
     kill: &[(u32, u32, u32)],
 ) -> (Vec<u32>, Vec<u32>) {
-    let (row_ptr, mut col_idx) = reference_build_ifds_csr(
+    let (row_ptr, mut col_idx) = build_cpu_reference(
         num_procs,
         blocks_per_proc,
         facts_per_proc,

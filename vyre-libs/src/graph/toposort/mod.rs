@@ -33,6 +33,16 @@ pub use plan::{
 };
 pub use program::toposort_program;
 
+// `csr` and `edge_list` are private, and the CPU reference each owns is what the
+// dispatch contracts compare a device order against. These are the owning
+// names, re-exported so the one test path that reads them has a path to them.
+#[cfg(test)]
+pub(crate) use csr::{toposort_csr, toposort_csr_into};
+#[cfg(test)]
+pub(crate) use edge_list::{
+    reference_all_reachable, reference_reachable_set, reference_topo_order, toposort,
+};
+
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::graph::toposort";
 /// Canonical dispatch input label for CSR offsets.
