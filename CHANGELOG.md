@@ -4638,6 +4638,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   provenance gates enforce runtime path derivation across all member sources
   and test binaries, catching both `env!` and `option_env!` variants without
   waivers.
+- Fixed compilation of vyre-driver-metal output allocation sizing, gated
+  Linux-only uring ingest telemetry invariant test on target_os, and set MSVC
+  compiler environment for Windows CI vendored OpenSSL.
 - CI now uses compatible benchmark, nightly tool, and vendored OpenSSL
   configuration across supported hosts. Unused crate dependencies were deleted
   and indirect test dependencies are declared for the dependency audit.
@@ -6178,6 +6181,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   declared, and names the members shipping for the first time. Passing a member
   the baseline revision never carried aborted the tool before any rule ran, so
   one new crate suppressed the comparison for every released crate beside it.
+- Restored public visibility on vyre-spec specification submodules to maintain
+  SemVer compatibility with published releases.
 - Megakernel selection charges a workgroup tile once per fusion group instead
   of once per member, so a group whose members share a tile by name is no
   longer pushed over the device scratch budget and ranked below the pair it
