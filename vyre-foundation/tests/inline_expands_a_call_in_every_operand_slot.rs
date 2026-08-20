@@ -49,7 +49,8 @@ fn resolver(op_id: &str) -> Option<Program> {
 /// through a position this test did not think of still counts.
 fn calls_left(program: &Program) -> Vec<String> {
     let mut found = Vec::new();
-    try_for_each_expr(program.entry(), |expr| {
+    // The closure never breaks, so the walk can only report `Continue`.
+    let _ = try_for_each_expr(program.entry(), |expr| {
         if let Expr::Call { op_id, .. } = expr {
             found.push(op_id.to_string());
         }
