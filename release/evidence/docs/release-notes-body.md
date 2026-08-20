@@ -3661,6 +3661,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that stated no exclusion at all. The bound on the output a failed benchmark
   child contributes to a report applies to the joined text, so a command
   writing on both streams no longer contributes twice the bound.
+- Three vyre-bench tests named vyre_driver_cuda, which the crate depends on
+  only under cfg(not(target_os = "macos")). The macOS lane failed to resolve
+  the crate and the whole benchmark harness stopped compiling there. Each test
+  now carries the same target condition its dependency does.
 - A registration is rejected when the tier it declares is one the crate that
   minted its id cannot carry, and when the id names no crate at all.
 - A default build of vyre-libs emitted programs whose child regions named
@@ -4222,6 +4226,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The walker that checks every registration is linkable now reads production
   text only, so a registration quoted inside a test module is no longer
   reported as one the build cannot reach.
+- This workspace declares 1219 integration test files and each one links its
+  own binary at roughly 56 MiB, so a single whole-workspace test run outgrew
+  every hosted runner disk. The lane now runs one package at a time and drops
+  that package's test executables before the next, keeping every rlib and
+  build-script output so nothing is rebuilt.
 - One owner now answers which files a cfg(test) module declaration reaches,
   honoring an explicit path attribute, and both the host oracle elimination
   gate and the expect-states-a-fix gate read it. The panic-message rule treated
@@ -4271,10 +4280,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   correct cut and is refused with the loop named.
 - Every CI lane that builds every target of the workspace deletes the
   preinstalled .NET, Android, Haskell, Swift, PowerShell and CodeQL trees
-  first, because a hosted Linux runner ships too little free space for that
-  build and dies mid-compile reporting only that it received a shutdown signal.
-  The step prints the free space before and after, so a lane that still dies
-  names a number instead of a symptom.
+  first, and prints the free space before and after. That reclaim alone was not
+  enough: a lane died with 112 GiB free, because the build it was running needs
+  more than that. It is kept because the space is real and free, not because it
+  is sufficient.
 - A workflow step that runs a repository script is reported, since every
   continuous integration assertion is a registered gate and a script invocation
   carries an assertion the registry, the baseline and the subset roster cannot
@@ -4586,6 +4595,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   naming nothing by the oracle and the property passed while the two sides were
   free to disagree about it. It now composes the two owners, which makes it an
   oracle for the agreement rather than a second opinion about the variant list.
+- The workspace cargo configuration pinned sixteen build jobs on every host. A
+  32-thread workstation was held to half its cores and a four-vCPU CI runner
+  ran sixteen concurrent linkers against 16 GiB of memory. Parallelism is now
+  cargo's default, which is the logical CPU count of whichever machine is
+  building.
 - The radix prefix table, digit-value decode, type-suffix set and digit
   accumulator of a C integer literal are owned by
   `parsing::c::preprocess::c_int_literal_grammar`. The standalone scanner and
@@ -6538,6 +6552,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   It builds both passes itself, so a fusion failure is a defect in the builder
   rather than a caller error, and the crate carried it as an undocumented
   panic.
+- The lane that holds the tree to -D warnings linked every target of every
+  crate, which writes over 100 GiB of test executables and kills a hosted
+  runner mid-compile. Warnings are produced by rustc's analysis phase, so the
+  lane now runs check across the same crate and target set and reaches the end.
 - The Windows CI lane deletes the coreutils `link.exe` that Git for Windows
   places ahead of the MSVC toolchain on PATH, so rustc reaches the real linker
   instead of a program that rejects an object list with `extra operand`. The
