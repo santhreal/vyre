@@ -345,17 +345,37 @@ mod tests {
 
     #[test]
     fn small_and_large_reduction_sizes_prepare_expected_values() {
-        let small = prepare_size(SMALL_COUNT);
+        // The block count a 4090-class device reports; the clamp is what turns
+        // it into a legal grid for each size.
+        let compute_units = 170;
+
+        let small = prepare_size(SMALL_COUNT, compute_units);
         assert_eq!(small.count, 32);
         assert_eq!(small.tree_tile, 32);
         assert_eq!(small.inputs[0].len(), 32 * 4);
         assert_eq!(small.expected.len(), 4);
+        assert_eq!(
+            small.tree_grid, None,
+            "Fix: 32 elements at tile 32 need one block, and a one-block tree infers its own grid"
+        );
 
-        let large = prepare_size(LARGE_COUNT);
+        let large = prepare_size(LARGE_COUNT, compute_units);
         assert_eq!(large.count, 1 << 20);
         assert_eq!(large.tree_tile, MAX_TREE_TILE);
         assert_eq!(large.inputs[0].len(), (1 << 20) * 4);
         assert_eq!(large.expected.len(), 4);
+        assert_eq!(
+            large.tree_grid,
+            Some([compute_units, 1, 1]),
+            "Fix: the launch must pin the block count the pass-one loop was built for"
+        );
+
+        let saturated = prepare_size(LARGE_COUNT, 100_000);
+        assert_eq!(
+            saturated.tree_grid,
+            Some([LARGE_COUNT / MAX_TREE_TILE, 1, 1]),
+            "Fix: more blocks than tiles leaves blocks with nothing to reduce"
+        );
     }
 
     #[test]
