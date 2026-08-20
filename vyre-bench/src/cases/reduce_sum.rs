@@ -19,6 +19,7 @@ const ROUTE_TREE: u64 = 1;
 struct ReductionSizePrepared {
     count: u32,
     tree_tile: u32,
+    values: Vec<u32>,
     atomic_program: Program,
     tree_program: Program,
     inputs: [Vec<u8>; 2],
@@ -77,10 +78,23 @@ impl BenchCase for ReduceSumBench {
     }
 
     fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let baseline_started = std::time::Instant::now();
         let small = prepare_size(SMALL_COUNT);
         let large = prepare_size(LARGE_COUNT);
-        let baseline_wall_ns = elapsed_ns(baseline_started);
+
+        let pool = crate::cases::cpu_baselines::baseline_pool();
+        let mut durations = Vec::with_capacity(11);
+        for _ in 0..11 {
+            let start = std::time::Instant::now();
+            let (_s, _l) = pool.install(|| {
+                use rayon::prelude::*;
+                let s: u32 = small.values.par_iter().copied().sum();
+                let l: u32 = large.values.par_iter().copied().sum();
+                (s, l)
+            });
+            durations.push(elapsed_ns(start));
+        }
+        durations.sort_unstable();
+        let baseline_wall_ns = durations[durations.len() / 2];
 
         Ok(Box::new(ReduceSumPrepared {
             small,
@@ -212,6 +226,7 @@ fn prepare_size(count: u32) -> ReductionSizePrepared {
     ReductionSizePrepared {
         count,
         tree_tile,
+        values: values.clone(),
         atomic_program: sum::reduce_sum("values", "out", count),
         tree_program: workgroup_tree::workgroup_sum_u32("values", "out", count, tree_tile),
         inputs: [
@@ -245,17 +260,24 @@ fn measure_size(
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     verify_route_output(size_name, "tree", &tree.outputs, &prepared.expected)?;
 
-    let device_timing = match (atomic.device_ns, tree.device_ns) {
-        (Some(_), Some(_)) => true,
-        (None, None) => false,
-        _ => {
+    let (atomic_ns, tree_ns) = match (atomic.device_ns, tree.device_ns) {
+        (Some(a), Some(t)) if a > 0 && t > 0 => (a, t),
+        (Some(a), Some(t)) => {
             return Err(BenchError::BackendFailed(format!(
-                "{size_name} reduction routes reported inconsistent device-timing availability"
+                "{size_name} reduction routes reported zero device timing: atomic={a} ns, tree={t} ns"
+            )));
+        }
+        (a, t) => {
+            return Err(BenchError::BackendFailed(format!(
+                "{size_name} reduction routes missing device timing: atomic={a:?}, tree={t:?}"
             )));
         }
     };
-    let atomic_ns = atomic.device_ns.unwrap_or(atomic.wall_ns);
-    let tree_ns = tree.device_ns.unwrap_or(tree.wall_ns);
+    if size_name == "large" && atomic_ns == tree_ns {
+        return Err(BenchError::BackendFailed(format!(
+            "large reduction routes reported identical device timings ({atomic_ns} ns); selector cannot determine measured winner"
+        )));
+    }
     let (selected_route, selected) = if atomic_ns <= tree_ns {
         (ROUTE_ATOMIC, atomic)
     } else {
@@ -266,7 +288,7 @@ fn measure_size(
         atomic_ns,
         tree_ns,
         selected_route,
-        device_timing,
+        device_timing: true,
         selected,
     })
 }
@@ -297,4 +319,39 @@ fn metric(name: &str, value: u64) -> MetricPoint {
 }
 inventory::submit! {
     &ReduceSumBench as &'static dyn BenchCase
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn small_and_large_reduction_sizes_prepare_expected_values() {
+        let small = prepare_size(SMALL_COUNT);
+        assert_eq!(small.count, 32);
+        assert_eq!(small.tree_tile, 32);
+        assert_eq!(small.inputs[0].len(), 32 * 4);
+        assert_eq!(small.expected.len(), 4);
+
+        let large = prepare_size(LARGE_COUNT);
+        assert_eq!(large.count, 1 << 20);
+        assert_eq!(large.tree_tile, MAX_TREE_TILE);
+        assert_eq!(large.inputs[0].len(), (1 << 20) * 4);
+        assert_eq!(large.expected.len(), 4);
+    }
+
+    #[test]
+    fn verify_route_output_rejects_mismatch_and_accepts_expected() {
+        let expected = vec![1, 2, 3, 4];
+        let matching = vec![vec![1, 2, 3, 4]];
+        let mismatch = vec![vec![1, 2, 3, 5]];
+
+        assert!(verify_route_output("test", "atomic", &matching, &expected).is_ok());
+        assert!(verify_route_output("test", "atomic", &mismatch, &expected).is_err());
+    }
+
+    #[test]
+    fn tree_barrier_rounds_computes_expected_log2_rounds() {
+        assert_eq!(tree_barrier_rounds(32), 6);
+        assert_eq!(tree_barrier_rounds(256), 9);
+    }
 }

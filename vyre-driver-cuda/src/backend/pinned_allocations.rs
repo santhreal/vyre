@@ -745,7 +745,7 @@ mod tests {
         let error = copy_raw_bytes_into_vec(src, usize::MAX, &mut dst)
             .expect_err("Fix: reservation overflow must fail cleanly");
 
-        assert!(matches!(error, BackendError::InvalidProgram { .. }));
+        assert!(error.to_string().contains("could not reserve"));
         assert_eq!(dst, &[7, 8, 9]);
         assert_eq!(dst.capacity(), capacity);
     }

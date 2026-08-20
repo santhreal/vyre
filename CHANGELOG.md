@@ -5890,6 +5890,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   scan left the recorded coverage naming the older set. The record now reads
   `RESOURCE_BOUND_PATTERNS`, `HIDDEN_FALLBACK_PATTERNS` and
   `CARGO_WRAPPER_PATTERNS` directly.
+- Bypass materialized output cache lookup on timed CUDA dispatches so device
+  timing events are always recorded. Require distinct, non-zero device timings
+  before reduction route selection on large workloads, and measure a Rayon CPU
+  baseline for reduction crossover benchmarks.
 - The reduction benchmark now measures atomic-scalar and workgroup-tree sums on
   the same GPU at 32 and 1,048,576 elements. It verifies both routes exactly,
   selects the measured winner per size, and records contention and barrier

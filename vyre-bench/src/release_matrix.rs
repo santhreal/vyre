@@ -585,20 +585,21 @@ fn build_family_report(
         }
         let id = case.id().0;
         matched_cases.push(id.clone());
-        if has_cpu_sota_100x_contract(case.performance_contract().as_ref()) {
-            cpu_sota_100x_cases.push(id.clone());
+        if family.requires_cpu_sota_baseline {
+            if has_cpu_sota_100x_contract(case.performance_contract().as_ref()) {
+                cpu_sota_100x_cases.push(id.clone());
+            }
+            collect_cpu_sota_contracts(
+                &id,
+                case.performance_contract().as_ref(),
+                &mut cpu_sota_contracts,
+                &mut cpu_sota_baseline_names,
+                &mut cpu_sota_baseline_crates,
+                &mut cpu_sota_backend_ids,
+                &mut max_cpu_sota_min_speedup_x,
+            );
         }
-        collect_cpu_sota_contracts(
-            &id,
-            case.performance_contract().as_ref(),
-            &mut cpu_sota_contracts,
-            &mut cpu_sota_baseline_names,
-            &mut cpu_sota_baseline_crates,
-            &mut cpu_sota_backend_ids,
-            &mut max_cpu_sota_min_speedup_x,
-        );
     }
-
     matched_cases.sort();
     cpu_sota_100x_cases.sort();
     let evidence_artifact = format!(

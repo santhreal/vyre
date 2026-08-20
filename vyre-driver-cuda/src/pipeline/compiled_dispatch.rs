@@ -65,26 +65,6 @@ impl CompiledPipeline for CudaCompiledPipeline {
         let started = std::time::Instant::now();
         let mut outputs = reserved_vec(self.prepared.output_binding_indices.len(), "timed output")?;
         let input_key = exact_input_key(inputs)?;
-        if self.materialized_output_cache_hit_with_key_into(inputs, &input_key, &mut outputs)? {
-            let wall_ns = CUDA_NUMERIC
-                .elapsed_nanos_u64(started, "cuda graph materialized timed hit wall latency")?;
-            // Materialized output cache hit: no kernel was launched, so the
-            // device performed exactly zero work.  Report Some(0) -- the exact,
-            // non-fabricated device time for a hit.  None would mean "device
-            // time unknown" and route this to timed_dispatches_missing_device_time,
-            // which is wrong: we know the device did nothing.  Some(0) also lets
-            // the release perf gate see the cache eliminate device work (0 ns).
-            self.backend
-                .telemetry
-                .record_timed_dispatch(wall_ns, Some(0), None, None);
-            return Ok(vyre_driver::TimedDispatchResult {
-                outputs,
-                wall_ns,
-                device_ns: Some(0),
-                enqueue_ns: None,
-                wait_ns: None,
-            });
-        }
         let (mut cached, input_state) = match self
             .take_cached_graph_with_replay_state(inputs, &input_key)?
         {
