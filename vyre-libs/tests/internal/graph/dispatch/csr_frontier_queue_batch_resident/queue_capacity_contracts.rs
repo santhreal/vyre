@@ -1,10 +1,10 @@
 use super::super::*;
-use super::recording_dispatcher::RecordingBatchDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 
 #[test]
 fn batch_queries_bucket_graph_sized_capacity_from_max_frontier_popcount() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 4096u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
@@ -51,7 +51,7 @@ fn batch_queries_bucket_graph_sized_capacity_from_max_frontier_popcount() {
 
 #[test]
 fn batch_queries_reuse_larger_queue_scratch_for_smaller_effective_capacity() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 4096u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])

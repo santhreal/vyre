@@ -52,7 +52,7 @@ fn resident_query_buckets_graph_sized_capacity_from_frontier_popcount() {
         ]
     );
     let grids = dispatcher
-        .sequence_step_grids
+        .step_grids
         .borrow()
         .last()
         .cloned()
@@ -130,7 +130,7 @@ fn resident_query_reuses_larger_queue_scratch_for_smaller_effective_capacity() {
     );
     assert!(dispatcher.freed.borrow().is_empty());
     let grids = dispatcher
-        .sequence_step_grids
+        .step_grids
         .borrow()
         .last()
         .cloned()

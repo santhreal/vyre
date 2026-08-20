@@ -33,7 +33,7 @@ fn resident_query_initializes_queue_len_on_device() {
         .expect("Fix: resident CSR queue query should allocate scratch handles");
     assert_eq!(
         dispatcher
-            .sequence_upload_handles
+            .upload_handles
             .borrow()
             .last()
             .cloned()
@@ -42,7 +42,7 @@ fn resident_query_initializes_queue_len_on_device() {
         "resident CSR queue query must only upload frontier bytes; queue_len and output clear must stay device-side"
     );
     let steps = dispatcher
-        .sequence_step_handles
+        .step_handles
         .borrow()
         .last()
         .cloned()

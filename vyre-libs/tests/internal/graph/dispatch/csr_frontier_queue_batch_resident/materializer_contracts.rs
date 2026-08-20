@@ -1,11 +1,11 @@
 use super::super::*;
-use super::recording_dispatcher::RecordingBatchDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 use crate::graph::csr_frontier_queue::scratch::ResidentCsrQueueMaterializer;
 use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 
 #[test]
 fn large_sparse_batch_queries_use_atomic_word_materializer() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 8_193u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
@@ -69,7 +69,7 @@ fn large_sparse_batch_queries_use_atomic_word_materializer() {
 
 #[test]
 fn large_dense_batch_queries_use_word_prefix_queue_materializer() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 8_193u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
@@ -137,7 +137,7 @@ fn large_dense_batch_queries_use_word_prefix_queue_materializer() {
 
 #[test]
 fn small_multiblock_batch_queries_inline_block_offsets() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 32_897u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
@@ -197,7 +197,7 @@ fn small_multiblock_batch_queries_inline_block_offsets() {
 
 #[test]
 fn many_block_batch_queries_scan_block_offsets_once_per_query() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 262_177u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])

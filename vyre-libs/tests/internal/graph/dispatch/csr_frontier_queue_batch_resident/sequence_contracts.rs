@@ -1,10 +1,10 @@
 use super::super::*;
-use super::recording_dispatcher::RecordingBatchDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 
 #[test]
 fn batch_queries_initialize_queue_len_on_device() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let graph = upload_resident_csr_queue_graph(&dispatcher, 2, &[0, 0, 0], &[], &[])
         .expect("Fix: zero-edge resident CSR graph is valid");
     let mut scratch = ResidentCsrQueueBatchScratch::default();

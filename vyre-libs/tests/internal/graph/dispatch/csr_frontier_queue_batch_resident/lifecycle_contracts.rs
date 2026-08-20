@@ -1,10 +1,10 @@
 use super::super::*;
-use super::recording_dispatcher::RecordingBatchDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 
 #[test]
 fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let graph = upload_resident_csr_queue_graph(&dispatcher, 4, &[0, 0, 0, 0, 0], &[], &[])
         .expect("Fix: zero-edge resident CSR graph is valid");
     let mut scratch = ResidentCsrQueueBatchScratch::default();
@@ -100,7 +100,7 @@ fn generated_batch_dispatch_tables_reuse_capacity_across_calls() {
 #[test]
 fn generated_batch_scratch_free_releases_each_handle_once_in_first_seen_order() {
     for seed in 0..4096_u64 {
-        let dispatcher = RecordingBatchDispatcher::default();
+        let dispatcher = RecordingResidentDispatcher::default();
         let base = 40_000 + seed * 16;
         let mut scratch = ResidentCsrQueueBatchScratch::default();
         scratch.slots.push(ResidentCsrQueueSlots {

@@ -1,5 +1,5 @@
 use super::super::*;
-use super::recording_dispatcher::RecordingBatchDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 use crate::graph::csr_frontier_queue::scratch::{
     resident_csr_queue_split_low_grid, STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
@@ -8,7 +8,7 @@ use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_que
 
 #[test]
 fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 16u32;
     let mut edge_offsets = vec![0u32; node_count as usize + 1];
     for offset in edge_offsets.iter_mut().skip(1) {
@@ -136,7 +136,7 @@ fn skewed_high_degree_batch_queries_use_bounded_split_queue() {
 
 #[test]
 fn uniformly_high_degree_batch_queries_use_row_strided_traverse_grid() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 16u32;
     let mut edge_offsets = vec![0u32; node_count as usize + 1];
     for (row, offset) in edge_offsets.iter_mut().enumerate() {

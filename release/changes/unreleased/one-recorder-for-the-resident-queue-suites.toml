@@ -1,0 +1,2 @@
+category = "Changed"
+text = "One recording dispatcher for both resident CSR queue test suites. The single-step and batch suites each kept their own recorder with the same five `ProgramDispatcher` arms under differently spelled fields, so an assertion about one said nothing about the other. Both now include `recording_resident_dispatcher.rs`, and the batch suite records the allocation lengths and upload bytes it previously discarded."

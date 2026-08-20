@@ -46,7 +46,7 @@ fn large_single_word_resident_query_uses_atomic_word_materializer() {
     assert!(handles.word_partials.is_none());
     assert!(handles.block_totals.is_none());
     let steps = dispatcher
-        .sequence_step_handles
+        .step_handles
         .borrow()
         .last()
         .cloned()
@@ -114,7 +114,7 @@ fn large_dense_resident_query_uses_word_prefix_queue_materializer() {
         .block_totals
         .expect("Fix: word-prefix query should allocate block_totals");
     let steps = dispatcher
-        .sequence_step_handles
+        .step_handles
         .borrow()
         .last()
         .cloned()
@@ -179,7 +179,7 @@ fn small_multiblock_resident_query_inlines_block_offsets() {
         .block_totals
         .expect("Fix: multiblock word-prefix query should allocate block_totals");
     let steps = dispatcher
-        .sequence_step_handles
+        .step_handles
         .borrow()
         .last()
         .cloned()
@@ -244,7 +244,7 @@ fn many_block_resident_query_scans_block_offsets_once() {
         .block_totals
         .expect("Fix: many-block word-prefix query should allocate block_totals");
     let steps = dispatcher
-        .sequence_step_handles
+        .step_handles
         .borrow()
         .last()
         .cloned()

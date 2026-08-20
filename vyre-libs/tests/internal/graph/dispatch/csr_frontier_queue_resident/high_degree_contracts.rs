@@ -47,7 +47,7 @@ fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
         1
     );
     let steps = dispatcher
-        .sequence_step_handles
+        .step_handles
         .borrow()
         .last()
         .cloned()
@@ -84,7 +84,7 @@ fn skewed_high_degree_resident_query_uses_bounded_split_queue() {
         "strided follow-up must consume the bounded high-row queue"
     );
     let grids = dispatcher
-        .sequence_step_grids
+        .step_grids
         .borrow()
         .last()
         .cloned()
@@ -170,14 +170,14 @@ fn uniformly_high_degree_resident_query_uses_row_strided_traverse_grid() {
     assert!(handles.high_queue.is_none());
     assert!(handles.high_len.is_none());
     let steps = dispatcher
-        .sequence_step_handles
+        .step_handles
         .borrow()
         .last()
         .cloned()
         .expect("Fix: expected one resident step sequence");
     assert_eq!(steps.len(), 3);
     let grids = dispatcher
-        .sequence_step_grids
+        .step_grids
         .borrow()
         .last()
         .cloned()

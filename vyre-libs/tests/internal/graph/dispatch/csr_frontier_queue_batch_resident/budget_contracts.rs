@@ -1,11 +1,11 @@
 use super::super::*;
-use super::recording_dispatcher::RecordingBatchDispatcher;
+use super::recording_dispatcher::RecordingResidentDispatcher;
 use crate::graph::csr_frontier_queue::scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 use crate::graph::dispatch::csr_frontier_queue_resident::upload_resident_csr_queue_graph;
 
 #[test]
 fn budgeted_batch_memory_plan_uses_effective_queue_capacity() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 4096u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
@@ -44,7 +44,7 @@ fn budgeted_batch_memory_plan_uses_effective_queue_capacity() {
 
 #[test]
 fn budgeted_batch_memory_plan_accounts_for_split_high_queue_scratch() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 16u32;
     let mut edge_offsets = vec![0u32; node_count as usize + 1];
     for offset in edge_offsets.iter_mut().skip(1) {
@@ -89,7 +89,7 @@ fn budgeted_batch_memory_plan_accounts_for_split_high_queue_scratch() {
 
 #[test]
 fn budgeted_batch_packs_sparse_runs_around_dense_outlier() {
-    let dispatcher = RecordingBatchDispatcher::default();
+    let dispatcher = RecordingResidentDispatcher::default();
     let node_count = 4096u32;
     let edge_offsets = vec![0u32; node_count as usize + 1];
     let graph = upload_resident_csr_queue_graph(&dispatcher, node_count, &edge_offsets, &[], &[])
