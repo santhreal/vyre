@@ -522,7 +522,7 @@ pub fn code_offsets(text: &str) -> impl Iterator<Item = usize> + '_ {
 /// `vyre-libs/src/parsing/python/lex.rs` went unread and the operation it
 /// defines was reported as having no definition site.
 ///
-/// Which spans are not code is [`opaque_span`](crate::opaque_span)'s answer,
+/// Which spans are not code is [`opaque_span`]'s answer,
 /// the same one the masker and the registration parser read, so a raw string,
 /// a byte string and a nested block comment are all one decision.
 #[must_use]

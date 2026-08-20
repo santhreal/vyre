@@ -36,7 +36,7 @@
 //! width against a fixed program, so a width term would be a guess, and a guess
 //! that orders the widths is worse than no term: the analytic ranking would claim
 //! a result only a measurement has. Width candidates therefore tie on cost, are
-//! ordered deterministically by [`crate::select::rank`], and a measured
+//! ordered deterministically by `crate::select::rank`, and a measured
 //! compilation decides between them on device time.
 
 use serde::{Deserialize, Serialize};

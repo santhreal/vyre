@@ -1,10 +1,10 @@
 //! Aho-Corasick scans over a 4 MiB haystack of unaligned, varied-length literals.
 //!
 //! Two cases share one fixture and one sampling path:
-//! [`literals`] emits every match as a byte range, [`count`] returns cardinality
-//! only. The fixture lives in [`haystack`], the match wire format in
-//! [`match_triples`], the dispatch and reporting path in [`sample`], the CPU
-//! oracle in [`baseline`], and the metric points in [`metrics`].
+//! `literals` emits every match as a byte range, `count` returns cardinality
+//! only. The fixture lives in `haystack`, the match wire format in
+//! `match_triples`, the dispatch and reporting path in `sample`, the CPU
+//! oracle in `baseline`, and the metric points in `metrics`.
 
 use crate::api::suite::SuiteKind;
 

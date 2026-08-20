@@ -18,7 +18,7 @@
 //! read-modify-write on `k` slots, and the cumulative mass that top-p needs is
 //! a running sum over those slots in descending order. Fusing them under the
 //! elementwise stage widens their geometry, so both arms are attributed through
-//! [`attribute_serial_child`], which names the invocation they run on.
+//! `attribute_serial_child`, which names the invocation they run on.
 
 use thiserror::Error;
 use vyre_foundation::composition::tag_program;

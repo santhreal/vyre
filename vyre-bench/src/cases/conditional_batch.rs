@@ -1,7 +1,7 @@
 //! `conditions.yara_like.batch.16x64k`  -  batched sparse rule-condition eval.
 //!
 //! Same measured loop as `conditions.yara_like.eval.1m`: the shared owner in
-//! [`super::conditional`] runs the resident reset-plus-evaluate sequence, builds
+//! `super::conditional` runs the resident reset-plus-evaluate sequence, builds
 //! the sample and verifies the sparse fired set. What is specific here is the
 //! packed nine-word rule descriptor, the per-file size and entropy metadata,
 //! and the fired identifier being a file-and-rule pair rather than a rule.

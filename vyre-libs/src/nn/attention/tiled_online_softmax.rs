@@ -6,7 +6,7 @@
 //! only in the tile width the planner picks, and take the whole program from
 //! [`online_softmax_attention`]. [`mla_decode`](super::mla::mla_decode) reads
 //! its scores out of a compressed KV cache, so it supplies its own two
-//! fragments to [`tiled_online_softmax_body`] and shares the recurrence around
+//! fragments to `tiled_online_softmax_body` and shares the recurrence around
 //! them.
 //!
 //! Scalar is not a second algorithm. The scalar kernel is this core at

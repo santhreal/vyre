@@ -9,7 +9,7 @@
 //!
 //! The measured loop, the sparse-output verifier and the pattern-metadata
 //! generator are shared with `conditions.yara_like.batch.16x64k` and live in
-//! [`super::conditional`]; only the condition graph, the per-rule record layout
+//! `super::conditional`; only the condition graph, the per-rule record layout
 //! and the CPU oracle are here.
 
 use super::byte_pack::u32_bytes;

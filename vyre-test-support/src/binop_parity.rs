@@ -522,13 +522,13 @@ fn reference_for(
         })
 }
 
-/// Op names [`SYNTHETIC_U32_REFERENCES`] declares.
+/// Op names `SYNTHETIC_U32_REFERENCES` declares.
 #[must_use]
 pub fn synthetic_u32_reference_ops() -> Vec<&'static str> {
     SYNTHETIC_U32_REFERENCES.iter().map(|(op, _)| *op).collect()
 }
 
-/// Op names [`TOTAL_U32_REFERENCES`] declares.
+/// Op names `TOTAL_U32_REFERENCES` declares.
 #[must_use]
 pub fn total_u32_reference_ops() -> Vec<&'static str> {
     TOTAL_U32_REFERENCES.iter().map(|(op, _)| *op).collect()

@@ -9,7 +9,7 @@
 //! Givens rotation that depends on the current matrix, so sweep `k + 1` cannot start before sweep
 //! `k`'s rotation has landed. The pivot SEARCH inside a sweep is not sequential — it is an argmax
 //! over the `n²` index pairs — so the kernel runs a workgroup of lanes: the search is a cooperative
-//! reduction ([`crate::builder::cooperative::Argmax`]), the identity seeding, the sign pass and the
+//! reduction (`crate::builder::cooperative::Argmax`), the identity seeding, the sign pass and the
 //! diagonal read-out each walk their own cells across the lanes, and only the rotation stays on one
 //! lane, behind a barrier, because the next sweep reads what it wrote. The serial work per sweep
 //! drops from `n²` iterations in one lane to `n² / lanes` plus a log-depth tree. It

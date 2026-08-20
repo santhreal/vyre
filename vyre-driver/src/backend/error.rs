@@ -61,7 +61,7 @@ impl ErrorCode {
     /// Every variant, ordered by [`Self::stable_id`].
     ///
     /// Catalog renderers and conformance tests walk this instead of a
-    /// hand-maintained list. [`Self::catalog_index`] and the const assertion
+    /// hand-maintained list. `Self::catalog_index` and the const assertion
     /// below make a variant that is missing here a compile error rather than
     /// a silently uncatalogued code.
     pub const ALL: &'static [Self] = &[
@@ -97,7 +97,7 @@ impl ErrorCode {
 
     /// One-line description carried into the generated catalog.
     ///
-    /// Exhaustive for the same reason as [`Self::catalog_index`]: a new
+    /// Exhaustive for the same reason as `Self::catalog_index`: a new
     /// variant cannot reach the catalog without a description.
     #[must_use]
     pub const fn summary(self) -> &'static str {
