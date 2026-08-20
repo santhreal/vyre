@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: architectural-invariants-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   architecture-release-gate:
     name: Architecture release gate

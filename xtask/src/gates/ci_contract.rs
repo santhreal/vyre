@@ -310,6 +310,226 @@ impl crate::gate::GateBehavior for CiShell {
     }
 }
 
+/// A superseded run holds the runner the current sha is waiting for.
+///
+/// Pushing again replaces the commit the previous run was measuring, so that run
+/// reports on code no ref points at. On a hosted runner that only spends
+/// minutes. On a self-hosted device runner, which takes one job at a time, the
+/// obsolete run holds the device for as long as its queue takes and the run for
+/// the current sha does not start until it finishes: the device lane then
+/// reports a verdict from several pushes ago, or reports nothing before the
+/// branch moves again.
+///
+/// The group has to vary by ref for the same reason. A constant group makes two
+/// branches cancel each other, so a push to one branch discards the run another
+/// branch was waiting on, which is a worse failure than the one the group was
+/// added to fix.
+///
+/// A workflow that only a tag, a schedule or a dispatch starts is not held to
+/// this. A tag is not superseded by the next push, and cancelling one would
+/// discard a release recording.
+pub struct CiConcurrency;
+
+impl crate::gate::GateBehavior for CiConcurrency {
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let tree = Tree::open(&ctx.root)?;
+        let mut report = Report::clean();
+        let mut workflows = 0;
+
+        for path in tree.paths() {
+            let relative = path.to_string_lossy().to_string();
+            if !is_workflow(&relative) {
+                continue;
+            }
+            let text = tree.read(path)?;
+            if !triggered_by_a_change(&text) {
+                continue;
+            }
+            workflows += 1;
+            let Some(concurrency) = concurrency_block(&text) else {
+                report.find(Finding::in_file(
+                    &relative,
+                    "a change starts this workflow and it declares no `concurrency` group",
+                    "add a top-level `concurrency:` with `group: <workflow>-${{ github.ref }}` \
+                     and `cancel-in-progress: true`, so the next push retires the run it \
+                     superseded instead of queueing behind it",
+                ));
+                continue;
+            };
+            match concurrency.group.as_deref() {
+                None => report.find(Finding::at(
+                    &relative,
+                    concurrency.line,
+                    "the `concurrency` block names no group",
+                    "give it `group: <workflow>-${{ github.ref }}`; a block with no group \
+                     key is not a concurrency group at all",
+                )),
+                Some(group) if !varies_by_ref(group) => report.find(Finding::at(
+                    &relative,
+                    concurrency.line,
+                    format!("the concurrency group `{group}` is the same on every ref"),
+                    "put `${{ github.ref }}` in the group; a constant group makes a push to \
+                     one branch cancel the run another branch is waiting on",
+                )),
+                Some(_) => {}
+            }
+            match concurrency.cancel_in_progress.as_deref() {
+                Some("true") => {}
+                Some(other) => report.find(Finding::at(
+                    &relative,
+                    concurrency.line,
+                    format!("the group is declared with `cancel-in-progress: {other}`"),
+                    "set `cancel-in-progress: true`; a group that queues instead of \
+                     cancelling makes the obsolete run hold the runner first",
+                )),
+                None => report.find(Finding::at(
+                    &relative,
+                    concurrency.line,
+                    "the group does not declare `cancel-in-progress`",
+                    "set `cancel-in-progress: true`; the default queues the new run behind \
+                     the superseded one, which is the delay the group exists to remove",
+                )),
+            }
+        }
+
+        report.cover_complete("change-triggered workflows", workflows);
+        Ok(report)
+    }
+}
+
+/// Whether a group expression distinguishes one ref from another.
+fn varies_by_ref(group: &str) -> bool {
+    group.contains("github.ref") || group.contains("github.head_ref")
+}
+
+/// The top-level `concurrency:` mapping of a workflow.
+struct Concurrency {
+    /// One-based line the block opens on.
+    line: u32,
+    /// The `group:` expression, verbatim.
+    group: Option<String>,
+    /// The `cancel-in-progress:` value, verbatim.
+    cancel_in_progress: Option<String>,
+}
+
+/// The top-level `concurrency:` mapping, if the workflow declares one.
+///
+/// Only a key at column zero is the workflow's own: `concurrency:` indented
+/// inside a job scopes that job alone and does not retire the run.
+fn concurrency_block(text: &str) -> Option<Concurrency> {
+    let mut found: Option<Concurrency> = None;
+    for (index, line) in text.lines().enumerate() {
+        if line.trim().is_empty() || line.trim_start().starts_with('#') {
+            continue;
+        }
+        if indentation(line) == 0 {
+            if found.is_some() {
+                break;
+            }
+            let Some(rest) = line.strip_prefix("concurrency:") else {
+                continue;
+            };
+            let mut opened = Concurrency {
+                line: index as u32 + 1,
+                group: None,
+                cancel_in_progress: None,
+            };
+            read_concurrency_keys(rest, &mut opened);
+            found = Some(opened);
+            continue;
+        }
+        if let Some(opened) = found.as_mut() {
+            read_concurrency_keys(line, opened);
+        }
+    }
+    found
+}
+
+/// Read whichever concurrency keys a fragment carries into the block.
+///
+/// The fragment is either an indented line of a block mapping or the remainder
+/// of an inline one, so a flow mapping is unwrapped once at its own boundaries.
+/// Stripping braces from each entry instead would eat the closing `}}` of a
+/// `${{ github.ref }}` group and read it as a constant.
+fn read_concurrency_keys(fragment: &str, block: &mut Concurrency) {
+    let fragment = fragment.trim();
+    let fragment = fragment
+        .strip_prefix('{')
+        .map_or(fragment, |rest| rest.strip_suffix('}').unwrap_or(rest));
+    for part in fragment.split(',') {
+        let part = part.trim();
+        if let Some(value) = part.strip_prefix("group:") {
+            block.group = Some(
+                value
+                    .trim()
+                    .trim_matches('"')
+                    .trim_matches('\'')
+                    .to_string(),
+            );
+        } else if let Some(value) = part.strip_prefix("cancel-in-progress:") {
+            block.cancel_in_progress = Some(value.trim().to_string());
+        }
+    }
+}
+
+/// Whether a push to a branch or a pull request starts the workflow.
+///
+/// A `push:` that filters on `tags:` and names no `branches:` is a tag trigger,
+/// and a tag is not superseded by the next push.
+fn triggered_by_a_change(text: &str) -> bool {
+    let mut inside_on = false;
+    let mut inside_push = false;
+    let mut push_declared = false;
+    let mut push_branches = false;
+    let mut push_tags = false;
+    for line in text.lines() {
+        if line.trim().is_empty() || line.trim_start().starts_with('#') {
+            continue;
+        }
+        let indent = indentation(line);
+        if indent == 0 {
+            if inside_on {
+                break;
+            }
+            let Some(rest) = line
+                .strip_prefix("on:")
+                .or_else(|| line.strip_prefix("\"on\":"))
+                .or_else(|| line.strip_prefix("'on':"))
+            else {
+                continue;
+            };
+            if rest.contains("pull_request") || rest.contains("push") {
+                return true;
+            }
+            inside_on = true;
+            continue;
+        }
+        if !inside_on {
+            continue;
+        }
+        let trimmed = line.trim();
+        if indent <= 2 {
+            inside_push = false;
+            if trimmed.starts_with("pull_request:") || trimmed.starts_with("pull_request_target:") {
+                return true;
+            }
+            if trimmed.starts_with("push:") {
+                inside_push = true;
+                push_declared = true;
+            }
+            continue;
+        }
+        if inside_push {
+            if trimmed.starts_with("branches:") {
+                push_branches = true;
+            } else if trimmed.starts_with("tags:") {
+                push_tags = true;
+            }
+        }
+    }
+    push_declared && (push_branches || !push_tags)
+}
+
 /// Whether the path is a workflow file, running or paused.
 fn is_workflow(relative: &str) -> bool {
     let Some(name) = relative
@@ -1192,5 +1412,62 @@ jobs:
         assert!(!is_workflow(".github/workflows/nested/ci.yml"));
         assert!(!is_workflow(".github/CI_REQUIRED.md"));
         assert!(!is_workflow("xtask/ci-registry.toml"));
+    }
+
+    /// WHY: the rule exempts a lane no push supersedes, and the exemption is
+    /// what a stale workflow would hide behind. A `push:` filtered to tags is
+    /// exempt; the same key filtered to branches is not, and neither is a
+    /// workflow that also answers a pull request.
+    #[test]
+    fn only_a_lane_a_push_supersedes_is_held_to_a_concurrency_group() {
+        let tag_only = "name: Release\non:\n  workflow_dispatch:\n  push:\n    tags: [\"v*\"]\n";
+        let branch_push = "name: CI\non:\n  push:\n    branches: [main]\n";
+        let schedule_only = "name: Nightly\non:\n  schedule:\n    - cron: '0 0 * * *'\n";
+        let pull_request = "name: Docs\non:\n  pull_request:\n";
+        assert!(!triggered_by_a_change(tag_only), "a tag is not superseded");
+        assert!(
+            !triggered_by_a_change(schedule_only),
+            "a cron has no ref to supersede"
+        );
+        assert!(triggered_by_a_change(branch_push));
+        assert!(triggered_by_a_change(pull_request));
+    }
+
+    /// WHY: `concurrency:` inside a job scopes that job and leaves the run it
+    /// superseded holding the runner, which is the exact failure the rule
+    /// exists for. Only a key at column zero answers it.
+    #[test]
+    fn a_job_scoped_concurrency_key_is_not_the_workflow_group() {
+        let text = "name: CI\non:\n  pull_request:\njobs:\n  build:\n    \
+                    concurrency:\n      group: build\n      cancel-in-progress: true\n";
+        assert!(
+            concurrency_block(text).is_none(),
+            "a job-scoped group is not the workflow's"
+        );
+    }
+
+    /// WHY: both spellings GitHub accepts have to read the same, or the rule
+    /// reports a workflow that already retires its superseded run.
+    #[test]
+    fn a_group_reads_the_same_written_inline_or_as_a_block() {
+        let block = "on:\n  pull_request:\nconcurrency:\n  group: ci-${{ github.ref }}\n  \
+                     cancel-in-progress: true\n";
+        let inline = "on:\n  pull_request:\nconcurrency: { group: ci-${{ github.ref }}, \
+                      cancel-in-progress: true }\n";
+        for text in [block, inline] {
+            let parsed = concurrency_block(text).expect("the workflow declares a group");
+            assert_eq!(parsed.group.as_deref(), Some("ci-${{ github.ref }}"));
+            assert_eq!(parsed.cancel_in_progress.as_deref(), Some("true"));
+            assert!(varies_by_ref(parsed.group.as_deref().expect("a group")));
+        }
+    }
+
+    /// WHY: a constant group is worse than none, because a push to one branch
+    /// then cancels the run another branch is waiting on.
+    #[test]
+    fn a_group_that_is_the_same_on_every_ref_does_not_vary_by_ref() {
+        assert!(!varies_by_ref("gates"));
+        assert!(varies_by_ref("gates-${{ github.ref }}"));
+        assert!(varies_by_ref("gates-${{ github.head_ref }}"));
     }
 }

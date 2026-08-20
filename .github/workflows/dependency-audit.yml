@@ -16,6 +16,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   machete:
     name: cargo_full machete (unused deps)

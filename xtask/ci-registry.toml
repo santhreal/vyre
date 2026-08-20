@@ -68,6 +68,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "ci-concurrency"
+subsets = ["ci-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "ci-matrix"
 subsets = ["ci-rules"]
 workflows = ["gates.yml"]

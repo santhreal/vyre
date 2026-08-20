@@ -13,6 +13,10 @@ on:
     # Nightly sweep so drift is caught even if no PR touches perf code.
     - cron: "0 6 * * *"
 
+concurrency:
+  group: bench-regression-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bench-target-smoke:
     name: bench target build

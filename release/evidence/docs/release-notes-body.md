@@ -4112,6 +4112,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   string literal and so is the table that spells it. The two rule sources are
   exempt by path, and a test requires each to exist and to still carry the
   language, so a stale exemption is red rather than a silent widening.
+- Two graph dispatch contracts compared a CPU reference against itself.
+  `substrate_exploded_ifds_arms_cover_every_declared_case_group` asserted
+  `reference_build_ifds_csr` equals `build_cpu_reference`, and
+  `matches_primitive_directly` asserted `bfs_expand` equals `cpu_ref`; in both
+  pairs the first name was a `#[cfg(test)]` re-export alias of the second, so
+  neither could fail on any defect in the reference it named. The aliases are
+  gone, each reference has one name, and the exploded arm now asserts what the
+  substrate actually owes: the CSR the reference builds is the declared one,
+  with one row offset per node plus the terminator.
 - Nine registered floating-point operations left a multiply feeding an add for
   a backend to contract on its own, so a device took one rounding where the
   reference took two. `vyre-libs::math::dot_partial`, the attention max, sum
@@ -4254,6 +4263,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that subset and no others. Recording the bare sweep for it gave every
   registered gate a workflow, so a gate no workflow selects could not be
   reported and the rows that were reported named the wrong file.
+- Nine workflows ran without a concurrency group, so a push left the run
+  measuring the previous commit alive. Both GPU lanes take one job at a time,
+  and the GPU parity workflow serialises eleven jobs on one device host, so an
+  obsolete run held that device for hours while the run for the current commit
+  queued behind it. Every workflow a branch push or a pull request starts now
+  declares `group: <workflow>-${{ github.ref }}` with `cancel-in-progress:
+  true`, and the new `ci-concurrency` gate holds the class: it reads the
+  trigger block rather than a file name, exempts a lane only a tag or a
+  schedule starts, and rejects a group that is constant across refs, because
+  that spelling makes one branch cancel another branch's run.
 - The NVMe ingest telemetry test declares its crate documentation before its
   `#![cfg(target_os = "linux")]`, so the crate still carries a doc on a target
   the cfg strips. Written the other way round it compiled on Linux and failed

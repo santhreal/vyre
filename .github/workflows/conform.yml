@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: conform-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   operation-registry:
     name: Operation registry contract

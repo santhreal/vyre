@@ -100,6 +100,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("bench-coverage", &bench::BenchCoverage),
     ("bench-smoke-runtime", &bench::BenchSmokeRuntime),
     ("check-tier-deps", &check_tier_deps::CheckTierDeps),
+    ("ci-concurrency", &ci_contract::CiConcurrency),
     ("ci-matrix", &ci_contract::CiMatrix),
     ("ci-required", &ci_contract::CiRequired),
     ("ci-registry", &ci_registry::CiRegistry),

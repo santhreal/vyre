@@ -201,6 +201,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::check_tier_deps::dependency_kind_tests::production_upward_workspace_inherited_dependency_fails",
     },
     GateDescriptor {
+        name: "ci-concurrency",
+        help: "Enforce ci-concurrency contracts",
+        package: "xtask",
+        areas: &["ci-rules"],
+        subject: "ci workflows",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::ci_contract::tests::a_job_scoped_concurrency_key_is_not_the_workflow_group",
+    },
+    GateDescriptor {
         name: "ci-matrix",
         help: "Enforce ci-matrix contracts",
         package: "xtask",
