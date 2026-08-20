@@ -32,7 +32,7 @@ The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
 ## Feature sets
 
 - Default feature members: `cli`
-- Available manifest features: `cli`, `default`
+- Available manifest features: `cli`, `default`, `device-tests`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

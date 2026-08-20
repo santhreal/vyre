@@ -135,10 +135,33 @@ const FAMILY_CASE_IDS: &[&str] = &[
 const FAMILY_SURFACE_DIGEST: &str =
     "62966bdad8dfdc5e5e738f67ad4bb25dbcd7e98ecc266aa5696080f1e74d9955";
 
+/// The pinned ids the registry only publishes on Linux.
+///
+/// `vyre_bench::cases::nvme_gpu_ingest` is `#[cfg(target_os = "linux")]`: it
+/// drives io_uring and GPUDirect Storage, neither of which exists on macOS or
+/// Windows. `EXPECTED_CASE_IDS` stays whole so the Linux surface is still
+/// pinned exactly, and the other targets subtract exactly this set instead of
+/// carrying a second enumeration that would drift out of step with the first.
+const LINUX_ONLY_CASE_IDS: &[&str] = &[
+    "runtime.nvme_gpu_ingest.gpudirect_nvme.64g",
+    "runtime.nvme_gpu_ingest.registered_mapped.4g",
+];
+
 fn registry_ids() -> Vec<String> {
     vyre_bench::registry::collect_all()
         .iter()
         .map(|case| case.id().0)
+        .collect()
+}
+
+/// `EXPECTED_CASE_IDS` in registry order, minus the ids this target cannot
+/// publish. Filtering preserves order, so the ordering assertion below still
+/// compares registry order against pin order on every target.
+fn pinned_case_ids() -> Vec<String> {
+    EXPECTED_CASE_IDS
+        .iter()
+        .filter(|id| cfg!(target_os = "linux") || !LINUX_ONLY_CASE_IDS.contains(id))
+        .map(|id| (*id).to_string())
         .collect()
 }
 
@@ -156,10 +179,7 @@ fn case_surface(case: &'static dyn BenchCase) -> serde_json::Value {
 #[test]
 fn registry_publishes_exactly_the_pinned_case_enumeration() {
     let actual = registry_ids();
-    let pinned: Vec<String> = EXPECTED_CASE_IDS
-        .iter()
-        .map(|id| (*id).to_string())
-        .collect();
+    let pinned: Vec<String> = pinned_case_ids();
 
     let published: BTreeSet<&String> = actual.iter().collect();
     let recorded: BTreeSet<&String> = pinned.iter().collect();

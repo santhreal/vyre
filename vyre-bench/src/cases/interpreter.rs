@@ -257,11 +257,16 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "device-tests")]
     use std::sync::Mutex;
     use vyre_driver::{DispatchConfig, VyreBackend};
 
+    /// Both device tests dispatch on the one physical adapter, so they take
+    /// turns rather than racing for it.
+    #[cfg(feature = "device-tests")]
     static GPU_TEST_LOCK: Mutex<()> = Mutex::new(());
 
+    #[cfg(feature = "device-tests")]
     fn stack_carrier_snapshot_instrs() -> Vec<u32> {
         vec![
             OP_SWAP,
@@ -299,6 +304,10 @@ mod tests {
         );
     }
 
+    // Dispatches on a physical GPU: gated on `device-tests` so the hosted CI
+    // matrix, which has no Vulkan adapter, does not report the absence of
+    // hardware as a parity defect. `gpu-parity.yml` enables the feature.
+    #[cfg(feature = "device-tests")]
     #[test]
     fn bytecode_program_wgpu_matches_seeded_cpu_trace() {
         let _gpu_guard = GPU_TEST_LOCK.lock().unwrap_or_else(|error| {
@@ -323,7 +332,9 @@ mod tests {
 
     // vyre-driver-cuda is a dependency only under cfg(not(target_os = "macos")),
     // so the crate is not nameable on macOS and the test cannot be written there.
-    #[cfg(not(target_os = "macos"))]
+    // `device-tests` gates the live dispatch for the same reason as the wgpu test
+    // above: a hosted runner has no CUDA driver to load.
+    #[cfg(all(not(target_os = "macos"), feature = "device-tests"))]
     #[test]
     fn bytecode_program_cuda_matches_seeded_cpu_trace() {
         let _gpu_guard = GPU_TEST_LOCK.lock().unwrap_or_else(|error| {

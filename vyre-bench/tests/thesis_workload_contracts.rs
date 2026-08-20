@@ -87,14 +87,22 @@ fn release_suite_cannot_regress_to_elementwise_only_evidence() {
         }
     }
 
-    for required_class in [
+    // `zero_copy_ingest` is carried solely by `cases::nvme_gpu_ingest`, which is
+    // `#[cfg(target_os = "linux")]` because io_uring and GPUDirect Storage exist
+    // only there. Requiring the class on a target that cannot register it would
+    // assert the absence of a platform, not the presence of evidence.
+    let mut required = vec![
         "parsing",
         "graph_traversal",
         "pattern_matching",
         "megakernel",
-        "zero_copy_ingest",
         "optimizer",
-    ] {
+    ];
+    if cfg!(target_os = "linux") {
+        required.push("zero_copy_ingest");
+    }
+
+    for required_class in required {
         assert!(
             evidence_classes.contains(required_class),
             "release benchmark suite is missing {required_class} evidence"

@@ -104,9 +104,13 @@ jobs:
       - name: cargo_full test
         shell: bash
         run: |
+          # `tr -d '\r'` because jq on windows-latest terminates each line with
+          # CRLF, and IFS does not split on CR: the loop variable then carried a
+          # trailing carriage return and cargo rejected `structure-gate\r` as a
+          # package name containing an invalid character.
           metadata="$(./cargo_full metadata --format-version 1 --no-deps)"
-          target_dir="$(printf '%s' "$metadata" | jq -r .target_directory)"
-          for package in $(printf '%s' "$metadata" | jq -r '.packages[].name' | sort); do
+          target_dir="$(printf '%s' "$metadata" | jq -r .target_directory | tr -d '\r')"
+          for package in $(printf '%s' "$metadata" | jq -r '.packages[].name' | tr -d '\r' | sort); do
             ./cargo_full test -p "$package"
             # A test executable is the only artifact in deps/ with no file
             # extension (or `.exe` on Windows). Every rlib, rmeta and depfile

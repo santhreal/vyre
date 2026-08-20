@@ -144,6 +144,21 @@ jobs:
       - name: Run determinism stress
         run: ./cargo_full test -p vyre-driver-wgpu --release --test determinism_contract -- --nocapture
 
+  bench-device-tests:
+    name: Benchmark harness device tests
+    needs: gpu-adapter-probe
+    runs-on: [self-hosted, axiomexec, gpu]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The bytecode-VM stack-carrier parity tests dispatch on a real adapter.
+      # They are off by default so the hosted matrix does not read a missing
+      # CUDA driver as a parity defect; this is the runner that owns the device.
+      - name: Bytecode VM stack-carrier parity on real CUDA and WGPU
+        run: ./cargo_full test -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture
+
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement
     needs: gpu-adapter-probe
@@ -239,6 +254,7 @@ jobs:
       - cuda-parity-suite
       - composition-parity-gpu
       - determinism-stress-gpu
+      - bench-device-tests
       - mandatory-gpu-enforcer
       - cuda-conformance-all-ops
       - wgpu-conformance-all-ops
@@ -261,6 +277,7 @@ jobs:
             || [ "${{ needs.cuda-parity-suite.result }}" != "success" ] \
             || [ "${{ needs.composition-parity-gpu.result }}" != "success" ] \
             || [ "${{ needs.determinism-stress-gpu.result }}" != "success" ] \
+            || [ "${{ needs.bench-device-tests.result }}" != "success" ] \
             || [ "${{ needs.mandatory-gpu-enforcer.result }}" != "success" ] \
             || [ "${{ needs.cuda-conformance-all-ops.result }}" != "success" ] \
             || [ "${{ needs.wgpu-conformance-all-ops.result }}" != "success" ] \

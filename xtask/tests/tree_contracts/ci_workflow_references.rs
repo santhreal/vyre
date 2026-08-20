@@ -138,13 +138,13 @@ const SUBCOMMAND_PACKAGES: [&str; 3] = ["xtask", "xtask-registry", "xtask-eviden
 ///
 /// Tokenizing on whitespace is enough because the input is a shell command
 /// line: `--test foo` and `-p bar` are adjacent tokens, and a script is a token
-/// that starts with `scripts/`. A `${{ }}` expression is skipped, since its
-/// value is not in this tree.
+/// that starts with `scripts/`. A `${{ }}` expression and a `$name` shell
+/// variable are both skipped, since neither resolves to a name in this tree.
 fn references(workflow: &str, command: &str) -> Vec<Reference> {
     let mut found = Vec::new();
     let mut push = |kind: Kind, name: &str| {
         let name = name.trim_matches(['"', '\'', '`']);
-        if name.is_empty() || name.contains("${{") {
+        if name.is_empty() || name.contains('$') {
             return;
         }
         found.push(Reference {
@@ -300,6 +300,22 @@ fn packages_named(references: &[Reference]) -> Vec<String> {
         .filter(|reference| reference.kind == Kind::Package)
         .map(|reference| reference.name.clone())
         .collect()
+}
+
+/// WHY: a step that loops over packages spells the selector `-p "$package"`,
+/// and reading that literally reports `$package` as a package no member
+/// declares. The value is produced by the shell at run time, so it is not a
+/// name this tree can resolve, exactly like a `${{ }}` expression. The class is
+/// every selector kind, not just `-p`: a `--test "$name"` would have failed the
+/// same way.
+#[test]
+fn a_shell_variable_is_not_read_as_a_name() {
+    let command = "cargo test -p \"$package\" --test \"$suite\" --bin ${{ matrix.bin }}";
+    assert_eq!(references("ci.yml", command), Vec::new());
+
+    let literal = references("ci.yml", "cargo test -p xtask");
+    assert_eq!(literal.len(), 1, "a literal package is still read");
+    assert_eq!(literal[0].name, "xtask");
 }
 
 #[test]

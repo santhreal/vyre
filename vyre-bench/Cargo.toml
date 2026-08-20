@@ -76,6 +76,11 @@ vyre-driver-cuda = { workspace = true }
 [features]
 default = ["cli"]
 cli = ["dep:clap", "dep:env_logger"]
+# In-crate tests that dispatch on a physical GPU. Off by default because the
+# hosted CI matrix has no CUDA driver and no Vulkan adapter, where the tests do
+# not fail on a defect, they fail on the absence of hardware. `gpu-parity.yml`
+# turns the feature on so the tests still run, on a runner that has the device.
+device-tests = []
 
 [dev-dependencies]
 vyre-test-support.workspace = true

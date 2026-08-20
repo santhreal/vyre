@@ -1,4 +1,9 @@
 //! Tests for release-scale NVMe to GPU ingest telemetry benchmark surfaces.
+//!
+//! `cases::nvme_gpu_ingest` is `#[cfg(target_os = "linux")]` because the
+//! zero-copy read path is io_uring, so on any other target the module this
+//! file drives does not exist and the crate fails to compile its tests.
+#![cfg(target_os = "linux")]
 
 use std::collections::BTreeSet;
 

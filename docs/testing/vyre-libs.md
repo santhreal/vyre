@@ -171,7 +171,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `family_duplication_budget` | `vyre-libs/tests/family_duplication_budget.rs` | None | `./cargo_full test -p vyre-libs --test family_duplication_budget` |
 | `test` | `filesystem_path_archive_policies` | `vyre-libs/tests/filesystem_path_archive_policies.rs` | None | `./cargo_full test -p vyre-libs --test filesystem_path_archive_policies` |
 | `test` | `fingerprint_lock` | `vyre-libs/tests/fingerprint_lock.rs` | None | `./cargo_full test -p vyre-libs --test fingerprint_lock` |
-| `test` | `fingerprint_lock` | `vyre-libs/tests/fingerprint_lock.rs` | `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `./cargo_full test -p vyre-libs --test fingerprint_lock` |
+| `test` | `fingerprint_lock` | `vyre-libs/tests/fingerprint_lock.rs` | `hash`, `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `./cargo_full test -p vyre-libs --test fingerprint_lock` |
 | `test` | `flash_attention_plan_shared_memory` | `vyre-libs/tests/flash_attention_plan_shared_memory.rs` | None | `./cargo_full test -p vyre-libs --test flash_attention_plan_shared_memory` |
 | `test` | `flash_attention_plan_shared_memory` | `vyre-libs/tests/flash_attention_plan_shared_memory.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test flash_attention_plan_shared_memory` |
 | `test` | `flow_precision_planner` | `vyre-libs/tests/flow_precision_planner.rs` | None | `./cargo_full test -p vyre-libs --test flow_precision_planner` |
@@ -510,7 +510,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `sum_product_depth_order_is_a_contract` | `vyre-libs/tests/sum_product_depth_order_is_a_contract.rs` | None | `./cargo_full test -p vyre-libs --test sum_product_depth_order_is_a_contract` |
 | `test` | `sum_product_signed_parity` | `vyre-libs/tests/sum_product_signed_parity.rs` | None | `./cargo_full test -p vyre-libs --test sum_product_signed_parity` |
 | `test` | `surface_contracts` | `vyre-libs/tests/surface_contracts.rs` | None | `./cargo_full test -p vyre-libs --test surface_contracts` |
-| `test` | `surface_contracts` | `vyre-libs/tests/surface_contracts.rs` | `nn-attention`, `nn-norm` | `./cargo_full test -p vyre-libs --test surface_contracts` |
+| `test` | `surface_contracts` | `vyre-libs/tests/surface_contracts.rs` | `hash`, `nn-attention`, `nn-norm` | `./cargo_full test -p vyre-libs --test surface_contracts` |
 | `test` | `sweep_bitset_oracle_matrix` | `vyre-libs/tests/sweep_bitset_oracle_matrix.rs` | None | `./cargo_full test -p vyre-libs --test sweep_bitset_oracle_matrix` |
 | `test` | `sweep_bitset_oracle_matrix` | `vyre-libs/tests/sweep_bitset_oracle_matrix.rs` | `bitset` | `./cargo_full test -p vyre-libs --test sweep_bitset_oracle_matrix` |
 | `test` | `sweep_decode_base64_volume_oracle_matrix` | `vyre-libs/tests/sweep_decode_base64_volume_oracle_matrix.rs` | None | `./cargo_full test -p vyre-libs --test sweep_decode_base64_volume_oracle_matrix` |
