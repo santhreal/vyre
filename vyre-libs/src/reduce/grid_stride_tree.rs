@@ -20,9 +20,6 @@ use super::workgroup_tree::{sum_u32_child, WorkgroupReductionScope};
 /// Canonical op id for multi-workgroup grid-stride tree sum over u32 elements.
 pub const SUM_U32_OP_ID: &str = "vyre-libs::reduce::grid_stride_tree_sum_u32";
 
-/// Default number of workgroups to saturate GPU compute units without excessive partials.
-pub const DEFAULT_GRID_BLOCKS: u32 = 128;
-
 /// Build a multi-workgroup tree reduction program for u32 sum.
 #[must_use]
 pub fn grid_stride_tree_sum_u32(
@@ -36,13 +33,13 @@ pub fn grid_stride_tree_sum_u32(
         return single_block_tree_sum_u32(values, out, count, tile);
     }
 
-    let num_blocks = count.div_ceil(tile).min(DEFAULT_GRID_BLOCKS).max(1);
+    let num_blocks = count.div_ceil(tile);
     if num_blocks == 1 {
         return single_block_tree_sum_u32(values, out, count, tile);
     }
 
     let partials = format!("__{out}_gst_partials");
-    let pass1 = pass1_grid_stride_reduction(values, &partials, count, tile, num_blocks);
+    let pass1 = pass1_block_reduction(values, &partials, count, tile, num_blocks);
     let pass2 = pass2_combine_reduction(&partials, out, num_blocks, tile);
 
     match fuse_programs(&[pass1, pass2]) {
@@ -101,7 +98,7 @@ fn single_block_tree_sum_u32(
     )
 }
 
-fn pass1_grid_stride_reduction(
+fn pass1_block_reduction(
     values: &str,
     partials: &str,
     count: u32,
@@ -111,37 +108,19 @@ fn pass1_grid_stride_reduction(
     let scratch = "__gst_pass1_scratch";
     let local = Expr::LocalId { axis: 0 };
     let block = Expr::WorkgroupId { axis: 0 };
-    let stride = num_blocks * tile;
-    let chunks = count.div_ceil(stride);
+    let global = Expr::InvocationId { axis: 0 };
 
     let body = vec![
         Node::let_bind("local", local.clone()),
         Node::let_bind("block", block.clone()),
+        Node::let_bind("global", global.clone()),
         Node::let_bind(
-            "thread_id",
-            Expr::add(Expr::mul(block.clone(), Expr::u32(tile)), local.clone()),
-        ),
-        Node::let_bind("acc", Expr::u32(0)),
-        Node::loop_for(
-            "chunk",
-            Expr::u32(0),
-            Expr::u32(chunks),
-            vec![
-                Node::let_bind(
-                    "idx",
-                    Expr::add(
-                        Expr::mul(Expr::var("chunk"), Expr::u32(stride)),
-                        Expr::var("thread_id"),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::lt(Expr::var("idx"), Expr::u32(count)),
-                    vec![Node::assign(
-                        "acc",
-                        Expr::add(Expr::var("acc"), Expr::load(values, Expr::var("idx"))),
-                    )],
-                ),
-            ],
+            "acc",
+            Expr::select(
+                Expr::lt(global.clone(), Expr::u32(count)),
+                Expr::load(values, global),
+                Expr::u32(0),
+            ),
         ),
         Node::store(scratch, local.clone(), Expr::var("acc")),
         Node::barrier(),

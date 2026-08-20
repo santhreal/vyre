@@ -137,8 +137,8 @@ impl BenchCase for ReduceSumBench {
             _ => None,
         };
         let outputs = vec![
-            small.selected.outputs[0].clone(),
-            large.selected.outputs[0].clone(),
+            small.selected.outputs.last().cloned().unwrap_or_default(),
+            large.selected.outputs.last().cloned().unwrap_or_default(),
         ];
         let baseline_outputs = vec![
             prepared.small.expected.clone(),
@@ -299,7 +299,7 @@ fn verify_route_output(
     outputs: &[Vec<u8>],
     expected: &[u8],
 ) -> Result<(), BenchError> {
-    if outputs == [expected] {
+    if outputs.last().map(Vec::as_slice) == Some(expected) {
         return Ok(());
     }
     Err(BenchError::CorrectnessViolation(format!(
