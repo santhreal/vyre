@@ -10,7 +10,7 @@
 //! that need the canonical form without running the full pass scheduler.
 
 use crate::ir::Program;
-use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
 #[vyre_pass(
     name = "canonicalize",
@@ -40,14 +40,9 @@ impl Canonicalize {
 
     /// Run the canonical-form rewrite on `program`.
     pub fn transform(program: Program) -> PassResult {
-        let before_fingerprint = fingerprint_program(&program);
+        let before = program.clone();
         let canonical = super::canonicalize_engine::run(program);
-        let after_fingerprint = fingerprint_program(&canonical);
-        let changed = before_fingerprint != after_fingerprint;
-        PassResult {
-            program: canonical,
-            changed,
-        }
+        PassResult::from_programs(before, canonical)
     }
 }
 

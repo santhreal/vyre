@@ -272,7 +272,7 @@ fn validate_unique_string_literals(field: &str, values: &[LitStr]) -> syn::Resul
 ///     fn analyze(_program: &Program) -> PassAnalysis { PassAnalysis::RUN }
 ///     fn transform(program: Program) -> PassResult {
 ///         // ... real rewrite ...
-///         PassResult::from_programs(&program.clone(), program)
+///         PassResult::from_programs(program.clone(), program)
 ///     }
 /// }
 /// ```

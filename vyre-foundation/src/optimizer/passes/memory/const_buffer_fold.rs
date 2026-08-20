@@ -8,7 +8,7 @@
 use std::borrow::Cow;
 
 use crate::ir::{Expr, Ident, Program};
-use crate::optimizer::{fingerprint_program, PassResult};
+use crate::optimizer::PassResult;
 use crate::transform::rewrite_walk::{self, NodeRewrite};
 
 /// Compile-time-known u32 buffer contents.
@@ -23,17 +23,12 @@ pub struct ConstBuffer {
 /// Inline literal loads from a compile-time-known u32 buffer.
 #[must_use]
 pub fn fold_const_buffer(program: &Program, constant: &ConstBuffer) -> PassResult {
-    let before_fp = fingerprint_program(program);
     let mut fold = ConstBufferFold { constant };
     let optimized = match rewrite_walk::rewrite_body(program.entry(), &mut fold) {
         Some(entry) => program.with_rewritten_entry(entry),
         None => program.clone(),
     };
-    let changed = fingerprint_program(&optimized) != before_fp;
-    PassResult {
-        program: optimized,
-        changed,
-    }
+    PassResult::from_programs(program.clone(), optimized)
 }
 
 struct ConstBufferFold<'a> {

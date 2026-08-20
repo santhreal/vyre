@@ -381,19 +381,44 @@ impl std::fmt::Display for RefusalReason {
 
 impl PassResult {
     /// Build a transformation result by comparing before and after programs.
+    ///
+    /// Change detection is a structural comparison, never a content digest. A
+    /// pass engine returns a freshly built `Program` whose memos are cold, so
+    /// hashing it forces a full canonical wire encode plus BLAKE3 on every pass
+    /// invocation; that idiom measured as roughly half of the optimizer
+    /// pipeline's instruction count. `Program`'s structural equality answers the
+    /// same question: it ignores buffer declaration order for the same reason
+    /// the canonical fingerprint does, short-circuits on shared `Arc` identity
+    /// when an engine handed its input straight back, and stops at the first
+    /// difference.
+    ///
+    /// `before` is taken by value so that an unchanged pass returns the program
+    /// it received. That program's fingerprint, statistics and shape memos then
+    /// survive into the next pass instead of being dropped with the discarded
+    /// rewrite.
     #[must_use]
     #[inline]
-    pub fn from_programs(before: &Program, program: Program) -> Self {
-        let changed = before != &program;
-        Self { program, changed }
+    pub fn from_programs(before: Program, program: Program) -> Self {
+        if program == before {
+            Self {
+                program: before,
+                changed: false,
+            }
+        } else {
+            Self {
+                program,
+                changed: true,
+            }
+        }
     }
 
-    /// Declare the pass left the program unchanged. `VYRE_IR_HOTSPOTS`
-    /// CRIT-2/CRIT-3: `from_programs(&program, program.clone())` pays
-    /// a full `Program` clone + O(N) `PartialEq` comparison on every
-    /// no-op call. When a pass has already proven it will not rewrite
-    /// the program, it should `return PassResult::unchanged(program)`
-    /// to move the input through without cloning or comparing.
+    /// Declare the pass left the program unchanged.
+    ///
+    /// [`from_programs`](Self::from_programs) still pays a `Program` clone plus
+    /// an O(N) structural comparison on every no-op call. A pass that has
+    /// already proven it will not rewrite the program should return
+    /// `PassResult::unchanged(program)` and move the input through without
+    /// cloning or comparing at all.
     #[must_use]
     #[inline]
     pub fn unchanged(program: Program) -> Self {

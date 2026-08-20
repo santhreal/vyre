@@ -35,10 +35,12 @@ const REBUILDS_WHEN_UNCHANGED: &[&str] = &[
     // of, and `loop_software_pipeline` needs the stage assignment. The rest are
     // whole-body rewriters whose rule is a fold over a sibling sequence rather
     // than a per-node replacement.
+    //
+    // `canonicalize`, `cse` and `dce` left this list when their engines stopped
+    // being the last word: they still rebuild internally, but the pass now
+    // compares the rebuild against the program it was handed and returns that
+    // program when the two match, so the caller's borrow survives.
     "barrier_coalesce",
-    "canonicalize",
-    "cse",
-    "dce",
     "fusion",
     "loop_licm",
     "loop_redundant_bound_check_elide",

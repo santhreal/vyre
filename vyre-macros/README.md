@@ -41,7 +41,7 @@ impl FoldZeroAdd {
         // so the scheduler can prove the fixpoint.
         let before = program.clone();
         let after = program; // (real rewrite would go here)
-        PassResult::from_programs(&before, after)
+        PassResult::from_programs(before, after)
     }
 
     fn fingerprint(&self, program: &Program) -> u64 {
@@ -118,7 +118,7 @@ from `docs/testing/TESTING.toml`, which is authoritative.
 
 ### Release status
 
-`vyre-macros@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+`vyre-macros@0.8.0` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
 
 ### Ownership
 

@@ -4,7 +4,7 @@
 //! scheduler control rather than as a hard-coded pre-pass.
 
 use crate::ir::Program;
-use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
 #[vyre_pass(
     name = "region_inline",
@@ -41,12 +41,9 @@ impl RegionInlinePass {
     /// Flatten small regions into the surrounding body.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let before = fingerprint_program(&program);
+        let before = program.clone();
         let optimized = super::region_inline_engine::run(program);
-        PassResult {
-            changed: fingerprint_program(&optimized) != before,
-            program: optimized,
-        }
+        PassResult::from_programs(before, optimized)
     }
 }
 

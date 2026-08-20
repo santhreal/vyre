@@ -93,6 +93,34 @@ fn introduces_shape_predicate_violations(
     after.iter().any(|violation| !before.contains(violation))
 }
 
+/// The program to carry forward when a pass reported no rewrite.
+///
+/// A pass that leaves the program alone frequently still hands back a freshly
+/// built `Program`, and a fresh one carries none of the memos the snapshot
+/// already paid for: the canonical fingerprint, the stats, the output buffer
+/// index. Every gate certificate lookup and every fact cache keys off
+/// [`Program::fingerprint`], which canonicalizes the whole program, encodes it
+/// to wire bytes and BLAKE3-hashes the result, so one cold copy costs a full
+/// hash for every pass that looks at it afterwards. On a small program that
+/// hash is most of the pipeline, and it is paid once per pass per fixpoint
+/// iteration, which is why adding a pass used to slow the whole pipeline down.
+///
+/// Equal programs are interchangeable, so the snapshot wins and its memos stay
+/// warm. A rebuilt program that differs means the pass rewrote the IR while
+/// reporting no change; that rewrite is kept, exactly as before this cache
+/// existed, because dropping it would change what the pipeline compiles.
+///
+/// [`crate::optimizer::PassResult::from_programs`] applies the same rule where
+/// a pass builds its own result. This is the scheduler-level backstop for a
+/// pass that assembles a `PassResult` by hand instead.
+fn carry_warm(snapshot: Program, rebuilt: Program) -> Program {
+    if rebuilt == snapshot {
+        snapshot
+    } else {
+        rebuilt
+    }
+}
+
 /// Post-condition certificates for one program.
 ///
 /// Every enabled gate is a pure function of the program, so a pass that
@@ -451,7 +479,7 @@ impl PassScheduler {
                         }
                         Ok(result) => {
                             gates.store(&snapshot, before);
-                            (result.program, false)
+                            (carry_warm(snapshot, result.program), false)
                         }
                         Err(_refusal) => {
                             gates.store(&snapshot, before);
@@ -462,9 +490,11 @@ impl PassScheduler {
                     let result = pass.batch_apply(program, &self.adapter);
                     if result.changed {
                         next_dirty.fill(true);
+                        let landed = changed || result.program != snapshot;
+                        (result.program, landed)
+                    } else {
+                        (carry_warm(snapshot, result.program), false)
                     }
-                    let landed = result.changed && (changed || result.program != snapshot);
-                    (result.program, landed)
                 };
                 if landed {
                     changed = true;

@@ -36,7 +36,7 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node, Program};
-use crate::optimizer::{fingerprint_program, vyre_pass, AdapterCaps, PassAnalysis, PassResult};
+use crate::optimizer::{vyre_pass, AdapterCaps, PassAnalysis, PassResult};
 use crate::visit::for_each_node;
 
 /// Bytes-per-element for the destination workgroup buffer. Delegates
@@ -148,12 +148,9 @@ impl DecodeScanFuse {
     /// the shared-memory budget the target actually reports.
     #[must_use]
     pub fn transform_for_adapter(program: Program, caps: &AdapterCaps) -> PassResult {
-        let before = fingerprint_program(&program);
+        let before = program.clone();
         let optimized = run(program, caps);
-        PassResult {
-            changed: fingerprint_program(&optimized) != before,
-            program: optimized,
-        }
+        PassResult::from_programs(before, optimized)
     }
 }
 
