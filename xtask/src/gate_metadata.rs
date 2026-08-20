@@ -122,7 +122,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "backend-matrix",
-        help: "Judge the CUDA-first, WGPU-fallback backend policy. Proves, on any host, that every \\        backend implementation file the policy names exists and carries its implementation \\        tokens with no unresolved marker left in it, and that no backend production source \\        states a hidden fallback. Proves, from the recorded probe, that CUDA acquires first, \\        that the WGPU fallback acquires, that the preferred dispatch backend is never the \\        reference one, and that the host met the release GPU floor. The probe is only as \\        current as the run that recorded it; --write re-probes this host and rewrites the \\        artifact.",
+        help: "Judge the CUDA-first, WGPU-fallback backend policy. Proves, on any host, that every  backend implementation file the policy names exists and carries its implementation  tokens with no unresolved marker left in it, and that no backend production source  states a hidden fallback. Proves, from the recorded probe, that CUDA acquires first,  that the WGPU fallback acquires, that the preferred dispatch backend is never the  reference one, and that the host met the release GPU floor. The probe is only as  current as the run that recorded it; --write re-probes this host and rewrites the  artifact.",
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
@@ -152,7 +152,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "bench-crossback",
-        help: "Cross-validate every speedup cell across the three measured backend comparison \\        matrices. Proves every measured cell records positive speedup, is strictly reproducible \\        from its source probe, cites no placeholder, and is traceable back to its host, commit, \\        GPU model, driver version, and measurement timestamp. Proves nothing about benchmark \\        methodology: this gate reads the produced matrices and their source artifacts, never \\        starts a benchmark run. Run with --write to re-derive the markdown summary table.",
+        help: "Cross-validate every speedup cell across the three measured backend comparison  matrices. Proves every measured cell records positive speedup, is strictly reproducible  from its source probe, cites no placeholder, and is traceable back to its host, commit,  GPU model, driver version, and measurement timestamp. Proves nothing about benchmark  methodology: this gate reads the produced matrices and their source artifacts, never  starts a benchmark run. Run with --write to re-derive the markdown summary table.",
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
@@ -162,7 +162,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "bench-release",
-        help: "Judge the recorded release benchmark evidence across CUDA, WGPU, and CPU reference baselines. \\        Proves all 42 required release benchmark cases exist, passed on the recorded release host, \\        and achieved measured throughput and latency at or above the release floor. Proves zero \\        failed cases, zero unexplained regressions from the baseline, and that the recorded run \\        reached the required sample count. It measures nothing; regenerate the owned artifacts \\        with release-benchmarks before running this comparison gate.",
+        help: "Judge the recorded release benchmark evidence across CUDA, WGPU, and CPU reference baselines.  Proves all 42 required release benchmark cases exist, passed on the recorded release host,  and achieved measured throughput and latency at or above the release floor. Proves zero  failed cases, zero unexplained regressions from the baseline, and that the recorded run  reached the required sample count. It measures nothing; regenerate the owned artifacts  with release-benchmarks before running this comparison gate.",
         package: "xtask-evidence",
         areas: &["prepublish", "release-evidence"],
         subject: "release evidence matrices",
@@ -510,7 +510,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "feature-matrix",
-        help: "Regenerate release/evidence/metadata/feature-matrix.json from every workspace manifest \\            and report each line the committed artifact disagrees on. Proves every feature table \\            parses, every feature member resolves to a local feature, an optional dependency or a \\            dependency feature, every package that declares features declares a default policy, the \\            three release packages exist with empty defaults, and that vyre, vyre-driver-cuda and \\            vyre-driver-wgpu declare their release features. Proves nothing about whether any \\            feature selection compiles: that is feature-isolation.",
+        help: "Regenerate release/evidence/metadata/feature-matrix.json from every workspace manifest  and report each line the committed artifact disagrees on. Proves every feature table  parses, every feature member resolves to a local feature, an optional dependency or a  dependency feature, every package that declares features declares a default policy, the  three release packages exist with empty defaults, and that vyre, vyre-driver-cuda and  vyre-driver-wgpu declare their release features. Proves nothing about whether any  feature selection compiles: that is feature-isolation.",
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "workspace manifests",
@@ -937,7 +937,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "metadata-matrix",
-        help: "Regenerate release/evidence/metadata/metadata-matrix.json from every workspace \\        manifest and report each line the committed artifact disagrees on. Proves every package \\        declares its license, repository, description, authors, and publish status, that \\        workspace-inherited metadata is resolved, that the release version is uniform across the \\        workspace, and that no unreviewed package is marked for publication. Proves nothing about \\        what is published on crates.io: every fact here is read from this checkout.",
+        help: "Regenerate release/evidence/metadata/metadata-matrix.json from every workspace  manifest and report each line the committed artifact disagrees on. Proves every package  declares its license, repository, description, authors, and publish status, that  workspace-inherited metadata is resolved, that the release version is uniform across the  workspace, and that no unreviewed package is marked for publication. Proves nothing about  what is published on crates.io: every fact here is read from this checkout.",
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "workspace manifests",
@@ -997,7 +997,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "optimization-corpus",
-        help: "Regenerate the five artifacts under release/evidence/optimization from the semantic \\        Program optimizer corpus and report each line the committed copies disagree on. Proves \\        the corpus reaches its case floor, that every case verifies after optimization, that at \\        least one pass instance changed a program, that no case failed to converge, that every \\        required family carries its minimum case count, that no case id repeats, and that no \\        optimizer pass id repeats. Proves nothing about runtime performance: the corpus is \\        optimized and re-verified in process, never executed on a device.",
+        help: "Regenerate the five artifacts under release/evidence/optimization from the semantic  Program optimizer corpus and report each line the committed copies disagree on. Proves  the corpus reaches its case floor, that every case verifies after optimization, that at  least one pass instance changed a program, that no case failed to converge, that every  required family carries its minimum case count, that no case id repeats, and that no  optimizer pass id repeats. Proves nothing about runtime performance: the corpus is  optimized and re-verified in process, never executed on a device.",
         package: "xtask-registry",
         areas: &["prepublish", "release-evidence"],
         subject: "registered IR corpus",
@@ -1017,7 +1017,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "optimization-matrix",
-        help: "Regenerate release/evidence/optimization/optimization-integration-matrix.json from the \\        live optimizer pass catalog and report every line the committed artifact disagrees on. \\        Proves the artifact lists exactly the catalog entries the source registers, that no pass \\        id repeats, and that every entry names an owner, invariant, proof and benchmark. Proves \\        nothing about whether a pass is correct, ever fires, or improves anything: the named \\        proof and benchmark are strings the catalog carries, not results this gate reads.",
+        help: "Regenerate release/evidence/optimization/optimization-integration-matrix.json from the  live optimizer pass catalog and report every line the committed artifact disagrees on.  Proves the artifact lists exactly the catalog entries the source registers, that no pass  id repeats, and that every entry names an owner, invariant, proof and benchmark. Proves  nothing about whether a pass is correct, ever fires, or improves anything: the named  proof and benchmark are strings the catalog carries, not results this gate reads.",
         package: "xtask-registry",
         areas: &["prepublish", "release-evidence"],
         subject: "registered IR corpus",
@@ -1037,7 +1037,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "package-readiness",
-        help: "Enforce the release package readiness gate across every publishable workspace crate. \\        Proves all required packages exist, carry matching version declarations, contain only \\        allowed license tokens, and that archive contents match the published artifact \\        manifests byte-for-byte. Proves zero unpack errors, zero forbidden file extensions, \\        and that package sizes stay within declared bandwidth budgets.",
+        help: "Enforce the release package readiness gate across every publishable workspace crate.  Proves all required packages exist, carry matching version declarations, contain only  allowed license tokens, and that archive contents match the published artifact  manifests byte-for-byte. Proves zero unpack errors, zero forbidden file extensions,  and that package sizes stay within declared bandwidth budgets.",
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "workspace manifests",
@@ -1192,7 +1192,7 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "release-docs",
-        help: "Hold docs/releases/0.7.0.md to the current release facts. Proves the document exists, \\        states the release date, links every published crate at its released version, and \\        names every Category A operation added or renamed in this release train. Proves \\        nothing about historical releases: only the current release document is held to \\        this check.",
+        help: "Regenerate CHANGELOG.md's unreleased section and release/evidence/docs/release-notes-body.md from release/release-train.toml and the fragments under release/changes/unreleased, and report each line the committed copies disagree on. Proves the changelog keeps its `## [Unreleased]` heading and a released section under it, that at least one fragment is on disk, that every fragment carries exactly `category` and `text`, that the changelog carries every token the release train requires, that [versions] and [release_groups] declare a version, an owner repository and a package list with no package in two groups, and that every approval-gated external action has a unique id the launch record can name. Proves nothing about a historical release document or about what a registry has published: every fact is read from this checkout.",
         package: "xtask",
         areas: &["prepublish", "release-evidence"],
         subject: "owned documentation pages",

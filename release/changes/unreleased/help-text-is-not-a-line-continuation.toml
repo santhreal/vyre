@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Nine gate descriptors carried an escaped backslash where a string continuation was meant, so `xtask --help` printed a literal backslash and a run of spaces in the middle of every sentence. The release-docs descriptor also described a docs/releases/0.7.0.md that does not exist and a set of checks the gate does not perform; it now states what the gate reads and writes, which is the changelog's unreleased section, the release notes body, the release train and the fragment directory."
