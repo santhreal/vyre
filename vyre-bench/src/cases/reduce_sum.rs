@@ -19,6 +19,7 @@ const ROUTE_TREE: u64 = 1;
 struct ReductionSizePrepared {
     count: u32,
     tree_tile: u32,
+    tree_grid: Option<[u32; 3]>,
     values: Vec<u32>,
     atomic_program: Program,
     tree_program: Program,
@@ -77,9 +78,15 @@ impl BenchCase for ReduceSumBench {
         ))
     }
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let small = prepare_size(SMALL_COUNT);
-        let large = prepare_size(LARGE_COUNT);
+    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
+        // The fused tree reduction carries a whole-grid fence, so it launches
+        // cooperatively and every workgroup must be co-resident. One workgroup
+        // per compute unit is the widest grid that holds at this tile, and it
+        // is read from the probed device so the grid is a fact of the machine
+        // being measured rather than a constant baked into the composition.
+        let tree_blocks = ctx.preferred_backend.device_profile().compute_units.max(1);
+        let small = prepare_size(SMALL_COUNT, tree_blocks);
+        let large = prepare_size(LARGE_COUNT, tree_blocks);
 
         let pool = crate::cases::cpu_baselines::baseline_pool();
         let mut durations = Vec::with_capacity(11);
@@ -113,6 +120,7 @@ impl BenchCase for ReduceSumBench {
         for size in [&prepared.small, &prepared.large] {
             hasher.update(&size.count.to_le_bytes());
             hasher.update(&size.tree_tile.to_le_bytes());
+            hasher.update(&size.tree_grid.unwrap_or([0; 3])[0].to_le_bytes());
             hasher.update(&size.atomic_program.fingerprint());
             hasher.update(&size.tree_program.fingerprint());
         }
@@ -217,18 +225,25 @@ struct MeasuredSize {
     selected: TimedDispatchResult,
 }
 
-fn prepare_size(count: u32) -> ReductionSizePrepared {
+fn prepare_size(count: u32, tree_blocks: u32) -> ReductionSizePrepared {
     let values: Vec<u32> = (0..count)
         .map(|index| index.wrapping_mul(17).wrapping_add(3) & 0xff)
         .collect();
     let expected = values.iter().copied().fold(0u32, u32::wrapping_add);
     let tree_tile = count.min(MAX_TREE_TILE).max(1).next_power_of_two();
+    let tree_blocks =
+        grid_stride_tree::grid_stride_tree_sum_u32_blocks(count, tree_tile, tree_blocks);
     ReductionSizePrepared {
         count,
         tree_tile,
+        // A single-block reduction infers its own grid; only the multi-block
+        // form needs the launch pinned to the count it was built for.
+        tree_grid: (tree_blocks > 1).then_some([tree_blocks, 1, 1]),
         values: values.clone(),
         atomic_program: sum::reduce_sum("values", "out", count),
-        tree_program: grid_stride_tree::grid_stride_tree_sum_u32("values", "out", count, tree_tile),
+        tree_program: grid_stride_tree::grid_stride_tree_sum_u32(
+            "values", "out", count, tree_tile, tree_blocks,
+        ),
         inputs: [
             crate::cases::byte_pack::u32_bytes(&values),
             crate::cases::byte_pack::u32_bytes(&[0]),
@@ -251,12 +266,12 @@ fn measure_size(
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     verify_route_output(size_name, "atomic", &atomic.outputs, &prepared.expected)?;
 
+    let mut tree_config = ctx.dispatch_config.clone();
+    if let Some(grid) = prepared.tree_grid {
+        tree_config.grid_override = Some(grid);
+    }
     let tree = ctx
-        .dispatch_timed(
-            &prepared.tree_program,
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )
+        .dispatch_timed(&prepared.tree_program, &prepared.inputs, &tree_config)
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     verify_route_output(size_name, "tree", &tree.outputs, &prepared.expected)?;
 

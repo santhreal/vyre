@@ -20,27 +20,42 @@ use super::workgroup_tree::{sum_u32_child, WorkgroupReductionScope};
 /// Canonical op id for multi-workgroup grid-stride tree sum over u32 elements.
 pub const SUM_U32_OP_ID: &str = "vyre-libs::reduce::grid_stride_tree_sum_u32";
 
+/// Effective workgroup count for [`grid_stride_tree_sum_u32`].
+///
+/// The builder clamps a requested count to what the shape admits: pass 2
+/// combines the partials with one workgroup, so the partial count cannot
+/// exceed one tile, and a grid wider than the input has idle blocks. The
+/// caller must launch exactly this grid, so both read the rule from here and
+/// the program cannot disagree with its own dispatch.
+#[must_use]
+pub fn grid_stride_tree_sum_u32_blocks(count: u32, tile: u32, blocks: u32) -> u32 {
+    let tile = tile.max(1);
+    blocks.clamp(1, tile).min(count.div_ceil(tile).max(1))
+}
+
 /// Build a multi-workgroup tree reduction program for u32 sum.
+///
+/// `blocks` is the workgroup count the caller will launch. The fused program
+/// carries a whole-grid fence, so it runs as one cooperative launch whose grid
+/// must be fully co-resident. Only the caller knows that device limit, so the
+/// caller fixes the grid and pass 1 strides over the input to cover it.
 #[must_use]
 pub fn grid_stride_tree_sum_u32(
     values: &str,
     out: &str,
     count: u32,
     tile: u32,
+    blocks: u32,
 ) -> Program {
     let tile = tile.max(1);
-    if count <= tile {
-        return single_block_tree_sum_u32(values, out, count, tile);
-    }
-
-    let num_blocks = count.div_ceil(tile);
-    if num_blocks == 1 {
+    let blocks = grid_stride_tree_sum_u32_blocks(count, tile, blocks);
+    if count <= tile || blocks == 1 {
         return single_block_tree_sum_u32(values, out, count, tile);
     }
 
     let partials = format!("__{out}_gst_partials");
-    let pass1 = pass1_block_reduction(values, &partials, count, tile, num_blocks);
-    let pass2 = pass2_combine_reduction(&partials, out, num_blocks, tile);
+    let pass1 = pass1_block_reduction(values, &partials, count, tile, blocks);
+    let pass2 = pass2_combine_reduction(&partials, out, blocks, tile);
 
     match fuse_programs(&[pass1, pass2]) {
         Ok(fused) => crate::plumbing::program::outputs::demote_intermediate_outputs(fused, out),
@@ -103,24 +118,56 @@ fn pass1_block_reduction(
     partials: &str,
     count: u32,
     tile: u32,
-    num_blocks: u32,
+    blocks: u32,
 ) -> Program {
     let scratch = "__gst_pass1_scratch";
     let local = Expr::LocalId { axis: 0 };
     let block = Expr::WorkgroupId { axis: 0 };
-    let global = Expr::InvocationId { axis: 0 };
+    // The grid is fixed by the caller, so a thread covers the input by striding
+    // the whole grid instead of owning one element. Both the stride and the
+    // trip count are known here, which keeps the loop bound free of any device
+    // fact.
+    let stride = blocks.saturating_mul(tile).max(1);
+    let iterations = count.div_ceil(stride);
+    let last_index = count.saturating_sub(1);
 
     let body = vec![
         Node::let_bind("local", local.clone()),
         Node::let_bind("block", block.clone()),
-        Node::let_bind("global", global.clone()),
         Node::let_bind(
-            "acc",
-            Expr::select(
-                Expr::lt(global.clone(), Expr::u32(count)),
-                Expr::load(values, global),
-                Expr::u32(0),
-            ),
+            "base",
+            Expr::add(Expr::mul(block.clone(), Expr::u32(tile)), local.clone()),
+        ),
+        Node::let_bind("acc", Expr::u32(0)),
+        Node::loop_for(
+            "step",
+            Expr::u32(0),
+            Expr::u32(iterations),
+            vec![
+                Node::let_bind(
+                    "index",
+                    Expr::add(
+                        Expr::var("base"),
+                        Expr::mul(Expr::var("step"), Expr::u32(stride)),
+                    ),
+                ),
+                Node::assign(
+                    "acc",
+                    Expr::select(
+                        Expr::lt(Expr::var("index"), Expr::u32(count)),
+                        Expr::add(
+                            Expr::var("acc"),
+                            // A select evaluates both arms, so the discarded
+                            // load is clamped back inside the buffer.
+                            Expr::load(
+                                values,
+                                Expr::min(Expr::var("index"), Expr::u32(last_index)),
+                            ),
+                        ),
+                        Expr::var("acc"),
+                    ),
+                ),
+            ],
         ),
         Node::store(scratch, local.clone(), Expr::var("acc")),
         Node::barrier(),
@@ -146,7 +193,7 @@ fn pass1_block_reduction(
                 .with_count(count),
             BufferDecl::workgroup(scratch, tile, DataType::U32),
             BufferDecl::storage(partials, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(num_blocks)
+                .with_count(blocks)
                 .with_pipeline_live_out(true),
         ],
         [tile, 1, 1],
@@ -213,7 +260,7 @@ fn pass2_combine_reduction(
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         SUM_U32_OP_ID,
-        || grid_stride_tree_sum_u32("values", "out", 4, 4),
+        || grid_stride_tree_sum_u32("values", "out", 4, 4, 1),
         Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![to_bytes(&[1, 2, 3, 4]), to_bytes(&[0])]]
@@ -229,7 +276,7 @@ mod tests {
 
     #[test]
     fn single_block_tree_sum_u32_builds_valid_program() {
-        let program = grid_stride_tree_sum_u32("values", "out", 256, 256);
+        let program = grid_stride_tree_sum_u32("values", "out", 256, 256, 1);
         assert_eq!(program.workgroup_size(), [256, 1, 1]);
         assert_eq!(program.buffers().len(), 3);
         assert_eq!(program.buffers()[0].name.as_ref(), "values");
@@ -239,7 +286,7 @@ mod tests {
 
     #[test]
     fn multi_block_tree_sum_u32_fuses_two_passes() {
-        let program = grid_stride_tree_sum_u32("values", "out", 1048576, 1024);
+        let program = grid_stride_tree_sum_u32("values", "out", 1048576, 1024, 128);
         assert_eq!(program.workgroup_size(), [1024, 1, 1]);
         assert!(program.buffers().iter().any(|b| b.name.as_ref() == "values"));
         assert!(program.buffers().iter().any(|b| b.name.as_ref() == "out"));
