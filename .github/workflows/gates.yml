@@ -5,6 +5,12 @@ on:
   push:
     branches: [main]
 
+# Two of these jobs build the whole workspace on one persistent GPU host, so a
+# superseded run holds that runner against the commit that replaced it.
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   registered-gates:
     name: Every registered gate
