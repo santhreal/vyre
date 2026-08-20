@@ -197,9 +197,10 @@ pub(crate) fn check_benchmark_cuda_environment_provenance(
             .and_then(|device| device.get("memory_total_mib"))
             .and_then(serde_json::Value::as_u64)
         {
-            Some(mib) if mib < 16 * 1024 => failures.push(format!(
-                "requirement `{}` CUDA benchmark `{label}` GPU memory is {mib} MiB, below release floor 16384 MiB",
-                requirement.id
+            Some(mib) if mib < super::min_cuda_release_memory_mib() => failures.push(format!(
+                "requirement `{}` CUDA benchmark `{label}` GPU memory is {mib} MiB, below release floor {} MiB",
+                requirement.id,
+                super::min_cuda_release_memory_mib()
             )),
             None => failures.push(format!(
                 "requirement `{}` CUDA benchmark `{label}` has no GPU memory_total_mib from nvidia-smi",
@@ -1410,8 +1411,10 @@ mod tests {
             &serde_json::json!({"environment": environment}),
             &mut failures,
         );
+        let floor = super::min_cuda_release_memory_mib();
         assert!(
-            failures.iter().any(|failure| failure.contains("8192 MiB, below release floor 16384 MiB")),
+            failures.iter().any(|failure| failure
+                .contains(&format!("{} MiB, below release floor {floor} MiB", floor - 1))),
             "Fix: CUDA environment provenance must reject GPU memory below floor; failures={failures:?}"
         );
         assert!(

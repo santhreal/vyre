@@ -256,10 +256,11 @@ pub(crate) fn check_backend_suite_report(
                     .get("gpu_memory_total_mib")
                     .and_then(serde_json::Value::as_u64)
                 {
-                    Some(mib) if mib >= 16 * 1024 => {}
+                    Some(mib) if mib >= super::min_cuda_release_memory_mib() => {}
                     Some(mib) => failures.push(format!(
-                        "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` reports {mib} MiB GPU memory, below release floor 16384 MiB",
-                        requirement.id
+                        "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` reports {mib} MiB GPU memory, below release floor {} MiB",
+                        requirement.id,
+                        super::min_cuda_release_memory_mib()
                     )),
                     None => failures.push(format!(
                         "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` has no `gpu_memory_total_mib` provenance",
@@ -1670,7 +1671,7 @@ mod backend_suite_tests {
                         "gpu_model": "sub-floor-device",
                         "nvidia_driver_version": "580.0",
                         "nvidia_cuda_version": "13.0",
-                        "gpu_memory_total_mib": 8192,
+                        "gpu_memory_total_mib": super::min_cuda_release_memory_mib() - 1,
                         "gpu_compute_capability_major": 6,
                         "gpu_compute_capability_minor": 1,
                         "min_cuda_ptx_source_cache_entries": 1,
@@ -1698,10 +1699,13 @@ mod backend_suite_tests {
             &mut failures,
         );
 
+        let floor = super::min_cuda_release_memory_mib();
+        let reported = floor - 1;
         assert!(
-            failures.iter().any(|failure| failure
-                .contains("reports 8192 MiB GPU memory, below release floor 16384 MiB")),
-            "Fix: release gate must reject CUDA status with VRAM below 16384 MiB; failures={failures:?}"
+            failures.iter().any(|failure| failure.contains(&format!(
+                "reports {reported} MiB GPU memory, below release floor {floor} MiB"
+            ))),
+            "Fix: release gate must reject CUDA status with VRAM below {floor} MiB; failures={failures:?}"
         );
         assert!(
             failures.iter().any(|failure| failure

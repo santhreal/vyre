@@ -524,17 +524,16 @@ fn probe_backend_matrix(scan: SourceScan) -> (BackendMatrix, Vec<String>) {
                 .to_string(),
         );
     }
-    if !gpu_probe.nvidia_smi_device_details.iter().any(|device| {
-        device.memory_total_mib.is_some_and(|mib| mib >= 16 * 1024)
-            && matches!(
-                (device.compute_capability_major, device.compute_capability_minor),
-                (Some(major), Some(minor)) if (major, minor) >= (8, 0)
-            )
-    }) {
-        blockers.push(
-            "nvidia-smi did not report a CUDA GPU meeting the release floor: >=16384 MiB VRAM and compute capability >=8.0"
-                .to_string(),
-        );
+    if !gpu_probe
+        .nvidia_smi_device_details
+        .iter()
+        .any(gpu_probe_device_meets_release_floor)
+    {
+        let (major, minor) = crate::gpu_release_floor::RELEASE_COMPUTE_CAPABILITY_FLOOR;
+        blockers.push(format!(
+            "nvidia-smi did not report a CUDA GPU meeting the release floor: >={} MiB VRAM and compute capability >={major}.{minor}",
+            crate::gpu_release_floor::min_cuda_release_memory_mib()
+        ));
     }
     let capability_rows = collect_backend_capability_rows(&backends, &gpu_probe);
     blockers.extend(capability_contract_blockers(&capability_rows));
@@ -667,7 +666,8 @@ fn collect_backend_capability_rows(
     });
 
     let max_memory = max_cuda_memory_mib(gpu_probe);
-    let memory_supported = max_memory.is_some_and(|mib| mib >= 16 * 1024);
+    let memory_floor_mib = crate::gpu_release_floor::min_cuda_release_memory_mib();
+    let memory_supported = max_memory.is_some_and(|mib| mib >= memory_floor_mib);
     rows.push(BackendCapabilityRow {
         backend_id: "cuda".to_string(),
         capability_id: "live-memory-release-floor".to_string(),
@@ -675,9 +675,10 @@ fn collect_backend_capability_rows(
         probed_value: max_memory.map(|mib| format!("{mib} MiB")),
         supported: memory_supported,
         unsupported_reason: (!memory_supported)
-            .then(|| "no live NVIDIA device reported >=16384 MiB memory".to_string()),
-        fix: "Fix: run release benchmark evidence on a CUDA GPU with at least 16 GiB VRAM."
-            .to_string(),
+            .then(|| format!("no live NVIDIA device reported >={memory_floor_mib} MiB memory")),
+        fix: format!(
+            "Fix: run release benchmark evidence on a CUDA GPU with at least {memory_floor_mib} MiB VRAM, which is the largest registered workload plus its CUDA context."
+        ),
     });
 
     let warp_supported = gpu_probe.nvidia_smi_ok && cuda_sm.is_some();
@@ -788,6 +789,21 @@ fn max_cuda_memory_mib(gpu_probe: &GpuProbe) -> Option<u64> {
         .iter()
         .filter_map(|device| device.memory_total_mib)
         .max()
+}
+
+/// Whether a live `nvidia-smi` device clears the release floors.
+///
+/// The comparison itself belongs to `crate::gpu_release_floor`; this only
+/// widens the probe's `u32` capability pair to the shape that owner takes.
+fn gpu_probe_device_meets_release_floor(device: &GpuProbeDevice) -> bool {
+    let compute_capability = device
+        .compute_capability_major
+        .zip(device.compute_capability_minor)
+        .map(|(major, minor)| (u64::from(major), u64::from(minor)));
+    crate::gpu_release_floor::device_meets_release_floor(
+        device.memory_total_mib,
+        compute_capability,
+    )
 }
 
 fn capability_contract_blockers(rows: &[BackendCapabilityRow]) -> Vec<String> {
@@ -1343,6 +1359,64 @@ mod capability_contract_tests {
                 && row.probed_value.as_deref() == Some("32 lanes")
         }));
         assert!(capability_contract_blockers(&rows).is_empty());
+    }
+
+    /// WHY: the memory row is the only thing that rejects a device too small
+    /// for the workload it claims to have measured, and the floor it compares
+    /// against is now derived from the catalog. A row that reports `supported`
+    /// for a device one MiB short certifies a measurement nothing can hold.
+    #[test]
+    fn a_device_below_the_derived_memory_floor_is_unsupported() {
+        let backends = vec![BackendEntry {
+            id: "cuda".to_string(),
+            precedence: 0,
+            dispatches: true,
+            acquire_ok: true,
+            acquire_error: None,
+        }];
+        let short_by_one = crate::gpu_release_floor::min_cuda_release_memory_mib() - 1;
+        let probe = GpuProbe {
+            nvidia_smi_ok: true,
+            nvidia_smi_devices: vec!["GPU 0: NVIDIA A2".to_string()],
+            nvidia_smi_device_details: vec![GpuProbeDevice {
+                name: "NVIDIA A2".to_string(),
+                driver_version: "580.0".to_string(),
+                memory_total_mib: Some(short_by_one),
+                compute_capability_major: Some(8),
+                compute_capability_minor: Some(6),
+            }],
+            nvidia_driver_version: Some("580.0".to_string()),
+            nvidia_cuda_version: Some("13.0".to_string()),
+            nvidia_smi_error: None,
+        };
+
+        let rows = collect_backend_capability_rows(&backends, &probe);
+
+        let memory_row = rows
+            .iter()
+            .find(|row| {
+                row.backend_id == "cuda" && row.capability_id == "live-memory-release-floor"
+            })
+            .expect("Fix: CUDA capability rows must always carry a live memory release floor row.");
+        assert!(
+            !memory_row.supported,
+            "Fix: a device {short_by_one} MiB below the derived floor must not be a supported release device."
+        );
+        assert_eq!(
+            memory_row.unsupported_reason.as_deref(),
+            Some(
+                format!(
+                    "no live NVIDIA device reported >={} MiB memory",
+                    crate::gpu_release_floor::min_cuda_release_memory_mib()
+                )
+                .as_str()
+            ),
+            "Fix: the unsupported reason must quote the derived floor, not a fixed number."
+        );
+        assert!(
+            !gpu_probe_device_meets_release_floor(&probe.nvidia_smi_device_details[0]),
+            "Fix: the release-floor predicate must reject a device short of the derived memory floor."
+        );
     }
 }
 

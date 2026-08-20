@@ -13,8 +13,8 @@ use super::evidence_schema::{
     HardwareUnavailableReason,
 };
 use super::release_thresholds::{
-    MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR,
-    MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR, MIN_CUDA_RELEASE_MEMORY_MIB,
+    min_cuda_release_memory_mib, MAX_RELEASE_BENCHMARK_TEXT_BYTES,
+    MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR,
 };
 use super::runner::run_command_status;
 
@@ -716,11 +716,14 @@ pub(super) fn inspect_backend_suite_artifact(
             );
         }
         match gpu_memory_total_mib {
-            Some(mib) if mib >= MIN_CUDA_RELEASE_MEMORY_MIB => {}
+            Some(mib) if mib >= min_cuda_release_memory_mib() => {}
             Some(mib) => blockers.push(format!(
-                "CUDA artifact GPU memory is {mib} MiB, below release floor {MIN_CUDA_RELEASE_MEMORY_MIB} MiB"
+                "CUDA artifact GPU memory is {mib} MiB, below release floor {} MiB",
+                min_cuda_release_memory_mib()
             )),
-            None => blockers.push("CUDA artifact has no nvidia-smi GPU memory provenance".to_string()),
+            None => {
+                blockers.push("CUDA artifact has no nvidia-smi GPU memory provenance".to_string())
+            }
         }
         match (gpu_compute_capability_major, gpu_compute_capability_minor) {
             (Some(major), Some(minor))

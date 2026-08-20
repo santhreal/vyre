@@ -6,8 +6,8 @@ use serde_json::Value;
 
 use super::artifact_metrics::{read_text_bounded, suite_metric_percentile, suite_metric_samples};
 use super::release_thresholds::{
-    MAX_RELEASE_BENCHMARK_TEXT_BYTES, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR,
-    MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR, MIN_CUDA_RELEASE_MEMORY_MIB,
+    min_cuda_release_memory_mib, MAX_RELEASE_BENCHMARK_TEXT_BYTES,
+    MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR, MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR,
 };
 
 const RELEASE_WARMUP_SAMPLES: usize = 300;
@@ -189,7 +189,7 @@ fn benchmark_artifact_report_shape_is_reusable(
             device
                 .get("memory_total_mib")
                 .and_then(Value::as_u64)
-                .is_some_and(|mib| mib >= MIN_CUDA_RELEASE_MEMORY_MIB)
+                .is_some_and(|mib| mib >= min_cuda_release_memory_mib())
                 && matches!(
                     (
                         device

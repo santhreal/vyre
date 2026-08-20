@@ -135,42 +135,46 @@ pub(crate) fn release_workload_matrix(
     )
 }
 
-/// The release floor for GPU memory in MiB (16 GiB).
-pub(crate) const RELEASE_GPU_MEMORY_FLOOR_MIB: u64 = 16 * 1024;
+pub(crate) use crate::gpu_release_floor::{
+    min_cuda_release_memory_mib, RELEASE_COMPUTE_CAPABILITY_FLOOR,
+};
 
-/// The release floor for CUDA GPU compute capability (8.0).
-pub(crate) const RELEASE_COMPUTE_CAPABILITY_FLOOR: (u64, u64) = (8, 0);
-
-/// Whether `device` meets release qualification floors:
-/// a non-empty name, at least 16384 MiB VRAM, and compute capability >= 8.0.
+/// Whether `device` meets release qualification floors: a non-empty name plus
+/// the memory and compute-capability floors owned by
+/// [`crate::gpu_release_floor::device_meets_release_floor`].
 pub(crate) fn is_qualifying_gpu_device(device: &serde_json::Value) -> bool {
     let has_name = device
         .get("name")
         .and_then(serde_json::Value::as_str)
         .is_some_and(|name| !name.trim().is_empty());
-    let has_memory = device
-        .get("memory_total_mib")
-        .and_then(serde_json::Value::as_u64)
-        .is_some_and(|mib| mib >= RELEASE_GPU_MEMORY_FLOOR_MIB);
-    let has_compute_capability = matches!(
-        (
+    let compute_capability = match (
+        device
+            .get("compute_capability_major")
+            .and_then(serde_json::Value::as_u64),
+        device
+            .get("compute_capability_minor")
+            .and_then(serde_json::Value::as_u64),
+    ) {
+        (Some(major), Some(minor)) => Some((major, minor)),
+        _ => None,
+    };
+    has_name
+        && crate::gpu_release_floor::device_meets_release_floor(
             device
-                .get("compute_capability_major")
+                .get("memory_total_mib")
                 .and_then(serde_json::Value::as_u64),
-            device
-                .get("compute_capability_minor")
-                .and_then(serde_json::Value::as_u64),
-        ),
-        (Some(major), Some(minor)) if (major, minor) >= RELEASE_COMPUTE_CAPABILITY_FLOOR
-    );
-    has_name && has_memory && has_compute_capability
+            compute_capability,
+        )
 }
 
+/// A device one MiB short of the derived memory floor, and below the compute
+/// capability floor. Derived rather than fixed so it stays a sub-floor device
+/// when a larger workload registers and moves the floor.
 #[cfg(test)]
 pub(crate) fn mock_sub_floor_gpu_device() -> serde_json::Value {
     serde_json::json!({
         "name": "sub-floor-device",
-        "memory_total_mib": 8192,
+        "memory_total_mib": min_cuda_release_memory_mib() - 1,
         "compute_capability_major": 6,
         "compute_capability_minor": 1
     })

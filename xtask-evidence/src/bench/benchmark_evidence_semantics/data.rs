@@ -9,8 +9,6 @@
 //! all of it, so changing what release evidence must contain is a change to
 //! this file alone.
 
-use std::path::PathBuf;
-
 /// Bound on one evidence file read while checking benchmark semantics.
 pub(crate) const MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES: u64 = 16_777_216;
 

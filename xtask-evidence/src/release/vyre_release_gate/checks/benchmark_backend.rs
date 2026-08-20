@@ -549,10 +549,12 @@ mod benchmark_backend_tests {
         });
         let mut failures = Vec::new();
         check_backend_gpu_probe("cuda-first-path", &matrix, &mut failures);
+        let (major, minor) = super::RELEASE_COMPUTE_CAPABILITY_FLOOR;
+        let floor = super::min_cuda_release_memory_mib();
         assert!(
-            failures.iter().any(|failure| failure.contains(
-                "must include a CUDA GPU with >=16384 MiB VRAM and compute capability >=8.0"
-            )),
+            failures.iter().any(|failure| failure.contains(&format!(
+                "must include a CUDA GPU with >={floor} MiB VRAM and compute capability >={major}.{minor}"
+            ))),
             "Fix: GPU probe must reject setups where no device meets release floors; failures={failures:?}"
         );
     }
@@ -659,8 +661,10 @@ pub(crate) fn check_backend_gpu_probe(
         .and_then(serde_json::Value::as_array)
         .is_some_and(|devices| devices.iter().any(is_qualifying_gpu_device));
     if !release_floor_device {
+        let (major, minor) = super::RELEASE_COMPUTE_CAPABILITY_FLOOR;
         failures.push(format!(
-            "requirement `{requirement_id}` backend matrix gpu_probe.nvidia_smi_device_details must include a CUDA GPU with >=16384 MiB VRAM and compute capability >=8.0"
+            "requirement `{requirement_id}` backend matrix gpu_probe.nvidia_smi_device_details must include a CUDA GPU with >={} MiB VRAM and compute capability >={major}.{minor}",
+            super::min_cuda_release_memory_mib()
         ));
     }
     for field in ["nvidia_driver_version", "nvidia_cuda_version"] {

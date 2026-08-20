@@ -17,6 +17,8 @@ pub(super) const REQUIRED_CPU_SOTA_100X_CASES: &[&str] = &[
 ];
 pub(super) const MIN_CPU_SOTA_100X_RELEASE_CASES: usize = 10;
 pub(super) const MAX_RELEASE_BENCHMARK_TEXT_BYTES: u64 = 256 * 1024 * 1024;
-pub(super) const MIN_CUDA_RELEASE_MEMORY_MIB: u64 = 16 * 1024;
-pub(super) const MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR: u64 = 8;
-pub(super) const MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR: u64 = 0;
+pub(super) use crate::gpu_release_floor::min_cuda_release_memory_mib;
+pub(super) const MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MAJOR: u64 =
+    crate::gpu_release_floor::RELEASE_COMPUTE_CAPABILITY_FLOOR.0;
+pub(super) const MIN_CUDA_RELEASE_COMPUTE_CAPABILITY_MINOR: u64 =
+    crate::gpu_release_floor::RELEASE_COMPUTE_CAPABILITY_FLOOR.1;

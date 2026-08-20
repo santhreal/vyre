@@ -6,6 +6,7 @@
 //! release checks that only read manifests stay in `xtask`.
 
 pub mod bench;
+pub mod gpu_release_floor;
 pub mod release;
 #[cfg(test)]
 pub(crate) mod report_fixture;
