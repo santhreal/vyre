@@ -8,7 +8,7 @@ use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Stable Tier 2.5 op id.
+/// Stable op id.
 pub const OP_ID: &str = "vyre-libs::visual::packed_rgba_map";
 
 /// Emit a generic identity packed-RGBA map node.

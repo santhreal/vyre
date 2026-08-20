@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-// Tests for `mod.rs`. Split out per audit item #85 to keep the
+// Tests for `mod.rs`. Split out to keep the
 // parent file focused on production code.
 
 use super::atomic_scanner::{scan_buffer_targets, BufferTargets};

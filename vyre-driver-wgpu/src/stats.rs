@@ -1,6 +1,6 @@
 //! Runtime observability snapshot for the wgpu backend.
 //!
-//! Extracted from `lib.rs` per audit item #78  -  the stats type is
+//! Extracted from `lib.rs`  -  the stats type is
 //! lock-free observability data that has no business living inside
 //! the backend trait-impl module. Re-exported through
 //! `crate::WgpuBackendStats` so existing call sites do not change.

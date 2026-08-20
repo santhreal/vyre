@@ -1,4 +1,4 @@
-//! Tier 3 - Property: proptest over random exchange graphs for `math::matroid_intersection_full`,
+//! Property: proptest over random exchange graphs for `math::matroid_intersection_full`,
 //! locking the multi-augmentation FIX (`BUG-matroid-megakernel-static-graph-oscillates-multi-augmentation`).
 //!
 //! The exchange graph is STATIC, so the augmenting path P is re-found identically every augmentation

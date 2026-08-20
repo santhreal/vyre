@@ -10,7 +10,7 @@
 //! the font or the cell size does.
 //!
 //! Category A composition  -  pure IR over existing expressions, specializing
-//! the Tier 2.5 `packed_rgba_map` shape.
+//! the `packed_rgba_map` shape.
 //!
 //! [`cell_grid_fill`]: crate::visual::cell_grid::cell_grid_fill
 

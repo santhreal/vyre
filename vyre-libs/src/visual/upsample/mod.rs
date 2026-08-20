@@ -4,7 +4,7 @@
 //! nearest-neighbor (no bilinear) because the input is already blurred  -
 //! the blur itself provides the smoothing that bilinear would add.
 //!
-//! Category A composition  -  pure IR. No Tier 2.5 primitives.
+//! Category A composition  -  pure IR. No shared primitives.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

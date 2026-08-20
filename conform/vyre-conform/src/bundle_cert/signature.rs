@@ -8,7 +8,7 @@ use vyre_conform_spec::BundleCertificate;
 
 use super::error::BundleCertError;
 
-/// CRITIQUE_CONFORM_2026-04-23 C1 (companion API): cryptographically
+/// 2026-04-23 C1 (companion API): cryptographically
 /// verify the Ed25519 signature on a BundleCertificate. The
 /// existing `verify_bundle_with_backend` + `verify_bundle_against_reference`
 /// entrypoints check the hash chain; they do **not** check the
@@ -41,7 +41,7 @@ pub fn verify_cert_signature_hex(
 ) -> Result<(), BundleCertError> {
     cert.validate_schema_version()
         .map_err(|error| BundleCertError::UnsupportedSchemaVersion(error.found().to_string()))?;
-    // Hex-length sanity on declared fields (CRITIQUE_CONFORM M2).
+    // Hex-length sanity on declared fields.
     if cert.signature_ed25519 == "TBD" || cert.pubkey == "TBD" {
         return Err(BundleCertError::UnsetField(
             "signature_ed25519 or pubkey still set to 'TBD'  -  sign the cert before shipping.",

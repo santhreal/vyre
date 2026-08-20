@@ -1,4 +1,4 @@
-//! Tier 3 - Parity: drives the ACTUAL Datalog-fixpoint IR (`math::scallop_join`, a monotone Lineage
+//! Parity: drives the ACTUAL Datalog-fixpoint IR (`math::scallop_join`, a monotone Lineage
 //! join iterated to convergence via a ping-pong state/next + `changed` flag) through `reference_eval`
 //! and asserts BIT-EXACT equality against the shipped `scallop_join::cpu_ref`. The op had NO
 //! `reference_eval` test.

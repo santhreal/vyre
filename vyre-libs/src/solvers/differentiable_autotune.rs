@@ -1,4 +1,4 @@
-//! Differentiable autotuner via #7 differentiable softmax / argmax (#27).
+//! Differentiable autotuner via differentiable softmax / argmax.
 //!
 //! Picks workgroup-size / tile-shape / fusion-threshold via gradient
 //! descent over a smoothed argmax of cost-model scores. Same softmax

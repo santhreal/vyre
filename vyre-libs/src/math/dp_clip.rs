@@ -1,4 +1,4 @@
-//! DP-SGD per-sample gradient clip + Gaussian noise primitive (#42).
+//! DP-SGD per-sample gradient clip + Gaussian noise primitive.
 //!
 //! DP-SGD (Abadi 2016) per-sample gradient clipping enforces an L2
 //! norm bound `C` on each sample's gradient before averaging across

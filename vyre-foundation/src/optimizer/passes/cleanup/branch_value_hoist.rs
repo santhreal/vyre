@@ -1,5 +1,5 @@
 //! `branch_value_hoist`  -  hoist a common prefix out of a divergent
-//! `Node::If`. Cross-branch GVN entry point under ROADMAP A18.
+//! `Node::If`. Cross-branch GVN entry point under
 //!
 //! Soundness: `Exact`. When both arms of an `If` begin with the same
 //! observably-side-effect-free `Let` (same name, same value expression),
@@ -26,9 +26,8 @@
 //! The pass repeats the extraction so a chain of common prefix `Let`s
 //! collapses to a sequence before a single `If`.
 //!
-//! ## ROADMAP
 //!
-//! A18  -  GVN across control flow. The fact-driven full-CFG GVN over
+//! GVN across control flow. The fact-driven full-CFG GVN over
 //! arbitrary join points lands beside the downstream reaching-def pass; this
 //! row implements the structural prefix slice that is provably correct
 //! without needing the alias substrate.

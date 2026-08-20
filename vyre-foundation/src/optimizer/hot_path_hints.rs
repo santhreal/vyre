@@ -1,4 +1,4 @@
-//! ROADMAP I1  -  hot-path recording into optimizer hints.
+//! hot-path recording into optimizer hints.
 //!
 //! Foundation-side substrate. Backends record per-Region dispatch
 //! latency at runtime; the optimizer reads the recorded hints to

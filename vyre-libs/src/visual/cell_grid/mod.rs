@@ -8,7 +8,7 @@
 //! writes one `u32` per cell that changed and nothing else.
 //!
 //! Category A composition  -  pure IR over existing expressions, specializing
-//! the Tier 2.5 `packed_rgba_map` shape. No new IR variant, no target
+//! the `packed_rgba_map` shape. No new IR variant, no target
 //! lowering.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

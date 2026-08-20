@@ -3,7 +3,7 @@
 //! `result = fg + bg * (1 - fg_alpha)`
 //!
 //! Category A composition  -  pure IR over existing expressions.
-//! No Tier 2.5 primitives consumed.
+//! No shared primitives consumed.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

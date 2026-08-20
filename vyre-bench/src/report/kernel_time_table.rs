@@ -1,4 +1,4 @@
-//! ROADMAP M2  -  per-op kernel-time table emitter.
+//! per-op kernel-time table emitter.
 //!
 //! Lane: `bench_harness`. Op id: `vyre-bench::report::kernel_time_table`.
 //!

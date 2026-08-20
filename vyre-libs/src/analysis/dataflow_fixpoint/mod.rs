@@ -1,4 +1,4 @@
-//! Region-graph dataflow fixpoint via #1 semiring_gemm (#26 substrate).
+//! Region-graph dataflow fixpoint via semiring_gemm.
 //!
 //! Treats vyre's Region tree adjacency as a sparse boolean matrix
 //! and computes reachability / liveness / dominance / constant-prop
@@ -12,7 +12,7 @@
 //! | Constant prop | Lineage | OR | OR |
 //! | Min-cost path | MinPlus | + (sat) | min |
 //!
-//! Same primitive (#1), same Program, four different IR analyses.
+//! Same primitive, same Program, four different IR analyses.
 //! Demonstrates the recursion thesis directly.
 //!
 //! `dense_matrix` owns the shared adjacency shape checks,

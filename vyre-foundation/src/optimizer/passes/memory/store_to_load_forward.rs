@@ -1,4 +1,4 @@
-//! ROADMAP A22  -  store-to-load forwarding under the conservative
+//! store-to-load forwarding under the conservative
 //! same-block / structurally-equal-index alias proof.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::store_to_load_forward`.
@@ -56,8 +56,7 @@ use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::{any_descendant, for_each_subexpr};
 use rustc_hash::FxHashSet;
 
-/// `ProgramPass` registration for the store-to-load forwarding rewrite
-/// (ROADMAP A22).
+/// `ProgramPass` registration for the store-to-load forwarding rewrite.
 #[derive(Debug, Default)]
 #[vyre_pass(
     name = "store_to_load_forward",

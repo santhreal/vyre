@@ -704,7 +704,7 @@ impl CudaDeviceCaps {
     }
 
     /// Project a CUDA device snapshot into the workspace-wide
-    /// [`vyre_foundation::optimizer::AdapterCaps`] (audit P0 #60). All vyre
+    /// [`vyre_foundation::optimizer::AdapterCaps`]. All vyre
     /// backends consume the same typed capability shape so passes that
     /// adapt to subgroup-ops, indirect dispatch, max workgroup size, or
     /// shared-memory budget take a single typed input regardless of

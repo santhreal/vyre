@@ -1,6 +1,6 @@
-//! Vyre IR Region tree as a string diagram (#53 self-consumer).
+//! Vyre IR Region tree as a string diagram.
 //!
-//! Closes the recursion thesis for #53  -  string-diagram tensor
+//! Closes the recursion thesis: string-diagram tensor
 //! compilation ships to user dialects (quantum circuits, monoidal
 //! tensor networks, ZX-calculus) AND IS the substrate semantics for
 //! vyre's IR.

@@ -1,6 +1,6 @@
 //! Reusable Quest-style KV paging passes.
 //!
-//! These are Tier 2.5 building blocks: each pass is usable as a
+//! These are shared building blocks: each pass is usable as a
 //! standalone `Program`, and higher-level attention compositions can
 //! wrap the same bodies with `source_region` metadata instead of
 //! hiding multi-phase work in one monolithic op.

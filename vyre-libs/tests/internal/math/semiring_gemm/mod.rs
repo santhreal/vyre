@@ -107,7 +107,7 @@ fn cpu_bool_or_reachability() {
 
 #[test]
 fn cpu_lineage_scallop_join() {
-    // Scallop-style which-facts-used provenance (#39).
+    // Scallop-style which-facts-used provenance.
     // Each bit in a u32 names a clause / fact:
     //   bit 0 = "fact f1 used", bit 1 = "fact f2 used".
     //

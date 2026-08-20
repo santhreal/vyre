@@ -23,9 +23,7 @@
 //! `rest` on iteration 0). `var := 0` is substituted into both halves because
 //! `var` is no longer an induction variable in the lifted block.
 //!
-//! ## ROADMAP
-//!
-//! A28  -  loop peeling first iteration when guarded.
+//! Peels the first iteration when it is guarded.
 
 use super::substitution::body_writes_loop_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};

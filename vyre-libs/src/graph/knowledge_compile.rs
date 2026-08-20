@@ -1,9 +1,9 @@
-//! Probabilistic knowledge compilation primitive (#38).
+//! Probabilistic knowledge compilation primitive.
 //!
 //! Knowledge compilation (Darwiche 2002) compiles a probabilistic
 //! logic program into a tractable circuit (d-DNNF, SDD). The
 //! compilation step is host-side; the **evaluation** of a compiled
-//! circuit is GPU-shaped  -  exactly what #10 sum_product_circuit
+//! circuit is GPU-shaped  -  exactly what sum_product_circuit
 //! does. This file ships a thin wrapper that confirms the compose
 //! contract for device-resident d-DNNF evaluation.
 //!

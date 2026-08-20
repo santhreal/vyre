@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL atomic grid-stride reduction IR of
+//! Property: differential proptest driving the ACTUAL atomic grid-stride reduction IR of
 //! the whole `reduce::atomic_scalar` family — ALL seven variants: `reduce_max`, `reduce_min`,
 //! `reduce_any`, `reduce_all`, `reduce_sum`, `reduce_count` (popcount-sum), `reduce_count_non_zero` —
 //! through `reference_eval` vs each op's `cpu_ref`.

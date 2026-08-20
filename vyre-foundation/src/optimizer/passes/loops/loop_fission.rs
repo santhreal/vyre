@@ -1,4 +1,4 @@
-//! ROADMAP A27  -  fission a `Node::Loop` whose body partitions cleanly
+//! fission a `Node::Loop` whose body partitions cleanly
 //! into two consecutive halves that touch disjoint buffer sets.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::loop_fission`.

@@ -1,4 +1,4 @@
-//! ROADMAP A11  -  reaching-def facts into cross-control-flow const fold.
+//! reaching-def facts into cross-control-flow const fold.
 //!
 //! Built on top of the A2 `ProgramFacts` substrate. For every
 //! `Node::Let { name, value: Lit* }` whose `name` is never rebound

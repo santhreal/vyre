@@ -1,12 +1,7 @@
-//! Dispatch-graph clustering via #2 sinkhorn (#30 substrate).
+//! Dispatch-graph clustering via sinkhorn.
 //!
 //! This module implements the clustering of vyre's dispatch graph into
 //! fusion-coherent groups using entropic optimal transport (Sinkhorn).
-//!
-//! # Math Frontier #2 entry
-//!
-//! "sinkhorn  -  dispatch-graph clustering via Sinkhorn-OT distance between
-//! cost-vector distributions."
 //!
 //! # Transport Problem
 //!

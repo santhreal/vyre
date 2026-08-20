@@ -185,7 +185,7 @@ proptest! {
         prop_assert!(tail.is_empty());
     }
 
-    // CRITIQUE_THIRD_PASS_2026-04-23 Finding 07: proptest over the
+    // Proptest over the
     // canonical_f64_zero contract across every u64 bit pattern. A
     // refactor that replaces `value == 0.0` with, say,
     // `value.is_subnormal()` would silently flip the mapping from
@@ -338,7 +338,7 @@ fn canonical_regex_flags_deduplicates_by_char() {
 
 #[test]
 fn canonical_regex_flags_stress_10mb_alternating_must_dedup_to_one_pair() {
-    // CRITIQUE_FIX_REVIEW_2026-04-23 Finding #21: existing coverage is
+    // Existing coverage is
     // limited to tiny inputs. A 10MB string of alternating 'a' and 'b'
     // probes both allocator stress and the O(n log n) sort path (a
     // naive O(n²) dedup would time out). The output must be exactly

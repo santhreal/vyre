@@ -1,4 +1,4 @@
-//! Parked composition (belongs in vyre-libs): geometric-algebra primitives (#8).
+//! Geometric-algebra primitives.
 //!
 //! Geometric (Clifford) algebra unifies vectors, quaternions, dual
 //! quaternions, projective transformations, spinors. Recent ML work
@@ -16,7 +16,7 @@
 pub mod clifford;
 
 /// SE(3)-equivariant tensor field network scalar (l=0) channel mix
-/// step (#33). User: equivariant NN, molecular dynamics, cryo-EM.
+/// step. User: equivariant NN, molecular dynamics, cryo-EM.
 pub mod tfn;
 #[cfg(test)]
 pub(crate) fn approx_eq(a: f64, b: f64) -> bool {

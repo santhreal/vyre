@@ -1,12 +1,12 @@
-//! Parked composition (belongs in vyre-libs): topological-data-analysis primitives (#15, #32).
+//! Topological-data-analysis primitives.
 //!
 //! Persistent homology + simplicial-complex operations. Composes
 //! with `vyre-primitives::math` and `vyre-primitives::graph`.
 
-/// Vietoris-Rips filtration boundary-matrix construction (#15).
+/// Vietoris-Rips filtration boundary-matrix construction.
 pub mod vietoris_rips;
 
-/// Simplicial neural network message-passing step (#32). Triangle-
+/// Simplicial neural network message-passing step. Triangle-
 /// level boundary-operator message aggregation.
 pub mod simplicial;
 

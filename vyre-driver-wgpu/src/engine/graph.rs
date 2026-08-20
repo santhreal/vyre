@@ -1,4 +1,4 @@
-//! GPU-resident dispatch graph execution (Innovation I.14).
+//! GPU-resident dispatch graph execution.
 //!
 //! A graph records many dependent pipeline dispatches into one command buffer
 //! and submits it once. This gives callers one CPU-to-GPU launch while the GPU

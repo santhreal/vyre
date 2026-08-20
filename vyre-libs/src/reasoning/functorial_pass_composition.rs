@@ -1,6 +1,6 @@
-//! IR transform passes as categorical functors (#52 self-consumer).
+//! IR transform passes as categorical functors.
 //!
-//! Closes the recursion thesis for #52  -  categorical-database
+//! Closes the recursion thesis: categorical-database
 //! migration ships to user dialects (ETL pipelines, schema evolution)
 //! AND treats vyre's IR transform passes as functors in a
 //! Cat-of-IR-views category.

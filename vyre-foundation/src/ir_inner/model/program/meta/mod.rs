@@ -315,7 +315,7 @@ impl Program {
     /// (e.g. validation cache, AOT artifact dedup); use
     /// [`Self::fingerprint`] for exact-match lookups.
     ///
-    /// Wires the substrate's #29 hypervector primitive into Program
+    /// Wires the substrate's hypervector primitive into Program
     /// itself  -  every Program now carries its own VSA fingerprint
     /// without callers having to reach into the substrate explicitly.
     #[must_use]
@@ -533,7 +533,7 @@ impl Program {
     #[inline]
     /// Estimate the peak VRAM byte size of this Program.
     ///
-    /// Innovation I.11: Static VRAM Pressure Analysis.
+    /// Static VRAM Pressure Analysis.
     /// Returns the total bytes required by all storage and uniform buffers
     /// declared in the Program. Optimizer passes use this to automatically
     /// partition workloads if they would exceed a backend-specific safety

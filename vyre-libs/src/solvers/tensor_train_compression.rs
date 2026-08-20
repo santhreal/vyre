@@ -1,6 +1,6 @@
 //! Tensor-train compression of the dispatch-graph cost tensor.
 //!
-//! Self-consumer for [#12 `tensor_train_decompose`](crate::math::tensor_train_decompose).
+//! Self-consumer for [`tensor_train_decompose`](crate::math::tensor_train_decompose).
 //!
 //! The dispatch-graph cost tensor (per-Region × per-buffer × per-config
 //! cost) grows with the cube of the dispatch size. For a 1k-region

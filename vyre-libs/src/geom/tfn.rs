@@ -1,4 +1,4 @@
-//! SE(3)-equivariant tensor field network primitive (#33).
+//! SE(3)-equivariant tensor field network primitive.
 //!
 //! TFN (Thomas 2018, Geiger 2022 e3nn) is the SE(3)-equivariant
 //! building block for molecules, cryo-EM, robotics. Each layer is a

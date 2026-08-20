@@ -167,11 +167,11 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
         // LitU32 power of two  -  LitI32 paths avoid signed semantics
         // mismatch (negative dividend + rounding direction).
         BinOp::Div => {
-            // ROADMAP G2: 1.0 / constant → compile-time reciprocal literal.
+            // 1.0 / constant → compile-time reciprocal literal.
             if let Some(folded) = reciprocal_constant_fold(left.as_ref(), right.as_ref()) {
                 return Some(folded);
             }
-            // ROADMAP G2: 1.0 / x → Reciprocal(x). Keeping reciprocal as
+            // 1.0 / x → Reciprocal(x). Keeping reciprocal as
             // a first-class IR op lets strict backends emit precise rcp and
             // ULP-budgeted backends emit approximate rcp without re-discovering
             // the expression shape in every driver.

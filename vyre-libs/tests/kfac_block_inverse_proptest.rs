@@ -1,4 +1,4 @@
-//! Tier 3 - Property: proptest over random well-conditioned block-diagonal matrices for
+//! Property: proptest over random well-conditioned block-diagonal matrices for
 //! `math::kfac_block_inverse`. The shipped file has a SINGLE 2x2 parity case (`test_parity_2x2`);
 //! this drives the GPU IR through `reference_eval` against `cpu_ref` over thousands of random
 //! instances with varying block size `n` and `num_blocks`, exercising the parallel per-block

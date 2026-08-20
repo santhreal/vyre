@@ -1,4 +1,4 @@
-//! Complete glass material  -  the hero Molten composition.
+//! Complete glass material.
 //!
 //! Combines blur + tint + border into a single batched pipeline
 //! that replaces CSS `backdrop-filter: blur(N) + background-color`.

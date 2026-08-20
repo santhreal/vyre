@@ -42,10 +42,10 @@ mod bit_count_u32;
 /// Clamp to [lo, hi] per lane.
 #[cfg(feature = "math-dialect")]
 pub(crate) mod clamp_u32;
-/// 2D convolution  -  direct 3x3 kernel base case (ROADMAP H3).
+/// 2D convolution  -  direct 3x3 kernel base case.
 #[cfg(feature = "math-dialect")]
 pub mod conv;
-/// Fast Fourier Transform  -  base-case 4-point complex FFT (ROADMAP H2).
+/// Fast Fourier Transform  -  base-case 4-point complex FFT.
 #[cfg(feature = "math-dialect")]
 pub mod fft;
 /// Arithmetic mean reduction
@@ -57,7 +57,7 @@ pub(crate) mod reduce_variance;
 /// Element-wise square operation
 #[cfg(feature = "math-dialect")]
 pub(crate) mod square;
-/// Block-FMA weighted-sum reduction (ROADMAP G7).
+/// Block-FMA weighted-sum reduction.
 #[cfg(feature = "math-dialect")]
 pub mod weighted_sum;
 /// Welford sum-of-squares operation
@@ -294,29 +294,29 @@ pub mod preconditioner;
 #[cfg(feature = "math-kernels")]
 pub mod natural_gradient;
 
-/// Iterative hard thresholding for sparse signal recovery (#48).
+/// Iterative hard thresholding for sparse signal recovery.
 #[cfg(feature = "math-kernels")]
 pub mod sparse_recovery;
 
-/// DP-SGD per-sample gradient clip (#42).
+/// DP-SGD per-sample gradient clip.
 #[cfg(feature = "math-kernels")]
 pub mod dp_clip;
 
 /// Mori-Zwanzig Markovian projection step  -  closed-form coarse-graining of
-/// dynamical systems (#58).
+/// dynamical systems.
 #[cfg(feature = "math-kernels")]
 pub mod mori_zwanzig;
 
 /// Information-geometry primitives  -  Bhattacharyya / Fisher-Rao / Amari
-/// alpha-connection (#57).
+/// alpha-connection.
 #[cfg(feature = "math-kernels")]
 pub mod info_geometry;
 
-/// Fast Multipole Method primitives  -  P2M / M2L / L2P (#51).
+/// Fast Multipole Method primitives  -  P2M / M2L / L2P.
 #[cfg(feature = "math-kernels")]
 pub mod fmm;
 
-/// Algebraic Multigrid V-cycle Jacobi smoother step (#50).
+/// Algebraic Multigrid V-cycle Jacobi smoother step.
 #[cfg(feature = "math-kernels")]
 pub mod multigrid;
 
@@ -365,32 +365,32 @@ pub mod matroid_intersection_full;
 #[cfg(feature = "math-kernels")]
 pub mod tensor_train_decompose;
 
-/// Tensor-train one-step contraction (#6).
+/// Tensor-train one-step contraction.
 #[cfg(feature = "math-kernels")]
 pub mod tensor_train;
 
-/// Randomized SVD random-projection step (#3).
+/// Randomized SVD random-projection step.
 #[cfg(feature = "math-kernels")]
 pub mod randomized_svd;
 
-/// Sum-of-squares (Positivstellensatz) Gram-matrix construction (#14).
+/// Sum-of-squares (Positivstellensatz) Gram-matrix construction.
 #[cfg(feature = "math-kernels")]
 pub mod sos_certificate;
 
 /// Quantum singular-value transform (classical) block-encoding + Chebyshev
-/// apply (#34).
+/// apply.
 #[cfg(feature = "math-kernels")]
 pub mod qsvt;
 
-/// Pairwise tensor-network contraction (#35).
+/// Pairwise tensor-network contraction.
 #[cfg(feature = "math-kernels")]
 pub mod tensor_network;
 
-/// RMT-based Marchenko-Pastur edge clip (#17).
+/// RMT-based Marchenko-Pastur edge clip.
 #[cfg(feature = "math-kernels")]
 pub mod spectral_shape;
 
-/// p-adic Hensel-lift step (#54, research scaffold). Stable arithmetic for
+/// p-adic Hensel-lift step (research scaffold). Stable arithmetic for
 /// ill-conditioned problems.
 #[cfg(feature = "math-kernels")]
 pub mod padic;
@@ -417,7 +417,7 @@ pub mod bellman_shortest_path;
 #[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 mod scallop_persistent;
 
-/// Scallop-style probabilistic Datalog join (#39). Emits a lineage
+/// Scallop-style probabilistic Datalog join. Emits a lineage
 /// semiring join inside a GPU-resident fixpoint kernel over `w`-word
 /// lineage cells. User dialect: probabilistic Datalog.
 /// Self-consumer: rule-provenance tracking

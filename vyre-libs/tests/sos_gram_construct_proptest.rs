@@ -1,4 +1,4 @@
-//! Tier 3 - Property: proptest over random monomial-pair tables for `math::sos_certificate::sos_gram_construct`,
+//! Property: proptest over random monomial-pair tables for `math::sos_certificate::sos_gram_construct`,
 //! hardening the HIGH-severity OOB fix (SWEEP-parity-surface-math: `monomial_pairs` is UNVALIDATED
 //! data, so a pair index >= coeff_count is an out-of-range gather that the IR must gate to 0 to match
 //! the CPU reference's `p_coeffs.get(idx).unwrap_or(0)`; without the gate it OOB-reads p_coeffs on the

@@ -1,6 +1,6 @@
 //! Program-level static shape facts derived from `BufferDecl`s.
 //!
-//! Audit P0 #38: replaces ad-hoc shape recomputations across optimizer,
+//! replaces ad-hoc shape recomputations across optimizer,
 //! lowering, and validation with one derived analysis. Every `Program`
 //! produces exactly one `ProgramShapeFacts`; passes consume it instead of
 //! walking `BufferDecl`s themselves.

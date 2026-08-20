@@ -1,4 +1,4 @@
-//! ROADMAP A15  -  buffer aliasing facts into load elision.
+//! buffer aliasing facts into load elision.
 //!
 //! Read-only-buffer slice shipped here. When both arms of an
 //! `Node::If` begin with a `Let(name, Load(buf, idx))` whose

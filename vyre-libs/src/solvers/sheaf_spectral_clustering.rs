@@ -1,6 +1,6 @@
 //! Sheaf-spectral clustering of dispatch graphs.
 //!
-//! Self-consumer for [#9 `sheaf_laplacian_eigenvalue`](crate::math::sheaf_laplacian_eigenvalue).
+//! Self-consumer for [`sheaf_laplacian_eigenvalue`](crate::math::sheaf_laplacian_eigenvalue).
 //!
 //! The dispatch graph's sheaf Laplacian carries spectral information
 //! about cluster structure: the dominant eigenvalue corresponds to

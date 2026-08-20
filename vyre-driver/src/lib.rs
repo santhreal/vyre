@@ -15,17 +15,17 @@ pub(crate) mod accounting_atomic;
 pub mod allocation;
 /// Backend-neutral ahead-of-time emission registry.
 pub(crate) mod aot;
-/// Independent-arm detection for queue-parallel dispatch (ROADMAP D2).
+/// Independent-arm detection for queue-parallel dispatch.
 /// Pure set arithmetic over (reads, writes) summaries; the dispatcher
 /// uses `can_dispatch_concurrently` to decide whether two megakernel
 /// arms can launch on independent backend queues or streams.
 pub mod arm_independence;
-/// Async-copy / kernel-overlap decision policy (ROADMAP D3). Pure
+/// Async-copy / kernel-overlap decision policy. Pure
 /// per-slot read/write conflict check that decides whether an H2D
 /// copy can run on a side stream concurrently with a downstream
 /// kernel.
 pub mod async_copy_overlap;
-/// Persistent autotuning record store (ROADMAP I3).
+/// Persistent autotuning record store.
 pub mod autotune_store;
 /// VyreBackend trait, BackendError, capability records, validation.
 pub(crate) mod backend;
@@ -35,7 +35,7 @@ pub mod benchmark_pass_selection;
 pub(crate) mod binding;
 /// Stable fingerprints and descriptor-layout sharing for binding plans.
 pub(crate) mod binding_layout;
-/// Bindless buffers / textures decision policy (ROADMAP D9). Decides
+/// Bindless buffers / textures decision policy. Decides
 /// whether to use a bindless descriptor array or traditional per-
 /// resource bindings, given the kernel's resource count and the
 /// backend's bindless support level (Full / Static / Unsupported).
@@ -49,7 +49,7 @@ pub mod cache_eviction;
 pub mod cache_eviction_heat;
 /// Backend-neutral cache invalidation policy.
 pub mod cache_invalidation;
-/// Pre-recorded command reuse decision policy (ROADMAP D4). Decides
+/// Pre-recorded command reuse decision policy. Decides
 /// whether to record a native command sequence once and replay it for
 /// repeated identical dispatches, based on per-launch overhead vs
 /// record + replay overhead.
@@ -76,7 +76,7 @@ pub mod dispatch_policy;
 pub(crate) mod dispatch_shape;
 /// Backend-neutral bounded fan-out for durability work on a path set.
 pub mod durable_fanout;
-/// Device-profile-aware extraction cost helpers (ROADMAP A7).
+/// Device-profile-aware extraction cost helpers.
 pub mod extraction_cost;
 /// Backend-neutral fixpoint-iteration resolution.
 pub(crate) mod fixpoint_iterations;
@@ -99,7 +99,7 @@ pub(crate) mod materialize_instance;
 pub mod ordering;
 /// Backend-neutral fallible output-slot vector management.
 pub mod output_slots;
-/// Push-constant / tiny-param inlining decision policy (ROADMAP D7).
+/// Push-constant / tiny-param inlining decision policy.
 /// Backends consume `decide_param_inlining` to choose between inlined
 /// launch metadata and a uniform buffer upload, based on a per-backend
 /// [`crate::param_inlining::ParamInliningPolicy`].
@@ -156,7 +156,7 @@ pub(crate) mod subgroup;
 /// Stable compilation and emission target identifiers.
 pub(crate) mod target;
 pub mod target_dialect;
-/// Trace-based JIT specialization decision policy (ROADMAP I2).
+/// Trace-based JIT specialization decision policy.
 /// Decides whether the dispatcher should fire a speculative
 /// pre-spec on a predicted shape, weighted by recent hit count and
 /// prediction confidence vs the speculative spec cost.

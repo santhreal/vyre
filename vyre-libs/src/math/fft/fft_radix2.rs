@@ -1,6 +1,6 @@
 //! Recursive radix-2 Cooley-Tukey FFT for power-of-two N.
 //!
-//! ROADMAP H2  -  companion to `fft4_complex`. Builds an N-point
+//! companion to `fft4_complex`. Builds an N-point
 //! complex FFT by recursive bit-reversal + butterfly stages on top
 //! of the verified 4-point base case.
 //!

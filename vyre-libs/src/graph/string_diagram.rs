@@ -1,4 +1,4 @@
-//! String diagram compilation primitive (#53).
+//! String diagram compilation primitive.
 //!
 //! String diagrams (Selinger 2010, Coecke-Kissinger ZX) are the visual
 //! language of monoidal categories  -  a generalized tensor network.

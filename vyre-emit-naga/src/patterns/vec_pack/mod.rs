@@ -1,6 +1,5 @@
 //! Vec2/vec4 packing analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.1 item B1.
 //!
 //! Modern GPU shader languages (WGSL, GLSL/SPIR-V, CUDA C++) all
 //! support packed vector loads and stores: a single `vec4<f32>` load

@@ -1,4 +1,4 @@
-//! ROADMAP L2 / E2  -  content-hash LRU cache for parsed source.
+//! content-hash LRU cache for parsed source.
 //!
 //! Substrate that any language's parse pipeline can opt into without
 //! plumbing a cache through every layer of the parser. The cache is

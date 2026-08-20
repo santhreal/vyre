@@ -45,7 +45,7 @@ fn canonical_f32_zero_all_sign_exponent_mantissa_combinations_for_f32() {
 }
 
 // ------------------------------------------------------------------
-// CRITIQUE_FIX_REVIEW_2026-04-23 Finding #13 regressions.
+// Regression pins.
 // ------------------------------------------------------------------
 
 use vyre_foundation::opaque_payload::endian::LeBytesWriter;

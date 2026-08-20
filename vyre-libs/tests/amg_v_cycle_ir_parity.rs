@@ -1,4 +1,4 @@
-//! Tier 3 - Parity: drives the ACTUAL 2-level AMG V-cycle IR (`math::amg_v_cycle`, a single-lane
+//! Parity: drives the ACTUAL 2-level AMG V-cycle IR (`math::amg_v_cycle`, a single-lane
 //! serial 16.16 FIXED-POINT V-cycle: presmooth -> residual -> restrict -> 4x coarse-Jacobi -> prolong
 //! -> postsmooth) through `reference_eval` and compares the decoded fine solution against the shipped
 //! f64 oracle `amg_v_cycle::cpu_ref`. The op had NO `reference_eval` test.

@@ -1,4 +1,4 @@
-//! VSA-based op cache key via #13 hypervector primitives (#29).
+//! VSA-based op cache key via hypervector primitives.
 //!
 //! Fingerprints a Program by binding op-kind, buffer-signature, and
 //! region-shape into one 10K-dim hypervector. Approximate-match cache

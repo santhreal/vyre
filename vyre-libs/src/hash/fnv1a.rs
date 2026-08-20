@@ -63,7 +63,7 @@ pub const fn fnv1a32_update_byte(hash: u32, byte: u8) -> u32 {
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-/// Stable op id  -  the Tier 3 wrapper registers under this id.
+/// Stable op id  -  the dialect wrapper registers under this id.
 pub const FNV1A32_OP_ID: &str = "vyre-libs::hash::fnv1a32";
 /// Stable op id for the 64-bit widening-multiply builder.
 pub const FNV1A64_OP_ID: &str = "vyre-libs::hash::fnv1a64";

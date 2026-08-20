@@ -1,4 +1,4 @@
-//! ROADMAP A29  -  strip-mine large literal loops into tiled outer and
+//! strip-mine large literal loops into tiled outer and
 //! fixed-size inner loops.
 //!
 //! Soundness: `Exact`. For an original `i in from..to`, the rewrite

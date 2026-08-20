@@ -1,4 +1,4 @@
-//! Tier 3 - Property: proptest over random liveness masks for `math::stream_compact`, driving the
+//! Property: proptest over random liveness masks for `math::stream_compact`, driving the
 //! GPU IR through `reference_eval` vs `cpu_ref`. The shipped file has only inline CPU-oracle unit
 //! tests + a program-shape test; the actual data-derived SCATTER
 //! (`compacted[offsets[i]] = payloads[i]` for live lanes, with `offsets` = exclusive prefix sum of

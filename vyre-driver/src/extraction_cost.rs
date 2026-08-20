@@ -1,6 +1,6 @@
 //! Device-profile-aware cost helpers for [`vyre_foundation::optimizer::eqsat::extract_best`].
 //!
-//! ROADMAP A7. The egraph extraction substrate (`extract_best`) accepts an
+//! The egraph extraction substrate (`extract_best`) accepts an
 //! arbitrary `Fn(&L) -> u64` cost function. Each consumer Family used to
 //! roll its own  -  passing a flat per-op cost table that ignored the
 //! current device's tensor-core throughput, hot/cold path heat, and

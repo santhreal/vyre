@@ -8,7 +8,7 @@
 //! signed-multiply fix (BACKLOG `FIXED-amg-fixed-path-unsigned-mul-negatives`) `dt·v[i]` reconstructed
 //! its product from the UNSIGNED high word, so a negative tangent component (a u32 with the top bit
 //! set, read as ~2^32) produced a garbage predictor step, sending the path the wrong way. This is
-//! not a toy: vyre's OWN megakernel-scheduler ILP (#22 self-consumer) is solved by following this
+//! not a toy: vyre's OWN megakernel-scheduler ILP is solved by following this
 //! homotopy path on GPU, so a sign bug here mis-schedules real kernels. The primitive had NO
 //! IR-execution parity coverage; this is the first faithful signed run.
 //!

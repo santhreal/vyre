@@ -1,6 +1,6 @@
-//! Transport-based fusion analysis via #34 QSVT (#34 self-consumer).
+//! Transport-based fusion analysis via QSVT.
 //!
-//! Closes the recursion thesis for #34  -  the QSVT (quantum singular
+//! Closes the recursion thesis: the QSVT (quantum singular
 //! value transform) primitives ship to user dialects (matrix
 //! function evaluation: exp, sqrt, inverse without eigendecomposition)
 //! AND power vyre's transport-based fusion analyses.

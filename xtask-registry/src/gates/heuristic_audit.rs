@@ -41,7 +41,7 @@ const CRATES: &[&str] = &[
 /// without the `//` that opens one: see [`declared_marker`] for why the
 /// distinction between a note and a doc comment is the whole rule.
 const MARKERS: &[(&str, &str)] = &[
-    // Fusion / cost heuristics → tensor_network_fusion_order (#35).
+    // Fusion / cost heuristics → tensor_network_fusion_order.
     (
         "Heuristic fusion pressure",
         "use tensor_network_fusion_order::optimal_fusion_order",
@@ -50,12 +50,12 @@ const MARKERS: &[(&str, &str)] = &[
         "HEURISTIC",
         "audit + replace with the appropriate self-consumer",
     ),
-    // Per-pass match-on-Node validators → knowledge_compile_pass_precondition (#38).
+    // Per-pass match-on-Node validators → knowledge_compile_pass_precondition.
     (
         "hand-rolled validator",
         "use knowledge_compile_pass_precondition::pass_applies",
     ),
-    // Pass-dependency hand-curation → adjustment_set_pass_dependency (#37).
+    // Pass-dependency hand-curation → adjustment_set_pass_dependency.
     (
         "pass dependency table",
         "derive via adjustment_set_pass_dependency::ordering_is_safe",
@@ -65,17 +65,17 @@ const MARKERS: &[(&str, &str)] = &[
         "host-side fixpoint",
         "use vyre_libs::fixpoint::persistent_fixpoint",
     ),
-    // LRU eviction / hit-rate heuristics → submodular_cache_eviction (#45).
+    // LRU eviction / hit-rate heuristics → submodular_cache_eviction.
     (
         "LRU eviction",
         "use submodular_cache_eviction::select_retention_set",
     ),
-    // Plain-gradient autotuner → natural_gradient_autotuner (#56).
+    // Plain-gradient autotuner → natural_gradient_autotuner.
     (
         "plain gradient autotune",
         "use natural_gradient_autotuner::autotune_step",
     ),
-    // Hand-coded cache invalidation → do_calculus_change_impact (#36).
+    // Hand-coded cache invalidation → do_calculus_change_impact.
     ("hand-coded invalidation", "use do_calculus_change_impact"),
 ];
 

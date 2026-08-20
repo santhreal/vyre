@@ -1,4 +1,4 @@
-// Tests for `fusion.rs`. Split out per audit item #85 to keep the
+// Tests for `fusion.rs`. Split out to keep the
 // parent file focused on production code.
 
 use crate::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};

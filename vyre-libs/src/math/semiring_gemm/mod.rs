@@ -8,17 +8,17 @@
 //!
 //! # Why this primitive is dual-use
 //!
-//! Same Program is consumed by user-dialect callers (Tier 3 `vyre-libs`) AND
+//! Same Program is consumed by dialect callers in this crate AND
 //! by vyre's own substrate (`vyre-foundation::transform`):
 //!
 //! | Semiring | User-dialect consumer | vyre-self consumer |
 //! |---|---|---|
 //! | `Real` (×, +) | every numeric workload | dispatch-cost matrix products |
-//! | `MinPlus` (+, min) | shortest-path graphs in `vyre-libs::security` | dependency-graph longest-path for #19 polyhedral fusion |
-//! | `MaxPlus` (+, max) | scheduling, rate analysis | critical-path of dispatch graph for #22 megakernel scheduler |
-//! | `BoolOr` (∧, ∨) | reachability in `vyre-libs::dataflow` | Region-tree reachability for #26 dataflow fixpoint |
+//! | `MinPlus` (+, min) | shortest-path graphs in `vyre-libs::security` | dependency-graph longest-path for polyhedral fusion |
+//! | `MaxPlus` (+, max) | scheduling, rate analysis | critical-path of dispatch graph for megakernel scheduler |
+//! | `BoolOr` (∧, ∨) | reachability in `vyre-libs::dataflow` | Region-tree reachability for dataflow fixpoint |
 //! | `MaxTimes` (×, max) | Viterbi/HMM forward in ML consumers | rule-conflict probability resolution |
-//! | `Provenance` | `vyre-libs::scallop_join` (#39) | rule provenance tracking in external analyzer |
+//! | `Provenance` | `vyre-libs::scallop_join` | rule provenance tracking in external analyzer |
 //! | `Gf2` (∧, ⊕) | crypto / linear-code dialects | bitset adjacency under XOR closure |
 //!
 //! Six self-consumers, six user-dialect consumers  -  clears the recursion-thesis

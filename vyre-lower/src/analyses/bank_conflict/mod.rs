@@ -1,6 +1,5 @@
 //! Shared-memory bank-conflict analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B13.
 //!
 //! Shared memory on modern GPUs is divided into N banks. Each bank can
 //! serve one read or write per cycle. When K threads in the same

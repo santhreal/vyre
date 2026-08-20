@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `predicate::node_kind_eq` IR (the
+//! Property: differential proptest driving the ACTUAL `predicate::node_kind_eq` IR (the
 //! shared u32-per-node → packed-NodeSet filter kernel) through `reference_eval` vs `cpu_ref`. The op
 //! had `reference_eval` = 0 in tests/ (its `sweep_predicate_node_kind_oracle_matrix` peer is
 //! cpu-vs-cpu).

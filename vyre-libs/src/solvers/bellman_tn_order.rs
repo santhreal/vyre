@@ -1,6 +1,6 @@
 //! Tensor-network contraction order via shortest-path on the contraction-cost graph.
 //!
-//! Extends `tensor_network_fusion_order` (#35). Instead of a greedy heuristic,
+//! Extends `tensor_network_fusion_order`. Instead of a greedy heuristic,
 //! we frame the search for the optimal contraction order of a Region chain as
 //! finding the shortest path in a state graph where:
 //! - Node = subset of contracted tensors (represented as an integer bitset or ID).

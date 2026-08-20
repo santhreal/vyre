@@ -248,7 +248,7 @@ pub struct SaturationReport {
 
 /// Adapter that gates a base [`Rule`] on a device-fact predicate.
 ///
-/// ROADMAP A9. The "should this rule fire on this hardware?" check
+/// The "should this rule fire on this hardware?" check
 /// recurs across every device-aware Rule (FP16 only on `supports_f16`,
 /// tensor-core fusion only on `supports_tensor_cores`, subgroup
 /// shuffle only on `has_subgroup_shuffle`). Without a shared adapter,

@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL CSR per-segment reduction IR of
+//! Property: differential proptest driving the ACTUAL CSR per-segment reduction IR of
 //! `reduce::segment_reduce_sum` through `reference_eval` vs `cpu_ref`.
 //!
 //! MOTIVATION — real IR gap. The shipped file's tests are all CPU-oracle self-consistency

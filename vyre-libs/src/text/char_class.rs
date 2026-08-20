@@ -1,12 +1,12 @@
-//! Tier 2.5 byte classifier  -  the canonical char-class primitive.
+//! Byte classifier  -  the canonical char-class primitive.
 //!
 //! Each invocation classifies one source byte by loading a host-supplied
 //! 256-entry lookup table from the `table` buffer. The table stays in data
 //! rather than code so alternate classifier sets can be swapped in without
 //! rebuilding the crate.
 //!
-//! Tier 3 dialects call this builder and may register wrapper ops
-//! with their own ids. This primitive keeps its own Tier 2.5 id so
+//! Dialects call this builder and may register wrapper ops
+//! with their own ids. This primitive keeps its own id so
 //! op coverage and composition audits can distinguish the reusable
 //! substrate from user-facing library wrappers.
 
@@ -78,7 +78,7 @@ pub const C_CLOSE_BRACKET: u32 = 30;
 /// Anything else.
 pub const C_OTHER: u32 = 31;
 
-/// Stable op id for the registered Tier 2.5 primitive.
+/// Stable op id for the registered primitive.
 pub const CHAR_CLASS_OP_ID: &str = "vyre-libs::text::char_class";
 /// Byte-lane workgroup used by the table-driven classifier.
 pub const CHAR_CLASS_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];

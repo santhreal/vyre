@@ -11,7 +11,7 @@ use vyre_foundation::ir::{Expr, Node, Program};
 /// Largest prime smaller than 2^16 used by Adler-32.
 pub const ADLER32_MOD: u32 = 65_521;
 
-/// Stable Tier 2.5 op id for the Adler-32 serial byte walker.
+/// Stable op id for the Adler-32 serial byte walker.
 pub const ADLER32_OP_ID: &str = "vyre-libs::hash::adler32";
 
 /// Test-only Adler-32 chunk summary used by independent witness adapters.

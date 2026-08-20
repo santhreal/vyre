@@ -20,7 +20,7 @@ pub fn canonicalise_corpus(
     let mut sorted_indices: Vec<usize> = (0..corpus.len()).collect();
     sorted_indices.sort_by(|&left, &right| corpus[left].name.cmp(&corpus[right].name));
 
-    // CRITIQUE_CONFORM_2026-04-23 H5: reject duplicate names *after*
+    // Reject duplicate names *after*
     // the stable sort so the error names one colliding entry exactly
     // once. A deterministic hash of `[dup, dup]` previously passed
     // verification while any downstream index-by-name consumer
@@ -65,7 +65,7 @@ pub fn hash_output_stream(hasher: &mut blake3::Hasher, stream: &[Vec<u8>]) {
 
 /// Lowercase hex of a 32-byte digest, the form every cert field carries.
 pub fn hex32(bytes: &[u8; 32]) -> String {
-    // CRITIQUE_CONFORM_2026-04-23 L2: previous impl `let _ = write!(&mut
+    // Previous impl `let _ = write!(&mut
     // out, ...)` silently discarded the Result. String::write_str is
     // infallible today, but swallowing the Result would mask a
     // regression if it ever changed  -  violating the 'never swallow

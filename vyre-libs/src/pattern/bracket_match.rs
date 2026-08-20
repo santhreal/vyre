@@ -1,4 +1,4 @@
-//! Tier 2.5 bracket-pair detector  -  bounded-stack scanner over a
+//! Bracket-pair detector  -  bounded-stack scanner over a
 //! token-kind buffer.
 //!
 //! The op uses a parallel per-token matcher when `max_depth >= n`, because
@@ -17,7 +17,7 @@ pub(crate) use vyre_reference::composition_witness::{
     bracket_match_witness_into as reference_bracket_match_into,
 };
 
-/// Stable op id for the Tier 2.5 primitive.
+/// Stable op id for the shared primitive.
 pub const BRACKET_MATCH_OP_ID: &str = "vyre-libs::pattern::bracket_match";
 /// Workgroup size for the uncapped parallel parser-bracket path.
 pub const BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];

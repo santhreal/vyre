@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL GPU IR of the scalar/whole-buffer
+//! Property: differential proptest driving the ACTUAL GPU IR of the scalar/whole-buffer
 //! bitset mutators — `bitset::zero`, `bitset::set_bit`, `bitset::clear_bit` — through `reference_eval`
 //! vs each op's `cpu_ref`.
 //!

@@ -1,6 +1,6 @@
 //! Exact (Edmonds) matroid intersection for megakernel fusion-grouping.
 //!
-//! Self-consumer for [#10 `matroid_intersection_full`](crate::math::matroid_intersection_full).
+//! Self-consumer for [`matroid_intersection_full`](crate::math::matroid_intersection_full).
 //!
 //! Today the megakernel scheduler uses
 //! [`vyre_foundation::optimizer::megakernel::matroid_subset::max_fusion_subset`] which is

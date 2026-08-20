@@ -16,9 +16,7 @@
 //!   → If(c, [a], [a']); b
 //! ```
 //!
-//! ## ROADMAP
-//!
-//! A32  -  tail duplication for divergent branches.
+//! Tail duplication for divergent branches.
 
 use rustc_hash::FxHashSet;
 

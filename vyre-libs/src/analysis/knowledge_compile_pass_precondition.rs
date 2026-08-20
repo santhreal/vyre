@@ -1,7 +1,6 @@
-//! Pass-precondition compilation via #38 knowledge compilation
-//! (#38 self-consumer).
+//! Pass-precondition compilation via knowledge compilation.
 //!
-//! Closes the recursion thesis for #38  -  d-DNNF compilation +
+//! Closes the recursion thesis: d-DNNF compilation +
 //! evaluation ships to user dialects (neuro-symbolic systems,
 //! probabilistic policy engines) AND compiles vyre's optimizer
 //! pass-precondition predicates into tractable evaluation circuits.

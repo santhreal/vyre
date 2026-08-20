@@ -1,4 +1,4 @@
-//! Tier 8 - Scale gate: 10M+ node graph, no OOM, no panic, completes within budget.
+//! Scale gate: 10M+ node graph, no OOM, no panic, completes within budget.
 #![cfg(feature = "graph")]
 
 use std::time::Instant;

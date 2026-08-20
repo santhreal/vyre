@@ -290,7 +290,7 @@ impl LruPipelineCache {
 
     /// Invalidate entries impacted by a change in the rule dependency graph.
     ///
-    /// This implements the #36 recursion thesis: vyre using its own
+    /// This implements the recursion thesis: vyre using its own
     /// `do_calculus` primitive to perform formal causal change-impact
     /// analysis on its own rule graph.
     pub(crate) fn invalidate_impacted(&self, impact_mask: &[u32], keys: &[[u8; 32]]) {

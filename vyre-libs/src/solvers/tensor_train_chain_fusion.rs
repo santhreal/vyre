@@ -1,4 +1,4 @@
-//! Tensor-train chain fusion analyzer (#6 substrate).
+//! Tensor-train chain fusion analyzer.
 //!
 //! Frames a sequence of Regions as a Tensor Train where:
 //! - Each Region $R_i$ is a TT-core $G_i$.

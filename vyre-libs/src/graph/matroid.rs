@@ -17,7 +17,7 @@
 //! |---|---|
 //! | `vyre-libs::opt::scheduling` | combinatorial scheduling |
 //! | `vyre-libs::opt::bipartite` | bipartite matching |
-//! | `vyre-runtime/src/resident_work_queue/planner.rs` (#22 self-consumer) | **vyre's megakernel scheduler**  -  fusion-grouping subject to memory + sync constraints IS a matroid intersection problem (graphic matroid × partition matroid) |
+//! | `vyre-runtime/src/resident_work_queue/planner.rs` | **vyre's megakernel scheduler**  -  fusion-grouping subject to memory + sync constraints IS a matroid intersection problem (graphic matroid × partition matroid) |
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 

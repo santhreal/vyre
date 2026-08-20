@@ -1,6 +1,5 @@
 //! Pipeline pre-warm hint.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B item B4.
 //!
 //! First-dispatch pipeline reflection is sync-blocking on wgpu  -  the
 //! host has to wait for the driver to compile + reflect the shader

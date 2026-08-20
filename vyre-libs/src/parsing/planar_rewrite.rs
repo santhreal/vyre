@@ -1,4 +1,4 @@
-//! 2D / planar grammar rewrite primitive (#11).
+//! 2D / planar grammar rewrite primitive.
 //!
 //! Chomsky's grammars are 1D (token streams); 2D grammars (Hu-Tian
 //! 1995, Zhu-Mumford 2007 image grammars, Wu 2017 generative shape

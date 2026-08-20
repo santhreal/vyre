@@ -1,6 +1,6 @@
-//! Polyhedral-fusion all-pairs compression via #51 FMM (#19+#51 self-consumer).
+//! Polyhedral-fusion all-pairs compression via FMM.
 //!
-//! Closes the recursion thesis for #51  -  the FMM (fast multipole)
+//! Closes the recursion thesis: the FMM (fast multipole)
 //! hierarchical-expansion primitives ship to user dialects (kernel
 //! methods at scale, computational physics, dense GP inference) AND
 //! provide vyre's polyhedral fusion analysis with the hierarchical
@@ -9,7 +9,7 @@
 //!
 //! # The self-use
 //!
-//! Vyre's #19 polyhedral fusion (already shipped at
+//! Vyre's polyhedral fusion (already shipped at
 //! `crate::scheduling::polyhedral_fusion`) computes pairwise
 //! affine-dependency adjacency over Regions: every pair (i, j) is
 //! checked for fusion eligibility. At N Regions this is N(N-1)/2

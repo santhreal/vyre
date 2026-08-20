@@ -16,7 +16,7 @@
 //! This is the architectural prototype for the universal pattern-match
 //! engine: V2 takes the pattern bank as input buffers (kind/op/literal-
 //! value templates per pattern) and runs the same kernel shape over
-//! arbitrary rewrite rules sourced from a TOML database (ROADMAP A6).
+//! arbitrary rewrite rules sourced from a TOML database.
 //! All the hardcoding below is a fixed instance of that more general
 //! kernel.
 //!

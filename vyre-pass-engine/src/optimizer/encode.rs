@@ -1,7 +1,7 @@
 //! IR-DAG → ProgramGraph encoder.
 //!
 //! Walks a `Program`'s entry tree depth-first and emits the canonical
-//! 5-buffer ProgramGraph CSR ABI used by every Tier 2.5 graph
+//! 5-buffer ProgramGraph CSR ABI used by every graph
 //! primitive. Each visited `Node` (top-level or inside any nested
 //! scope  -  `If`, `Loop`, `Block`, `Region`) gets a graph-node id in
 //! prefix-DFS order; a synthetic ROOT at index 0 fans out to every

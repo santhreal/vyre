@@ -43,7 +43,7 @@ pub(super) fn run_case(
     }
     let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
     let mut correctness = None;
-    // ROADMAP M3 cold-vs-warm separation: capture the first warmup
+    // Cold-vs-warm separation: capture the first warmup
     // sample's wall-clock and per-stage breakdown so the report can
     // attribute time to cold-start (compile / cache miss / first
     // dispatch) versus warm steady-state. Subsequent warmup runs are
@@ -208,7 +208,7 @@ pub(super) fn run_case(
             metrics.insert(name.to_string(), compute_stats(&values));
         }
     }
-    // ROADMAP M3: surface the cold (first-warmup) sample as
+    // surface the cold (first-warmup) sample as
     // synthetic-stat rows under `cold_*` keys. Stats are degenerate
     // (one sample → min == p50 == max) but they share the
     // MetricStats schema so downstream consumers (flamegraph
@@ -402,7 +402,7 @@ fn sum_metric_stats(left: &MetricStats, right: &MetricStats) -> MetricStats {
     }
 }
 
-/// ROADMAP M3 helper: produce a degenerate `MetricStats` for a single
+/// Produce a degenerate `MetricStats` for a single
 /// observation. Used to surface the cold (first-warmup) sample
 /// alongside the warm-batch stats without inventing a separate
 /// schema. min == p50 == max, samples == 1, stddev == 0.

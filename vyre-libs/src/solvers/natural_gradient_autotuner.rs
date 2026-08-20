@@ -1,6 +1,6 @@
-//! Autotuner gradient direction via #56 natural_gradient (#56 self-consumer).
+//! Autotuner gradient direction via natural_gradient.
 //!
-//! Closes the recursion thesis for #56  -  natural_gradient ships to
+//! Closes the recursion thesis: natural_gradient ships to
 //! user dialects (KFAC-trained NNs, Fisher-information-aware
 //! optimizers) AND drives vyre's autotuner past the
 //! `differentiable_autotune` baseline by using the Fisher-information

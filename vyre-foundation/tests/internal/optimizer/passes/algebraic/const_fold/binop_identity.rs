@@ -389,7 +389,7 @@ mod reflexive_comparison_and_self_identities {
         );
     }
 
-    // ──── ROADMAP A25: chained-predicate boolean simplification ─────────
+    // ──── chained-predicate boolean simplification ─────────
 
     #[test]
     fn and_x_not_x_is_false_contradiction() {
@@ -514,7 +514,7 @@ mod reflexive_comparison_and_self_identities {
         );
     }
 
-    // ──── ROADMAP A35: range-based fold identities ──────────────────────
+    // ──── range-based fold identities ──────────────────────
 
     #[test]
     fn min_with_u32_max_is_identity() {
@@ -640,7 +640,7 @@ mod boundary_and_distribution_identities {
         );
     }
 
-    // ──── ROADMAP A33: distributive expansion for const-fold feed ────
+    // ──── distributive expansion for const-fold feed ────
 
     /// `Mul(c, Add(a, k))` with both literals folds the right-side
     /// product on the next pass: `c·a + c·k` → `c·a + (c*k)`. The rule
@@ -763,7 +763,7 @@ mod boundary_and_distribution_identities {
         assert_eq!(folded, None);
     }
 
-    /// Positive: `Mul` whose right side is `Sub` distributes (ROADMAP A33).
+    /// Positive: `Mul` whose right side is `Sub` distributes.
     #[test]
     fn distributes_mul_lit_over_sub_when_one_arm_is_literal() {
         let folded = fold_expr(&Expr::BinOp {
@@ -803,7 +803,7 @@ mod boundary_and_distribution_identities {
         assert_eq!(folded, Some(expected));
     }
 
-    // ─── ROADMAP A35: stronger range fold Mod(x, N) ───────────────────
+    // ─── stronger range fold Mod(x, N) ───────────────────
 
     fn test_mod_program(c: u32, n: u32) -> crate::optimizer::PassResult {
         use crate::ir::{BufferDecl, DataType, Node, Program};

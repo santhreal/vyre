@@ -16,11 +16,10 @@
 //! `0x3a000000`, a one-ulp difference that is exactly the retained low bit of
 //! the unrounded product.
 //!
-//! Two consequences, both recorded in BACKLOG.md under the release gap #1
-//! entry:
+//! Two consequences:
 //!
 //! 1. Bitwise CPU/GPU parity for f32 is not achievable through the ordinary
-//!    lowering, no matter how the arithmetic is expressed. Closing gap #1 needs
+//!    lowering, no matter how the arithmetic is expressed. Bitwise parity needs
 //!    a strict-IEEE lowering mode that blocks contraction, not a more careful
 //!    polynomial.
 //! 2. The bounded-ULP envelope in `transcendentals_parity.rs` is not merely a

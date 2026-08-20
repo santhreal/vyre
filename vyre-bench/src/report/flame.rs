@@ -1,4 +1,4 @@
-//! ROADMAP M0  -  per-stage flame-graph emitter for the warm-batch corpus.
+//! per-stage flame-graph emitter for the warm-batch corpus.
 //!
 //! Lane: `bench_harness`. Op id:
 //! `vyre-bench::report::flame`. Soundness: read-only over a finished

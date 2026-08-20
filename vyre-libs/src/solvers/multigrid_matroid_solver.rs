@@ -1,7 +1,7 @@
-//! Sparse linear-system solver for matroid intersection via #50
-//! algebraic multigrid (#50 self-consumer).
+//! Sparse linear-system solver for matroid intersection via
+//! algebraic multigrid.
 //!
-//! Closes the recursion thesis for #50  -  Algebraic Multigrid (AMG)
+//! Closes the recursion thesis: Algebraic Multigrid (AMG)
 //! Jacobi smoothing ships to user dialects (any PDE / sparse-system
 //! workload) AND solves the inner linear systems that
 //! Chakrabarty-Lee-Sidford (2021) reduces matroid intersection to.

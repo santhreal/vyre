@@ -23,7 +23,7 @@
 //! dynamics output `F` and the projector matrix `P` (constructed from
 //! e.g. randomized SVD over slow-mode trajectories), emit the
 //! resolved-subspace forcing `P · F`. Memory-kernel evaluators compose
-//! this projection with #43 `ode_step`.
+//! this projection with `ode_step`.
 //!
 //! # Why this primitive is dual-use
 //!

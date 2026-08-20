@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL hyperdimensional-computing IR of
+//! Property: differential proptest driving the ACTUAL hyperdimensional-computing IR of
 //! `hash::hypervector_xor_bind` and `hash::hypervector_majority_bundle` through `reference_eval` vs
 //! their CPU oracles (`xor_bind_cpu`, `majority_bundle_cpu`). Both had `reference_eval` = 0.
 //!

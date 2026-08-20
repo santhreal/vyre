@@ -1,7 +1,7 @@
 //! Top-K selection: indices of the K largest elements.
 //!
 //! Category-A composition. Sequential implementation for the reference
-//! oracle; parallel bitonic top-k lands in Tier 2.
+//! oracle; parallel bitonic top-k is not built yet.
 
 use super::topk_selection::{
     copy_top_k_indices, init_top_k_slots, insert_top_k_candidate, BEST_IDXS, BEST_VALS,

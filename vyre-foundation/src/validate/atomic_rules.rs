@@ -79,7 +79,7 @@ pub(crate) fn validate_atomic(
         }
     }
     if let Some(buf) = buffers.get(buffer) {
-        // L.1.36 / audit finding #5: split the "non-writable" check so
+        // split the "non-writable" check so
         // Workgroup buffers get their own V025 code. The vyre atomic
         // memory model is defined for `ReadWrite` storage buffers;
         // Workgroup atomics require additional OOB and ordering

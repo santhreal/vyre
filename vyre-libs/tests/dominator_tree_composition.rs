@@ -21,7 +21,7 @@
 //!   predecessor list is still unreached.
 //!
 //! What it does not cover: the fixpoint's own convergence. That is
-//! `dominator_tree_pristine`'s Tier 5, which compares the whole program against
+//! `dominator_tree_pristine`'s GPU-versus-CPU oracle case, which compares the whole program against
 //! the Lengauer-Tarjan oracle.
 #![cfg(feature = "graph")]
 

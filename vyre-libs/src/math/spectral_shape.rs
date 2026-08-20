@@ -1,4 +1,4 @@
-//! RMT-based deterministic spectrum projection primitive (#17).
+//! RMT-based deterministic spectrum projection primitive.
 //!
 //! Random matrix theory predicts the bulk spectrum of large random
 //! matrices (Marchenko-Pastur, Wigner). Recent work (Pennington 2017,
@@ -8,7 +8,7 @@
 //! eigenvalue/singular-value distribution of a matrix, clip values
 //! outside the predicted bulk to the bulk-edge.
 //!
-//! Composes with #5 chebyshev_filter for the spectrum projection
+//! Composes with chebyshev_filter for the spectrum projection
 //! without computing the eigendecomposition.
 //!
 //! # Why this primitive is dual-use

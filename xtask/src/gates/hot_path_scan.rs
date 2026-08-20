@@ -1,4 +1,4 @@
-//! `cargo xtask hot-path-scan`  -  ROADMAP S11 enforcement.
+//! `cargo xtask hot-path-scan`  -  hot-path enforcement.
 //!
 //! Reads `docs/optimization/HOT_PATHS.toml` and scans every listed file
 //! for allocation, clone, lock, sleep, panic, and string-construction patterns that

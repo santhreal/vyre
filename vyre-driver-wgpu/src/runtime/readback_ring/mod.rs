@@ -1,4 +1,4 @@
-//! Async readback ring (Innovation I.5).
+//! Async readback ring.
 //!
 //! Blocking readback submits a copy + device.poll(Wait) that stalls
 //! the submit queue. Under high dispatch rate this ruins latency and

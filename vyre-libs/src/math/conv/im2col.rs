@@ -8,7 +8,7 @@
 //! primitive carry the convolution work  -  at the cost of `H*W*9 - H*W`
 //! extra F32 of memory for the patch matrix.
 //!
-//! Decision wrapper (im2col-vs-direct, ROADMAP H3): use im2col when
+//! Decision wrapper, im2col versus direct: use im2col when
 //! `H*W` is large enough that the matmul tile / vectorisation win
 //! exceeds the patch-matrix memory cost, and direct conv otherwise.
 //! The decision substrate lives beside this primitive once the

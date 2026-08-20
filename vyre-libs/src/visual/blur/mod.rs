@@ -9,7 +9,7 @@
 //! For initial simplicity, we inline the convolution directly (pure IR)
 //! and compose the conv1d primitive's node as the inner kernel.
 //!
-//! Category A composition  -  composes Tier 2.5 `math::conv1d`.
+//! Category A composition  -  composes `math::conv1d`.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
 

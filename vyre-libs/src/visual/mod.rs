@@ -1,15 +1,14 @@
-//! Tier 3 visual compute compositions.
+//! Visual compute compositions.
 //!
-//! GPU-accelerated image processing ops for the Molten visual effects
-//! engine. Each sub-module exposes one reusable composition built from
-//! Tier 2.5 primitives (`math::conv1d`) and Tier 1 IR expressions
-//! (bitwise pack/unpack, lerp, select).
+//! GPU image-processing operations. Each sub-module exposes one reusable
+//! composition built from `math::conv1d` and bare IR expressions (bitwise
+//! pack/unpack, lerp, select).
 //!
 //! All compositions operate on RGBA u8 pixel buffers packed as `u32`
 //! (one pixel per u32 word, little-endian RGBA: bits `[7:0]` = R,
 //! `[15:8]` = G, `[23:16]` = B, `[31:24]` = A).
 //!
-//! # Discovery checklist (LEGO-BLOCK-RULE compliance)
+//! # Discovery checklist (docs/lego-block-rule.md)
 //!
 //! - `blur`  -  composes `math::conv1d` (horizontal + vertical weight tables)
 //! - `shadow`  -  private SDF helper (single caller, stays inline)

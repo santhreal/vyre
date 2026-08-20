@@ -1,4 +1,4 @@
-//! Tier 3 - Property: proptest over random brace-token sequences for `matching::bracket_match`,
+//! Property: proptest over random brace-token sequences for `matching::bracket_match`,
 //! driving the ACTUAL GPU IR through `reference_eval` vs `reference_bracket_match`. The shipped file value-checks
 //! only the reference oracle's self-consistency (`generated_uncapped_cases_match_stack_reference_contract`
 //! asserts pair symmetry, NOT the IR) plus a SINGLE balanced inventory fixture — so neither GPU IR

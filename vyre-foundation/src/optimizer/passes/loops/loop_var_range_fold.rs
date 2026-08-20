@@ -1,4 +1,4 @@
-//! ROADMAP A16  -  range facts into cast / branch / bounds-check elision.
+//! range facts into cast / branch / bounds-check elision.
 //!
 //! Loop-induction range slice shipped here. Inside `Loop(i,
 //! LitU32(lo), LitU32(hi), body)`, the loop variable `i` has the

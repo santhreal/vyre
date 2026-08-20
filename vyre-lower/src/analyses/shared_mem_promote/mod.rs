@@ -1,6 +1,5 @@
 //! Shared-memory promotion analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B12.
 //!
 //! Workgroup-shared memory is roughly 100x faster than global memory on
 //! modern GPUs. When the same data is read multiple times by threads in

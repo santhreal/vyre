@@ -1,12 +1,12 @@
-//! P0 inventory #16–#23 (Phase 1 wave 1.2)  -  pipeline cache observability and
+//! Pipeline cache observability and
 //! bounded growth via the public `WgpuBackend` API.
 //!
 //! In-memory eviction semantics with a microscopic cap are exercised in
 //! `vyre-driver-wgpu` crate tests (`pipeline_cache_eviction_respects_entry_cap`).
 //! Disk poisoning contracts live next to `pipeline_disk_cache` (wave 1.2
 //! `disk_cache_adversarial_*` tests). Byte-budget enforcement for GPU buffer
-//! tiers remains covered by the tiered-cache / buffer-pool unit tests (P0 #17
-//! implementation still pending for pipeline artifacts specifically).
+//! tiers remains covered by the tiered-cache / buffer-pool unit tests;
+//! pipeline artifacts have no byte budget of their own yet.
 #![allow(missing_docs)]
 
 mod harness;

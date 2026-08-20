@@ -1,6 +1,6 @@
 //! Tier-B TOML rule database for the egraph saturation engine.
 //!
-//! ROADMAP A6. The Rust-coded `Family::rules` pattern in
+//! The Rust-coded `Family::rules` pattern in
 //! [`crate::optimizer::eqsat`] keeps every rewrite in source code,
 //! which means new equivalences need a recompile. The Tier-B contract
 //! says community-contributable rule families should live in TOML so

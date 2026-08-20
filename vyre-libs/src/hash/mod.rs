@@ -40,7 +40,7 @@ pub mod sketch;
 /// 32-bit prime variant; 64-bit Goldilocks ships with U64 buffers.
 pub mod ntt;
 
-/// Hassanieh-Indyk-Katabi-Price sparse FFT bin-hash primitive (#49).
+/// Hassanieh-Indyk-Katabi-Price sparse FFT bin-hash primitive.
 /// Sparse audio, radio, and imaging analysis composition block.
 pub mod sparse_fft;
 

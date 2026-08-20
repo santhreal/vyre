@@ -1,8 +1,8 @@
-//! Probabilistic dispatch cost model via #10 sum_product_circuit (#28).
+//! Probabilistic dispatch cost model via sum_product_circuit.
 //!
 //! Models per-Program runtime as a probabilistic circuit. Calibrated
-//! intervals come from #41 conformal prediction over historical
-//! latency samples. Output feeds #22 megakernel scheduler as soft
+//! intervals come from conformal prediction over historical
+//! latency samples. Output feeds megakernel scheduler as soft
 //! constraints.
 
 use crate::dispatch_buffers::{

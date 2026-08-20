@@ -212,8 +212,8 @@ fn loop_shadowing_preserves_live_outer_binding() {
 
 #[test]
 fn test_async_load_offset_keeps_let_alive() {
-    // Reproducer for the vfs::resolve cat_a_gpu_differential panic on
-    // 2026-05-02: AsyncLoad's `offset` Expr was not walked for live
+    // Reproducer for the vfs::resolve cat_a_gpu_differential panic:
+    // AsyncLoad's `offset` Expr was not walked for live
     // refs, so the upstream `Let("file_hash", ...)` was eliminated as
     // dead, leaving the AsyncLoad referencing an unbound name during
     // backend lowering.
@@ -310,11 +310,11 @@ fn test_trap_address_keeps_let_alive() {
     assert!(matches!(&result.nodes[0], Node::Let { name, .. } if name == "trap_addr"));
 }
 
-// ──── ROADMAP A21: dead-load elimination ────────────────────
+// ──── dead-load elimination ────────────────────
 
 #[test]
 fn dead_let_bound_to_load_is_eliminated() {
-    // ROADMAP A21: a `Let` whose value is `Expr::Load { buffer, lit }`
+    // a `Let` whose value is `Expr::Load { buffer, lit }`
     // and whose name is never read must be dropped by DCE. The Load
     // is treated as effect-free at the IR level (the buffer's contents
     // do not change between binding and use within the same dispatch

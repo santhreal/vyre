@@ -1,6 +1,6 @@
-//! IR rewrite-batch scheduler via #11 planar_rewrite (#11 self-consumer).
+//! IR rewrite-batch scheduler via planar_rewrite.
 //!
-//! Closes the recursion thesis for #11  -  planar grammar rewriting
+//! Closes the recursion thesis: planar grammar rewriting
 //! ships to user dialects (visual-programming languages, 2D
 //! pattern-matching languages) AND schedules vyre's own batch IR
 //! rewrites for non-conflicting parallel application.

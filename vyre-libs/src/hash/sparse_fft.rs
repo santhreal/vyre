@@ -16,7 +16,7 @@
 //! This file ships the **bin hashing** primitive  -  given a signal and
 //! a permutation/filter pair, hash each frequency into one of B bins
 //! and accumulate. Subsequent steps (subsampled FFT, voting) compose
-//! from existing #4 NTT or future small-FFT primitives.
+//! from existing NTT or future small-FFT primitives.
 //!
 //! # Why this primitive is dual-use
 //!

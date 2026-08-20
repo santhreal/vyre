@@ -1,4 +1,4 @@
-//! Megakernel auto-scheduler via #9 homotopy continuation (#22).
+//! Megakernel auto-scheduler via homotopy continuation.
 //!
 //! The dispatch-graph fusion-grouping problem is a 0/1 ILP. This substrate
 //! exposes the continuous relaxation used before the discrete matroid

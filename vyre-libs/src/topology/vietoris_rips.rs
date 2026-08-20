@@ -1,4 +1,4 @@
-//! Vietoris-Rips filtration boundary primitive (#15).
+//! Vietoris-Rips filtration boundary primitive.
 //!
 //! Persistent homology computes topological features (connected
 //! components, loops, voids) of point clouds across multiple scales.
@@ -12,7 +12,7 @@
 //! sorted list of edges (pairs of vertices) whose distance ≤ ε. Edges
 //! are encoded as `u32` packed `(u_vertex << 16) | v_vertex`.
 //!
-//! Composes with #1 semiring_gemm (boundary matrix products = MinPlus
+//! Composes with semiring_gemm (boundary matrix products = MinPlus
 //! semiring on the edge incidence matrix) for the chunk-reduction
 //! step that extracts persistence pairs.
 //!

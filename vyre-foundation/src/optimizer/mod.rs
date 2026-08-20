@@ -54,7 +54,7 @@ pub mod diff_compile;
 pub mod effect_lattice;
 pub mod fact_cache;
 pub(crate) mod fusion_cert;
-/// Program-level shape-facts analysis (audit P0 #38). Derives one
+/// Program-level shape-facts analysis. Derives one
 /// `BufferShapeFacts` per `BufferDecl`; downstream passes consume the
 /// derived map instead of recomputing buffer sizes ad hoc.
 pub mod program_shape_facts;
@@ -76,7 +76,7 @@ pub mod eqsat;
 /// `apply_equivalences` to the CPU EGraph.
 pub mod eqsat_gpu;
 /// Tier-B TOML rule database  -  load equivalence rules from
-/// community-contributable `*.toml` files (ROADMAP A6).
+/// community-contributable `*.toml` files.
 pub mod eqsat_toml;
 /// Hash-consed Expr arena. Side-table substrate that
 /// collapses structurally-equal `Expr` subtrees into shared 32-bit
@@ -937,7 +937,7 @@ pub fn optimize_with_hot_path_hints(
 }
 
 /// 32-byte BLAKE3 fingerprint of a Program for content-addressed pipeline
-/// caches (audit P0 #26). Two semantically-equal Programs that differ only
+/// caches. Two semantically-equal Programs that differ only
 /// in author-visible buffer declaration order share this fingerprint, so
 /// AOT-emitted artifacts and runtime-cache blobs key into the same bucket.
 ///

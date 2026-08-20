@@ -74,7 +74,7 @@ pub enum BundleCertError {
     UnsetField(&'static str),
     /// Two witnesses in the corpus share the same name.
     ///
-    /// CRITIQUE_CONFORM_2026-04-23 H5: duplicate witness names hash
+    /// 2026-04-23 H5: duplicate witness names hash
     /// deterministically (the canonicalisation sort is stable), so
     /// the cert verifies, but any downstream display or cache that
     /// indexes by name silently overwrites one entry with the other.
@@ -90,7 +90,7 @@ pub enum BundleCertError {
     /// Cert-declared witness count doesn't match the corpus it
     /// was built against.
     ///
-    /// CRITIQUE_CONFORM_2026-04-23 L1: `witness_count` was stored
+    /// 2026-04-23 L1: `witness_count` was stored
     /// but never validated on verify. A tampered cert could claim
     /// a misleading count without affecting the hash chain. Now
     /// verify rejects the mismatch with both values named.

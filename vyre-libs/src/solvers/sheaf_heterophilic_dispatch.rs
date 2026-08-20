@@ -1,6 +1,6 @@
-//! Heterophilic dispatch-graph analysis via #31 sheaf diffusion (#31 self-consumer).
+//! Heterophilic dispatch-graph analysis via sheaf diffusion.
 //!
-//! Closes the recursion thesis for #31  -  sheaf neural networks
+//! Closes the recursion thesis: sheaf neural networks
 //! ship to user dialects (heterophilic graph learning, social
 //! networks, code call graphs) AND directly model vyre's own
 //! dispatch graph, where compute-bound, memory-bound, and

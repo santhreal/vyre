@@ -140,7 +140,7 @@ pub struct BenchMetrics {
     pub wire_bytes: Option<u64>,
     pub gpu_counter: Vec<GpuCounter>,
     pub custom: Vec<MetricPoint>,
-    /// ROADMAP M3: cold-vs-warm separation. Wall-clock (ns) of the
+    /// cold-vs-warm separation. Wall-clock (ns) of the
     /// first warmup sample for this case, captured before any pipeline
     /// cache hits, before any naga module cache hits, and before the
     /// GPU adapter has memoised the kernel. Compare against `wall_ns`
@@ -159,7 +159,7 @@ pub struct BenchMetrics {
 }
 
 impl BenchMetrics {
-    /// ROADMAP M4  -  CPU-side achieved memory bandwidth probe.
+    /// CPU-side achieved memory bandwidth probe.
     ///
     /// Returns `bytes_touched / wall_ns * 1e9 / 1e9` (= `bytes_touched / wall_ns`)
     /// in GB/s when both `bytes_touched` and `wall_ns` are present and

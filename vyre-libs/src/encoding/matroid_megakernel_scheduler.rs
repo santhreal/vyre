@@ -1,6 +1,6 @@
-//! Megakernel fusion-grouping via #46 matroid intersection (#22 self-consumer).
+//! Megakernel fusion-grouping via matroid intersection.
 //!
-//! Closes the recursion thesis for #46  -  `matroid_exchange_bfs_step` ships
+//! Closes the recursion thesis: `matroid_exchange_bfs_step` ships
 //! to user dialects (combinatorial scheduling, bipartite matching) AND
 //! powers vyre's megakernel scheduler.
 //!
@@ -25,9 +25,9 @@
 //! Maximum-fusion = max independent set in the intersection of these
 //! two matroids. Edmonds' (1970) augmenting-path algorithm is the
 //! canonical solver; each iteration is one BFS over the exchange
-//! graph, which we run via #46 `matroid_exchange_bfs_step`.
+//! graph, which we run via `matroid_exchange_bfs_step`.
 //!
-//! # Why this complements `megakernel_schedule` (#22)
+//! # Why this complements `megakernel_schedule`
 //!
 //! The existing `megakernel_schedule` ships the homotopy-relaxation
 //! continuous solver. That gives a smooth fractional answer in

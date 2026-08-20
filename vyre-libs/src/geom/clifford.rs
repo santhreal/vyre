@@ -19,7 +19,7 @@
 //!
 //! | Consumer | Use |
 //! |---|---|
-//! | future `vyre-libs::geom::equivariant` | equivariant-by-construction NNs (#33 TFN) |
+//! | future `vyre-libs::geom::equivariant` | equivariant-by-construction NNs (TFN) |
 //! | future `vyre-libs::sim::physics` | rigid-body dynamics, conformal geometry |
 //! | future `vyre-libs::vision::3d` | 3D rotations, dual-quaternion poses |
 //! | future `vyre-libs::robotics` | screw motions, twists, wrenches |

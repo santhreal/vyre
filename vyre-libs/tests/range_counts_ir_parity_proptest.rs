@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `reduce::range_counts_u32` IR through
+//! Property: differential proptest driving the ACTUAL `reduce::range_counts_u32` IR through
 //! `reference_eval` vs `cpu_ref`. `grep reference_eval` = 0 in the shipped inline tests; the GPU IR
 //! (a `loop_for` summing `histogram[start..end]` with the bounds baked in as COMPILE-TIME constants)
 //! is validated only by the single inventory fixture.

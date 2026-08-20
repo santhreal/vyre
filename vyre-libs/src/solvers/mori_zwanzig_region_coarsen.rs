@@ -1,6 +1,6 @@
-//! Region-tree coarse-graining via #58 Mori-Zwanzig projection (#58 self-consumer).
+//! Region-tree coarse-graining via Mori-Zwanzig projection.
 //!
-//! Closes the recursion thesis for #58  -  `mz_project_step` ships to
+//! Closes the recursion thesis: `mz_project_step` ships to
 //! user dialects (climate modeling, scientific ML model reduction)
 //! AND derives vyre's coarse-grained dispatch view of its own Region
 //! tree.
@@ -14,8 +14,8 @@
 //! detail. Mori-Zwanzig (1965) gives an EXACT reduction with a
 //! memory kernel that captures whatever the projection drops.
 //!
-//! Concretely: cluster Regions into K macro-nodes via #2 sinkhorn
-//! divergence (the substrate clustering primitive #31 ships).
+//! Concretely: cluster Regions into K macro-nodes via sinkhorn
+//! divergence (the substrate clustering primitive ships).
 //! Construct a projection matrix P that averages within each cluster.
 //! Mori-Zwanzig's projection step yields the coarse dispatch
 //! dynamics; the memory kernel encodes how within-cluster detail
@@ -40,10 +40,10 @@
 //! # Why this matters at scale
 //!
 //! At 1M Regions, naive full-resolution analysis is O(N²) memory in
-//! the worst case (#19 polyhedral fusion considers all pairs).
+//! the worst case (polyhedral fusion considers all pairs).
 //! Mori-Zwanzig coarsening to K macro-nodes drops that to O(K²) at
 //! the cost of an exactly-quantified projection error  -  the memory
-//! kernel. Combined with #51 FMM hierarchical compression on the
+//! kernel. Combined with FMM hierarchical compression on the
 //! coarse system, full workspace analysis stays tractable.
 
 use crate::dispatch_buffers::{

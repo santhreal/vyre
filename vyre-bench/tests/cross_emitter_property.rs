@@ -12,7 +12,7 @@
 //! When the generator surfaces a real bug in an emitter, the test
 //! fails with a printable seed so the bug is reproducible.
 //!
-//! Source: ROADMAP T090.
+//! Source:
 
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::{

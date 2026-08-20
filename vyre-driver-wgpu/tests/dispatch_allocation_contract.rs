@@ -1,4 +1,4 @@
-//! P0 inventory #10  -  allocation-count contracts for steady-state GPU dispatch.
+//! Allocation-count contracts for steady-state GPU dispatch.
 //!
 //! After caches are warm, CPU-side heap traffic must stay bounded. Budgets are
 //! documented here; tighten them as zero-copy and caller-owned output buffers
@@ -35,7 +35,7 @@ fn allocation_contract_guard() -> MutexGuard<'static, ()> {
 
 /// Build a Program with `inputs` separate read buffers and one output. The
 /// summed program exceeds the dispatch-local `SmallVec` inline cap of 8 used
-/// by `clear_requests`, exercising the spill path covered by audit P0 #9.
+/// by `clear_requests`, exercising the spill path.
 fn many_input_sum_program(inputs: u32, words: u32) -> Program {
     let mut bindings: Vec<BufferDecl> = (0..inputs)
         .map(|i| BufferDecl::read(&format!("input_{i}"), i, DataType::U32).with_count(words))
@@ -75,7 +75,7 @@ fn budget_borrowed_hot() -> (usize, usize) {
 
 /// Wide-program ratchet: a Program whose buffer count exceeds the dispatch
 /// `SmallVec` inline cap (8 for `clear_requests`) must stay within this budget
-/// after warm-up. Inventory P0 #9  -  per-thread scratch arenas eliminate the
+/// after warm-up. Per-thread scratch arenas eliminate the
 /// per-dispatch heap allocations that the spill path used to pay.
 fn budget_borrowed_wide_hot() -> (usize, usize) {
     (4096, 6 * 1024 * 1024)
@@ -130,7 +130,7 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
     let backend = live_backend();
     // 12 inputs > clear_requests inline cap (8): the dispatch hot path's
     // SmallVec spill must come from per-thread scratch capacity, not a fresh
-    // heap allocation per dispatch. Audit P0 #9.
+    // heap allocation per dispatch.
     let inputs_count: u32 = 12;
     let words: u32 = 256;
     let program = many_input_sum_program(inputs_count, words);

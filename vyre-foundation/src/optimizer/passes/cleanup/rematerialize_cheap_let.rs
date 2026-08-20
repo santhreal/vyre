@@ -44,9 +44,9 @@
 //! whose name appears as the target of a `Node::Assign` anywhere in
 //! the sibling/descendant sequence the pass is currently rewriting.
 //!
-//! ## ROADMAP
+//! ## Scope
 //!
-//! A14  -  live-range and register-pressure model with rematerialization.
+//! The live-range and register-pressure model with rematerialization.
 //! `register_pressure_estimate` already exists at the
 //! `ProgramStats`/`OptimizationCost` layer; this pass is the
 //! rewrite-side companion that drops the easiest contributors to that

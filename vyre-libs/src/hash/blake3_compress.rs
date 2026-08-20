@@ -15,7 +15,7 @@
 //! 7-round permutation in-place on 16 local state words. Parallel
 //! tree hashing composes this compression primitive over chunk states.
 //!
-//! Migration 3 moved this op from `vyre-libs::crypto::blake3_compress`
+//! The canonical path is `vyre-libs::hash::blake3_compress`
 //! to `vyre-libs::hash::blake3_compress`.
 
 use crate::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
@@ -120,7 +120,7 @@ pub fn blake3_compress(
         ));
     }
 
-    // -- 7 rounds. Each round is a composed Tier 2.5 primitive. -----
+    // -- 7 rounds. Each round is a registered child region. -----
     for (round_idx, perm) in MSG_SCHEDULE.iter().enumerate() {
         body.push(wrap_child_region(
             BLAKE3_ROUND_OP_ID,

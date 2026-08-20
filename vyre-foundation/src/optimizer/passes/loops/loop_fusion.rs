@@ -1,4 +1,4 @@
-//! ROADMAP A26  -  fuse adjacent `Node::Loop` siblings whose bounds
+//! fuse adjacent `Node::Loop` siblings whose bounds
 //! match and whose bodies touch disjoint buffer sets.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::loop_fusion`.

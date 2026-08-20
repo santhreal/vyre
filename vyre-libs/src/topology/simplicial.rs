@@ -1,4 +1,4 @@
-//! Simplicial neural network message-passing primitive (#32).
+//! Simplicial neural network message-passing primitive.
 //!
 //! Simplicial NNs (Bodnar-Frasca 2021, Yang-Sala 2023) generalize GNNs
 //! from edges to higher-order simplices (triangles, tetrahedra). The

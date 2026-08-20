@@ -1,4 +1,4 @@
-//! ROADMAP A31  -  software pipelining.
+//! software pipelining.
 //!
 //! 2-stage Load-then-Store narrow slice shipped here. Detect the
 //! tight pattern:

@@ -1,4 +1,4 @@
-//! Rule-graph change-impact as a Pearl do-calculus query (#36 substrate).
+//! Rule-graph change-impact as a Pearl do-calculus query.
 //!
 //! Frames vyre's cache-invalidation as a `do(rule_X)` query on the
 //! dependency graph. When rule `X` changes, `do(X)` on the graph

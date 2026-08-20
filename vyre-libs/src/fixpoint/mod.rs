@@ -1,4 +1,4 @@
-//! Parked composition (belongs in vyre-libs): fixpoint primitives  -  driver-free convergence loops for
+//! Fixpoint primitives  -  driver-free convergence loops for
 //! bitset transfer functions.
 //!
 //! The vision's taint/flow semantics all reduce to "iterate a

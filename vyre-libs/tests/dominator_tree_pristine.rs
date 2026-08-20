@@ -1,11 +1,11 @@
 //! Dominator-tree 10-tier pristine pipeline - tiers 1, 2, 4, 5, 6, 9.
 //!
-//! Tier 1 : Positive truth   → 10+ hand-built CFG fixtures vs LT reference.
-//! Tier 2 : Negative precision → empty / single / disconnected degenerates.
-//! Tier 4 : Cross-primitive  → csr_forward / csr_backward / dominator_frontier.
-//! Tier 5 : GPU vs CPU oracle → reference_eval parity on random graphs.
-//! Tier 6 : Edge cases       → irreducible loops, self-loops, cycles, multi-entry.
-//! Tier 9 : Differential     → LT vs CHK vs external algorithm path.
+//! Positive truth   → 10+ hand-built CFG fixtures vs LT reference.
+//! Negative precision → empty / single / disconnected degenerates.
+//! Cross-primitive  → csr_forward / csr_backward / dominator_frontier.
+//! GPU vs CPU oracle → reference_eval parity on random graphs.
+//! Edge cases       → irreducible loops, self-loops, cycles, multi-entry.
+//! Differential     → LT vs CHK vs external algorithm path.
 #![cfg(feature = "graph")]
 
 mod gate_fixtures;
@@ -20,7 +20,7 @@ use vyre_reference::composition_witness::{
 };
 
 // ------------------------------------------------------------------
-// Tier 1 - Positive truth: 10+ canonical CFG fixtures
+// Positive truth: 10+ canonical CFG fixtures
 // ------------------------------------------------------------------
 
 #[test]
@@ -157,7 +157,7 @@ fn t1_deep_chain() {
 }
 
 // ------------------------------------------------------------------
-// Tier 2 - Negative precision: degenerate behaviour
+// Negative precision: degenerate behaviour
 // ------------------------------------------------------------------
 
 #[test]
@@ -203,7 +203,7 @@ fn t2_self_loop_single_node() {
 }
 
 // ------------------------------------------------------------------
-// Tier 4 - Cross-primitive: data flow with csr_forward / backward / df
+// Cross-primitive: data flow with csr_forward / backward / df
 // ------------------------------------------------------------------
 
 #[test]
@@ -266,7 +266,7 @@ fn t4_idom_tree_to_forward_csr_roundtrip() {
 }
 
 // ------------------------------------------------------------------
-// Tier 5 - GPU vs CPU oracle: reference_eval parity
+// GPU vs CPU oracle: reference_eval parity
 // ------------------------------------------------------------------
 
 fn gpu_idoms_via_reference(
@@ -370,7 +370,7 @@ fn t5_gpu_parity_irreducible() {
 }
 
 // ------------------------------------------------------------------
-// Tier 6 - Edge cases: irreducible, multi-entry, self-loops, cycles
+// Edge cases: irreducible, multi-entry, self-loops, cycles
 // ------------------------------------------------------------------
 
 #[test]
@@ -429,7 +429,7 @@ fn t6_complete_graph_three_nodes() {
 }
 
 // ------------------------------------------------------------------
-// Tier 9 - Differential: LT vs CHK (external algorithm path)
+// Differential: LT vs CHK (external algorithm path)
 // ------------------------------------------------------------------
 
 type DominatorFixture = (u32, u32, Vec<(u32, u32)>);

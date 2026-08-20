@@ -24,7 +24,7 @@
 //! index stores are kept conservatively. The pass walks recursively
 //! through `If`/`Loop`/`Block`/`Region` containers but only fires on
 //! sibling sequences inside one container; cross-container DSE is left
-//! to a stronger reaching-store analysis (ROADMAP A22 store-to-load
+//! to a stronger reaching-store analysis (store-to-load
 //! forwarding will produce the alias proof needed for that).
 //!
 //! Catches:

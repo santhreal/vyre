@@ -1,12 +1,12 @@
-//! Polyhedral / affine fusion via #1 semiring_gemm on the affine
-//! dependency adjacency (#19 substrate).
+//! Polyhedral / affine fusion via semiring_gemm on the affine
+//! dependency adjacency.
 //!
 //! Treat affine-loop dependencies between Region children as a
 //! sparse boolean matrix; closure under `Semiring::BoolOr` reveals
 //! transitive dependencies. Fusion candidates = pairs (i, j) where
 //! NEITHER reaches the other transitively (independent, fusable).
 //!
-//! Composes #26 reachability_closure for the transitive-closure step.
+//! Composes reachability_closure for the transitive-closure step.
 
 use vyre_foundation::pass_substrate::polyhedral_fusion as foundation_polyhedral;
 

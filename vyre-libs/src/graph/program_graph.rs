@@ -1,5 +1,5 @@
 //! Canonical ProgramGraph ABI  -  the 5-buffer CSR bundle every graph
-//! primitive in Tier 2.5 consumes.
+//! primitive consumes.
 //!
 //! Downstream analyzers emit a `ProgramGraph` from their native ASTs. Every
 //! vyre graph primitive takes exactly this buffer shape so a new

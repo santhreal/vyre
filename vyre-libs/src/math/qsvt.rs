@@ -1,5 +1,5 @@
 //! Quantum singular value transform (classical)  -  block-encoded matrix
-//! function via Chebyshev polynomial of singular values (#34).
+//! function via Chebyshev polynomial of singular values.
 //!
 //! QSVT (Gilyen-Su-Low-Wiebe 2018) gives a unified framework for
 //! matrix functions: inverse, sqrt, exp, all without eigendecomposition.
@@ -11,13 +11,13 @@
 //! ```
 //!
 //! where `T_k` are Chebyshev polynomials of the first kind. Composes
-//! with #5 chebyshev_filter (already on graph Laplacians)  -  same
+//! with chebyshev_filter (already on graph Laplacians)  -  same
 //! recurrence, applied here to a generic matrix.
 //!
 //! This file ships the **block-encoding scaling step** primitive  -
 //! given matrix `A` and Frobenius norm `||A||`, produce the scaled
 //! `A / ||A||` whose singular values lie in `[0, 1]`. Caller composes
-//! with #5 chebyshev_filter and a coefficient buffer to evaluate
+//! with chebyshev_filter and a coefficient buffer to evaluate
 //! `f(A) · v` for any analytic `f`.
 //!
 //! # Why this primitive is dual-use

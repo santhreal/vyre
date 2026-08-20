@@ -12,7 +12,7 @@ use crate::ir::Ident;
 
 /// One row per `Node::Region` observed during the build walk  -
 /// the diagnostic / source-correlation metadata that the
-/// `Region` enum variant inlines. ROADMAP A3  -  passes that don't
+/// `Region` enum variant inlines. passes that don't
 /// care about source provenance can ignore this column entirely;
 /// passes that do care (diagnostics, region-inlining, region
 /// identity tracking) iterate the column once.
@@ -235,7 +235,7 @@ impl ProgramFacts {
 
     /// Every `Node::Region` observed during the build walk, with
     /// its diagnostic `generator` ident and optional `source_region`
-    /// ref. ROADMAP A3  -  the side-table half of "treat Region /
+    /// ref. the side-table half of "treat Region /
     /// source metadata as side tables during optimization, restore
     /// for diagnostics."
     #[must_use]
@@ -293,7 +293,7 @@ impl ProgramFacts {
         self.loop_vars.iter().any(|(_, var)| var.as_str() == name)
     }
 
-    /// ROADMAP A12  -  points-to fact: `true` iff `buf_a` and `buf_b`
+    /// points-to fact: `true` iff `buf_a` and `buf_b`
     /// can be proven to refer to disjoint memory.
     ///
     /// Soundness: in vyre's IR every `BufferDecl` is a distinct
@@ -318,7 +318,7 @@ impl ProgramFacts {
         a_seen && b_seen
     }
 
-    /// ROADMAP A13  -  escape fact: `true` iff `name`'s contents are
+    /// escape fact: `true` iff `name`'s contents are
     /// observable outside this kernel's execution.
     ///
     /// A buffer escapes the kernel scope when it appears as:

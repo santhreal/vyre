@@ -1,6 +1,5 @@
 //! PERF B10: constant-buffer promotion candidate detection.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B item B10.
 //!
 //! Small read-only data accessed many times across a workgroup
 //! benefits from being promoted from a Storage/SSBO buffer to a

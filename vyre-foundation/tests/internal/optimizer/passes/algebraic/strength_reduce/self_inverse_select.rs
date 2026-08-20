@@ -138,4 +138,4 @@ fn select_with_distinct_arms_does_not_collapse() {
     );
 }
 
-// ── Task 4 / ROADMAP G2: reciprocal constant-fold ────────────────
+// ── reciprocal constant-fold ────────────────

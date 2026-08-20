@@ -1,4 +1,4 @@
-//! ROADMAP A30  -  polyhedral loop-bound normalization.
+//! polyhedral loop-bound normalization.
 //!
 //! Shipped variant: lower-bound normalization. Every literal-bounded
 //! `Loop(i, lo, hi, body)` with `lo > 0` and `hi >= lo` rewrites to

@@ -6,7 +6,6 @@
 //! When the snapshot legitimately changes (new analysis, descriptor
 //! redesign, etc.), update the asserted constants in this file.
 //!
-//! Source: AGENT_PLAN_2026-05-01.md A12 / ROADMAP T052.
 
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::analyses::vec_pack;

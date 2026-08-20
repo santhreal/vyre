@@ -44,7 +44,7 @@ pub(super) fn mul_operands(expr: &Expr) -> Option<(&Expr, &Expr)> {
 }
 
 /// True iff `expr` is an integer literal (u32 or i32). Used by the
-/// distributive expansion rule (ROADMAP A33) to gate the rewrite so
+/// distributive expansion rule to gate the rewrite so
 /// it only fires when one of the new sub-multiplications will fold
 /// in the next const-fold pass.
 fn lit_int(expr: &Expr) -> Option<()> {
@@ -356,7 +356,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                 }
             }
 
-            // ─── Distributive expansion (ROADMAP A33) ────────────
+            // ─── Distributive expansion ────────────
             // Mul(c, Add(a, b)) → Add(Mul(c, a), Mul(c, b)) when `c` is
             // a literal and at least one of `a`/`b` is also a literal.
             // The "at least one literal sibling" guard guarantees at
@@ -401,7 +401,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
                 }
             }
 
-            // ─── Sign-preserving distributive expansion for subtraction (ROADMAP A33) ───
+            // ─── Sign-preserving distributive expansion for subtraction ───
             if let (
                 Some(()),
                 Expr::BinOp {
@@ -601,7 +601,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::Min if left == right => Some(left.clone()),
         BinOp::Max if left == right => Some(left.clone()),
 
-        // ─── ROADMAP A35: range-based fold identities ────────
+        // ─── range-based fold identities ────────
         // For unsigned u32, every value lies in [0, u32::MAX], so:
         //   min(x, u32::MAX) → x  /  min(u32::MAX, x) → x
         //   max(x, 0)        → x  /  max(0, x) → x
@@ -673,7 +673,7 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         BinOp::And if left == right => Some(left.clone()),
         BinOp::Or if left == right => Some(left.clone()),
 
-        // ─── ROADMAP A25: chained-predicate boolean simplification ──
+        // ─── chained-predicate boolean simplification ──
         // x && !x → false  (contradiction)
         BinOp::And if matches!(right, Expr::UnOp { op: crate::ir::UnOp::LogicalNot, operand } if operand.as_ref() == left) => {
             Some(Expr::bool(false))
@@ -738,7 +738,7 @@ fn expr_scalar_literal(expr: &Expr) -> Option<ScalarLiteral> {
     }
 }
 
-// ─── ROADMAP A35: stronger range fold ─────────────────────────────
+// ─── stronger range fold ─────────────────────────────
 // Mod(x, N) where x.max < N -> x
 // We use a tiny single-block lookbehind to find if `x` was defined as `LitU32(c)` where `c < N`.
 pub(super) fn fold_mod_lookbehind(

@@ -1,7 +1,7 @@
 //! NFA primitives  -  subgroup-cooperative epsilon closure and
 //! step simulation.
 //!
-//! G1 (GPU perf innovation #1) is a 32-state-per-subgroup NFA
+//! The simulator is 32-state-per-subgroup:
 //! simulator where each lane holds one `u32` state-set bit and
 //! epsilon closure is subgroup ballot/shuffle bitwise-or. For NFAs
 //! wider than 32 states, callers tile into 32-state windows and stream

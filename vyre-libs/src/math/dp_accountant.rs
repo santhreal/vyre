@@ -18,7 +18,7 @@
 //!
 //! | Consumer | Use |
 //! |---|---|
-//! | future `vyre-libs::privacy::dp_sgd` | per-step accounting in DP-SGD trainers (#42) |
+//! | future `vyre-libs::privacy::dp_sgd` | per-step accounting in DP-SGD trainers |
 //! | future `vyre-libs::observability::dp_telemetry` | release aggregate dispatch / cache statistics with formal privacy guarantees |
 //! | `vyre-driver` DP telemetry release | applies RDP composition before exposing per-Program latency aggregates so the telemetry layer cannot leak individual user code patterns  -  same Program serves user DP-SGD trainers AND vyre-self telemetry hardening |
 //!

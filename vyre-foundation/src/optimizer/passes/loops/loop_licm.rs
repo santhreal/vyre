@@ -1,4 +1,4 @@
-//! ROADMAP A17  -  Loop-invariant code motion.
+//! Loop-invariant code motion.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::loop_licm`.
 //! Soundness: `Exact`  -  a `Node::Let` inside a loop body whose value

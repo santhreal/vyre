@@ -2,7 +2,7 @@
 //! using the Strassen recurrence (7 multiplications, 18 additions
 //! instead of naive 8 multiplications, 4 additions).
 //!
-//! ROADMAP H1  -  Strassen-like matmul substitution where profitable
+//! Strassen-like matmul substitution where profitable
 //! and numerically allowed.
 //!
 //! For 2x2 matrices `A = [[a,b],[c,d]]` and `B = [[e,f],[g,h]]`:

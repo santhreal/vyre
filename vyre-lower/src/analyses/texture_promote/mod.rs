@@ -1,6 +1,5 @@
 //! Texture-memory promotion candidate detection.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B11.
 //!
 //! GPU texture memory provides hardware-accelerated read paths for
 //! 2D/3D spatially-coherent access patterns. Promoting a global

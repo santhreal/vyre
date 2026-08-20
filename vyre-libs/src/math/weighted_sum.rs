@@ -1,6 +1,6 @@
 //! Block-FMA weighted-sum reduction: `y = sum_i weights[i] * values[i]`.
 //!
-//! ROADMAP G7  -  block-FMA reductions. The naive form
+//! block-FMA reductions. The naive form
 //! `acc = acc + weights[i] * values[i]` performs two rounded
 //! IEEE-754 operations per element (mul, add). Replacing with
 //! `acc = Fma(weights[i], values[i], acc)` collapses to a single

@@ -6,7 +6,7 @@
 
 pub(crate) mod artifact;
 pub(crate) mod bundle;
-/// Runtime-cache compatibility for AOT-emitted artifacts (audit P0 #26).
+/// Runtime-cache compatibility for AOT-emitted artifacts.
 pub mod cache;
 pub(crate) mod compile;
 pub(crate) mod launcher;

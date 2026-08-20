@@ -518,7 +518,7 @@ fn literal_pattern_lowers_to_acceptor_dfa() {
     // The accept field encodes pid+1, so pattern 0 → value 1. Asserting
     // != 0 only proves some pattern accepted; asserting == 1 proves the
     // correct pattern id is stored. A pid transposition or the pid+1 wrap
-    // bug (finding #3: pid=u32::MAX→0) would pass != 0 but fail == 1.
+    // bug (pid=u32::MAX→0) would pass != 0 but fail == 1.
     assert_eq!(
         dfa.accept[s_abc as usize], 1,
         "DFA state after 'abc' must accept pattern 0 encoded as pid+1=1; \
@@ -614,7 +614,7 @@ fn shape_mismatch_caught_before_construction() {
     }
 }
 
-/// Finding #4 (P0): accept_state_ids entries are not validated to be < num_states.
+/// Accept_state_ids entries are not validated to be < num_states.
 /// Before the fix, nfa_state=1024 produced lane=32 which is OOB on StateSet=[u32;32],
 /// causing a panic instead of a structured ShapeMismatch error.
 #[test]
@@ -636,7 +636,7 @@ fn accept_state_id_ge_num_states_is_shape_mismatch() {
     );
 }
 
-/// Finding #4: also verify accept_state_id exactly equal to num_states is rejected.
+/// Also verify accept_state_id exactly equal to num_states is rejected.
 #[test]
 fn accept_state_id_equal_to_num_states_is_shape_mismatch() {
     let (transition, epsilon, _, _) = literal_abc_tables();
@@ -656,7 +656,7 @@ fn accept_state_id_equal_to_num_states_is_shape_mismatch() {
     );
 }
 
-/// Finding #2+8 (P0/P1): max_dfa_states > u32::MAX must return StateExplosion
+/// Max_dfa_states > u32::MAX must return StateExplosion
 /// rather than allowing dfa_state_sets.len() to grow past u32::MAX and wrap
 /// the as u32 cast to 0, aliasing existing DFA states and corrupting the automaton.
 #[test]
@@ -679,7 +679,7 @@ fn max_dfa_states_above_u32_max_returns_state_explosion() {
     );
 }
 
-/// Finding #3 (P0): the accept field encodes pid+1 so that 0 means no match.
+/// The accept field encodes pid+1 so that 0 means no match.
 /// For pattern 0, the encoded value must be exactly 1, not some other nonzero value.
 /// This test replaces the existing decoration test that only checked != 0.
 #[test]

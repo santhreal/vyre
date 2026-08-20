@@ -1,6 +1,6 @@
 //! Subgroup-cooperative DFA scan for multi-string workloads.
 //!
-//! This is the Innovation I.9 sibling of [`super::aho_corasick`]: lanes in one
+//! This is the sibling of [`super::aho_corasick`]: lanes in one
 //! subgroup forward DFA state with [`Expr::SubgroupShuffle`] instead of
 //! replaying the whole prefix independently.
 

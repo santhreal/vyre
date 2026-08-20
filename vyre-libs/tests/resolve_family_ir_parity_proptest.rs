@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `label::resolve_family` IR through
+//! Property: differential proptest driving the ACTUAL `label::resolve_family` IR through
 //! `reference_eval` vs `cpu_ref`. `resolve_family` reuses the shared `nodeset_filter` kernel but
 //! selects the `Intersects(mask)` predicate (`node_tags[v] & family_mask != 0` -> set bit `v`), a
 //! DISTINCT code path from the `Eq` predicate exercised by node_kind_eq_ir_parity: the IR condition is

@@ -1,7 +1,7 @@
 //! 2× box-filter downsample for half-resolution blur.
 //!
 //! Averages each 2×2 block of pixels into one output pixel.
-//! Category A composition  -  pure IR. No Tier 2.5 primitives.
+//! Category A composition  -  pure IR. No shared primitives.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

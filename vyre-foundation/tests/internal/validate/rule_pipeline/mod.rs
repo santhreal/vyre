@@ -1,4 +1,4 @@
-// Tests for `validate.rs`. Split out per audit item #85 to keep the
+// Tests for `validate.rs`. Split out to keep the
 // parent file focused on production code.
 
 use super::*;

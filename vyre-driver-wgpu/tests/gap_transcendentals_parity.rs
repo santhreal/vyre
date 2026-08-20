@@ -1,12 +1,11 @@
-//! Release gap #1: the aspirational bitwise transcendental contract.
+//! The aspirational bitwise transcendental contract.
 //!
 //! Every test in this file is `#[ignore]`d, deliberately and with a stated
 //! reason. They are not dead: they are the exact assertions that must pass the
-//! day gap #1 closes, kept compiling and runnable (`cargo test -- --ignored`)
+//! day it closes, kept compiling and runnable (`cargo test -- --ignored`)
 //! so the contract cannot rot while it waits.
 //!
-//! Two independent blockers stand between here and a green run, both recorded
-//! in BACKLOG.md under R65:
+//! Two independent blockers stand between here and a green run:
 //!
 //! 1. WGSL hardware transcendentals are not correctly rounded. The spec defers
 //!    to the hardware, which uses an approximation ROM good to a few ulps.

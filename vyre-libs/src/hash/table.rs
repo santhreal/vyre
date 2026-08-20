@@ -1,6 +1,6 @@
 //! GPU-native lock-free hash table primitives.
 //!
-//! Tier 2.5 LEGO components returning `Vec<Node>` fragments.
+//! Shared components returning `Vec<Node>` fragments.
 //! Program construction and harness registration belong to higher-level
 //! composition crates that choose table shape and dispatch policy.
 

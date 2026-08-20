@@ -96,7 +96,7 @@ pub(crate) fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String
         Some(test_inputs) => test_inputs(),
         None => synthesize_witness_cases(&program)?,
     };
-    // CRITIQUE_CONFORM_2026-04-23 H4: `compare_backend_against_reference`
+    // `compare_backend_against_reference`
     // returned `passed: true` with message "0 witness case(s) matched"
     // when test_inputs() produced an empty vector  -  an op that registered
     // a witness-input function returning `vec![]` received a passing

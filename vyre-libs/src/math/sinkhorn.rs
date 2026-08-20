@@ -33,7 +33,7 @@
 //! |---|---|
 //! | future `vyre-libs::ml::ot` | Wasserstein loss / EMD |
 //! | future `vyre-libs::ml::alignment` | distribution alignment / GAN training |
-//! | `vyre-libs::parsing::c::sema` (#5 typedef classification) | identifier→typedef bipartite as soft assignment via Sinkhorn |
+//! | `vyre-libs::parsing::c::sema` (typedef classification) | identifier→typedef bipartite as soft assignment via Sinkhorn |
 //!
 //! Self-consumer is weak today; revisit when an internal soft-
 //! assignment use materializes (e.g. dispatch-graph clustering

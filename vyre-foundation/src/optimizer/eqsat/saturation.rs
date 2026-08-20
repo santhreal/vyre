@@ -207,7 +207,7 @@ fn finalize_saturation_report<L: ENodeLang>(
 
 /// Run each family with its own iteration budget.
 ///
-/// Saturate-per-family is the prerequisite for ROADMAP A8: a global
+/// Saturate-per-family is the prerequisite for a per-family budget: a global
 /// `max_iters` punishes algebraic families (which converge in 2-3 iters)
 /// for sharing a budget with slow rewrite families (which may need 50+).
 /// The fix is to give each family its own cap  -  algebraic gets the small

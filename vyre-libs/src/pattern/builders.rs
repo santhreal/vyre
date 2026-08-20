@@ -53,7 +53,7 @@ pub fn load_packed_byte_expr(haystack: &str, idx: Expr) -> Expr {
 /// LEGO BLOCK: Append a match to a standardized hit buffer.
 ///
 /// Use \`append_match_subgroup\` for production paths that benefit from
-/// subgroup-coalesced atomics (Innovation I.17).
+/// subgroup-coalesced atomics.
 pub fn append_match(
     hits_buffer: &str,
     count_buffer: &str,
@@ -97,7 +97,7 @@ pub fn append_match(
     ])
 }
 
-/// Innovation I.17: Subgroup-Coalesced Match Append.
+/// Subgroup-coalesced match append.
 ///
 /// Uses subgroup-ballot and subgroup-shuffle to perform a single
 /// \`atomic_add\` per subgroup, drastically reducing global memory
@@ -225,10 +225,9 @@ mod packed_byte_dedup_lock {
     //! word_idx), byte_offset) & 0xFF` byte-extract pattern landed in
     //! vyre-libs over time (scan/nfa, scan/literal_set, parsing/c/
     //! preprocess/gpu_if_expression/byte_load,
-    //! parsing/c/preprocess/gpu_filter/keep_mask). Tasks #21,
-    //! #22, #26 were marked completed previously while three of those
-    //! copies were still alive. This test prevents the next
-    //! regression: it walks `vyre-libs/src/**/*.rs` for the
+    //! parsing/c/preprocess/gpu_filter/keep_mask). Three of those
+    //! copies outlived the deduplication that was supposed to remove
+    //! them. This test prevents the next regression: it walks `vyre-libs/src/**/*.rs` for the
     //! divrem-shr-and(0xFF) shape and fails if it appears outside
     //! `scan/builders.rs`.
     //!

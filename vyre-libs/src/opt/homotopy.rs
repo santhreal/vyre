@@ -1,4 +1,4 @@
-//! Homotopy continuation predictor-corrector step (#9).
+//! Homotopy continuation predictor-corrector step.
 //!
 //! Continuation methods solve `F(x) = 0` (the hard problem) by
 //! deforming from `G(x) = 0` (the easy problem) via the homotopy
@@ -29,7 +29,7 @@
 //! |---|---|
 //! | future `vyre-libs::opt::polynomial_solve` | polynomial system solving |
 //! | future `vyre-libs::opt::milp_relax` | MILP continuous relaxation |
-//! | `vyre-runtime/src/resident_work_queue/planner.rs` (#22 self-consumer) | **vyre's megakernel scheduler ILP** is solved by relaxing to a continuous family parameterized by `t ∈ [0, 1]` and following the homotopy path on GPU |
+//! | `vyre-runtime/src/resident_work_queue/planner.rs` | **vyre's megakernel scheduler ILP** is solved by relaxing to a continuous family parameterized by `t ∈ [0, 1]` and following the homotopy path on GPU |
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 

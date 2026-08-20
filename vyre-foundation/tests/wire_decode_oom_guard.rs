@@ -1,4 +1,4 @@
-//! P1 inventory #90  -  OOM / huge-input tests for wire decode.
+//! OOM / huge-input tests for wire decode.
 //!
 //! The wire decoder must reject frames that claim a payload larger
 //! than `MAX_PROGRAM_BYTES` without allocating that much memory. The

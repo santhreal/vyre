@@ -1,4 +1,4 @@
-//! Tier 3 - Parity: drives the ACTUAL iterative Sinkhorn matrix-scaling IR (`math::sinkhorn_iterate`)
+//! Parity: drives the ACTUAL iterative Sinkhorn matrix-scaling IR (`math::sinkhorn_iterate`)
 //! through `reference_eval` and asserts BIT-EXACT equality against the shipped fixed-point oracle
 //! `sinkhorn_iterate::cpu_ref`. The op had NO `reference_eval` test.
 //!

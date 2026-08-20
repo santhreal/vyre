@@ -33,7 +33,7 @@
 //!     (zero-extended into u32 for downstream byte materialization).
 //!
 //! The prefix-sum that converts `segment_lengths_out` into per-segment
-//! start offsets is the existing `prefix_scan` primitive (math/#5).
+//! start offsets is the existing `prefix_scan` primitive (`math`).
 //! This module emits the unpacked length + value arrays it consumes.
 //!
 //! ## Why split, not fuse

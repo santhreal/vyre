@@ -1,4 +1,4 @@
-//! Compound command-buffer dispatch for pipeline mode (Innovation I.14).
+//! Compound command-buffer dispatch for pipeline mode.
 
 use super::binding::usage_for_binding;
 use crate::allocation::{reserve_smallvec_to_capacity, reserve_vec_to_capacity};

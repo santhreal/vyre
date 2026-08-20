@@ -1,4 +1,4 @@
-//! Release gap #1 - reference completeness (deterministic transcendentals).
+//! Reference completeness: deterministic transcendentals.
 //!
 //! The CPU reference oracle must emit byte-identical f32 results for
 //! sin/cos/sqrt/exp/log across proptest inputs. Cross-backend bitwise GPU

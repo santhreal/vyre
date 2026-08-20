@@ -1,4 +1,4 @@
-//! Multi-GPU work stealing scheduler (Innovation I.7).
+//! Multi-GPU work stealing scheduler.
 //!
 //! Partitions a large Program or batch of Programs across all
 //! registered physical devices.

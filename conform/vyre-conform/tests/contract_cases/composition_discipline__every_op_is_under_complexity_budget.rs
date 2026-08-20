@@ -167,7 +167,7 @@ fn every_op_has_test_fixtures() {
     let mut missing = Vec::new();
 
     for entry in vyre_libs::operation_catalog::fixture_entries() {
-        // CRITIQUE_CONFORM_2026-04-23 M7: the original gate required
+        // The original gate required
         // BOTH fixtures to be missing before failing. An op that
         // shipped only one half (test_inputs without expected_output
         // or vice versa) passed the gate despite being incomplete,

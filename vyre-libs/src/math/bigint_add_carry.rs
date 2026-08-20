@@ -21,7 +21,7 @@
 //! known parallel bigint adder (Brent-Kung, Kogge-Stone, Sklansky). Once you
 //! have `(sum_no_carry[i], carry[i])` you can finish in O(log n) prefix-scan
 //! depth instead of O(n) ripple. This module emits the first half; the
-//! prefix-scan finish is in `prefix_scan` (#5).
+//! prefix-scan finish is in `prefix_scan`.
 //!
 //! ## Wire layout
 //!

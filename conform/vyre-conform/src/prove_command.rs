@@ -131,7 +131,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     }
     let program_hash = hasher.finalize().to_hex().to_string();
 
-    // CRITIQUE_CONFORM_2026-04-23 C2 (CRITICAL): the prior derivation
+    // The prior derivation
     // hashed `program_hash:pid:SystemTime::now()` into the Ed25519
     // seed. All three inputs are attacker-guessable (program_hash is
     // public, pid is ~2^22, SystemTime has microsecond resolution)

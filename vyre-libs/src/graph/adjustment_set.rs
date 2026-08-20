@@ -29,7 +29,7 @@
 //! | `vyre-libs::causal::adjust` | observational ML estimation |
 //! | `vyre-libs::security::root_cause` | confounded-finding adjustment |
 //!
-//! Self-consumer is weak today; the primitive composes well with #36
+//! Self-consumer is weak today; the primitive composes well with
 //! do-calculus for full ID-algorithm pipelines.
 //!
 //! # Encoding

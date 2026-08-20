@@ -99,7 +99,7 @@ pub(crate) fn lower_with_features(
 
 /// Heuristic for selecting the optimal workgroup size for a program.
 ///
-/// Innovation I.6: Adaptive workgroup sizing.
+/// Adaptive workgroup sizing.
 ///
 /// Takes the requested size from the program and the adapter capability
 /// reports, and returns a size that maximizes occupancy and throughput.
@@ -326,14 +326,14 @@ pub(crate) fn write_wgsl(module: &naga::Module) -> Result<String, LoweringError>
     let wgsl =
         naga::back::wgsl::write_string(module, &info, naga::back::wgsl::WriterFlags::empty())
             .map_err(LoweringError::writer)?;
-    // Emission size cap (Task #65): adapter shader-binary-size limits
+    // Emission size cap: adapter shader-binary-size limits
     // are finite. At 1000+ fused arms WGSL source can exceed the
     // ceiling. Fail-fast at write_wgsl with a clear diagnostic
     // naming the byte count, instead of opaque pipeline-creation
     // failure downstream. The 32 MiB cap below is the safe floor  -
     // most adapters allow 256 MiB but Metal-on-iOS is the strictest.
     // Production adapters report their limit via wgpu::Limits; if the
-    // FusionPlan partitioning harness is wired (Task #65 callers),
+    // FusionPlan partitioning harness is wired (callers),
     // it consults the adapter limit and partitions before reaching
     // here. This guard is the last-line failsafe.
     const MAX_WGSL_BYTES: usize = 32 * 1024 * 1024;

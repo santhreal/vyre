@@ -333,7 +333,7 @@ fn hash_expr(expr: &Expr, h: &mut u64) {
             hash_expr(operand, h);
         }
         Expr::Call { op_id, args } => {
-            // CRITIQUE_CONFORM_2026-04-23 H7: hashing only the
+            // Hashing only the
             // discriminant + arity collapsed every `Expr::Call` with
             // the same arg count into a single fingerprint. An
             // attacker could trivially craft a call to op `b` whose

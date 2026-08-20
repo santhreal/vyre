@@ -1,4 +1,4 @@
-//! Tier 2.5 UTF-8 validator  -  single-pass byte classification with
+//! UTF-8 validator  -  single-pass byte classification with
 //! structural sequence checks.
 //!
 //! Each invocation reads one source byte (`source[i]`, low 8 bits)
@@ -24,7 +24,7 @@ mod tests;
 
 pub use program::{utf8_validate, utf8_validate_u8};
 
-/// Stable op id for the registered Tier 3 wrapper.
+/// Stable op id for the registered dialect wrapper.
 pub(crate) const OP_ID: &str = "vyre-libs::text::utf8_validate";
 /// Byte-lane workgroup used by the UTF-8 classifier.
 pub const UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];

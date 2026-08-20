@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `decode::rle_segment_lengths` IR
+//! Property: differential proptest driving the ACTUAL `decode::rle_segment_lengths` IR
 //! through `reference_eval` vs `rle_segment_lengths_cpu`. The op had `reference_eval` = 0 in tests/
 //! (its `rle_segment_lengths_contracts.rs` peer checks the CPU packer/oracle, not the kernel).
 //!

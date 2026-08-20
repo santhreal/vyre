@@ -1,7 +1,7 @@
 //! The optimizer's passes, executed as dispatched vyre Programs.
 //!
 //! The encoder turns a `vyre_foundation::ir::Program` into the canonical
-//! 5-buffer `ProgramGraph` ABI shared by every Tier 2.5 graph primitive.
+//! 5-buffer `ProgramGraph` ABI shared by every graph primitive.
 //! Once the IR lives in that shape, optimizer passes are *graph primitives
 //! reused as compiler passes*: DCE is `persistent_bfs` reachability, CSE is
 //! `union_find` over a structural-hash key, const-fold is `level_wave`

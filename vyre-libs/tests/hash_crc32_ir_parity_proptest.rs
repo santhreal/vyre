@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL CRC-32 GPU IR (`hash::crc32_program`)
+//! Property: differential proptest driving the ACTUAL CRC-32 GPU IR (`hash::crc32_program`)
 //! through `reference_eval` vs the `hash::crc32` byte oracle.
 //!
 //! MOTIVATION — real IR gap. `proptest_hash_crc32.rs` and the `sweep_hash_crc32_*` matrices assert

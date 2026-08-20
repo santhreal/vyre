@@ -1,4 +1,4 @@
-//! ROADMAP H5 (foundation_optimizer half)  -  region-fusion hint pass.
+//! Region-fusion hint pass, foundation half.
 //!
 //! Detects adjacent `Node::Region` pairs whose generator names
 //! match a fusion rule in the built-in table (e.g.

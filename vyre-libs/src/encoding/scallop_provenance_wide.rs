@@ -1,6 +1,6 @@
 //! Provenance closure tracking up to W·32 source rules.
 //!
-//! Extends `#39 scallop_provenance` from a 32-rule (single u32) capacity to
+//! Extends `scallop_provenance` from a 32-rule (single u32) capacity to
 //! up to 256 rules (`W=8`) by carrying `w` words per lineage cell.
 //!
 //! Dispatches the `crate::math::scallop_join` primitive at `w > 1`.

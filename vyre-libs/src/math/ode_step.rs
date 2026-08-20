@@ -18,7 +18,7 @@
 //! |---|---|
 //! | `vyre-libs::nn::neural_ode` consumers | continuous-time NN training |
 //! | `vyre-libs::physics::flow` consumers | Lipschitz-bounded flows / sim |
-//! | `vyre-libs::opt::homotopy_continuation` (#9) | **path-tracking step** in homotopy methods uses RK4 to follow zeros of `H(x, t) = 0`; same Program serves user-dialect ODE *and* vyre's own combinatorial-optimization substrate |
+//! | `vyre-libs::opt::homotopy_continuation` | **path-tracking step** in homotopy methods uses RK4 to follow zeros of `H(x, t) = 0`; same Program serves user-dialect ODE *and* vyre's own combinatorial-optimization substrate |
 //!
 //! # Separate ODE-Step Ops
 //!

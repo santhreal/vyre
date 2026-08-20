@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `decode::inflate::inflate_stored_block` IR (DEFLATE
+//! Property: differential proptest driving the ACTUAL `decode::inflate::inflate_stored_block` IR (DEFLATE
 //! BTYPE=0 stored-block decode) through `reference_eval` vs `inflate_stored_reference_words`. The op
 //! had `reference_eval` = 0 in tests/.
 //!

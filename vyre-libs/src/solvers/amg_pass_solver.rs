@@ -1,6 +1,6 @@
 //! Algebraic-multigrid V-cycle for matroid-intersection LP relaxation.
 //!
-//! Self-consumer for [#3 `amg_v_cycle`](crate::math::amg_v_cycle).
+//! Self-consumer for [`amg_v_cycle`](crate::math::amg_v_cycle).
 //!
 //! The matroid scheduler currently uses a single `matroid_solve_step` Jacobi
 //! smoothing step to weight augmenting BFS layers. That's a 1-step relaxation  -

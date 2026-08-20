@@ -255,11 +255,11 @@ fn zero_budget_rejects_every_nonempty_dfa() {
     ));
 }
 
-/// Finding #13 (P2): accept field last-writer-wins bug.
+/// Accept field last-writer-wins bug.
 /// When two patterns share a final trie node (duplicate literals or suffix patterns),
 /// the accept fast-path field must store the FIRST (lowest) pattern id, not the last.
 /// Before the fix, accept[state_B] = 2 (pid=1, last writer) instead of 1 (pid=0, first).
-/// Finding #14 (P2): from_bytes incorrectly rejected DFAs compiled from
+/// From_bytes incorrectly rejected DFAs compiled from
 /// zero-length patterns because max_pattern_len==0 with accept states was
 /// treated as "corrupt sentinel" rather than "empty-pattern accept".
 #[test]

@@ -1,4 +1,4 @@
-//! Algebraic Multigrid V-cycle smoothing primitive (#50).
+//! Algebraic Multigrid V-cycle smoothing primitive.
 //!
 //! AMG (Brandt 1986, Ruge-Stüben 1987) solves elliptic PDEs in O(n)
 //! by alternating SMOOTHING (relax error on the current level) with

@@ -1,4 +1,4 @@
-//! Parked composition (belongs in vyre-libs): label → NodeSet resolver.
+//! Label → NodeSet resolver.
 //!
 //! Given a node-tags buffer (each word = tag bitmask over a
 //! registered TagFamily) and a family-mask constant, emit a NodeSet

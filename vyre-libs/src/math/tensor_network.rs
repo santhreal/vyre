@@ -1,4 +1,4 @@
-//! Tensor-network contraction primitive (#35).
+//! Tensor-network contraction primitive.
 //!
 //! Tensor networks (PEPS, MPS, MERA) compress high-dimensional
 //! functions exponentially. Contraction order matters  -  the optimal

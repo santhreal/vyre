@@ -4,8 +4,8 @@
 //! inverse Fisher information `F^{-1}`. For exponential-family models,
 //! `F` is block-diagonal with closed-form blocks; for empirical-Fisher
 //! approximations (KFAC, Shampoo, Sophia), each block is a small PSD
-//! matrix that needs `M^{-1/2}` via Newton-Schulz (#16
-//! [`crate::math::preconditioner`]).
+//! matrix that needs `M^{-1/2}` via Newton-Schulz
+//! ([`crate::math::preconditioner`]).
 //!
 //! This file ships the **block-apply** primitive  -  apply a
 //! preconditioner block to one slice of the gradient. Composes with
@@ -16,7 +16,7 @@
 //!
 //! ```text
 //!   1. M = empirical_fisher_block(activations, grads)     // user-supplied
-//!   2. M_inv_sqrt = newton_schulz_inverse_sqrt(M, iters)  // #16
+//!   2. M_inv_sqrt = newton_schulz_inverse_sqrt(M, iters)  // preconditioner
 //!   3. for each block:
 //!        natural_gradient_block_apply(M_inv_sqrt, g, g_nat)  // this primitive
 //!   4. apply g_nat to weights via SGD step                // user-supplied

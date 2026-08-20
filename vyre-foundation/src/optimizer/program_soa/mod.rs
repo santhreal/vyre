@@ -1,4 +1,4 @@
-//! ROADMAP A2  -  columnar / SoA fact view of a `Program` that hot
+//! columnar / SoA fact view of a `Program` that hot
 //! optimizer passes can opt into.
 //!
 //! This is the *additive* shape of the same A1 contract. The

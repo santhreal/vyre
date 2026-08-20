@@ -1,4 +1,4 @@
-//! Parked composition (belongs in vyre-libs): bitset primitives  -  `and`/`or`/`not`/`xor`/`popcount`/
+//! Bitset primitives  -  `and`/`or`/`not`/`xor`/`popcount`/
 //! `any`/`contains` over packed u32 bitsets. These are the LEGO
 //! blocks every higher-level graph/taint composition reaches for
 //! when combining two NodeSets.
@@ -256,7 +256,7 @@ pub mod xor_into {
 }
 pub mod zero;
 
-/// Stochastic computing primitive (#59)  -  bitstream multiplication
+/// Stochastic computing primitive  -  bitstream multiplication
 /// via AND. Power-efficient inference substrate.
 pub mod stochastic_compute;
 

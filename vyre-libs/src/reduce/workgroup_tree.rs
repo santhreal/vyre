@@ -1,6 +1,6 @@
 //! Workgroup-local tree reductions over scratch buffers.
 //!
-//! These helpers are Tier 2.5 LEGO blocks for higher-level library ops that
+//! These helpers are shared blocks for higher-level library ops that
 //! already stage one partial value per lane into workgroup memory. They emit
 //! child `Region`s so composition audits and traces show the shared reduction
 //! instead of treating every math/NN op as a hand-rolled loop.

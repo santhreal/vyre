@@ -64,7 +64,7 @@ pub fn canonical_f32_zero(value: f32) -> f32 {
 /// that carry IEEE-754 semantic meaning (NaN payloads, signed zero in
 /// division, etc.).
 ///
-/// CRITIQUE_FIX_REVIEW_2026-04-23 Finding #11: without this helper,
+/// without this helper,
 /// f64 opaque extensions had no canonicalisation path, so two
 /// semantically-equal programs differing only by `-0.0f64 → +0.0f64`
 /// would hash distinctly and defeat CSE / cache lookups.

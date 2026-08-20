@@ -29,7 +29,7 @@
 //! often writes `if (in_bounds(x)) { if (matches_pattern(x)) { ... } }`
 //! and the optimizer should see one combined predicate instead of two
 //! nested branches. Coalescing also unblocks downstream
-//! const-fold/boolean-simplification (ROADMAP A25) since the combined
+//! const-fold/boolean-simplification since the combined
 //! predicate may collapse further when one of the conditions is a
 //! literal.
 //!

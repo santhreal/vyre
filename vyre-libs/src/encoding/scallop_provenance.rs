@@ -1,6 +1,6 @@
-//! GPU-resident rule-provenance tracking via #39 scallop_join (#39 substrate).
+//! GPU-resident rule-provenance tracking via scallop_join.
 //!
-//! Closes the recursion thesis for #39  -  `vyre-libs::math::scallop_join`
+//! Closes the recursion thesis: `vyre-libs::math::scallop_join`
 //! ships a Datalog-fixpoint primitive for user-dialect probabilistic logic,
 //! AND simultaneously powers vyre's own provenance bookkeeping.
 //!

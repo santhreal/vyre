@@ -27,12 +27,12 @@
 #[cfg(feature = "parsing")]
 pub mod core;
 
-/// Content-hash LRU cache for parsed source artifacts. ROADMAP L2 / E2
+/// Content-hash LRU cache for parsed source artifacts.
 /// substrate; language-specific parse pipelines opt in via
 /// `ParsedSourceLru::get_or_parse`.
 pub mod source_cache;
 
-/// Parallel corpus parse on top of the L2 LRU cache. ROADMAP L3
+/// Parallel corpus parse on top of the L2 LRU cache.
 /// substrate; fans `get_or_parse` across cores with `rayon` while
 /// preserving input order.
 pub mod parallel_parse;
@@ -100,7 +100,7 @@ pub mod ast_cse_constant_fold;
 #[cfg(feature = "parsing-kernels")]
 pub mod ast_cse_structural_hash;
 
-/// 2D / planar grammar rewrite scheduler (#11). Picks a maximal
+/// 2D / planar grammar rewrite scheduler. Picks a maximal
 /// non-overlapping set of `k x k` matches to apply in one wave.
 #[cfg(feature = "parsing-kernels")]
 pub mod planar_rewrite;

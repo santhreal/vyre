@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `text::utf8_shape_counts` IR through
+//! Property: differential proptest driving the ACTUAL `text::utf8_shape_counts` IR through
 //! `reference_eval` vs an INDEPENDENT in-test reference. The op had `reference_eval` = 0 in tests/, and
 //! its shipped oracle (`utf8_shape_counts_from_histogram`) is `pub(crate)` — unreachable from an
 //! external test — so this file computes the reference a second, independent way (range sums), which

@@ -3705,6 +3705,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with more than one group. A value an entry produces without reading it is no
   longer requested from the caller as a host input, because an inter-group
   intermediate is device state rather than a caller buffer.
+- A benchmark test that dispatches on a GPU runs where a GPU is. The two
+  bytecode-VM stack-carrier parity tests in `vyre-bench` loaded a CUDA driver
+  and opened a Vulkan adapter from the hosted CI matrix, which has neither, so
+  they reported the absence of hardware as a parity defect and poisoned the
+  shared adapter lock on the way out. They now sit behind a default-off
+  `device-tests` feature that `gpu-parity.yml` turns on, and the GPU release
+  gate blocks on that job, so the coverage moved to the runner that owns the
+  device instead of being dropped. The pinned benchmark case enumeration and
+  the release evidence classes likewise subtract exactly the ids
+  `cases::nvme_gpu_ingest` cannot register off Linux, rather than asserting
+  io_uring exists on macOS.
 - The cross-dialect reach-through audit asks whether the library source root
   carries Rust source instead of whether its directory exists, because a
   directory outlives the deletion of every file in it.
@@ -4246,6 +4257,23 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   read has to be the statement that names the Rust path, so a fixture workspace
   that copies one tool out of the checkout is no longer read as a walk over the
   real tree.
+- A lego tier is derived from placement, never declared in a comment. `tier_of`
+  reads it from the registered op id alone: `vyre-primitives::hardware::*` is
+  2, every other `vyre-primitives::*` is 2.5, `vyre-libs::*` is 3. Thirty-odd
+  `vyre-libs` files declared 2.5 in prose anyway, which the composability check
+  reads as must-not-compose on operations that are compositions by
+  construction, and no live document defined the numbers at all.
+  `docs/lego-block-rule.md` now owns the mapping and the new `lego-tier-claims`
+  gate reads the tier from the op id and the claims from the file, so moving an
+  operation between crates re-derives its tier and turns every stale claim in
+  its file red. The same sweep removed dead review bookkeeping from tracked
+  source: the `CRITIQUE_*` stamps, the `Innovation I.N` register, the audit
+  history block in the `vyre-libs` crate documentation, and the `Parked
+  composition` prefix on seven modules already in `vyre-libs`. Where a stamp
+  carried a reason, the reason stayed. Three crate documentation claims were
+  false and are corrected: `math::atomic` is not a Category B exception because
+  `Expr::Atomic` is an existing IR variant, `hash` did not replace the
+  still-live `crypto` feature, and `default` includes `hash`.
 - An artifact whose math reaches `Exp`, `Log`, `Sin`, `Cos` or `Tanh` compiles
   for CUDA. The PTX emitter refused to lower those ops to a native instruction
   unless `PtxEmitOptions::ulp_budget` was positive, so 21 registered ops failed
@@ -6808,3 +6836,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   neighbours to be other spiders of matching colour. `simplified_diagram` runs
   fusion and identity removal to a joint fixpoint, which terminates because
   every firing removes exactly one spider.
+
+### Security
+
+- The build wrapper passes --locked to every resolving cargo subcommand, so a
+  build compiles the dependency versions this repository committed and nothing
+  else. CI steps previously re-resolved from the registry at run time, which
+  compiles and executes the build script of anything published since the
+  lockfile was written. cargo-deny additionally bans proc-macro1 outright and
+  pins arrayref away from 0.3.10: 0.3.10 was published on the day every
+  arrayref release back to 0.3.5 was yanked, and it depends on proc-macro1,
+  whose build script disables TLS verification, downloads a per-platform binary
+  to /tmp/rust-setup, and spawns it.

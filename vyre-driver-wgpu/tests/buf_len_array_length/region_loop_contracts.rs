@@ -40,7 +40,7 @@ fn buf_len_through_three_region_wraps_for_one_element() {
         observed, 1,
         "Q3: arrayLength on a triple-Region-wrapped Program must report 1 for a 4-byte input, got {observed}. \
          If this fails while the flat-program tests pass, region inlining or pre-lowering is breaking the BufLen path \
-         in catalog wrappers  -  see ROADMAP.md Q3."
+         in catalog wrappers."
     );
 }
 

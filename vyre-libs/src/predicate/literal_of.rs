@@ -5,7 +5,7 @@
 //! type-inference ensures `literal_of(probe)` is only lowered against
 //! literal-typed frontiers. A runtime match on the literal value can
 //! be composed by re-filtering with a dedicated literal-payload
-//! comparison primitive in Tier 3.
+//! comparison primitive in this crate.
 
 use vyre_foundation::composition::tag_program;
 use vyre_foundation::ir::Program;

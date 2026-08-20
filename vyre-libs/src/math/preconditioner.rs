@@ -22,10 +22,10 @@
 //! |---|---|
 //! | future `vyre-libs::optim::shampoo` | Shampoo / Sophia preconditioned SGD |
 //! | future `vyre-libs::optim::kfac` | K-FAC natural gradient |
-//! | future `vyre-libs::math::matrix_function` | general matrix-function family (sqrt, inv-sqrt, log, exp via QSVT  -  composes with #34) |
+//! | future `vyre-libs::math::matrix_function` | general matrix-function family (sqrt, inv-sqrt, log, exp via QSVT  -  composes with `qsvt`) |
 //!
 //! Self-consumer is currently weak; revisit once optimizer-aware
-//! dispatch scheduling lands (#22 megakernel auto-scheduler may use
+//! dispatch scheduling lands (megakernel auto-scheduler may use
 //! preconditioned SGD on its own ILP relaxation).
 //!
 //! # Newton-Schulz variant

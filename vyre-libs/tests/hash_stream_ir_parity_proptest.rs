@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL byte-stream hash IR of
+//! Property: differential proptest driving the ACTUAL byte-stream hash IR of
 //! `hash::adler32_program` and `hash::multi_hash_program` through `reference_eval` vs their CPU
 //! oracles. Both had `reference_eval` = 0 in the coverage audit; their `sweep_hash_*` peers assert
 //! oracle-vs-oracle and the only randomized IR check is the single inventory fixture.

@@ -1,7 +1,7 @@
 //! GPU-computed box shadow with signed-distance-field falloff.
 //!
 //! Category A composition  -  pure IR. Private SDF helper (single caller,
-//! not promoted to Tier 2.5 per LEGO-BLOCK-RULE).
+//! not promoted to a shared primitive, per docs/lego-block-rule.md).
 
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

@@ -1,10 +1,10 @@
-//! Spectral analysis of dispatch graph via #5 chebyshev_filter +
-//! #17 spectral_shape (#23 substrate).
+//! Spectral analysis of dispatch graph via chebyshev_filter +
+//! spectral_shape.
 //!
 //! Apply Chebyshev polynomial filtering to vyre's own dispatch
 //! dependency matrix, clip outlier eigenvalues via Marchenko-Pastur
 //! edge, identify clusters of Programs that should be fused.
-//! Output: cluster IDs that #19 polyhedral fusion + #22 megakernel
+//! Output: cluster IDs that polyhedral fusion + megakernel
 //! scheduler consume as fusion hints.
 
 use crate::dispatch_buffers::{

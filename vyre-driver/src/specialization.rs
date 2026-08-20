@@ -24,7 +24,7 @@ pub enum SpecValue {
     F32(f32),
     /// Boolean flag.
     Bool(bool),
-    /// Element data type. ROADMAP F3  -  dtype-specialized kernel variants
+    /// Element data type. dtype-specialized kernel variants
     /// flow through the same `SpecMap` cache as tile-size and unroll
     /// choices, so the F1 specialization-cache key already separates
     /// (matmul, F32) from (matmul, F16) without any backend-specific

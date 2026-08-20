@@ -1,7 +1,7 @@
 //! Fused `linear_silu` constructor  -  Linear + SiLU activation in one
 //! GPU dispatch.
 //!
-//! ROADMAP H5  -  GEMM + bias + activation fusion. Companion to
+//! GEMM + bias + activation fusion. Companion to
 //! `linear_relu`; computes `out[i] = silu(sum_k x[k] * w[k, i] + b[i])`
 //! where `silu(z) = z / (1 + exp(-z))`.
 //!

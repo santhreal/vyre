@@ -1,6 +1,6 @@
-//! Pipeline-cache eviction via #45 submodular maximization (#45 self-consumer).
+//! Pipeline-cache eviction via submodular maximization.
 //!
-//! Closes the recursion thesis for #45  -  submodular_greedy ships to
+//! Closes the recursion thesis: submodular_greedy ships to
 //! user dialects (feature selection, sensor placement, summarization,
 //! coreset construction) AND drives vyre's compile-cache eviction
 //! policy.

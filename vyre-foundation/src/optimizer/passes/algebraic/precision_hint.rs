@@ -1,4 +1,4 @@
-//! ROADMAP G1 / G5 foundation half  -  precision + transcendental
+//! precision + transcendental
 //! fast-path hints.
 //!
 //! Walks the entry tree and identifies expression contexts where

@@ -1,4 +1,4 @@
-//! Tier 3 - Property: differential proptest driving the ACTUAL `reduce::workgroup_any_u32` IR (a
+//! Property: differential proptest driving the ACTUAL `reduce::workgroup_any_u32` IR (a
 //! single-workgroup bitwise-OR reduction) through `reference_eval` vs `cpu_ref`. The op had
 //! `reference_eval` = 0 in tests/ (its `sweep_reduce_workgroup_any_*` peer is cpu-vs-cpu).
 //!

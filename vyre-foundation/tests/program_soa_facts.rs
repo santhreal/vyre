@@ -325,7 +325,7 @@ fn iter_nodes_yields_preorder() {
     assert_eq!(kinds, vec![NodeKind::Region, NodeKind::Let, NodeKind::Let]);
 }
 
-// ──── ROADMAP A3: region/source metadata side-table ────
+// ──── region/source metadata side-table ────
 
 /// `regions()` records every Region in the entry tree, including
 /// the wrapping Region that `Program::wrapped` injects when the
@@ -448,7 +448,7 @@ fn regionless_parent_skips_only_region_ancestors() {
     assert_eq!(facts.regionless_parent_of(let_idx), Some(block));
 }
 
-// ──── ROADMAP A12: points-to facts (buffers_provably_distinct) ────
+// ──── points-to facts (buffers_provably_distinct) ────
 
 /// Two distinct named buffers in the program both touched at
 /// least once → provably distinct.
@@ -478,7 +478,7 @@ fn buffers_provably_distinct_rejects_phantom_name() {
     assert!(!facts.buffers_provably_distinct("a", "phantom"));
 }
 
-// ──── ROADMAP A13: escape facts (buffer_escapes) ────
+// ──── escape facts (buffer_escapes) ────
 
 /// A buffer that's only read (Load) does NOT escape  -  its
 /// contents are an input the host produced.

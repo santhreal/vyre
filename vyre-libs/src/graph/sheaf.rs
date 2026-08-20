@@ -1,4 +1,4 @@
-//! Sheaf neural network primitive  -  sheaf Laplacian application (#31).
+//! Sheaf neural network primitive  -  sheaf Laplacian application.
 //!
 //! Sheaf neural networks (Bodnar-Di Giovanni 2022, Hansen-Gebhart 2023)
 //! generalize GNNs from "all nodes share one feature space" to "each
@@ -55,7 +55,7 @@ pub const OP_ID: &str = "vyre-libs::graph::sheaf_diffusion_step";
 /// This is the diagonal-form approximation that's correct when the
 /// restriction maps are simultaneously diagonalizable. Full off-
 /// diagonal sheaf-Laplacian application composes from this primitive
-/// plus a graph-traversal step (#5 chebyshev_filter on the off-
+/// plus a graph-traversal step (chebyshev_filter on the off-
 /// diagonal part).
 #[must_use]
 pub fn sheaf_diffusion_step(

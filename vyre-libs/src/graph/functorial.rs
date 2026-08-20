@@ -1,4 +1,4 @@
-//! Functorial data migration primitive (#52).
+//! Functorial data migration primitive.
 //!
 //! Categorical data migration (Spivak 2012, Patterson 2022 Catlab.jl):
 //! treat schema migrations between databases as functors `F: C → D`.

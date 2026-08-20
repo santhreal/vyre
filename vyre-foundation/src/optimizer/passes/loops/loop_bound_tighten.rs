@@ -1,4 +1,4 @@
-//! ROADMAP A19  -  loop-bound tightening via inner predicate hoisting.
+//! loop-bound tightening via inner predicate hoisting.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::loop_bound_tighten`.
 //! Soundness: `Exact`  -  when every observable side-effect inside a
@@ -34,7 +34,7 @@
 //!   empty. The condition is `Lt(Var(loop_var), LitU32(n))` with `n` a
 //!   compile-time constant strictly less than the upper bound `b`.
 //! - Loop bounds must both be `Expr::LitU32`. Runtime bounds (e.g.
-//!   `Expr::buf_len`) need range facts (ROADMAP A16) before tightening
+//!   `Expr::buf_len`) need range facts before tightening
 //!   is safe; that variant lives beside the downstream range pass.
 //! - When `n >= b`, the predicate is always true on every iteration  -
 //!   the redundant guard is dropped by `loop_redundant_bound_check_elide`,

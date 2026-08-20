@@ -1,4 +1,4 @@
-//! Tier 2.5 line-index  -  write a per-byte line number into `lines[i]`.
+//! Line index  -  write a per-byte line number into `lines[i]`.
 //!
 //! Every parser dialect that reports diagnostics needs line numbers.
 //! This op is a GPU-native flag/scan pipeline. The first pass marks bytes
@@ -25,7 +25,7 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::GeometryRequirements;
 
-/// Stable op id for the registered Tier 3 wrapper.
+/// Stable op id for the registered dialect wrapper.
 pub const LINE_INDEX_OP_ID: &str = "vyre-libs::text::line_index";
 const FLAG_OP_ID: &str = "anonymous::vyre-primitives::text::line_index::line_start_flags";
 

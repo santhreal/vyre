@@ -1,4 +1,4 @@
-//! The seam a Tier 3 dialect crosses to reach a sibling dialect.
+//! The seam one dialect crosses to reach a sibling dialect.
 //!
 //! Each directory under `src/` is one dialect. A dialect owns its own surface
 //! and depends downward on `vyre-primitives`; it does not reach sideways into

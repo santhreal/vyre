@@ -1,4 +1,4 @@
-//! ROADMAP A13  -  escape facts into scratch reuse across megakernel
+//! escape facts into scratch reuse across megakernel
 //! arms.
 //!
 //! Foundation-side substrate. Walks every `Node::Region` in the

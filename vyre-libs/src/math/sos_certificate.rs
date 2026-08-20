@@ -11,7 +11,7 @@
 //! the polynomial coefficients and a monomial basis, populate the
 //! Gram matrix `Q` such that `m(x)ᵀ Q m(x) = p(x)`. The downstream
 //! SDP feasibility check (Newton-Schulz on Q's PSD projection or a
-//! coupled ADMM iteration) composes with #16 preconditioner.
+//! coupled ADMM iteration) composes with preconditioner.
 //!
 //! # Why this primitive is dual-use
 //!

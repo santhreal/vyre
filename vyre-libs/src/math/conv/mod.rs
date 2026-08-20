@@ -1,6 +1,6 @@
 //! 2D convolution sub-dialect.
 //!
-//! ROADMAP H3  -  Im2col/direct-conv decision by shape and memory
+//! Im2col/direct-conv decision by shape and memory
 //! budget. Both ops are one algorithm: `crate::builder::stencil::stencil_3x3_taps` owns the
 //! zero-padded 3x3 patch of a pixel, `im2col_3x3` writes those patches into an
 //! `[H*W, 9]` matrix for a caller-supplied gemm, and `conv2d_3x3_direct`

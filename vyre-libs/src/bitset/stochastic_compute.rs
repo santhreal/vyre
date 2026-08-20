@@ -1,4 +1,4 @@
-//! Stochastic computing primitive (#59, research scaffold).
+//! Stochastic computing primitive (research scaffold).
 //!
 //! Stochastic computing (Gaines 1969, Alaghi 2018 revival) represents
 //! numbers as bitstreams; multiplication = AND, addition = MUX.

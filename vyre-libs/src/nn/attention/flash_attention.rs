@@ -1,7 +1,7 @@
 //! Flash-attention tiled fusion  -  `softmax(Q·Kᵀ / √d) · V` computed
 //! in a single pass per query row via online-softmax tiling.
 //!
-//! ROADMAP H4. The standard `attention` primitive in this crate
+//! The standard `attention` primitive in this crate
 //! materialises three passes per row (max-reduction, sum-reduction,
 //! write) and re-evaluates the dot-product score in each pass. Each
 //! re-evaluation reloads `d` Q-values and `d * s` K-values from

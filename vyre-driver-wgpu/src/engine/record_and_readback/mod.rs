@@ -70,7 +70,7 @@ pub(crate) struct RecordAndReadback<'a> {
     pub workgroup_count: [u32; 3],
     /// Optional indirect dispatch source.
     pub indirect: Option<&'a crate::pipeline::IndirectDispatch>,
-    /// wgpu labels for trace readability.
+    /// Wgpu labels for trace readability.
     pub labels: DispatchLabels,
     /// Number of back-to-back compute dispatches to record before readback.
     pub iterations: u32,
@@ -270,7 +270,7 @@ fn record_dispatch_unsubmitted_impl(
     // Tuple = (binding, pooled buffer, logical-byte-size). The third
     // field is the size we want the descriptor binding range to use,
     // not the size_class allocation length the pool returns. See
-    // ROADMAP Q3  -  using `as_entire_binding()` made `arrayLength`
+    // using `as_entire_binding()` made `arrayLength`
     // report the rounded-up element count instead of the logical one.
     let mut gpu_buffers = GpuBuffers::with_capacity(non_shared_binding_count);
     let gpu_idx_by_binding = &mut scratch.gpu_idx_by_binding;
@@ -278,7 +278,7 @@ fn record_dispatch_unsubmitted_impl(
     for (idx, output) in request.output_bindings.iter().enumerate() {
         output_idx_by_binding.push(output.binding, idx)?;
     }
-    // P0 #9: scratch.clear_requests is a thread-local Vec that retains
+    // scratch.clear_requests is a thread-local Vec that retains
     // capacity across dispatches. Programs with > 8 buffers no longer pay a
     // fresh heap allocation on the spill path.
     let clear_requests = &mut scratch.clear_requests;

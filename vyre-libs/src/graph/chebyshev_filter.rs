@@ -24,9 +24,9 @@
 //! | `vyre-libs::nn::gnn` | Spectral GNN filter without eigendecomp |
 //! | `vyre-libs::security::call_graph` | Spectral anomaly on call graphs |
 //! | `vyre-libs::dataflow` | Spectral propagation of taint priors |
-//! | `vyre-foundation::transform::spectral_schedule` (#23) | **Spectral clustering of vyre's own dispatch graph** to drive #19 polyhedral fusion + #22 megakernel scheduler |
+//! | `vyre-foundation::transform::spectral_schedule` | **Spectral clustering of vyre's own dispatch graph** to drive polyhedral fusion + megakernel scheduler |
 //!
-//! The self-consumer (#23) is what makes this a recursion-thesis
+//! The self-consumer is what makes this a recursion-thesis
 //! primitive: same Program that GNN dialects use for graph filtering
 //! is the engine that decides which vyre-primitive Programs should
 //! be fused at compile time.

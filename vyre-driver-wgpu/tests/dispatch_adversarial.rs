@@ -1,4 +1,4 @@
-//! P1 inventory #88  -  adversarial tests for every dispatch path.
+//! Adversarial tests for every dispatch path.
 //!
 //! Hostile inputs against `WgpuBackend::dispatch` and friends. The
 //! test suite asserts each adversarial input produces a structured

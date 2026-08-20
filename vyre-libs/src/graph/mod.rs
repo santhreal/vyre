@@ -234,31 +234,31 @@ pub mod sum_product_circuit;
 #[cfg(feature = "graph")]
 pub mod do_calculus;
 
-/// Back-door / front-door adjustment set predicates for causal inference
-/// (#37). Composes with #36 do-calculus for full ID-algorithm pipelines.
+/// Back-door / front-door adjustment set predicates for causal inference.
+/// Composes with do-calculus for full ID-algorithm pipelines.
 #[cfg(feature = "graph")]
 pub mod adjustment_set;
 
 /// Matroid intersection  -  exchange-graph BFS step for combinatorial
-/// scheduling and bipartite matching (#46).
+/// scheduling and bipartite matching.
 #[cfg(feature = "graph")]
 pub mod matroid;
 
-/// Sheaf neural network diagonal-form diffusion step (#31).
+/// Sheaf neural network diagonal-form diffusion step.
 #[cfg(feature = "graph")]
 pub mod sheaf;
 
-/// Probabilistic knowledge compilation d-DNNF evaluator (#38). Composes with
-/// #10 sum_product_circuit for probability-weighted variants.
+/// Probabilistic knowledge compilation d-DNNF evaluator. Composes with
+/// sum_product_circuit for probability-weighted variants.
 #[cfg(feature = "graph")]
 pub mod knowledge_compile;
 
-/// Functorial data migration (#52). Schema-functor application as graph
+/// Functorial data migration. Schema-functor application as graph
 /// rewrite.
 #[cfg(feature = "graph")]
 pub mod functorial;
 
-/// Monoidal-category sequential composition (#53). String-diagram compilation
+/// Monoidal-category sequential composition. String-diagram compilation
 /// primitive.
 #[cfg(feature = "graph")]
 pub mod string_diagram;

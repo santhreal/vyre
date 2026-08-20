@@ -1,4 +1,4 @@
-//! CRITIQUE_NAGA_DEEPER_2026-04-23 regression pins.
+//! Naga backend regression pins.
 //!
 //! These tests lock the four fixes that closed the silent-correctness
 //! hazards in the Naga emitter. Every test would have passed on the

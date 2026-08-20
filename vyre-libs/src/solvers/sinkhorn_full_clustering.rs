@@ -1,6 +1,6 @@
 //! Full Sinkhorn-balanced dispatch-graph clustering.
 //!
-//! Replaces the single-step version in `sinkhorn_dispatch_clustering` (#2)
+//! Replaces the single-step version in `sinkhorn_dispatch_clustering`
 //! with a full iterative fixpoint. This computes an entropy-regularized
 //! optimal transport plan between dispatch components, yielding a balanced
 //! soft assignment of nodes to clusters.

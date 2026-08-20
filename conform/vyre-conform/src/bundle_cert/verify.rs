@@ -143,7 +143,7 @@ where
         });
     }
 
-    // CRITIQUE_CONFORM_2026-04-23 L1: witness_count was declared
+    // `witness_count` was declared
     // but never validated. Reject mismatches here so a tampered
     // cert that claims a bogus count is surfaced with both values
     // named instead of silently accepted.
