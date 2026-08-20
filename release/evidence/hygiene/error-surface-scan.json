@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:aaa92ef9765a41119bef5bb95b5e5852e24c6f65:dirty=true:worktree=af4788061382720abb2a880a5561ef28abad55844c847a0250a5cad9c4114c80",
+  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=a9d254d5ca759ed91b91ea1248ed19ec31a34f66188bad61215330084f0d76e1",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -119,25 +119,25 @@
     },
     {
       "path": "vyre-libs/src/nn/attention/tiled_online_softmax.rs",
-      "line": 422,
+      "line": 443,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the registered online-softmax witness must plan\");"
     },
     {
       "path": "vyre-libs/src/graph/vast_tree_walk.rs",
-      "line": 136,
+      "line": 137,
       "pattern": "documented_panic_contract",
       "text": "try_ast_walk_preorder(nodes, out, node_count, out_cap).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/graph/vast_tree_walk.rs",
-      "line": 161,
+      "line": 162,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/graph/dominator_frontier.rs",
-      "line": 80,
+      "line": 83,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -149,25 +149,25 @@
     },
     {
       "path": "vyre-libs/src/graph/persistent_bfs/program.rs",
-      "line": 495,
+      "line": 502,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/graph/persistent_bfs/program.rs",
-      "line": 567,
+      "line": 574,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/graph/csr_forward_or_changed/program_parallel_batch_global.rs",
-      "line": 63,
+      "line": 69,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
     {
       "path": "vyre-libs/src/graph/csr_forward_or_changed/program_parallel_batch.rs",
-      "line": 34,
+      "line": 41,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -188,6 +188,12 @@
       "line": 91,
       "pattern": "documented_panic_contract",
       "text": "try_security_predicate_rows().expect("
+    },
+    {
+      "path": "vyre-libs/src/reduce/grid_stride_tree.rs",
+      "line": 69,
+      "pattern": "documented_panic_contract",
+      "text": "Err(error) => panic!(\"grid_stride_tree_sum_u32 fusion failed: {error}\"),"
     },
     {
       "path": "vyre-libs/src/math/fixed_u32_matmul.rs",
@@ -1121,7 +1127,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1466,
+      "line": 1496,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },

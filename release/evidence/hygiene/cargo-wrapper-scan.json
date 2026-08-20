@@ -1,8 +1,44 @@
 {
-  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=true:worktree=30531da37e53670e7b8d915514805ee8e31745f7767d0bad7a7b409954b15df9",
+  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=bc92d6d9d55cf91573cc2968b941465426bb7e6691dc1a26c53d7326464ee63b",
   "schema_version": 1,
   "scan": "cargo-wrapper",
-  "findings": [],
-  "release_blocking_findings": [],
-  "blockers": []
+  "findings": [
+    {
+      "path": ".github/workflows/gates.yml",
+      "line": 39,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0"
+    },
+    {
+      "path": ".github/workflows/gates.yml",
+      "line": 39,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0"
+    }
+  ],
+  "release_blocking_findings": [
+    {
+      "path": ".github/workflows/gates.yml",
+      "line": 39,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": ".github/workflows/gates.yml",
+      "line": 39,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    }
+  ],
+  "blockers": [
+    "2 release-blocking `cargo-wrapper` finding(s) remain"
+  ]
 }

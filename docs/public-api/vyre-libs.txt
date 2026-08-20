@@ -1124,6 +1124,7 @@ pub enum vyre_libs::nn::conv::DepthwiseCausalConv1dError
 pub enum vyre_libs::nn::model::DenseGatedMlpError
 pub enum vyre_libs::nn::norm::GatedRmsNormError
 pub enum vyre_libs::nn::norm::LastDimL2NormError
+pub enum vyre_libs::parsing::ast_cse_structural_hash::SlotAccess
 pub enum vyre_libs::parsing::lr_tables::Action
 pub enum vyre_libs::pattern::AnchorDfaPlanError
 pub enum vyre_libs::pattern::CaptureMode
@@ -2167,7 +2168,7 @@ pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::
 pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::opt::homotopy::homotopy_euler_predictor(x_curr: &str, v: &str, dt_scaled: &str, x_pred: &str, n_paths: u32, n_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::ast_cse_constant_fold::ast_cse_constant_fold(ast_opcodes: &str, ast_lefts: &str, ast_rights: &str, ast_vals: &str, out_modified_flag: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_hash_probe_body(ast_opcodes: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, h: vyre_foundation::ir_inner::model::generated::Expr, slot_init: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_hash_probe_body(ast_opcodes: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, h: vyre_foundation::ir_inner::model::generated::Expr, slot_init: vyre_foundation::ir_inner::model::generated::Expr, access: vyre_libs::parsing::ast_cse_structural_hash::SlotAccess) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_hash_probe_program(hash_set_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_structural_hash(ast_opcodes: &str, ast_lefts: &str, ast_rights: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -4433,6 +4434,8 @@ pub vyre_libs::nn::norm::LastDimL2NormError::UnsupportedDtype
 pub vyre_libs::nn::norm::LastDimL2NormError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
 pub vyre_libs::operation_catalog::ConvergenceContract::max_iterations: u32
 pub vyre_libs::operation_catalog::ConvergenceContract::op_id: &'static str
+pub vyre_libs::parsing::ast_cse_structural_hash::SlotAccess::Contended
+pub vyre_libs::parsing::ast_cse_structural_hash::SlotAccess::SingleLane
 pub vyre_libs::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry::control_flow: bool
 pub vyre_libs::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry::handler_arity: u8
 pub vyre_libs::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry::handler_offset: u32

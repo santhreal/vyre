@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:ba00227d18f98b50e904c13f0ecf9d16cd74602b:dirty=false",
+  "source_fingerprint": "git:83e389a0f43da66e134d323e36f375190d1670d3:dirty=true:worktree=7e3dc801731642e92d79fc7368bcec7534893c86ba0688009bac0f83ce10f084",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -52,14 +52,15 @@
     {
       "name": "vyre-bench",
       "manifest": "vyre-bench/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
         "cli"
       ],
       "features": [
         "cli",
-        "default"
+        "default",
+        "device-tests"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],

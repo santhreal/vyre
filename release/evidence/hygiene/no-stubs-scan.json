@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:aaa92ef9765a41119bef5bb95b5e5852e24c6f65:dirty=true:worktree=af4788061382720abb2a880a5561ef28abad55844c847a0250a5cad9c4114c80",
+  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=a9d254d5ca759ed91b91ea1248ed19ec31a34f66188bad61215330084f0d76e1",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -95,55 +95,55 @@
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 184,
+      "line": 194,
       "pattern": "placeholder_text",
       "text": "/// One template: every placeholder known, and the rendered crate passing."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 200,
+      "line": 220,
       "pattern": "placeholder_text",
       "text": "format!(\"`{path}` uses the placeholder `{unknown}`, which this gate cannot render\"),"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 367,
+      "line": 387,
       "pattern": "placeholder_text",
       "text": "/// Substitute every known placeholder."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 370,
+      "line": 390,
       "pattern": "placeholder_text",
       "text": "for (placeholder, value) in PLACEHOLDERS {"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 371,
+      "line": 391,
       "pattern": "placeholder_text",
       "text": "rendered = rendered.replace(placeholder, value);"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 385,
+      "line": 405,
       "pattern": "placeholder_text",
       "text": "let placeholder = &after[..close + 2];"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 386,
+      "line": 406,
       "pattern": "placeholder_text",
       "text": "if !PLACEHOLDERS.iter().any(|(known, _)| *known == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 387,
+      "line": 407,
       "pattern": "placeholder_text",
       "text": "&& !unknown.iter().any(|found| found == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 389,
+      "line": 409,
       "pattern": "placeholder_text",
       "text": "unknown.push(placeholder.to_string());"
     },

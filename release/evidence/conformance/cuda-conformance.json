@@ -1,16 +1,16 @@
 {
-  "source_fingerprint": "git:f7531aecea5a6a1270eb3cec465a72da335f5304:dirty=false",
+  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=a9d254d5ca759ed91b91ea1248ed19ec31a34f66188bad61215330084f0d76e1",
   "schema_version": 4,
   "backend_id": "cuda",
   "command": "cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all",
   "stdout_diagnostics": [],
-  "total_pairs": 339,
-  "distinct_op_count": 339,
-  "catalog_required_op_count": 339,
-  "catalog_covered_op_count": 339,
+  "total_pairs": 349,
+  "distinct_op_count": 349,
+  "catalog_required_op_count": 349,
+  "catalog_covered_op_count": 349,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1017,
-  "supported_release_backend_row_count": 1017,
+  "release_backend_row_count": 1047,
+  "supported_release_backend_row_count": 1047,
   "release_backend_rows": [
     "vyre-primitives::hardware::bit_reverse_u32:reference:supported",
     "vyre-primitives::hardware::bit_reverse_u32:cuda:supported",
@@ -174,6 +174,9 @@
     "vyre-libs::graph::dominator_frontier:reference:supported",
     "vyre-libs::graph::dominator_frontier:cuda:supported",
     "vyre-libs::graph::dominator_frontier:wgpu:supported",
+    "vyre-libs::graph::dominator_frontier_pred_check:reference:supported",
+    "vyre-libs::graph::dominator_frontier_pred_check:cuda:supported",
+    "vyre-libs::graph::dominator_frontier_pred_check:wgpu:supported",
     "vyre-libs::graph::dominator_tree:reference:supported",
     "vyre-libs::graph::dominator_tree:cuda:supported",
     "vyre-libs::graph::dominator_tree:wgpu:supported",
@@ -183,6 +186,9 @@
     "vyre-libs::graph::dominator_tree_intersect_step:reference:supported",
     "vyre-libs::graph::dominator_tree_intersect_step:cuda:supported",
     "vyre-libs::graph::dominator_tree_intersect_step:wgpu:supported",
+    "vyre-libs::graph::dominator_tree_lca:reference:supported",
+    "vyre-libs::graph::dominator_tree_lca:cuda:supported",
+    "vyre-libs::graph::dominator_tree_lca:wgpu:supported",
     "vyre-libs::graph::functor_apply:reference:supported",
     "vyre-libs::graph::functor_apply:cuda:supported",
     "vyre-libs::graph::functor_apply:wgpu:supported",
@@ -219,9 +225,15 @@
     "vyre-libs::graph::tensor_flow_forward:reference:supported",
     "vyre-libs::graph::tensor_flow_forward:cuda:supported",
     "vyre-libs::graph::tensor_flow_forward:wgpu:supported",
+    "vyre-libs::graph::tensor_flow_propagate_edges:reference:supported",
+    "vyre-libs::graph::tensor_flow_propagate_edges:cuda:supported",
+    "vyre-libs::graph::tensor_flow_propagate_edges:wgpu:supported",
     "vyre-libs::graph::union_find:reference:supported",
     "vyre-libs::graph::union_find:cuda:supported",
     "vyre-libs::graph::union_find:wgpu:supported",
+    "vyre-libs::graph::vast_descend_leftmost_leaf:reference:supported",
+    "vyre-libs::graph::vast_descend_leftmost_leaf:cuda:supported",
+    "vyre-libs::graph::vast_descend_leftmost_leaf:wgpu:supported",
     "vyre-libs::graph::vast_walk_postorder:reference:supported",
     "vyre-libs::graph::vast_walk_postorder:cuda:supported",
     "vyre-libs::graph::vast_walk_postorder:wgpu:supported",
@@ -528,12 +540,18 @@
     "vyre-libs::nn::attention:reference:supported",
     "vyre-libs::nn::attention:cuda:supported",
     "vyre-libs::nn::attention:wgpu:supported",
+    "vyre-libs::nn::attention::absorb_values:reference:supported",
+    "vyre-libs::nn::attention::absorb_values:cuda:supported",
+    "vyre-libs::nn::attention::absorb_values:wgpu:supported",
     "vyre-libs::nn::attention::online_softmax:reference:supported",
     "vyre-libs::nn::attention::online_softmax:cuda:supported",
     "vyre-libs::nn::attention::online_softmax:wgpu:supported",
     "vyre-libs::nn::attention::quest_paging:reference:supported",
     "vyre-libs::nn::attention::quest_paging:cuda:supported",
     "vyre-libs::nn::attention::quest_paging:wgpu:supported",
+    "vyre-libs::nn::attention::tile_scores:reference:supported",
+    "vyre-libs::nn::attention::tile_scores:cuda:supported",
+    "vyre-libs::nn::attention::tile_scores:wgpu:supported",
     "vyre-libs::nn::attention::turboquant:reference:supported",
     "vyre-libs::nn::attention::turboquant:cuda:supported",
     "vyre-libs::nn::attention::turboquant:wgpu:supported",
@@ -711,18 +729,27 @@
     "vyre-libs::parsing::ast_cfg_blocks:reference:supported",
     "vyre-libs::parsing::ast_cfg_blocks:cuda:supported",
     "vyre-libs::parsing::ast_cfg_blocks:wgpu:supported",
+    "vyre-libs::parsing::ast_cse_hash_probe:reference:supported",
+    "vyre-libs::parsing::ast_cse_hash_probe:cuda:supported",
+    "vyre-libs::parsing::ast_cse_hash_probe:wgpu:supported",
     "vyre-libs::parsing::ast_cse_structural_hash:reference:supported",
     "vyre-libs::parsing::ast_cse_structural_hash:cuda:supported",
     "vyre-libs::parsing::ast_cse_structural_hash:wgpu:supported",
     "vyre-libs::parsing::ast_shunting_yard:reference:supported",
     "vyre-libs::parsing::ast_shunting_yard:cuda:supported",
     "vyre-libs::parsing::ast_shunting_yard:wgpu:supported",
+    "vyre-libs::parsing::ast_shunting_yard_reduce:reference:supported",
+    "vyre-libs::parsing::ast_shunting_yard_reduce:cuda:supported",
+    "vyre-libs::parsing::ast_shunting_yard_reduce:wgpu:supported",
     "vyre-libs::parsing::core_delimiter_match:reference:supported",
     "vyre-libs::parsing::core_delimiter_match:cuda:supported",
     "vyre-libs::parsing::core_delimiter_match:wgpu:supported",
     "vyre-libs::parsing::line_splice_classify:reference:supported",
     "vyre-libs::parsing::line_splice_classify:cuda:supported",
     "vyre-libs::parsing::line_splice_classify:wgpu:supported",
+    "vyre-libs::parsing::planar_rewrite_exclusion_check:reference:supported",
+    "vyre-libs::parsing::planar_rewrite_exclusion_check:cuda:supported",
+    "vyre-libs::parsing::planar_rewrite_exclusion_check:wgpu:supported",
     "vyre-libs::parsing::planar_rewrite_schedule:reference:supported",
     "vyre-libs::parsing::planar_rewrite_schedule:cuda:supported",
     "vyre-libs::parsing::planar_rewrite_schedule:wgpu:supported",
@@ -858,6 +885,9 @@
     "vyre-libs::reduce::gather:reference:supported",
     "vyre-libs::reduce::gather:cuda:supported",
     "vyre-libs::reduce::gather:wgpu:supported",
+    "vyre-libs::reduce::grid_stride_tree_sum_u32:reference:supported",
+    "vyre-libs::reduce::grid_stride_tree_sum_u32:cuda:supported",
+    "vyre-libs::reduce::grid_stride_tree_sum_u32:wgpu:supported",
     "vyre-libs::reduce::histogram:reference:supported",
     "vyre-libs::reduce::histogram:cuda:supported",
     "vyre-libs::reduce::histogram:wgpu:supported",
@@ -1034,11 +1064,11 @@
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
-  "passed_pairs": 339,
-  "failed_pairs": 0,
+  "passed_pairs": 348,
+  "failed_pairs": 1,
   "duplicate_op_ids": [],
   "diff_schema_version": 1,
-  "diff_summary_count": 339,
+  "diff_summary_count": 349,
   "diff_summary_errors": [],
   "diff_summaries": [
     {
@@ -1492,6 +1522,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::graph::dominator_frontier_pred_check",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:ff8b0627b7f8928ef2b2e6a58e8d506309ec2ddd5e6e1c378b99ff8bd30ddc41",
+      "output_digest": "vyre-conform-output-envelope-v1:eef8bf5e27ea141a1985ff92cee98c88120c53feed8a8ecbd4117a9e4ed40efa",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::graph::dominator_tree",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:e6b10fbc93d448803c875265cc7239e6b36af510a94bca8bc577b9a8329a72ff",
@@ -1516,6 +1556,16 @@
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:2ef9841a0c2bf8d19e3a9c72396336cb3dcc4b8bf53a88d785bcd218c6d94ff3",
       "output_digest": "vyre-conform-output-envelope-v1:e4fdd6f8922ad30392d4b8b0ab75eede31434dc3c79e532dc077e597ccfd8f11",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::graph::dominator_tree_lca",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:b6f6e6fa373fde2f562943b4747c03acdb071a3312ddd4d2507a907cf204622e",
+      "output_digest": "vyre-conform-output-envelope-v1:881fdedc02170afbef844aa8af375b807d32a761961e08b06a5ae0325ed8e4fc",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -1642,10 +1692,30 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::graph::tensor_flow_propagate_edges",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:8f89aebb47fcb73df777e94553b713dc07fe1871571ab192bab064b6d662929a",
+      "output_digest": "vyre-conform-output-envelope-v1:c561fbbe08daf7e9af3f058db0dec4e585c74f0bff49e926e39c7bc0aff49538",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::graph::union_find",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:c2fcb8a2828c6763fa4266589f0f6c80ba8019ecc5e265d8ce3403617a638147",
       "output_digest": "vyre-conform-output-envelope-v1:f68a9e257103d9bc0585855b2ced733399685640a0a531ecae2d5e5c53c4edeb",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::graph::vast_descend_leftmost_leaf",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:e2009c6ecc5fd4262bb32a8faa28d08f69595afeaf1a9e964fc732046c4dc200",
+      "output_digest": "vyre-conform-output-envelope-v1:576750fec0e889efbce6ecad685a3eb194149bceefe540fd338b657cd15daff6",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -2672,6 +2742,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::nn::attention::absorb_values",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:54d3046c914b3ea5e6fa218467de17363430bdfa6b425f898eada3b3249bc79f",
+      "output_digest": "vyre-conform-output-envelope-v1:35b3f1b0118fe46f7a6e17016b52271013c594ffac7cf5d09b9fc1dee817e320",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::nn::attention::online_softmax",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:6ac6203c2242a48c6a90e20af92fc2fcbc48cc40bea9e3251d7c3a10007dd810",
@@ -2686,6 +2766,16 @@
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:246f257dfb843a76f55dcbc6cee355730b9788e08e61f9ef051156c4e4daa1a2",
       "output_digest": "vyre-conform-output-envelope-v1:ec86fc661162220238306734c038a60e08ee15f1d388f9aae9991e0ba37452db",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::nn::attention::tile_scores",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:1f53367ca237bf5754a3ef5de16599d2b0ade6dc0a02b03be1aa4bdd33a170d2",
+      "output_digest": "vyre-conform-output-envelope-v1:40ace31b8b6aa5a0b0ffb29bb95209b2ef8e4c948f7fb2f070ff163823acc359",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -3282,6 +3372,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::parsing::ast_cse_hash_probe",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:e48e12ec91fa1272074ebdb8f90adea9fdcf3b40d56debbdeda805f2a716ffb2",
+      "output_digest": "vyre-conform-output-envelope-v1:b0eb8c6d5bc30e7528a044126274715fbba1ebf2fde1f4380df1909ce067c103",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
       "op_id": "vyre-libs::parsing::ast_cse_structural_hash",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:b33be71edb502d13aac7aa9bb42b705a61045ce216d18a5baea94f1f3b37d015",
@@ -3302,6 +3402,16 @@
       "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
+      "op_id": "vyre-libs::parsing::ast_shunting_yard_reduce",
+      "backend_id": "cuda",
+      "input_digest": "ea7437056c3abfd892b5efba38795b2d5fc8f4887510621a76f161c2573c801a",
+      "output_digest": "315a4860fda60622fbac93ad8c16fda108a7714a98c622e410977aed65a1eab0",
+      "timing_class": "not_reported",
+      "failure_class": "output_mismatch",
+      "passed": false,
+      "source": "input=replay_capsule;output=replay_capsule"
+    },
+    {
       "op_id": "vyre-libs::parsing::core_delimiter_match",
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:ac54243a3bc516865bf2333b21428a26e78a66070421a1807e7c298278e1d323",
@@ -3316,6 +3426,16 @@
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:6da95d3476e936924465196ef84eb7513f404426d0cd466f249a5d0798afc59b",
       "output_digest": "vyre-conform-output-envelope-v1:e5bfc22d21d1ef4a71dfbcdf29f41a9886b9ea104be49923754c30f80f4d26e3",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::parsing::planar_rewrite_exclusion_check",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:3cbd0824134ea5becc166dda2943a14a3eead442c43cd429477ca40e275f34dd",
+      "output_digest": "vyre-conform-output-envelope-v1:6960fdd95784531a868135841e00c42bd2631a47b9cc49e89873b7c4ddfa97ed",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -3766,6 +3886,16 @@
       "backend_id": "cuda",
       "input_digest": "vyre-conform-input-envelope-v1:e368483b20b7253e3d1c9f31f646f3432b03f644e5a23c29605f9c62b1238ac2",
       "output_digest": "vyre-conform-output-envelope-v1:7281cbfb7b64f5a02ba9100e14f465f73b0111ebdfb7990943e027c17efb64fa",
+      "timing_class": "not_reported",
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
+    },
+    {
+      "op_id": "vyre-libs::reduce::grid_stride_tree_sum_u32",
+      "backend_id": "cuda",
+      "input_digest": "vyre-conform-input-envelope-v1:0f477155d567a3c7987ade2ce4a2147811bfa9d54f2443784a53793c36e2a74e",
+      "output_digest": "vyre-conform-output-envelope-v1:6b45151b11cc7e31523bd82118040996da1a9845126c5ee631d2cebb4d77915d",
       "timing_class": "not_reported",
       "failure_class": "passed",
       "passed": true,
@@ -4704,6 +4834,12 @@
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
     },
     {
+      "op_id": "vyre-libs::graph::dominator_frontier_pred_check",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
       "op_id": "vyre-libs::graph::dominator_tree",
       "backend_id": "cuda",
       "passed": true,
@@ -4717,6 +4853,12 @@
     },
     {
       "op_id": "vyre-libs::graph::dominator_tree_intersect_step",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
+      "op_id": "vyre-libs::graph::dominator_tree_lca",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
@@ -4794,7 +4936,19 @@
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
     },
     {
+      "op_id": "vyre-libs::graph::tensor_flow_propagate_edges",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
       "op_id": "vyre-libs::graph::union_find",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
+      "op_id": "vyre-libs::graph::vast_descend_leftmost_leaf",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
@@ -5412,6 +5566,12 @@
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
     },
     {
+      "op_id": "vyre-libs::nn::attention::absorb_values",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
       "op_id": "vyre-libs::nn::attention::online_softmax",
       "backend_id": "cuda",
       "passed": true,
@@ -5419,6 +5579,12 @@
     },
     {
       "op_id": "vyre-libs::nn::attention::quest_paging",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
+      "op_id": "vyre-libs::nn::attention::tile_scores",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
@@ -5778,6 +5944,12 @@
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
     },
     {
+      "op_id": "vyre-libs::parsing::ast_cse_hash_probe",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
       "op_id": "vyre-libs::parsing::ast_cse_structural_hash",
       "backend_id": "cuda",
       "passed": true,
@@ -5790,6 +5962,58 @@
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
     },
     {
+      "op_id": "vyre-libs::parsing::ast_shunting_yard_reduce",
+      "backend_id": "cuda",
+      "passed": false,
+      "message": "backend output diverged from vyre-reference on case 0: output buffer 2 (U32) is not byte-identical; left=len=256 hex=030000000a00000014000000ffffffff00000000000000000000000000000000... right=len=256 hex=030000000a000000140000000000000000000000000000000000000000000000.... Fix: align backend.dispatch with vyre-reference under the backend-transcendental-aware ULP window (byte-exact for non-F32, <= program-derived ULP cap for F32).",
+      "replay_capsule": {
+        "backend_id": "cuda",
+        "backend_output_blake3": "315a4860fda60622fbac93ad8c16fda108a7714a98c622e410977aed65a1eab0",
+        "backend_output_buffers_hex": [
+          "14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "00000000140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "030000000a00000014000000ffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "04000000"
+        ],
+        "backend_output_count": 4,
+        "case_index": 0,
+        "first_mismatch": {
+          "backend_byte": 255,
+          "backend_len": 256,
+          "byte_index": 12,
+          "kind": "byte",
+          "output_index": 2,
+          "reference_byte": 0,
+          "reference_len": 256
+        },
+        "minimization": {
+          "original_case_count": 1,
+          "retained_case_count": 1,
+          "strategy": "single_witness_case"
+        },
+        "op_id": "vyre-libs::parsing::ast_shunting_yard_reduce",
+        "program_blake3": "a78eb9c27e1ca404b08cc442046293265d09b2ece720e685d6cc7b7ca48abc35",
+        "reference_output_blake3": "b9b7568ec482643e3c19d0c99be186c1fe9b333014f8e14894ad2befe00041cc",
+        "reference_output_buffers_hex": [
+          "14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "00000000140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "030000000a0000001400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "04000000"
+        ],
+        "reference_output_count": 4,
+        "replay_command": "vyre-conform dispatch --backend cuda --ops vyre-libs::parsing::ast_shunting_yard_reduce",
+        "schema_version": 2,
+        "witness_input_blake3": "ea7437056c3abfd892b5efba38795b2d5fc8f4887510621a76f161c2573c801a",
+        "witness_input_buffers_hex": [
+          "14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "0a000000140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "00000000"
+        ],
+        "witness_input_count": 4
+      }
+    },
+    {
       "op_id": "vyre-libs::parsing::core_delimiter_match",
       "backend_id": "cuda",
       "passed": true,
@@ -5797,6 +6021,12 @@
     },
     {
       "op_id": "vyre-libs::parsing::line_splice_classify",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
+      "op_id": "vyre-libs::parsing::planar_rewrite_exclusion_check",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
@@ -6067,6 +6297,12 @@
     },
     {
       "op_id": "vyre-libs::reduce::gather",
+      "backend_id": "cuda",
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
+    },
+    {
+      "op_id": "vyre-libs::reduce::grid_stride_tree_sum_u32",
       "backend_id": "cuda",
       "passed": true,
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
@@ -6468,5 +6704,8 @@
       "message": "1 witness case(s) matched vyre-reference through canonical artifact submission"
     }
   ],
-  "blockers": []
+  "blockers": [
+    "`cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all` exited with exit status: 1; stderr: Compiling vyre-conform v0.8.0 (conform/vyre-conform)\n    Finished `release` profile [optimized] target(s) in 15.46s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend cuda --ops all`",
+    "cuda conformance reported 1 failed pair(s)"
+  ]
 }

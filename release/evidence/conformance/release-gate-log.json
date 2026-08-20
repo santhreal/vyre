@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:bfb821dee03076f8552040a4f1acd93ca2137219:dirty=false",
+  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=a9d254d5ca759ed91b91ea1248ed19ec31a34f66188bad61215330084f0d76e1",
   "schema_version": 2,
   "command": "cargo_full run --bin xtask -- release-conformance",
   "requested_backends": [
@@ -32,5 +32,12 @@
       "read_error": null
     }
   ],
-  "blockers": []
+  "blockers": [
+    "cuda: `cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all` exited with exit status: 1; stderr: Compiling vyre-conform v0.8.0 (conform/vyre-conform)\n    Finished `release` profile [optimized] target(s) in 15.46s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend cuda --ops all`",
+    "cuda: cuda conformance reported 1 failed pair(s)",
+    "wgpu: `cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.09s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
+    "wgpu: wgpu conformance reported 1 failed pair(s)",
+    "cpu-ref: `cargo_full run -p vyre-conform --release --bin vyre-conform -- dispatch --backend cpu-ref --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.23s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend cpu-ref --ops all`",
+    "cpu-ref: cpu-ref conformance reported 1 failed pair(s)"
+  ]
 }

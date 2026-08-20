@@ -543,6 +543,18 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::graph::dominator_frontier_pred_check"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 5
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::graph::dominator_tree"
 tier = "libs"
 category = "graph"
@@ -572,6 +584,18 @@ tier = "libs"
 category = "graph"
 kind = "program_buffers"
 buffers = 5
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::dominator_tree_lca"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 3
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
@@ -723,11 +747,35 @@ laws = ["distributive"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::graph::tensor_flow_propagate_edges"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::graph::union_find"
 tier = "libs"
 category = "graph"
 kind = "program_buffers"
 buffers = 3
+bytes_extraction = false
+features = ["graph"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::graph::vast_descend_leftmost_leaf"
+tier = "libs"
+category = "graph"
+kind = "program_buffers"
+buffers = 2
 bytes_extraction = false
 features = ["graph"]
 target_facets = ["cuda", "spirv", "wgpu"]
@@ -1959,6 +2007,18 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::nn::attention::absorb_values"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::nn::attention::online_softmax"
 tier = "libs"
 category = "nn"
@@ -1972,6 +2032,18 @@ backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
 id = "vyre-libs::nn::attention::quest_paging"
+tier = "libs"
+category = "nn"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["nn-activation", "nn-linear", "nn-norm", "nn-attention", "nn-kernels"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::nn::attention::tile_scores"
 tier = "libs"
 category = "nn"
 kind = "program_buffers"
@@ -2691,6 +2763,18 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::parsing::ast_cse_hash_probe"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::parsing::ast_cse_structural_hash"
 tier = "libs"
 category = "parsing"
@@ -2715,6 +2799,18 @@ laws = []
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
+id = "vyre-libs::parsing::ast_shunting_yard_reduce"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 4
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
 id = "vyre-libs::parsing::core_delimiter_match"
 tier = "libs"
 category = "parsing"
@@ -2728,6 +2824,18 @@ backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
 id = "vyre-libs::parsing::line_splice_classify"
+tier = "libs"
+category = "parsing"
+kind = "program_buffers"
+buffers = 2
+bytes_extraction = false
+features = ["parsing", "parsing-kernels", "go-parser", "python-parser"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = []
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::parsing::planar_rewrite_exclusion_check"
 tier = "libs"
 category = "parsing"
 kind = "program_buffers"
@@ -3276,6 +3384,18 @@ bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
 laws = ["monotonic"]
+backends = ["cuda", "reference", "wgpu"]
+
+[[operation]]
+id = "vyre-libs::reduce::grid_stride_tree_sum_u32"
+tier = "libs"
+category = "reduce"
+kind = "program_buffers"
+buffers = 3
+bytes_extraction = false
+features = ["reduce"]
+target_facets = ["cuda", "spirv", "wgpu"]
+laws = ["associative", "commutative", "identity"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
