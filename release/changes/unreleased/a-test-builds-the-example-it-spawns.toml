@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "wire_harness_smoke_test spawned an example binary that only cargo's default target selection builds. Every explicit selection, including the --tests the coverage lane runs under, compiles an example as a hashed test harness instead, so the test failed on a flag rather than on a defect. It now builds the example itself when the selected targets did not, once per process."
