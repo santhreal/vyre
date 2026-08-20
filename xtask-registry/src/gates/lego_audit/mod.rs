@@ -90,22 +90,6 @@ use xtask::gates::dedup_report::{
 };
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
-/// All 12 discrete registered LEGO law gates whose results LegoAudit aggregates.
-pub static LEGO_LAW_GATES: &[&dyn xtask::gate::GateBehavior] = &[
-    &LegoExemptionLiveness,
-    &LegoNoReinvention,
-    &LegoCompositionDepth,
-    &LegoPrimitiveCoverage,
-    &LegoCrossDialect,
-    &LegoCompositionChains,
-    &LegoTrend,
-    &LegoComposability,
-    &LegoNameStems,
-    &LegoOperandShapes,
-    &LegoSemanticOrganization,
-    &LegoTierClaims,
-];
-
 /// Check 0: every exemption is live.
 pub struct LegoExemptionLiveness;
 

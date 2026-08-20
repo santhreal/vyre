@@ -76,22 +76,6 @@ pub fn subsets() -> Vec<Subset> {
         .collect()
 }
 
-/// All 11 discrete registered LEGO law gates executed by the lego-audit aggregate runner.
-pub const LEGO_LAW_GATES: &[&str] = &[
-    "lego-composability",
-    "lego-composition-chains",
-    "lego-composition-depth",
-    "lego-cross-dialect",
-    "lego-exemption-liveness",
-    "lego-name-stems",
-    "lego-no-reinvention",
-    "lego-operand-shapes",
-    "lego-primitive-coverage",
-    "lego-semantic-organization",
-    "lego-tier-claims",
-    "lego-trend",
-];
-
 /// Every registered gate, in name order.
 #[must_use]
 pub fn registry() -> Vec<RegisteredGate> {
@@ -128,13 +112,6 @@ pub fn find(name: &str) -> Option<RegisteredGate> {
 /// Look one subset up by name.
 #[must_use]
 pub fn subset(name: &str) -> Option<Subset> {
-    if name == "lego-audit" {
-        return Some(Subset {
-            name: "lego-audit",
-            help: "Aggregate runner over all 11 discrete LEGO law gates",
-            gates: LEGO_LAW_GATES.to_vec(),
-        });
-    }
     subsets().into_iter().find(|subset| subset.name == name)
 }
 

@@ -454,6 +454,28 @@ fn help_requested_of_the_runner(args: &[String]) -> bool {
     false
 }
 
+/// The word the runner does not accept, if the caller passed one.
+///
+/// A silently ignored flag is worse than a rejected one here: `--gate file-size`
+/// looks like it ran one gate and actually ran the whole registry, so several
+/// runs were read as single-gate evidence when they were full sweeps. The
+/// runner takes flags only, so anything that is not a known flag or the value
+/// of `--subset`/`--area` is a typo.
+fn unknown_argument(args: &[String]) -> Option<String> {
+    const KNOWN: &[&str] = &["--list", "--write-baseline", "--help", "-h"];
+    let mut words = args.iter();
+    while let Some(word) = words.next() {
+        match word.as_str() {
+            "--subset" | "--area" => {
+                words.next();
+            }
+            other if KNOWN.contains(&other) => {}
+            other => return Some(other.to_string()),
+        }
+    }
+    None
+}
+
 /// What the runner accepts, rendered from the registry it would run.
 fn usage_text() -> String {
     let mut text = String::from(
@@ -483,6 +505,15 @@ pub fn run(args: &[String]) {
     if help_requested_of_the_runner(args) {
         print!("{}", usage_text());
         return;
+    }
+
+    if let Some(word) = unknown_argument(args) {
+        eprintln!(
+            "Fix: `xtask gates` does not accept `{word}`. Run `xtask gates --help` for what it \
+             takes; there is no per-gate flag, `--subset <name>` is how you run less than the \
+             whole registry."
+        );
+        process::exit(2);
     }
 
     if args.iter().any(|argument| argument == "--list") {
@@ -648,20 +679,29 @@ mod tests {
 
     /// WHY: Section 182.7.2 requires proving that full sweep and aggregate lego-audit invocation
     /// each execute every discrete LEGO law gate exactly once without duplicate/rerun execution.
+    ///
+    /// The roster is derived from the metadata area, not restated here. A
+    /// hardcoded copy plus a hardcoded count is what went stale when
+    /// `lego-tier-claims` joined: the list grew to twelve and the count kept
+    /// asserting eleven, so the proof failed on its own bookkeeping.
     #[test]
     fn full_sweep_and_aggregate_each_execute_laws_exactly_once() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
 
-        let execution_counts: std::collections::HashMap<&str, Arc<AtomicUsize>> =
-            subcommands::LEGO_LAW_GATES
-                .iter()
-                .map(|name| (*name, Arc::new(AtomicUsize::new(0))))
-                .collect();
+        let subset = subcommands::subset("lego-audit").expect("lego-audit subset exists");
+        assert!(
+            !subset.gates.is_empty(),
+            "the lego-audit area must name at least one gate or this proof is vacuous"
+        );
+        let execution_counts: std::collections::HashMap<&str, Arc<AtomicUsize>> = subset
+            .gates
+            .iter()
+            .map(|name| (*name, Arc::new(AtomicUsize::new(0))))
+            .collect();
 
-        // 1. Full sweep simulation: runs registry() where each of the 123 gates is present once
-        let full_registry = subcommands::registry();
-        for gate in &full_registry {
+        // 1. Full sweep simulation: the registry holds each gate once.
+        for gate in &subcommands::registry() {
             if let Some(counter) = execution_counts.get(gate.name()) {
                 counter.fetch_add(1, Ordering::SeqCst);
             }
@@ -678,8 +718,6 @@ mod tests {
         for counter in execution_counts.values() {
             counter.store(0, Ordering::SeqCst);
         }
-        let subset = subcommands::subset("lego-audit").expect("lego-audit subset exists");
-        assert_eq!(subset.gates.len(), 11);
         for gate_name in &subset.gates {
             let gate = subcommands::find(gate_name).expect("gate exists in registry");
             if let Some(counter) = execution_counts.get(gate.name()) {
@@ -892,6 +930,36 @@ mod tests {
         assert!(selected.len() < subcommands::registry().len());
         assert!(selection(&["--subset".to_string()]).is_err());
         assert!(selection(&["--subset".to_string(), "nope".to_string()]).is_err());
+    }
+
+    /// WHY: an ignored flag certifies a run that never happened.
+    ///
+    /// `--gate file-size` was read as "one gate ran" several times while the
+    /// whole registry ran instead, because the runner dropped the word. Every
+    /// accepted word is derived from the flags the runner actually reads, and a
+    /// subset value is not mistaken for a flag.
+    #[test]
+    fn a_word_the_runner_does_not_read_is_rejected_rather_than_dropped() {
+        assert_eq!(
+            unknown_argument(&["--gate".to_string(), "file-size".to_string()]),
+            Some("--gate".to_string())
+        );
+        assert_eq!(
+            unknown_argument(&["--subset".to_string(), "ci-rules".to_string()]),
+            None
+        );
+        assert_eq!(unknown_argument(&["--write-baseline".to_string()]), None);
+        assert_eq!(unknown_argument(&["--list".to_string()]), None);
+        assert_eq!(unknown_argument(&[]), None);
+        // A subset literally named like a flag is a value, not a second flag.
+        assert_eq!(
+            unknown_argument(&["--area".to_string(), "--gate".to_string()]),
+            None
+        );
+        assert_eq!(
+            unknown_argument(&["file-size".to_string()]),
+            Some("file-size".to_string())
+        );
     }
 
     /// WHY: every script this campaign deletes is named by the workflow that
