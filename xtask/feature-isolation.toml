@@ -76,6 +76,10 @@ member = "vyre-bench"
 feature = "cli"
 
 [[pair]]
+member = "vyre-bench"
+feature = "device-tests"
+
+[[pair]]
 member = "vyre-conform"
 feature = "(default)"
 

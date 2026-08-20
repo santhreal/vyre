@@ -148,16 +148,22 @@ jobs:
     name: Benchmark harness device tests
     needs: gpu-adapter-probe
     runs-on: [self-hosted, axiomexec, gpu]
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # The bytecode-VM stack-carrier parity tests dispatch on a real adapter.
-      # They are off by default so the hosted matrix does not read a missing
-      # CUDA driver as a parity defect; this is the runner that owns the device.
+      # Every `vyre-bench` test that dispatches on a device is behind
+      # `device-tests`, off by default so the hosted matrix does not read a
+      # missing CUDA driver as a benchmark defect and does not pass a run whose
+      # every case failed. This is the runner that owns the device, so it turns
+      # the feature on and the whole target set runs. The roster is derived by
+      # enabling the feature, not named test by test: a device test added later
+      # is covered without editing this file.
       - name: Bytecode VM stack-carrier parity on real CUDA and WGPU
         run: ./cargo_full test -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture
+      - name: Benchmark harness suites on a real device
+        run: ./cargo_full test -p vyre-bench --features device-tests --tests -- --test-threads=1
 
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement

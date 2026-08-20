@@ -239,7 +239,7 @@ Run the checked-in behavior from `vyre-bench/src/main.rs`:
 
 ### Features
 
-- Manifest features: `cli`, `default`
+- Manifest features: `cli`, `default`, `device-tests`
 - Default feature members: `cli`
 
 ### Errors and unsupported behavior

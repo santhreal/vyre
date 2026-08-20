@@ -1,4 +1,12 @@
 //! Cache hit rate is reported only when a run observes a cache contract.
+//!
+//! `execute_suite` runs a real benchmark case, which dispatches on the device
+//! the case selects. On a hosted runner with no CUDA driver and no Vulkan
+//! adapter that is not a defect in what this file asserts: the run either
+//! aborts inside the driver or reports a failed case that a weaker assertion
+//! reads as a pass. Gated on `device-tests`, which `gpu-parity.yml` enables on
+//! the runner that owns the GPU.
+#![cfg(feature = "device-tests")]
 #![allow(missing_docs)]
 #![allow(clippy::field_reassign_with_default)]
 use vyre_bench::api::suite::SuiteKind;

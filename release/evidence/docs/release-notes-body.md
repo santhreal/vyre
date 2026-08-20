@@ -2152,6 +2152,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   xtask::json_document owns both directions; the package readiness matrix, the
   release benchmark metrics and the release backend suite all read through it
   instead of each spelling its own bounded read and serde parse.
+- `reduce::workgroup_tree::BlockScanPass` owns a multi-block scan pass.
+  `reduce::multi_block_prefix_scan` and
+  `graph::csr_frontier_queue::word_block_scan` each wrote the same seven steps
+  around the shared sweep: bind lane, block and global, zero-fill the workgroup
+  scratch, stage under `global < bound`, barrier, scan, publish the per-element
+  partial, and have the last lane write the block total. Only the staging
+  differs, so only the staging is a parameter now. Three dead re-export aliases
+  went with it: `reference_build_ifds_csr`, `try_reference_build_ifds_csr` and
+  `bfs_expand` named functions the crate already exports under their own names
+  and had no callers.
 - A gate that reads a string field out of a TOML row now calls
   xtask::toml_text::string_field. The CLI documentation generator and the
   documentation checker had the same row-to-scalar closure.
@@ -3612,6 +3622,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   profile instead of unknown device facts, so a case that uses subgroup
   intrinsics is measured on a device that has them rather than recorded as a
   validation failure.
+- Every `vyre-bench` integration test that calls `execute_suite` is behind
+  `device-tests`. `execute_suite` runs a real benchmark case and dispatches on
+  the device the case selects, so on a hosted runner with no CUDA driver the
+  thirteen of them split two ways, both wrong: `baseline_determinism` unwrapped
+  a metric and aborted inside cudarc, while the others asserted only that the
+  report was non-empty and passed a run in which every case had failed.
+  `gpu-parity.yml` enables the feature and runs the whole target set, so the
+  roster is derived from the feature rather than named test by test and a
+  device test added later is covered without editing the workflow.
 - `vyre-primitives::reduce::multi_block_prefix_scan_inclusive_sum` now declares
   a workgroup every registered target admits. Its default builders previously
   used 1024 lanes on the false claim that every target admitted that width, so
@@ -3964,6 +3983,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   child region that had derived its name from its parent operation, and the
   collapse of the C declaration prefix walk onto one owner whose disqualifier
   token set differs from the copy the annotate builders had been reading.
+- A backend that lowers a whole-grid barrier is no longer routed through the
+  host split. `VyreBackend::supports_grid_sync` and
+  `VyreBackend::cooperative_grid_sync_fits` are two halves of one answer, and
+  their defaults disagreed: the fit query returned a bare `Ok(false)`, so a
+  backend that reported native support and left the residency check on its
+  default was read as "the cooperative launch does not fit" and had every
+  grid-sync dispatch emulated by multiple host launches. Only the CUDA driver
+  overrides both, so the contradiction was reachable by any backend that
+  overrode one. The default now answers `supports_grid_sync()`, which is
+  unchanged for a backend that lowers no barrier and correct for one that does,
+  and a regression test asserts the two defaults agree rather than observing
+  the split reject an input shape downstream.
 - Four comments in substrate-neutral production source named a concrete backend
   where the neutral concept was what they meant. `vyre-driver` described a
   materialization failure as belonging to one portable target rather than to
@@ -4248,6 +4279,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   a file that is the test module as shipped source, so fixture panics in five
   test-module files under src/ were reported as production panics owing
   corrective guidance.
+- `label::resolve_family` asserted `entry_op_id == Some(OP_ID)`, which no
+  program this builder produces can satisfy: `Program::wrapped` clears that
+  field, and only the builders that call `with_entry_op_id` carry one. The test
+  now asserts the contract that is actually observable, the region tree, so it
+  goes red if the op stops composing the shared `nodeset_filter` skeleton under
+  its own generator. Five dead `#[cfg(test)]` re-exports went with it:
+  `toposort_csr`, `toposort_csr_into`, `reference_all_reachable`,
+  `reference_reachable_set` and `reference_topo_order` named items no reader
+  imported, because the contract suite defines its own.
 - The hygiene scan reported every unit test of every source-reading gate as a
   release blocker, including the tests that prove the scanner itself: a test
   that writes a source tree in a temporary directory and runs an analyzer over
