@@ -78,6 +78,7 @@ pub fn dominator_tree_intersect_step_body(
                                 Expr::eq(Expr::var("new_idom"), Expr::u32(IDOM_NONE)),
                                 vec![Node::assign("new_idom", Expr::var("p"))],
                                 vec![
+                                    Node::let_bind("a", Expr::var("new_idom")),
                                     wrap_child_region(
                                         DOMINATOR_TREE_LCA_OP_ID,
                                         Ident::from(OP_ID),
@@ -85,7 +86,6 @@ pub fn dominator_tree_intersect_step_body(
                                             node_count,
                                             idom,
                                             depth,
-                                            Expr::var("new_idom"),
                                             Expr::var("p"),
                                         ),
                                     ),
@@ -135,11 +135,9 @@ pub fn dominator_tree_lca_body(
     node_count: u32,
     idom: &str,
     depth: &str,
-    a_init: Expr,
     b_init: Expr,
 ) -> Vec<Node> {
     vec![
-        Node::let_bind("a", a_init),
         Node::let_bind("b", b_init),
         Node::loop_for(
             "lca_step",
@@ -165,18 +163,26 @@ pub fn dominator_tree_lca_body(
 #[must_use]
 pub fn dominator_tree_lca_program(node_count: u32) -> Program {
     let count = node_count.max(1);
-    let body = dominator_tree_lca_body(node_count, "idom", "depth", Expr::u32(1), Expr::u32(2));
+    let mut body = vec![Node::let_bind("a", Expr::u32(1))];
+    body.extend(dominator_tree_lca_body(node_count, "idom", "depth", Expr::u32(2)));
+    body.push(Node::store("out_lca", Expr::u32(0), Expr::var("a")));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage("idom", 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(count),
             BufferDecl::storage("depth", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(count),
+            BufferDecl::output("out_lca", 2, DataType::U32)
+                .with_count(1),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             DOMINATOR_TREE_LCA_OP_ID,
-            body,
+            guarded,
         )],
     )
 }
@@ -186,12 +192,11 @@ inventory::submit! {
         DOMINATOR_TREE_LCA_OP_ID,
         || dominator_tree_lca_program(4),
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
-            vyre_primitives::wire::pack_u32_slice(&[0, 1, 1, 2]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 3, 3, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 2, 2, 1]),
         ]]),
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
-            vyre_primitives::wire::pack_u32_slice(&[0, 1, 1, 2]),
+            vyre_primitives::wire::pack_u32_slice(&[3]),
         ]]),
     )
 }

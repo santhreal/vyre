@@ -413,16 +413,24 @@ pub fn descend_to_leftmost_leaf_body(nodes_name: &str, node_count: u32, stride: 
 #[must_use]
 pub fn vast_descend_leftmost_leaf_program(node_count: u32) -> Program {
     let count = node_count.max(1);
-    let body = descend_to_leftmost_leaf_body("nodes", count, NODE_STRIDE_U32 as u32);
+    let mut body = vec![Node::let_bind("n", Expr::u32(0))];
+    body.extend(descend_to_leftmost_leaf_body("nodes", count, NODE_STRIDE_U32 as u32));
+    body.push(Node::store("out_leaf", Expr::u32(0), Expr::var("n")));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage("nodes", 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(count.saturating_mul(NODE_STRIDE_U32 as u32)),
+            BufferDecl::output("out_leaf", 1, DataType::U32)
+                .with_count(1),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             VAST_DESCEND_LEFTMOST_LEAF_OP_ID,
-            body,
+            guarded,
         )],
     )
 }
@@ -435,7 +443,7 @@ inventory::submit! {
             fixture_u32(&fixture_tree_words()),
         ]]),
         Some(|| vec![vec![
-            fixture_u32(&fixture_tree_words()),
+            fixture_u32(&[1]),
         ]]),
     )
 }

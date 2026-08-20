@@ -169,10 +169,6 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
                                 "h",
                                 fnv1a32_mul_xor_word_expr(Expr::var("h"), Expr::var("r_idx2")),
                             ),
-                            Node::let_bind(
-                                "slot",
-                                Expr::rem(Expr::var("h"), Expr::u32(hash_set_capacity)),
-                            ),
                             wrap_child_region(
                                 AST_CSE_HASH_PROBE_OP_ID,
                                 Ident::from(OP_ID),
@@ -184,7 +180,7 @@ pub fn ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -
                                     "out_modified_flag",
                                     Expr::var("node_idx"),
                                     Expr::var("h"),
-                                    Expr::var("slot"),
+                                    Expr::rem(Expr::var("h"), Expr::u32(hash_set_capacity)),
                                 ),
                             ),
                         ],
@@ -300,6 +296,10 @@ pub fn ast_cse_hash_probe_program(hash_set_capacity: u32) -> Program {
         Expr::u32(100),
         Expr::u32(0),
     );
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage("ast_opcodes", 0, BufferAccess::ReadWrite, DataType::U32)
@@ -317,7 +317,7 @@ pub fn ast_cse_hash_probe_program(hash_set_capacity: u32) -> Program {
             .with_count(1),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(AST_CSE_HASH_PROBE_OP_ID, body)],
+        vec![wrap_anonymous_region(AST_CSE_HASH_PROBE_OP_ID, guarded)],
     )
 }
 

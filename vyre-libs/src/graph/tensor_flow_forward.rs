@@ -279,7 +279,12 @@ pub fn tensor_flow_propagate_edges_body(
 #[must_use]
 pub fn tensor_flow_propagate_edges_program() -> Program {
     use crate::graph::program_graph::{NAME_EDGE_KIND_MASK, NAME_EDGE_OFFSETS};
-    let body = tensor_flow_propagate_edges_body("tout", 4, 2, 4, 0xFFFF_FFFF);
+    let mut body = vec![
+        Node::let_bind("src", Expr::u32(0)),
+        Node::let_bind("ctx", Expr::u32(0)),
+        Node::let_bind("fld", Expr::u32(0)),
+    ];
+    body.extend(tensor_flow_propagate_edges_body("tout", 4, 2, 4, 0xFFFF_FFFF));
     Program::wrapped(
         vec![
             BufferDecl::storage(NAME_EDGE_OFFSETS, 0, BufferAccess::ReadOnly, DataType::U32)
@@ -309,10 +314,7 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
         ]]),
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[0, 1, 2, 3, 4]),
-            vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 0]),
-            vyre_primitives::wire::pack_u32_slice(&[1, 1, 1, 1]),
-            vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[16, 0, 0, 0]),
         ]]),
     )
 }

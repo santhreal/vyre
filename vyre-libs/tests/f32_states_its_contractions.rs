@@ -236,7 +236,7 @@ const UNSTATED_CONTRACTIONS: &[(&str, usize)] = &[
     ),
     ("vyre-libs::math::quantized::i4x8_dot_f32_scaled", 1),
     ("vyre-libs::math::quantized::i4x8_matvec_f32_scaled", 1),
-    ("vyre-libs::math::reduce_variance", 17),
+    ("vyre-libs::math::reduce_variance", 3),
     ("vyre-libs::math::symmetric_eigen_jacobi", 8),
     ("vyre-libs::math::tensor_train_decompose", 8),
     ("vyre-libs::nn::gelu", 1),

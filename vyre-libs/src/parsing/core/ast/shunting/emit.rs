@@ -316,14 +316,25 @@ pub fn ast_shunting_yard_reduce_program() -> Program {
     let out_ast_count = "out_ast_count";
     let scratch_val_stack = "scratch_val_stack";
     let scratch_op_stack = "scratch_op_stack";
-    let body = binary_token_body(
+    let mut body = vec![
+        Node::let_bind("o_sp", Expr::u32(1)),
+        Node::let_bind("v_sp", Expr::u32(2)),
+        Node::let_bind("tok", Expr::u32(vyre_spec::c11_token::TOK_PLUS)),
+        Node::let_bind("tok_prec", precedence(Expr::var("tok"))),
+        Node::let_bind("tok_is_assignment", Expr::bool(false)),
+    ];
+    body.extend(binary_token_body(
         scratch_op_stack,
         out_ast_nodes,
         out_ast_count,
         scratch_val_stack,
         Expr::u32(0),
         Expr::u32(0),
-    );
+    ));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage(scratch_op_stack, 0, BufferAccess::ReadWrite, DataType::U32)
@@ -338,7 +349,7 @@ pub fn ast_shunting_yard_reduce_program() -> Program {
         [1, 1, 1],
         vec![wrap_anonymous_region(
             AST_SHUNTING_YARD_REDUCE_OP_ID,
-            body,
+            guarded,
         )],
     )
 }

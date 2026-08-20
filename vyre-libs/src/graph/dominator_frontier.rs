@@ -108,11 +108,14 @@ pub fn try_dominator_frontier(
         "seed_bit",
         |word| word,
         {
-            let mut nodes = vec![wrap_child_region(
-                DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
-                Ident::from(OP_ID),
-                dominator_frontier_pred_check_body(Expr::var("candidate"), Expr::var("n")),
-            )];
+            let mut nodes = vec![
+                Node::let_bind("dominates_a_predecessor", Expr::u32(0)),
+                wrap_child_region(
+                    DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
+                    Ident::from(OP_ID),
+                    dominator_frontier_pred_check_body(Expr::var("candidate"), Expr::var("n")),
+                ),
+            ];
             nodes.extend(vec![
                 Node::let_bind("dominates_candidate", Expr::u32(0)),
                 Node::let_bind(
@@ -238,7 +241,6 @@ pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node>
                 Expr::add(candidate, Expr::u32(1)),
             ),
         ),
-        Node::let_bind("dominates_a_predecessor", Expr::u32(0)),
         Node::loop_for(
             "p",
             Expr::var("pred_start"),
@@ -273,7 +275,13 @@ pub fn dominator_frontier_pred_check_body(candidate: Expr, n: Expr) -> Vec<Node>
 /// Build the standalone predecessor-dominance check sub-operation.
 #[must_use]
 pub fn dominator_frontier_pred_check_program() -> Program {
-    let body = dominator_frontier_pred_check_body(Expr::u32(0), Expr::u32(0));
+    let mut body = vec![Node::let_bind("dominates_a_predecessor", Expr::u32(0))];
+    body.extend(dominator_frontier_pred_check_body(Expr::u32(0), Expr::u32(0)));
+    body.push(Node::store("out_flag", Expr::u32(0), Expr::var("dominates_a_predecessor")));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
         vec![
             BufferDecl::storage("dom_offsets", 0, BufferAccess::ReadOnly, DataType::U32)
@@ -284,11 +292,13 @@ pub fn dominator_frontier_pred_check_program() -> Program {
                 .with_count(2),
             BufferDecl::storage("pred_targets", 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(2),
+            BufferDecl::output("out_flag", 4, DataType::U32)
+                .with_count(1),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
-            body,
+            guarded,
         )],
     )
 }
@@ -298,16 +308,13 @@ inventory::submit! {
         DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
         dominator_frontier_pred_check_program,
         Some(|| vec![vec![
-            vec![0u8; 8],
-            vec![0u8; 8],
-            vec![0u8; 8],
-            vec![0u8; 8],
+            vyre_primitives::wire::pack_u32_slice(&[0, 1]),
+            vyre_primitives::wire::pack_u32_slice(&[5, 0]),
+            vyre_primitives::wire::pack_u32_slice(&[0, 1]),
+            vyre_primitives::wire::pack_u32_slice(&[5, 0]),
         ]]),
         Some(|| vec![vec![
-            vec![0u8; 8],
-            vec![0u8; 8],
-            vec![0u8; 8],
-            vec![0u8; 8],
+            vyre_primitives::wire::pack_u32_slice(&[1]),
         ]]),
     )
 }

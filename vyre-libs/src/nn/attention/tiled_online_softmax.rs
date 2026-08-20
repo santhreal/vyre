@@ -472,18 +472,27 @@ pub fn attention_tile_scores_program() -> Program {
         Node::let_bind("local", Expr::u32(0)),
         Node::let_bind("tile_start", Expr::u32(0)),
         Node::let_bind("tile_len", Expr::u32(1)),
+        Node::store("q_scratch", Expr::u32(0), Expr::f32(2.0)),
+        Node::store("q_scratch", Expr::u32(1), Expr::f32(4.0)),
     ];
-    body.extend(tile_scores_body("k", 4, 4, Expr::f32(0.5)));
+    body.extend(tile_scores_body("k", 2, 2, Expr::f32(0.5)));
+    body.push(Node::store("out_scores", Expr::u32(0), Expr::load("score_tile", Expr::u32(0))));
+    body.push(Node::store("out_scores", Expr::u32(1), Expr::load("score_tile", Expr::u32(1))));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
         vec![
-            BufferDecl::storage("k", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::workgroup("q_scratch", 4, DataType::F32),
-            BufferDecl::workgroup("score_tile", 4, DataType::F32),
+            BufferDecl::storage("k", 0, BufferAccess::ReadOnly, DataType::F32).with_count(2),
+            BufferDecl::output("out_scores", 1, DataType::F32).with_count(2),
+            BufferDecl::workgroup("q_scratch", 2, DataType::F32),
+            BufferDecl::workgroup("score_tile", 2, DataType::F32),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             ATTENTION_TILE_SCORES_OP_ID,
-            body,
+            guarded,
         )],
     )
 }
@@ -497,18 +506,28 @@ pub fn attention_absorb_values_program() -> Program {
         Node::let_bind("tile_len", Expr::u32(1)),
         Node::let_bind("m_new", Expr::f32(0.0)),
         Node::let_bind("rescale", Expr::f32(1.0)),
+        Node::store("score_tile", Expr::u32(0), Expr::f32(0.0)),
+        Node::store("o_acc", Expr::u32(0), Expr::f32(0.0)),
+        Node::store("o_acc", Expr::u32(1), Expr::f32(0.0)),
     ];
-    body.extend(absorb_tile_values_body("v", 4, 4));
+    body.extend(absorb_tile_values_body("v", 2, 2));
+    body.push(Node::store("out_acc", Expr::u32(0), Expr::load("o_acc", Expr::u32(0))));
+    body.push(Node::store("out_acc", Expr::u32(1), Expr::load("o_acc", Expr::u32(1))));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
         vec![
-            BufferDecl::storage("v", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::workgroup("score_tile", 4, DataType::F32),
-            BufferDecl::workgroup("o_acc", 4, DataType::F32),
+            BufferDecl::storage("v", 0, BufferAccess::ReadOnly, DataType::F32).with_count(2),
+            BufferDecl::output("out_acc", 1, DataType::F32).with_count(2),
+            BufferDecl::workgroup("score_tile", 2, DataType::F32),
+            BufferDecl::workgroup("o_acc", 2, DataType::F32),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             ATTENTION_ABSORB_VALUES_OP_ID,
-            body,
+            guarded,
         )],
     )
 }
@@ -518,10 +537,10 @@ inventory::submit! {
         ATTENTION_TILE_SCORES_OP_ID,
         attention_tile_scores_program,
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_f32_slice(&[1.0, 1.0, 1.0, 1.0]),
+            vyre_primitives::wire::pack_f32_slice(&[1.0, 3.0]),
         ]]),
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_f32_slice(&[1.0, 1.0, 1.0, 1.0]),
+            vyre_primitives::wire::pack_f32_slice(&[7.0, 0.0]),
         ]]),
     )
     .with_category("nn")
@@ -532,10 +551,10 @@ inventory::submit! {
         ATTENTION_ABSORB_VALUES_OP_ID,
         attention_absorb_values_program,
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_f32_slice(&[1.0, 1.0, 1.0, 1.0]),
+            vyre_primitives::wire::pack_f32_slice(&[2.0, 5.0]),
         ]]),
         Some(|| vec![vec![
-            vyre_primitives::wire::pack_f32_slice(&[1.0, 1.0, 1.0, 1.0]),
+            vyre_primitives::wire::pack_f32_slice(&[2.0, 5.0]),
         ]]),
     )
     .with_category("nn")

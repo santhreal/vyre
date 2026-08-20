@@ -91,6 +91,7 @@ pub fn planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k
                     Node::if_then(
                         Expr::ne(Expr::load(candidates, Expr::var("addr")), Expr::u32(0)),
                         vec![
+                            Node::let_bind("conflict", Expr::u32(0)),
                             wrap_child_region(
                                 PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
                                 Ident::from(OP_ID),
@@ -135,7 +136,6 @@ pub fn planar_rewrite_exclusion_check_body(
     c: Expr,
 ) -> Vec<Node> {
     vec![
-        Node::let_bind("conflict", Expr::u32(0)),
         // Exclusion zone scan
         Node::loop_for(
             "di",
@@ -175,14 +175,30 @@ pub fn planar_rewrite_exclusion_check_body(
 /// Build the standalone exclusion check sub-operation.
 #[must_use]
 pub fn planar_rewrite_exclusion_check_program(w: u32, k: u32) -> Program {
-    let body = planar_rewrite_exclusion_check_body("chosen", w, k, Expr::u32(1), Expr::u32(1));
+    let mut body = vec![Node::let_bind("conflict", Expr::u32(0))];
+    body.extend(planar_rewrite_exclusion_check_body(
+        "chosen",
+        w,
+        k,
+        Expr::u32(1),
+        Expr::u32(1),
+    ));
+    body.push(Node::store("out_conflict", Expr::u32(0), Expr::var("conflict")));
+    let guarded = vec![Node::if_then(
+        Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+        body,
+    )];
     Program::wrapped(
-        vec![BufferDecl::storage("chosen", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(w.saturating_mul(w))],
+        vec![
+            BufferDecl::storage("chosen", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(w.saturating_mul(w)),
+            BufferDecl::output("out_conflict", 1, DataType::U32)
+                .with_count(1),
+        ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
             PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
-            body,
+            guarded,
         )],
     )
 }
@@ -191,11 +207,15 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
         || planar_rewrite_exclusion_check_program(4, 2),
+        Some(|| {
+            let mut chosen = vec![0u32; 16];
+            chosen[0] = 1; // (0, 0)
+            vec![vec![
+                vyre_primitives::wire::pack_u32_slice(&chosen),
+            ]]
+        }),
         Some(|| vec![vec![
-            vec![0u8; 64],
-        ]]),
-        Some(|| vec![vec![
-            vec![0u8; 64],
+            vyre_primitives::wire::pack_u32_slice(&[1u32]),
         ]]),
     )
 }
