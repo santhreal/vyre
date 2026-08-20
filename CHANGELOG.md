@@ -6121,6 +6121,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.7.2`, `vyre-driver-w
   validates drain conditions before declaring a timeout and prevents
   subtraction underflow on concurrent drain observation, and resident IO loop
   automatically stops detached polling threads on drop.
+- A failed benchmark no longer writes host absolute paths into an evidence
+  blocker. The workspace root is rewritten relative to the workspace at path
+  boundaries, so a sibling checkout keeps its own name and an artifact path
+  issue names the declared artifact rather than the host that resolved it.
 - The scalar storage-graph matrix declares every operation the scalar oracle
   defines. It declared 40 and the oracle defines 76: the four bit-unpack ops at
   both 32-bit integer widths, the whole bitwise set at `i32`, and the
