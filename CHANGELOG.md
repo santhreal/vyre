@@ -2159,6 +2159,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A gate that reads a string field out of a TOML row now calls
   xtask::toml_text::string_field. The CLI documentation generator and the
   documentation checker had the same row-to-scalar closure.
+- `BufferDecl::with_full_output_byte_range` derives the readback range from the
+  declaration's own count and element size. The elementwise builder computed it
+  by hand, which put the layout rule in two places and made the builder read as
+  host data processing.
 - Eleven builders computed their own buffer cell count and wrote their own
   overflow message. `vyre_libs::math::matrix_cells` and `square_matrix_cells`
   now own both: the count of a `rows x cols` operand, the `n == 0` rejection
@@ -2171,6 +2175,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   length checks, four copies across two files, so a test could assert against a
   looser oracle than its neighbour. `graph::do_calculus_oracle` owns the checks
   and every test module calls it.
+- The composition-discipline cases read the exempt-child-region rule through
+  one predicate over a node instead of destructuring `Node::Region` and calling
+  the test at each site, which is what pushed the conform crate past its
+  duplication pin.
 - vyre_foundation::transform::grid_sync_split owns the whole-grid fence walk,
   hoist and segmentation. The compile-time planner cut and the dispatch-time
   split in vyre-driver both call it, replacing the copy that lived in
@@ -4345,6 +4353,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   every row is checked against the live registry, so a row naming a renamed or
   deleted op is a finding instead of reading as coverage. Two rows were already
   in that state and are gone.
+- Eleven library operation registrations computed their `expected_output` by
+  packing a slice through the wire codec at registration time, so the fixture a
+  conformance run compared against was produced by host code rather than
+  declared. Each now names an exact byte constant, which also removes the codec
+  and its sizing helpers from the set of host functions reachable from a
+  registration.
 - An f32 literal reaches a materializer with every bit intact.
   `LiteralValue::F32` was written as a JSON number inside the target-module
   bundle, and JSON has no non-finite number, so a lowering that seeds a running
@@ -6524,6 +6538,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   registry by layer at run time, so a crate added to a contract layer is tested
   instead of silently uncovered, and a layer that names no crate is a finding
   rather than an empty roster.
+- `grid_stride_tree_sum_u32` documents the one condition under which it panics.
+  It builds both passes itself, so a fusion failure is a defect in the builder
+  rather than a caller error, and the crate carried it as an undocumented
+  panic.
 - The Windows CI lane deletes the coreutils `link.exe` that Git for Windows
   places ahead of the MSVC toolchain on PATH, so rustc reaches the real linker
   instead of a program that rejects an object list with `extra operand`. The
