@@ -16,7 +16,7 @@ pub(super) const FINGERPRINT_SIM_THRESHOLD: f64 = 0.88;
 /// structure, not just node-kind sets.
 pub(super) fn check_1_no_reinvention(report: &mut Report, ops: &[OpInfo]) -> usize {
     report.note(format!(
-        "[1/10] No-reinvention check (bigram cosine ≥ {FINGERPRINT_SIM_THRESHOLD:.2})"
+        "No-reinvention check (bigram cosine ≥ {FINGERPRINT_SIM_THRESHOLD:.2})"
     ));
     let pairs = no_reinvention_pairs(ops);
     for (sim, a, b) in &pairs {

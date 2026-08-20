@@ -142,7 +142,9 @@ pub(super) fn validate_primitive_admission(
 pub(super) fn check_3_primitive_coverage(report: &mut Report, ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
     let mut exceptions_used = 0usize;
-    report.note(format!("[3/10] Primitive coverage (Tier 2.5 primitives need ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers)"));
+    report.note(format!(
+        "Primitive coverage (Tier 2.5 primitives need ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers)"
+    ));
     for op in ops
         .iter()
         .filter(|op| is_synthetic_catalog_consumer(&op.id))

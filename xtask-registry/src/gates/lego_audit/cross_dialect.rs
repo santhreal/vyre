@@ -30,7 +30,7 @@ use super::*;
 /// this check reports. The two are not one measurement with two answers, and
 /// collapsing them onto the stricter rule is open work.
 pub(super) fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
-    report.note("[4/10] Cross-dialect reach-through (a dialect names a sibling edge in vyre_libs::prelude, not from inside its own module tree)".to_string());
+    report.note("Cross-dialect reach-through (a dialect names a sibling edge in vyre_libs::prelude, not from inside its own module tree)".to_string());
     let checkout = xtask::checkout::checkout_root();
     let libs_root = checkout.join("vyre-libs").join("src");
     // A directory outlives the deletion of every file in it, so its presence is

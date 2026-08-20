@@ -87,9 +87,11 @@ pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateE
     let files = tree.all_rust();
     let mut normalized: Vec<(usize, String, Vec<String>)> = Vec::new();
     for (index, path) in files.iter().enumerate() {
-        let Ok(text) = fs::read_to_string(tree.absolute(path)) else {
-            continue;
-        };
+        // `Tree::read` rather than a raw read that drops the file on error. A
+        // file this scan cannot read is a file whose duplicated lines are not
+        // counted, and the count only ever moves down, so the silent version
+        // let an unreadable or oversized source lower a pin nobody earned.
+        let text = tree.read(path)?;
         let Some(owner) = crate_of(path) else {
             continue;
         };
@@ -186,9 +188,7 @@ pub(crate) fn report_for(root: &Path, only: Option<&str>) -> Result<Vec<FileRepo
     let mut normalized: Vec<(String, String, Vec<String>)> = Vec::new();
     let tree = scan::Tree::open(root)?;
     for path in tree.all_rust() {
-        let Ok(text) = fs::read_to_string(tree.absolute(&path)) else {
-            continue;
-        };
+        let text = tree.read(&path)?;
         let Some(owner) = crate_of(&path) else {
             continue;
         };

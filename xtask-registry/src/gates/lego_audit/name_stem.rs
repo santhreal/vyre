@@ -73,7 +73,7 @@ pub(super) fn colliding_stems(ops: &[OpInfo]) -> BTreeMap<String, Vec<String>> {
 
 pub(super) fn check_9_name_stem_collision(report: &mut Report, ops: &[OpInfo]) -> usize {
     report.note(format!(
-        "[9/10] Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)"
+        "Name-stem collision (≥ {STEM_COLLISION_MIN} ops sharing a leaf-prefix stem)"
     ));
     let mut flagged = 0usize;
     for (stem, ids) in colliding_stems(ops) {

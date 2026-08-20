@@ -60,8 +60,7 @@ fn tier_claims(text: &str) -> Vec<(usize, String)> {
 
 pub(super) fn check_12_tier_claims(report: &mut Report, ops: &[OpInfo]) -> usize {
     report.note(
-        "[12/12] Tier claims (no source file names a tier its registered op ids contradict)"
-            .to_string(),
+        "Tier claims (no source file names a tier its registered op ids contradict)".to_string(),
     );
     let Some(root) = workspace_root() else {
         report.find(violation(
@@ -90,8 +89,20 @@ pub(super) fn check_12_tier_claims(report: &mut Report, ops: &[OpInfo]) -> usize
     let mut flagged = 0usize;
     for (file, allowed) in &by_file {
         let path = root.join(file.replace('\\', "/"));
-        let Ok(text) = std::fs::read_to_string(&path) else {
-            continue;
+        let text = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(error) => {
+                // Not a skip. A registered op names this file as its source, so
+                // a file the check cannot open is a file whose tier claims went
+                // unread while the gate still reported zero.
+                flagged += 1;
+                report.find(Finding::in_file(
+                    file,
+                    format!("a registered operation names `{file}` as its source and it cannot be read: {error}"),
+                    "restore the file the registration points at, or repoint the registration at the path it moved to",
+                ));
+                continue;
+            }
         };
         for (line, claimed) in tier_claims(&text) {
             if allowed.contains(claimed.as_str()) {

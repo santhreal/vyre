@@ -109,7 +109,7 @@ pub(super) fn classify_file_role(
 /// exist, every operation with the same semantic body must have one owner, and
 /// every file in `vyre-libs` must have exactly one mechanically checkable role.
 pub(super) fn check_semantic_organization(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note("[11/11] Semantic ownership, placement, and consolidation".to_string());
+    report.note("Semantic ownership, placement, and consolidation".to_string());
     let mut findings = Vec::new();
     let known = ops.iter().map(|op| op.id.as_str()).collect::<BTreeSet<_>>();
     let registered_sources = ops
@@ -241,8 +241,20 @@ fn check_for_duplicate_block_skeletons(path: &Path, rel_path: &str, findings: &m
     if rel_path.starts_with("vyre-libs/src/builder/") || rel_path == "vyre-libs/src/builder.rs" {
         return;
     }
-    let Ok(text) = std::fs::read_to_string(path) else {
-        return;
+    let text = match std::fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) => {
+            // A file this check cannot open is a file whose skeleton
+            // definitions went unread, which reads the same as having none.
+            findings.push(Finding::in_file(
+                rel_path,
+                format!(
+                    "cannot read `{rel_path}` to check it for duplicate block skeletons: {error}"
+                ),
+                "restore the file, or drop it from the tracked tree if it is gone",
+            ));
+            return;
+        }
     };
     for skeleton in CANONICAL_BLOCK_SKELETONS {
         let pattern_fn = format!("fn {skeleton}");

@@ -10,7 +10,7 @@ use super::*;
 pub(super) const OPERAND_DUP_MIN_COSINE: f64 = 0.55;
 
 pub(super) fn check_10_operand_shape_duplicate(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note(format!("[10/10] Operand-shape advisory (same fingerprint prefix, then cosine ≥ {OPERAND_DUP_MIN_COSINE:.2} past that prefix)"));
+    report.note(format!("Operand-shape advisory (same fingerprint prefix, then cosine ≥ {OPERAND_DUP_MIN_COSINE:.2} past that prefix)"));
     let pairs = operand_shape_duplicate_pairs(ops);
     for (cos, a, b) in &pairs {
         report.find(violation(format!("  ⚠ unreviewed shape pair: `{}` and `{}` share their entry shape and {:.0}% cosine over the rest of the body. Fix: extract the shared body to one builder and record both in `IMPLEMENTATION_FAMILY_ROWS`, or read the two algorithms side by side and record the pair in `REVIEWED_DISTINCT_OPERATIONS` with the reason the shape cannot express.",

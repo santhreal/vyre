@@ -7,7 +7,7 @@
 use super::*;
 
 pub(super) fn check_8_composability(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note("[8/10] Composability (every non-leaf op must be composed by ≥ 1 caller OR compose ≥ 1 child op; primitives must not be composable)".to_string());
+    report.note("Composability (every non-leaf op must be composed by ≥ 1 caller OR compose ≥ 1 child op; primitives must not be composable)".to_string());
     let mut callers: HashMap<String, usize> = HashMap::new();
     for op in ops {
         for child in &op.children {

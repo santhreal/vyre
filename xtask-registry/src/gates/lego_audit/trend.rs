@@ -41,7 +41,7 @@ pub(super) const INTENDED_COMPOSITION_COLLAPSES: [&str; 10] = [
 ];
 
 pub(super) fn check_7_trend(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note("[7/10] Composition trend (current composed_fraction must not regress from the latest available baseline)".to_string());
+    report.note("Composition trend (current composed_fraction must not regress from the latest available baseline)".to_string());
     let Some(root) = workspace_root() else {
         report.find(violation("  ✗ workspace root not reachable from xtask. Fix: run from the vyre workspace checkout.".to_string()));
         return 1;

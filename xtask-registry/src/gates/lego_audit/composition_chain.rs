@@ -13,7 +13,10 @@ use super::*;
 /// canonical operation contract are exempt.
 pub(super) fn check_6_composition_chain_coverage(report: &mut Report, ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
-    report.note("[6/10] Composition-chain coverage (non-leaf ops must have ≥ 1 child Region with source_region)".to_string());
+    report.note(
+        "Composition-chain coverage (non-leaf ops must have ≥ 1 child Region with source_region)"
+            .to_string(),
+    );
     for op in ops {
         // Tier 2 intrinsics and Tier 2.5 primitives are leaves unless
         // their own bodies choose to compose deeper primitives.

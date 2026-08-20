@@ -9,7 +9,7 @@ use super::*;
 /// Check 2: per-op composition depth  -  for Tier 3 ops, composed_nodes
 /// should dominate own_nodes.
 pub(super) fn check_2_depth_of_composition(report: &mut Report, ops: &[OpInfo]) -> usize {
-    report.note("[2/10] Depth-of-composition (Tier 3 ops compose ≥25% registered child nodes or declare a pure-IR leaf)".to_string());
+    report.note("Depth-of-composition (Tier 3 ops compose ≥25% registered child nodes or declare a pure-IR leaf)".to_string());
     let shallow = shallow_tier3_ops(ops);
     for op in &shallow {
         report.find(violation(format!("  ✗ {} Tier 3 op has own={} composed={} and {} child op(s)  -  registered child composition is below 25%. Wrap sub-bodies in vyre_foundation::composition::wrap_child_region(<primitive_id>, ...), or explicitly classify an irreducible pure-IR leaf.",

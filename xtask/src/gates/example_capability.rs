@@ -138,12 +138,16 @@ fn tracked_example_paths(root: &Path) -> Result<BTreeMap<String, Vec<String>>, G
 
 /// The tracked Rust of one example, held to the review cap.
 fn line_cap_findings(root: &Path, directory: &str, paths: &[String]) -> Vec<Finding> {
-    let lines: usize = paths
-        .iter()
-        .filter(|path| path.ends_with(".rs"))
-        .filter_map(|path| std::fs::read_to_string(root.join(path)).ok())
-        .map(|text| text.lines().count())
-        .sum();
+    let mut lines = 0usize;
+    for path in paths.iter().filter(|path| path.ends_with(".rs")) {
+        // Counted, never skipped: a file dropped on a read error lowers the
+        // measured line count, and the cap is a maximum, so the silent version
+        // let an unreadable example pass a bound it may well exceed.
+        let text = std::fs::read_to_string(root.join(path)).unwrap_or_else(|error| {
+            panic!("tracked example source `{path}` must be readable to hold it to the line cap: {error}")
+        });
+        lines += text.lines().count();
+    }
     if lines > MAX_EXAMPLE_RUST_LINES {
         return vec![Finding::in_file(
             directory,
@@ -191,8 +195,18 @@ fn template_findings(
     let mut findings = workspace_isolation_findings(root, &manifest);
     let mut rendered: BTreeMap<PathBuf, String> = BTreeMap::new();
     for path in paths {
-        let Ok(text) = std::fs::read_to_string(root.join(path)) else {
-            continue;
+        // A template this cannot read is a template whose placeholders went
+        // unchecked, which reads the same as a template with none.
+        let text = match std::fs::read_to_string(root.join(path)) {
+            Ok(text) => text,
+            Err(error) => {
+                findings.push(Finding::in_file(
+                    path,
+                    format!("`{path}` cannot be read, so its placeholders are unchecked: {error}"),
+                    "restore the tracked template file, or drop it from the tree",
+                ));
+                continue;
+            }
         };
         for unknown in unknown_placeholders(&text) {
             findings.push(Finding::in_file(
@@ -458,9 +472,8 @@ mod tests {
                 continue;
             }
             for path in paths {
-                let Ok(text) = std::fs::read_to_string(root.join(path)) else {
-                    continue;
-                };
+                let text = std::fs::read_to_string(root.join(path))
+                    .unwrap_or_else(|error| panic!("tracked template `{path}` must be readable, or the placeholder sweep silently covers nothing: {error}"));
                 unknown.extend(unknown_placeholders(&text));
             }
         }
