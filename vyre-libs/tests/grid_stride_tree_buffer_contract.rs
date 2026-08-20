@@ -89,14 +89,15 @@ fn every_storage_buffer_binding_is_unique() {
 #[test]
 fn the_fused_reduction_carries_a_grid_level_fence() {
     use vyre_foundation::ir::Node;
+    use vyre_foundation::visit::child_bodies;
 
     fn orderings(nodes: &[Node], out: &mut Vec<String>) {
         for node in nodes {
-            match node {
-                Node::Barrier { ordering } => out.push(format!("{ordering:?}")),
-                Node::Region { body, .. } => orderings(body, out),
-                Node::Block(body) => orderings(body, out),
-                _ => {}
+            if let Node::Barrier { ordering } = node {
+                out.push(format!("{ordering:?}"));
+            }
+            for body in child_bodies(node) {
+                orderings(body, out);
             }
         }
     }
@@ -121,25 +122,19 @@ fn the_fused_reduction_carries_a_grid_level_fence() {
 #[test]
 fn pass_one_strides_far_enough_to_cover_every_element() {
     use vyre_foundation::ir::{Expr, Node};
+    use vyre_foundation::visit::child_bodies;
 
     fn loop_bounds(nodes: &[Node], out: &mut Vec<u32>) {
         for node in nodes {
-            match node {
-                Node::Loop { to, body, .. } => {
-                    if let Expr::LitU32(bound) = to {
-                        out.push(*bound);
-                    }
-                    loop_bounds(body, out);
-                }
-                Node::Region { body, .. } => loop_bounds(body, out),
-                Node::Block(body) => loop_bounds(body, out),
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    loop_bounds(then, out);
-                    loop_bounds(otherwise, out);
-                }
-                _ => {}
+            if let Node::Loop {
+                to: Expr::LitU32(bound),
+                ..
+            } = node
+            {
+                out.push(*bound);
+            }
+            for body in child_bodies(node) {
+                loop_bounds(body, out);
             }
         }
     }

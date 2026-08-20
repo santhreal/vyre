@@ -596,7 +596,7 @@ fn rewrite(node: &Node) -> Option<Node> {
 fn the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks() {
     let root = workspace_root();
     let slots = declared_child_slots(&root);
-    let owner = root.join("vyre-foundation/src/visit/node_parts.rs");
+    let owner = child_bodies_owner(&root);
     let text = fs::read_to_string(&owner).expect("the owner of child bodies is readable");
     let source = mask_comments_and_strings(&text);
     let open = source
@@ -616,8 +616,8 @@ fn the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks() {
         unnamed.is_empty(),
         "Fix: `Node` declares child bodies {unnamed:?} that `child_bodies` does not hand back, so \
          no traversal in the workspace reaches them and the scan cannot tell a walk that misses \
-         them from one that does not. Add the slot to the owner in \
-         vyre-foundation/src/visit/node_parts.rs."
+         them from one that does not. Add the slot to the owner in {}.",
+        owner.display()
     );
     let missing_tuple: Vec<&String> = slots
         .tuple_variants
@@ -821,6 +821,47 @@ fn scan(root: &Path) -> Vec<Site> {
     }
     sites.sort();
     sites
+}
+
+/// The file that DEFINES `child_bodies`, found by reading the traversal module.
+///
+/// # Panics
+///
+/// Panics unless exactly one file under `vyre-foundation/src/visit` defines it.
+/// A hardcoded path was here and it named `node_parts.rs`, which re-exports the
+/// function after the definition moved to a sibling; the assertion below then
+/// read a file with no `child_bodies` body in it at all. Zero definitions means
+/// the owner is gone and every walk in the workspace has to derive children
+/// itself; two means the vocabulary has two answers and this test cannot say
+/// which one the tree walks.
+fn child_bodies_owner(root: &Path) -> std::path::PathBuf {
+    let directory = root.join("vyre-foundation/src/visit");
+    let mut found: Vec<std::path::PathBuf> = fs::read_dir(&directory)
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: the traversal module {} could not be read: {error}.",
+                directory.display()
+            )
+        })
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|extension| extension == "rs"))
+        .filter(|path| {
+            fs::read_to_string(path)
+                .is_ok_and(|text| mask_comments_and_strings(&text).contains("fn child_bodies("))
+        })
+        .collect();
+    found.sort();
+    assert_eq!(
+        found.len(),
+        1,
+        "Fix: exactly one file under {} defines `fn child_bodies(`, and {} do: {found:?}. \
+         Child bodies have one owner so a new `Node` variant reaches every walk from one \
+         exhaustive match.",
+        directory.display(),
+        found.len()
+    );
+    found.remove(0)
 }
 
 /// The child slots `Node` declares, read from the enum in the tree at `root`.
