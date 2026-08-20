@@ -1202,7 +1202,7 @@ pub fn vyre_foundation::optimizer::FusionCertificate::is_sound(&self) -> bool
 pub fn vyre_foundation::optimizer::OptimizerProfile::accepts(self, metadata: vyre_foundation::optimizer::PassMetadata) -> bool
 pub fn vyre_foundation::optimizer::OptimizerRunReport::explanations(&self) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::PassExplanation>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::PassExplanation::from_metric(metric: &vyre_foundation::optimizer::PassRunMetric, catalog_entry: core::option::Option<&vyre_foundation::optimizer::pass_catalog::OptimizationCatalogEntry>) -> Self
-pub fn vyre_foundation::optimizer::PassResult::from_programs(before: &vyre_foundation::ir::Program, program: vyre_foundation::ir::Program) -> Self
+pub fn vyre_foundation::optimizer::PassResult::from_programs(before: vyre_foundation::ir::Program, program: vyre_foundation::ir::Program) -> Self
 pub fn vyre_foundation::optimizer::PassResult::unchanged(program: vyre_foundation::ir::Program) -> Self
 pub fn vyre_foundation::optimizer::PassScheduler::adapter(&self) -> &vyre_foundation::optimizer::AdapterCaps
 pub fn vyre_foundation::optimizer::PassScheduler::cost_monotone_enforcement(&self) -> bool

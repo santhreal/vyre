@@ -53,6 +53,7 @@ impl core::marker::Sync for vyre_runtime::uring::GpuMappedBuffer<'_>
 impl core::marker::Sync for vyre_runtime::uring::IoUringState
 impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
 impl core::ops::drop::Drop for vyre_runtime::uring::IoUringState
+impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
 impl vyre_runtime::PipelineError
 impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
@@ -966,6 +967,7 @@ pub fn vyre_runtime::uring::NvmeGpuIngestDriver<'a>::telemetry_snapshot(&self) -
 pub fn vyre_runtime::uring::NvmeGpuIngestTelemetry::inflight_reads(self) -> u64
 pub fn vyre_runtime::uring::NvmeGpuIngestTelemetry::path_submissions(self, path: vyre_runtime::uring::NativeReadPath) -> u64
 pub fn vyre_runtime::uring::NvmeGpuIngestTelemetry::validate_completed_zero_copy(self, path: vyre_runtime::uring::NativeReadPath) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::uring::ResidentIoLoop::drop(&mut self)
 pub fn vyre_runtime::uring::ResidentIoLoop::spawn(stream: vyre_runtime::uring::AsyncUringStream<'static>, io_queue_mapped: &'static mut [u8]) -> Self
 pub fn vyre_runtime::uring::ResidentIoLoop::spawn_with_registered_destinations(stream: vyre_runtime::uring::AsyncUringStream<'static>, io_queue_mapped: &'static mut [u8], registered_destinations: alloc::vec::Vec<vyre_runtime::uring::RegisteredIoDestination>) -> Self
 pub fn vyre_runtime::uring::ResidentIoLoop::stop(&mut self) -> core::result::Result<(), vyre_runtime::PipelineError>

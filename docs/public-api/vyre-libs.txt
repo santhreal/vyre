@@ -528,6 +528,7 @@ pub const vyre_libs::graph::do_calculus::RULE3_OP_ID: &str
 pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_DOM_OFFSETS_BUFFER: u32
 pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_DOM_TARGETS_BUFFER: u32
 pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_OUT_BUFFER: u32
+pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_PRED_CHECK_OP_ID: &str
 pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_PRED_OFFSETS_BUFFER: u32
 pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_PRED_TARGETS_BUFFER: u32
 pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_SEED_BUFFER: u32
@@ -535,6 +536,7 @@ pub const vyre_libs::graph::dominator_frontier::DOMINATOR_FRONTIER_WORKGROUP_SIZ
 pub const vyre_libs::graph::dominator_frontier::OP_ID: &str
 pub const vyre_libs::graph::dominator_tree::DOMINATOR_TREE_DEPTH_OP_ID: &str
 pub const vyre_libs::graph::dominator_tree::DOMINATOR_TREE_INTERSECT_STEP_OP_ID: &str
+pub const vyre_libs::graph::dominator_tree::DOMINATOR_TREE_LCA_OP_ID: &str
 pub const vyre_libs::graph::dominator_tree::IDOM_NONE: u32
 pub const vyre_libs::graph::dominator_tree::OP_ID: &str
 pub const vyre_libs::graph::exploded::BLOCK_BITS: u32
@@ -628,6 +630,7 @@ pub const vyre_libs::graph::tensor_flow_forward::BINDING_TENSOR_IN: u32
 pub const vyre_libs::graph::tensor_flow_forward::BINDING_TENSOR_OUT: u32
 pub const vyre_libs::graph::tensor_flow_forward::OP_ID: &str
 pub const vyre_libs::graph::tensor_flow_forward::TENSOR_FLOW_FORWARD_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs::graph::tensor_flow_forward::TENSOR_FLOW_PROPAGATE_EDGES_OP_ID: &str
 pub const vyre_libs::graph::toposort::OP_ID: &str
 pub const vyre_libs::graph::toposort::TOPOSORT_DISPATCH_GRID: [u32; 3]
 pub const vyre_libs::graph::toposort::TOPOSORT_INDEGREE_SCRATCH_BUFFER: &str
@@ -639,6 +642,7 @@ pub const vyre_libs::graph::union_find::OP_ID: &str
 pub const vyre_libs::graph::union_find::UNION_FIND_WORKGROUP_SIZE: [u32; 3]
 pub const vyre_libs::graph::vast_tree_walk::POSTORDER_OP_ID: &str
 pub const vyre_libs::graph::vast_tree_walk::PREORDER_OP_ID: &str
+pub const vyre_libs::graph::vast_tree_walk::VAST_DESCEND_LEFTMOST_LEAF_OP_ID: &str
 pub const vyre_libs::hash::adler32::ADLER32_MOD: u32
 pub const vyre_libs::hash::adler32::ADLER32_OP_ID: &str
 pub const vyre_libs::hash::blake3::BLAKE3_G_OP_ID: &str
@@ -772,6 +776,8 @@ pub const vyre_libs::nn::attention::PAGED_ATTENTION_OP_ID: &str
 pub const vyre_libs::nn::attention::PAGED_ATTENTION_SUM_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention::PAGED_ATTENTION_WRITE_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention::PAGED_CACHE_APPEND_OP_ID: &str
+pub const vyre_libs::nn::attention::tiled_online_softmax::ATTENTION_ABSORB_VALUES_OP_ID: &str
+pub const vyre_libs::nn::attention::tiled_online_softmax::ATTENTION_TILE_SCORES_OP_ID: &str
 pub const vyre_libs::nn::attention::tiled_online_softmax::OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_MAX_PASS_OP_ID: &str
 pub const vyre_libs::nn::attention_passes::ATTENTION_SUM_PASS_OP_ID: &str
@@ -794,6 +800,7 @@ pub const vyre_libs::nn::quest_paging_passes::QUEST_SELECT_TOP_K_OP_ID: &str
 pub const vyre_libs::nn::quest_paging_passes::QUEST_ZERO_FILL_OP_ID: &str
 pub const vyre_libs::opt::homotopy::OP_ID: &str
 pub const vyre_libs::parsing::ast_cse_constant_fold::OP_ID: &str
+pub const vyre_libs::parsing::ast_cse_structural_hash::AST_CSE_HASH_PROBE_OP_ID: &str
 pub const vyre_libs::parsing::ast_cse_structural_hash::OP_ID: &str
 pub const vyre_libs::parsing::ast_ops::AST_ADD: u32
 pub const vyre_libs::parsing::ast_ops::AST_ASSIGN: u32
@@ -822,6 +829,8 @@ pub const vyre_libs::parsing::core::ast::node::AST_PTR_DEREF: u32
 pub const vyre_libs::parsing::core::ast::node::AST_RET: u32
 pub const vyre_libs::parsing::core::ast::node::AST_SUB: u32
 pub const vyre_libs::parsing::core::ast::node::AST_VAR: u32
+pub const vyre_libs::parsing::core::ast::shunting::AST_SHUNTING_YARD_REDUCE_OP_ID: &str
+pub const vyre_libs::parsing::core::ast::shunting::OP_ID: &str
 pub const vyre_libs::parsing::core_delimiter_match::OP_ID: &str
 pub const vyre_libs::parsing::go::parse::structure::GO_DECL_FUNC: u32
 pub const vyre_libs::parsing::go::parse::structure::GO_DECL_INTERFACE: u32
@@ -836,6 +845,7 @@ pub const vyre_libs::parsing::lr_tables::NT_E: u32
 pub const vyre_libs::parsing::lr_tables::NT_F: u32
 pub const vyre_libs::parsing::lr_tables::NT_T: u32
 pub const vyre_libs::parsing::planar_rewrite::OP_ID: &str
+pub const vyre_libs::parsing::planar_rewrite::PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID: &str
 pub const vyre_libs::parsing::ssa_dominance_scan::OP_ID: &str
 pub const vyre_libs::parsing::whitespace_classify_word::BINDING_BYTES_IN: u32
 pub const vyre_libs::parsing::whitespace_classify_word::BINDING_WHITESPACE_MASK_OUT: u32
@@ -927,6 +937,7 @@ pub const vyre_libs::reduce::any::OP_ID: &str
 pub const vyre_libs::reduce::count::OP_ID: &str
 pub const vyre_libs::reduce::count_non_zero::OP_ID: &str
 pub const vyre_libs::reduce::gather::OP_ID: &str
+pub const vyre_libs::reduce::grid_stride_tree::SUM_U32_OP_ID: &str
 pub const vyre_libs::reduce::histogram::OP_ID: &str
 pub const vyre_libs::reduce::max::OP_ID: &str
 pub const vyre_libs::reduce::min::OP_ID: &str
@@ -1639,6 +1650,8 @@ pub fn vyre_libs::graph::do_calculus::try_rule3_subgraph(adjacency: &str, keep_m
 pub fn vyre_libs::graph::dominator_frontier::DominatorFrontierLaunchPlan::program(&self, seed_buffer: &str, out_buffer: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::dominator_frontier::DominatorFrontierLaunchPlan::static_input_key(&self, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32]) -> vyre_libs::graph::dominator_frontier::DominatorFrontierStaticInputKey
 pub fn vyre_libs::graph::dominator_frontier::dominator_frontier(node_count: u32, dom_edge_count: u32, pred_edge_count: u32, seed: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::graph::dominator_frontier::dominator_frontier_pred_check_body(candidate: vyre_foundation::ir_inner::model::generated::Expr, n: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::graph::dominator_frontier::dominator_frontier_pred_check_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::dominator_frontier::dominator_frontier_slice_fingerprint(words: &[u32]) -> vyre_libs::graph::dominator_frontier::DominatorFrontierSliceFingerprint
 pub fn vyre_libs::graph::dominator_frontier::plan_dominator_frontier_dispatch(node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32], seed_buffer: &str, out_buffer: &str) -> core::result::Result<vyre_libs::graph::dominator_frontier::DominatorFrontierDispatchPlan, alloc::string::String>
 pub fn vyre_libs::graph::dominator_frontier::plan_dominator_frontier_launch(node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32]) -> core::result::Result<vyre_libs::graph::dominator_frontier::DominatorFrontierLaunchPlan, alloc::string::String>
@@ -1651,6 +1664,8 @@ pub fn vyre_libs::graph::dominator_tree::dominator_tree_depth_child(parent_op_id
 pub fn vyre_libs::graph::dominator_tree::dominator_tree_intersect_step(node_count: u32, pred_edge_count: u32, idom: &str, depth: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::dominator_tree::dominator_tree_intersect_step_body(node_count: u32, idom: &str, depth: &str, changed: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::graph::dominator_tree::dominator_tree_intersect_step_child(parent_op_id: &str, node_count: u32, idom: &str, depth: &str, changed: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs::graph::dominator_tree::dominator_tree_lca_body(node_count: u32, idom: &str, depth: &str, b_init: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::graph::dominator_tree::dominator_tree_lca_program(node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::dominator_tree::dominator_tree_program(node_count: u32, edge_count: u32, pred_edge_count: u32, idom_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::dominator_tree::try_dominator_tree_program(node_count: u32, edge_count: u32, pred_edge_count: u32, idom_out: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::dominator_tree::validate_dominator_tree_inputs(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32]) -> core::result::Result<vyre_libs::graph::dominator_tree::DominatorTreeLayout, vyre_libs::graph::dominator_tree::DominatorTreeError>
@@ -1747,6 +1762,8 @@ pub fn vyre_libs::graph::sum_product_circuit::sum_product_evaluate_leveled(depth
 pub fn vyre_libs::graph::sum_product_circuit::try_sum_product_evaluate(kinds: &str, child_offsets: &str, child_counts: &str, children: &str, weights: &str, leaf_values: &str, out: &str, n_nodes: u32, n_edges: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::sum_product_circuit::try_sum_product_evaluate_leveled(depths: &str, kinds: &str, child_offsets: &str, child_counts: &str, children: &str, weights: &str, leaf_values: &str, out: &str, n_nodes: u32, n_edges: u32, max_depth: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::tensor_flow_forward::tensor_flow_forward(shape: vyre_libs::graph::program_graph::ProgramGraphShape, tensor_in: &str, tensor_out: &str, context_limit: u32, field_limit: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::graph::tensor_flow_forward::tensor_flow_propagate_edges_body(tensor_out: &str, node_count: u32, field_limit: u32, tensor_lane_count: u32, allow_mask: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::graph::tensor_flow_forward::tensor_flow_propagate_edges_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::tensor_flow_forward::try_tensor_flow_forward(shape: vyre_libs::graph::program_graph::ProgramGraphShape, tensor_in: &str, tensor_out: &str, context_limit: u32, field_limit: u32, allow_mask: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::tensor_flow_forward::try_tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> core::result::Result<u32, alloc::string::String>
 pub fn vyre_libs::graph::toposort::ToposortCsrDispatchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -1768,10 +1785,12 @@ pub fn vyre_libs::graph::vast_tree_walk::build_checked_preorder_walk(nodes: &str
 pub fn vyre_libs::graph::vast_tree_walk::build_trusted_postorder_walk(nodes: &str, out: &str, node_count: u32, traversal_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::vast_tree_walk::build_trusted_preorder_walk(nodes: &str, out: &str, node_count: u32, traversal_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::graph::vast_tree_walk::build_vast_tree_walk_plan(nodes: &str, preorder_out: &str, postorder_out: &str, node_count: u32, traversal_capacity: u32) -> core::result::Result<vyre_libs::graph::vast_tree_walk::VastTreeWalkPlan, alloc::string::String>
+pub fn vyre_libs::graph::vast_tree_walk::descend_to_leftmost_leaf_body(nodes_name: &str, node_count: u32, stride: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::graph::vast_tree_walk::try_ast_walk_order(order: vyre_libs::graph::vast_tree_walk::VastWalkOrder, nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::vast_tree_walk::try_ast_walk_plan(nodes: &str, preorder_out: &str, postorder_out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan, alloc::string::String>
 pub fn vyre_libs::graph::vast_tree_walk::try_ast_walk_postorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs::graph::vast_tree_walk::try_ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs::graph::vast_tree_walk::vast_descend_leftmost_leaf_program(node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::hash::adler32::adler32_finalize_expr(a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::hash::adler32::adler32_initial_a_expr() -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::hash::adler32::adler32_initial_b_expr() -> vyre_foundation::ir_inner::model::generated::Expr
@@ -2032,6 +2051,8 @@ pub fn vyre_libs::nn::attention::quest_paging(query: &str, page_metadata: &str, 
 pub fn vyre_libs::nn::attention::recurrent_gated_delta(spec: &vyre_libs::nn::attention::GatedDeltaSpec<'_>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::nn::attention::RecurrentGatedDeltaError>
 pub fn vyre_libs::nn::attention::softmax(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::softmax_reference(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::nn::attention::tiled_online_softmax::attention_absorb_values_program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::nn::attention::tiled_online_softmax::attention_tile_scores_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::tiled_online_softmax::online_softmax_attention(q: &str, k: &str, v: &str, out: &str, plan: &vyre_libs::nn::attention::FlashAttentionWorkPlan) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::nn::attention::try_attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::TensorRefError>
 pub fn vyre_libs::nn::attention::turboquant_attention(q: &str, k_packed: &str, v_packed: &str, out: &str, seq_len: u32, d_head: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2146,6 +2167,8 @@ pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::
 pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::opt::homotopy::homotopy_euler_predictor(x_curr: &str, v: &str, dt_scaled: &str, x_pred: &str, n_paths: u32, n_dim: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::ast_cse_constant_fold::ast_cse_constant_fold(ast_opcodes: &str, ast_lefts: &str, ast_rights: &str, ast_vals: &str, out_modified_flag: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_hash_probe_body(ast_opcodes: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, node_idx: vyre_foundation::ir_inner::model::generated::Expr, h: vyre_foundation::ir_inner::model::generated::Expr, slot_init: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_hash_probe_program(hash_set_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_structural_hash(ast_opcodes: &str, ast_lefts: &str, ast_rights: &str, ast_vals: &str, hash_set: &str, hash_set_capacity: u32, out_modified_flag: &str, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::parsing::ast_cse_structural_hash::ast_cse_structural_hash_program(num_nodes: u32, hash_set_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::bytecode_dispatch_table_pack::pack_dispatch_table(entries: &[vyre_libs::parsing::bytecode_dispatch_table_pack::OpcodeHandlerEntry]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_libs::parsing::bytecode_dispatch_table_pack::PackError>
@@ -2155,6 +2178,7 @@ pub fn vyre_libs::parsing::bytecode_dispatch_table_pack::unpack_entry(packed: u3
 pub fn vyre_libs::parsing::core::ast::binding::ast_binding_strength(tok_types: &str, out_depths: &str, out_strengths: &str, num_tokens: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::core::ast::blocks::ast_cfg_blocks(tok_types: &str, _out_scope_parents: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_block_headers: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard_reduce_program() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::core::ast::shunting::ast_shunting_yard_with_capacity(tok_types: &str, statements: &str, num_statements: vyre_foundation::ir_inner::model::generated::Expr, out_ast_nodes: &str, out_ast_count: &str, out_statement_roots: &str, scratch_val_stack: &str, scratch_op_stack: &str, token_capacity: u32, statement_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::core_delimiter_match::core_delimiter_match(tok_types: &str, tok_depths: &str, tok_count: u32, open_tok_id: u32, close_tok_id: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::go::lex::go_compact_tokens(sparse_types: &str, sparse_starts: &str, sparse_lens: &str, emit_flags: &str, emit_offsets: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2174,6 +2198,8 @@ pub fn vyre_libs::parsing::line_splice_classify::line_splice_classify_u8(byte_co
 pub fn vyre_libs::parsing::lr_tables::LrTables::action_at(&self, state: u32, token: u32) -> vyre_libs::parsing::lr_tables::Action
 pub fn vyre_libs::parsing::lr_tables::LrTables::goto_at(&self, state: u32, nt: u32) -> u32
 pub fn vyre_libs::parsing::parallel_parse::parse_corpus_parallel<T, F>(sources: &[(alloc::vec::Vec<u8>, alloc::vec::Vec<u8>)], cache: &vyre_libs::parsing::source_cache::ParsedSourceLru<T>, parse: F) -> alloc::vec::Vec<alloc::sync::Arc<T>> where T: core::marker::Send + core::marker::Sync, F: core::ops::function::Fn(&[u8]) -> T + core::marker::Sync
+pub fn vyre_libs::parsing::planar_rewrite::planar_rewrite_exclusion_check_body(chosen: &str, w: u32, k: u32, r: vyre_foundation::ir_inner::model::generated::Expr, c: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs::parsing::planar_rewrite::planar_rewrite_exclusion_check_program(w: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::planar_rewrite::planar_rewrite_schedule(candidates: &str, chosen: &str, h: u32, w: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::python::lex::python312_lexer(haystack: &str, out_tok_types: &str, out_tok_starts: &str, out_tok_lens: &str, out_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::parsing::python::parse::calls::python312_extract_calls(tok_types: &str, tok_starts: &str, tok_lens: &str, out_calls: &str, out_call_counts: &str, out_kwargs: &str, out_kw_counts: &str, haystack_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2350,6 +2376,8 @@ pub fn vyre_libs::reduce::any::reduce_any(values: &str, out: &str, count: u32) -
 pub fn vyre_libs::reduce::count::reduce_count(bitset: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::count_non_zero::reduce_count_non_zero(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::gather::gather(src: &str, indices: &str, dst: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::grid_stride_tree::grid_stride_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32, blocks: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs::reduce::grid_stride_tree::grid_stride_tree_sum_u32_blocks(count: u32, tile: u32, blocks: u32) -> u32
 pub fn vyre_libs::reduce::histogram::histogram(input: &str, output: &str, count: u32, num_bins: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::histogram::histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::reduce::max::reduce_max(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -2991,6 +3019,7 @@ pub mod vyre_libs::reduce::any
 pub mod vyre_libs::reduce::count
 pub mod vyre_libs::reduce::count_non_zero
 pub mod vyre_libs::reduce::gather
+pub mod vyre_libs::reduce::grid_stride_tree
 pub mod vyre_libs::reduce::histogram
 pub mod vyre_libs::reduce::max
 pub mod vyre_libs::reduce::min
