@@ -321,6 +321,18 @@ pub fn ast_cse_hash_probe_program(hash_set_capacity: u32) -> Program {
     )
 }
 
+/// The probe leaves the opcode and value buffers as it found them, writes the
+/// structural hash of the single `AST_ADD` node into the first table slot, and
+/// reports no collision.
+const EXPECTED_AST_CSE_HASH_PROBE_OPS_BYTES: [u8; 4] = [10, 0, 0, 0];
+const EXPECTED_AST_CSE_HASH_PROBE_VALS_BYTES: [u8; 4] = [0, 0, 0, 0];
+const EXPECTED_AST_CSE_HASH_PROBE_TABLE_BYTES: [u8; 64] = {
+    let mut bytes = [0u8; 64];
+    bytes[0] = 100;
+    bytes
+};
+const EXPECTED_AST_CSE_HASH_PROBE_COUNT_BYTES: [u8; 4] = [0, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         AST_CSE_HASH_PROBE_OP_ID,
@@ -331,12 +343,14 @@ inventory::submit! {
             fixture_u32(&[0; 16]),
             fixture_u32(&[0]),
         ]]),
-        Some(|| vec![vec![
-            fixture_u32(&[AST_ADD]),
-            fixture_u32(&[0]),
-            fixture_u32(&[100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            fixture_u32(&[0]),
-        ]]),
+        Some(|| {
+            vec![vec![
+                EXPECTED_AST_CSE_HASH_PROBE_OPS_BYTES.to_vec(),
+                EXPECTED_AST_CSE_HASH_PROBE_VALS_BYTES.to_vec(),
+                EXPECTED_AST_CSE_HASH_PROBE_TABLE_BYTES.to_vec(),
+                EXPECTED_AST_CSE_HASH_PROBE_COUNT_BYTES.to_vec(),
+            ]]
+        }),
     )
 }
 

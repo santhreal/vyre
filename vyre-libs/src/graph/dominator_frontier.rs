@@ -303,6 +303,10 @@ pub fn dominator_frontier_pred_check_program() -> Program {
     )
 }
 
+/// One predecessor of node 1 sits outside its dominator subtree, so the check
+/// reports a single frontier entry.
+const EXPECTED_DOMINATOR_FRONTIER_PRED_CHECK_BYTES: [u8; 4] = [1, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         DOMINATOR_FRONTIER_PRED_CHECK_OP_ID,
@@ -313,9 +317,7 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[0, 1]),
             vyre_primitives::wire::pack_u32_slice(&[5, 0]),
         ]]),
-        Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[1]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_DOMINATOR_FRONTIER_PRED_CHECK_BYTES.to_vec()]]),
     )
 }
 

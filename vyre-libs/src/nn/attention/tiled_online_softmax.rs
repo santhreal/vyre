@@ -545,6 +545,9 @@ pub fn attention_absorb_values_program() -> Program {
     )
 }
 
+/// The tile score for the single fixture query, and an unwritten second slot.
+const EXPECTED_ATTENTION_TILE_SCORES_BYTES: [u8; 8] = [0, 0, 224, 64, 0, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         ATTENTION_TILE_SCORES_OP_ID,
@@ -552,12 +555,13 @@ inventory::submit! {
         Some(|| vec![vec![
             vyre_primitives::wire::pack_f32_slice(&[1.0, 3.0]),
         ]]),
-        Some(|| vec![vec![
-            vyre_primitives::wire::pack_f32_slice(&[7.0, 0.0]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_ATTENTION_TILE_SCORES_BYTES.to_vec()]]),
     )
     .with_category("nn")
 }
+
+/// A single-weight absorb leaves the value tile unchanged.
+const EXPECTED_ATTENTION_ABSORB_VALUES_BYTES: [u8; 8] = [0, 0, 0, 64, 0, 0, 160, 64];
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
@@ -566,9 +570,7 @@ inventory::submit! {
         Some(|| vec![vec![
             vyre_primitives::wire::pack_f32_slice(&[2.0, 5.0]),
         ]]),
-        Some(|| vec![vec![
-            vyre_primitives::wire::pack_f32_slice(&[2.0, 5.0]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_ATTENTION_ABSORB_VALUES_BYTES.to_vec()]]),
     )
     .with_category("nn")
 }

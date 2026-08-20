@@ -187,6 +187,9 @@ pub fn dominator_tree_lca_program(node_count: u32) -> Program {
     )
 }
 
+/// The least common ancestor of the fixture's two deepest nodes.
+const EXPECTED_DOMINATOR_TREE_LCA_BYTES: [u8; 4] = [3, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         DOMINATOR_TREE_LCA_OP_ID,
@@ -195,9 +198,7 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[0, 3, 3, 0]),
             vyre_primitives::wire::pack_u32_slice(&[0, 2, 2, 1]),
         ]]),
-        Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[3]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_DOMINATOR_TREE_LCA_BYTES.to_vec()]]),
     )
 }
 

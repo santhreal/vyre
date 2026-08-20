@@ -260,6 +260,28 @@ fn ast_shunting_yard_program(
     .with_entry_op_id(OP_ID)
     .with_non_composable_with_self(true)
 }
+/// One reduction of `10 + 20`. The pending `+` stays on the operator stack,
+/// the left operand slot is consumed, the emitted node occupies the first four
+/// words of the node buffer, and the node cursor lands on word four.
+const EXPECTED_SHUNTING_REDUCE_OP_STACK_BYTES: [u8; 256] = {
+    let mut bytes = [0u8; 256];
+    bytes[0] = TOK_PLUS as u8;
+    bytes
+};
+const EXPECTED_SHUNTING_REDUCE_VAL_STACK_BYTES: [u8; 256] = {
+    let mut bytes = [0u8; 256];
+    bytes[4] = 20;
+    bytes
+};
+const EXPECTED_SHUNTING_REDUCE_OUT_NODES_BYTES: [u8; 256] = {
+    let mut bytes = [0u8; 256];
+    bytes[0] = 3;
+    bytes[4] = 10;
+    bytes[8] = 20;
+    bytes
+};
+const EXPECTED_SHUNTING_REDUCE_OUT_LEN_BYTES: [u8; 4] = [4, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         AST_SHUNTING_YARD_REDUCE_OP_ID,
@@ -278,21 +300,11 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            let mut op_stack = vec![0u32; STACK_SLOTS_PER_STATEMENT as usize];
-            op_stack[0] = TOK_PLUS;
-            let mut val_stack = vec![0u32; STACK_SLOTS_PER_STATEMENT as usize];
-            val_stack[0] = 0;
-            val_stack[1] = 20;
-            let mut out_nodes = vec![0u32; 64];
-            out_nodes[0] = 3; // AST_ADD
-            out_nodes[1] = 10; // left
-            out_nodes[2] = 20; // right
-            out_nodes[3] = 0;
             vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&op_stack),
-                vyre_primitives::wire::pack_u32_slice(&val_stack),
-                vyre_primitives::wire::pack_u32_slice(&out_nodes),
-                vyre_primitives::wire::pack_u32_slice(&[4u32]),
+                EXPECTED_SHUNTING_REDUCE_OP_STACK_BYTES.to_vec(),
+                EXPECTED_SHUNTING_REDUCE_VAL_STACK_BYTES.to_vec(),
+                EXPECTED_SHUNTING_REDUCE_OUT_NODES_BYTES.to_vec(),
+                EXPECTED_SHUNTING_REDUCE_OUT_LEN_BYTES.to_vec(),
             ]]
         }),
     )

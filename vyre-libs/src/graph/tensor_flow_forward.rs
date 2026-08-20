@@ -313,6 +313,11 @@ pub fn tensor_flow_propagate_edges_program() -> Program {
     )
 }
 
+/// One propagation sweep over the fixture graph leaves the whole flow on the
+/// first tensor.
+const EXPECTED_TENSOR_FLOW_PROPAGATE_EDGES_BYTES: [u8; 16] =
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         TENSOR_FLOW_PROPAGATE_EDGES_OP_ID,
@@ -323,9 +328,7 @@ inventory::submit! {
             vyre_primitives::wire::pack_u32_slice(&[1, 1, 1, 1]),
             vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]),
         ]]),
-        Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[16, 0, 0, 0]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_TENSOR_FLOW_PROPAGATE_EDGES_BYTES.to_vec()]]),
     )
 }
 

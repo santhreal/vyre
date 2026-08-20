@@ -203,6 +203,9 @@ pub fn planar_rewrite_exclusion_check_program(w: u32, k: u32) -> Program {
     )
 }
 
+/// The single chosen rewrite site survives the exclusion check.
+const EXPECTED_PLANAR_REWRITE_EXCLUSION_CHECK_BYTES: [u8; 4] = [1, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         PLANAR_REWRITE_EXCLUSION_CHECK_OP_ID,
@@ -214,9 +217,7 @@ inventory::submit! {
                 vyre_primitives::wire::pack_u32_slice(&chosen),
             ]]
         }),
-        Some(|| vec![vec![
-            vyre_primitives::wire::pack_u32_slice(&[1u32]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_PLANAR_REWRITE_EXCLUSION_CHECK_BYTES.to_vec()]]),
     )
 }
 

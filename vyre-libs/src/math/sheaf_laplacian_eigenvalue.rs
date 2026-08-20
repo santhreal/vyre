@@ -187,6 +187,9 @@ inventory::submit! {
     )
 }
 
+/// The largest diagonal entry in the fixture, which the phase selects.
+const EXPECTED_POWER_ITERATION_PHASE_BYTES: [u8; 4] = [50, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         POWER_ITERATION_PHASE_OP_ID,
@@ -223,10 +226,7 @@ inventory::submit! {
             let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
             vec![vec![to_bytes(&[10, 50, 30, 20])]]
         }),
-        Some(|| {
-            let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
-            vec![vec![to_bytes(&[50])]]
-        }),
+        Some(|| vec![vec![EXPECTED_POWER_ITERATION_PHASE_BYTES.to_vec()]]),
     )
 }
 

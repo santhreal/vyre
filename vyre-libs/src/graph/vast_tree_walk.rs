@@ -448,6 +448,9 @@ pub fn vast_descend_leftmost_leaf_program(node_count: u32) -> Program {
     )
 }
 
+/// The leftmost leaf of the three-node fixture tree.
+const EXPECTED_VAST_DESCEND_LEFTMOST_LEAF_BYTES: [u8; 4] = [1, 0, 0, 0];
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         VAST_DESCEND_LEFTMOST_LEAF_OP_ID,
@@ -455,9 +458,7 @@ inventory::submit! {
         Some(|| vec![vec![
             fixture_u32(&fixture_tree_words()),
         ]]),
-        Some(|| vec![vec![
-            fixture_u32(&[1]),
-        ]]),
+        Some(|| vec![vec![EXPECTED_VAST_DESCEND_LEFTMOST_LEAF_BYTES.to_vec()]]),
     )
 }
 
