@@ -8,7 +8,7 @@
 //!
 //! The measured loop, the input length check and the baseline capture are
 //! shared with `compound.pipeline.fused_filter.1m` and live in
-//! [`super::triplet_pass`]; the routing program, the generated streams and the
+//! `super::triplet_pass`; the routing program, the generated streams and the
 //! per-item routing decision are here.
 
 use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};

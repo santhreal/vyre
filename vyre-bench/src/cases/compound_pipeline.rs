@@ -8,7 +8,7 @@
 //!
 //! The measured loop, the input length check and the baseline capture are
 //! shared with `runtime.adaptive_routing.gpu_resident.1m` and live in
-//! [`super::triplet_pass`]; the fused program, the generated streams and the
+//! `super::triplet_pass`; the fused program, the generated streams and the
 //! per-item acceptance decision are here.
 
 use super::harness::{CaseOps, ContractDescription, HarnessCase, WorkloadDescription};

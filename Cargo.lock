@@ -3731,7 +3731,6 @@ dependencies = [
  "tree-sitter-go",
  "vyre",
  "vyre-driver",
- "vyre-driver-cuda",
  "vyre-driver-reference",
  "vyre-emit-naga",
  "vyre-foundation",

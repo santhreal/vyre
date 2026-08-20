@@ -629,7 +629,15 @@ impl ArtifactInstance for TestInstance {
             .iter()
             .filter_map(|(value, resource)| {
                 self.retained.contains(value).then(|| match resource {
-                    BoundResource::Host(bytes) => Ok((*value, bytes.clone())),
+                    BoundResource::Host(bytes) => {
+                        let mut next = bytes.clone();
+                        if next.len() == 4 {
+                            let counter = u32::from_le_bytes([next[0], next[1], next[2], next[3]]);
+                            std::thread::yield_now();
+                            next = counter.wrapping_add(1).to_le_bytes().to_vec();
+                        }
+                        Ok((*value, next))
+                    }
                     BoundResource::Resident(_) => Err(BackendError::UnsupportedFeature {
                         name: "test resident resource".to_string(),
                         backend: "test-artifact".to_string(),
@@ -1194,6 +1202,63 @@ fn retained_and_ephemeral_sessions_share_artifact_identity() {
         .submit_and_wait(retained_session_bindings(digest))
         .unwrap();
     assert_eq!(completion.artifact, digest);
+}
+
+/// WHY: concurrent submit_and_wait calls on one RetainedArtifactSession must serialize atomically.
+#[test]
+fn concurrent_retained_submissions_are_serialized_and_atomic() {
+    use std::sync::Arc;
+    use std::thread;
+
+    let retained_contract = contract(
+        DataType::U32,
+        1,
+        BufferAccess::ReadWrite,
+        ValueLifetime::Retained,
+    );
+    let values = vec![("counter", retained_contract)];
+    let neutral = compile_graph(graph_over("counter_kernel", [1, 1, 1], &values), 0);
+    let digest = neutral.digest();
+    let bytes = envelope_bytes(neutral.clone(), [queue_payload(&neutral)]);
+
+    let retained_val = neutral.resources()[0].value;
+    let mut initial_map = BTreeMap::new();
+    initial_map.insert(retained_val, 0u32.to_le_bytes().to_vec());
+
+    let session = ArtifactSession::from_bytes(&TEST_REGISTRATION, &bytes).unwrap();
+    let retained = Arc::new(RetainedArtifactSession::new(session, initial_map).unwrap());
+
+    const THREADS: usize = 8;
+    const ITERS_PER_THREAD: usize = 20;
+    const TOTAL_SUBMISSIONS: u32 = (THREADS * ITERS_PER_THREAD) as u32;
+
+    let mut handles = Vec::new();
+    for _ in 0..THREADS {
+        let retained_clone = Arc::clone(&retained);
+        handles.push(thread::spawn(move || {
+            for _ in 0..ITERS_PER_THREAD {
+                let completion = retained_clone
+                    .submit_and_wait(BindingSet::new(digest))
+                    .unwrap();
+                assert_eq!(completion.artifact, digest);
+            }
+        }));
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    let final_completion = retained
+        .submit_and_wait(BindingSet::new(digest))
+        .unwrap();
+    let final_bytes = &final_completion.retained[&retained_val];
+    let final_count = u32::from_le_bytes([final_bytes[0], final_bytes[1], final_bytes[2], final_bytes[3]]);
+    assert_eq!(
+        final_count,
+        TOTAL_SUBMISSIONS + 1,
+        "concurrent retained submissions must serialize without lost updates"
+    );
 }
 
 /// WHY: the shipped persistent route must authenticate, retain, submit, and recover one artifact.

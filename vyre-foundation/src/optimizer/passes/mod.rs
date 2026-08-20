@@ -100,7 +100,7 @@ pub(crate) fn expr_is_reexecutable_over_read_only_loads(
 
 /// Whether `expr` contains no `Atomic` and no `Opaque` anywhere.
 ///
-/// A weaker question than [`expr_is_observably_free_for_reexecution`], and a
+/// A weaker question than `expr_is_observably_free_for_reexecution`, and a
 /// different one: a `Load`, a `Call` or a subgroup op is allowed here, because
 /// the rewrites that ask this are deleting or hoisting a whole expression
 /// within one invocation rather than re-evaluating it at a new program point.

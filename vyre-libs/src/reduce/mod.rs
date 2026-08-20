@@ -15,6 +15,7 @@ pub(crate) mod atomic_scalar;
 pub mod count;
 pub mod count_non_zero;
 pub mod gather;
+pub mod grid_stride_tree;
 pub mod histogram;
 mod indexed_move;
 /// Unsigned maximum over a u32 ValueSet.

@@ -8,7 +8,7 @@
 //! error strings, so `dup-scan` counted twenty-nine of one backend's
 //! seventy-six target-compiler lines as duplicated against the other three.
 //!
-//! A backend now declares a [`TargetDialect`](crate::target_dialect::TargetDialect)
+//! A backend now declares a [`TargetDialect`]
 //! and gets the shell. What it still
 //! owns is the emit function and the numbers in the profile, which are facts
 //! about the device, not plumbing.

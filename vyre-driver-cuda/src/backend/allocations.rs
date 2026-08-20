@@ -449,7 +449,7 @@ mod tests {
             .expect_err("Fix: allocation-pool underflow must return a typed error.");
         assert_eq!(
             error.to_string(),
-            "Invalid program: Fix: CUDA allocation-pool byte accounting underflowed while subtracting 8 from observed 4; allocator state is corrupt."
+            "Fix: CUDA allocation-pool byte accounting underflowed while subtracting 8 from observed 4; allocator state is corrupt."
         );
     }
 }

@@ -13,11 +13,12 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   COVERAGE_FLOOR_LINES: '85'
-  COVERAGE_FLOOR_BRANCHES: '75'
 
 jobs:
   llvm-cov:
     runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

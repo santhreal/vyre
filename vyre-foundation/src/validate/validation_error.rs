@@ -55,7 +55,7 @@ impl ValidationCode {
     ///
     /// The registry is the source for diagnostics tooling and for the
     /// generated catalog. A rule must appear in
-    /// [`crate::validate::catalog::VALIDATION_RULES`] before a code naming it
+    /// `crate::validate::catalog::VALIDATION_RULES` before a code naming it
     /// can deserialize.
     pub fn registered() -> impl ExactSizeIterator<Item = (&'static str, ValidationPhase)> + Clone {
         VALIDATION_RULES.iter().map(|rule| (rule.code, rule.phase))

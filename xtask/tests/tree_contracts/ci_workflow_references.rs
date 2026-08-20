@@ -153,48 +153,73 @@ fn references(workflow: &str, command: &str) -> Vec<Reference> {
             name: name.to_string(),
         });
     };
+    // Split compound scripts into individual command segments so that flags
+    // and options like `--` or `-p` on one command are not attributed to
+    // another command in the same multi-line or piped step.
+    for segment in command
+        .split(|c| c == '\n' || c == ';' || c == '|' || c == '&' || c == '`' || c == '(' || c == ')')
+    {
+        let tokens: Vec<&str> = segment.split_whitespace().collect();
+        if tokens.is_empty() {
+            continue;
+        }
 
-    let tokens: Vec<&str> = command.split_whitespace().collect();
-    let addresses_dispatcher = tokens.windows(2).any(|pair| {
-        matches!(pair[0], "-p" | "--package") && SUBCOMMAND_PACKAGES.contains(&pair[1])
-    }) || tokens.iter().any(|token| {
-        token
-            .strip_prefix("--package=")
-            .is_some_and(|name| SUBCOMMAND_PACKAGES.contains(&name))
-    });
-    for (index, token) in tokens.iter().enumerate() {
-        let next = tokens.get(index + 1).copied().unwrap_or_default();
-        match *token {
-            "-p" | "--package" => push(Kind::Package, next),
-            "--test" => push(Kind::Test, next),
-            "--bin" => push(Kind::Bin, next),
-            _ => {
-                if let Some(name) = token.strip_prefix("--test=") {
-                    push(Kind::Test, name);
-                } else if let Some(name) = token.strip_prefix("--bin=") {
-                    push(Kind::Bin, name);
-                } else if let Some(name) = token.strip_prefix("--package=") {
-                    push(Kind::Package, name);
-                } else if token.starts_with("scripts/") {
-                    push(Kind::Script, token);
+        let is_cargo_run = tokens
+            .iter()
+            .any(|t| *t == "cargo" || *t == "cargo_full" || *t == "./cargo_full")
+            && tokens.contains(&"run");
+
+        let addresses_dispatcher = tokens.windows(2).any(|pair| {
+            (matches!(pair[0], "-p" | "--package") && SUBCOMMAND_PACKAGES.contains(&pair[1]))
+                || (pair[0] == "--bin" && SUBCOMMAND_PACKAGES.contains(&pair[1]))
+        }) || tokens.iter().any(|token| {
+            token
+                .strip_prefix("--package=")
+                .is_some_and(|name| SUBCOMMAND_PACKAGES.contains(&name))
+                || token
+                    .strip_prefix("--bin=")
+                    .is_some_and(|name| SUBCOMMAND_PACKAGES.contains(&name))
+        });
+
+        let addresses_other_bin = tokens.windows(2).any(|pair| {
+            pair[0] == "--bin" && !SUBCOMMAND_PACKAGES.contains(&pair[1])
+        }) || tokens.iter().any(|token| {
+            token
+                .strip_prefix("--bin=")
+                .is_some_and(|name| !SUBCOMMAND_PACKAGES.contains(&name))
+        });
+
+        for (index, token) in tokens.iter().enumerate() {
+            let next = tokens.get(index + 1).copied().unwrap_or_default();
+            match *token {
+                "-p" | "--package" => push(Kind::Package, next),
+                "--test" => push(Kind::Test, next),
+                "--bin" => push(Kind::Bin, next),
+                _ => {
+                    if let Some(name) = token.strip_prefix("--test=") {
+                        push(Kind::Test, name);
+                    } else if let Some(name) = token.strip_prefix("--bin=") {
+                        push(Kind::Bin, name);
+                    } else if let Some(name) = token.strip_prefix("--package=") {
+                        push(Kind::Package, name);
+                    } else if token.starts_with("scripts/") {
+                        push(Kind::Script, token);
+                    }
                 }
             }
         }
-    }
 
-    if addresses_dispatcher {
-        // A `run: |` block is one string, so a step that runs the dispatcher
-        // five times holds five `--` separators and the first one is not the
-        // only subcommand the step passes.
-        for (index, token) in tokens.iter().enumerate() {
-            if *token != "--" {
-                continue;
-            }
-            let Some(name) = tokens.get(index + 1) else {
-                continue;
-            };
-            if !name.starts_with('-') {
-                push(Kind::Subcommand, name);
+        if is_cargo_run && addresses_dispatcher && !addresses_other_bin {
+            for (index, token) in tokens.iter().enumerate() {
+                if *token != "--" {
+                    continue;
+                }
+                let Some(name) = tokens.get(index + 1) else {
+                    continue;
+                };
+                if !name.starts_with('-') {
+                    push(Kind::Subcommand, name);
+                }
             }
         }
     }

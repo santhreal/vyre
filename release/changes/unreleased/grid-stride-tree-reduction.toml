@@ -1,0 +1,2 @@
+category = "Added"
+text = "Add multi-workgroup grid-stride tree reduction composition in vyre-libs, enabling parallel tree reduction across all compute units with warp-level subgroup collectives and atomic partial combining."

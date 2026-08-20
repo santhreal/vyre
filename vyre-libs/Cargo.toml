@@ -230,10 +230,6 @@ vyre = { path = "../vyre" }
 vyre-primitives = { path = "../vyre-primitives", features = ["hardware"], default-features = false }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
-# The live-device parity modules in `bitset::any` and `label::resolve_family`
-# dispatch through the CUDA backend. Dev-dep only, so the composition library
-# names no concrete backend in a production table.
-vyre-driver-cuda = { path = "../vyre-driver-cuda" }
 vyre-lower = { path = "../vyre-lower" }
 vyre-driver = { path = "../vyre-driver" }
 vyre-reference = { path = "../vyre-reference" }

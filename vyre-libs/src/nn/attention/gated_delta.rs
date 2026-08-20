@@ -44,7 +44,7 @@ pub enum RecurrentGatedDeltaError {
 ///
 /// Everything this shares with
 /// [`chunked_gated_delta`](super::gated_delta_chunked::chunked_gated_delta) is
-/// built by [`super::gated_delta_spec`]: the head partition, the state copy,
+/// built by `super::gated_delta_spec`: the head partition, the state copy,
 /// the key and query normalizers, and the scaled operands. What remains here is
 /// the schedule, which is the only thing that differs: this one carries the
 /// matrix state forward one token at a time and needs no tile scratch, so it

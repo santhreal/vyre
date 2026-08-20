@@ -8,7 +8,7 @@
 //! default build that only the crate's own suites use.
 //!
 //! The name selects the candidate and the content decides the verdict. A stem
-//! segment out of [`TOKENS`] is what makes a file worth reading, and nothing more
+//! segment out of `TOKENS` is what makes a file worth reading, and nothing more
 //! than that: `bitset/test_bit.rs` is the bit-test operation and product code
 //! calls it, `bellman_shortest_path.rs` is not a candidate at all because the
 //! match is on segments split at `_`, `-` and `.` rather than on a substring. A

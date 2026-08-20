@@ -345,7 +345,7 @@ pub struct DiscardingImport {
 /// otherwise call into that crate: the production binary saw all 354 operation
 /// registrations while three registry rules iterated an empty registry and
 /// passed. A `const` backend id is no anchor either, because it inlines at the
-/// use site. Reading the registry through [`REGISTRY_LINK_OWNER`] calls a real
+/// use site. Reading the registry through `REGISTRY_LINK_OWNER` calls a real
 /// function in each source crate, which is what keeps the object file in.
 #[must_use]
 pub fn registry_link_failures(submitters: &[String], imports: &[DiscardingImport]) -> Vec<String> {

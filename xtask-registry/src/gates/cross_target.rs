@@ -24,7 +24,7 @@
 //!
 //! The `target_os` literals in workspace source. A `cfg` arm for a platform is
 //! the claim that the tree supports it; a comment naming one is not. A
-//! `target_os` with no triple in [`TRIPLE_FOR_OS`] is a finding rather than a
+//! `target_os` with no triple in `TRIPLE_FOR_OS` is a finding rather than a
 //! skip, so adding an arm for a new platform turns this red until somebody
 //! records which triple proves it.
 //!
