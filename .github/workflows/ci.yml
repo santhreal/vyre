@@ -94,9 +94,26 @@ jobs:
         continue-on-error: true
         run: ./cargo_full clippy --workspace
 
+      # Run the suite one package at a time and drop each package's test
+      # executables before the next. This workspace declares 1219 integration
+      # test files, each of which links its own binary at roughly 56 MiB, so a
+      # single `test --workspace` leaves well over 100 GiB behind and the runner
+      # dies mid-compile reporting only that it received a shutdown signal. No
+      # test binary is shared between packages, so nothing is rebuilt; rlibs and
+      # build-script outputs are kept.
       - name: cargo_full test
         shell: bash
-        run: ./cargo_full test --workspace
+        run: |
+          target_dir="$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)"
+          for package in $(cargo metadata --format-version 1 --no-deps | jq -r '.packages[].name' | sort); do
+            ./cargo_full test -p "$package"
+            # A test executable is the only artifact in deps/ with no file
+            # extension (or `.exe` on Windows). Every rlib, rmeta and depfile
+            # carries one and is kept, and build scripts are excluded by name so
+            # cargo does not re-run them.
+            find "$target_dir/debug/deps" -maxdepth 1 -type f \
+              \( ! -name '*.*' -o -name '*.exe' \) ! -name 'build_script_*' -delete
+          done
 
 
       - name: composition-library reference-parity tests
