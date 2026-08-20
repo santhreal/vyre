@@ -73,7 +73,8 @@ label = ["bitset"]
 # `graph` names `math-kernels` because seven graph kernels reach
 # `math::fixed`, `math::fixed_u32_matmul` and `math::chebyshev_recurrence`.
 # The reverse edge does not exist: `math-kernels` compiles no graph module.
-graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels"]
+# `telemetry` because `graph::alias_registry` bumps `alias_registry_calls`.
+graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels", "telemetry"]
 predicate = ["graph", "bitset", "label"]
 # `math-kernels` names `reduce` because `math/prefix_scan.rs` sweeps
 # `reduce::workgroup_tree::blelloch_inclusive_sum_nodes`.

@@ -40,7 +40,7 @@ const GENERATED_EXTENSION_IDS: &[&str] = &[
 
 #[test]
 fn default_registry_has_alias_union() {
-    let registry = build_default_registry();
+    let registry = default_alias_registry();
     assert!(alias_union_registered(&registry));
 }
 
@@ -53,23 +53,8 @@ fn empty_registry_has_no_ops() {
 
 #[test]
 fn lookup_unknown_op_returns_none() {
-    let registry = build_default_registry();
+    let registry = default_alias_registry();
     assert!(lookup_alias(&registry, "vyre.graph.does_not_exist").is_none());
-}
-
-/// Closure-bar: substrate path produces the same registry as
-/// calling the primitive register function directly.
-#[test]
-fn matches_primitive_directly() {
-    let via_substrate = build_default_registry();
-    let via_primitive = primitive_default_alias_registry();
-    assert_eq!(via_substrate.len(), via_primitive.len());
-    assert_eq!(
-        via_substrate.registered_op_ids(),
-        via_primitive.registered_op_ids()
-    );
-    assert!(via_substrate.get(ALIAS_UNION_OP_ID).is_some());
-    assert!(via_primitive.get(ALIAS_UNION_OP_ID).is_some());
 }
 
 /// Adversarial: looking up the alias-union op id on an empty
@@ -86,7 +71,7 @@ fn empty_registry_does_not_self_populate() {
 /// silently drop union calls - test pins the contract.
 #[test]
 fn alias_union_descriptor_contract() {
-    let registry = build_default_registry();
+    let registry = default_alias_registry();
     let desc = lookup_alias(&registry, ALIAS_UNION_OP_ID).unwrap();
     assert_eq!(desc.output, DataType::U32);
     assert!(desc.commutative, "alias-union must be commutative");
@@ -95,7 +80,7 @@ fn alias_union_descriptor_contract() {
 
 #[test]
 fn generated_extension_updates_never_duplicate_registry_slots() {
-    let mut registry = build_default_registry();
+    let mut registry = default_alias_registry();
     for round in 0..128 {
         let op_id = GENERATED_EXTENSION_IDS[round % GENERATED_EXTENSION_IDS.len()];
         let descriptor = AliasOpDescriptor {
@@ -133,7 +118,7 @@ fn generated_extension_updates_never_duplicate_registry_slots() {
 
 #[test]
 fn generated_unknown_ids_never_match_alias_union_or_extensions() {
-    let mut registry = build_default_registry();
+    let mut registry = default_alias_registry();
     registry.register(
         GENERATED_EXTENSION_IDS[0],
         AliasOpDescriptor {
@@ -166,7 +151,7 @@ fn alias_registry_uses_dedicated_observability_counter() {
     let alias_before = crate::telemetry::alias_registry_calls.load(Ordering::Relaxed);
     let dataflow_before = crate::telemetry::dataflow_fixpoint_calls.load(Ordering::Relaxed);
 
-    let registry = build_default_registry();
+    let registry = default_alias_registry();
     assert!(alias_union_registered(&registry));
     assert!(lookup_alias(&registry, ALIAS_UNION_OP_ID).is_some());
 

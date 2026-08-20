@@ -1,0 +1,2 @@
+category = "Changed"
+text = "One owner for the shape-checked do-calculus CPU oracles. Each do-calculus test module wrapped the same infallible reference witness in the same two length checks, four copies across two files, so a test could assert against a looser oracle than its neighbour. `graph::do_calculus_oracle` owns the checks and every test module calls it."

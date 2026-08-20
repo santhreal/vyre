@@ -126,18 +126,6 @@ pub fn default_alias_registry() -> AliasRegistry {
     registry
 }
 
-/// Alias for [`default_alias_registry`].
-#[must_use]
-pub fn primitive_default_alias_registry() -> AliasRegistry {
-    default_alias_registry()
-}
-
-/// Alias for [`default_alias_registry`].
-#[must_use]
-pub fn build_default_registry() -> AliasRegistry {
-    default_alias_registry()
-}
-
 /// Look up an alias op descriptor in `registry`.
 #[must_use]
 pub fn lookup_alias<'a>(registry: &'a AliasRegistry, op_id: &str) -> Option<&'a AliasOpDescriptor> {

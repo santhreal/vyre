@@ -299,35 +299,11 @@ mod rule2_tests {
 
 #[cfg(test)]
 mod rule3_tests {
+    use super::super::do_calculus_oracle::try_do_rule3_subgraph_cpu_into;
     use vyre_reference::composition_witness::{
         do_rule3_subgraph_witness as do_rule3_subgraph_cpu,
         do_rule3_subgraph_witness_into as do_rule3_subgraph_cpu_into,
     };
-    fn try_do_rule3_subgraph_cpu_into(
-        adjacency: &[u32],
-        keep_mask: &[u32],
-        n: u32,
-        reduced: &mut Vec<u32>,
-        kept: &mut Vec<u32>,
-    ) -> Result<(), String> {
-        let n_usize = n as usize;
-        if adjacency.len() != n_usize * n_usize {
-            return Err(format!(
-                "Fix: rule3 requires adjacency.len() == n*n, got {} vs {}.",
-                adjacency.len(),
-                n_usize * n_usize
-            ));
-        }
-        if keep_mask.len() != n_usize {
-            return Err(format!(
-                "Fix: rule3 requires keep_mask.len() == n, got {} vs {}.",
-                keep_mask.len(),
-                n_usize
-            ));
-        }
-        do_rule3_subgraph_cpu_into(adjacency, keep_mask, n, reduced, kept);
-        Ok(())
-    }
 
     #[test]
     fn keep_all_returns_original() {
