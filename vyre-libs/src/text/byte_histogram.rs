@@ -272,23 +272,21 @@ mod tests {
         // Removing the mask would OOB the atomic scatter (memory corruption on a real GPU)
         // and this test would see report.total() > 0.
         let program = byte_histogram_256("bytes", "histogram", 1);
-        let (outputs, report) = vyre_reference::reference_eval_oob_report(
+        let (outputs, report) = crate::fixture_bytes::eval_bytes_oob_report(
+            "byte_histogram_256",
             &program,
-            &[
+            vec![
                 // 0x0141: high byte 0x01 puts the raw word past 255, low byte 0x41.
-                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&[
-                    0x0141,
-                ])),
-                vyre_reference::value::Value::from(vec![0u8; 256 * 4]),
+                vyre_primitives::wire::pack_u32_slice(&[0x0141]),
+                vec![0u8; 256 * 4],
             ],
-        )
-        .expect("Fix: byte_histogram_256 must reference-evaluate a high-bit source element");
+        );
         assert_eq!(
             report.total(),
             0,
             "Fix: masked bin index must stay in bounds without relying on interpreter OOB masking"
         );
-        let histogram = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
+        let histogram = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
         assert_eq!(
             histogram[0x41], 1,
             "Fix: 0x0141 must count into bin 0x41 via the `& 0xFF` mask"

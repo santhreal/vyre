@@ -71,6 +71,7 @@ mod tests {
     use crate::fixpoint::persistent_fixpoint::{
         declared_words, persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
     };
+    use crate::fixture_bytes::eval_bytes_lane_order;
     use vyre_foundation::ir::{Expr, Node, Program};
 
     /// The wrapper declares the three buffers the caller named and no others.

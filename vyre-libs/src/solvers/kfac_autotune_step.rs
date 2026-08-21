@@ -225,13 +225,7 @@ mod tests {
         let blocks_in = vec![2.0, 0.0, 0.0, 4.0];
         let p = kfac_autotune_step_program("bo", "bi", "s", 1, 2);
 
-        use std::sync::Arc;
-        use vyre_reference::value::Value;
-
-        let to_value = |data: &[f32]| {
-            let bytes = vyre_primitives::wire::pack_f32_slice(data);
-            Value::Bytes(Arc::from(bytes))
-        };
+        let to_value = |data: &[f32]| vyre_primitives::wire::pack_f32_slice(data);
 
         let inputs = vec![
             to_value(&[0.0; 4]),

@@ -21,9 +21,11 @@ mod test_operation;
 
 use bundles::{
     bundle_composed_nested, bundle_loop_add, bundle_one_op_add,
-    bundle_region_chain_backend_witness, bundle_region_chain_intrinsic_dialect,
-    bundle_trivial_const, BundleBuilderFn,
+    bundle_region_chain_intrinsic_dialect, bundle_trivial_const,
 };
+// Reached only by the GPU dispatch lane below.
+#[cfg(feature = "device-tests")]
+use bundles::{bundle_region_chain_backend_witness, BundleBuilderFn};
 use pins::{
     deterministic_signing_key, sign_bundle_cert, COMPOSED_NESTED_BUNDLE_BLAKE3,
     COMPOSED_NESTED_SIG_HEX, COMPOSED_NESTED_WIRE_LEN, LOOP_ADD_BUNDLE_BLAKE3, LOOP_ADD_SIG_HEX,

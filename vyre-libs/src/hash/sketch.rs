@@ -449,17 +449,15 @@ mod tests {
         let hashes = [2u32, w + 5, w + 9]; // row0 valid; rows 1,2 far out of range
         let signs = [1u32, 1, 1];
         let program = count_sketch_update("table", "hashes", "signs", d, w);
-        let (_outputs, report) = vyre_reference::reference_eval_oob_report(
+        let (_outputs, report) = crate::fixture_bytes::eval_bytes_oob_report(
+            "count_sketch_update",
             &program,
-            &[
-                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(
-                    &vec![0u32; (d * w) as usize],
-                )),
-                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&hashes)),
-                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&signs)),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&vec![0u32; (d * w) as usize]),
+                vyre_primitives::wire::pack_u32_slice(&hashes),
+                vyre_primitives::wire::pack_u32_slice(&signs),
             ],
-        )
-        .expect("Fix: count_sketch_update must reference-evaluate");
+        );
         assert_eq!(
             report.total(),
             0,

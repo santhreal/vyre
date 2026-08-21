@@ -159,13 +159,7 @@ mod tests {
 
         let p = sinkhorn_full_clustering_program(FIXTURE, extents(2, 2, 1));
 
-        use std::sync::Arc;
-        use vyre_reference::value::Value;
-
-        let to_value = |data: &[u32]| {
-            let bytes = vyre_primitives::wire::pack_u32_slice(data);
-            Value::Bytes(Arc::from(bytes))
-        };
+        let to_value = |data: &[u32]| vyre_primitives::wire::pack_u32_slice(data);
 
         let inputs = vec![
             to_value(&u_c),

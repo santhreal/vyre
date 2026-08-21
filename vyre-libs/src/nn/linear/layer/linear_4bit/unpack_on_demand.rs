@@ -98,6 +98,7 @@ pub fn linear_4bit(
 
 #[cfg(test)]
 mod tests {
+    use crate::fixture_bytes::eval_bytes;
 
     use super::linear_4bit;
     use crate::fixture_bytes::{f32_bytes, u32_bytes};

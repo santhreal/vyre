@@ -102,6 +102,33 @@ pub(crate) fn try_eval_bytes(
         .collect())
 }
 
+/// Run a program and hand back both its buffers and the interpreter's
+/// out-of-bounds report.
+///
+/// A masking contract asserts that a program stays in bounds, which is a
+/// property of the run rather than of the buffers, so it needs the report
+/// [`eval_bytes`] discards. The interpreter is still reached from this module
+/// and nowhere else.
+#[cfg(test)]
+pub(crate) fn eval_bytes_oob_report(
+    label: &str,
+    program: &vyre_foundation::ir::Program,
+    buffers: Vec<Vec<u8>>,
+) -> (Vec<Vec<u8>>, vyre_reference::OobReport) {
+    let values: Vec<vyre_reference::value::Value> = buffers
+        .into_iter()
+        .map(vyre_reference::value::Value::from)
+        .collect();
+    let (outputs, report) = vyre_reference::reference_eval_oob_report(program, &values)
+        .unwrap_or_else(|error| {
+            panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+        });
+    (
+        outputs.iter().map(|value| value.to_bytes()).collect(),
+        report,
+    )
+}
+
 /// Run a program with the interpreter's lanes in declaration order, or
 /// reversed.
 ///

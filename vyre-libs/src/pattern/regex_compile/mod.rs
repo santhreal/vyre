@@ -408,6 +408,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::{regex_construct_diagnostic_code, RegexConstruct};
+    use crate::fixture_bytes::eval_bytes;
     use std::collections::BTreeSet;
 
     /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex
@@ -426,7 +427,7 @@ mod tests {
             vec![0u8; 4],
             vec![0u8; 4],
         ];
-        let actual = eval_bytes("regex_compile", &program, inputs.clone());
+        let actual = eval_bytes("regex_compile", &program, inputs.to_vec());
 
         assert_eq!(
             actual,

@@ -153,6 +153,7 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
 
 #[cfg(test)]
 mod tests {
+    use crate::fixture_bytes::eval_bytes;
     use vyre_foundation::ir::BufferAccess;
 
     use super::super::affine_grouped::linear_4bit_affine_grouped_batched;

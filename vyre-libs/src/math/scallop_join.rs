@@ -225,7 +225,6 @@ inventory::submit! {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     use super::*;
     use crate::fixpoint::persistent_fixpoint::count_grid_sync;
@@ -542,10 +541,7 @@ mod tests {
         let p = scallop_join("s", "nx", "j", "c", n, w, 4);
         let (expected_state, _) = cpu_ref(&state_init, &join_rules, n, w, 4);
 
-        let to_value = |data: &[u32]| {
-            let bytes = vyre_primitives::wire::pack_u32_slice(data);
-            vyre_reference::value::Value::Bytes(Arc::from(bytes))
-        };
+        let to_value = |data: &[u32]| vyre_primitives::wire::pack_u32_slice(data);
 
         let inputs = vec![
             to_value(&state_init),

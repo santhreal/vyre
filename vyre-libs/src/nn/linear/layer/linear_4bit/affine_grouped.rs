@@ -334,6 +334,7 @@ fn linear_4bit_affine_grouped_batch_impl(
 
 #[cfg(test)]
 mod tests {
+    use crate::fixture_bytes::eval_bytes;
     use vyre_foundation::ir::{Expr, Node};
 
     use super::super::grouped_layout::AFFINE_GROUPED_WORKGROUP_SIZE;

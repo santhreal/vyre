@@ -66,7 +66,7 @@ pub(crate) fn eval_qkv_program(
     v: &[f32],
     on_failure: &str,
 ) -> Vec<f32> {
-    use crate::fixture_bytes::{decode_f32, f32_bytes};
+    use crate::fixture_bytes::{decode_f32, eval_bytes, f32_bytes};
 
     let out_bytes = program
         .buffers()

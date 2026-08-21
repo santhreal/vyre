@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The vyre-libs fixture owner exposes the out-of-bounds report entry point, so no module in the crate reaches the reference interpreter itself."

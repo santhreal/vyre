@@ -129,13 +129,13 @@ fn record_once(
     })
 }
 
+#[cfg(feature = "device-tests")]
 mod bind_group_cache_contracts {
     use super::*;
 
     /// PERF-HOT-01: two WgpuPipeline instances for the same compiled shader
     /// must share one BindGroupCache (Arc identity). Different compiled
     /// shaders must have independent caches.
-    #[cfg(feature = "device-tests")]
     #[test]
     fn bind_group_cache_shared_per_compiled_shader() {
         let harness = PipelineHarness::new("cache-sharing test");
@@ -209,7 +209,6 @@ mod bind_group_cache_contracts {
         );
     }
 
-    #[cfg(feature = "device-tests")]
     #[test]
     fn compiled_borrowed_timed_dispatch_reports_device_ns() {
         use vyre_driver::CompiledPipeline;
@@ -429,6 +428,7 @@ mod layout_config_contracts {
     }
 }
 
+#[cfg(feature = "device-tests")]
 mod prerecorded_contracts {
     use super::*;
 
@@ -437,7 +437,6 @@ mod prerecorded_contracts {
     /// under its own wgpu labels. Replaying the recorded command buffer must
     /// therefore land the same bytes in the output buffer that a direct dispatch
     /// of the same program lands.
-    #[cfg(feature = "device-tests")]
     #[test]
     fn prerecorded_replay_writes_the_same_output_as_direct_dispatch() {
         let harness = PipelineHarness::new("pre-recorded dispatch replay test");
@@ -485,7 +484,6 @@ mod prerecorded_contracts {
 
     /// A wgpu command buffer is single-submit. The second replay must be a
     /// structured error rather than a raw wgpu panic.
-    #[cfg(feature = "device-tests")]
     #[test]
     fn prerecorded_second_replay_is_a_structured_error() {
         let harness = PipelineHarness::new("pre-recorded dispatch resubmit test");
@@ -513,10 +511,10 @@ mod prerecorded_contracts {
     }
 }
 
+#[cfg(feature = "device-tests")]
 mod readback_ring_contracts {
     use super::*;
 
-    #[cfg(feature = "device-tests")]
     #[test]
     fn direct_record_and_readback_reuses_bind_groups() {
         let harness = PipelineHarness::new("direct cache test");
@@ -565,7 +563,6 @@ mod readback_ring_contracts {
         );
     }
 
-    #[cfg(feature = "device-tests")]
     #[test]
     fn direct_record_and_readback_trap_uses_readback_rings_only() {
         let harness = PipelineHarness::new("trap-sidecar allocation test");
@@ -617,7 +614,6 @@ mod readback_ring_contracts {
 
     #[test]
 
-    #[cfg(feature = "device-tests")]
     fn direct_record_and_readback_trap_without_readback_rings_allocates_full_sidecar_copy() {
         let harness = PipelineHarness::new("trap-sidecar allocation delta test");
         let arena = harness.arena();

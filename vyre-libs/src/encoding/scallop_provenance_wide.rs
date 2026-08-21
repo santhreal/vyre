@@ -66,13 +66,7 @@ mod tests {
 
         let p = scallop_provenance_wide_program("s", "nx", "j", "c", n, w, 2);
 
-        use std::sync::Arc;
-        use vyre_reference::value::Value;
-
-        let to_value = |data: &[u32]| {
-            let bytes = vyre_primitives::wire::pack_u32_slice(data);
-            Value::Bytes(Arc::from(bytes))
-        };
+        let to_value = |data: &[u32]| vyre_primitives::wire::pack_u32_slice(data);
 
         // Buffer order matches `scallop_join` `Program::wrapped`: state, next, changed, join_rules.
         let inputs = vec![
