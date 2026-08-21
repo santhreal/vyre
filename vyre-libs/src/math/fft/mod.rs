@@ -1,9 +1,9 @@
 //! Fast Fourier Transform sub-dialect.
 //!
-//! FFT convolution for large kernels. This module
-//! ships the fixed-size 4-point base (`fft4_complex`), arbitrary
-//! power-of-two radix-2 FFT (`fft_radix2_complex`), and circular
-//! convolution wrapper (`fft_convolve_circular_complex`).
+//! FFT convolution for large kernels. `fft_radix2_complex` owns the transform
+//! for every power-of-two N. `fft4_complex` is a fixed-size entry point that
+//! builds through it at N=4, and `fft_convolve_circular_complex` is the
+//! circular convolution wrapper.
 //!
 //! Complex values are represented as interleaved (re, im) pairs in
 //! a length-`2 * N` F32 buffer. `fft4_complex` consumes a length-8

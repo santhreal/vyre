@@ -1,8 +1,10 @@
 //! Recursive radix-2 Cooley-Tukey FFT for power-of-two N.
 //!
-//! companion to `fft4_complex`. Builds an N-point
-//! complex FFT by recursive bit-reversal + butterfly stages on top
-//! of the verified 4-point base case.
+//! The one owner of the transform. Builds an N-point complex FFT by
+//! bit-reversal plus butterfly stages, for every power-of-two N including 4.
+//! `fft4_complex` is the fixed-size entry point over this builder, not a base
+//! case this file calls: the recursion is unrolled at IR-build time, so there
+//! is no base case to call.
 //!
 //! ## Algorithm
 //!
@@ -55,6 +57,22 @@ const OP_ID: &str = "vyre-libs::math::fft::fft_radix2";
 /// Returns `Err` when `n` is not a power of two, when `n < 2`, or
 /// when `2 * n` overflows `u32`.
 pub fn fft_radix2_complex(input: &str, output: &str, n: u32) -> Result<Program, String> {
+    radix2_program(input, output, n, OP_ID)
+}
+
+/// Build the radix-2 program under a caller-chosen operation identity.
+///
+/// The fixed-size 4-point entry point is the same algorithm at `n = 4`, and it
+/// used to be a second hand-expanded copy of the N=4 butterflies. It builds
+/// through here instead, so there is one implementation of the transform and
+/// the identity is the only thing that differs between the two registered
+/// operations.
+pub(super) fn radix2_program(
+    input: &str,
+    output: &str,
+    n: u32,
+    op_id: &'static str,
+) -> Result<Program, String> {
     let elements = validate_complex_len(n, "fft_radix2_complex")?;
     let log2_n = n.trailing_zeros() as usize;
 
@@ -162,9 +180,9 @@ pub fn fft_radix2_complex(input: &str, output: &str, n: u32) -> Result<Program, 
             BufferDecl::output(output, 1, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
+        vec![wrap_anonymous_region(op_id, body)],
     )
-    .with_entry_op_id(OP_ID))
+    .with_entry_op_id(op_id))
 }
 
 inventory::submit! {
