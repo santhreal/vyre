@@ -127,7 +127,6 @@ impl vyre_libs::graph::state_index_frontier::StateIndexFrontierHeader
 impl vyre_libs::graph::state_index_frontier::StateIndexFrontierItem
 impl vyre_libs::graph::state_index_frontier::StateIndexSpillDecision
 impl vyre_libs::graph::toposort::ToposortCsrDispatchPlan
-impl vyre_libs::intern::PerfectHash
 impl vyre_libs::llm::sampling::TokenSampler<'_>
 impl vyre_libs::math::bellman_shortest_path::BellmanBuffers<'static>
 impl vyre_libs::math::linalg::Dot
@@ -1107,7 +1106,6 @@ pub enum vyre_libs::graph::csr_frontier_queue::batch_memory::ResidentCsrQueueBat
 pub enum vyre_libs::graph::program_graph::GraphValidationError
 pub enum vyre_libs::graph::reachable::ReachableError
 pub enum vyre_libs::graph::vast_tree_walk::VastWalkOrder
-pub enum vyre_libs::intern::BuildError
 pub enum vyre_libs::label::nodeset_filter::NodeSetFilter
 pub enum vyre_libs::llm::paged_kv::PagedKvError
 pub enum vyre_libs::llm::sampling::SamplingError
@@ -1832,16 +1830,6 @@ pub fn vyre_libs::hash::sketch::count_sketch_update(table: &str, hashes: &str, s
 pub fn vyre_libs::hash::sparse_fft::sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::hash::table::hash_insert(in_keys: &str, in_values: &str, table_keys: &str, table_values: &str, table_capacity: u32, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs::hash::table::hash_lookup(queries: &str, table_keys: &str, table_values: &str, out_results: &str, table_capacity: u32, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
-pub fn vyre_libs::intern::PerfectHash::displacement(&self) -> &[u32]
-pub fn vyre_libs::intern::PerfectHash::is_empty(&self) -> bool
-pub fn vyre_libs::intern::PerfectHash::key_hashes(&self) -> &[u64]
-pub fn vyre_libs::intern::PerfectHash::len(&self) -> usize
-pub fn vyre_libs::intern::PerfectHash::lookup(&self, key: &str) -> core::option::Option<u32>
-pub fn vyre_libs::intern::PerfectHash::seeds(&self) -> (u64, u64)
-pub fn vyre_libs::intern::PerfectHash::slots(&self) -> usize
-pub fn vyre_libs::intern::PerfectHash::values(&self) -> &[u32]
-pub fn vyre_libs::intern::build_chd<I, S>(entries: I) -> vyre_libs::intern::PerfectHash where I: core::iter::traits::collect::IntoIterator<Item = (S, u32)>, S: core::convert::AsRef<str>
-pub fn vyre_libs::intern::try_build_chd<I, S>(entries: I) -> core::result::Result<vyre_libs::intern::PerfectHash, vyre_libs::intern::BuildError> where I: core::iter::traits::collect::IntoIterator<Item = (S, u32)>, S: core::convert::AsRef<str>
 pub fn vyre_libs::label::nodeset_filter::nodeset_filter(values: &str, nodeset_out: &str, node_count: u32, filter: vyre_libs::label::nodeset_filter::NodeSetFilter) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::label::resolve_family::resolve_family(node_tags: &str, nodeset_out: &str, node_count: u32, family_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs::llm::paged_kv::paged_kv_append(spec: &vyre_libs::llm::paged_kv::PagedKvCache<'_>, chunk: &str, chunk_tokens: u32, position: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs::llm::paged_kv::PagedKvError>
@@ -2877,7 +2865,6 @@ pub mod vyre_libs::hash::ntt
 pub mod vyre_libs::hash::sketch
 pub mod vyre_libs::hash::sparse_fft
 pub mod vyre_libs::hash::table
-pub mod vyre_libs::intern
 pub mod vyre_libs::label
 pub mod vyre_libs::label::nodeset_filter
 pub mod vyre_libs::label::resolve_family
@@ -3273,7 +3260,6 @@ pub struct vyre_libs::graph::toposort::ToposortCsrLayout
 pub struct vyre_libs::graph::toposort::ToposortCsrStaticInputKey
 pub struct vyre_libs::graph::union_find::UnionFindLayout
 pub struct vyre_libs::graph::vast_tree_walk::VastTreeWalkProgramPlan
-pub struct vyre_libs::intern::PerfectHash
 pub struct vyre_libs::llm::paged_kv::PagedKvCache<'a>
 pub struct vyre_libs::llm::sampling::TokenSampler<'a>
 pub struct vyre_libs::math::bellman_shortest_path::BellmanBuffers<'a>
@@ -4124,8 +4110,6 @@ pub vyre_libs::hash::sketch::CountSketchError::InvalidDimensions::w: u32
 pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow
 pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow::d: u32
 pub vyre_libs::hash::sketch::CountSketchError::TableSizeOverflow::w: u32
-pub vyre_libs::intern::BuildError::ConstructionFailed(usize)
-pub vyre_libs::intern::BuildError::DuplicateKey(alloc::string::String)
 pub vyre_libs::label::nodeset_filter::NodeSetFilter::Eq(u32)
 pub vyre_libs::label::nodeset_filter::NodeSetFilter::Intersects(u32)
 pub vyre_libs::llm::paged_kv::PagedKvCache::block_table: &'a str

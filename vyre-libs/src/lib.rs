@@ -253,12 +253,6 @@ pub(crate) use math::linalg::{
 #[cfg(feature = "rule")]
 pub mod rule;
 
-/// Vector-widened string interning. CHD perfect hash over label families  -
-/// 60k+ function-name strings reduce to one subgroup-shuffle + one DRAM load
-/// on the GPU.
-#[cfg(feature = "intern")]
-pub mod intern;
-
 /// The type-signature constants an op declaration reads. The module holding
 /// them is private, so these re-exports are their only public path.
 pub use plumbing::registration::signatures::{
