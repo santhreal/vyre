@@ -30,6 +30,28 @@ executable Cargo binary for nested gate commands.
 
 Per-crate test instructions live under `docs/testing/`, one page per crate.
 
+### A stale artifact from another worktree
+
+Worktrees share one cargo target directory. Cargo reuses a compiled artifact
+when package name, version and features match, so a crate built from one
+worktree's source is served to another whose source differs. The resulting
+error names the wrong thing: a trait method that the building tree's own source
+already declares, or a macro argument its source already accepts. Proc-macro
+crates are the worst case, because a stale dylib reports errors naming the
+trait rather than the macro that produced it.
+
+The target directory stays shared. Splitting it per worktree multiplies a
+terabyte-scale `debug/deps` by the worktree count. Worktree lifetime is the
+bound instead: create one only for an unmerged branch, and delete it when that
+branch merges.
+
+When an error names a symbol the source in front of you already defines,
+rebuild that one crate and trust the next error:
+
+```bash
+./cargo_full clean -p <crate>
+```
+
 ## Gates
 
 Every check in the workspace is a gate in one registry. There are no other
