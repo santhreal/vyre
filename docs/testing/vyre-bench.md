@@ -59,6 +59,7 @@ The crate lives at `vyre-bench`. The `benchmarks` owner maintains its
 | `test` | `cuda_event_timing` | `vyre-bench/tests/cuda_event_timing.rs` | None | `./cargo_full test -p vyre-bench --test cuda_event_timing` |
 | `test` | `dataset_lineage_catalog` | `vyre-bench/tests/dataset_lineage_catalog.rs` | None | `./cargo_full test -p vyre-bench --test dataset_lineage_catalog` |
 | `test` | `determinism_gate` | `vyre-bench/tests/determinism_gate.rs` | None | `./cargo_full test -p vyre-bench --test determinism_gate` |
+| `test` | `device_profile_admissibility` | `vyre-bench/tests/device_profile_admissibility.rs` | None | `./cargo_full test -p vyre-bench --test device_profile_admissibility` |
 | `test` | `dfa_full_coverage` | `vyre-bench/tests/dfa_full_coverage.rs` | None | `./cargo_full test -p vyre-bench --test dfa_full_coverage` |
 | `test` | `feature_cfg_contract` | `vyre-bench/tests/feature_cfg_contract.rs` | None | `./cargo_full test -p vyre-bench --test feature_cfg_contract` |
 | `test` | `finite_queue_artifact` | `vyre-bench/tests/finite_queue_artifact.rs` | None | `./cargo_full test -p vyre-bench --test finite_queue_artifact` |

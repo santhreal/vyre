@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=a9d254d5ca759ed91b91ea1248ed19ec31a34f66188bad61215330084f0d76e1",
+  "source_fingerprint": "git:0014e86c4d328b0681b970a02cee9091a3d0a45c:dirty=true:worktree=3a7bf025ab45334bff024df8a94f533039c141c3ab7542ec9c02a8596ec504d8",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -593,25 +593,25 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 301,
+      "line": 299,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 344,
+      "line": 342,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 439,
+      "line": 437,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 447,
+      "line": 445,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },

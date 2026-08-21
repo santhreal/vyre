@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=a9d254d5ca759ed91b91ea1248ed19ec31a34f66188bad61215330084f0d76e1",
+  "source_fingerprint": "git:0014e86c4d328b0681b970a02cee9091a3d0a45c:dirty=true:worktree=3a7bf025ab45334bff024df8a94f533039c141c3ab7542ec9c02a8596ec504d8",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -79,7 +79,7 @@
       "path": "xtask/src/gate_metadata.rs",
       "line": 155,
       "pattern": "placeholder_text",
-      "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison \\\\        matrices. Proves every measured cell records positive speedup, is strictly reproducible \\\\        from its source probe, cites no placeholder, and is traceable back to its host, commit, \\\\        GPU model, driver version, and measurement timestamp. Proves nothing about benchmark \\\\        methodology: this gate reads the produced matrices and their source artifacts, never \\\\        starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
+      "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison  matrices. Proves every measured cell records positive speedup, is strictly reproducible  from its source probe, cites no placeholder, and is traceable back to its host, commit,  GPU model, driver version, and measurement timestamp. Proves nothing about benchmark  methodology: this gate reads the produced matrices and their source artifacts, never  starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
@@ -107,43 +107,43 @@
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 387,
+      "line": 405,
       "pattern": "placeholder_text",
       "text": "/// Substitute every known placeholder."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 390,
+      "line": 408,
       "pattern": "placeholder_text",
       "text": "for (placeholder, value) in PLACEHOLDERS {"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 391,
+      "line": 409,
       "pattern": "placeholder_text",
       "text": "rendered = rendered.replace(placeholder, value);"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 405,
+      "line": 423,
       "pattern": "placeholder_text",
       "text": "let placeholder = &after[..close + 2];"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 406,
+      "line": 424,
       "pattern": "placeholder_text",
       "text": "if !PLACEHOLDERS.iter().any(|(known, _)| *known == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 407,
+      "line": 425,
       "pattern": "placeholder_text",
       "text": "&& !unknown.iter().any(|found| found == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 409,
+      "line": 427,
       "pattern": "placeholder_text",
       "text": "unknown.push(placeholder.to_string());"
     },
@@ -167,7 +167,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 262,
+      "line": 263,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },

@@ -69,6 +69,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `device_signature_path` | `vyre-driver/tests/device_signature_path.rs` | None | `./cargo_full test -p vyre-driver --test device_signature_path` |
 | `test` | `device_work_queue_contracts` | `vyre-driver/tests/device_work_queue_contracts.rs` | None | `./cargo_full test -p vyre-driver --test device_work_queue_contracts` |
 | `test` | `diagnostic_surface` | `vyre-driver/tests/diagnostic_surface.rs` | None | `./cargo_full test -p vyre-driver --test diagnostic_surface` |
+| `test` | `dialect_admissible_facts` | `vyre-driver/tests/dialect_admissible_facts.rs` | None | `./cargo_full test -p vyre-driver --test dialect_admissible_facts` |
 | `test` | `dispatch_config_surface` | `vyre-driver/tests/dispatch_config_surface.rs` | None | `./cargo_full test -p vyre-driver --test dispatch_config_surface` |
 | `test` | `driver_contracts` | `vyre-driver/tests/driver_contracts.rs` | None | `./cargo_full test -p vyre-driver --test driver_contracts` |
 | `test` | `driver_lifecycle_e2e` | `vyre-driver/tests/driver_lifecycle_e2e.rs` | None | `./cargo_full test -p vyre-driver --test driver_lifecycle_e2e` |

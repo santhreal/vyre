@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:97332227e2d73e3275916a31b5b1d35f74a28f0b:dirty=true:worktree=a9d254d5ca759ed91b91ea1248ed19ec31a34f66188bad61215330084f0d76e1",
+  "source_fingerprint": "git:0014e86c4d328b0681b970a02cee9091a3d0a45c:dirty=true:worktree=3a7bf025ab45334bff024df8a94f533039c141c3ab7542ec9c02a8596ec504d8",
   "schema_version": 6,
   "scanned_roots": [
     "."
@@ -63,10 +63,6 @@
     {
       "pattern": "placeholder_text",
       "count": 28
-    },
-    {
-      "pattern": "raw_workspace_cargo",
-      "count": 2
     },
     {
       "pattern": "source_inspection_test",
@@ -321,14 +317,6 @@
       "hot_path": false,
       "release_blocker": false,
       "count": 17
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true,
-      "count": 2
     },
     {
       "owner_lane": "testing_evidence",
@@ -705,15 +693,6 @@
       "hot_path": false,
       "pattern": "tokio_sleep",
       "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "raw_workspace_cargo",
-      "release_blocker": true,
       "count": 2
     },
     {
@@ -2527,7 +2506,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 301,
+      "line": 299,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2537,7 +2516,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 344,
+      "line": 342,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2547,7 +2526,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 439,
+      "line": 437,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -2557,7 +2536,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 447,
+      "line": 445,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4367,36 +4346,6 @@
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 387,
-      "pattern": "placeholder_text",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/example_capability.rs",
-      "line": 390,
-      "pattern": "placeholder_text",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/example_capability.rs",
-      "line": 391,
-      "pattern": "placeholder_text",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/example_capability.rs",
       "line": 405,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
@@ -4407,17 +4356,7 @@
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 406,
-      "pattern": "placeholder_text",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/example_capability.rs",
-      "line": 407,
+      "line": 408,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4428,6 +4367,46 @@
     {
       "path": "xtask/src/gates/example_capability.rs",
       "line": 409,
+      "pattern": "placeholder_text",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 423,
+      "pattern": "placeholder_text",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 424,
+      "pattern": "placeholder_text",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 425,
+      "pattern": "placeholder_text",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 427,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4567,7 +4546,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 262,
+      "line": 263,
       "pattern": "stub_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4704,29 +4683,9 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false
-    },
-    {
-      "path": ".github/workflows/gates.yml",
-      "line": 39,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": ".github/workflows/gates.yml",
-      "line": 39,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "testing_evidence",
-      "surface": "release_tooling",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
     }
   ],
-  "release_blocker_count": 2,
+  "release_blocker_count": 0,
   "findings": [
     {
       "path": "structure-gate/src/workspace_manifest.rs",
@@ -5384,25 +5343,25 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 301,
+      "line": 299,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 344,
+      "line": 342,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 439,
+      "line": 437,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 447,
+      "line": 445,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -6476,7 +6435,7 @@
       "path": "xtask/src/gate_metadata.rs",
       "line": 155,
       "pattern": "placeholder_text",
-      "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison \\\\        matrices. Proves every measured cell records positive speedup, is strictly reproducible \\\\        from its source probe, cites no placeholder, and is traceable back to its host, commit, \\\\        GPU model, driver version, and measurement timestamp. Proves nothing about benchmark \\\\        methodology: this gate reads the produced matrices and their source artifacts, never \\\\        starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
+      "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison  matrices. Proves every measured cell records positive speedup, is strictly reproducible  from its source probe, cites no placeholder, and is traceable back to its host, commit,  GPU model, driver version, and measurement timestamp. Proves nothing about benchmark  methodology: this gate reads the produced matrices and their source artifacts, never  starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
     },
     {
       "path": "xtask/src/gate_metadata.rs",
@@ -6564,43 +6523,43 @@
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 387,
+      "line": 405,
       "pattern": "placeholder_text",
       "text": "/// Substitute every known placeholder."
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 390,
+      "line": 408,
       "pattern": "placeholder_text",
       "text": "for (placeholder, value) in PLACEHOLDERS {"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 391,
+      "line": 409,
       "pattern": "placeholder_text",
       "text": "rendered = rendered.replace(placeholder, value);"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 405,
+      "line": 423,
       "pattern": "placeholder_text",
       "text": "let placeholder = &after[..close + 2];"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 406,
+      "line": 424,
       "pattern": "placeholder_text",
       "text": "if !PLACEHOLDERS.iter().any(|(known, _)| *known == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 407,
+      "line": 425,
       "pattern": "placeholder_text",
       "text": "&& !unknown.iter().any(|found| found == placeholder)"
     },
     {
       "path": "xtask/src/gates/example_capability.rs",
-      "line": 409,
+      "line": 427,
       "pattern": "placeholder_text",
       "text": "unknown.push(placeholder.to_string());"
     },
@@ -6685,7 +6644,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 262,
+      "line": 263,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },
@@ -6766,21 +6725,7 @@
       "line": 328,
       "pattern": "documented_panic_contract",
       "text": "let w = stack.pop().expect("
-    },
-    {
-      "path": ".github/workflows/gates.yml",
-      "line": 39,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0"
-    },
-    {
-      "path": ".github/workflows/gates.yml",
-      "line": 39,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0"
     }
   ],
-  "blockers": [
-    "2 release-blocking source hygiene finding(s) remain; 329 total finding(s) preserved in classification output"
-  ]
+  "blockers": []
 }
