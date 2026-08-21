@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "warm_us_per_file": 2.795,
-  "cold_pipeline_build_ms": 0.693158,
-  "gbs_scan_throughput": 1703.052,
+  "warm_us_per_file": 3.156,
+  "cold_pipeline_build_ms": 0.473192,
+  "gbs_scan_throughput": 1773.314,
   "ulp_drift_max": 0,
   "max_vram_mib": 32607,
   "source_artifacts": [
