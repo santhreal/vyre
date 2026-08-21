@@ -16,7 +16,7 @@ use vyre_reference::value::Value;
 fn run_ir(values: &[u32]) -> u32 {
     let program = workgroup_any_u32("values", "out", values.len() as u32);
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
-    let outputs = vyre_reference::reference_eval(&program, &[pack(values), pack(&[0u32])])
+    let outputs = vyre_reference::reference_eval(&program, &[pack(values)])
         .expect("workgroup_any_u32 reference evaluation must succeed");
     let b = outputs[0].to_bytes();
     u32::from_le_bytes([b[0], b[1], b[2], b[3]])

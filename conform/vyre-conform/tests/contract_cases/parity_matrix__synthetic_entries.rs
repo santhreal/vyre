@@ -76,6 +76,7 @@ fn synthetic_expr_variant_contract_program() -> Program {
                         },
                     ),
                     Node::let_bind("subgroup_add", Expr::subgroup_add(Expr::LitU32(7))),
+                    Node::let_bind("subgroup_size", Expr::SubgroupSize),
                     Node::let_bind("opaque", Expr::Opaque(Arc::new(SyntheticOpaqueExpr))),
                 ],
                 otherwise: vec![],

@@ -25,7 +25,6 @@ fn linear_tiled_matches_scalar_linear_with_bias_and_tail_tile() {
             Value::from(to_bytes(&x)),
             Value::from(to_bytes(&w)),
             Value::from(to_bytes(&b)),
-            Value::from(output_zero_bytes(&program)),
         ],
     )
     .expect("Fix: linear_tiled must execute in the reference interpreter.");
@@ -43,7 +42,7 @@ fn linear_tiled_matches_scalar_linear_with_bias_and_tail_tile() {
 }
 
 #[test]
-fn linear_tiled_accepts_logical_output_fixture_for_padded_storage() {
+fn linear_tiled_returns_only_logical_output_bytes_from_padded_storage() {
     let program = linear_tiled("x", "w", "b", "out", 4, 4, 2)
         .expect("Fix: linear_tiled must build for a 4x4 fixture.");
     let output = program
@@ -67,12 +66,7 @@ fn linear_tiled_accepts_logical_output_fixture_for_padded_storage() {
     let bias = crate::fixture_bytes::u32_bytes(&[0, 0, 0, 0]);
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(x),
-            Value::from(w),
-            Value::from(bias),
-            Value::from(vec![0u8; 16]),
-        ],
+        &[Value::from(x), Value::from(w), Value::from(bias)],
     )
     .expect("Fix: reference interpreter must pad output backing storage internally.");
 
@@ -117,7 +111,6 @@ fn linear_tiled_matches_reference_on_adversarial_shapes() {
                 Value::from(to_bytes(&x)),
                 Value::from(to_bytes(&w)),
                 Value::from(to_bytes(&b)),
-                Value::from(output_zero_bytes(&opt)),
             ],
         )
         .expect("Fix: linear_tiled must execute.");
@@ -127,7 +120,6 @@ fn linear_tiled_matches_reference_on_adversarial_shapes() {
                 Value::from(to_bytes(&x)),
                 Value::from(to_bytes(&w)),
                 Value::from(to_bytes(&b)),
-                Value::from(vec![0u8; out_dim as usize * 4]),
             ],
         )
         .expect("Fix: linear_tiled_reference must execute.");
@@ -171,7 +163,6 @@ fn linear_tiled_matches_reference_on_boundary_values() {
                 Value::from(to_bytes(x)),
                 Value::from(to_bytes(&w)),
                 Value::from(to_bytes(&b)),
-                Value::from(output_zero_bytes(&opt)),
             ],
         )
         .expect("Fix: linear_tiled must execute.");
@@ -181,7 +172,6 @@ fn linear_tiled_matches_reference_on_boundary_values() {
                 Value::from(to_bytes(x)),
                 Value::from(to_bytes(&w)),
                 Value::from(to_bytes(&b)),
-                Value::from(vec![0u8; out_dim as usize * 4]),
             ],
         )
         .expect("Fix: linear_tiled_reference must execute.");

@@ -20,14 +20,8 @@ fn execute(input: &[f32], batch: u32, heads: u32, sequence: u32, dim: u32) -> Ve
         dtype: DataType::F32,
     })
     .expect("Fix: valid attention layout fixture must build");
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(bytes(input)),
-            Value::from(vec![0; input.len() * 4]),
-        ],
-    )
-    .expect("Fix: attention layout conversion must execute");
+    let outputs = vyre_reference::reference_eval(&program, &[Value::from(bytes(input))])
+        .expect("Fix: attention layout conversion must execute");
     outputs[0]
         .to_bytes()
         .chunks_exact(4)

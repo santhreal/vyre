@@ -59,14 +59,12 @@ fn paged_gqa_attention_broadcasts_kv_heads() {
     ];
 
     let table_data = vec![0u32];
-    let out_init = vec![0.0f32; 8];
 
     let inputs = vec![
         Value::from(f32_to_bytes(&q_data)),
         Value::from(f32_to_bytes(&k_data)),
         Value::from(f32_to_bytes(&v_data)),
         Value::from(u32_to_bytes(&table_data)),
-        Value::from(f32_to_bytes(&out_init)),
     ];
 
     let outputs = reference_eval(&program, &inputs).expect("eval");
@@ -114,14 +112,12 @@ fn paged_attention_partial_page_boundary() {
     ];
     let v_data = vec![10.0f32, 10.0, 20.0, 20.0, 30.0, 30.0, 9999.0, 9999.0];
     let table_data = vec![0u32];
-    let out_init = vec![0.0f32; 2];
 
     let inputs = vec![
         Value::from(f32_to_bytes(&q_data)),
         Value::from(f32_to_bytes(&k_data)),
         Value::from(f32_to_bytes(&v_data)),
         Value::from(u32_to_bytes(&table_data)),
-        Value::from(f32_to_bytes(&out_init)),
     ];
 
     let outputs = reference_eval(&program, &inputs).expect("eval");

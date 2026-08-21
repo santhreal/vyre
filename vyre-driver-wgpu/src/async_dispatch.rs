@@ -159,13 +159,11 @@ impl WgpuPendingDispatch {
             );
         }
         enforce_budget(started, timeout, "dispatch exceeded configured timeout")?;
-        Ok(vyre_driver::TimedDispatchResult {
+        Ok(vyre_driver::TimedDispatchResult::device_timed(
             outputs,
-            wall_ns: crate::numeric::WGPU_NUMERIC.elapsed_nanos_u64(started, "timed dispatch")?,
+            crate::numeric::WGPU_NUMERIC.elapsed_nanos_u64(started, "timed dispatch")?,
             device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        ))
     }
 }
 

@@ -200,11 +200,8 @@ fn matrix_identity_fill_multi_lane_reference_eval() {
     for &n in &[1u32, 2, 3, 5, 7, 8, 16, 64, 65, 80] {
         let program = matrix_identity_fill("m", n);
         let cells = (n * n) as usize;
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(pack_f32(&vec![0.0f32; cells]))],
-        )
-        .unwrap_or_else(|err| panic!("reference_eval failed for identity_fill n={n}: {err}"));
+        let outputs = vyre_reference::reference_eval(&program, &[])
+            .unwrap_or_else(|err| panic!("reference_eval failed for identity_fill n={n}: {err}"));
         let result = unpack_f32(&outputs[0].to_bytes());
         assert_eq!(result.len(), cells);
         for row in 0..(n as usize) {
@@ -229,14 +226,10 @@ fn matrix_diagonal_extract_multi_lane_reference_eval() {
         for i in 0..cells {
             matrix.push((i + 1) as f32);
         }
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(pack_f32(&matrix)),
-                Value::from(pack_f32(&vec![0.0f32; n as usize])),
-            ],
-        )
-        .unwrap_or_else(|err| panic!("reference_eval failed for diagonal_extract n={n}: {err}"));
+        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_f32(&matrix))])
+            .unwrap_or_else(|err| {
+                panic!("reference_eval failed for diagonal_extract n={n}: {err}")
+            });
         let result = unpack_f32(
             &outputs[vyre_reference::output_index(&program, "diag").unwrap()].to_bytes(),
         );

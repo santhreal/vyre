@@ -296,6 +296,78 @@ fn grid_sync_program_wider_than_cooperative_residency_still_dispatches_correctly
     );
 }
 
+/// WHY: the over-residency route was implemented on two of the five dispatch
+/// entry points. `dispatch` and `dispatch_borrowed` consulted
+/// `grid_sync_program_needs_host_split`; `dispatch_borrowed_timed`,
+/// `dispatch_async` and `dispatch_borrowed_async` went straight to the native
+/// cooperative launch and returned `CooperativeResidencyExceeded` for the same
+/// program the two synchronous entry points ran correctly. A benchmark measures
+/// through the timed entry point, so the one path with no route was the one path
+/// every performance measurement of a large scan took.
+///
+/// Which entry point a caller picks is not a semantic choice, so the route must
+/// not depend on it. This asserts the union, not a representative: every public
+/// dispatch entry point on `CudaBackend` runs the same over-residency program and
+/// returns the same grid-synchronized answer.
+#[test]
+fn every_dispatch_entry_point_routes_an_over_residency_grid_the_same_way() {
+    let backend = backend();
+    if !backend.hardware_supports_grid_sync() {
+        return;
+    }
+    let Some(lanes) = over_residency_lanes(&backend) else {
+        panic!(
+            "Fix: hardware reports grid-sync support, so an over-residency lane count must be \
+             derivable."
+        );
+    };
+    let program = cross_block_grid_sync_program(lanes);
+    let inputs = cross_block_grid_sync_inputs(lanes);
+    let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
+    let config = DispatchConfig::default();
+    let expected = cross_block_grid_sync_expected(lanes);
+
+    let owned = backend
+        .dispatch(&program, &inputs, &config)
+        .expect("Fix: `dispatch` must route an over-residency grid to the split.");
+    let borrowed_outputs = backend
+        .dispatch_borrowed(&program, &borrowed, &config)
+        .expect("Fix: `dispatch_borrowed` must route an over-residency grid to the split.");
+    let timed = backend
+        .dispatch_borrowed_timed(&program, &borrowed, &config)
+        .expect(
+            "Fix: `dispatch_borrowed_timed` must route an over-residency grid to the split. \
+             Skipping the residency check on the timed entry point alone is what made every \
+             benchmark of a large multi-block scan fail with CooperativeResidencyExceeded while \
+             the untimed dispatch of the same program succeeded.",
+        );
+    let asynchronous = backend
+        .dispatch_async(&program, &inputs, &config)
+        .expect("Fix: `dispatch_async` must route an over-residency grid to the split.")
+        .await_result()
+        .expect("Fix: the split result handed back by `dispatch_async` must resolve.");
+    let borrowed_asynchronous = backend
+        .dispatch_borrowed_async(&program, &borrowed, &config)
+        .expect("Fix: `dispatch_borrowed_async` must route an over-residency grid to the split.")
+        .await_result()
+        .expect("Fix: the split result handed back by `dispatch_borrowed_async` must resolve.");
+
+    for (entry_point, outputs) in [
+        ("dispatch", &owned),
+        ("dispatch_borrowed", &borrowed_outputs),
+        ("dispatch_borrowed_timed", &timed.outputs),
+        ("dispatch_async", &asynchronous),
+        ("dispatch_borrowed_async", &borrowed_asynchronous),
+    ] {
+        assert_eq!(
+            bytes_u32(outputs.last().expect("the fixture declares an output")),
+            expected,
+            "Fix: `{entry_point}` produced a different answer for the same over-residency \
+             grid-sync program. Every entry point must take the same route and honor the barrier."
+        );
+    }
+}
+
 /// The same program at a FITTING grid must take the native cooperative route and
 /// produce the identical answer.
 ///

@@ -85,6 +85,45 @@ pub(crate) fn program_for_interpreter(
 /// harnesses never hand-roll (and drift from) the selection.
 pub use hashmap::{is_reference_input, is_reference_output, output_index};
 
+/// Project a declaration-order buffer list onto the interpreter's input ABI.
+///
+/// [`reference_eval`] takes one `Value` per [`is_reference_input`] buffer and
+/// nothing for a backend-allocated output, which is what a device artifact
+/// enforces. A harness that walks `Program::buffers()` naturally produces the
+/// longer declaration-order list instead, with a zeroed stand-in per output.
+/// This is the one translation between the two, so a harness never re-derives
+/// it and drifts.
+///
+/// A list already sized to the reference inputs passes through. Anything that
+/// is neither shape is handed over unchanged: the interpreter names the buffer
+/// it is missing a `Value` for, which is a better diagnostic than a count, and
+/// leaving the refusal with the ABI's owner keeps this a translation rather
+/// than a second validator with its own opinion.
+#[must_use]
+pub fn reference_inputs(program: &Program, buffers: Vec<Vec<u8>>) -> Vec<Value> {
+    let declared = program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+        .count();
+    let logical = program
+        .buffers()
+        .iter()
+        .filter(|decl| is_reference_input(decl))
+        .count();
+    if buffers.len() != declared || declared == logical {
+        return buffers.into_iter().map(Value::from).collect();
+    }
+    program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+        .zip(buffers)
+        .filter(|(decl, _)| is_reference_input(decl))
+        .map(|(_, bytes)| Value::from(bytes))
+        .collect()
+}
+
 /// Execute a vyre IR program on the pure Rust reference interpreter.
 ///
 /// The current public [`Program`] model is statement-oriented, so this stable

@@ -28,14 +28,11 @@ pub(crate) fn zeroed_u32_words(words: usize) -> Vec<u8> {
 
 /// Execute a program under the reference interpreter, binding inputs by position.
 pub(crate) fn run(program: &vyre::Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    vyre_reference::reference_eval(
-        program,
-        &inputs.into_iter().map(Value::from).collect::<Vec<_>>(),
-    )
-    .expect("reference execution must succeed")
-    .into_iter()
-    .map(|value| value.to_bytes())
-    .collect()
+    vyre_reference::reference_eval(program, &vyre_reference::reference_inputs(program, inputs))
+        .expect("reference execution must succeed")
+        .into_iter()
+        .map(|value| value.to_bytes())
+        .collect()
 }
 
 /// Run a program, binding inputs by BUFFER NAME rather than by position.

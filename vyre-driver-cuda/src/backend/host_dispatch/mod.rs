@@ -114,6 +114,19 @@ impl CudaBackend {
         vyre_driver::grid_sync::dispatch_with_grid_sync_split(&adapter, program, inputs, config)
     }
 
+    /// The timed twin of [`CudaBackend::dispatch_borrowed_with_grid_sync_split`].
+    fn dispatch_borrowed_with_grid_sync_split_timed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        let adapter = GridSyncSplitCudaBackend(self);
+        vyre_driver::grid_sync::dispatch_with_grid_sync_split_timed(
+            &adapter, program, inputs, config,
+        )
+    }
+
     /// Whether a grid-sync `program` must run as a host-orchestrated kernel split
     /// (its barriers split into separate regular launches) rather than a single
     /// cooperative launch.
@@ -136,7 +149,7 @@ impl CudaBackend {
     /// preflight honest: an orchestrator that asks "does this fit?" gets the answer
     /// the driver is about to act on, from the same code, with the same numbers. A
     /// second copy of the arithmetic here is exactly how the two would drift.
-    fn grid_sync_program_needs_host_split(
+    pub(crate) fn grid_sync_program_needs_host_split(
         &self,
         program: &Program,
         inputs: &[&[u8]],
@@ -224,7 +237,18 @@ impl CudaBackend {
                 })?;
         let program = lowered_program.as_ref().unwrap_or(program);
         if vyre_driver::grid_sync::contains_grid_sync(program) {
-            self.require_native_grid_sync_lowering()?;
+            // Same route decision the synchronous path makes. An over-residency
+            // grid has no native launch to be asynchronous about: the split is
+            // a sequence of regular launches whose segments feed each other
+            // through host buffers, so it runs here and reports ready. The
+            // alternative this replaces was to skip the check on this entry
+            // point alone and hand the caller a `CooperativeResidencyExceeded`
+            // that the synchronous entry point next to it does not produce.
+            if self.grid_sync_program_needs_host_split(program, inputs, config)? {
+                let outputs =
+                    self.dispatch_borrowed_with_grid_sync_split(program, inputs, config)?;
+                return Ok(Box::new(CudaReadyPending { outputs }));
+            }
         }
         let trace = crate::instrumentation::cuda_stage_trace_enabled();
         let start = std::time::Instant::now();
@@ -270,6 +294,11 @@ impl CudaBackend {
                     fix: error.to_string(),
                 })?;
         let program = lowered_program.as_ref().unwrap_or(program);
+        if vyre_driver::grid_sync::contains_grid_sync(program)
+            && self.grid_sync_program_needs_host_split(program, inputs, config)?
+        {
+            return self.dispatch_borrowed_with_grid_sync_split_timed(program, inputs, config);
+        }
         let prepared = self.prepare_host_dispatch(program, inputs, config)?;
         let (ptx_src, ptx_source_key) = self.ptx_for_program_cached_with_key(program, config)?;
         let module_key = self.module_cache_key_for_ptx_source_key(ptx_source_key)?;
@@ -351,13 +380,9 @@ impl CudaBackend {
         let wall_ns = CUDA_NUMERIC.elapsed_nanos_u64(started, "host-dispatch wall latency")?;
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, Some(enqueue_ns), Some(wait_ns));
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: Some(enqueue_ns),
-            wait_ns: Some(wait_ns),
-        })
+        Ok(vyre_driver::TimedDispatchResult::split_timed(
+            outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
+        ))
     }
 
     fn dispatch_borrowed_async_with_ptx_concrete(

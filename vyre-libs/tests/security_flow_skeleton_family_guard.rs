@@ -287,55 +287,55 @@ fn pinned_cases() -> Vec<(&'static str, Program)> {
 const PINS: &[(&str, &str)] = &[
     (
         "flows_to/1n0e/fin-fout",
-        "162bf7fac3d425b79480a52e5cafba72b67ef801929ed92455b4225c565cebba",
+        "f2ccb970d416a0733fac5b2bb85d6eaa0a833e69e6a32127efa746225114f950",
     ),
     (
         "flows_to/4n3e/fin-fout",
-        "bcbf803353846fec73cc51dcff20b9b18ab87d9efe36a2528a70339c034a016b",
+        "0f81118e6062c8adf5602b1b90ba3b06a30ef723a6486eefadc2ed9aca9b7ab0",
     ),
     (
         "flows_to/32n31e/fin-fout",
-        "0673e34fd37504d2ae39410dddd7891ff0e8795bbd702b8426bad9aaf05c177f",
+        "69c54585ad6a7eea580d04e47fdb9708264a083be4791747c87decc05e17ae10",
     ),
     (
         "flows_to/33n32e/fin-fout",
-        "ad2776bad94c0b485f919af03face61a61565610bc3086b8d54aeeaf638842ee",
+        "e1ae43e164e6278a6b08de620a6733d32e2baca1f84919102e38ab3c4f71a346",
     ),
     (
         "flows_to/1024n4096e/renamed",
-        "9f18951599a58ec0092ad6a5f310c90752503537e57c3f5863441222a50f20b0",
+        "be5ff6ca49530b540a689067a8779628d313c1e9105e4117ae13509a4892478c",
     ),
     (
         "flows_to_alias_only/1n0e/fin-fout",
-        "76f32f76193817d097f2227b49fdaa94dca23b3cbd4b714f1bf00914b07bfc0f",
+        "6d2a32672c4b12f82047503ccf2a29cc64e3d1a9e275bbf8ea016c121ba6e3a3",
     ),
     (
         "flows_to_alias_only/4n3e/fin-fout",
-        "c5d854e5c5bcef4de9c1a705e090b5bc5fdc8f151936235c36c94052bbe6124f",
+        "f0e9b8214b7ec82795643fba9f0edf5b6718cc7fdab083ec491000bb1344eed1",
     ),
     (
         "flows_to_alias_only/33n32e/renamed",
-        "024688997a03920be3b24a6c0c8d316f147fb2a39e9915f8defce02cd9e6223f",
+        "ae878d74e17e8204b3174328f7a9f6ecc35347a971c33016f2febfa31a69265f",
     ),
     (
         "taint_flow/1n0e/fin-fout",
-        "ef5d33bed7c5cba42d5c30d2012284f8f08c0fa45d71addd07905f6c704e467e",
+        "70c43d105b6dbfc40c6f0a52b409719627df49ebe491d8a7888b3b003eee28a0",
     ),
     (
         "taint_flow/4n3e/fin-fout",
-        "e4ca7456ff3f5cb6547d6c6f0faaa9bad36868a9f0ade6f239927ad667db25a3",
+        "81306eb5024343361c4b99f729f398eaeb75fb24bf22c7835a0616a29552fe63",
     ),
     (
         "taint_flow/32n31e/fin-fout",
-        "e75369d7fa35846e027a1e090e0266c69d17096dbda90ed21683f2c7c3bbe195",
+        "0cbb00305c0ff25bfe651d163e09d27464ba9b1a6c1d5fedb09064fbe98be3bd",
     ),
     (
         "taint_flow/33n32e/fin-fout",
-        "169fb0865e50656c9d1500e35b9478be1a4457ce36857466eebd8436d14bf381",
+        "b2461579c26ca079af48cb3fcf5cee8fd173c9a66163ee863869c6763bd7e8a6",
     ),
     (
         "taint_flow/1024n4096e/renamed",
-        "2d987b052310594904459a3cae75a959211aa76ad5e93859c13a4efd9b60b0b8",
+        "4bdd9fa1f6d3da9e5c2080e81d421c9e26d35c0acacc8ea49cf358b67a818605",
     ),
     (
         "bounded_by_comparison/1n0e/fin-fout",
@@ -379,39 +379,39 @@ const PINS: &[(&str, &str)] = &[
     ),
     (
         "flows_to_to_sink/1n0e",
-        "7d47676673558204a38a9508cb26505f7aa9a2b9dd9a260514900adcee374172",
+        "5b3cef28e2d89c08414c5a84f3a1681734e5d216d5d7ad808d2e4a2daf0f8283",
     ),
     (
         "flows_to_to_sink/4n3e",
-        "b835e4f94d3f7fdd50a5ab6d2a4d5789aacb0a48b8d8e772ba111f858442617b",
+        "d95a648a54b985e3c4cd245c73e84f45ec278a5391493b787c344a24c9ae8ca9",
     ),
     (
         "flows_to_to_sink/33n32e/renamed",
-        "b09ca3deff963f3b9cbd456d55d7a2e2fb8637ba978e34445b661076219c3382",
+        "eeccd28c95914074d9a5904ff15cb8601369e9f60dc7e07d884d7e411ebe278f",
     ),
     (
         "taint_pollution/1n0e",
-        "447d40a649467ed1c0a7a5313ece37bbdbf0d6a513a21705ec307f6e6cda6fa4",
+        "da9abb7e4d90c379fbdd1d3ec927e15ccaae433a05d5e991b55dd5548a66182e",
     ),
     (
         "taint_pollution/4n3e",
-        "6af3481130576c106ba37d296b35aade7eb6d7d8e8a37ba300079af093239b4c",
+        "312fd35b1b15d8fd6c1edb8d591907383ab464001fce660e3858aa45209b769d",
     ),
     (
         "taint_pollution/33n32e/renamed",
-        "2ce60b393817e0db12f06643a38a0041a0c3d5297db6da545b6f3c385d271419",
+        "2fd977b49abd339183c2b55fe680703b3ae91eb0f79fe6b35bbc2107c7bf4347",
     ),
     (
         "flows_to_with_sanitizer/1n0e",
-        "1965d292c243971c2ffcfbdc4bcea0fd1fbd45ceb45258f0e902fa0c15d7f7f7",
+        "9d3bcb68a903c62ca15918604bb7477457a734ca002624995b2a11785dbbbecb",
     ),
     (
         "flows_to_with_sanitizer/4n3e",
-        "a327d6e018e90d19c3dbfc435c8df6d9fc941ff92bb63e9e31dfac565197031e",
+        "348af72d975ef8a9ed31cea296660a746acd3588394a42928cd3bf6272bbcf64",
     ),
     (
         "flows_to_with_sanitizer/33n32e/renamed",
-        "14b9909ab8eb43efd379463a946e5807f3ef6421f84c5085a86a58de420028b0",
+        "f4101950d89d6d67f8ebc79b8f8768c4ef45a046df08f8a300e95f640285bf02",
     ),
 ];
 

@@ -81,7 +81,6 @@ fn gqa_single_token_broadcasts_distinct_kv_heads_to_their_query_groups() {
             Value::from(f32_bytes(&[1.0, 0.0, 0.0, 1.0, 1.0, 1.0, -1.0, 1.0])),
             Value::from(f32_bytes(&[1.0, 0.0, 0.0, 1.0])),
             Value::from(f32_bytes(&[10.0, 20.0, 30.0, 40.0])),
-            Value::from(vec![0u8; 8 * size_of::<f32>()]),
         ],
     )
     .expect("reference execution must evaluate canonical GQA composition");

@@ -11,127 +11,79 @@ use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 mod dispatch_fixtures;
-use dispatch_fixtures::{dispatch_no_input, dispatch_with_inputs};
+use dispatch_fixtures::{binary_program, dispatch_no_input, dispatch_with_inputs, u32_out_buffer};
 
 // ---------------------------------------------------------------
-// Store literal
+// Scalar expression shapes: store, arithmetic, bitwise
 // ---------------------------------------------------------------
 
-#[test]
-fn store_literal_u32() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
-    );
-    let outputs = dispatch_no_input(&program);
-    assert_eq!(outputs, vec![42u32.to_le_bytes().to_vec()]);
+/// One scalar shape: the expression the program stores into `out[0]`, and the
+/// word the reference backend must return for it.
+struct ScalarCase {
+    name: &'static str,
+    value: fn() -> Expr,
+    expected: u32,
 }
 
-#[test]
-fn store_literal_zero() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(0))],
-    );
-    let outputs = dispatch_no_input(&program);
-    assert_eq!(outputs, vec![0u32.to_le_bytes().to_vec()]);
-}
-
-// ---------------------------------------------------------------
-// Arithmetic: Add, Sub, Mul
-// ---------------------------------------------------------------
-
-#[test]
-fn arithmetic_add() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("sum", Expr::add(Expr::u32(10), Expr::u32(32))),
-            Node::store("out", Expr::u32(0), Expr::var("sum")),
-        ],
-    );
-    let outputs = dispatch_no_input(&program);
-    assert_eq!(outputs, vec![42u32.to_le_bytes().to_vec()]);
-}
-
-#[test]
-fn arithmetic_sub() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("diff", Expr::sub(Expr::u32(50), Expr::u32(8))),
-            Node::store("out", Expr::u32(0), Expr::var("diff")),
-        ],
-    );
-    let outputs = dispatch_no_input(&program);
-    assert_eq!(outputs, vec![42u32.to_le_bytes().to_vec()]);
-}
-
-#[test]
-fn arithmetic_mul() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("product", Expr::mul(Expr::u32(6), Expr::u32(7))),
-            Node::store("out", Expr::u32(0), Expr::var("product")),
-        ],
-    );
-    let outputs = dispatch_no_input(&program);
-    assert_eq!(outputs, vec![42u32.to_le_bytes().to_vec()]);
-}
-
-// ---------------------------------------------------------------
-// Bitwise: XOR, AND, OR
-// ---------------------------------------------------------------
+const SCALAR_CASES: &[ScalarCase] = &[
+    ScalarCase {
+        name: "store literal",
+        value: || Expr::u32(42),
+        expected: 42,
+    },
+    ScalarCase {
+        name: "store zero",
+        value: || Expr::u32(0),
+        expected: 0,
+    },
+    ScalarCase {
+        name: "add",
+        value: || Expr::add(Expr::u32(10), Expr::u32(32)),
+        expected: 42,
+    },
+    ScalarCase {
+        name: "sub",
+        value: || Expr::sub(Expr::u32(50), Expr::u32(8)),
+        expected: 42,
+    },
+    ScalarCase {
+        name: "mul",
+        value: || Expr::mul(Expr::u32(6), Expr::u32(7)),
+        expected: 42,
+    },
+    ScalarCase {
+        name: "bitxor",
+        value: || Expr::bitxor(Expr::u32(0xFF), Expr::u32(0x55)),
+        expected: 0xAA,
+    },
+    ScalarCase {
+        name: "bitand",
+        value: || Expr::bitand(Expr::u32(0xFF), Expr::u32(0x0F)),
+        expected: 0x0F,
+    },
+    ScalarCase {
+        name: "bitor",
+        value: || Expr::bitor(Expr::u32(0xF0), Expr::u32(0x0F)),
+        expected: 0xFF,
+    },
+];
 
 #[test]
-fn bitwise_xor() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("r", Expr::bitxor(Expr::u32(0xFF), Expr::u32(0x55))),
-            Node::store("out", Expr::u32(0), Expr::var("r")),
-        ],
-    );
-    let outputs = dispatch_no_input(&program);
-    // 0xFF ^ 0x55 = 0xAA = 170
-    assert_eq!(outputs, vec![170u32.to_le_bytes().to_vec()]);
-}
-
-#[test]
-fn bitwise_and() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("r", Expr::bitand(Expr::u32(0xFF), Expr::u32(0x0F))),
-            Node::store("out", Expr::u32(0), Expr::var("r")),
-        ],
-    );
-    let outputs = dispatch_no_input(&program);
-    // 0xFF & 0x0F = 0x0F = 15
-    assert_eq!(outputs, vec![15u32.to_le_bytes().to_vec()]);
-}
-
-#[test]
-fn bitwise_or() {
-    let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("r", Expr::bitor(Expr::u32(0xF0), Expr::u32(0x0F))),
-            Node::store("out", Expr::u32(0), Expr::var("r")),
-        ],
-    );
-    let outputs = dispatch_no_input(&program);
-    // 0xF0 | 0x0F = 0xFF = 255
-    assert_eq!(outputs, vec![255u32.to_le_bytes().to_vec()]);
+fn scalar_expression_shapes_dispatch_to_their_pinned_word() {
+    for case in SCALAR_CASES {
+        let program = Program::wrapped(
+            vec![u32_out_buffer("out", 0)],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), (case.value)())],
+        );
+        assert_eq!(
+            dispatch_no_input(&program),
+            vec![case.expected.to_le_bytes().to_vec()],
+            "Fix: cpu-ref must evaluate the {} shape to {}.",
+            case.name,
+            case.expected
+        );
+    }
 }
 
 // ---------------------------------------------------------------
@@ -143,7 +95,7 @@ fn input_buffer_passthrough() {
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::U32),
-            BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            u32_out_buffer("out", 1),
         ],
         [1, 1, 1],
         vec![
@@ -156,12 +108,15 @@ fn input_buffer_passthrough() {
     assert_eq!(outputs, vec![99u32.to_le_bytes().to_vec()]);
 }
 
+/// WHY: a reference input the caller never supplied is an ABI failure. Zero
+/// synthesis would answer it with fabricated data and hide the caller's defect
+/// behind a plausible-looking result.
 #[test]
-fn missing_input_buffer_is_zero_synthesized_for_reference_only_dispatch() {
+fn missing_input_buffer_is_rejected_rather_than_synthesized() {
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::U32),
-            BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            u32_out_buffer("out", 1),
         ],
         [1, 1, 1],
         vec![
@@ -169,8 +124,15 @@ fn missing_input_buffer_is_zero_synthesized_for_reference_only_dispatch() {
             Node::store("out", Expr::u32(0), Expr::var("val")),
         ],
     );
-    let outputs = dispatch_with_inputs(&program, &[]);
-    assert_eq!(outputs, vec![0u32.to_le_bytes().to_vec()]);
+    let error = CpuRefBackend
+        .dispatch(&program, &[], &DispatchConfig::default())
+        .expect_err("a missing reference input must be rejected");
+    assert!(
+        error
+            .to_string()
+            .contains("missing an input buffer for `input`"),
+        "reference backend must name the buffer it never received: {error}"
+    );
 }
 
 /// WHY: backend-allocated outputs are not host inputs. Accepting an initializer
@@ -178,7 +140,7 @@ fn missing_input_buffer_is_zero_synthesized_for_reference_only_dispatch() {
 #[test]
 fn backend_allocated_output_initializer_is_rejected() {
     let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        vec![u32_out_buffer("out", 0)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     );
@@ -202,25 +164,7 @@ fn backend_allocated_output_initializer_is_rejected() {
 
 #[test]
 fn two_buffer_xor() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::storage("out", 2, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::u32(0)),
-            Node::store(
-                "out",
-                Expr::var("idx"),
-                Expr::bitxor(
-                    Expr::load("a", Expr::var("idx")),
-                    Expr::load("b", Expr::var("idx")),
-                ),
-            ),
-        ],
-    );
+    let program = binary_program(Expr::bitxor);
     let a = 0xAAu32.to_le_bytes().to_vec();
     let b = 0x55u32.to_le_bytes().to_vec();
     let outputs = dispatch_with_inputs(&program, &[a, b]);
@@ -235,7 +179,7 @@ fn two_buffer_xor() {
 #[test]
 fn conditional_if_true() {
     let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
+        vec![u32_out_buffer("out", 0)],
         [1, 1, 1],
         vec![
             // Store 0 first, then conditionally overwrite with 42
@@ -253,7 +197,7 @@ fn conditional_if_true() {
 #[test]
 fn conditional_if_false() {
     let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
+        vec![u32_out_buffer("out", 0)],
         [1, 1, 1],
         vec![
             // Store 99, then conditionally overwrite  -  but condition is false
@@ -279,7 +223,7 @@ fn dispatch_borrowed_matches_owned() {
     let program = Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            u32_out_buffer("out", 1),
         ],
         [1, 1, 1],
         vec![
@@ -314,7 +258,7 @@ fn dispatch_borrowed_matches_owned() {
 fn dispatch_borrowed_timed_returns_wall_time() {
     let backend = CpuRefBackend;
     let program = Program::wrapped(
-        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
+        vec![u32_out_buffer("out", 0)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
     );
@@ -384,7 +328,7 @@ fn determinism_guarantee() {
     let program = Program::wrapped(
         vec![
             BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            u32_out_buffer("out", 1),
         ],
         [1, 1, 1],
         vec![

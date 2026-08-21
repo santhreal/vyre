@@ -26,11 +26,7 @@ fn execute_bf16(gate: &[f32], branch: &[f32]) -> Vec<u16> {
     .expect("Fix: BF16 sigmoid gate must build");
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(encode(gate)),
-            Value::from(encode(branch)),
-            Value::from(vec![0; gate.len() * size_of::<u16>()]),
-        ],
+        &[Value::from(encode(gate)), Value::from(encode(branch))],
     )
     .expect("Fix: BF16 sigmoid gate must execute");
     outputs[0]

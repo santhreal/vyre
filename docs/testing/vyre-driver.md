@@ -79,6 +79,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `fusion_contracts` | `vyre-driver/tests/fusion_contracts.rs` | None | `./cargo_full test -p vyre-driver --test fusion_contracts` |
 | `test` | `gap_duplicate_op_id` | `vyre-driver/tests/gap_duplicate_op_id.rs` | None | `./cargo_full test -p vyre-driver --test gap_duplicate_op_id` |
 | `test` | `geometry_lowering_plan_search` | `vyre-driver/tests/geometry_lowering_plan_search.rs` | None | `./cargo_full test -p vyre-driver --test geometry_lowering_plan_search` |
+| `test` | `grid_sync_capability_admits_either_route` | `vyre-driver/tests/grid_sync_capability_admits_either_route.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_capability_admits_either_route` |
 | `test` | `grid_sync_detection_reaches_every_body_variant` | `vyre-driver/tests/grid_sync_detection_reaches_every_body_variant.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_detection_reaches_every_body_variant` |
 | `test` | `grid_sync_nested_fence_survives_split` | `vyre-driver/tests/grid_sync_nested_fence_survives_split.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_nested_fence_survives_split` |
 | `test` | `grid_sync_segments_declare_every_referenced_buffer` | `vyre-driver/tests/grid_sync_segments_declare_every_referenced_buffer.rs` | None | `./cargo_full test -p vyre-driver --test grid_sync_segments_declare_every_referenced_buffer` |

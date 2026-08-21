@@ -113,13 +113,13 @@ impl MetalPendingDispatch {
         } = self;
         let result = command.retire()?;
         record_output_readback_metrics(&metrics, &result.outputs);
-        Ok(TimedDispatchResult {
-            outputs: result.outputs,
-            wall_ns: elapsed_ns(started, "Metal resident timed dispatch")?,
-            device_ns: None,
-            enqueue_ns: Some(result.enqueue_ns),
-            wait_ns: Some(result.wait_ns),
-        })
+        Ok(TimedDispatchResult::split_timed(
+            result.outputs,
+            elapsed_ns(started, "Metal resident timed dispatch")?,
+            None,
+            result.enqueue_ns,
+            result.wait_ns,
+        ))
     }
 }
 

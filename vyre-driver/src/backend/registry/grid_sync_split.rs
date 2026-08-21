@@ -252,19 +252,29 @@ impl GridSyncSplitBackend {
     /// slowly. Routing on availability alone sent every oversized grid into a
     /// launch that could only fail, which is what
     /// [`crate::backend::ErrorCode::CooperativeResidencyExceeded`] reports.
+    ///
+    /// [`VyreBackend::allows_host_grid_sync_split`] refuses ONE of the two
+    /// reasons a native launch is unavailable. A backend that cannot lower a
+    /// grid barrier at all is asking the wrapper to emulate a primitive the
+    /// device does not have, and a backend that answers `false` wants that
+    /// surfaced as an unsupported feature rather than as a quietly slower
+    /// multi-launch path. A backend that CAN lower the barrier and merely
+    /// cannot make this grid resident is a different question: there is no
+    /// native route to prefer, so refusing the split does not preserve a fast
+    /// path, it converts a runnable dispatch into a hard error. `ErrorCode::
+    /// CooperativeResidencyExceeded` documents that case as a fallback rather
+    /// than a failure, and the fallback is this split.
     fn should_split_grid_sync_for(
         &self,
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        if !crate::grid_sync::contains_grid_sync(program)
-            || !self.inner.allows_host_grid_sync_split()
-        {
+        if !crate::grid_sync::contains_grid_sync(program) {
             return Ok(false);
         }
         if !self.inner.supports_grid_sync() {
-            return Ok(true);
+            return Ok(self.inner.allows_host_grid_sync_split());
         }
         Ok(!self
             .inner
@@ -448,15 +458,113 @@ mod tests {
         );
     }
 
-    struct NativeGridSyncProbe {
-        calls: Mutex<usize>,
+    /// WHY: `allows_host_grid_sync_split() == false` means "do not emulate a
+    /// barrier my device does not have". It was also read as "never split",
+    /// which sent a launch the device could not make resident into a native
+    /// cooperative launch that can only return
+    /// `CooperativeResidencyExceeded`. That is the whole failure: the routing
+    /// asked whether the split was *allowed* before asking whether the native
+    /// route *existed*, so the one dispatch with no native route was the one
+    /// dispatch denied the fallback. Both directions are pinned here, because a
+    /// rule that always splits would silently discard the native route this
+    /// backend asked to keep.
+    #[test]
+    fn a_native_backend_that_cannot_make_the_grid_resident_still_takes_the_split() {
+        for (fits, expected_segments, expect_grid_sync) in [(false, 2, false), (true, 1, true)] {
+            let recorder = Arc::new(SegmentRecorder::default());
+            let backend = wrap_grid_sync_split(Box::new(GridSyncProbe::native_but_oversized(
+                Arc::clone(&recorder),
+                fits,
+            )));
+            let inputs = [vec![0u8]];
+            let borrowed: SmallVec<[&[u8]; 8]> = inputs.iter().map(Vec::as_slice).collect();
+
+            backend
+                .dispatch_borrowed(&grid_sync_program(), &borrowed, &DispatchConfig::default())
+                .expect("Fix: the wrapper must route this dispatch somewhere that runs");
+
+            let calls = recorder
+                .calls
+                .lock()
+                .expect("Fix: segment recorder mutex must not be poisoned");
+            assert_eq!(
+                calls.len(),
+                expected_segments,
+                "Fix: with cooperative_grid_sync_fits={fits} the wrapper must dispatch \
+                 {expected_segments} time(s), not {}.",
+                calls.len()
+            );
+            assert!(
+                calls
+                    .iter()
+                    .all(|(has_grid_sync, _)| *has_grid_sync == expect_grid_sync),
+                "Fix: with cooperative_grid_sync_fits={fits} the backend must receive a program \
+                 whose GridSync presence is {expect_grid_sync}."
+            );
+        }
     }
 
-    impl crate::backend::sealed::Sealed for NativeGridSyncProbe {}
+    /// A backend described entirely by its capability answers. Every routing
+    /// decision the wrapper makes reads those four answers, so one probe with
+    /// four fields covers the native barrier, the split opt-out, and the
+    /// native backend whose grid does not fit. A probe carrying a recorder
+    /// forwards its dispatches instead of counting them, which is what the
+    /// segment-level assertions need.
+    struct GridSyncProbe {
+        id: &'static str,
+        marker: u8,
+        native: bool,
+        allows_split: bool,
+        fits: bool,
+        calls: Mutex<usize>,
+        recorder: Option<Arc<SegmentRecorder>>,
+    }
 
-    impl VyreBackend for NativeGridSyncProbe {
+    impl GridSyncProbe {
+        fn native() -> Self {
+            Self::marked("native-grid-sync-probe", 9, true, true)
+        }
+
+        fn split_opt_out() -> Self {
+            Self::marked("grid-sync-split-opt-out-probe", 13, false, false)
+        }
+
+        /// `fits` follows `native` so the residency answer stays the trait
+        /// default for a probe that does not set one.
+        fn marked(id: &'static str, marker: u8, native: bool, allows_split: bool) -> Self {
+            Self {
+                id,
+                marker,
+                native,
+                allows_split,
+                fits: native,
+                calls: Mutex::new(0),
+                recorder: None,
+            }
+        }
+
+        /// Lowers a grid barrier natively, opts out of the host split, and
+        /// answers the residency preflight from `fits`. The two refusals
+        /// `allows_host_grid_sync_split` used to be asked for are separable
+        /// only on a backend that has both.
+        fn native_but_oversized(recorder: Arc<SegmentRecorder>, fits: bool) -> Self {
+            Self {
+                id: "native-but-oversized-probe",
+                marker: 0,
+                native: true,
+                allows_split: false,
+                fits,
+                calls: Mutex::new(0),
+                recorder: Some(recorder),
+            }
+        }
+    }
+
+    impl crate::backend::sealed::Sealed for GridSyncProbe {}
+
+    impl VyreBackend for GridSyncProbe {
         fn id(&self) -> &'static str {
-            "native-grid-sync-probe"
+            self.id
         }
 
         reject_owned_dispatch!(
@@ -466,27 +574,41 @@ mod tests {
         fn dispatch_borrowed(
             &self,
             program: &Program,
-            _inputs: &[&[u8]],
-            _config: &DispatchConfig,
+            inputs: &[&[u8]],
+            config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
+            if let Some(recorder) = &self.recorder {
+                return recorder.dispatch_borrowed(program, inputs, config);
+            }
             assert!(
                 crate::grid_sync::contains_grid_sync(program),
-                "native grid-sync backends must receive the original unsplit Program"
+                "a backend that keeps the barrier must receive the original unsplit Program"
             );
             *self.calls.lock().map_err(BackendError::poisoned_lock)? += 1;
-            Ok(vec![vec![9]])
+            Ok(vec![vec![self.marker]])
         }
 
         fn supports_grid_sync(&self) -> bool {
-            true
+            self.native
+        }
+
+        fn allows_host_grid_sync_split(&self) -> bool {
+            self.allows_split
+        }
+
+        fn cooperative_grid_sync_fits(
+            &self,
+            _program: &Program,
+            _inputs: &[&[u8]],
+            _config: &DispatchConfig,
+        ) -> Result<bool, BackendError> {
+            Ok(self.fits)
         }
     }
 
     #[test]
     fn registered_backend_wrapper_preserves_native_grid_sync_dispatch() {
-        let probe = Arc::new(NativeGridSyncProbe {
-            calls: Mutex::new(0),
-        });
+        let probe = Arc::new(GridSyncProbe::native());
         let backend = wrap_grid_sync_split(Box::new(ArcBackend {
             inner: Arc::clone(&probe),
         }));
@@ -515,9 +637,28 @@ mod tests {
     /// one of the pair without the other stays red on its own.
     #[test]
     fn a_native_grid_sync_claim_answers_the_cooperative_fit_query() {
-        let probe = NativeGridSyncProbe {
-            calls: Mutex::new(0),
-        };
+        /// Overrides `supports_grid_sync` and NOTHING else, so
+        /// `cooperative_grid_sync_fits` below is the trait's own default rather
+        /// than a copy of it. `GridSyncProbe` cannot stand in here: it answers
+        /// the query from a field, which would make this assertion compare two
+        /// values the constructor already set equal.
+        struct DefaultCooperativeFitProbe;
+
+        impl crate::backend::sealed::Sealed for DefaultCooperativeFitProbe {}
+
+        impl VyreBackend for DefaultCooperativeFitProbe {
+            fn id(&self) -> &'static str {
+                "default-cooperative-fit-probe"
+            }
+
+            reject_dispatch!("the cooperative-fit default test must not dispatch programs.");
+
+            fn supports_grid_sync(&self) -> bool {
+                true
+            }
+        }
+
+        let probe = DefaultCooperativeFitProbe;
 
         assert_eq!(
             probe
@@ -694,45 +835,9 @@ mod tests {
         forward_vyre_backend_dispatch!();
     }
 
-    struct GridSyncSplitOptOutProbe {
-        calls: Mutex<usize>,
-    }
-
-    impl crate::backend::sealed::Sealed for GridSyncSplitOptOutProbe {}
-
-    impl VyreBackend for GridSyncSplitOptOutProbe {
-        fn id(&self) -> &'static str {
-            "grid-sync-split-opt-out-probe"
-        }
-
-        reject_owned_dispatch!(
-            "owned dispatch should not run for this test. Fix: keep the borrowed path selected."
-        );
-
-        fn dispatch_borrowed(
-            &self,
-            program: &Program,
-            _inputs: &[&[u8]],
-            _config: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            assert!(
-                crate::grid_sync::contains_grid_sync(program),
-                "split opt-out backends must receive the original GridSync program"
-            );
-            *self.calls.lock().map_err(BackendError::poisoned_lock)? += 1;
-            Ok(vec![vec![13]])
-        }
-
-        fn allows_host_grid_sync_split(&self) -> bool {
-            false
-        }
-    }
-
     #[test]
     fn registered_backend_wrapper_preserves_grid_sync_when_backend_opts_out_of_host_split() {
-        let probe = Arc::new(GridSyncSplitOptOutProbe {
-            calls: Mutex::new(0),
-        });
+        let probe = Arc::new(GridSyncProbe::split_opt_out());
         let backend = wrap_grid_sync_split(Box::new(ArcBackend {
             inner: Arc::clone(&probe),
         }));

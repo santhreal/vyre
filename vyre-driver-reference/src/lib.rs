@@ -12,7 +12,7 @@ use vyre_driver::{
     core_supported_ops, BackendCapability, BackendError, BackendPrecedence, BackendRegistration,
 };
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
+use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_reference::value::Value;
 
 /// Stable backend id for the pure-Rust reference interpreter.
@@ -92,24 +92,30 @@ impl VyreBackend for CpuRefBackend {
 }
 
 fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, BackendError> {
-    // `is_backend_allocated_output` is the SINGLE cross-backend contract in
-    // vyre-foundation, shared verbatim with the reference interpreter, do NOT re-inline
-    // it here (drift would make this backend disagree with the interpreter on outputs).
+    // `is_reference_input` is the interpreter's own ABI predicate, and its
+    // complement `is_backend_allocated_output` is the SINGLE cross-backend
+    // contract in vyre-foundation. Do NOT re-inline either (drift would make
+    // this backend disagree with the interpreter on outputs). A backend-allocated
+    // output is allocated by the callee, so it consumes neither a caller input
+    // nor a `Value`: handing the interpreter a zeroed stand-in for one is the
+    // legacy shape a device artifact rejects.
     let mut next_input = 0usize;
     let mut values = Vec::new();
     for buffer in program.buffers() {
         if buffer.access() == BufferAccess::Workgroup {
             continue;
         }
-        let bytes: Arc<[u8]> = if buffer.is_backend_allocated_output() {
-            Arc::from(synthesized_zero_buffer(buffer, "backend-allocated output")?)
-        } else if let Some(input) = inputs.get(next_input) {
-            next_input += 1;
-            Arc::from(*input)
-        } else {
-            Arc::from(synthesized_zero_buffer(buffer, "missing input")?)
-        };
-        values.push(Value::Bytes(bytes));
+        if buffer.is_backend_allocated_output() {
+            continue;
+        }
+        let input = inputs.get(next_input).ok_or_else(|| {
+            BackendError::new(format!(
+                "cpu-ref is missing an input buffer for `{}`. Fix: pass one buffer per reference input in Program::buffers order; a synthesized zero buffer would answer an ABI failure with fabricated data.",
+                buffer.name()
+            ))
+        })?;
+        next_input += 1;
+        values.push(Value::Bytes(Arc::from(*input)));
     }
     if next_input != inputs.len() {
         return Err(BackendError::new(format!(
@@ -118,28 +124,6 @@ fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, B
         )));
     }
     Ok(values)
-}
-
-fn synthesized_zero_buffer(
-    buffer: &BufferDecl,
-    role: &'static str,
-) -> Result<Vec<u8>, BackendError> {
-    let element_size = buffer.element().size_bytes().ok_or_else(|| {
-        BackendError::new(format!(
-            "cpu-ref cannot synthesize {role} buffer `{}` because its element type is unsized. Fix: declare fixed-width buffers or pass an explicit input buffer.",
-            buffer.name()
-        ))
-    })?;
-    let byte_len = usize::try_from(buffer.count())
-        .ok()
-        .and_then(|count| count.checked_mul(element_size))
-        .ok_or_else(|| {
-            BackendError::new(format!(
-                "cpu-ref {role} buffer `{}` size overflows usize. Fix: use a representable buffer size.",
-                buffer.name()
-            ))
-        })?;
-    Ok(vec![0u8; byte_len])
 }
 
 fn acquire_cpu_ref() -> Result<Box<dyn VyreBackend>, BackendError> {

@@ -45,8 +45,9 @@ fn execute(
             Value::from(bytes(decay)),
             Value::from(bytes(beta)),
             Value::from(bytes(state)),
-            Value::from(vec![0; value.len() * 4]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state_output` is a plain ReadWrite result: it consumes one host
+            // input slot whose incoming contents the schedule overwrites.
+            Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: recurrent delta must execute");

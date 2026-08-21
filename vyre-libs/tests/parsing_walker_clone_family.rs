@@ -496,11 +496,11 @@ const EXPECTED: &[(&str, &str)] = &[
     ),
     (
         "core/ast/shunting",
-        "8e37b37f223ad3103e55a15d255f8a39a7e60dd7a53b9ddb88b0c41a08609ad6",
+        "fd268d258fd06a6124b14d902323aecfec3539f20de9242a17ed8a88f5a580c3",
     ),
     (
         "core/ast/shunting_with_capacity",
-        "0f2e99cc7f3c868de182a71747231a7c2dfd703a432957697fb50ca26d050a15",
+        "8fc0666a67d0dce44ab55957e842401e265bb920bcd87c8e523451974847b304",
     ),
 ];
 

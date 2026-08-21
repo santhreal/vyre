@@ -38,8 +38,8 @@ fn phi_stores_past_capacity_are_gated_not_oob_and_count_signals_overflow() {
         Value::from(pack_u32_slice(&[100, 100, 100])),                      // ast_rights
         Value::from(pack_u32_slice(&[7, 7, 7])),                            // ast_vals
         Value::from(pack_u32_slice(&[1, 2, 3])),                            // block_headers
-        Value::from(vec![0u8; phi_words as usize * 4]),                     // out_phi_nodes
-        Value::from(vec![0u8; 4]),                                          // out_phi_count
+        Value::from(pack_u32_slice(&vec![0u32; phi_words as usize])),       // out_phi_nodes
+        Value::from(pack_u32_slice(&[0])),                                  // out_phi_count
     ];
 
     let (outputs, report) = vyre_reference::reference_eval_oob_report(&program, &inputs)

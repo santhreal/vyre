@@ -20,7 +20,6 @@ fn two_rows_match_exact_hand_computed_projection() {
             Value::from(bytes(&[1.0, 2.0, 3.0, -1.0, 0.0, 2.0])),
             Value::from(bytes(&[1.0, 0.0, 0.0, 1.0, 1.0, 1.0])),
             Value::from(bytes(&[0.5, -0.5])),
-            Value::from(vec![0; 4 * 4]),
         ],
     )
     .expect("Fix: row projection must execute");
@@ -38,7 +37,6 @@ fn zero_first_row_does_not_change_nonzero_second_row() {
             Value::from(bytes(&[0.0, 0.0, 4.0, -1.0])),
             Value::from(bytes(&[2.0, 3.0])),
             Value::from(bytes(&[0.0])),
-            Value::from(vec![0; 2 * 4]),
         ],
     )
     .expect("Fix: isolated row projection must execute");
@@ -55,7 +53,6 @@ fn output_major_checkpoint_weights_project_exactly() {
         &[
             Value::from(bytes(&[2.0, 3.0])),
             Value::from(bytes(&[1.0, 10.0, 100.0, 1000.0])),
-            Value::from(vec![0; 2 * 4]),
         ],
     )
     .expect("Fix: checkpoint projection must execute");

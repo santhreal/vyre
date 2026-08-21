@@ -107,13 +107,11 @@ pub(super) fn dispatch_batch_or_single(
                 )));
             }
             Ok(BatchSample {
-                timed: vyre_driver::TimedDispatchResult {
-                    outputs: first_outputs,
-                    wall_ns: batch.per_item_wall_ns(),
-                    device_ns: batch.per_item_device_ns(),
-                    enqueue_ns: None,
-                    wait_ns: None,
-                },
+                timed: vyre_driver::TimedDispatchResult::device_timed(
+                    first_outputs,
+                    batch.per_item_wall_ns(),
+                    batch.per_item_device_ns(),
+                ),
                 resident_used: true,
                 reset_bytes: plan.reset_payload.len() as u64,
                 batch_wall_ns: Some(batch.wall_ns_total),
@@ -185,13 +183,7 @@ mod tests {
 
     fn sample(batch: bool) -> BatchSample {
         BatchSample {
-            timed: vyre_driver::TimedDispatchResult {
-                outputs: vec![vec![0u8; 4]],
-                wall_ns: 10,
-                device_ns: None,
-                enqueue_ns: None,
-                wait_ns: None,
-            },
+            timed: vyre_driver::TimedDispatchResult::host_timed(vec![vec![0u8; 4]], 10),
             resident_used: batch,
             reset_bytes: if batch { 4 } else { 0 },
             batch_wall_ns: batch.then_some(160),

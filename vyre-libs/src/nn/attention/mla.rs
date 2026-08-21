@@ -450,8 +450,8 @@ mod tests {
 
     #[test]
     fn mla_compress_kv_identity() {
-        let h = vec![2.0f32, 3.0];
-        let w_dk = vec![1.0f32, 0.0, 0.0, 1.0];
+        let h = [2.0f32, 3.0];
+        let w_dk = [1.0f32, 0.0, 0.0, 1.0];
         let program = mla_compress_kv("h", "w_dk", "c", 2, 2).unwrap();
         let c = eval_f32("mla", &program, &[&h[..], &w_dk[..]], 2);
         assert_eq!(c, vec![2.0, 3.0]);
@@ -459,11 +459,11 @@ mod tests {
 
     #[test]
     fn mla_decode_simple() {
-        let q = vec![1.0f32, 0.0];
-        let kv_cache = vec![1.0f32, 0.0];
-        let kr_cache = vec![0.0f32, 0.0];
-        let w_uk = vec![1.0f32, 0.0, 0.0, 1.0];
-        let w_uv = vec![1.0f32, 0.0, 0.0, 1.0];
+        let q = [1.0f32, 0.0];
+        let kv_cache = [1.0f32, 0.0];
+        let kr_cache = [0.0f32, 0.0];
+        let w_uk = [1.0f32, 0.0, 0.0, 1.0];
+        let w_uv = [1.0f32, 0.0, 0.0, 1.0];
 
         let program = mla_decode(
             "q", "kv_cache", "kr_cache", "w_uk", "w_uv", "out", 1, 1, 2, 2, 2,
@@ -496,11 +496,11 @@ mod tests {
         // softmax: w0 ≈ 0.67, w1 ≈ 0.33
         // v_0 = [1,0], v_1 = [0,1]
         // out = [0.67, 0.33]
-        let q = vec![1.0f32, 0.0];
-        let kv_cache = vec![1.0f32, 0.0, 0.0, 1.0];
-        let kr_cache = vec![0.0f32; 4];
-        let w_uk = vec![1.0f32, 0.0, 0.0, 1.0];
-        let w_uv = vec![1.0f32, 0.0, 0.0, 1.0];
+        let q = [1.0f32, 0.0];
+        let kv_cache = [1.0f32, 0.0, 0.0, 1.0];
+        let kr_cache = [0.0f32; 4];
+        let w_uk = [1.0f32, 0.0, 0.0, 1.0];
+        let w_uv = [1.0f32, 0.0, 0.0, 1.0];
 
         let program = mla_decode(
             "q", "kv_cache", "kr_cache", "w_uk", "w_uv", "out", 2, 1, 2, 2, 2,

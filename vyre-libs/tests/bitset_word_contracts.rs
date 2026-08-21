@@ -4,15 +4,18 @@ use vyre_libs::bitset::{and::bitset_and, and_not::bitset_and_not};
 use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as pack};
 use vyre_reference::value::Value;
 
+/// WHY: `out` is a `WriteOnly` backend-allocated output, so the caller never
+/// supplies its incoming contents. The contract is that every declared word is
+/// written: a word the program skips would surface as the allocator's zero
+/// rather than the AND result.
 #[test]
-fn bitset_and_overwrites_dirty_output_words() {
+fn bitset_and_writes_every_declared_output_word() {
     let program = bitset_and("lhs", "rhs", "out", 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
             Value::from(pack(&[0xFF00_FF00, 0xAAAA_5555])),
             Value::from(pack(&[0x0F0F_F0F0, 0xFFFF_0000])),
-            Value::from(pack(&[u32::MAX, u32::MAX])),
         ],
     )
     .expect("bitset_and reference evaluation must succeed");
@@ -24,14 +27,13 @@ fn bitset_and_overwrites_dirty_output_words() {
 }
 
 #[test]
-fn bitset_and_not_overwrites_dirty_output_words() {
+fn bitset_and_not_writes_every_declared_output_word() {
     let program = bitset_and_not("lhs", "rhs", "out", 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
             Value::from(pack(&[0xFFFF_0000, 0xAAAA_5555])),
             Value::from(pack(&[0x0F0F_F0F0, 0xFFFF_0000])),
-            Value::from(pack(&[u32::MAX, u32::MAX])),
         ],
     )
     .expect("bitset_and_not reference evaluation must succeed");

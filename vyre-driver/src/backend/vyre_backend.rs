@@ -117,13 +117,10 @@ pub trait VyreBackend: sealed::Sealed + Send + Sync {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.dispatch_borrowed(program, inputs, config)?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(started, "backend borrowed dispatch")?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            crate::backend::checked_elapsed_wall_ns(started, "backend borrowed dispatch")?,
+        ))
     }
 
     /// Executes the program with borrowed input buffers and writes outputs into

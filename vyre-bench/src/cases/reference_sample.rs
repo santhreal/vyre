@@ -265,13 +265,8 @@ mod tests {
     /// disagreed: some published a baseline record carrying only `wall_ns`.
     #[test]
     fn both_samples_are_accounted_separately() {
-        let timed = vyre_driver::TimedDispatchResult {
-            outputs: vec![vec![0u8; 8]],
-            wall_ns: 500,
-            device_ns: Some(300),
-            enqueue_ns: None,
-            wait_ns: None,
-        };
+        let timed =
+            vyre_driver::TimedDispatchResult::device_timed(vec![vec![0u8; 8]], 500, Some(300));
         let run = run_against_reference(
             timed,
             64,
@@ -303,13 +298,7 @@ mod tests {
     /// device half only: the reference still read its own inputs from the host.
     #[test]
     fn resident_sample_does_not_zero_the_reference_read_total() {
-        let timed = vyre_driver::TimedDispatchResult {
-            outputs: vec![vec![1u8; 4]],
-            wall_ns: 10,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        };
+        let timed = vyre_driver::TimedDispatchResult::host_timed(vec![vec![1u8; 4]], 10);
         let run = run_against_reference(
             timed,
             1_024,

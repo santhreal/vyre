@@ -45,8 +45,9 @@ fn run_schedule(
             Value::from(encode(&lanes[3])),
             Value::from(encode(&lanes[4])),
             Value::from(bytes(state)),
-            Value::from(vec![0; len * lane_width]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state_output` is a plain ReadWrite result: one host input slot
+            // whose incoming contents the schedule overwrites.
+            Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: delta schedule must execute");
@@ -159,8 +160,9 @@ fn execute_chunk_fixture(
             Value::from(bytes(decay)),
             Value::from(bytes(beta_logits)),
             Value::from(bytes(state)),
-            Value::from(vec![0; value.len() * 4]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state_output` is a plain ReadWrite result: one host input slot
+            // whose incoming contents the schedule overwrites.
+            Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: authoritative chunk fixture must execute");
@@ -490,8 +492,9 @@ fn grouped_value_heads_match_recurrent_without_cross_head_state() {
                 Value::from(bytes(&decay)),
                 Value::from(bytes(&beta)),
                 Value::from(bytes(&state)),
-                Value::from(vec![0; value.len() * 4]),
-                Value::from(vec![0; state.len() * 4]),
+                // `state_output` is a plain ReadWrite result: one host input
+                // slot whose incoming contents the schedule overwrites.
+                Value::from(bytes(&vec![0.0f32; state.len()])),
             ],
         )
         .expect("Fix: grouped delta schedule must execute");

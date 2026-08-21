@@ -424,13 +424,13 @@ mod tests {
                 "Fix: resident grid-sync split must keep the original device handles bound across every segment."
             );
             let call = self.calls.fetch_add(1, Ordering::SeqCst);
-            Ok(TimedDispatchResult {
-                outputs: vec![vec![call as u8]],
-                wall_ns: 10,
-                device_ns: Some(2),
-                enqueue_ns: Some(3),
-                wait_ns: Some(4),
-            })
+            Ok(TimedDispatchResult::split_timed(
+                vec![vec![call as u8]],
+                10,
+                Some(2),
+                3,
+                4,
+            ))
         }
     }
 
@@ -603,13 +603,13 @@ mod tests {
             // buffer, so earlier segments' slots persist (the accumulator).
             apply_out_stores(entry_sequence(program), buf.as_mut_slice());
 
-            Ok(TimedDispatchResult {
-                outputs: Vec::new(),
-                wall_ns: 1,
-                device_ns: Some(1),
-                enqueue_ns: Some(1),
-                wait_ns: Some(1),
-            })
+            Ok(TimedDispatchResult::split_timed(
+                Vec::new(),
+                1,
+                Some(1),
+                1,
+                1,
+            ))
         }
     }
 

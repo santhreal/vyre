@@ -63,8 +63,8 @@ total_lines = 248
 
 [[crate]]
 name = "vyre-aot"
-duplicate_lines = 21
-total_lines = 1513
+duplicate_lines = 8
+total_lines = 1599
 
 [[crate]]
 name = "vyre-bench"
@@ -78,13 +78,13 @@ total_lines = 2227
 
 [[crate]]
 name = "vyre-driver"
-duplicate_lines = 463
-total_lines = 39979
+duplicate_lines = 461
+total_lines = 40044
 
 [[crate]]
 name = "vyre-driver-cuda"
-duplicate_lines = 1623
-total_lines = 66835
+duplicate_lines = 1594
+total_lines = 66999
 
 [[crate]]
 name = "vyre-driver-metal"
@@ -93,8 +93,8 @@ total_lines = 4535
 
 [[crate]]
 name = "vyre-driver-reference"
-duplicate_lines = 23
-total_lines = 655
+duplicate_lines = 10
+total_lines = 669
 
 [[crate]]
 name = "vyre-driver-spirv"
@@ -133,8 +133,8 @@ total_lines = 105607
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 5499
-total_lines = 213672
+duplicate_lines = 5472
+total_lines = 213242
 
 [[crate]]
 name = "vyre-lints"

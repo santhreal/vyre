@@ -24,7 +24,7 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `spirv-val`
+- Available manifest features: `default`, `device-tests`, `spirv-val`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -34,7 +34,9 @@ The crate lives at `vyre-driver-spirv`. The `spirv-driver` owner maintains its
 | `example` | `vulkan_probe` | `vyre-driver-spirv/examples/vulkan_probe.rs` | None | `./cargo_full test -p vyre-driver-spirv --example vulkan_probe` |
 | `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-driver-spirv` |
 | `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | None | `./cargo_full test -p vyre-driver-spirv --test dispatch` |
+| `test` | `dispatch` | `vyre-driver-spirv/tests/dispatch.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test dispatch` |
 | `test` | `hostile_input_closure_contract` | `vyre-driver-spirv/tests/hostile_input_closure_contract.rs` | None | `./cargo_full test -p vyre-driver-spirv --test hostile_input_closure_contract` |
+| `test` | `hostile_input_closure_contract` | `vyre-driver-spirv/tests/hostile_input_closure_contract.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test hostile_input_closure_contract` |
 | `test` | `shared_target_contract_discrimination` | `vyre-driver-spirv/tests/shared_target_contract_discrimination.rs` | None | `./cargo_full test -p vyre-driver-spirv --test shared_target_contract_discrimination` |
 | `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | None | `./cargo_full test -p vyre-driver-spirv --test spirv_parity` |
 | `test` | `spirv_parity` | `vyre-driver-spirv/tests/spirv_parity.rs` | `spirv-val` | `./cargo_full test -p vyre-driver-spirv --test spirv_parity` |

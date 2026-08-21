@@ -712,7 +712,7 @@ mod tests {
         }
 
         fn hashmap_executor(program: &Program) -> Result<(), crate::ReferenceError> {
-            let inputs = vec![Value::from(vec![1_u8, 2, 3, 4]), Value::from(vec![0_u8; 4])];
+            let inputs = vec![Value::from(vec![1_u8, 2, 3, 4])];
             crate::reference_eval(program, &inputs).map(|_| ())
         }
 

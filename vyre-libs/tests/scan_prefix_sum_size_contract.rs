@@ -72,7 +72,9 @@ fn run_scan(n: u32, input: &[u32]) -> Vec<u32> {
         } else {
             vec![0_u8; (buffer.count() as usize) * 4]
         };
-        values.push(Value::from(bytes));
+        if vyre_reference::is_reference_input(buffer) {
+            values.push(Value::from(bytes));
+        }
         if buffer.access() == BufferAccess::ReadWrite {
             if buffer.name() == "output" {
                 output_slot = Some(writable);

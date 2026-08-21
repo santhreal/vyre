@@ -43,7 +43,6 @@ fn run_fused(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u32> 
         Value::from(vec![0u8; decoded_len as usize * 4]),
         Value::from(u32_bytes(&dfa.transitions)),
         Value::from(u32_bytes(&dfa.accept)),
-        Value::from(vec![0u8; decoded_len as usize * 4]),
         Value::from(u32_bytes(&hex_decode_table())),
     ];
     let outputs = vyre_reference::reference_eval(&program, &inputs).expect("fused must run");
@@ -61,7 +60,6 @@ fn run_separate(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u3
         Value::from(u32_bytes(
             &encoded.iter().map(|&b| u32::from(b)).collect::<Vec<_>>(),
         )),
-        Value::from(vec![0u8; decoded_len as usize * 4]),
         Value::from(u32_bytes(&hex_decode_table())),
     ];
     let decode_outputs = vyre_reference::reference_eval(&decode_program, &decode_inputs)
@@ -81,7 +79,6 @@ fn run_separate(encoded: &[u8], dfa: &vyre_libs::pattern::CompiledDfa) -> Vec<u3
         Value::from(decoded),
         Value::from(u32_bytes(&dfa.transitions)),
         Value::from(u32_bytes(&dfa.accept)),
-        Value::from(vec![0u8; decoded_len as usize * 4]),
     ];
     let scan_outputs =
         vyre_reference::reference_eval(&scan_program, &scan_inputs).expect("aho_corasick must run");

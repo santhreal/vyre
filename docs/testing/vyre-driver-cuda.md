@@ -119,6 +119,7 @@ The crate lives at `vyre-driver-cuda`. The `cuda-driver` owner maintains its
 | `test` | `module_cache_contracts` | `vyre-driver-cuda/tests/module_cache_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test module_cache_contracts` |
 | `test` | `motif_gpu_parity` | `vyre-driver-cuda/tests/motif_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test motif_gpu_parity` |
 | `test` | `multi_block_prefix_scan_gpu_parity` | `vyre-driver-cuda/tests/multi_block_prefix_scan_gpu_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test multi_block_prefix_scan_gpu_parity` |
+| `test` | `multi_block_scan_device_answer` | `vyre-driver-cuda/tests/multi_block_scan_device_answer.rs` | None | `./cargo_full test -p vyre-driver-cuda --test multi_block_scan_device_answer` |
 | `test` | `narrowing_cast_cuda_parity` | `vyre-driver-cuda/tests/narrowing_cast_cuda_parity.rs` | None | `./cargo_full test -p vyre-driver-cuda --test narrowing_cast_cuda_parity` |
 | `test` | `occupancy_choice_autotune_persistence` | `vyre-driver-cuda/tests/occupancy_choice_autotune_persistence.rs` | None | `./cargo_full test -p vyre-driver-cuda --test occupancy_choice_autotune_persistence` |
 | `test` | `occupancy_contracts` | `vyre-driver-cuda/tests/occupancy_contracts.rs` | None | `./cargo_full test -p vyre-driver-cuda --test occupancy_contracts` |

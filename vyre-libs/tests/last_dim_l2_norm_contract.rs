@@ -19,14 +19,8 @@ fn u16_bytes(values: &[u16]) -> Vec<u8> {
 fn execute_f32(input: &[f32], rows: u32, width: u32, eps: f32) -> Vec<f32> {
     let program = last_dim_l2_norm("input", "output", rows, width, eps, DataType::F32)
         .expect("Fix: valid L2 fixture must build");
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(f32_bytes(input)),
-            Value::from(vec![0; input.len() * 4]),
-        ],
-    )
-    .expect("Fix: L2 normalization must execute");
+    let outputs = vyre_reference::reference_eval(&program, &[Value::from(f32_bytes(input))])
+        .expect("Fix: L2 normalization must execute");
     outputs[0]
         .to_bytes()
         .chunks_exact(4)
@@ -96,14 +90,9 @@ fn representative_head_widths_have_unit_l2_magnitude() {
 fn bf16_execution_matches_exact_output_words() {
     let program = last_dim_l2_norm("input", "output", 1, 2, 1e-6, DataType::BF16)
         .expect("Fix: BF16 L2 normalization must build");
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(u16_bytes(&[0x4040, 0x4080])),
-            Value::from(vec![0; 4]),
-        ],
-    )
-    .expect("Fix: BF16 L2 normalization must execute");
+    let outputs =
+        vyre_reference::reference_eval(&program, &[Value::from(u16_bytes(&[0x4040, 0x4080]))])
+            .expect("Fix: BF16 L2 normalization must execute");
     assert_eq!(outputs[0].to_bytes(), u16_bytes(&[0x3f1a, 0x3f4d]));
 }
 

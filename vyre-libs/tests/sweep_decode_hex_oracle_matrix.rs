@@ -50,7 +50,6 @@ fn run_hex_decode(input: &[u8]) -> Vec<u32> {
         &program,
         &[
             Value::from(vyre_primitives::wire::pack_u32_slice(&packed_input)),
-            Value::from(vec![0u8; (input.len() / 2) * 4]),
             Value::from(vyre_primitives::wire::pack_u32_slice(hex_decode_table_ref())),
         ],
     )

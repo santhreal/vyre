@@ -40,7 +40,6 @@ fn bf16_decode_offset_rotates_prefix_and_preserves_suffix_words() {
             Value::from(bf16_bytes(&[1.0, 2.0, 3.0, 4.0])),
             Value::from(f32_bytes(&[1.0, 0.0])),
             Value::from(f32_bytes(&[0.0, 1.0])),
-            Value::from(vec![0; 4 * size_of::<u16>()]),
         ],
     )
     .expect("Fix: BF16 offset RoPE must execute");
@@ -80,7 +79,6 @@ fn bf16_rotation_rounds_once_after_f32_math() {
             Value::from(bf16_bytes(&[x0, x1])),
             Value::from(f32_bytes(&[0.5])),
             Value::from(f32_bytes(&[0.25])),
-            Value::from(vec![0; 2 * size_of::<u16>()]),
         ],
     )
     .expect("Fix: mixed-precision RoPE must execute");

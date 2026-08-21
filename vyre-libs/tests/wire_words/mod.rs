@@ -355,7 +355,6 @@ pub(crate) fn execute_causal_gqa(
             Value::from(f32_bytes(q)),
             Value::from(f32_bytes(k)),
             Value::from(f32_bytes(v)),
-            Value::from(vec![0; q.len() * 4]),
         ],
     )
     .expect("Fix: causal GQA must execute");
@@ -398,7 +397,6 @@ pub(crate) fn execute_causal_gqa_typed(
             Value::from(bf16_bytes(q)),
             Value::from(bf16_bytes(k)),
             Value::from(bf16_bytes(v)),
-            Value::from(vec![0; q.len() * std::mem::size_of::<u16>()]),
         ],
     )
     .expect("Fix: BF16 causal GQA must execute");

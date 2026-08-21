@@ -175,16 +175,13 @@ mod tests {
     fn graph(edges: &[(&str, &str)], kind: &str) -> WorkspaceState {
         let mut dependencies: BTreeMap<String, BTreeMap<String, DependencyUse>> = BTreeMap::new();
         for (from, to) in edges {
-            dependencies
-                .entry((*from).to_string())
-                .or_default()
-                .insert(
-                    (*to).to_string(),
-                    DependencyUse {
-                        kinds: vec![kind.to_string()],
-                        ..DependencyUse::default()
-                    },
-                );
+            dependencies.entry((*from).to_string()).or_default().insert(
+                (*to).to_string(),
+                DependencyUse {
+                    kinds: vec![kind.to_string()],
+                    ..DependencyUse::default()
+                },
+            );
         }
         WorkspaceState {
             members: Vec::new(),
@@ -321,6 +318,9 @@ mod tests {
                 "`{layer}` is exempted but is not a layer this workspace has"
             );
         }
-        assert!(!ships("quantum-boundary"), "an unknown layer is not shipped");
+        assert!(
+            !ships("quantum-boundary"),
+            "an unknown layer is not shipped"
+        );
     }
 }

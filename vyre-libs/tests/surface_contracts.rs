@@ -187,12 +187,7 @@ fn contract_substring_real_byte_compare() {
         .bytes()
         .flat_map(|b| u32::from(b).to_le_bytes())
         .collect();
-    let matches_bytes = vec![0u8; 5 * 4];
-    let inputs = [
-        Value::from(haystack_bytes),
-        Value::from(needle_bytes),
-        Value::from(matches_bytes),
-    ];
+    let inputs = [Value::from(haystack_bytes), Value::from(needle_bytes)];
     let outputs =
         vyre_reference::reference_eval(&program, &inputs).expect("execute substring_search");
     assert_eq!(outputs.len(), 1, "only matches buffer is ReadWrite");

@@ -39,7 +39,6 @@ fn rms_norm_linear_very_small_variance_eps_dominates() {
         Value::from(to_f32_bytes(&input)),
         Value::from(to_f32_bytes(&weights)),
         Value::from(to_f32_bytes(&bias)),
-        Value::from(vec![0u8; out_dim as usize * 4]),
     ];
     let fused_outputs = vyre_reference::reference_eval(&fused, &fused_inputs)
         .expect("Fix: rms_norm_linear must execute on zero-variance input");
@@ -66,7 +65,6 @@ fn rms_norm_linear_very_large_variance() {
         Value::from(to_f32_bytes(&input)),
         Value::from(to_f32_bytes(&weights)),
         Value::from(to_f32_bytes(&bias)),
-        Value::from(vec![0u8; out_dim as usize * 4]),
     ];
     let fused_outputs = vyre_reference::reference_eval(&fused, &fused_inputs)
         .expect("Fix: rms_norm_linear must execute on large-variance input");
@@ -93,7 +91,6 @@ fn rms_norm_linear_single_element() {
         Value::from(to_f32_bytes(&input)),
         Value::from(to_f32_bytes(&weights)),
         Value::from(to_f32_bytes(&bias)),
-        Value::from(vec![0u8; out_dim as usize * 4]),
     ];
     let fused_outputs = vyre_reference::reference_eval(&fused, &fused_inputs)
         .expect("Fix: rms_norm_linear single element must execute");
@@ -157,7 +154,6 @@ fn parity_rms_norm_linear_matches_reference_adversarial_inputs() {
             Value::from(to_f32_bytes(&small_input)),
             Value::from(to_f32_bytes(&weights)),
             Value::from(to_f32_bytes(&bias)),
-            Value::from(vec![0u8; out_dim as usize * core::mem::size_of::<f32>()]),
         ];
         let fused_outputs = vyre_reference::reference_eval(&fused, &fused_inputs)
             .expect("Fix: fused rms_norm_linear must execute on small inputs");
@@ -189,7 +185,6 @@ fn parity_rms_norm_linear_matches_reference_adversarial_inputs() {
             Value::from(to_f32_bytes(&alt_input)),
             Value::from(to_f32_bytes(&weights)),
             Value::from(to_f32_bytes(&bias)),
-            Value::from(vec![0u8; out_dim as usize * core::mem::size_of::<f32>()]),
         ];
         let fused_alt_outputs = vyre_reference::reference_eval(&fused_alt, &fused_alt_inputs)
             .expect("Fix: fused rms_norm_linear must execute on alternating dynamic range inputs");

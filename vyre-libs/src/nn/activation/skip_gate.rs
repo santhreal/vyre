@@ -220,7 +220,12 @@ mod tests {
     #[test]
     fn skip_gate_empty_tensor() {
         let program = skip_gate("gate", "branch", "skip", "output", 0);
-        let out = eval_f32("skip_gate", &program, &[&[] as &[f32]], 0);
+        let out = eval_f32(
+            "skip_gate",
+            &program,
+            &[&[] as &[f32], &[] as &[f32], &[] as &[f32]],
+            0,
+        );
         assert!(out.is_empty());
     }
 }

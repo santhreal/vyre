@@ -21,14 +21,8 @@ mod cell_grid {
             "fixture must supply one colour per cell"
         );
         let program = cell_grid_fill("cells", "out", shape);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(le_bytes(cells)),
-                Value::from(vec![0u8; shape.pixel_count() as usize * 4]),
-            ],
-        )
-        .expect("cell_grid_fill must execute under the reference oracle");
+        let outputs = vyre_reference::reference_eval(&program, &[Value::from(le_bytes(cells))])
+            .expect("cell_grid_fill must execute under the reference oracle");
         assert_eq!(outputs.len(), 1, "only the output buffer is ReadWrite");
         words(&outputs[0].to_bytes())
     }

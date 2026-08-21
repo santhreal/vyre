@@ -98,7 +98,25 @@ pub fn prefix_scan_with_op_id(
         .next_power_of_two()
         .min(vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS);
     let run = n.div_ceil(lanes);
-    let lane = Expr::InvocationId { axis: 0 };
+    // Workgroup-LOCAL, and the whole body is fenced to workgroup 0.
+    //
+    // This is a single-workgroup scan: `scratch_a` and `scratch_b` are
+    // workgroup-scoped and hold exactly `lanes` slots, and the Blelloch sweep
+    // between them is ordered by a workgroup barrier that means nothing across
+    // workgroups. The lane index used to be `InvocationId`, the GLOBAL id. That
+    // is the same number only when the launch is one workgroup wide. It is, for
+    // `n <= lanes`, which is why every test of this builder passed; above that
+    // the grid is `ceil(n / lanes)` workgroups, lanes `lanes..` index a
+    // workgroup buffer that has `lanes` slots, and a device faults on the store
+    // with an illegal address rather than returning a wrong answer.
+    //
+    // A program that is only correct at one launch geometry must not read a
+    // geometry-dependent id. The sibling bottom-out scan in
+    // `reduce::multi_block_prefix_scan` already fences on `WorkgroupId == 0`
+    // and reads `LocalId`; this now matches it, so extra workgroups are inert
+    // instead of out of bounds and the answer no longer depends on which grid
+    // the driver infers.
+    let lane = Expr::var("lane");
     let scratch_a = format!("__{out_buf}_scan_a");
     let scratch_b = format!("__{out_buf}_scan_b");
     let run_base = Expr::mul(lane.clone(), Expr::u32(run));
@@ -110,6 +128,7 @@ pub fn prefix_scan_with_op_id(
         staged = Expr::add(staged, run_element(in_buf, &run_base, step, n));
     }
     let mut body = vec![
+        Node::let_bind("lane", Expr::LocalId { axis: 0 }),
         Node::store(&scratch_a, lane.clone(), staged),
         Node::barrier(),
     ];
@@ -159,7 +178,13 @@ pub fn prefix_scan_with_op_id(
     Program::wrapped(
         buffers,
         [lanes, 1, 1],
-        vec![wrap_anonymous_region(op_id, body)],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(
+                Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+                body,
+            )],
+        )],
     )
 }
 

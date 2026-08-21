@@ -9,15 +9,9 @@ use vyre_reference::value::Value;
 use wire_words::u32_bytes as bytes;
 
 fn run(program: &vyre::Program, a: &[u32; 4], b: &[u32; 4]) -> [u32; 4] {
-    let outputs = vyre_reference::reference_eval(
-        program,
-        &[
-            Value::from(bytes(a)),
-            Value::from(bytes(b)),
-            Value::from(vec![0u8; 16]),
-        ],
-    )
-    .unwrap_or_else(|error| panic!("Fix: logical reference run failed: {error}"));
+    let outputs =
+        vyre_reference::reference_eval(program, &[Value::from(bytes(a)), Value::from(bytes(b))])
+            .unwrap_or_else(|error| panic!("Fix: logical reference run failed: {error}"));
     let raw = outputs[0].to_bytes();
     std::array::from_fn(|index| {
         let offset = index * 4;

@@ -39,7 +39,6 @@ mod glyph_grid {
                 Value::from(le_bytes(&grid.fg)),
                 Value::from(le_bytes(&grid.bg)),
                 Value::from(le_bytes(&grid.atlas)),
-                Value::from(vec![0u8; grid.shape.pixel_count() as usize * 4]),
             ],
         )
         .expect("glyph_grid_blend must execute under the reference oracle");

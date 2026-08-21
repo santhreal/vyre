@@ -125,13 +125,13 @@ impl VyreBackend for ResidentBackend {
                 "injected resident failure. Fix: this is a test fixture.",
             ));
         }
-        Ok(TimedDispatchResult {
-            outputs: vec![vec![10, 11, 12]],
-            wall_ns: 7,
-            device_ns: Some(5),
-            enqueue_ns: Some(1),
-            wait_ns: Some(1),
-        })
+        Ok(TimedDispatchResult::split_timed(
+            vec![vec![10, 11, 12]],
+            7,
+            Some(5),
+            1,
+            1,
+        ))
     }
 }
 

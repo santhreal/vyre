@@ -58,16 +58,10 @@ pub trait PendingDispatch: sealed::Sealed + Send + Sync {
     fn await_timed_result(self: Box<Self>) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.await_result()?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(
-                started,
-                "pending dispatch retirement",
-            )?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            crate::backend::checked_elapsed_wall_ns(started, "pending dispatch retirement")?,
+        ))
     }
 
     /// Consume the handle and write output buffers into caller-owned storage.

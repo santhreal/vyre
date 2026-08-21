@@ -18,7 +18,6 @@ fn decode_offset_rotates_only_the_configured_prefix() {
             Value::from(bytes(&[1.0, 2.0, 3.0, 4.0])),
             Value::from(bytes(&[1.0, 0.0])),
             Value::from(bytes(&[0.0, 1.0])),
-            Value::from(vec![0; 16]),
         ],
     )
     .expect("Fix: offset RoPE must execute");
@@ -35,7 +34,6 @@ fn full_rotary_dimensions_use_offset_table_rows() {
             Value::from(bytes(&[1.0, 2.0, 3.0, 4.0])),
             Value::from(bytes(&[1.0, 1.0, 0.0, 0.0])),
             Value::from(bytes(&[0.0, 0.0, 1.0, 1.0])),
-            Value::from(vec![0; 16]),
         ],
     )
     .expect("Fix: full offset RoPE must execute");
@@ -46,7 +44,7 @@ fn full_rotary_dimensions_use_offset_table_rows() {
 #[test]
 fn offset_range_beyond_tables_fails_validation() {
     let program = partial_rope_at_offset("input", "cos", "sin", "output", 1, 2, 4, 2, 2, 3);
-    let error = vyre_reference::reference_eval(&program, &[Value::from(vec![0; 32])])
+    let error = vyre_reference::reference_eval(&program, &[])
         .expect_err("Fix: table range overflow must remain invalid");
     assert!(error.to_string().contains("position range"), "{error}");
 }

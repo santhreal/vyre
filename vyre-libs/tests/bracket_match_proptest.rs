@@ -34,7 +34,6 @@ fn run_ir(kinds: &[u32], max_depth: u32) -> Vec<u32> {
         &[
             pack(kinds),                                  // kinds (binding 0, RO)
             pack(&vec![0u32; max_depth.max(1) as usize]), // stack (binding 1, RW)
-            pack(&vec![BRACKET_MATCH_NONE; kinds.len()]), // match_pairs (binding 2, output)
         ],
     )
     .expect("bracket_match reference evaluation must succeed");

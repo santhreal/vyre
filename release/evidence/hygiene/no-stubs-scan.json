@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:0014e86c4d328b0681b970a02cee9091a3d0a45c:dirty=true:worktree=3a7bf025ab45334bff024df8a94f533039c141c3ab7542ec9c02a8596ec504d8",
+  "source_fingerprint": "git:d8af8afb638887e0d0bf0603db5f5d7e0b0f41c3:dirty=true:worktree=357f3c6af02b565e26923264c8ee44ee20354d7e53521dc3e87b35bceca3d548",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -59,13 +59,19 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 285,
+      "line": 224,
       "pattern": "placeholder_text",
-      "text": "// the placeholder to the range it will actually read back."
+      "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 436,
+      "line": 237,
+      "pattern": "placeholder_text",
+      "text": "backend-allocated output; a placeholder for one is what the artifact ABI rejects on \\"
+    },
+    {
+      "path": "vyre-reference/src/execution/hashmap/mod.rs",
+      "line": 420,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },

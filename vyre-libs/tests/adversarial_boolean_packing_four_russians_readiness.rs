@@ -394,7 +394,7 @@ fn four_russians_ir_apply_lut_matches_cpu_reference() {
             Value::from(u32_bytes(&lhs)),
             Value::from(u32_bytes(&rhs)),
             Value::from(u32_bytes(&lut)),
-            Value::from(vec![0u8; lhs.len() * 4]),
+            Value::from(u32_bytes(&[0u32; 2])),
         ],
     )
     .expect("four_russians_apply_byte_lut must execute");

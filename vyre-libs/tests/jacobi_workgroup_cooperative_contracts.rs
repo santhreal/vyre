@@ -192,11 +192,8 @@ fn identity_fill_cooperative_lane_striding_reference_exactness() {
     for &n in &[1u32, 2, 3, 5, 7, 8, 16, 64, 65, 80] {
         let program = matrix_identity_fill("m", n);
         let count = (n * n) as usize;
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(pack_f32(&vec![0.0f32; count]))],
-        )
-        .expect("identity fill reference eval");
+        let outputs =
+            vyre_reference::reference_eval(&program, &[]).expect("identity fill reference eval");
         let out = unpack_f32(&outputs[0].to_bytes());
         assert_eq!(out.len(), count);
         for r in 0..(n as usize) {
@@ -217,14 +214,8 @@ fn diagonal_extract_cooperative_lane_striding_reference_exactness() {
         for i in 0..count {
             matrix.push((i as f32) * 1.5 + 0.25);
         }
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(pack_f32(&matrix)),
-                Value::from(pack_f32(&vec![0.0f32; n as usize])),
-            ],
-        )
-        .expect("diagonal extract reference eval");
+        let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_f32(&matrix))])
+            .expect("diagonal extract reference eval");
         let out = unpack_f32(
             &outputs[vyre_reference::output_index(&program, "diag").unwrap()].to_bytes(),
         );

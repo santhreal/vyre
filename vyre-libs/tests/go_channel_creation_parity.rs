@@ -45,8 +45,8 @@ fn run(
             Value::from(pack_u32_slice(tok_starts)),
             Value::from(pack_u32_slice(tok_lens)),
             Value::from(expanded(source)),
-            Value::from(vec![0u8; n * GO_SPAN_RECORD_WORDS as usize * 4]), // out_ops
-            Value::from(vec![0u8; n * 4]), // out_counts (sized to dispatch extent)
+            Value::from(vec![0u8; n * GO_SPAN_RECORD_WORDS as usize * 4]),
+            Value::from(vec![0u8; n * 4]),
         ],
     )
     .expect("go_extract_channel_creations must execute under reference_eval");

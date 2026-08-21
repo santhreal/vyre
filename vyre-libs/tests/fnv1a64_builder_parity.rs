@@ -87,10 +87,7 @@ fn rows() -> [Row; 4] {
 fn hash_of(row: &Row, message: &[u8]) -> u64 {
     let n = u32::try_from(message.len()).expect("message length fits u32");
     let program = (row.build)("input", "out", n);
-    let inputs = [
-        Value::from(row.source.encode(message)),
-        Value::from(vec![0u8; 8]),
-    ];
+    let inputs = [Value::from(row.source.encode(message))];
     let outputs = vyre_reference::reference_eval(&program, &inputs)
         .unwrap_or_else(|error| panic!("{} must evaluate: {error}", row.name));
     let bytes = outputs[0].to_bytes();
@@ -147,7 +144,7 @@ fn u32_lane_builders_ignore_the_high_lane_bits() {
         .filter(|row| row.source == Source::U32Lanes)
     {
         let program = (row.build)("input", "out", 3);
-        let inputs = [Value::from(lanes.clone()), Value::from(vec![0u8; 8])];
+        let inputs = [Value::from(lanes.clone())];
         let outputs = vyre_reference::reference_eval(&program, &inputs)
             .unwrap_or_else(|error| panic!("{} must evaluate: {error}", row.name));
         let bytes = outputs[0].to_bytes();

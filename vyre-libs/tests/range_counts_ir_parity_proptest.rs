@@ -21,14 +21,8 @@ const BINS: usize = 256;
 fn run_ir(histogram: &[u32], start: u32, end: u32) -> u32 {
     let program = range_counts_u32("histogram", "out", start, end);
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            pack(histogram), // histogram (binding 0, RO, 256 bins)
-            pack(&[0u32]),   // out (binding 1, output)
-        ],
-    )
-    .expect("range_counts_u32 reference evaluation must succeed");
+    let outputs = vyre_reference::reference_eval(&program, &[pack(histogram)])
+        .expect("range_counts_u32 reference evaluation must succeed");
     let b = outputs[0].to_bytes();
     u32::from_le_bytes([b[0], b[1], b[2], b[3]])
 }

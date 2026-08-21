@@ -44,7 +44,6 @@ fn vyre_ir_scan(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<u32> {
         )),
         Value::from(u32_bytes(&dfa.transitions)),
         Value::from(u32_bytes(&dfa.accept)),
-        Value::from(vec![0u8; haystack.len() * 4]),
     ];
     let outputs =
         vyre_reference::reference_eval(&program, &inputs).expect("aho_corasick must execute");

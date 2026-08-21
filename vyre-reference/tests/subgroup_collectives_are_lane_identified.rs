@@ -168,7 +168,7 @@ fn ballot_reports_its_own_subgroups_predicate_in_every_step_order() {
 
     assert_every_step_order_matches(
         &ballot_program(),
-        &[pack(&cond), pack(&vec![0u32; LANES as usize])],
+        &[pack(&cond)],
         &expected,
         "subgroup ballot",
     );
@@ -195,11 +195,7 @@ fn shuffle_sources_the_requested_lane_in_every_step_order() {
 
     assert_every_step_order_matches(
         &shuffle_program(),
-        &[
-            pack(&values),
-            pack(&lanes),
-            pack(&vec![0u32; LANES as usize]),
-        ],
+        &[pack(&values), pack(&lanes)],
         &expected,
         "subgroup shuffle",
     );

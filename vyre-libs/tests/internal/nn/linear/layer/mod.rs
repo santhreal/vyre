@@ -4,7 +4,6 @@ use super::relu::linear_relu;
 use super::rms_norm::{rms_norm_linear, try_rms_norm_linear};
 use super::tiled::{linear_tiled, linear_tiled_reference};
 use crate::fixture_bytes::{decode_f32 as bytes_to_f32, f32_bytes as to_f32_bytes};
-use vyre_foundation::ir::Program;
 
 const TOLERANCE_ULP: u32 = 2;
 
@@ -41,19 +40,6 @@ fn compare_ulp(a: &[f32], b: &[f32], n: u32, in_dim: u32, out_dim: u32) {
             "ULP mismatch at lane {lane} n={n} in_dim={in_dim} out_dim={out_dim}: lhs={lhs:?} rhs={rhs:?} diff={diff}"
         );
     }
-}
-
-fn output_zero_bytes(program: &Program) -> Vec<u8> {
-    let output = program
-        .buffers()
-        .iter()
-        .find(|buffer| buffer.is_output())
-        .expect("Fix: linear test program must declare an output buffer.");
-    let bytes = output.output_byte_range().map_or(
-        (output.count() as usize) * core::mem::size_of::<u32>(),
-        |range| range.end.saturating_sub(range.start),
-    );
-    vec![0u8; bytes]
 }
 
 fn case_data(_n: u32, in_dim: u32, out_dim: u32, eps: f32) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
@@ -93,7 +79,6 @@ fn parity_case(n: u32, in_dim: u32, out_dim: u32) {
         Value::from(to_f32_bytes(&input)),
         Value::from(to_f32_bytes(&weights)),
         Value::from(to_f32_bytes(&bias)),
-        Value::from(vec![0u8; out_dim as usize * core::mem::size_of::<f32>()]),
     ];
     let fused_outputs = vyre_reference::reference_eval(&fused, &fused_inputs).expect(
         "Fix: fused rms_norm_linear must execute; restore this invariant before continuing.",

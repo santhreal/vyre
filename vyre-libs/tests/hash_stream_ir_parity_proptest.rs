@@ -33,20 +33,16 @@ fn decode_words(v: &Value) -> Vec<u32> {
 fn run_adler(bytes: &[u8]) -> u32 {
     let program = adler32_program("input", "out", bytes.len() as u32);
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
-    let outputs =
-        vyre_reference::reference_eval(&program, &[pack(&bytes_to_words(bytes)), pack(&[0u32])])
-            .expect("adler32 reference evaluation must succeed");
+    let outputs = vyre_reference::reference_eval(&program, &[pack(&bytes_to_words(bytes))])
+        .expect("adler32 reference evaluation must succeed");
     decode_words(&outputs[0])[0]
 }
 
 fn run_multi(bytes: &[u8]) -> (u32, u32, u32) {
     let program = multi_hash_program("input", "out", bytes.len() as u32);
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[pack(&bytes_to_words(bytes)), pack(&[0u32, 0, 0])],
-    )
-    .expect("multi_hash reference evaluation must succeed");
+    let outputs = vyre_reference::reference_eval(&program, &[pack(&bytes_to_words(bytes))])
+        .expect("multi_hash reference evaluation must succeed");
     let w = decode_words(&outputs[0]);
     (w[0], w[1], w[2])
 }

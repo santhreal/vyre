@@ -78,7 +78,6 @@ fn reference_eval_tile_matmul_2x2() {
         &[
             Value::from(encode_f32(&a_data)),
             Value::from(encode_f32(&b_data)),
-            Value::from(vec![0u8; 16]),
         ],
     )
     .expect("reference_eval failed");
@@ -116,11 +115,8 @@ fn reference_eval_tile_reduce_and_elementwise() {
         ],
     );
 
-    let outputs = reference_eval(
-        &prog,
-        &[Value::from(encode_f32(&a_data)), Value::from(vec![0u8; 8])],
-    )
-    .expect("reference_eval failed");
+    let outputs =
+        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
 
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![5.0, 8.0]);
@@ -156,11 +152,8 @@ fn reference_eval_tile_elementwise_scaling() {
         ],
     );
 
-    let outputs = reference_eval(
-        &prog,
-        &[Value::from(encode_f32(&a_data)), Value::from(vec![0u8; 16])],
-    )
-    .expect("reference_eval failed");
+    let outputs =
+        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
 
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![6.0, 12.0, 18.0, 24.0]);
@@ -201,11 +194,8 @@ fn reference_eval_tile_column_major_layout() {
         ],
     );
 
-    let outputs = reference_eval(
-        &prog,
-        &[Value::from(encode_f32(&a_data)), Value::from(vec![0u8; 16])],
-    )
-    .expect("reference_eval failed");
+    let outputs =
+        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
 
     let out_f32 = decode_f32(&outputs[0].to_bytes());
     assert_eq!(out_f32, vec![1.0, 3.0, 2.0, 4.0]);

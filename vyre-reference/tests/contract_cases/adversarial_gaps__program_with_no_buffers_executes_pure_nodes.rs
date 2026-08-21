@@ -34,7 +34,7 @@ fn load_from_undefined_buffer_errors() {
             Expr::load("missing", Expr::u32(0)),
         )],
     );
-    let err = reference_eval(&program, &[Value::from(vec![0u8; 4])])
+    let err = reference_eval(&program, &[])
         .expect_err("Fix: load from undefined buffer must be rejected");
     let message = err.to_string();
     assert!(
@@ -79,7 +79,6 @@ fn u32_div_by_zero_in_program_returns_max() {
         &[
             Value::from(7u32.to_le_bytes().to_vec()),
             Value::from(0u32.to_le_bytes().to_vec()),
-            Value::from(vec![0u8; 4]),
         ],
     )
     .expect("Fix: u32 div by zero must be total in program context");
@@ -99,7 +98,6 @@ fn i32_div_by_zero_in_program_errors() {
         &[
             Value::from(7i32.to_le_bytes().to_vec()),
             Value::from(0i32.to_le_bytes().to_vec()),
-            Value::from(vec![0u8; 4]),
         ],
     )
     .expect_err("Fix: i32 div by zero must error in program context");
@@ -122,7 +120,6 @@ fn u32_mod_by_zero_in_program_returns_zero() {
         &[
             Value::from(7u32.to_le_bytes().to_vec()),
             Value::from(0u32.to_le_bytes().to_vec()),
-            Value::from(vec![0u8; 4]),
         ],
     )
     .expect("Fix: u32 mod by zero must be total in program context");
@@ -157,8 +154,7 @@ fn u32_shl_by_32_wraps_to_identity() {
             Expr::shl(Expr::u32(1), Expr::u32(32)),
         )],
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![0u8; 4])])
-        .expect("Fix: u32 shift by 32 must wrap modulo 32");
+    let outputs = reference_eval(&program, &[]).expect("Fix: u32 shift by 32 must wrap modulo 32");
     assert_eq!(outputs[0].to_bytes(), 1u32.to_le_bytes().to_vec());
 }
 
@@ -202,14 +198,8 @@ fn store_after_conditional_return_is_skipped_when_branch_taken() {
         ],
     );
     // cond = 1 (truthy) -> Return executes -> Store is skipped.
-    let outputs = reference_eval(
-        &program,
-        &[
-            Value::from(1u32.to_le_bytes().to_vec()),
-            Value::from(vec![0u8; 4]),
-        ],
-    )
-    .expect("Fix: conditional return must truncate execution cleanly");
+    let outputs = reference_eval(&program, &[Value::from(1u32.to_le_bytes().to_vec())])
+        .expect("Fix: conditional return must truncate execution cleanly");
     assert_eq!(outputs[0].to_bytes(), vec![0; 4]);
 }
 
@@ -228,7 +218,7 @@ fn loop_with_zero_iterations_skips_body() {
             ),
         ],
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![0u8; 4])])
+    let outputs = reference_eval(&program, &[])
         .expect("Fix: loop with zero iterations must not execute body");
     assert_eq!(outputs[0].to_bytes(), vec![0; 4]);
 }
@@ -248,7 +238,7 @@ fn loop_with_from_greater_than_to_skips_body() {
             ),
         ],
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![0u8; 4])])
+    let outputs = reference_eval(&program, &[])
         .expect("Fix: loop with from >= to must execute zero iterations");
     assert_eq!(outputs[0].to_bytes(), vec![0; 4]);
 }
@@ -258,11 +248,9 @@ fn negative_i32_index_is_rejected_not_wrapped() {
     // WGSL allows negative i32 indices by casting to u32 (wrapping).
     // The reference interpreter rejects them. This test documents the gap.
     let program = unary_scalar_prog(DataType::U32, Expr::load("in", Expr::i32(-1)));
-    let err = reference_eval(
-        &program,
-        &[Value::from(vec![0xAB; 4]), Value::from(vec![0u8; 4])],
-    )
-    .expect_err("Fix: negative i32 index must be rejected (or wrapped if WGSL parity is desired)");
+    let err = reference_eval(&program, &[Value::from(vec![0xAB; 4])]).expect_err(
+        "Fix: negative i32 index must be rejected (or wrapped if WGSL parity is desired)",
+    );
     let message = err.to_string();
     assert!(
         message.contains("cannot be represented as u32"),

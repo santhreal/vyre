@@ -133,6 +133,7 @@ impl vyre_driver::SubgroupCaps
 impl vyre_driver::SubgroupOp
 impl vyre_driver::TailMaskPolicy
 impl vyre_driver::Target
+impl vyre_driver::TimedDispatchResult
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
@@ -581,6 +582,9 @@ pub fn vyre_driver::Target::aot_target_id(self) -> &'static str
 pub fn vyre_driver::Target::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
 pub fn vyre_driver::Target::extension(self) -> &'static str
 pub fn vyre_driver::Target::serialize<S>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error> where S: serde_core::ser::Serializer
+pub fn vyre_driver::TimedDispatchResult::device_timed(outputs: vyre_driver::OutputBuffers, wall_ns: u64, device_ns: core::option::Option<u64>) -> Self
+pub fn vyre_driver::TimedDispatchResult::host_timed(outputs: vyre_driver::OutputBuffers, wall_ns: u64) -> Self
+pub fn vyre_driver::TimedDispatchResult::split_timed(outputs: vyre_driver::OutputBuffers, wall_ns: u64, device_ns: core::option::Option<u64>, enqueue_ns: u64, wait_ns: u64) -> Self
 pub fn vyre_driver::TypedDispatchExt::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_f32(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<f32>>, vyre_driver::BackendError>
 pub fn vyre_driver::TypedDispatchExt::dispatch_f32_into(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[f32]], config: &vyre_driver::DispatchConfig, raw_outputs: &mut vyre_driver::OutputBuffers, typed_outputs: &mut alloc::vec::Vec<alloc::vec::Vec<f32>>) -> core::result::Result<(), vyre_driver::BackendError>
@@ -1185,6 +1189,7 @@ pub fn vyre_driver::validate_program(program: &vyre_foundation::ir_inner::model:
 pub fn vyre_driver::validation::LaunchGeometryLimits::blocks_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
 pub fn vyre_driver::validation::LaunchGeometryLimits::resident_threads_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
 pub fn vyre_driver::validation::ProgramValidationCaps::from_backend(backend: &dyn vyre_driver::VyreBackend) -> Self
+pub fn vyre_driver::validation::ProgramValidationCaps::support(&self) -> vyre_foundation::program_caps::BackendSupport
 pub fn vyre_driver::validation::ValidationCache::clear(&self) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validation::ValidationCache::contains_hash(&self, hash: &blake3::Hash) -> bool
 pub fn vyre_driver::validation::ValidationCache::default() -> Self
@@ -2567,11 +2572,13 @@ pub vyre_driver::validation::LaunchGeometryLimits::max_block_dim: [u32; 3]
 pub vyre_driver::validation::LaunchGeometryLimits::max_grid_dim: [u32; 3]
 pub vyre_driver::validation::LaunchGeometryLimits::max_threads_per_block: u32
 pub vyre_driver::validation::LaunchGeometryLimits::max_threads_per_sm: u32
+pub vyre_driver::validation::ProgramValidationCaps::allows_host_grid_sync_split: bool
 pub vyre_driver::validation::ProgramValidationCaps::backend_id: &'static str
 pub vyre_driver::validation::ProgramValidationCaps::max_workgroup_size: [u32; 3]
 pub vyre_driver::validation::ProgramValidationCaps::supports_bf16: bool
 pub vyre_driver::validation::ProgramValidationCaps::supports_distributed_collectives: bool
 pub vyre_driver::validation::ProgramValidationCaps::supports_f16: bool
+pub vyre_driver::validation::ProgramValidationCaps::supports_grid_sync: bool
 pub vyre_driver::validation::ProgramValidationCaps::supports_indirect_dispatch: bool
 pub vyre_driver::validation::ProgramValidationCaps::supports_subgroup_ops: bool
 pub vyre_driver::validation::ProgramValidationCaps::supports_trap_propagation: bool

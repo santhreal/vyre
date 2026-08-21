@@ -33,11 +33,7 @@ fn gpu_threshold(z: &[u32], threshold: u32) -> Vec<u32> {
     let program = iht_threshold("z", "threshold", "out", z.len() as u32);
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(pack(z)),
-            Value::from(pack(&[threshold])),
-            Value::from(pack(&vec![0u32; z.len()])),
-        ],
+        &[Value::from(pack(z)), Value::from(pack(&[threshold]))],
     )
     .expect("iht_threshold reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())

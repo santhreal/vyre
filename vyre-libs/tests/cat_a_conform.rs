@@ -23,6 +23,8 @@ use wire_words::{decode_u32_words, u32_bytes};
 
 /// Run `program` on `inputs` and return the read-write buffer outputs.
 fn run_program(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
+    let inputs =
+        vyre_reference::reference_inputs(program, inputs.iter().map(Value::to_bytes).collect());
     let outputs =
         vyre_reference::reference_eval(program, &inputs).expect("Cat-A program must execute");
     outputs.into_iter().map(|v| v.to_bytes()).collect()
@@ -111,11 +113,7 @@ fn cat_a_dot_matches_cpu_reference() {
         let program = dot("lhs", "rhs", "out", lhs.len() as u32).unwrap();
         let outputs = run_program(
             &program,
-            vec![
-                Value::from(u32_bytes(lhs)),
-                Value::from(u32_bytes(rhs)),
-                Value::from(vec![0u8; 4]),
-            ],
+            vec![Value::from(u32_bytes(lhs)), Value::from(u32_bytes(rhs))],
         );
         let got = decode_u32_words(&outputs[0])[0];
         assert_eq!(
@@ -157,7 +155,6 @@ fn cat_a_aho_corasick_matches_cpu_reference() {
         )),
         Value::from(u32_bytes(&compiled.transitions)),
         Value::from(u32_bytes(&compiled.accept)),
-        Value::from(vec![0u8; haystack.len() * 4]),
     ];
     let outputs = run_program(&program, inputs);
     assert_eq!(
@@ -184,13 +181,7 @@ fn cat_a_scan_prefix_sum_matches_cpu_reference() {
 
     for (input, expected) in witnesses {
         let program = scan_prefix_sum("input", "output", input.len() as u32);
-        let outputs = run_program(
-            &program,
-            vec![
-                Value::from(u32_bytes(input)),
-                Value::from(vec![0u8; input.len() * 4]),
-            ],
-        );
+        let outputs = run_program(&program, vec![Value::from(u32_bytes(input))]);
         let got = decode_u32_words(&outputs[0]);
         assert_eq!(
             got, *expected,

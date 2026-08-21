@@ -112,8 +112,7 @@ pub fn cell_grid_fill(cells: &str, output: &str, shape: GridShape) -> Program {
         vec![
             BufferDecl::storage(cells, 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(shape.cell_count()),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(pixels),
+            BufferDecl::output(output, 1, DataType::U32).with_count(pixels),
         ],
         pixels,
         body,
@@ -142,10 +141,9 @@ inventory::submit! {
             // blue, white on the bottom. Packing is little-endian RGBA, so
             // bits [7:0] are red and [31:24] are alpha.
             let cells = [0xFF00_00FFu32, 0xFF00_FF00, 0xFFFF_0000, 0xFFFF_FFFF];
-            vec![vec![
-                crate::visual::u32_word_bytes::u32_words_to_le_bytes(&cells),
-                vec![0u8; 16 * 4],
-            ]]
+            vec![vec![crate::visual::u32_word_bytes::u32_words_to_le_bytes(
+                &cells,
+            )]]
         }),
         Some(|| {
             vec![vec![EXPECTED_CELL_GRID_BYTES.to_vec()]]

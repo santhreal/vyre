@@ -79,7 +79,6 @@ fn execute_case(
         Value::from(f32_bytes(scales)),
         Value::from(u32_bytes(zero_points)),
         Value::from(f32_bytes(bias)),
-        Value::from(vec![0u8; padded_output_len * 4]),
     ];
     let outputs = vyre_reference::reference_eval(&program, &inputs)
         .expect("grouped INT4 program must execute under the reference oracle");

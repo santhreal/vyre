@@ -137,8 +137,7 @@ pub fn glyph_grid_blend(
             BufferDecl::storage(bg, 2, BufferAccess::ReadOnly, DataType::U32).with_count(cells),
             BufferDecl::storage(atlas, 3, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(atlas_texels),
-            BufferDecl::storage(output, 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(pixels),
+            BufferDecl::output(output, 4, DataType::U32).with_count(pixels),
         ],
         pixels,
         body,
@@ -176,7 +175,6 @@ inventory::submit! {
                 crate::visual::u32_word_bytes::u32_words_to_le_bytes(&fg),
                 crate::visual::u32_word_bytes::u32_words_to_le_bytes(&bg),
                 crate::visual::u32_word_bytes::u32_words_to_le_bytes(&atlas),
-                vec![0u8; 4 * 4],
             ]]
         }),
         Some(|| {

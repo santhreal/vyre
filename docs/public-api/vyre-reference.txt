@@ -758,6 +758,7 @@ pub fn vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_fo
 pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_facets() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::ReferenceFacet>
 pub fn vyre_reference::reference_fn(operation_id: &str) -> core::option::Option<vyre_spec::intrinsic_descriptor::CpuFn>
+pub fn vyre_reference::reference_inputs(program: &vyre_foundation::ir_inner::model::program::definition::Program, buffers: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> alloc::vec::Vec<vyre_reference::value::Value>
 pub fn vyre_reference::resolve_dual(operation_id: &str) -> core::option::Option<(vyre_reference::dual::ReferenceFn, vyre_reference::dual::ReferenceFn)>
 pub fn vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>

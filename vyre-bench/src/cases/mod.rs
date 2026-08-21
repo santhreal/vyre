@@ -66,6 +66,7 @@ pub mod conditional_batch;
 pub mod conditional_eval;
 pub mod cpu_baselines;
 pub mod crypto;
+pub mod cub_scan;
 pub mod cuda_ptx_patterns;
 pub mod dataflow_irregular;
 pub(crate) mod dfa_match;

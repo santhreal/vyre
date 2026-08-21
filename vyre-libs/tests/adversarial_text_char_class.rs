@@ -26,7 +26,6 @@ fn char_class_masks_high_bit_source_and_records_no_interpreter_oob() {
         &[
             Value::from(pack_u32s(&[0x0141])), // > 255
             Value::from(pack_u32s(&table)),
-            Value::from(vec![0u8; 4]),
         ],
     )
     .expect("Fix: char_class must reference-evaluate a high-bit source element");
@@ -54,14 +53,9 @@ fn run_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
         input_bytes.extend_from_slice(&0u32.to_le_bytes());
     }
     let table_bytes = pack_u32s(table);
-    let zero_classified = vec![0u8; cap * 4];
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(input_bytes),
-            Value::from(table_bytes),
-            Value::from(zero_classified),
-        ],
+        &[Value::from(input_bytes), Value::from(table_bytes)],
     )
     .expect("Fix: char_class reference evaluation must succeed");
     let out_bytes = outputs[0].to_bytes();

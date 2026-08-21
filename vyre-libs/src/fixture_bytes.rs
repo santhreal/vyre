@@ -92,10 +92,7 @@ pub(crate) fn try_eval_bytes(
     program: &vyre_foundation::ir::Program,
     buffers: Vec<Vec<u8>>,
 ) -> Result<Vec<Vec<u8>>, vyre_reference::ReferenceError> {
-    let values: Vec<vyre_reference::value::Value> = buffers
-        .into_iter()
-        .map(vyre_reference::value::Value::from)
-        .collect();
+    let values = vyre_reference::reference_inputs(program, buffers);
     Ok(vyre_reference::reference_eval(program, &values)?
         .iter()
         .map(|value| value.to_bytes())
@@ -115,10 +112,7 @@ pub(crate) fn eval_bytes_oob_report(
     program: &vyre_foundation::ir::Program,
     buffers: Vec<Vec<u8>>,
 ) -> (Vec<Vec<u8>>, vyre_reference::OobReport) {
-    let values: Vec<vyre_reference::value::Value> = buffers
-        .into_iter()
-        .map(vyre_reference::value::Value::from)
-        .collect();
+    let values = vyre_reference::reference_inputs(program, buffers);
     let (outputs, report) = vyre_reference::reference_eval_oob_report(program, &values)
         .unwrap_or_else(|error| {
             panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
@@ -143,10 +137,7 @@ pub(crate) fn eval_bytes_lane_order(
     buffers: Vec<Vec<u8>>,
     reversed: bool,
 ) -> Vec<Vec<u8>> {
-    let values: Vec<vyre_reference::value::Value> = buffers
-        .into_iter()
-        .map(vyre_reference::value::Value::from)
-        .collect();
+    let values = vyre_reference::reference_inputs(program, buffers);
     let results = if reversed {
         vyre_reference::reference_eval_lane_reversed(program, &values)
     } else {

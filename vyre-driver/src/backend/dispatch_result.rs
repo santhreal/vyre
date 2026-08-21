@@ -233,6 +233,41 @@ pub struct TimedDispatchResult {
     pub wait_ns: Option<u64>,
 }
 
+impl TimedDispatchResult {
+    /// A dispatch the host timed with no device timer behind it.
+    pub fn host_timed(outputs: OutputBuffers, wall_ns: u64) -> Self {
+        Self::device_timed(outputs, wall_ns, None)
+    }
+
+    /// A dispatch whose backend exposes an elapsed device time.
+    pub fn device_timed(outputs: OutputBuffers, wall_ns: u64, device_ns: Option<u64>) -> Self {
+        Self {
+            outputs,
+            wall_ns,
+            device_ns,
+            enqueue_ns: None,
+            wait_ns: None,
+        }
+    }
+
+    /// A dispatch whose backend separates enqueue time from completion wait.
+    pub fn split_timed(
+        outputs: OutputBuffers,
+        wall_ns: u64,
+        device_ns: Option<u64>,
+        enqueue_ns: u64,
+        wait_ns: u64,
+    ) -> Self {
+        Self {
+            outputs,
+            wall_ns,
+            device_ns,
+            enqueue_ns: Some(enqueue_ns),
+            wait_ns: Some(wait_ns),
+        }
+    }
+}
+
 // Inline: `vyre_driver::backend` is `pub(crate)`, so no integration test can reach what this suite
 // exercises.
 #[cfg(test)]

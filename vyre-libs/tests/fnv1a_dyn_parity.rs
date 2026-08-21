@@ -16,11 +16,8 @@ use vyre_reference::composition_witness::fnv1a32_witness as fnv1a32;
 use vyre_reference::value::Value;
 
 fn hash_out(program: &vyre_foundation::ir::Program, input: Vec<u8>) -> u32 {
-    let outputs = vyre_reference::reference_eval(
-        program,
-        &[Value::from(input), Value::from(0u32.to_le_bytes().to_vec())],
-    )
-    .expect("fnv1a dyn reference evaluation must succeed");
+    let outputs = vyre_reference::reference_eval(program, &[Value::from(input)])
+        .expect("fnv1a dyn reference evaluation must succeed");
     // `out` is the sole writable (output) buffer, one u32.
     let bytes = outputs[0].to_bytes();
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])

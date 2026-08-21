@@ -42,9 +42,8 @@ fn run_ir(input_words: &[u32]) -> (Vec<u32>, u32) {
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
-            pack(input_words),                     // input (0, RO)
-            pack(&vec![0u32; input_len as usize]), // output (1, output)
-            pack(&[0u32]),                         // inflated_len (2, RW)
+            pack(input_words), // input (0, RO)
+            pack(&vec![0u32; input_len as usize]),
         ],
     )
     .expect("inflate_stored reference evaluation must succeed");

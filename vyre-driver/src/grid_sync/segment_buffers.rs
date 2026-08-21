@@ -175,7 +175,8 @@ fn rewrite_segment_buffers_for_host_split(
         // result-store does not land in the final segment).
         // `is_output()` alone missed a plain `WriteOnly` result buffer, which is
         // precisely the fresh-WriteOnly case this guard exists to prevent.
-        let is_source_output = buffer.is_backend_allocated_output() || buffer.is_pipeline_live_out();
+        let is_source_output =
+            buffer.is_backend_allocated_output() || buffer.is_pipeline_live_out();
         let earlier_segment_wrote_output = is_source_output
             && first_writer
                 .get(&name)

@@ -202,7 +202,7 @@ fn a_corrupted_device_result_fails_parity_instead_of_being_replaced() {
         )],
     );
 
-    let reference = vyre_conform::lens::execution::run_cpu(&program, &[vec![0u8; 16]])
+    let reference = vyre_conform::lens::execution::run_cpu(&program, &[])
         .expect("Fix: the reference interpreter must execute this program.");
     assert_eq!(
         reference,

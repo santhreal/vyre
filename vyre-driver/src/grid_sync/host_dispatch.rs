@@ -69,13 +69,10 @@ pub fn dispatch_with_grid_sync_split_timed(
 ) -> Result<TimedDispatchResult, BackendError> {
     let started = std::time::Instant::now();
     let outputs = dispatch_with_grid_sync_split(backend, program, inputs, config)?;
-    Ok(TimedDispatchResult {
+    Ok(TimedDispatchResult::host_timed(
         outputs,
-        wall_ns: elapsed_wall_ns(started)?,
-        device_ns: None,
-        enqueue_ns: None,
-        wait_ns: None,
-    })
+        elapsed_wall_ns(started)?,
+    ))
 }
 
 fn seed_backend_allocated_segment_inputs<'a>(

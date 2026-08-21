@@ -17,6 +17,30 @@ use crate::numeric::CUDA_NUMERIC;
 use crate::pipeline::{CudaCompiledPipeline, CudaPipelineExecutionStrategy};
 use vyre_driver::input_identity::exact_input_key;
 
+impl CudaCompiledPipeline {
+    /// Whether this launch must take the host-orchestrated grid-sync split.
+    ///
+    /// A compiled pipeline is built around one native launch shape: a CUDA
+    /// graph to replay, or a direct cooperative launch. Neither can express a
+    /// grid whose blocks do not all fit on the device at once, so a program
+    /// with a grid barrier and an over-residency grid has no pipeline route at
+    /// all and must go back to the backend's split. The pipeline used to ask
+    /// nothing and launch anyway, which is where a large multi-block scan met
+    /// `CooperativeResidencyExceeded` through the artifact runtime while the
+    /// same program dispatched correctly straight off the backend.
+    fn needs_grid_sync_host_split(
+        &self,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if !vyre_driver::grid_sync::contains_grid_sync(&self.program) {
+            return Ok(false);
+        }
+        self.backend
+            .grid_sync_program_needs_host_split(&self.program, inputs, config)
+    }
+}
+
 impl CompiledPipeline for CudaCompiledPipeline {
     fn id(&self) -> &str {
         &self.id
@@ -27,6 +51,11 @@ impl CompiledPipeline for CudaCompiledPipeline {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
+        if self.needs_grid_sync_host_split(inputs, config)? {
+            return self
+                .backend
+                .dispatch_borrowed(&self.program, inputs, config);
+        }
         if !dispatch_configs_share_launch_shape(&self.compiled_config, config) {
             return self
                 .backend
@@ -51,6 +80,11 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
+        if self.needs_grid_sync_host_split(inputs, config)? {
+            return self
+                .backend
+                .dispatch_borrowed_timed(&self.program, inputs, config);
+        }
         if !dispatch_configs_share_launch_shape(&self.compiled_config, config)
             || self.execution_strategy() == CudaPipelineExecutionStrategy::DirectDispatch
         {
@@ -98,13 +132,9 @@ impl CompiledPipeline for CudaCompiledPipeline {
         self.backend
             .telemetry
             .record_timed_dispatch(wall_ns, device_ns, None, None);
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        Ok(vyre_driver::TimedDispatchResult::device_timed(
+            outputs, wall_ns, device_ns,
+        ))
     }
 
     fn dispatch_borrowed_into(
@@ -115,6 +145,13 @@ impl CompiledPipeline for CudaCompiledPipeline {
     ) -> Result<(), BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
+        if self.needs_grid_sync_host_split(inputs, config)? {
+            let split = self
+                .backend
+                .dispatch_borrowed(&self.program, inputs, config)?;
+            vyre_driver::replace_output_buffers_preserving_slots(split, outputs);
+            return Ok(());
+        }
         if !dispatch_configs_share_launch_shape(&self.compiled_config, config)
             || self.execution_strategy() == CudaPipelineExecutionStrategy::DirectDispatch
         {
@@ -173,6 +210,16 @@ impl CompiledPipeline for CudaCompiledPipeline {
         );
         if batches.is_empty() {
             outputs.clear();
+            return Ok(());
+        }
+        if self.needs_grid_sync_host_split(batches[0], config)? {
+            resize_vec_slots(outputs, batches.len(), "split batched output")?;
+            for (inputs, item_outputs) in batches.iter().zip(outputs.iter_mut()) {
+                let split = self
+                    .backend
+                    .dispatch_borrowed(&self.program, inputs, config)?;
+                vyre_driver::replace_output_buffers_preserving_slots(split, item_outputs);
+            }
             return Ok(());
         }
         if self.execution_strategy() == CudaPipelineExecutionStrategy::GraphReplay
@@ -240,13 +287,9 @@ impl CompiledPipeline for CudaCompiledPipeline {
             self.backend
                 .telemetry
                 .record_timed_dispatch(wall_ns, None, None, None);
-            return Ok(vyre_driver::TimedDispatchResult {
-                outputs,
-                wall_ns,
-                device_ns: None,
-                enqueue_ns: None,
-                wait_ns: None,
-            });
+            return Ok(vyre_driver::TimedDispatchResult::host_timed(
+                outputs, wall_ns,
+            ));
         }
         if !dispatch_configs_share_launch_shape(&self.compiled_config, config) {
             let started = std::time::Instant::now();
@@ -280,13 +323,9 @@ impl CompiledPipeline for CudaCompiledPipeline {
                 Some(enqueue_ns),
                 Some(wait_ns),
             );
-            return Ok(vyre_driver::TimedDispatchResult {
-                outputs,
-                wall_ns,
-                device_ns,
-                enqueue_ns: Some(enqueue_ns),
-                wait_ns: Some(wait_ns),
-            });
+            return Ok(vyre_driver::TimedDispatchResult::split_timed(
+                outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
+            ));
         }
 
         let started = std::time::Instant::now();
@@ -317,13 +356,9 @@ impl CompiledPipeline for CudaCompiledPipeline {
             Some(enqueue_ns),
             Some(wait_ns),
         );
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: Some(enqueue_ns),
-            wait_ns: Some(wait_ns),
-        })
+        Ok(vyre_driver::TimedDispatchResult::split_timed(
+            outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
+        ))
     }
 
     fn dispatch_persistent_handles_into(

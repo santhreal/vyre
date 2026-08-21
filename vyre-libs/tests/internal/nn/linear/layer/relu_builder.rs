@@ -28,7 +28,6 @@ fn linear_relu_parity_with_sequential_linear_plus_relu() {
                 Value::from(x_bytes.clone()),
                 Value::from(w_bytes.clone()),
                 Value::from(b_bytes.clone()),
-                Value::from(vec![0u8; (out_dim as usize) * 4]),
             ],
         )
         .unwrap();
@@ -79,7 +78,6 @@ fn linear_relu_clamps_negative_accumulators_without_clamping_positive_lanes() {
             Value::from(vyre_primitives::wire::pack_f32_slice(&[2.0])),
             Value::from(vyre_primitives::wire::pack_f32_slice(&[-3.0, 0.0, 4.0])),
             Value::from(vyre_primitives::wire::pack_f32_slice(&[1.0, -5.0, -1.0])),
-            Value::from(vec![0u8; 12]),
         ],
     )
     .expect("Fix: linear_relu must execute on mixed-sign accumulator lanes.");

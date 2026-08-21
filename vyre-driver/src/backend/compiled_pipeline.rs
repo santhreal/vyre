@@ -67,16 +67,10 @@ pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.dispatch_borrowed(inputs, config)?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(
-                started,
-                "compiled pipeline dispatch",
-            )?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            crate::backend::checked_elapsed_wall_ns(started, "compiled pipeline dispatch")?,
+        ))
     }
 
     /// Dispatch the precompiled pipeline with borrowed inputs and write
@@ -192,16 +186,13 @@ pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.dispatch_persistent_handles(inputs, config)?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(
+            crate::backend::checked_elapsed_wall_ns(
                 started,
                 "compiled persistent handle dispatch",
             )?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        ))
     }
 
     /// Dispatch the precompiled pipeline with mixed host/resident handles and

@@ -96,8 +96,9 @@ fn a_backend_offering_both_routes_is_admitted() {
 
 #[test]
 fn a_backend_with_neither_route_is_refused_by_name() {
-    let error = validate(caps(false, false))
-        .expect_err("Fix: a barrier with no route to run it must be refused before a target is chosen.");
+    let error = validate(caps(false, false)).expect_err(
+        "Fix: a barrier with no route to run it must be refused before a target is chosen.",
+    );
     let message = error.to_string();
     assert!(
         message.contains("grid_sync"),

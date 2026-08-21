@@ -38,13 +38,8 @@ fn execute_graph(graph: &ProgramGraph, external: &[(&str, Vec<u8>)]) -> Value {
             .program
             .buffers()
             .iter()
+            .filter(|buffer| !buffer.is_output)
             .map(|buffer| {
-                if buffer.is_output {
-                    return Value::from(vec![
-                        0;
-                        buffer.count as usize * element_bytes(&buffer.element)
-                    ]);
-                }
                 let input = node
                     .inputs
                     .iter()

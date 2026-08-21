@@ -76,9 +76,7 @@ fn owns_an_operation_catalog(src: &Path) -> bool {
     let mut files = Vec::new();
     rust_sources(src, &mut files);
     files.iter().any(|path| {
-        let is_file_module = path
-            .file_stem()
-            .is_some_and(|stem| stem == MODULE);
+        let is_file_module = path.file_stem().is_some_and(|stem| stem == MODULE);
         let is_directory_module = path.file_name().is_some_and(|name| name == "mod.rs")
             && path
                 .parent()

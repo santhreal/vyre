@@ -5,7 +5,7 @@ fn semiring_min_plus_mul_zero_is_identity() {
     let a = [42u32, 100, 0, u32::MAX];
     let zero = [0u32; 4];
     let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "zero", "out", 4);
-    let outputs = eval_pair(&program, &a, &zero, 16);
+    let outputs = eval_pair(&program, &a, &zero);
 
     assert_eq!(decode_u32_words(&outputs), vec![42, 100, 0, u32::MAX]);
 }
@@ -15,7 +15,7 @@ fn semiring_min_plus_mul_saturates_at_max() {
     let a = [u32::MAX - 5u32];
     let b = [10u32];
     let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", 1);
-    let outputs = eval_pair(&program, &a, &b, 4);
+    let outputs = eval_pair(&program, &a, &b);
 
     assert_eq!(decode_u32_words(&outputs), vec![u32::MAX]);
 }
@@ -27,8 +27,8 @@ fn semiring_min_plus_mul_commutative() {
     let p1 = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", 2);
     let p2 = vyre_libs::math::algebra::semiring_min_plus_mul("b", "a", "out", 2);
 
-    let o1 = eval_pair(&p1, &a, &b, 8);
-    let o2 = eval_pair(&p2, &b, &a, 8);
+    let o1 = eval_pair(&p1, &a, &b);
+    let o2 = eval_pair(&p2, &b, &a);
 
     assert_eq!(o1.clone(), o2.clone(), "min-plus addition is commutative");
 }
@@ -38,7 +38,7 @@ fn semiring_min_plus_mul_size_one() {
     let a = [5u32];
     let b = [7u32];
     let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", 1);
-    let outputs = eval_pair(&program, &a, &b, 4);
+    let outputs = eval_pair(&program, &a, &b);
 
     assert_eq!(decode_u32_words(&outputs), vec![12]);
 }
@@ -49,7 +49,7 @@ fn semiring_min_plus_mul_large_size() {
     let a = vec![1u32; n as usize];
     let b = vec![2u32; n as usize];
     let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", n);
-    let outputs = eval_pair(&program, &a, &b, (n * 4) as usize);
+    let outputs = eval_pair(&program, &a, &b);
 
     assert_eq!(decode_u32_words(&outputs), vec![3u32; n as usize]);
 }
@@ -81,11 +81,7 @@ fn bool_semiring_matmul_specific_values() {
     let program = vyre_libs::math::algebra::bool_semiring_matmul("a", "b", "out", 2, 3, 2);
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(u32_bytes(&a)),
-            Value::from(u32_bytes(&b)),
-            Value::from(vec![0u8; 16]),
-        ],
+        &[Value::from(u32_bytes(&a)), Value::from(u32_bytes(&b))],
     )
     .expect("bool_semiring_matmul must execute");
 
@@ -111,7 +107,6 @@ fn bool_semiring_matmul_composes_two_hop_reachability() {
         &[
             Value::from(u32_bytes(&adjacency)),
             Value::from(u32_bytes(&adjacency)),
-            Value::from(vec![0u8; 16 * 4]),
         ],
     )
     .expect("reachability boolean semiring multiply must execute");
@@ -157,11 +152,8 @@ fn try_bool_semiring_matmul_rejects_output_shape_overflow() {
 fn sketch_mix_specific_values() {
     let input = [1u32, 2, 3, 4];
     let program = vyre_libs::math::algebra::sketch_mix("input", "out", 4);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 16])],
-    )
-    .unwrap();
+    let outputs =
+        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
 
     let expected = [mix(1), mix(2), mix(3), mix(4)];
     assert_eq!(decode_u32_words(&outputs[0].to_bytes()), expected.to_vec());
@@ -171,11 +163,8 @@ fn sketch_mix_specific_values() {
 fn sketch_mix_zero_input() {
     let input = [0u32];
     let program = vyre_libs::math::algebra::sketch_mix("input", "out", 1);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 4])],
-    )
-    .unwrap();
+    let outputs =
+        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
 
     let got = decode_u32_words(&outputs[0].to_bytes())[0];
     // Zero is a fixed point of the mix? Let's compute:
@@ -189,14 +178,8 @@ fn sketch_mix_large_size() {
     let n = 64u32;
     let input: Vec<u32> = (0..n).collect();
     let program = vyre_libs::math::algebra::sketch_mix("input", "out", n);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(u32_bytes(&input)),
-            Value::from(vec![0u8; (n * 4) as usize]),
-        ],
-    )
-    .unwrap();
+    let outputs =
+        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
 
     let expected: Vec<u32> = (0..n).map(mix).collect();
     assert_eq!(decode_u32_words(&outputs[0].to_bytes()), expected);
@@ -206,11 +189,8 @@ fn sketch_mix_large_size() {
 fn sketch_mix_max_u32() {
     let input = [u32::MAX];
     let program = vyre_libs::math::algebra::sketch_mix("input", "out", 1);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 4])],
-    )
-    .unwrap();
+    let outputs =
+        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
 
     assert_eq!(
         decode_u32_words(&outputs[0].to_bytes()),
@@ -223,14 +203,8 @@ fn sketch_mix_diffusion_neighbours_differ() {
     let n = 16u32;
     let input: Vec<u32> = (0..n).collect();
     let program = vyre_libs::math::algebra::sketch_mix("input", "out", n);
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(u32_bytes(&input)),
-            Value::from(vec![0u8; (n * 4) as usize]),
-        ],
-    )
-    .unwrap();
+    let outputs =
+        vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(&input))]).unwrap();
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     // Every adjacent output should differ (diffusion property  -  not a
@@ -266,31 +240,23 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
 
     // LHS: a | (b & c)
     let p_bc = vyre_libs::math::algebra::lattice_meet("b", "c", "bc", 1);
-    let o_bc = eval_pair(&p_bc, &b, &c, 4);
+    let o_bc = eval_pair(&p_bc, &b, &c);
     let p_lhs = vyre_libs::math::algebra::lattice_join("a", "bc", "out", 1);
     let o_lhs = vyre_reference::reference_eval(
         &p_lhs,
-        &[
-            Value::from(u32_bytes(&a)),
-            Value::from(o_bc.clone()),
-            Value::from(vec![0u8; 4]),
-        ],
+        &[Value::from(u32_bytes(&a)), Value::from(o_bc.clone())],
     )
     .unwrap();
 
     // RHS: (a | b) & (a | c)
     let p_ab = vyre_libs::math::algebra::lattice_join("a", "b", "ab", 1);
-    let o_ab = eval_pair(&p_ab, &a, &b, 4);
+    let o_ab = eval_pair(&p_ab, &a, &b);
     let p_ac = vyre_libs::math::algebra::lattice_join("a", "c", "ac", 1);
-    let o_ac = eval_pair(&p_ac, &a, &c, 4);
+    let o_ac = eval_pair(&p_ac, &a, &c);
     let p_rhs = vyre_libs::math::algebra::lattice_meet("ab", "ac", "out", 1);
     let o_rhs = vyre_reference::reference_eval(
         &p_rhs,
-        &[
-            Value::from(o_ab.clone()),
-            Value::from(o_ac.clone()),
-            Value::from(vec![0u8; 4]),
-        ],
+        &[Value::from(o_ab.clone()), Value::from(o_ac.clone())],
     )
     .unwrap();
 

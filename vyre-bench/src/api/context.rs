@@ -183,13 +183,11 @@ impl BenchContext {
         let outputs = session
             .program_outputs(prog, &completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        Ok(vyre_driver::TimedDispatchResult {
+        Ok(vyre_driver::TimedDispatchResult::device_timed(
             outputs,
-            wall_ns: elapsed_ns(start),
-            device_ns: completion.device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            elapsed_ns(start),
+            completion.device_ns,
+        ))
     }
     /// Dispatch resident resources and include output readback in wall time.
     pub fn dispatch_resident_timed(
@@ -233,17 +231,15 @@ impl BenchContext {
         let outputs = session
             .program_outputs(prog, &completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        Ok(vyre_driver::TimedDispatchResult {
+        Ok(vyre_driver::TimedDispatchResult::device_timed(
             outputs,
-            wall_ns: if include_readback {
+            if include_readback {
                 elapsed_ns(start)
             } else {
                 execution_wall_ns
             },
-            device_ns: completion.device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            completion.device_ns,
+        ))
     }
 
     pub fn dispatch_resident_sequence_read_ranges_into(

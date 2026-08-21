@@ -41,7 +41,6 @@ fn execute(
             Value::from(f32_bytes(input)),
             Value::from(f32_bytes(weight)),
             Value::from(f32_bytes(gate)),
-            Value::from(vec![0; input.len() * 4]),
         ],
     )
     .expect("Fix: gated RMSNorm must execute in the reference evaluator");
@@ -183,7 +182,6 @@ fn low_precision_programs_execute_with_exact_source_dtype_rounding() {
                 Value::from(u16_bytes(&input)),
                 Value::from(u16_bytes(&weight)),
                 Value::from(u16_bytes(&gate)),
-                Value::from(vec![0; 4]),
             ],
         )
         .expect("Fix: low-precision gated RMSNorm must execute");
@@ -216,7 +214,6 @@ fn bf16_activations_with_f32_weights_execute_exactly() {
             Value::from(u16_bytes(&[0x3f80, 0xc000])),
             Value::from(f32_bytes(&[1.0, 0.5])),
             Value::from(u16_bytes(&[0x3f80, 0xbf80])),
-            Value::from(vec![0; 4]),
         ],
     )
     .expect("Fix: mixed-weight gated RMSNorm must execute");

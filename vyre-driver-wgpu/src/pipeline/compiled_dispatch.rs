@@ -107,14 +107,13 @@ impl WgpuPendingPersistentDispatch {
             .map(|profile| profile.dispatch_ns);
         let wait_ns =
             WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent asynchronous wait")?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::split_timed(
             outputs,
-            wall_ns: WGPU_NUMERIC
-                .elapsed_nanos_u64(self.started, "persistent asynchronous dispatch")?,
+            WGPU_NUMERIC.elapsed_nanos_u64(self.started, "persistent asynchronous dispatch")?,
             device_ns,
-            enqueue_ns: Some(self.enqueue_ns),
-            wait_ns: Some(wait_ns),
-        })
+            self.enqueue_ns,
+            wait_ns,
+        ))
     }
 }
 
@@ -364,13 +363,13 @@ impl CompiledPipeline for WgpuPipeline {
             .map(|profile| profile.dispatch_ns);
         let wait_ns = WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent wait")?;
 
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::split_timed(
             outputs,
-            wall_ns: WGPU_NUMERIC.elapsed_nanos_u64(started, "persistent timed dispatch")?,
+            WGPU_NUMERIC.elapsed_nanos_u64(started, "persistent timed dispatch")?,
             device_ns,
-            enqueue_ns: Some(enqueue_ns),
-            wait_ns: Some(wait_ns),
-        })
+            enqueue_ns,
+            wait_ns,
+        ))
     }
 
     fn dispatch_persistent_resource_outputs(
@@ -551,13 +550,13 @@ impl CompiledPipeline for WgpuPipeline {
         enforce_actual_output_budget(config, outputs.as_slice())?;
         let wait_ns = WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "compiled timed wait")?;
 
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::split_timed(
             outputs,
-            wall_ns: WGPU_NUMERIC.elapsed_nanos_u64(started, "compiled timed dispatch")?,
+            WGPU_NUMERIC.elapsed_nanos_u64(started, "compiled timed dispatch")?,
             device_ns,
-            enqueue_ns: Some(enqueue_ns),
-            wait_ns: Some(wait_ns),
-        })
+            enqueue_ns,
+            wait_ns,
+        ))
     }
 
     fn dispatch_borrowed_batched(

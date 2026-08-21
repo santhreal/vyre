@@ -5,15 +5,8 @@
 use vyre_reference::value::Value;
 
 fn assert_size_mismatch_is_result_error(program: vyre::Program) {
-    let error = vyre_reference::reference_eval(
-        &program,
-        &[
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 16]),
-            Value::from(vec![0u8; 12]),
-        ],
-    )
-    .expect_err("Fix: output buffer size mismatch must return a reference_eval error");
+    let error = vyre_reference::reference_eval(&program, &[Value::from(vec![0u8; 16])])
+        .expect_err("Fix: output buffer size mismatch must return a reference_eval error");
     let message = error.to_string();
     assert!(
         message.contains("out") || message.contains("buffer"),

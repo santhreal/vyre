@@ -1069,6 +1069,7 @@ pub fn vyre_foundation::ir::ProgramStats::bf16(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::distributed_collectives(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::f16(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::f64(&self) -> bool
+pub fn vyre_foundation::ir::ProgramStats::grid_sync(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::has_any_node_kind(&self, mask: u32) -> bool
 pub fn vyre_foundation::ir::ProgramStats::has_node_assign(&self) -> bool
 pub fn vyre_foundation::ir::ProgramStats::has_node_barrier(&self) -> bool
@@ -4134,6 +4135,7 @@ pub vyre_foundation::program_caps::RequiredCapabilities::bf16: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::distributed_collectives: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::f16: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::f64: bool
+pub vyre_foundation::program_caps::RequiredCapabilities::grid_sync: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::indirect_dispatch: bool
 pub vyre_foundation::program_caps::RequiredCapabilities::local_single_rank_collectives: usize
 pub vyre_foundation::program_caps::RequiredCapabilities::max_workgroup_size: [u32; 3]

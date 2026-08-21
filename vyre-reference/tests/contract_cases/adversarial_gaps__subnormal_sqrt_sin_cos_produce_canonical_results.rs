@@ -172,11 +172,8 @@ fn oob_load_returns_zero() {
         1,
         Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(999))),
     );
-    let outputs = reference_eval(
-        &program,
-        &[Value::from(vec![0xAB; 4]), Value::from(vec![0u8; 4])],
-    )
-    .expect("Fix: OOB load must not panic");
+    let outputs = reference_eval(&program, &[Value::from(vec![0xAB; 4])])
+        .expect("Fix: OOB load must not panic");
     assert_eq!(
         outputs[0].to_bytes(),
         vec![0; 4],
@@ -200,14 +197,8 @@ fn oob_store_is_silent_noop() {
             Expr::u32(0xDEAD_BEEF),
         )],
     );
-    let outputs = reference_eval(
-        &program,
-        &[
-            Value::from(999u32.to_le_bytes().to_vec()),
-            Value::from(vec![0u8; 4]),
-        ],
-    )
-    .expect("Fix: OOB store must not panic");
+    let outputs = reference_eval(&program, &[Value::from(999u32.to_le_bytes().to_vec())])
+        .expect("Fix: OOB store must not panic");
     assert_eq!(
         outputs[0].to_bytes(),
         vec![0; 4],
@@ -221,7 +212,7 @@ fn zero_sized_buffer_load_returns_zero() {
         0,
         Node::store("out", Expr::u32(0), Expr::load("in", Expr::u32(0))),
     );
-    let outputs = reference_eval(&program, &[Value::from(vec![]), Value::from(vec![0u8; 4])])
+    let outputs = reference_eval(&program, &[Value::from(vec![])])
         .expect("Fix: zero-sized buffer load must not panic");
     assert_eq!(
         outputs[0].to_bytes(),
@@ -268,11 +259,8 @@ fn u32_max_index_load_returns_zero() {
             Expr::load("in", Expr::u32(u32::MAX)),
         )],
     );
-    let outputs = reference_eval(
-        &program,
-        &[Value::from(vec![0xAB; 4]), Value::from(vec![0u8; 4])],
-    )
-    .expect("Fix: u32::MAX index load must not panic");
+    let outputs = reference_eval(&program, &[Value::from(vec![0xAB; 4])])
+        .expect("Fix: u32::MAX index load must not panic");
     assert_eq!(
         outputs[0].to_bytes(),
         vec![0; 4],

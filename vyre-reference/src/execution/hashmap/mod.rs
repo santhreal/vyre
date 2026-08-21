@@ -216,18 +216,30 @@ pub(crate) fn run_hashmap_reference(
         return Err(ReferenceError::validation(source));
     }
     let mut storage = FxHashMap::default();
+    // The interpreter's ABI is exactly the artifact ABI: one Value per
+    // `is_reference_input` buffer. It used to also accept a vector sized to
+    // every non-workgroup buffer, treating the extra entries as initializers
+    // for backend-allocated outputs. Nothing writes those bytes on any path, so
+    // the compatibility branch bought a fixture the right to be malformed: an
+    // op whose fixture carried a placeholder for a backend-allocated output
+    // passed every CPU lens and was rejected only by the strict artifact ABI on
+    // a device, which is the wrong place and the wrong run to find out.
     let logical_input_count = program
         .buffers()
         .iter()
         .filter(|decl| is_reference_input(decl))
         .count();
-    let legacy_input_count = program
-        .buffers()
-        .iter()
-        .filter(|decl| decl.access() != BufferAccess::Workgroup)
-        .count();
-    let legacy_input_mode =
-        inputs.len() == legacy_input_count && inputs.len() != logical_input_count;
+    if inputs.len() > logical_input_count {
+        return Err(ReferenceError::new(format!(
+            "reference_eval received {} input Value(s) for a program with {logical_input_count} \
+             reference input buffer(s), so {} of them is an unused input Value. Fix: pass one \
+             Value per buffer accepted by `vyre_reference::is_reference_input`, and none for a \
+             backend-allocated output; a placeholder for one is what the artifact ABI rejects on \
+             a device.",
+            inputs.len(),
+            inputs.len() - logical_input_count
+        )));
+    }
     let mut input_index = 0usize;
     let mut output_decls = Vec::new();
     let mut max_output_elements = 0u32;
@@ -262,34 +274,6 @@ pub(crate) fn run_hashmap_reference(
             input_index += 1;
             value.to_bytes()
         } else {
-            if legacy_input_mode {
-                let legacy_output_initializer = inputs.get(input_index).ok_or_else(|| {
-                    ReferenceError::new(format!(
-                        "missing legacy output initializer for buffer `{}`. Fix: pass one Value for each non-workgroup buffer or migrate to logical inputs only.",
-                        decl.name()
-                    ))
-                })?;
-                // Backend-allocated outputs are zero-filled, so this Value's
-                // CONTENTS are unused, but its SIZE is still part of the
-                // caller's contract and must be checked. Discarding it whole
-                // meant an undersized output buffer produced a full-size
-                // result with no diagnostic: the caller believed a 12-byte
-                // output had been written when the interpreter had quietly
-                // substituted its own 16-byte buffer (a Law 10 fail-open).
-                //
-                // The requirement is the LOGICAL output size, not the declared
-                // storage size. A buffer declared with an output byte range is
-                // padded on purpose (a tiled kernel rounds its storage up to a
-                // whole tile, and `relu(n = 0)` declares one element so the
-                // decl stays well-formed), and the caller is expected to size
-                // the placeholder to the range it will actually read back.
-                check_min_byte_len(
-                    decl,
-                    legacy_output_initializer.to_bytes().len(),
-                    logical_output_byte_len(decl, required_bytes),
-                )?;
-                input_index += 1;
-            }
             vec![0u8; required_bytes]
         };
         check_min_byte_len(decl, bytes.len(), required_bytes)?;
@@ -306,7 +290,7 @@ pub(crate) fn run_hashmap_reference(
         );
     }
     if input_index != inputs.len() {
-        return Err(ReferenceError::new("unused input values supplied. Fix: pass exactly one Value per non-workgroup buffer declaration."));
+        return Err(ReferenceError::new("unused input values supplied. Fix: pass exactly one Value per buffer accepted by `vyre_reference::is_reference_input`."));
     }
     if program.workgroup_size().contains(&0) {
         return Err(ReferenceError::new(

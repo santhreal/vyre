@@ -32,11 +32,7 @@ fn execute_bf16(
     .expect("Fix: valid BF16 cache transition must build");
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(bytes(prior)),
-            Value::from(bytes(chunk)),
-            Value::from(vec![0; prior.len() * size_of::<u16>()]),
-        ],
+        &[Value::from(bytes(prior)), Value::from(bytes(chunk))],
     )
     .expect("Fix: BF16 cache transition must execute");
     assert_eq!(words(&outputs[0]), prior);

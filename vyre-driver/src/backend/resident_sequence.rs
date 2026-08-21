@@ -305,13 +305,13 @@ mod tests {
                 Some([index as u32 + 1, 1, 1]),
                 "Fix: default resident sequence timing must preserve each step's grid override."
             );
-            Ok(TimedDispatchResult {
-                outputs: Vec::new(),
-                wall_ns: 10 + index,
-                device_ns: Some(7 + index),
-                enqueue_ns: Some(3 + index),
-                wait_ns: Some(4 + index),
-            })
+            Ok(TimedDispatchResult::split_timed(
+                Vec::new(),
+                10 + index,
+                Some(7 + index),
+                3 + index,
+                4 + index,
+            ))
         }
 
         fn download_resident_ranges_into(

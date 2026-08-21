@@ -54,6 +54,13 @@ fn output_words(program: &Program, outputs: &[Value], name: &str) -> Vec<u32> {
 }
 
 fn evaluate(program: &Program, inputs: Vec<Value>) -> Vec<Value> {
+    let inputs = vyre_reference::reference_inputs(
+        program,
+        inputs
+            .iter()
+            .map(vyre_reference::value::Value::to_bytes)
+            .collect(),
+    );
     vyre_reference::reference_eval(program, &inputs)
         .unwrap_or_else(|error| panic!("Fix: production IR reference evaluation failed: {error}"))
 }

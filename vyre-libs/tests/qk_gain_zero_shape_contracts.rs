@@ -11,7 +11,6 @@ fn evaluate_empty_shape(num_heads: u32, seq_len: u32, head_dim: u32) -> Vec<u8> 
         &program,
         &[
             Value::from(Vec::<u8>::new()),
-            Value::from(Vec::<u8>::new()),
             Value::from(vec![0_u8; num_heads as usize * size_of::<f32>()]),
         ],
     )

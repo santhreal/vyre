@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The public API snapshots record `vyre_reference::reference_inputs`, `vyre_foundation::ir::ProgramStats::grid_sync`, `vyre_driver::validation::ProgramValidationCaps::support` and `vyre_pass_engine::optimizer::pipeline::gpu_sequential_three_pass`, which the crates already exported without a snapshot entry to diff against."

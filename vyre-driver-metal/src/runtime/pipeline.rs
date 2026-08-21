@@ -232,13 +232,13 @@ impl MetalBackend {
             &module.pipeline,
             buffers,
         )?;
-        Ok(TimedDispatchResult {
-            outputs: result.outputs,
-            wall_ns: elapsed_ns(started, "Metal authenticated timed dispatch")?,
-            device_ns: None,
-            enqueue_ns: Some(result.enqueue_ns),
-            wait_ns: Some(result.wait_ns),
-        })
+        Ok(TimedDispatchResult::split_timed(
+            result.outputs,
+            elapsed_ns(started, "Metal authenticated timed dispatch")?,
+            None,
+            result.enqueue_ns,
+            result.wait_ns,
+        ))
     }
 
     fn record_pipeline_cache_miss_reason(&self, reason: PipelineCacheMissReason) {

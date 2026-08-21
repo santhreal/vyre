@@ -37,6 +37,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | None | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
 | `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | `math-scan` | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
 | `example` | `select1_optimizer_parity` | `vyre-libs/examples/select1_optimizer_parity.rs` | None | `./cargo_full test -p vyre-libs --example select1_optimizer_parity` |
+| `example` | `select1_optimizer_parity` | `vyre-libs/examples/select1_optimizer_parity.rs` | `bitset` | `./cargo_full test -p vyre-libs --example select1_optimizer_parity` |
 | `lib` | `vyre_libs` | `vyre-libs/src/lib.rs` | None | `./cargo_full test -p vyre-libs` |
 | `test` | `ac_count_suffix3_naga_validation` | `vyre-libs/tests/ac_count_suffix3_naga_validation.rs` | None | `./cargo_full test -p vyre-libs --test ac_count_suffix3_naga_validation` |
 | `test` | `adaptive_four_russians_dense_generated` | `vyre-libs/tests/adaptive_four_russians_dense_generated.rs` | None | `./cargo_full test -p vyre-libs --test adaptive_four_russians_dense_generated` |
@@ -145,6 +146,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `csr_frontier_degree_sum_ir_parity_proptest` | `vyre-libs/tests/csr_frontier_degree_sum_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test csr_frontier_degree_sum_ir_parity_proptest` |
 | `test` | `csr_queue_strided_ir_parity_proptest` | `vyre-libs/tests/csr_queue_strided_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test csr_queue_strided_ir_parity_proptest` |
 | `test` | `csr_sweep_arm_coverage` | `vyre-libs/tests/csr_sweep_arm_coverage.rs` | None | `./cargo_full test -p vyre-libs --test csr_sweep_arm_coverage` |
+| `test` | `csr_sweep_arm_coverage` | `vyre-libs/tests/csr_sweep_arm_coverage.rs` | `graph` | `./cargo_full test -p vyre-libs --test csr_sweep_arm_coverage` |
 | `test` | `csr_traversal_clone_family_equality` | `vyre-libs/tests/csr_traversal_clone_family_equality.rs` | None | `./cargo_full test -p vyre-libs --test csr_traversal_clone_family_equality` |
 | `test` | `decode_primitive_composition_contracts` | `vyre-libs/tests/decode_primitive_composition_contracts.rs` | None | `./cargo_full test -p vyre-libs --test decode_primitive_composition_contracts` |
 | `test` | `dedup_conv_ast_walk_family_guard` | `vyre-libs/tests/dedup_conv_ast_walk_family_guard.rs` | None | `./cargo_full test -p vyre-libs --test dedup_conv_ast_walk_family_guard` |
@@ -255,6 +257,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `last_dim_l2_norm_contract` | `vyre-libs/tests/last_dim_l2_norm_contract.rs` | `nn-norm` | `./cargo_full test -p vyre-libs --test last_dim_l2_norm_contract` |
 | `test` | `library_operation_provenance` | `vyre-libs/tests/library_operation_provenance.rs` | None | `./cargo_full test -p vyre-libs --test library_operation_provenance` |
 | `test` | `line_splice_classify_roundtrip` | `vyre-libs/tests/line_splice_classify_roundtrip.rs` | None | `./cargo_full test -p vyre-libs --test line_splice_classify_roundtrip` |
+| `test` | `line_splice_classify_roundtrip` | `vyre-libs/tests/line_splice_classify_roundtrip.rs` | `parsing-kernels` | `./cargo_full test -p vyre-libs --test line_splice_classify_roundtrip` |
 | `test` | `linear_rows_contract` | `vyre-libs/tests/linear_rows_contract.rs` | None | `./cargo_full test -p vyre-libs --test linear_rows_contract` |
 | `test` | `linear_rows_contract` | `vyre-libs/tests/linear_rows_contract.rs` | `nn-linear` | `./cargo_full test -p vyre-libs --test linear_rows_contract` |
 | `test` | `literal_set_presence_and_positions_reference` | `vyre-libs/tests/literal_set_presence_and_positions_reference.rs` | None | `./cargo_full test -p vyre-libs --test literal_set_presence_and_positions_reference` |
@@ -267,8 +270,11 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `logical_proptest` | `vyre-libs/tests/logical_proptest.rs` | None | `./cargo_full test -p vyre-libs --test logical_proptest` |
 | `test` | `logical_should_panic` | `vyre-libs/tests/logical_should_panic.rs` | None | `./cargo_full test -p vyre-libs --test logical_should_panic` |
 | `test` | `loop_back_edge_audit` | `vyre-libs/tests/loop_back_edge_audit.rs` | None | `./cargo_full test -p vyre-libs --test loop_back_edge_audit` |
+| `test` | `loop_back_edge_audit` | `vyre-libs/tests/loop_back_edge_audit.rs` | `fixpoint`, `graph`, `math-kernels`, `parsing-kernels` | `./cargo_full test -p vyre-libs --test loop_back_edge_audit` |
 | `test` | `loop_unroll_trip1_idempotence` | `vyre-libs/tests/loop_unroll_trip1_idempotence.rs` | None | `./cargo_full test -p vyre-libs --test loop_unroll_trip1_idempotence` |
+| `test` | `loop_unroll_trip1_idempotence` | `vyre-libs/tests/loop_unroll_trip1_idempotence.rs` | `fixpoint`, `math-kernels` | `./cargo_full test -p vyre-libs --test loop_unroll_trip1_idempotence` |
 | `test` | `lr_tables_contracts` | `vyre-libs/tests/lr_tables_contracts.rs` | None | `./cargo_full test -p vyre-libs --test lr_tables_contracts` |
+| `test` | `lr_tables_contracts` | `vyre-libs/tests/lr_tables_contracts.rs` | `parsing` | `./cargo_full test -p vyre-libs --test lr_tables_contracts` |
 | `test` | `match_motif_via_reference_parity` | `vyre-libs/tests/match_motif_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test match_motif_via_reference_parity` |
 | `test` | `match_motif_via_reference_parity` | `vyre-libs/tests/match_motif_via_reference_parity.rs` | `graph-dispatch` | `./cargo_full test -p vyre-libs --test match_motif_via_reference_parity` |
 | `test` | `matching_diagnostic_via_reference_parity` | `vyre-libs/tests/matching_diagnostic_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test matching_diagnostic_via_reference_parity` |
@@ -296,6 +302,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `natural_gradient_via_reference_parity` | `vyre-libs/tests/natural_gradient_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test natural_gradient_via_reference_parity` |
 | `test` | `natural_gradient_via_reference_parity` | `vyre-libs/tests/natural_gradient_via_reference_parity.rs` | `solvers` | `./cargo_full test -p vyre-libs --test natural_gradient_via_reference_parity` |
 | `test` | `nfa_plan_contracts` | `vyre-libs/tests/nfa_plan_contracts.rs` | None | `./cargo_full test -p vyre-libs --test nfa_plan_contracts` |
+| `test` | `nfa_plan_contracts` | `vyre-libs/tests/nfa_plan_contracts.rs` | `nfa` | `./cargo_full test -p vyre-libs --test nfa_plan_contracts` |
 | `test` | `nn_attention_clone_family_ir_invariance` | `vyre-libs/tests/nn_attention_clone_family_ir_invariance.rs` | None | `./cargo_full test -p vyre-libs --test nn_attention_clone_family_ir_invariance` |
 | `test` | `nn_attention_clone_family_ir_invariance` | `vyre-libs/tests/nn_attention_clone_family_ir_invariance.rs` | `nn-attention` | `./cargo_full test -p vyre-libs --test nn_attention_clone_family_ir_invariance` |
 | `test` | `node_kind_eq_ir_parity_proptest` | `vyre-libs/tests/node_kind_eq_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test node_kind_eq_ir_parity_proptest` |
@@ -314,6 +321,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `paged_attention_eval` | `vyre-libs/tests/paged_attention_eval.rs` | None | `./cargo_full test -p vyre-libs --test paged_attention_eval` |
 | `test` | `parser_edit_delta_contracts` | `vyre-libs/tests/parser_edit_delta_contracts.rs` | None | `./cargo_full test -p vyre-libs --test parser_edit_delta_contracts` |
 | `test` | `parser_graph_navigation_contracts` | `vyre-libs/tests/parser_graph_navigation_contracts.rs` | None | `./cargo_full test -p vyre-libs --test parser_graph_navigation_contracts` |
+| `test` | `parser_graph_navigation_contracts` | `vyre-libs/tests/parser_graph_navigation_contracts.rs` | `graph` | `./cargo_full test -p vyre-libs --test parser_graph_navigation_contracts` |
 | `test` | `parser_recovery_corpus_registry` | `vyre-libs/tests/parser_recovery_corpus_registry.rs` | None | `./cargo_full test -p vyre-libs --test parser_recovery_corpus_registry` |
 | `test` | `parsing_walker_clone_family` | `vyre-libs/tests/parsing_walker_clone_family.rs` | None | `./cargo_full test -p vyre-libs --test parsing_walker_clone_family` |
 | `test` | `parsing_walker_clone_family` | `vyre-libs/tests/parsing_walker_clone_family.rs` | `parsing` | `./cargo_full test -p vyre-libs --test parsing_walker_clone_family` |
@@ -353,6 +361,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `proptest_bitset_words` | `vyre-libs/tests/proptest_bitset_words.rs` | None | `./cargo_full test -p vyre-libs --test proptest_bitset_words` |
 | `test` | `proptest_bitset_xor_laws` | `vyre-libs/tests/proptest_bitset_xor_laws.rs` | None | `./cargo_full test -p vyre-libs --test proptest_bitset_xor_laws` |
 | `test` | `proptest_bitset_zero` | `vyre-libs/tests/proptest_bitset_zero.rs` | None | `./cargo_full test -p vyre-libs --test proptest_bitset_zero` |
+| `test` | `proptest_bitset_zero` | `vyre-libs/tests/proptest_bitset_zero.rs` | `bitset` | `./cargo_full test -p vyre-libs --test proptest_bitset_zero` |
 | `test` | `proptest_csr_forward_traverse` | `vyre-libs/tests/proptest_csr_forward_traverse.rs` | None | `./cargo_full test -p vyre-libs --test proptest_csr_forward_traverse` |
 | `test` | `proptest_csr_frontier_queue` | `vyre-libs/tests/proptest_csr_frontier_queue.rs` | None | `./cargo_full test -p vyre-libs --test proptest_csr_frontier_queue` |
 | `test` | `proptest_csr_frontier_queue` | `vyre-libs/tests/proptest_csr_frontier_queue.rs` | `graph` | `./cargo_full test -p vyre-libs --test proptest_csr_frontier_queue` |

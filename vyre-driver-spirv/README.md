@@ -54,7 +54,7 @@ Run the checked-in behavior from `vyre-driver-spirv/examples/vulkan_probe.rs`:
 
 ### Features
 
-- Manifest features: `default`, `spirv-val`
+- Manifest features: `default`, `device-tests`, `spirv-val`
 - Default feature members: None
 
 ### Errors and unsupported behavior

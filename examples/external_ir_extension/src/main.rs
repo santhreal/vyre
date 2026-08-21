@@ -4,9 +4,9 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 
 use vyre::compiler::{
-    self, compile_selected_modules, CompileRequest, DeviceFacts, Digest, EmittedTargetModule, ExternalFacts,
-    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
-    TargetProfile,
+    self, compile_selected_modules, CompileRequest, DeviceFacts, Digest, EmittedTargetModule,
+    ExternalFacts, SearchBudget, TargetCompileError, TargetCompiler, TargetPayload,
+    TargetPayloadFormat, TargetProfile,
 };
 use vyre::ir::{BufferDecl, DataType, Expr, Node, OpId, Program, ProgramGraph};
 use vyre_driver::{BackendError, BackendRegistration};

@@ -344,13 +344,13 @@ impl VyreBackend for MetalBackend {
             &pipeline,
             buffers,
         )?;
-        Ok(TimedDispatchResult {
-            outputs: result.outputs,
-            wall_ns: elapsed_ns(started, "Metal borrowed timed dispatch")?,
-            device_ns: None,
-            enqueue_ns: Some(result.enqueue_ns),
-            wait_ns: Some(result.wait_ns),
-        })
+        Ok(TimedDispatchResult::split_timed(
+            result.outputs,
+            elapsed_ns(started, "Metal borrowed timed dispatch")?,
+            None,
+            result.enqueue_ns,
+            result.wait_ns,
+        ))
     }
 
     fn allocate_resident(&self, byte_len: usize) -> Result<Resource, BackendError> {

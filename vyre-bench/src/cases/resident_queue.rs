@@ -157,13 +157,7 @@ mod tests {
         resident_used: bool,
     ) -> ResidentDispatch {
         ResidentDispatch {
-            timed: TimedDispatchResult {
-                outputs,
-                wall_ns,
-                device_ns,
-                enqueue_ns: None,
-                wait_ns: None,
-            },
+            timed: TimedDispatchResult::device_timed(outputs, wall_ns, device_ns),
             resident_used,
         }
     }

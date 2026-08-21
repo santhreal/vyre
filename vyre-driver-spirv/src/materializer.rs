@@ -119,19 +119,16 @@ impl MaterializedInstance for SpirvArtifactInstance {
         let outputs = unsafe {
             vulkan::dispatch_program(&self.native, &module.program, &module.words, inputs, config)
         }?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
+            u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
                 BackendError::DispatchFailed {
                     code: None,
                     message: "SPIR-V dispatch duration overflowed a 64-bit nanosecond count"
                         .to_string(),
                 }
             })?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        ))
     }
 }
 

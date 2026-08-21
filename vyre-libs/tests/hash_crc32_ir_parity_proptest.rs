@@ -27,7 +27,7 @@ fn run_ir(bytes: &[u8]) -> u32 {
     let program = crc32_program("input", "out", n);
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
     // An n==0 program declares a zero-count input buffer; hand it an empty slice.
-    let outputs = vyre_reference::reference_eval(&program, &[pack(&words), pack(&[0u32])])
+    let outputs = vyre_reference::reference_eval(&program, &[pack(&words)])
         .expect("crc32 reference evaluation must succeed");
     // Output buffer `out` (binding 1) → results[1]? RW/output buffers are returned in binding order;
     // `input` is ReadOnly so only `out` is returned → results[0].

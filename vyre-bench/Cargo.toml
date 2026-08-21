@@ -32,6 +32,7 @@ vyre-runtime = { workspace = true }
 vyre-libs = { workspace = true, features = [
     "bitset",
     "graph",
+    "math-scan",
     "nn-linear-4bit",
     "predicate",
 ] }

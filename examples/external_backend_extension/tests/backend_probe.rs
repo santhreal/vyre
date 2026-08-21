@@ -19,10 +19,8 @@ fn an_out_of_tree_registration_reaches_the_registry() {
 
     assert_eq!(registration.target_id.as_str(), BACKEND_ID);
     assert!(registration.reference_oracle);
-    assert!(
-        vyre_driver::backend_dispatches(BACKEND_ID)
-            .expect("a registered backend declares its dispatch capability")
-    );
+    assert!(vyre_driver::backend_dispatches(BACKEND_ID)
+        .expect("a registered backend declares its dispatch capability"));
 }
 
 #[test]

@@ -36,8 +36,9 @@ fn update(input: &[f32], state: &[f32], weight: &[f32]) -> (Vec<f32>, Vec<f32>) 
             Value::from(f32_bytes(input)),
             Value::from(f32_bytes(weight)),
             Value::from(f32_bytes(state)),
-            Value::from(vec![0; input.len() * 4]),
-            Value::from(vec![0; state.len() * 4]),
+            // `state.out` is a plain ReadWrite result: one host input slot whose
+            // incoming contents the update overwrites.
+            Value::from(f32_bytes(&vec![0.0f32; state.len()])),
         ],
     )
     .expect("Fix: state update must execute");
@@ -76,7 +77,6 @@ fn chunked_state_continuation_matches_full_sequence_convolution() {
         &[
             Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
             Value::from(f32_bytes(&weight)),
-            Value::from(vec![0; 16]),
         ],
     )
     .expect("Fix: full prefill must execute");

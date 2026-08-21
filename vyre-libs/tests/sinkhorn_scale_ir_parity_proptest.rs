@@ -39,11 +39,7 @@ fn gpu_scale(target: &[u32], divisor: &[u32]) -> Vec<u32> {
     let program = sinkhorn_scale("target", "divisor", "out", count);
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(pack(target)),
-            Value::from(pack(divisor)),
-            Value::from(pack(&vec![0u32; target.len()])),
-        ],
+        &[Value::from(pack(target)), Value::from(pack(divisor))],
     )
     .expect("sinkhorn_scale reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())

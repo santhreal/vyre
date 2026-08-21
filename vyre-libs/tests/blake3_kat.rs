@@ -46,7 +46,6 @@ fn run_compress(
         Value::from(u32_bytes(cv_in)),
         Value::from(u32_bytes(msg)),
         Value::from(u32_bytes(params)),
-        Value::from(vec![0u8; 8 * 4]),
     ];
     let outputs =
         vyre_reference::reference_eval(program, &inputs).expect("blake3_compress must execute");

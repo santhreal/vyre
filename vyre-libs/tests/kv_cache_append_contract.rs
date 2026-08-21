@@ -32,11 +32,7 @@ fn execute(
     .expect("Fix: valid cache append fixture must build");
     let outputs = vyre_reference::reference_eval(
         &program,
-        &[
-            Value::from(bytes(prior)),
-            Value::from(bytes(chunk)),
-            Value::from(vec![0; prior.len() * 4]),
-        ],
+        &[Value::from(bytes(prior)), Value::from(bytes(chunk))],
     )
     .expect("Fix: cache append must execute");
     assert_eq!(decode(&outputs[0]), prior);
