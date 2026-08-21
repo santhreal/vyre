@@ -201,10 +201,8 @@ mod tests {
     /// clean. A finding here means a merged worktree is live right now.
     #[test]
     fn this_checkout_has_no_merged_worktree() {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("the xtask manifest sits under the workspace root");
-        let found = findings(root).expect("git is available in a checkout");
+        let root = structure_gate::workspace_root();
+        let found = findings(&root).expect("git is available in a checkout");
         assert!(found.is_empty(), "{found:?}");
     }
 
