@@ -212,10 +212,12 @@ impl ProgramValidationCaps {
             supports_bf16: backend.supports_bf16(),
             supports_indirect_dispatch: backend.supports_indirect_dispatch(),
             supports_distributed_collectives: backend.supports_distributed_collectives(),
-            // Every backend in this workspace leaves a host-readable record
-            // when a lane traps, so a trapping launch refuses instead of
-            // returning wrong data. A backend that cannot must stop reporting
-            // this here rather than at its own call site.
+            // Not asked of the backend, because the trait has no question for
+            // it. Both emitting backends write a trap record the host reads
+            // back, so a trapping launch refuses instead of returning wrong
+            // data, and every call site that built this set by hand passed a
+            // literal `true`. Kept here so there is one place to correct when
+            // the trait learns to answer, instead of five.
             supports_trap_propagation: true,
             supports_grid_sync: backend.supports_grid_sync(),
             allows_host_grid_sync_split: backend.allows_host_grid_sync_split(),
