@@ -294,7 +294,8 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         id: "egraph-saturation",
         title: "Rewrite-equivalence saturation predicates",
         release_plan_workload: 17,
-        required: false,
+        // Carries the tenth CPU-SOTA 100x contract, so the release depends on it.
+        required: true,
         any_terms: &["release.egraph_saturation", "egraph"],
         all_terms: &["optimization", "rewrite"],
         bench_target_id: "release.workload.egraph_saturation",

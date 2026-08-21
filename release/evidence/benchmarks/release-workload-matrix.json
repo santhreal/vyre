@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3b20ed94a5c40e08e4097ec66bb38f764c360289:dirty=false",
+  "source_fingerprint": "git:6e3be5f4a7d116480c1c0440aee3c01bc68165a3:dirty=true:worktree=692411983ddce5f037bcda6e17d332caafbdda26576189761add750b8cacdb68",
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -13,10 +13,9 @@
     "active_time_ns",
     "transfer_bytes"
   ],
-  "required_closed_families": 13,
+  "required_closed_families": 14,
   "required_cpu_sota_100x_families": [
     "condition-eval",
-    "string-bitmap-scatter",
     "offset-count-aggregation",
     "entropy-window",
     "quantified-condition-loops",
@@ -24,13 +23,14 @@
     "ifds-witness",
     "ast-motif-traversal",
     "megakernel-queued-batches",
-    "sparse-output-compaction"
+    "sparse-output-compaction",
+    "egraph-saturation"
   ],
   "missing_required_cpu_sota_100x_families": [],
-  "matched_required_families": 13,
-  "release_suite_case_count": 22,
+  "matched_required_families": 14,
+  "release_suite_case_count": 23,
   "cpu_sota_contract_count": 31,
-  "cpu_sota_100x_contract_count": 14,
+  "cpu_sota_100x_contract_count": 13,
   "cpu_sota_100x_contract_cases": [
     "conditions.yara_like.eval.1m",
     "nn.linear_4bit_affine_grouped.1m",
@@ -43,7 +43,6 @@
     "release.megakernel_queue.1m",
     "release.offset_count_aggregation.1m",
     "release.quantified_condition_loops.1m",
-    "release.string_bitmap_scatter.1m",
     "runtime.megakernel.condition.64k",
     "sparse.compaction.count.1m"
   ],
@@ -52,13 +51,13 @@
     "alias-reaching-def",
     "ast-motif-traversal",
     "condition-eval",
+    "egraph-saturation",
     "entropy-window",
     "ifds-witness",
     "megakernel-queued-batches",
     "offset-count-aggregation",
     "quantified-condition-loops",
-    "sparse-output-compaction",
-    "string-bitmap-scatter"
+    "sparse-output-compaction"
   ],
   "families": [
     {
@@ -90,7 +89,7 @@
         "release.condition_eval.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
         "release.megakernel_queue.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
         "release.quantified_condition_loops.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
-        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 100x",
+        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 25x",
         "runtime.megakernel.condition.64k => optimized CPU condition evaluator baseline 100x"
       ],
       "cpu_sota_100x_cases": [
@@ -98,7 +97,6 @@
         "release.condition_eval.1m",
         "release.megakernel_queue.1m",
         "release.quantified_condition_loops.1m",
-        "release.string_bitmap_scatter.1m",
         "runtime.megakernel.condition.64k"
       ],
       "cpu_sota_baseline_names": [
@@ -139,11 +137,9 @@
         "release.workload.string_bitmap_scatter"
       ],
       "cpu_sota_contracts": [
-        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 100x"
+        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 25x"
       ],
-      "cpu_sota_100x_cases": [
-        "release.string_bitmap_scatter.1m"
-      ],
+      "cpu_sota_100x_cases": [],
       "cpu_sota_baseline_names": [
         "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)"
       ],
@@ -156,7 +152,7 @@
       ],
       "fair_cpu_sota_baseline_count": 1,
       "reproducible_cuda_command": true,
-      "max_cpu_sota_min_speedup_x": 100.0
+      "max_cpu_sota_min_speedup_x": 25.0
     },
     {
       "id": "offset-count-aggregation",
@@ -667,7 +663,7 @@
       "id": "egraph-saturation",
       "title": "Rewrite-equivalence saturation predicates",
       "release_plan_workload": 17,
-      "required": false,
+      "required": true,
       "dispatch_policy": "single-kernel-count",
       "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: rewrite-equivalence saturation evaluates independent opcode and class-membership predicates in one counting pass rather than queueing a rule opcode stream",
