@@ -275,17 +275,13 @@ mod tests {
         approx_eq: impl Fn(f64, f64) -> bool,
     ) {
         assert_eq!(actual.len(), expected.len(), "case {case}: output length");
-        for idx in 0..actual.len() {
-            if expected[idx].is_nan() {
-                assert!(actual[idx].is_nan(), "case {case} idx {idx}: expected NaN");
+        for (idx, (got, want)) in actual.iter().zip(expected).enumerate() {
+            let matched = if want.is_nan() {
+                got.is_nan()
             } else {
-                assert!(
-                    approx_eq(actual[idx], expected[idx]),
-                    "case {case} idx {idx}: expected {}, got {}",
-                    expected[idx],
-                    actual[idx]
-                );
-            }
+                approx_eq(*got, *want)
+            };
+            assert!(matched, "case {case} idx {idx}: expected {want}, got {got}");
         }
     }
 
