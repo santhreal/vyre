@@ -158,6 +158,7 @@ evidence = [
   "evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
   "evidence/benchmarks/workload-12-sparse-output-compaction.json",
   "evidence/benchmarks/workload-13-callgraph-reachability.json",
+  "evidence/benchmarks/workload-17-egraph-saturation.json",
 ]
 
 [[requirements]]

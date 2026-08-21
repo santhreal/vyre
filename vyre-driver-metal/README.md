@@ -55,7 +55,7 @@ Run the checked-in behavior from `vyre-driver-metal/examples/metal_release_surfa
 
 ### Features
 
-- Manifest features: None
+- Manifest features: `device-tests`
 - Default feature members: None
 
 ### Errors and unsupported behavior

@@ -244,7 +244,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "flash_attention_2",
-        "195b5164dbd04fb0cac9a1ad7cc12b850af40612803ca45484a5c3612d537f4d",
+        "9aa03a353c3b87f76975cbde281077446d1b3c9f22ff5ec4d6b00bff65e17f92",
     ),
     (
         "softmax",
@@ -256,7 +256,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "flash_attention",
-        "918d2d3f7053c17ce12edf0dcc387bb7b0808540cb813e8c0e42e0880fed9c44",
+        "5aa2a2cf9aa224dff5f228eba6fd9cc57473f570baf4445d4f3bcca19cc4fc5d",
     ),
     (
         "flash_attention/direct",
@@ -469,7 +469,9 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
     (
         "flash_attention_2",
         &[
+            "vyre-libs::nn::attention::absorb_values",
             "vyre-libs::nn::attention::online_softmax",
+            "vyre-libs::nn::attention::tile_scores",
             "vyre-libs::nn::flash_attention_2",
         ],
     ),
@@ -495,7 +497,9 @@ const EXPECTED_IDENTITIES: [(&str, &[&str]); 26] = [
     (
         "flash_attention",
         &[
+            "vyre-libs::nn::attention::absorb_values",
             "vyre-libs::nn::attention::online_softmax",
+            "vyre-libs::nn::attention::tile_scores",
             "vyre-libs::nn::flash_attention",
         ],
     ),

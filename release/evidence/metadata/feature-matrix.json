@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:496e38ab21dbe41ad26f3a06e4fb51416b3e1d11:dirty=true:worktree=6054e31a1969f516388a4518a0b95504c6221b982508d434548ad061028b9993",
+  "source_fingerprint": "git:b8e1ebac5c90a7b5a7573f6ec660f4cf0e31bebc:dirty=true:worktree=417e59e7003f0c1b88b62212699a35b331de503bcaffc0f3adfb8040f7785721",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -69,13 +69,14 @@
     {
       "name": "vyre-conform",
       "manifest": "conform/vyre-conform/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
         "gpu"
       ],
       "features": [
         "default",
+        "device-tests",
         "gpu"
       ],
       "malformed_features": [],
@@ -122,12 +123,13 @@
     {
       "name": "vyre-driver-cuda",
       "manifest": "vyre-driver-cuda/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "cuda",
-        "default"
+        "default",
+        "device-tests"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
@@ -136,10 +138,13 @@
     {
       "name": "vyre-driver-metal",
       "manifest": "vyre-driver-metal/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
+      "feature_count": 2,
+      "has_default_feature": true,
       "default_feature_members": [],
-      "features": [],
+      "features": [
+        "default",
+        "device-tests"
+      ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
@@ -172,11 +177,12 @@
     {
       "name": "vyre-driver-wgpu",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
-      "feature_count": 9,
+      "feature_count": 10,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "default",
+        "device-tests",
         "math-linalg",
         "math-scan",
         "nn-attention",

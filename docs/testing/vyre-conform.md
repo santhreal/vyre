@@ -28,7 +28,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 ## Feature sets
 
 - Default feature members: `gpu`
-- Available manifest features: `default`, `gpu`
+- Available manifest features: `default`, `device-tests`, `gpu`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

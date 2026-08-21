@@ -28,7 +28,7 @@ The crate lives at `vyre-driver-wgpu`. The `portable-driver` owner maintains its
 ## Feature sets
 
 - Default feature members: None
-- Available manifest features: `default`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `pattern-dfa`, `pattern-nfa`, `pattern-substring`, `wgpu`
+- Available manifest features: `default`, `device-tests`, `math-linalg`, `math-scan`, `nn-attention`, `parity-testing`, `pattern-dfa`, `pattern-nfa`, `pattern-substring`, `wgpu`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

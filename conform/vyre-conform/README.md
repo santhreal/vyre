@@ -105,7 +105,7 @@ Run the checked-in behavior from `conform/vyre-conform/examples/vyre_conform_run
 
 ### Features
 
-- Manifest features: `default`, `gpu`
+- Manifest features: `default`, `device-tests`, `gpu`
 - Default feature members: `gpu`
 
 ### Errors and unsupported behavior

@@ -79,7 +79,7 @@ Run the checked-in behavior from `vyre-driver-cuda/examples/cuda_release_surface
 
 ### Features
 
-- Manifest features: `cuda`, `default`
+- Manifest features: `cuda`, `default`, `device-tests`
 - Default feature members: None
 
 ### Errors and unsupported behavior

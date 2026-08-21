@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:0014e86c4d328b0681b970a02cee9091a3d0a45c:dirty=true:worktree=3a7bf025ab45334bff024df8a94f533039c141c3ab7542ec9c02a8596ec504d8",
+  "source_fingerprint": "git:b8e1ebac5c90a7b5a7573f6ec660f4cf0e31bebc:dirty=true:worktree=ad51d427825f1cd0155e7084560f116f10befd6252a5126dc0ad70c7b80e1e30",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4282,
+  "scanned_files": 4280,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -3716,7 +3716,7 @@
     },
     {
       "path": "vyre-driver-cuda/tests/trap_readback_launch_coverage.rs",
-      "line": 258,
+      "line": 260,
       "pattern": "source_inspection_test",
       "owner_lane": "driver_cuda",
       "surface": "test",
@@ -3816,7 +3816,7 @@
     },
     {
       "path": "vyre-driver-wgpu/tests/shared_backend_contract.rs",
-      "line": 121,
+      "line": 123,
       "pattern": "source_inspection_test",
       "owner_lane": "driver_wgpu",
       "surface": "test",
@@ -4206,7 +4206,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1496,
+      "line": 1513,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6100,7 +6100,7 @@
     },
     {
       "path": "vyre-driver-cuda/tests/trap_readback_launch_coverage.rs",
-      "line": 258,
+      "line": 260,
       "pattern": "source_inspection_test",
       "text": "test `every_cuda_dispatch_path_records_how_it_reports_a_device_trap` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_cuda_dispatch_path_records_how_it_reports_a_device_trap"
@@ -6170,7 +6170,7 @@
     },
     {
       "path": "vyre-driver-wgpu/tests/shared_backend_contract.rs",
-      "line": 121,
+      "line": 123,
       "pattern": "source_inspection_test",
       "text": "test `only_the_device_acquisition_module_constructs_a_wgpu_instance` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "only_the_device_acquisition_module_constructs_a_wgpu_instance"
@@ -6439,7 +6439,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1496,
+      "line": 1513,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },
