@@ -1,5 +1,7 @@
 //! GPU-side reference parity over the canonical library operation view.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_conform::lens::backend_parity;
 use vyre_conform::lens::outcome::LensOutcome;
 fn backend() -> &'static vyre_driver::BackendRegistration {

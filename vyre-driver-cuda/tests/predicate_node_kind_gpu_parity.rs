@@ -1,6 +1,7 @@
 //! Parity test: vyre-primitives predicate node_kind_eq + literal_of
 //! match CPU oracles.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

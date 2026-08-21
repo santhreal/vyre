@@ -1,5 +1,7 @@
 //! PTX AOT launcher emission contract tests.
 
+#![cfg(feature = "device-tests")]
+
 use std::path::PathBuf;
 
 use vyre_driver::{emit_aot_launcher_target, AotLauncherRequest};

@@ -13,6 +13,8 @@
 //! backends answer the same question. What is not shared is this file: the naga
 //! word assembly and the live dispatch.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::Program;

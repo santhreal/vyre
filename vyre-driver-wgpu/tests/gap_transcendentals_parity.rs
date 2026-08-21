@@ -22,6 +22,7 @@
 //! exponent fields at all. Until then the shipped contract is the bounded
 //! envelope in `transcendentals_parity.rs`, which is enforced on every run.
 
+#![cfg(feature = "device-tests")]
 #![cfg(feature = "parity-testing")]
 
 use proptest::prelude::*;

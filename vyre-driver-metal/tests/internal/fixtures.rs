@@ -7,6 +7,8 @@
 //! restated per test, where a single edited count would silently retarget the
 //! assertion at a different number of bytes.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// One WriteOnly `u32` word named `out` at binding 0, collected as bytes 0..4.

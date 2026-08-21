@@ -1,5 +1,7 @@
 //! Wgsl scan uniformity certificates test suite.
 
+#![cfg(feature = "device-tests")]
+
 const CERTIFICATES: &str =
     include_str!("../../docs/optimization/WGSL_SCAN_UNIFORMITY_CERTIFICATES.toml");
 

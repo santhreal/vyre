@@ -19,6 +19,8 @@
 //! is charged per module by design; and whether the hit-to-miss ratio is any good,
 //! which is a tuning question and not an accounting one.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{add_one_program, u32_bytes};
 use vyre_driver::DispatchConfig;

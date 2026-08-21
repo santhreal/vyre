@@ -25,6 +25,8 @@
 //! The corpus, the section format, and the comparison live in
 //! `vyre_lower::artifact_golden`. This file supplies only the programs.
 
+#![cfg(feature = "device-tests")]
+
 use std::path::PathBuf;
 
 use vyre_driver::DispatchConfig;

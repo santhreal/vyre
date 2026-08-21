@@ -8,6 +8,8 @@
 //! `SmallVec` (inline capacity 8) and passes those borrows through to GPU staging. Caller-owned
 //! `Vec` buffers must stay alive until `PendingDispatch` resolves (same aliasing contract as
 //! `dispatch_borrowed_async`).
+
+#![cfg(feature = "device-tests")]
 #![allow(missing_docs)]
 
 mod harness;

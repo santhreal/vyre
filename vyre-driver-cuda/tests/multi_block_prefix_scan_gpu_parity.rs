@@ -2,6 +2,7 @@
 //! both the small-input fast path (n ≤ BLOCK_LANES) and the multi-pass
 //! Blelloch chain.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

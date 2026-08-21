@@ -2,6 +2,7 @@
 //! matches its CPU reference across packed-u32 and raw-u8 source layouts,
 //! including word- and workgroup-boundary splices.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

@@ -1,5 +1,6 @@
 //! Parity test: GPU BoolOr-semiring GEMM matches Reference oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

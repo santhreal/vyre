@@ -1,5 +1,7 @@
 //! Generated live CUDA/reference differential matrix for atomic memory semantics.
 
+#![cfg(feature = "device-tests")]
+
 #[path = "harness/generated_atomic_matrix.rs"]
 mod generated_atomic_matrix;
 mod harness;

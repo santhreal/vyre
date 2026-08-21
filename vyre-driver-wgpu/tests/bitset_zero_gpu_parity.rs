@@ -1,5 +1,7 @@
 //! WGPU parity for the device-side bitset clear primitive.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::acquire_live_backend as live_backend;
 use harness::bytes_u32;

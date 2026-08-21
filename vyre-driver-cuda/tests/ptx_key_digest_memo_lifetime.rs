@@ -27,6 +27,8 @@
 //! a program. Production mutation goes through the setters, which clear all six
 //! memos on purpose. Nothing here should be copied as a mutation pattern.
 
+#![cfg(feature = "device-tests")]
+
 use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};

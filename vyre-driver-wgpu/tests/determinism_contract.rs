@@ -8,6 +8,8 @@
 //! The generator intentionally includes unused and conditionally-used buffers
 //! so bind-group reflection stays honest across lowered shader variants.
 
+#![cfg(feature = "device-tests")]
+
 use proptest::prelude::*;
 use std::sync::OnceLock;
 use vyre_driver::{DispatchConfig, VyreBackend};

@@ -1,5 +1,6 @@
 //! Shared CUDA integration-test harness.
 
+#![cfg(feature = "device-tests")]
 #![allow(dead_code, unused_imports)]
 
 pub(crate) mod self_optimizer;

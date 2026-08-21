@@ -1,6 +1,7 @@
 //! Parity tests for vyre-primitives graph::adaptive_traverse and
 //! graph::vast_tree_walk preorder.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod auto_selector_contracts;

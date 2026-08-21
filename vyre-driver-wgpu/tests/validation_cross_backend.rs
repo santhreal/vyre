@@ -18,6 +18,8 @@
 //! that makes validation process-wide instead of per-backend trips
 //! the assertion below.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 

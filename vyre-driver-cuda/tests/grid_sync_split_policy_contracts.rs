@@ -26,6 +26,8 @@
 //! reaches the over-residency path from a shipping frontend. That is why the
 //! over-residency route is tested behaviorally here and not assumed.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::{

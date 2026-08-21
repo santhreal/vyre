@@ -6,6 +6,8 @@
 //! - Consistent across `VyreBackend`, `BackendValidationCapabilities`, and `adapter_caps()`
 //! - Subgroup-using programs compile and run when capability is reported `true`
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{selected_adapter, shared_live_backend as live_backend, SUBGROUP_PROBE_WGSL};
 

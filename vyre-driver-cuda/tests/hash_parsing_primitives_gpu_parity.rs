@@ -1,6 +1,7 @@
 //! Parity tests for hash::fnv1a32_program, parsing::whitespace_classify_word,
 //! hash::hypervector_xor_bind.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

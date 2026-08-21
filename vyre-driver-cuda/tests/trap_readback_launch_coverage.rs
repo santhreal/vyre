@@ -27,6 +27,8 @@
 //! release running. It also does not check that the recorded lane and address are
 //! the trapping ones.
 
+#![cfg(feature = "device-tests")]
+
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 

@@ -4,6 +4,8 @@
 //! `device_lost() == true`, (b) recover via `try_recover() -> Ok(())`, and
 //! (c) accept the next dispatch successfully.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 

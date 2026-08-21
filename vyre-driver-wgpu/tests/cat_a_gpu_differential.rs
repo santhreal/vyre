@@ -32,6 +32,7 @@
 //! divergences (atomic lowering, matmul accumulator, wgpu validator
 //! crash on substring, blake3 unsupported node).
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 mod harness;
 use harness::{cat_a_dispatch_config, f32_to_ordered};

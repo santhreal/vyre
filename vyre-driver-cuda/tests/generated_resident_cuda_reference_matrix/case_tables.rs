@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use super::*;
 
 pub(crate) const BOOL_UNARY_CASES: &[BoolUnaryCase] = &[BoolUnaryCase {

@@ -18,6 +18,8 @@
 //! in ONE cooperative dispatch, so it is the real upper bound on any
 //! per-dispatch throughput claim that depends on a grid-synchronized kernel.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{CudaBackend, CudaDeviceCaps};
 

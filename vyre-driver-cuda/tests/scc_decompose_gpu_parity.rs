@@ -1,5 +1,6 @@
 //! Parity test: GPU scc_decompose matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

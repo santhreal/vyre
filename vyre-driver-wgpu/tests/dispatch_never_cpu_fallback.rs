@@ -6,6 +6,8 @@
 //! - Execution latency is consistent with a GPU round-trip, not instant CPU results
 //! - `WgpuBackend::acquire()` fails when only CPU adapters are available
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{
     acquire_live_backend as live_backend, assert_actionable_error, assert_non_cpu_backend,

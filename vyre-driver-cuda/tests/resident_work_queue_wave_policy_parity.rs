@@ -7,6 +7,8 @@
 //! any of the three decisions fails here instead of silently diverging on one
 //! backend.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
 use vyre_driver::megakernel_execution::{
     plan_megakernel_execution, select_megakernel_topology, select_megakernel_topology_stable,

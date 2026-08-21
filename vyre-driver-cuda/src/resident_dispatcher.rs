@@ -110,7 +110,7 @@ impl<'a> CudaProgramDispatcher<'a> {
         }
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "device-tests"))]
     fn new_with_pool_budget_for_tests(backend: &'a CudaBackend, max_pooled_bytes: u64) -> Self {
         Self::with_pool_budget(backend, max_pooled_bytes)
     }
@@ -399,7 +399,7 @@ impl<'a> CudaProgramDispatcher<'a> {
 
 // Inline: `vyre_driver_cuda::resident_dispatcher` is `pub(crate)`, so no integration test can reach
 // what this suite exercises.
-#[cfg(test)]
+#[cfg(all(test, feature = "device-tests"))]
 #[allow(clippy::items_after_test_module)]
 mod tests {
     use vyre_foundation::program_dispatch::ProgramDispatcher;

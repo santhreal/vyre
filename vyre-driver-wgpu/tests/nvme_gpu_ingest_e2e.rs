@@ -1,5 +1,6 @@
 //! Linux ingest loop smoke/e2e: file -> io_uring -> mapped slot -> live GPU.
 
+#![cfg(feature = "device-tests")]
 #![cfg(target_os = "linux")]
 #![allow(unsafe_code)]
 

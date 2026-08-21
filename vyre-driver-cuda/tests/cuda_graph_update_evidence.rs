@@ -1,5 +1,7 @@
 //! Cuda graph update evidence test suite.
 
+#![cfg(feature = "device-tests")]
+
 const EVIDENCE: &str = include_str!("../../docs/optimization/CUDA_GRAPH_UPDATE_EVIDENCE.toml");
 
 #[test]

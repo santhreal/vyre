@@ -1,5 +1,6 @@
 //! Parity test: GPU csr_frontier_degree_sum matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

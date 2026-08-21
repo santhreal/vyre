@@ -7,6 +7,8 @@
 //! dispatch loop and asserts the snapshot reports measured launches with a
 //! plausible occupancy fraction and NO unmeasured launches.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

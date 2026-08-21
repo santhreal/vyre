@@ -12,6 +12,8 @@
 //! unsigned operands (two's-complement), so this test isolates the STORE
 //! coercion from any operation-level signedness question.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::u32_bytes;
 

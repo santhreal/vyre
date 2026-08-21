@@ -1,5 +1,6 @@
 //! Parity test: GPU batched path reconstruction matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

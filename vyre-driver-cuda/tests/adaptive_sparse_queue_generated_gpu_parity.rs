@@ -1,5 +1,6 @@
 //! Generated live CUDA parity for resident adaptive sparse-queue traversal.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

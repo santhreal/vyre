@@ -1,5 +1,6 @@
 //! Parity test: GPU iterated forward closure matches CPU iterated closure.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};

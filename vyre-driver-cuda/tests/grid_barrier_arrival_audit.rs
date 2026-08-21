@@ -18,6 +18,8 @@
 //! These tests assert real counter values and real dispatch outcomes. A
 //! `!is_empty()` style check would pass for an audit that never ran.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::{

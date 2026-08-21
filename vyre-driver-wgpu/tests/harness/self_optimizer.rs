@@ -5,6 +5,8 @@
 //! [`ProgramDispatcher`]. Satisfying that trait from a live `WgpuBackend` is one
 //! implementation, not one per suite.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::Program;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

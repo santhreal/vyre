@@ -1,5 +1,7 @@
 //! CUDA e-graph device-image upload planning tests.
 
+#![cfg(feature = "device-tests")]
+
 mod canonical_rewrite_contracts;
 mod fixed_point_contracts;
 mod structural_equivalence_contracts;

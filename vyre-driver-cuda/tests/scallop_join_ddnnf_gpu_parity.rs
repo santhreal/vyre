@@ -1,6 +1,7 @@
 //! Parity tests for math::scallop_join at w=1 and w>1, and
 //! graph::ddnnf_evaluate (single-node bottom-up step).
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

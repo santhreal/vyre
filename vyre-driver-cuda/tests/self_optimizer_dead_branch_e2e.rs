@@ -4,6 +4,7 @@
 //! the dead-branch pass splices the surviving body into the parent
 //! scope, eliminating both the `If` wrapper and the dead branch.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

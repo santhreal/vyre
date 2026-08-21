@@ -1,5 +1,6 @@
 //! Parity test: GPU csr_backward_or_changed reaches source lanes across blocks.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

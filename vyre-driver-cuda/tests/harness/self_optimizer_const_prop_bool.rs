@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use crate::harness::self_optimizer::{b_load_branch_program, binop, if_cond, run_pipeline};
 use vyre::ir::UnOp;
 use vyre::ir::{BinOp, Expr};

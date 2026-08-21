@@ -8,6 +8,7 @@
 //! self-hosted GPU pass is semantically identical, with the substrate
 //! actually running on hardware.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

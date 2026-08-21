@@ -1,5 +1,7 @@
 //! Generated live CUDA/reference differential matrix for data-dependent control semantics.
 
+#![cfg(feature = "device-tests")]
+
 #[path = "harness/generated_control_values.rs"]
 mod generated_control_values;
 mod harness;

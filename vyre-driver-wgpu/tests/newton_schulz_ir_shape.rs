@@ -19,6 +19,8 @@
 //! `vyre-foundation` the match is exhaustive, which is the only place a traversal
 //! of this IR cannot silently stop descending.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use vyre_foundation::visit::walk_exprs;

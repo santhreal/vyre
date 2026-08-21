@@ -8,6 +8,8 @@
 //! - Reported limits match the live `wgpu::Limits`
 //! - `subgroup_size` is not `None` when the adapter supports subgroups
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{selected_adapter, shared_live_backend as live_backend};
 

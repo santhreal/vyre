@@ -10,6 +10,10 @@ use std::process::Command;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde_json::Value;
 
+/// The backend a device lane pins the proof to.
+///
+/// Only the live-GPU tests read it, so it is admitted with them.
+#[cfg(feature = "device-tests")]
 fn selected_backend_override() -> Option<String> {
     std::env::var("VYRE_BACKEND")
         .ok()
@@ -129,6 +133,7 @@ fn merge_shards(
     serde_json::from_str(&merged_json).expect("Fix: merged artifact must be valid JSON")
 }
 
+#[cfg(feature = "device-tests")]
 mod gpu_certificate_contracts;
 mod merge_contracts;
 mod prove_failure_contracts;

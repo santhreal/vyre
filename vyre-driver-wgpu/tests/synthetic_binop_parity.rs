@@ -24,6 +24,8 @@
 //! added to the shared table without a reference fails at the lookup, before the
 //! GPU is acquired.
 
+#![cfg(feature = "device-tests")]
+
 mod binop_parity_fixtures;
 mod harness;
 

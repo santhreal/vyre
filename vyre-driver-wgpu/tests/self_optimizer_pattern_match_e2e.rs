@@ -3,6 +3,7 @@
 //! the kernel's per-Expr branch ladder. V2 will source the rule bank
 //! from data buffers; the kernel structure stays identical.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

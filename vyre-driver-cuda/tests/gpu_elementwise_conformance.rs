@@ -1,5 +1,7 @@
 //! Live CUDA elementwise dispatch conformance.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{bytes_u32, u32_bytes};
 use vyre_driver::DispatchConfig;

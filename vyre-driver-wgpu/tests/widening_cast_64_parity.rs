@@ -19,6 +19,8 @@
 //! The inventory carried 64-bit sign-extension as unit/source-proven with a
 //! live-GPU check as the "remaining gold standard" (this is that check).
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::u32_bytes;
 

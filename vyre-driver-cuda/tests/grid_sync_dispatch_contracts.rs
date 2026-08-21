@@ -4,6 +4,8 @@
 //! Tests assert exact cross-block outputs because an early barrier release
 //! returns populated buffers containing wrong values rather than an error.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{
     bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,

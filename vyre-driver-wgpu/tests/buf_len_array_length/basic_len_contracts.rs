@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use super::*;
 
 fn buf_len_writer_program() -> Program {

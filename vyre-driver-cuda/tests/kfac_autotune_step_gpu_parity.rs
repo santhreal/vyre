@@ -1,5 +1,6 @@
 //! Parity test: GPU K-FAC block inverse matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

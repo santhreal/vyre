@@ -15,6 +15,8 @@
 //!
 //! Lane: `driver_wgpu` (per `docs/optimization/OWNERSHIP.toml`).
 
+#![cfg(feature = "device-tests")]
+
 use std::sync::{Arc, OnceLock};
 
 use vyre_driver::{DispatchConfig, VyreBackend};

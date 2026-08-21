@@ -1,5 +1,6 @@
 //! Integration test crate for the containing Vyre package.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 use vyre_driver_wgpu::WgpuBackend;
 

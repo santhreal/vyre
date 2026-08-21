@@ -1,6 +1,7 @@
 //! Parity test: `vyre_libs::math::interval::interval_merge_program` on CUDA
 //! matches its CPU reference for per-lane interval hulls.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

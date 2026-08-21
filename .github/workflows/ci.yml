@@ -124,6 +124,15 @@ jobs:
               \( ! -name '*.*' -o -name '*.exe' \) ! -name 'build_script_*' -delete
           done
 
+      # The only Metal device in this fleet is the macOS leg of this matrix, so
+      # this is the lane that turns the admission on. The other legs leave it
+      # off and never link a test that would ask a Linux runner for a Metal
+      # queue.
+      - name: Metal driver device tests
+        if: runner.os == 'macOS'
+        shell: bash
+        run: ./cargo_full test -p vyre-driver-metal --features device-tests
+
 
       - name: composition-library reference-parity tests
         shell: bash

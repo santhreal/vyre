@@ -23,6 +23,8 @@
 //! (Integer `abs`/`sign` are intentionally absent: the oracle's integer unary
 //! dispatch errors on them, they are float-only ops by contract.)
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::u32_bytes;
 

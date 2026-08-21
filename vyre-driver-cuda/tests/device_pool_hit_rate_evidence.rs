@@ -8,6 +8,8 @@
 //! asserts the telemetry snapshot reports a HIGH pool hit rate, the evidence the
 //! plan asks for, not just that the counters exist.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::no_op_program;
 use vyre_driver::DispatchConfig;

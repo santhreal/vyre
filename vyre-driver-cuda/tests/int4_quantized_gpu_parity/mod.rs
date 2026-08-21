@@ -9,6 +9,8 @@
 //! deterministic generators and the binding order the programs are dispatched
 //! with, each with one owner below.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::wire::{

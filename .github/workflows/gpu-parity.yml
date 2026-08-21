@@ -47,35 +47,35 @@ jobs:
       - name: Run documented vyre-wgpu command on a real GPU
         run: ./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo
       - name: capability + async dispatch contracts
-        run: ./cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test capability_contract --test async_dispatch_contract -- --nocapture
       - name: cast parity on real GPU (float saturation + integer narrowing)
-        run: ./cargo_full test -p vyre-driver-wgpu --test float_to_int_cast_parity --test narrowing_cast_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test float_to_int_cast_parity --test narrowing_cast_parity -- --test-threads=1 --nocapture
       - name: 64-bit widening cast (i32/u32 -> i64/u64) sign/zero-extend parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test widening_cast_64_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test widening_cast_64_parity -- --test-threads=1 --nocapture
       - name: same-width integer store-coercion parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test same_width_store_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test same_width_store_parity -- --test-threads=1 --nocapture
       - name: signed integer modulo/division parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test signed_modulo_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test signed_modulo_parity -- --test-threads=1 --nocapture
       - name: signed integer min/max/comparison parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test signed_int_op_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test signed_int_op_parity -- --test-threads=1 --nocapture
       - name: div/mod-by-zero + oversized-shift-mask oracle parity on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test div_zero_shift_mask_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test div_zero_shift_mask_parity -- --test-threads=1 --nocapture
       - name: BLAKE3 compression (real workload, synthetic RotateRight) parity vs blake3 crate on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test blake3_compress_gpu_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test blake3_compress_gpu_parity -- --test-threads=1 --nocapture
       - name: FNV-1a32 (real workload, loop-carried hash state) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test fnv1a32_gpu_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test fnv1a32_gpu_parity -- --test-threads=1 --nocapture
       - name: FNV-1a64 (real workload, u32-pair explicit-carry 64-bit) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test fnv1a64_gpu_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test fnv1a64_gpu_parity -- --test-threads=1 --nocapture
       - name: CRC-32 (real workload, nested loop + per-bit conditional polynomial) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test crc32_gpu_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test crc32_gpu_parity -- --test-threads=1 --nocapture
       - name: Adler-32 (real workload, dual accumulator + u32 mod 65521 in loop) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test adler32_gpu_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test adler32_gpu_parity -- --test-threads=1 --nocapture
       - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test synthetic_binop_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test synthetic_binop_parity -- --test-threads=1 --nocapture
       - name: integer unary (negate/bitnot/popcount/clz/ctz/reverse_bits) parity vs oracle on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --test unary_int_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test unary_int_parity -- --test-threads=1 --nocapture
       - name: async transfer byte-span (unaligned offset + partial tail) parity vs reference on real GPU
-        run: ./cargo_full test -p vyre-driver-wgpu --release --test async_transfer_byte_span_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test async_transfer_byte_span_parity -- --test-threads=1 --nocapture
 
   cuda-driver-contracts:
     name: CUDA backend contracts
@@ -92,17 +92,17 @@ jobs:
       # differential. These per-test matrices were developer-run only (named in no
       # workflow); this job gates them on the real device.
       - name: generated IR-semantics differential matrices vs reference on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test generated_i32_cuda_reference_matrix --test generated_scalar_cuda_reference_matrix --test generated_cast_fma_cuda_reference_matrix --test generated_atomic_cuda_reference_matrix --test generated_control_cuda_reference_matrix --test generated_f32_cuda_reference_matrix --test generated_memory_cuda_reference_matrix --test generated_resident_cuda_reference_matrix --test generated_resident_sequence_cuda_reference_matrix -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test generated_i32_cuda_reference_matrix --test generated_scalar_cuda_reference_matrix --test generated_cast_fma_cuda_reference_matrix --test generated_atomic_cuda_reference_matrix --test generated_control_cuda_reference_matrix --test generated_f32_cuda_reference_matrix --test generated_memory_cuda_reference_matrix --test generated_resident_cuda_reference_matrix --test generated_resident_sequence_cuda_reference_matrix -- --test-threads=1 --nocapture
       - name: 64-bit widening cast (i32/u32 -> i64/u64) sign/zero-extend parity on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test widening_cast_64_cuda_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test widening_cast_64_cuda_parity -- --test-threads=1 --nocapture
       - name: integer-narrowing cast (u32 -> u8/u16/i8/i16) truncate/sign-extend parity on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test narrowing_cast_cuda_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test narrowing_cast_cuda_parity -- --test-threads=1 --nocapture
       - name: synthetic u32 binop (mulhi/abs_diff/saturating/rotate) parity vs oracle on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test synthetic_binop_cuda_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test synthetic_binop_cuda_parity -- --test-threads=1 --nocapture
       - name: div/mod-by-zero sentinel + oversized-shift-mask oracle parity on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test div_zero_shift_mask_cuda_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test div_zero_shift_mask_cuda_parity -- --test-threads=1 --nocapture
       - name: async transfer byte-span (unaligned offset + partial tail) parity vs reference on real CUDA
-        run: ./cargo_full test -p vyre-driver-cuda --features cuda --test async_transfer_byte_span_parity -- --test-threads=1 --nocapture
+        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda --test async_transfer_byte_span_parity -- --test-threads=1 --nocapture
 
   cuda-parity-suite:
     name: CUDA parity suite
@@ -134,7 +134,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run composition parity
-        run: ./cargo_full test -p vyre-driver-wgpu --release --test op_pairwise pairwise_composition_parity -- --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test op_pairwise pairwise_composition_parity -- --nocapture
 
   determinism-stress-gpu:
     name: Determinism stress on real GPU
@@ -146,7 +146,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run determinism stress
-        run: ./cargo_full test -p vyre-driver-wgpu --release --test determinism_contract -- --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test determinism_contract -- --nocapture
 
   bench-device-tests:
     name: Benchmark harness device tests
@@ -164,6 +164,15 @@ jobs:
       # the feature on and the whole target set runs. The roster is derived by
       # enabling the feature, not named test by test: a device test added later
       # is covered without editing this file.
+      # Every test in a concrete driver crate acquires the device the crate
+      # drives, so all of them are behind `device-tests` and none of them link
+      # on a hosted runner. That makes this lane the only place they run, so it
+      # runs the whole crate rather than a named selection: a target nobody
+      # named would otherwise be gated into never executing at all.
+      - name: Every CUDA driver test on a real device
+        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda -- --test-threads=1
+      - name: Every wgpu driver test on a real device
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests -- --test-threads=1
       - name: Bytecode VM stack-carrier parity on real CUDA and WGPU
         run: ./cargo_full test -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture
       - name: Benchmark harness suites on a real device

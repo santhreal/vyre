@@ -6,6 +6,7 @@
 //! and the wgpu backend, and assert byte-identity (int) or within-ULP
 //! (float) equivalence.
 
+#![cfg(feature = "device-tests")]
 #![allow(clippy::filter_map_bool_then, clippy::unnecessary_map_or)]
 #![allow(deprecated)]
 use std::sync::OnceLock;

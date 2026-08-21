@@ -340,7 +340,7 @@ fn decode_f32_batch(
 }
 
 // Inline: covers `F32_BYTES`, which no integration test can name.
-#[cfg(test)]
+#[cfg(all(test, feature = "device-tests"))]
 mod tests {
     use super::*;
 

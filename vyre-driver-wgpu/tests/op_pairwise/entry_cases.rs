@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use super::all_entries_vec::*;
 use super::harness::f32_to_ordered;
 use proptest::prelude::*;

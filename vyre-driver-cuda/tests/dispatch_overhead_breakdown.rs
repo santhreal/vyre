@@ -15,6 +15,8 @@
 //! the numbers. Asserts conservative ceilings so the test fails when latency
 //! regresses past obviously-bad thresholds.
 
+#![cfg(feature = "device-tests")]
+
 use std::time::Instant;
 
 mod harness;

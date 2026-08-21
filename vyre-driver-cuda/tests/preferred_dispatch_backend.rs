@@ -1,5 +1,7 @@
 //! Integration test crate for the containing Vyre package.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver_cuda::CudaBackendRegistration;
 
 #[path = "../../tests/support/preferred_dispatch_backend_contract.rs"]

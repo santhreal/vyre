@@ -1,6 +1,7 @@
 //! Parity tests for fixpoint::bitset_fixpoint, visual::packed_rgba_map,
 //! and matching::region::dedup_regions_flag_program.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

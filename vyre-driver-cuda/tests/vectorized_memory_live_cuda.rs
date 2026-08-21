@@ -1,5 +1,7 @@
 //! Live CUDA/reference coverage for PTX vectorized memory chains.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 #[path = "harness/vectorized_memory_dynamic_affine.rs"]
 mod vectorized_memory_dynamic_affine;

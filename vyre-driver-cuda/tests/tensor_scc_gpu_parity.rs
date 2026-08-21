@@ -1,5 +1,6 @@
 //! Parity test: vyre-primitives tensor_scc_fixpoint matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

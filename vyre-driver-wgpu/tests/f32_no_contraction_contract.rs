@@ -31,6 +31,8 @@
 //! the two differ by at most one ulp. A device that stops contracting still
 //! passes; a device that returns something outside that pair has a real bug.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::acquire_live_backend as live_backend;
 

@@ -15,6 +15,7 @@
 //! Materialization and dispatch are covered by the live tests in
 //! `tests/target_compiler.rs`; this file deliberately stops at the bytes.
 
+#![cfg(feature = "device-tests")]
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;

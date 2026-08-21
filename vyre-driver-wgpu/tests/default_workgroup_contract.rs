@@ -1,5 +1,7 @@
 //! Workgroup-size naming contracts.
 
+#![cfg(feature = "device-tests")]
+
 #[test]
 fn default_workgroup_constant_is_explicitly_1d() {
     assert_eq!(

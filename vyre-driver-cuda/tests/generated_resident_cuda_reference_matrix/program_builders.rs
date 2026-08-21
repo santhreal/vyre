@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use super::*;
 
 /// A resident-matrix program: `reads` bound at 0..n, one `out` buffer last, and

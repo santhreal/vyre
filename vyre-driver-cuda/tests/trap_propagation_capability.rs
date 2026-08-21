@@ -25,6 +25,8 @@
 //! `trap_readback_launch_coverage`), whether the recorded lane and address are the
 //! trapping ones, and any other capability this profile advertises.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::VyreBackend;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::composition::wrap_anonymous_region;

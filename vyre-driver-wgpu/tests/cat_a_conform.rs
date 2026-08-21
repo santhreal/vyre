@@ -1,5 +1,7 @@
 //! Focused GPU conform checks for Cat-A fixture-bearing ops.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::cat_a_dispatch_config;
 

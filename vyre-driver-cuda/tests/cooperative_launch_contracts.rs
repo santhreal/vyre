@@ -14,6 +14,8 @@
 //! These tests require a CUDA device. Backend acquisition failure is a test
 //! failure on the GPU-required Vyre test hosts.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{add_one_program, bytes_u32, u32_bytes};
 use vyre_driver::{grid_sync, BackendError, DispatchConfig};

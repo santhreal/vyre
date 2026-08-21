@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 // RELEASE PROOF LANE 4  -  pairwise op composition proptest.
 //
 // Generates random pairwise compositions from the Cat-A operator catalog,

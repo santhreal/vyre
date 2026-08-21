@@ -15,6 +15,7 @@
 //! Coverage grows as new Cat-A ops ship  -  each op's author adds a
 //! proptest function here per AUTHORING.md step 4b.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 #![cfg(all(
     feature = "math-linalg",

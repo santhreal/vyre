@@ -13,6 +13,8 @@
 //! backends answer the same question. What is not shared is this file: the PTX
 //! word assembly and the live dispatch.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::live_backend;

@@ -5,6 +5,7 @@
 //! a literal in an enclosing scope. Subsequent DCE drops the now-
 //! unused let bindings.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

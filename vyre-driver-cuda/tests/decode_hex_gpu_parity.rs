@@ -1,5 +1,7 @@
 //! CUDA parity for the primitive-owned hex decoder.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::{bytes_u32, live_backend, u32_bytes};

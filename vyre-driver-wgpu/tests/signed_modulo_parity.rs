@@ -12,6 +12,8 @@
 //! (The inventory's 2026-06-18 "signed mod emits SRem, correct" conclusion was a
 //! source-read that was never GPU-verified; this test is the empirical truth.)
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::u32_bytes;
 

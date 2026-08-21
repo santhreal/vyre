@@ -1,5 +1,7 @@
 //! Metal target-compiler registry and immutable module-bundle contracts.
 
+#![cfg(feature = "device-tests")]
+
 // Everything below the registry check builds and compiles an artifact, which
 // only the Apple-gated tests do. The non-Apple test asserts the absence of a
 // registration and reaches for none of it.

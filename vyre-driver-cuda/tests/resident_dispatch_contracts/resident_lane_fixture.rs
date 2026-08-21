@@ -8,6 +8,8 @@
 //! change made in three of them would have left the fourth asserting a stale
 //! expectation while still reporting green.
 
+#![cfg(feature = "device-tests")]
+
 use super::*;
 
 /// Lanes in every resident buffer this family allocates.

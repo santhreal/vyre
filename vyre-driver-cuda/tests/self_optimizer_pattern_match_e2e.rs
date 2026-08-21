@@ -1,6 +1,7 @@
 //! E2E test: hardcoded algebraic-identity pattern-match running as a
 //! vyre Program on real CUDA hardware. Same kernel as the wgpu test.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

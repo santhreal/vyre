@@ -4,6 +4,8 @@
 //! is therefore Apple-only; `backend_registration` also pins what a non-Apple
 //! build must refuse.
 
+#![cfg(feature = "device-tests")]
+
 mod backend_registration;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod dispatch;

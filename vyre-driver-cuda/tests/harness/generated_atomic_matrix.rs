@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use crate::harness::{
     bytes_u32, GENERATED_LANE_COUNT as LANE_COUNT, GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
 };

@@ -16,6 +16,8 @@
 //! workload end-to-end check, the strongest possible verification of the
 //! rotate/xor/add lowering chain under load.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::hash::blake3_compress;

@@ -1,5 +1,7 @@
 //! Live WGPU contracts for resident programs with dispatch-level grid synchronization.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;

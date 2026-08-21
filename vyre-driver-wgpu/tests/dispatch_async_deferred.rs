@@ -4,6 +4,8 @@
 //! file covers the deferred API boundary where validation must fail before a
 //! pending GPU handle is returned.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::acquire_live_backend as live_backend;
 

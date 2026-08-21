@@ -11,6 +11,7 @@
 //! end-to-end suite, and comparing the same pass sequence on both backends is
 //! the point of the table.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

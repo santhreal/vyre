@@ -4,6 +4,7 @@
 //! all four passes share GPU state) on real CUDA hardware and
 //! compares against the foundation CPU pipeline.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

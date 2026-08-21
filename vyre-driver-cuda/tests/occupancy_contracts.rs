@@ -3,6 +3,8 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::validation::blocks_per_compute_unit;
 use vyre_driver_cuda::occupancy::{
     can_launch_concurrently, cooperative_thread_residency_block_limit, estimate_occupancy,

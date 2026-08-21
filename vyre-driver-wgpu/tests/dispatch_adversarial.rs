@@ -15,6 +15,8 @@
 //! GPU-required: each test acquires a real adapter; no silent skip.
 //! The `gpu-loudness` gate enforces the loudness rule.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::{BufferDecl, DataType, Program};
 use vyre_driver::{BackendError, VyreBackend};
 

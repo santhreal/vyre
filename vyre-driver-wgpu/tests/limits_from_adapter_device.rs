@@ -8,6 +8,8 @@
 //! - `max_storage_buffer_bytes` matches the live device limits
 //! - `device_limits()` is the actual `wgpu::Limits` of the created device
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{selected_adapter, shared_live_backend as live_backend};
 

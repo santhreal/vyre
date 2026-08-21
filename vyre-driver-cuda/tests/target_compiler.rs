@@ -4,6 +4,8 @@
 //! is genuinely CUDA-native stays here: the payload format this backend
 //! registers, and the shape of a PTX module.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_foundation::ir::BufferAccess;
 
 #[path = "../../tests/support/target_compiler_contract.rs"]

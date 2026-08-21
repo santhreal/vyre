@@ -14,6 +14,8 @@
 //! are backend-independent and live in `vyre_test_support::cast_parity`, which
 //! the wgpu twin of this gate reads too. Only the dispatch below is CUDA.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::live_backend;
 

@@ -1,5 +1,7 @@
 //! Generated live CUDA/reference differential matrix for scalar IR semantics.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::{

@@ -1,5 +1,6 @@
 //! Test crate.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 use proptest::prelude::*;
 use std::collections::BTreeSet;

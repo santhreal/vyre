@@ -1,6 +1,7 @@
 //! Parity test: vyre-primitives causal-graph primitives (adjustment_set,
 //! do_calculus do_intervention_delete_incoming) match CPU oracles.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

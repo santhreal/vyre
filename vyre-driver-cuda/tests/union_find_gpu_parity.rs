@@ -4,6 +4,7 @@
 //! intermediate parent links but must agree on which nodes share a
 //! root.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

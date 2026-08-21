@@ -3,6 +3,7 @@
 //! Builds Programs that pass / fail each migrated check and asserts
 //! the GPU returns the right verdict.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

@@ -12,6 +12,8 @@
 //! - Even on the compiled-pipeline fast path execution remains GPU-consistent,
 //!   never silently falling back to CPU
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{acquire_live_backend as live_backend, add_one_program};
 

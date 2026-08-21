@@ -7,6 +7,8 @@
 //! `disk_cache_adversarial_*` tests). Byte-budget enforcement for GPU buffer
 //! tiers remains covered by the tiered-cache / buffer-pool unit tests;
 //! pipeline artifacts have no byte budget of their own yet.
+
+#![cfg(feature = "device-tests")]
 #![allow(missing_docs)]
 
 mod harness;

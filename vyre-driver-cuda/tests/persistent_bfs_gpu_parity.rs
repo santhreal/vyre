@@ -5,6 +5,7 @@
 //! hardware. Asserts identical (frontier_out, changed) on a battery
 //! of graph shapes and allow_mask values.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};

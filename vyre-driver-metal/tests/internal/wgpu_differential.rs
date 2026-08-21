@@ -5,6 +5,8 @@
 //! second opinion. Each backend is first checked against an explicit byte oracle,
 //! so two backends that agree on a wrong answer still fail.
 
+#![cfg(feature = "device-tests")]
+
 use crate::*;
 
 use vyre_driver::DispatchConfig;

@@ -230,7 +230,7 @@ fn dispatch_wgsl_pipeline_cache_key(wgsl: &str, entry_point: &str) -> Result<[u8
 // Inline: the cache-reuse case asserts the length of
 // `WgpuBackend::wgsl_dispatch_pipeline_cache`, a private field, so no integration
 // test can observe that a repeated dispatch compiled once.
-#[cfg(test)]
+#[cfg(all(test, feature = "device-tests"))]
 mod tests {
     use super::*;
 

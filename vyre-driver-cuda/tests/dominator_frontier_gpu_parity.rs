@@ -1,5 +1,6 @@
 //! Parity test: GPU dominance frontier matches the reference oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

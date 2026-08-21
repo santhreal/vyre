@@ -5,6 +5,8 @@
 //! broken code by producing the WRONG output silently  -  so each one
 //! must assert a specific error shape, not a general success.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::MemoryOrdering;
 

@@ -1,5 +1,7 @@
 //! Live CUDA/reference parity for autodiff-generated backward Programs.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::bytes_u32;

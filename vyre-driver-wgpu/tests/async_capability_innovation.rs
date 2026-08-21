@@ -8,6 +8,8 @@
 //! - Timeout errors carry actionable remediation guidance
 //! - Backend max_workgroup_size is nonzero on any real GPU
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{
     add_one_expected, add_one_input, add_one_program, assert_non_cpu_backend, long_running_program,

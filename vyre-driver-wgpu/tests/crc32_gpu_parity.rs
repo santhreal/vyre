@@ -14,6 +14,8 @@
 //! Dispatched on the live GPU and asserted byte-for-byte against the `crc32` Rust
 //! reference and the standard zlib CRC-32 vector for "abc".
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{byte_stream_input_bytes, dispatch_single_u32_output, u32_bytes};
 

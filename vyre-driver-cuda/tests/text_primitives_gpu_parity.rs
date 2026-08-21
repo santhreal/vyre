@@ -2,6 +2,7 @@
 //! Covers line_index (newline-aware line counter) and utf8_validate
 //! (per-byte UTF-8 class).
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

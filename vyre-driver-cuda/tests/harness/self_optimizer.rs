@@ -7,6 +7,8 @@
 //! implementation, not one per pass suite. Each suite keeps only the programs
 //! and expected literals that are its reason to exist.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::UnOp;
 use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_cuda::CudaProgramDispatcher;

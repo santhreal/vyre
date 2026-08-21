@@ -1,5 +1,7 @@
 //! Regression tests for Naga lowering of Region and loop scope behavior.
 
+#![cfg(feature = "device-tests")]
+
 use naga::{Block, Statement};
 use std::sync::Arc;
 

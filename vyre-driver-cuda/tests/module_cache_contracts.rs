@@ -1,5 +1,7 @@
 //! CUDA module-cache performance contracts.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::u32_bytes;
 use vyre_driver::DispatchConfig;

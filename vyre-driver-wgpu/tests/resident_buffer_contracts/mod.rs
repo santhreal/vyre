@@ -1,5 +1,7 @@
 //! WGPU backend resident-buffer API contracts.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{Resource, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 

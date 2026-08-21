@@ -1,6 +1,7 @@
 //! Parity test: vyre-primitives math primitives match CPU oracles.
 //! Covers prefix_scan (inclusive + exclusive sum) and stream_compact.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

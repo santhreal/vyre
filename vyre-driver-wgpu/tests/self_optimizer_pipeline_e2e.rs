@@ -10,6 +10,7 @@
 //! suite. The three dispatches stay here, because that composition is what this
 //! backend owes proof of.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

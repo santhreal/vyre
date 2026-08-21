@@ -1,5 +1,7 @@
 //! Live CUDA execution contracts for lane coverage and readback semantics.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{
     bytes_f32 as bytes_to_f32, bytes_u32, compiled_cuda_outputs_with_config, f32_bytes, i32_bytes,

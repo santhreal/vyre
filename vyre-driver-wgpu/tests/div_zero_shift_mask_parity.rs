@@ -30,6 +30,8 @@
 //! `div_i32`/`rem_i32` return an error, so they are not emittable and not
 //! tested here; only the unsigned, total cases reach the GPU.)
 
+#![cfg(feature = "device-tests")]
+
 mod binop_parity_fixtures;
 mod harness;
 

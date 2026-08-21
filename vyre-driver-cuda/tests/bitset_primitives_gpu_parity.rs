@@ -2,6 +2,7 @@
 //! Covers bitset_not, _or, _equal, _subset_of, _test_bit, _contains,
 //! _copy, _zero, _and_into, _or_into, _xor_into, _and_not_into, _clear_bit.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

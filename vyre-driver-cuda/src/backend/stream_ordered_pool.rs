@@ -277,7 +277,7 @@ impl CudaStreamOrderedPool {
 
 // Inline: `vyre_driver_cuda::backend` is `pub(crate)`, so no integration test can reach what this
 // suite exercises.
-#[cfg(test)]
+#[cfg(all(test, feature = "device-tests"))]
 mod tests {
     use super::*;
     use crate::backend::dispatch::CudaBackend;

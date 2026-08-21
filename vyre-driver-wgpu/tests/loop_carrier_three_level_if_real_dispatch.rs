@@ -8,6 +8,8 @@
 //! the carrier value escapes the loop with the expected post-iteration
 //! value.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::acquire_live_backend as live_backend;
 

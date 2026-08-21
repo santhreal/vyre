@@ -19,6 +19,8 @@
 //! its own proof against the reference, never a comparison against what naga
 //! produced.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::live_backend;
 

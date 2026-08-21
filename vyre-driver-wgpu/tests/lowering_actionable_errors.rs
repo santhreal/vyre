@@ -4,6 +4,8 @@
 //! `Fix:` hint so authors know what to change. Silent or vague
 //! errors are regressions.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver_wgpu::emit;
 

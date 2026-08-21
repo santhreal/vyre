@@ -3,6 +3,8 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver_cuda::synthetic_device_caps::{
     synthetic_sm120_envelope, synthetic_sm120_envelope_default,
 };

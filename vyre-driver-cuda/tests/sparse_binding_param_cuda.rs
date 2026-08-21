@@ -1,5 +1,7 @@
 //! Live CUDA parity for sparse binding-slot launch parameters.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::{bytes_u32, cuda_reference_outputs, live_backend, u32_bytes};

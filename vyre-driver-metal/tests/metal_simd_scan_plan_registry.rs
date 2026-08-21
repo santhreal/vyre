@@ -1,5 +1,7 @@
 //! Metal simd scan plan registry test suite.
 
+#![cfg(feature = "device-tests")]
+
 const PLANS: &str = include_str!("../../docs/optimization/METAL_SIMD_SCAN_PLANS.toml");
 
 #[test]

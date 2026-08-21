@@ -1,5 +1,7 @@
 //! Contract tests for the wgpu backend's non-blocking dispatch entrypoint.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::add_one_program;
 

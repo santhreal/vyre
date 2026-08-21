@@ -1,5 +1,7 @@
 //! Cancellation deadline and post-cancellation device usability contracts.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::long_running_program;
 

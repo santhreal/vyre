@@ -1,6 +1,7 @@
 //! Parity test: `vyre_libs::bitset::popcount::bitset_popcount` on CUDA
 //! matches its CPU reference per word.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

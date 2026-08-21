@@ -2,6 +2,8 @@
 //! AutotuneStore persists it, a fresh load returns the same choice. Pure
 //! end-to-end test  -  no live CUDA context required.
 
+#![cfg(feature = "device-tests")]
+
 use std::path::PathBuf;
 
 use vyre_driver::autotune_store::{AutotuneKey, AutotuneRecord, AutotuneStore};

@@ -5,6 +5,8 @@
 //! is WGPU's own: it pins that a resident timed dispatch returns exactly the
 //! public read-write outputs and attributes GPU time to the WGPU timestamp query.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::VyreBackend;
 
 #[path = "../../tests/support/resident_async_overlap_contract.rs"]

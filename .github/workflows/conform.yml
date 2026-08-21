@@ -33,8 +33,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
+      # `device-tests` admits the certificate contracts that drive the built
+      # binary through a real device. This lane has one; the hosted matrix does
+      # not, and a default `cargo test -p vyre-conform` there must not compile
+      # them.
       - name: Verify consolidated conformance engine
-        run: ./cargo_full test -p vyre-conform
+        run: ./cargo_full test -p vyre-conform --features device-tests
 
       - name: Verify registered primitive safety contracts
         run: >-

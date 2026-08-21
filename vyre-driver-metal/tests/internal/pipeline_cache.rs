@@ -1,6 +1,8 @@
 //! Compiled pipeline reuse, policy partitioning, and cache invalidation on
 //! shutdown.
 
+#![cfg(feature = "device-tests")]
+
 use crate::*;
 
 use super::fixtures::stores_word;

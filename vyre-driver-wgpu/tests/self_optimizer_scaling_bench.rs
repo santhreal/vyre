@@ -10,6 +10,7 @@
 //! at small sizes on dispatch overhead; the signal is whether the GPU column
 //! stays flat while the CPU column grows.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

@@ -1,5 +1,6 @@
 //! Multi-block word-prefix CUDA parity for resident CSR frontier queues.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

@@ -1,5 +1,7 @@
 //! Dispatch grid shape contracts for non-1D workgroups.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::acquire_live_backend as live_backend;
 

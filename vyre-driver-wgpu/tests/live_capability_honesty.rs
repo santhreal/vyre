@@ -6,6 +6,7 @@
 //! agree, async dispatch must be genuinely non-blocking and
 //! contract-visible, and CPU fallback is never permitted.
 
+#![cfg(feature = "device-tests")]
 #![allow(clippy::assertions_on_constants)]
 
 mod harness;

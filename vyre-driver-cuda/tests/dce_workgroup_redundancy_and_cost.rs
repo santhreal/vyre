@@ -24,6 +24,8 @@
 //! burn its whole `max_iters` budget: 183x on a star that converges in two
 //! iterations. The third test gates that it no longer does.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use std::time::Instant;

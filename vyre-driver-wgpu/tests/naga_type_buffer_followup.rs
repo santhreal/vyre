@@ -1,4 +1,7 @@
 //! Regression tests for type and buffer-lowering follow-up findings.
+
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::emit_validated_wgsl as emit_wgsl;

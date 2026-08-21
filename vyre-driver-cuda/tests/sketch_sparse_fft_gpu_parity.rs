@@ -1,5 +1,6 @@
 //! Parity tests for hash::count_sketch_update + hash::sparse_fft_bin_hash.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

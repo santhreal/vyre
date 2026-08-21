@@ -20,6 +20,8 @@
 //! sign-extend (`-7i32 as u64 == 0xFFFF_FFFF_FFFF_FFF9`), driven by the SOURCE
 //! signedness, not the target's.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::live_backend;
 

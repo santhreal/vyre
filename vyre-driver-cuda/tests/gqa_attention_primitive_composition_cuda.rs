@@ -1,5 +1,7 @@
 //! Live CUDA regression for grouped-query attention primitive composition.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::with_live_backend;

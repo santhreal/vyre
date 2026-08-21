@@ -1,5 +1,7 @@
 //! Gpu automata load balance registry test suite.
 
+#![cfg(feature = "device-tests")]
+
 const REGISTRY: &str = include_str!("../../docs/optimization/GPU_AUTOMATA_LOAD_BALANCE.toml");
 
 #[test]

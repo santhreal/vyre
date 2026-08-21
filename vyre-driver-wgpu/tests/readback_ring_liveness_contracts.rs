@@ -11,6 +11,8 @@
 //! reset to Free and the caller receives a structured error. Integration tests
 //! cover the normal liveness path without faking GPU absence or forcing device loss.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::acquire_live_backend as live_backend;
 

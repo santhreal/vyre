@@ -1,5 +1,6 @@
 //! WGPU parity for the hex decoder.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 mod harness;
 use harness::acquire_live_backend as live_backend;

@@ -1,5 +1,7 @@
 //! Apple math comparators test suite.
 
+#![cfg(feature = "device-tests")]
+
 const COMPARATORS: &str = include_str!("../../docs/optimization/APPLE_MATH_COMPARATORS.toml");
 
 #[test]

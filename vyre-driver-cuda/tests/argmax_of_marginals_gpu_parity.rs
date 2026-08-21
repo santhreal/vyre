@@ -1,6 +1,7 @@
 //! Parity test: `vyre_libs::math::submodular_greedy::argmax_of_marginals` on
 //! CUDA matches its CPU reference, including the all-picked sentinel.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

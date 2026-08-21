@@ -1,5 +1,6 @@
 //! Parity test: GPU bidirectional CSR step matches the reference oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};

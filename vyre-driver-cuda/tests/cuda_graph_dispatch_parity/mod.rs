@@ -11,6 +11,8 @@
 //! 3. **Shape validation**  -  passing inputs of the wrong byte length
 //!    returns `BackendError::InvalidProgram` with a structured fix string.
 
+#![cfg(feature = "device-tests")]
+
 #[path = "../harness/mod.rs"]
 mod harness;
 mod latency_cache_contracts;

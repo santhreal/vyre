@@ -1,5 +1,7 @@
 //! Shared program and dispatch fixtures for WGPU binary-operation parity suites.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

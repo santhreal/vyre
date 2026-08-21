@@ -5,6 +5,8 @@
 //! remain in sync, and that capabilities without a lowering path stay
 //! honestly `false` (LAW 9).
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::shared_live_backend as live_backend;
 

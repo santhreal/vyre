@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use super::*;
 
 /// Reproducer that mirrors fnv1a64's structure exactly: triple-Region

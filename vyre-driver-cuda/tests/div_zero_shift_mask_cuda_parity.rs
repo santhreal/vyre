@@ -27,6 +27,8 @@
 //! (Signed `i32 / 0` and `i32::MIN / -1` are rejected upstream as undefined, so
 //! they are not emittable and not tested here; only the unsigned total cases.)
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::live_backend;
 

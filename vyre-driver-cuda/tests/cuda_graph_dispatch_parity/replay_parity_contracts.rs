@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use super::*;
 
 #[test]

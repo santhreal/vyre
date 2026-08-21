@@ -43,6 +43,10 @@ gpu = [
     "vyre-registry-link/metal",
     "vyre-registry-link/wgpu",
 ]
+# A test that drives the built binary through a real device is compiled only
+# where the device is. `gpu` links the concrete drivers, which every lane does;
+# this admits the tests that acquire one.
+device-tests = []
 
 [dependencies]
 blake3 = { workspace = true }

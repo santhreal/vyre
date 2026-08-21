@@ -1,5 +1,7 @@
 //! Generated live CUDA/reference differential matrix for cast and fused arithmetic semantics.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::{

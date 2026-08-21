@@ -1,5 +1,7 @@
 //! Metal hazard certificates test suite.
 
+#![cfg(feature = "device-tests")]
+
 const CERTIFICATES: &str = include_str!("../../docs/optimization/METAL_HAZARD_CERTIFICATES.toml");
 
 #[test]

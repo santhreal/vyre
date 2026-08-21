@@ -1,5 +1,6 @@
 //! Parity test: vyre-primitives four_russians_apply_byte_lut matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

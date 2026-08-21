@@ -1,5 +1,6 @@
 //! Parity test: vyre-primitives predicate size_argument_of matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

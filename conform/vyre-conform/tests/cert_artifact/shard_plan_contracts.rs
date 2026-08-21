@@ -1,5 +1,9 @@
 use super::*;
 
+/// WHY: this drives two real `prove` shards through the built binary, which
+/// acquires a device. On a runner with no driver the acquisition aborts the
+/// process from inside cudarc, so it is admitted only where hardware is.
+#[cfg(feature = "device-tests")]
 #[test]
 fn prove_merges_live_gpu_certificate_shards() {
     let dir = tempfile::tempdir().expect("tempdir");

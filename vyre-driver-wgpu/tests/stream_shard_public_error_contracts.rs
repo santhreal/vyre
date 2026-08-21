@@ -1,5 +1,7 @@
 //! Public error-path contracts for multi-GPU stream sharding.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver_wgpu::engine::multi_gpu::{self, shard_by_blake3};
 
 /// Callers must be able to name and match the error returned by the public sharding API.

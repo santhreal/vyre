@@ -1,5 +1,7 @@
 //! End-to-end contract for GPU-side `Node::Trap` propagation.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};

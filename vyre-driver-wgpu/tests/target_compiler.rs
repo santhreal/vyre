@@ -5,6 +5,8 @@
 //! registers, the shape of a WGSL module, and the target operation facets this
 //! backend publishes.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_foundation::ir::BufferAccess;
 
 #[path = "../../tests/support/target_compiler_contract.rs"]

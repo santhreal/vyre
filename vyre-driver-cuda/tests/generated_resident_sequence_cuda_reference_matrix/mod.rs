@@ -1,5 +1,7 @@
 //! Generated live CUDA-resident sequence/reference differential matrix.
 
+#![cfg(feature = "device-tests")]
+
 mod basic_sequence_contracts;
 #[path = "../harness/mod.rs"]
 mod harness;

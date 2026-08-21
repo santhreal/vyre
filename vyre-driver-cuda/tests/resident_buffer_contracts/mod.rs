@@ -1,5 +1,7 @@
 //! Integration test for the CUDA backend.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver_cuda::CudaBackend;
 
 mod range_readback_contracts;

@@ -6,6 +6,8 @@
 //! agree on `(group, binding)` assignments and that Naga array strides
 //! match the IR element layout (FINDING-52 class).
 
+#![cfg(feature = "device-tests")]
+
 use naga::{ArraySize, ResourceBinding, TypeInner};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::DispatchConfig;

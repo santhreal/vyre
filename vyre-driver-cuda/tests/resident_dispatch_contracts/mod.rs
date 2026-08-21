@@ -8,6 +8,8 @@
 //! for `elementwise_add`. The chunks and the two tests below are restored; the
 //! two `vyre::scan` tests are not, because the product they exercised is gone.
 
+#![cfg(feature = "device-tests")]
+
 mod basic_resident_contracts;
 #[path = "../harness/mod.rs"]
 mod harness;

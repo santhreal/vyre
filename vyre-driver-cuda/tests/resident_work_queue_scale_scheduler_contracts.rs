@@ -1,5 +1,7 @@
 //! CUDA telemetry to scale-aware megakernel scheduler contracts.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::megakernel_execution::{
     MegakernelByteLayout, MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
 };

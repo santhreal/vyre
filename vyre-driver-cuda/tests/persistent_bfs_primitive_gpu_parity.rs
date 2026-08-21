@@ -1,5 +1,6 @@
 //! Parity test: vyre-primitives persistent_bfs Program matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

@@ -1,6 +1,7 @@
 //! Parity tests for vyre-primitives bitset pairwise non-`_into` ops:
 //! and, and_not, xor, plus any (reduce) and set_bit (scalar mutate).
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

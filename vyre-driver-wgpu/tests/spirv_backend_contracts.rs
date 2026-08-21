@@ -3,6 +3,8 @@
 //! Every item under test is public API, so the suite reaches the crate the way
 //! a consumer does.
 
+#![cfg(feature = "device-tests")]
+
 use naga::back::spv::WriterFlags;
 use vyre_driver_wgpu::spirv_backend::{SpirvEmitter, SPIRV_BACKEND_ID};
 

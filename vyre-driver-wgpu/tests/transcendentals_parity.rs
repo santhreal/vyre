@@ -1,4 +1,6 @@
 //! Bounded-ULP transcendental parity.
+
+#![cfg(feature = "device-tests")]
 #![cfg(feature = "parity-testing")]
 //!
 //! The release plan originally called for *bitwise* CPU↔GPU parity on

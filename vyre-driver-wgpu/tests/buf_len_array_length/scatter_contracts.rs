@@ -1,3 +1,5 @@
+#![cfg(feature = "device-tests")]
+
 use super::*;
 
 /// Scatter each lane's clamped input byte to the offset `offsets[i]` names.

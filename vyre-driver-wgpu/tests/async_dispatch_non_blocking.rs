@@ -7,6 +7,8 @@
 //! - Back-to-back async dispatches submit without host serialization
 //! - Returned WGPU pending handles are object-safe
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 
 use harness::{

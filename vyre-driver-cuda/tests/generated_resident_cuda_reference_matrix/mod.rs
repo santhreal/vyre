@@ -1,5 +1,7 @@
 //! Generated live CUDA-resident/reference differential matrix for release-path semantics.
 
+#![cfg(feature = "device-tests")]
+
 #[path = "../harness/mod.rs"]
 mod harness;
 

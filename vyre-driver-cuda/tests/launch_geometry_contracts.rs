@@ -1,5 +1,7 @@
 //! Integration test for the CUDA backend.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::u32_bytes;
 use vyre_driver::DispatchConfig;

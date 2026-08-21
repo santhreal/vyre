@@ -1,5 +1,7 @@
 //! WGPU contract coverage for composed persistent Sinkhorn iteration.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::u32_bytes;
 

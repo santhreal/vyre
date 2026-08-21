@@ -1,5 +1,6 @@
 //! Parity test: GPU tensor_flow_forward reaches source lanes across workgroups.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

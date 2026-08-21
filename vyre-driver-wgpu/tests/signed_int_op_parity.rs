@@ -9,6 +9,8 @@
 //!
 //! (Division and modulo have their own guard in `signed_modulo_parity`.)
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::{bytes_u32, u32_bytes};
 

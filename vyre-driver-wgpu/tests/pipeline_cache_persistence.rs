@@ -1,5 +1,7 @@
 //! Cold-process compiled-pipeline persistence regression.
 
+#![cfg(feature = "device-tests")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;

@@ -1,5 +1,7 @@
 //! Wgpu subgroup scan plan registry test suite.
 
+#![cfg(feature = "device-tests")]
+
 const PLANS: &str = include_str!("../../docs/optimization/WGPU_SUBGROUP_SCAN_PLANS.toml");
 
 #[test]

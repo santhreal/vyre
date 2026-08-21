@@ -17,6 +17,7 @@
 //! crafted so canon's swap is the only legal reordering  -  i.e. the
 //! result form is unambiguous.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

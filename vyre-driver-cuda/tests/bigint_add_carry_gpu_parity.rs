@@ -1,6 +1,7 @@
 //! Parity test: `vyre_libs::math::bigint_add_carry` on CUDA matches its
 //! CPU reference for per-limb sums and carries, across block boundaries.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

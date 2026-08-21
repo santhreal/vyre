@@ -3,6 +3,7 @@
 //! If a real GPU is present, the backend must bind to it. CPU or
 //! "Other" adapters must be rejected with an actionable error.
 
+#![cfg(feature = "device-tests")]
 #![allow(clippy::needless_range_loop)]
 
 use vyre_driver_wgpu::WgpuBackend;

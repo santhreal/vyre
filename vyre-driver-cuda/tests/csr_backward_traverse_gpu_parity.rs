@@ -1,5 +1,6 @@
 //! Parity test: GPU csr_backward_traverse one-step matches CPU oracle.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

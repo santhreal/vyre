@@ -16,6 +16,10 @@ exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL
 
 [features]
 default = []
+# A test that acquires a real device is compiled only where the device is.
+# The lanes that own hardware turn this on; a hosted runner leaves it off and
+# never links a test whose first line would abort inside the driver.
+device-tests = []
 wgpu = []
 parity-testing = []
 math-linalg = ["vyre-libs/math-linalg"]

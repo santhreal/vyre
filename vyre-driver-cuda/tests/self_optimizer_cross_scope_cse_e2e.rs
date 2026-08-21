@@ -5,6 +5,7 @@
 //! `let __cse_N = E;` and replaces the duplicate occurrences with
 //! `Var(__cse_N)`.
 
+#![cfg(feature = "device-tests")]
 #![cfg(test)]
 
 mod harness;

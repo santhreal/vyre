@@ -1,6 +1,8 @@
 //! Contracts for the process-wide shared wgpu backend and the one wgpu instance
 //! every acquisition in this crate uses.
 
+#![cfg(feature = "device-tests")]
+
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Barrier};

@@ -1,5 +1,7 @@
 //! Backend metric snapshot contents, including the poisoned-lock sentinel.
 
+#![cfg(feature = "device-tests")]
+
 use crate::*;
 
 use std::collections::BTreeMap;

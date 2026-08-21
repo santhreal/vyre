@@ -6,6 +6,8 @@
 //! instead of guessing. A no-op program isolates the fixed per-dispatch cost:
 //! the GPU work is ~nothing, so whatever remains is overhead we can cut.
 
+#![cfg(feature = "device-tests")]
+
 mod harness;
 use harness::no_op_program;
 use vyre_driver::DispatchConfig;
