@@ -423,6 +423,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "module-layout"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "neutral-crates"
 subsets = ["contract-rules"]
 workflows = ["architectural-invariants.yml", "gates.yml"]

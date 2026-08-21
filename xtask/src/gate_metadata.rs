@@ -973,6 +973,16 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::metal_parity::tests::a_destination_that_opens_an_option_is_refused",
     },
     GateDescriptor {
+        name: "module-layout",
+        help: "Enforce module-layout contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "tracked source files",
+        artifacts: &[],
+        prerequisites: &[],
+        proof: "crate::gates::module_layout::tests::a_file_beside_its_own_directory_is_a_finding",
+    },
+    GateDescriptor {
         name: "neutral-crates",
         help: "Enforce neutral-crates contracts",
         package: "xtask",

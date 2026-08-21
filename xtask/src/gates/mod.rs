@@ -64,6 +64,7 @@ pub mod lint_hygiene;
 pub mod lockfile;
 pub mod manifest_contract;
 pub mod metal_parity;
+pub mod module_layout;
 pub mod op_names;
 pub mod oracle_sweeps;
 pub mod ownership;
@@ -164,6 +165,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
         &manifest_contract::WorkspaceMembership,
     ),
     ("metal-parity", &metal_parity::MetalParity),
+    ("module-layout", &module_layout::ModuleLayout),
     ("op-names", &op_names::OpNames),
     ("oracle-sweeps", &oracle_sweeps::OracleSweeps),
     (

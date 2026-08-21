@@ -332,6 +332,10 @@ name = "metal-parity"
 findings = 0
 
 [[gate]]
+name = "module-layout"
+findings = 0
+
+[[gate]]
 name = "neutral-crates"
 findings = 0
 
