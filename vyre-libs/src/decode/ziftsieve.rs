@@ -476,11 +476,22 @@ mod primitive_tests {
         let (_outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,
             &[
-                vyre_primitives::wire::pack_u32_slice(&[10, 20, 30, 40]),
-                vyre_primitives::wire::pack_u32_slice(&[0]), // literal_start
-                vyre_primitives::wire::pack_u32_slice(&[4]), // literal_len overshoots the cap
-                vyre_primitives::wire::pack_u32_slice(&[1]), // literal_offset → slots 1..4
-                vyre_primitives::wire::pack_u32_slice(&[0u32; 3]),
+                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&[
+                    10, 20, 30, 40,
+                ])),
+                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&[0])),
+                vyre_reference::value::Value::from(
+                    // literal_start
+                    vyre_primitives::wire::pack_u32_slice(&[4]),
+                ),
+                vyre_reference::value::Value::from(
+                    // literal_len overshoots the cap
+                    vyre_primitives::wire::pack_u32_slice(&[1]),
+                ),
+                vyre_reference::value::Value::from(
+                    // literal_offset → slots 1..4
+                    vyre_primitives::wire::pack_u32_slice(&[0u32; 3]),
+                ),
             ],
         )
         .expect("Fix: ziftsieve copy must reference-evaluate");

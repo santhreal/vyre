@@ -95,7 +95,6 @@ fn exclusive_difference_pass_executes_and_subtracts_input() {
     ];
     let results = eval_bytes("multi_block_prefix_scan_tests", &program, inputs.clone());
     let out: Vec<u32> = results[0]
-        .to_bytes()
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
         .collect();
@@ -138,7 +137,6 @@ fn run_full_scan(program: &vyre_foundation::ir::Program, input: &[u32]) -> Vec<u
     let outputs = eval_bytes("multi_block_prefix_scan_tests", program, inputs);
     let idx = output_idx.expect("output buffer must be a writable result");
     outputs[idx]
-        .to_bytes()
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
         .collect()

@@ -379,7 +379,6 @@ pub(crate) mod tests {
         let outputs = eval_bytes("regex_region_admission", &program, inputs);
 
         let got: Vec<u32> = outputs[0]
-            .to_bytes()
             .chunks_exact(4)
             .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .take(expected.len())

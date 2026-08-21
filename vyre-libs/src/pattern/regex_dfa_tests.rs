@@ -22,11 +22,7 @@ fn registered_regex_dfa_expected_bytes_match_reference_execution() {
         vec![0u8; 4],
         vec![0u8; 4],
     ];
-    let values = inputs
-        .iter()
-        .map(|bytes| vyre_reference::value::Value::Bytes(bytes.as_slice().into()))
-        .collect::<Vec<_>>();
-    let actual = eval_bytes("regex_dfa_tests", &pipeline.program, values);
+    let actual = eval_bytes("regex_dfa", &pipeline.program, inputs.clone());
 
     assert_eq!(
         actual,

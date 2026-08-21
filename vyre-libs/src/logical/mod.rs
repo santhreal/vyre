@@ -72,7 +72,7 @@ mod tests {
 
     fn eval_u32_binary(program: &vyre_foundation::ir::Program, a: &[u32], b: &[u32]) -> Vec<u32> {
         let outputs = eval_bytes(
-            "mod",
+            "logical",
             program,
             vec![
                 vyre_primitives::wire::pack_u32_slice(a),

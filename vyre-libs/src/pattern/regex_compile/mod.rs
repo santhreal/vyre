@@ -426,11 +426,7 @@ mod tests {
             vec![0u8; 4],
             vec![0u8; 4],
         ];
-        let values = inputs
-            .iter()
-            .map(|bytes| vyre_reference::value::Value::Bytes(bytes.as_slice().into()))
-            .collect::<Vec<_>>();
-        let actual = eval_bytes("mod", &program, values);
+        let actual = eval_bytes("regex_compile", &program, inputs.clone());
 
         assert_eq!(
             actual,

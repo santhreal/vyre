@@ -279,7 +279,6 @@ fn eval_cap_survivors(pids: &[u32], k: u32) -> Vec<u32> {
     // The interpreter returns only the writable buffer(s); `survivors` is the
     // single output, so it is `results[0]`.
     results[0]
-        .to_bytes()
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
         .collect()
@@ -361,14 +360,13 @@ fn run_u32_program(program: &vyre_foundation::ir::Program, inputs: &[&[u32]]) ->
     use vyre_reference::value::Value;
     let values: Vec<Vec<u8>> = inputs
         .iter()
-        .map(|data| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data))))
+        .map(|data| vyre_primitives::wire::pack_u32_slice(data))
         .collect();
     let results = eval_bytes("region_tests", program, values);
     results
         .iter()
         .map(|value| {
             value
-                .to_bytes()
                 .chunks_exact(4)
                 .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
                 .collect()
@@ -520,7 +518,6 @@ fn eval_compact_survivors(regions: &[u32], pids: &[u32]) -> Vec<u32> {
     let results = eval_bytes("region_tests", &program, inputs);
     // `survivors` is the single writable buffer, so it is `results[0]`.
     results[0]
-        .to_bytes()
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
         .collect()

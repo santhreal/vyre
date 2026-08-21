@@ -244,7 +244,7 @@ mod tests {
         );
         let tm_idx = vyre_reference::output_index(&program, "tm")
             .expect("Fix: triangle_messages must be a reference output");
-        let messages = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[tm_idx].to_bytes());
+        let messages = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[tm_idx]);
 
         // tri 0 (valid): 10 - 20 + 30 = 20 (u32 wrapping). tri 1 (malformed): must be
         // 0 (skipped like the CPU), NOT the 999 the pre-fix OOB read would store.

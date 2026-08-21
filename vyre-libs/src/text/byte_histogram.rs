@@ -275,8 +275,13 @@ mod tests {
         let (outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,
             &[
-                vyre_primitives::wire::pack_u32_slice(&[0x0141]), // > 255, low byte 0x41
-                vec![0u8; 256 * 4],
+                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&[
+                    0x0141,
+                ])),
+                vyre_reference::value::Value::from(
+                    // > 255), vyre_reference::value::Value::from(low byte 0x41
+                    vec![0u8; 256 * 4],
+                ),
             ],
         )
         .expect("Fix: byte_histogram_256 must reference-evaluate a high-bit source element");

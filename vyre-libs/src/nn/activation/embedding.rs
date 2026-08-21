@@ -185,7 +185,7 @@ mod tests {
             &program,
             vec![f32_bytes(&[f32::NAN, 2.0]), u32_bytes(&[0]), vec![0u8; 8]],
         );
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = decode_f32(&outputs[0]);
         assert!(
             out[0].is_nan(),
             "embedding must propagate NaN from table to output"

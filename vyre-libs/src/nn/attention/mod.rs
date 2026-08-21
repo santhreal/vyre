@@ -75,7 +75,7 @@ pub(crate) fn eval_qkv_program(
         .map(|b| b.count() as usize * core::mem::size_of::<f32>())
         .expect("Fix: output buffer present");
     let outputs = eval_bytes(
-        "mod",
+        "attention",
         program,
         vec![
             f32_bytes(q),

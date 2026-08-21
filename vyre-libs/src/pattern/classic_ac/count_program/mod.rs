@@ -348,7 +348,7 @@ mod tests {
         let mut inputs = ac_dfa_table_inputs(&ac.dfa, haystack);
         inputs.push(u32_input(&[haystack.len() as u32]));
         inputs.push(vec![0_u8; haystack.len() * 4]);
-        let outputs = eval_bytes("mod", &program, inputs.clone());
+        let outputs = eval_bytes("count_program", &program, inputs.clone());
 
         assert_eq!(decode_u32(&outputs[0]), vec![expected]);
     }
@@ -383,7 +383,7 @@ mod tests {
         )));
         inputs.push(u32_input(&[haystack.len() as u32]));
         inputs.push(vec![0_u8; haystack.len() * 4]);
-        let outputs = eval_bytes("mod", &program, inputs);
+        let outputs = eval_bytes("count_program", &program, inputs);
 
         assert_eq!(decode_u32(&outputs[0]), vec![expected]);
     }

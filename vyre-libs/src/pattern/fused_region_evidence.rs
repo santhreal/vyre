@@ -356,9 +356,8 @@ mod tests {
         ];
         let outputs = eval_bytes("fused_region_evidence", &program, inputs);
 
-        let words_of = |v: &vyre_reference::value::Value| -> Vec<u32> {
-            v.to_bytes()
-                .chunks_exact(4)
+        let words_of = |v: &[u8]| -> Vec<u32> {
+            v.chunks_exact(4)
                 .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
                 .collect()
         };

@@ -354,7 +354,6 @@ pub(crate) fn build_atomic_compare_exchange(
 // Test helpers shared across atomic op unit tests.
 #[cfg(test)]
 pub(crate) mod testutil {
-    use vyre_reference::value::Value;
 
     pub(crate) use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
@@ -415,11 +414,11 @@ pub(crate) mod testutil {
     ) -> (u32, Vec<u32>) {
         let n = values.len().max(1);
         let inputs = vec![
-            Value::Bytes(pack_u32(values).into()),
-            Value::Bytes(pack_u32(&[initial_state]).into()),
-            Value::Bytes(vec![0u8; n * 4].into()),
+            pack_u32(values),
+            pack_u32(&[initial_state]),
+            vec![0u8; n * 4],
         ];
-        let outputs = eval_bytes("mod", program, inputs.clone());
+        let outputs = eval_bytes("atomic", program, inputs.clone());
         let state_bytes = outputs[0].clone();
         let state = vyre_primitives::wire::read_u32_le_word(&state_bytes, 0, "atomic state")
             .expect("Fix: atomic state output must contain one u32.");
@@ -436,12 +435,12 @@ pub(crate) mod testutil {
     ) -> (u32, Vec<u32>) {
         let n = expected.len().max(1);
         let inputs = vec![
-            Value::Bytes(pack_u32(expected).into()),
-            Value::Bytes(pack_u32(desired).into()),
-            Value::Bytes(pack_u32(&[initial_state]).into()),
-            Value::Bytes(vec![0u8; n * 4].into()),
+            pack_u32(expected),
+            pack_u32(desired),
+            pack_u32(&[initial_state]),
+            vec![0u8; n * 4],
         ];
-        let outputs = eval_bytes("mod", program, inputs);
+        let outputs = eval_bytes("atomic", program, inputs);
         let state_bytes = outputs[0].clone();
         let state = vyre_primitives::wire::read_u32_le_word(&state_bytes, 0, "cas state")
             .expect("Fix: CAS state output must contain one u32.");

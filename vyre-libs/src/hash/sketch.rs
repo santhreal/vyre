@@ -421,8 +421,7 @@ mod tests {
         );
         let table_idx = vyre_reference::output_index(&program, "table")
             .expect("Fix: count_sketch_update `table` must be a reference output");
-        let gpu_table =
-            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[table_idx].to_bytes());
+        let gpu_table = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[table_idx]);
 
         // GPU must match the CPU exactly (both skip the two out-of-range columns).
         assert_eq!(
@@ -453,9 +452,11 @@ mod tests {
         let (_outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,
             &[
-                vyre_primitives::wire::pack_u32_slice(&vec![0u32; (d * w) as usize]),
-                vyre_primitives::wire::pack_u32_slice(&hashes),
-                vyre_primitives::wire::pack_u32_slice(&signs),
+                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(
+                    &vec![0u32; (d * w) as usize],
+                )),
+                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&hashes)),
+                vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(&signs)),
             ],
         )
         .expect("Fix: count_sketch_update must reference-evaluate");

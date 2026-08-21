@@ -337,7 +337,6 @@ mod tests {
             i4x8_dot_i32_witness, i4x8_matvec_f32_scaled_witness, pack_i4x8_witness,
         },
         reference_eval,
-        value::Value,
     };
 
     fn dot(lhs: &[i32], rhs: &[i32]) -> i32 {
@@ -376,10 +375,10 @@ mod tests {
             "int4",
             &program,
             vec![
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&lhs_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&rhs_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(&[lhs_scale]).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(&[rhs_scale]).into()),
+                vyre_primitives::wire::pack_u32_slice(&lhs_packed),
+                vyre_primitives::wire::pack_u32_slice(&rhs_packed),
+                vyre_primitives::wire::pack_f32_slice(&[lhs_scale]),
+                vyre_primitives::wire::pack_f32_slice(&[rhs_scale]),
             ],
         );
         let raw = outputs[0].clone();
@@ -412,9 +411,9 @@ mod tests {
             "int4",
             &program,
             vec![
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(x).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(scales).into()),
+                vyre_primitives::wire::pack_u32_slice(&packed),
+                vyre_primitives::wire::pack_f32_slice(x),
+                vyre_primitives::wire::pack_f32_slice(scales),
             ],
         );
         vyre_primitives::wire::unpack_f32_slice(&outputs[0], rows as usize, "int4 matvec output")
@@ -436,9 +435,9 @@ mod tests {
             "int4",
             &program,
             vec![
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(x_batches).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(scales).into()),
+                vyre_primitives::wire::pack_u32_slice(&packed),
+                vyre_primitives::wire::pack_f32_slice(x_batches),
+                vyre_primitives::wire::pack_f32_slice(scales),
             ],
         );
         vyre_primitives::wire::unpack_f32_slice(
@@ -475,10 +474,10 @@ mod tests {
             "int4",
             &program,
             vec![
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&weights_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&activations_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(row_scales).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(batch_scales).into()),
+                vyre_primitives::wire::pack_u32_slice(&weights_packed),
+                vyre_primitives::wire::pack_u32_slice(&activations_packed),
+                vyre_primitives::wire::pack_f32_slice(row_scales),
+                vyre_primitives::wire::pack_f32_slice(batch_scales),
             ],
         );
         vyre_primitives::wire::unpack_f32_slice(
@@ -514,10 +513,10 @@ mod tests {
             "int4",
             &program,
             vec![
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&weights_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&activations_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(row_scales).into()),
-                Value::Bytes(vyre_primitives::wire::pack_f32_slice(batch_scales).into()),
+                vyre_primitives::wire::pack_u32_slice(&weights_packed),
+                vyre_primitives::wire::pack_u32_slice(&activations_packed),
+                vyre_primitives::wire::pack_f32_slice(row_scales),
+                vyre_primitives::wire::pack_f32_slice(batch_scales),
             ],
         );
         let packed = vyre_primitives::wire::unpack_f32_slice(

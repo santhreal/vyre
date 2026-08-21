@@ -274,7 +274,6 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
     use crate::fixture_bytes::eval_bytes;
-    use vyre_reference::value::Value;
 
     fn output_zero_bytes(program: &Program) -> Vec<u8> {
         let output = program
@@ -286,8 +285,7 @@ mod tests {
     }
 
     fn run_program(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<u32> {
-        let values = inputs.into_iter().map(Value::from).collect::<Vec<_>>();
-        let outputs = eval_bytes("ops", program, values);
+        let outputs = eval_bytes("matmul_tiled", program, inputs);
         decode_u32_words(&outputs[0])
     }
 

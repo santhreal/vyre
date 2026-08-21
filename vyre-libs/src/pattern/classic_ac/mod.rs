@@ -350,7 +350,7 @@ mod tests {
             vec![0u8; 1024 * 4],
         ];
 
-        let outputs = eval_bytes("mod", &program, inputs.clone());
+        let outputs = eval_bytes("classic_ac", &program, inputs.clone());
 
         let match_count = decode_u32_words(&outputs[0])[0];
         let gpu_matches_raw = decode_u32_words(&outputs[1]);
@@ -399,7 +399,7 @@ mod tests {
             vec![0u8; 2 * 4],
         ];
 
-        let outputs = eval_bytes("mod", &program, inputs);
+        let outputs = eval_bytes("classic_ac", &program, inputs);
 
         let match_count = decode_u32_words(&outputs[0])[0];
         // Total matches = 1 + 2 + 3 = 6, but only 2 slots.

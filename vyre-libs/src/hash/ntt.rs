@@ -414,7 +414,6 @@ mod tests {
             ],
         );
         let got = outputs[0]
-            .to_bytes()
             .chunks_exact(4)
             .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()))
             .collect::<Vec<_>>();
