@@ -15,6 +15,7 @@ pub mod check_tier_deps;
 pub mod ci_contract;
 pub mod ci_registry;
 pub mod ci_steps;
+pub mod codeowners;
 pub mod crate_pages;
 pub mod crate_readmes;
 pub mod crate_registry;
@@ -107,6 +108,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("ci-registry", &ci_registry::CiRegistry),
     ("ci-steps", &ci_steps::CiSteps),
     ("ci-shell", &ci_contract::CiShell),
+    ("codeowners", &codeowners::Codeowners),
     ("crate-pages", &crate_pages::CratePages),
     ("crate-readmes", &crate_readmes::CrateReadmes),
     ("crate-ownership", &crate_registry::CrateOwnership),

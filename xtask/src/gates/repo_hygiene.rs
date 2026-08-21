@@ -21,7 +21,10 @@ const REQUIRED: &[&str] = &[
     "CHANGELOG.md",
     "LICENSE-APACHE",
     "LICENSE-MIT",
-    "CODEOWNERS",
+    // Only the .github copy. GitHub reads a root `CODEOWNERS` first and ignores
+    // every later location, so requiring both required a shadow that silently
+    // replaced the active policy. The `codeowners` gate owns that file now and
+    // refuses a second one anywhere.
     ".github/CODEOWNERS",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/dependabot.yml",

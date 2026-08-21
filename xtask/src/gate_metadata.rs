@@ -261,6 +261,23 @@ pub static GATE_METADATA: &[GateDescriptor] = &[
         proof: "crate::gates::ci_steps::tests::a_matrix_expression_is_not_a_selector_the_tree_can_refuse",
     },
     GateDescriptor {
+        name: "codeowners",
+        help: "Generate .github/CODEOWNERS from docs/PROTECTED_BOUNDARIES.toml and report \
+        every way the protection surface has drifted from it: a second CODEOWNERS at a \
+        location GitHub reads first, a pattern matching no tracked path, a boundary naming a \
+        package that moved, a workspace member with no protection decision recorded, the \
+        manifest or generator failing to protect itself, and a branch-protection payload that \
+        stops requiring the code-owner review. Proves nothing about GitHub's live \
+        configuration: the API is not reached, so the script that applies the protection is \
+        what is judged.",
+        package: "xtask",
+        areas: &["contract-rules", "prepublish"],
+        subject: "workspace members",
+        artifacts: &[".github/CODEOWNERS"],
+        prerequisites: &[],
+        proof: "crate::gates::codeowners::tests::a_protection_payload_that_stops_requiring_the_owner_review_is_reported",
+    },
+    GateDescriptor {
         name: "cli-docs",
         help: "Enforce cli-docs contracts",
         package: "xtask",

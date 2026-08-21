@@ -1,0 +1,255 @@
+schema_version = 1
+
+# The review team every protected boundary names. GitHub resolves this to the
+# reviewers it requires, so one spelling here is the only spelling anywhere.
+owner = "@santhreal/core-maintainers"
+
+# The branch whose protection must require that review.
+protected_branch = "main"
+
+# `.github/CODEOWNERS` is generated from this file by the `codeowners` gate and
+# is the only CODEOWNERS the repository carries. GitHub reads the first of
+# `CODEOWNERS`, `.github/CODEOWNERS`, `docs/CODEOWNERS`, so a second file at a
+# higher-precedence location silently replaces the whole policy. The gate
+# refuses one at any location.
+#
+# Every workspace member appears exactly once: named by a boundary that covers
+# it, or listed under `[[open]]` with the reason no maintainer review is
+# required. A new crate matches neither and turns the gate red until someone
+# records the decision.
+
+# ─── Specification and semantics ───────────────────────────────────
+
+[[boundary]]
+pattern = "/vyre-spec/"
+packages = ["vyre-spec"]
+reason = "The algebraic law enum, the operation definitions and the cross-engine schemas every other crate is judged against."
+defends = "oracle poisoning, decorative laws, monotonic weakening"
+
+[[boundary]]
+pattern = "/vyre-foundation/"
+packages = ["vyre-foundation"]
+reason = "Typed IR, graph validation and the optimizer legality that decides which rewrites are semantically permitted."
+defends = "monotonic weakening, oracle poisoning"
+
+[[boundary]]
+pattern = "/vyre-reference/"
+packages = ["vyre-reference"]
+reason = "The CPU reference interpreter. It is the only independent semantic oracle, so a change to it changes what every parity result means."
+defends = "oracle poisoning, rigged tests"
+
+[[boundary]]
+pattern = "/vyre-driver-reference/"
+packages = ["vyre-driver-reference"]
+reason = "Registers the oracle as a backend, so it is the one place a host result can be presented as a device result."
+defends = "oracle poisoning, silent host execution"
+
+[[boundary]]
+pattern = "/conform/"
+packages = ["conform/vyre-conform-spec", "conform/vyre-conform"]
+reason = "The conformance harness, its certificate schema and the parity matrices."
+defends = "rigged tests, silent coverage holes, no proof for all inputs"
+
+# ─── Schedule selection, lowering and emission ─────────────────────
+
+[[boundary]]
+pattern = "/vyre-megakernel/"
+packages = ["vyre-megakernel"]
+reason = "The single schedule-selection owner. Legality, cost, search and artifact identity are decided here."
+defends = "monotonic weakening, unmeasured winners"
+
+[[boundary]]
+pattern = "/vyre-lower/"
+packages = ["vyre-lower"]
+reason = "Neutral lowering from selected schedule to physical kernel representation."
+defends = "monotonic weakening"
+
+[[boundary]]
+pattern = "/vyre-emit-naga/"
+packages = ["vyre-emit-naga"]
+reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
+defends = "silent scope downgrade"
+
+[[boundary]]
+pattern = "/vyre-emit-ptx/"
+packages = ["vyre-emit-ptx"]
+reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
+defends = "silent scope downgrade"
+
+[[boundary]]
+pattern = "/vyre-emit-spirv/"
+packages = ["vyre-emit-spirv"]
+reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
+defends = "silent scope downgrade"
+
+[[boundary]]
+pattern = "/vyre-emit-metal/"
+packages = ["vyre-emit-metal"]
+reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
+defends = "silent scope downgrade"
+
+# ─── Backends, runtime and caches ──────────────────────────────────
+
+[[boundary]]
+pattern = "/vyre-driver/"
+packages = ["vyre-driver"]
+reason = "The neutral backend contract, precedence and dispatch seam every concrete device is admitted through."
+defends = "silent host execution, monotonic weakening"
+
+[[boundary]]
+pattern = "/vyre-driver-cuda/"
+packages = ["vyre-driver-cuda"]
+reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
+defends = "silent host execution"
+
+[[boundary]]
+pattern = "/vyre-driver-wgpu/"
+packages = ["vyre-driver-wgpu"]
+reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
+defends = "silent host execution"
+
+[[boundary]]
+pattern = "/vyre-driver-metal/"
+packages = ["vyre-driver-metal"]
+reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
+defends = "silent host execution"
+
+[[boundary]]
+pattern = "/vyre-driver-spirv/"
+packages = ["vyre-driver-spirv"]
+reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
+defends = "silent host execution"
+
+[[boundary]]
+pattern = "/vyre-runtime/"
+packages = ["vyre-runtime"]
+reason = "Artifact admission, residency, tenant limits and the caches a stale record would be served from."
+defends = "stale cache reuse, unbounded tenants"
+
+# ─── Measurement and evidence ──────────────────────────────────────
+
+[[boundary]]
+pattern = "/vyre-bench/"
+packages = ["vyre-bench"]
+reason = "The measurement harness. What it records is what a performance claim is read from."
+defends = "rigged tests, contributor-chosen inputs"
+
+[[boundary]]
+pattern = "/xtask-evidence/"
+packages = ["xtask-evidence"]
+reason = "The release and evidence tooling that decides what a measured claim is."
+defends = "rigged tests, contributor-chosen inputs"
+
+[[boundary]]
+pattern = "/release/"
+packages = []
+reason = "The recorded evidence and release train a claim is read from."
+defends = "contributor-chosen inputs, rigged tests"
+
+[[boundary]]
+pattern = "/docs/public-api/"
+packages = []
+reason = "The committed public API snapshots. They are the semver trip-wire, so a regenerated snapshot is how an accidental promise ships."
+defends = "monotonic weakening"
+
+# ─── The gates and their pins ──────────────────────────────────────
+
+[[boundary]]
+pattern = "/xtask/gate-baselines.toml"
+packages = []
+reason = "Every gate's finding pin. A raised row certifies what it stopped checking."
+defends = "monotonic weakening"
+
+[[boundary]]
+pattern = "/xtask/src/gates/codeowners.rs"
+packages = []
+reason = "The generator and validator of the active CODEOWNERS file."
+defends = "all boundaries (meta-gate)"
+
+[[boundary]]
+pattern = "/docs/PROTECTED_BOUNDARIES.toml"
+packages = []
+reason = "This manifest. It is the source the active CODEOWNERS is generated from."
+defends = "all boundaries (meta-gate)"
+
+[[boundary]]
+pattern = "/.github/CODEOWNERS"
+packages = []
+reason = "The generated file itself, so a contributor cannot remove their own restriction."
+defends = "all boundaries (meta-gate)"
+
+[[boundary]]
+pattern = "/.github/workflows/"
+packages = []
+reason = "CI gates and the permissions they run with."
+defends = "all boundaries (meta-gate)"
+
+[[boundary]]
+pattern = "/scripts/apply-branch-protection.sh"
+packages = []
+reason = "Applies the branch protection that makes a required review required."
+defends = "all boundaries (meta-gate)"
+
+[[boundary]]
+pattern = "/Cargo.toml"
+packages = []
+reason = "Workspace root manifest. It controls features, dependencies and crate topology."
+defends = "oracle poisoning, monotonic weakening"
+
+# ─── Packages carrying no protected boundary ───────────────────────
+
+[[open]]
+package = "vyre"
+reason = "Facade. It re-exports and owns no semantics; its promise is protected through /docs/public-api/."
+
+[[open]]
+package = "vyre-registry-link"
+reason = "Link anchors only. It names submitting crates and holds no contract of its own."
+
+[[open]]
+package = "vyre-macros"
+reason = "Declaration macros. What they expand into is judged by the registries and gates that read the result."
+
+[[open]]
+package = "vyre-primitives"
+reason = "Uncomposable intrinsics. Admission is enforced by the lego gates, which read the registry rather than a reviewer."
+
+[[open]]
+package = "vyre-libs"
+reason = "Domain compositions built from published IR. A wrong composition fails conformance against the protected oracle."
+
+[[open]]
+package = "vyre-pass-engine"
+reason = "Runs optimizer passes as Vyre programs. Legality stays in the protected foundation optimizer."
+
+[[open]]
+package = "vyre-test-support"
+reason = "Shared test fixtures. It ships in no artifact and decides no contract."
+
+[[open]]
+package = "vyre-safetensors"
+reason = "Format adapter. Its bounds are proved by its own fuzz and property suites."
+
+[[open]]
+package = "vyre-aot"
+reason = "Ahead-of-time wrapper over the protected compile path; it adds no semantics."
+
+[[open]]
+package = "vyre-debug"
+reason = "Read-only inspection of descriptors and artifacts. It produces no shipped decision."
+
+[[open]]
+package = "vyre-lints"
+reason = "Lint implementations. Their verdicts are pinned in the protected gate baselines."
+
+[[open]]
+package = "xtask"
+reason = "Gate runner and text rules. The pins and the CODEOWNERS generator inside it are protected by path."
+
+[[open]]
+package = "xtask-registry"
+reason = "Registry reader for gates that must link the compiler. It records no measurement."
+
+[[open]]
+package = "structure-gate"
+reason = "Structural rules over source text. Its verdicts are pinned in the protected gate baselines."

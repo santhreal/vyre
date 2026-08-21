@@ -5,6 +5,15 @@
 # document is coherent with the workflows is the `ci-required` gate's question,
 # and this script refuses to apply anything until that gate passes. The context
 # list is read here because it is the payload of the API call.
+#
+# The payload also requires the code-owner review. Every line of
+# .github/CODEOWNERS is advisory until it does, so the `codeowners` gate reads
+# this file and fails when the requirement is dropped. The approval count is
+# zero on purpose: an owner review is required for an owned path and no extra
+# approval is demanded elsewhere.
+#
+# The gate also refuses to run if this script stops naming the branch that
+# docs/PROTECTED_BOUNDARIES.toml declares protected.
 
 set -euo pipefail
 
@@ -54,7 +63,11 @@ args=(
   -F
   "enforce_admins=true"
   -F
-  "required_pull_request_reviews=null"
+  "required_pull_request_reviews[require_code_owner_reviews]=true"
+  -F
+  "required_pull_request_reviews[required_approving_review_count]=0"
+  -F
+  "required_pull_request_reviews[dismiss_stale_reviews]=true"
   -F
   "restrictions=null"
 )
