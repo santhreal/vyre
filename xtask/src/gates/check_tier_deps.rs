@@ -39,7 +39,7 @@ const FIX: &str = "remove the upward dependency, or move the crate to the layer 
 /// of what it checks, the FNV-1a state functions and the DFA compiler, from the
 /// crate that owns them. The reverse edge exists only as a dev-dependency,
 /// which cargo resolves separately and no production table declares.
-const LAYER_ORDER: &[&str] = &[
+pub(super) const LAYER_ORDER: &[&str] = &[
     "standalone-tooling",
     "foundation",
     "primitives",

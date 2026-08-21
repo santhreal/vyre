@@ -37,6 +37,7 @@ pub mod fixture_checkout;
 pub mod frozen_contract;
 pub mod gate_canon;
 pub mod gpu_loudness;
+mod host_oracle_closure;
 pub mod host_oracle_elimination;
 mod host_oracle_elimination_ast;
 mod host_oracle_elimination_classify;

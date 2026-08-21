@@ -72,8 +72,16 @@ impl crate::gate::GateBehavior for HostOracleElimination {
             report.find(finding);
         }
 
+        // Containing no host oracle is not the same as linking none: a shipped
+        // crate that names the interpreter as a dependency carries it whether
+        // or not a line calls it.
+        let closure = super::host_oracle_closure::findings(&tree, &mut report)?;
+        for finding in closure {
+            report.find(finding);
+        }
+
         report.note(format!(
-            "{} production library source file(s) analyzed",
+            "{} production library source file(s) analyzed, and every shipped crate's production dependency closure checked for a host evaluator",
             sources.len()
         ));
         Ok(report)
