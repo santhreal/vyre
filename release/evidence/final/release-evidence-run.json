@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:299b1f6bc20d68c55f7bb5ac50980c9e87985d0c:dirty=true:worktree=e8ac6657f245dd11919b0139a95cf3597cfdc81f2049157e960e38f2a0ef6a88",
+  "source_fingerprint": "git:288eeb2f2d6ec6c2be61e6ba0ff05888dd6972ea:dirty=false",
   "schema_version": 6,
   "total_commands": 15,
   "artifact_failures": 0,
@@ -998,14 +998,14 @@
         {
           "path": "release/evidence/metadata/feature-matrix.json",
           "exists": true,
-          "bytes": 17454,
+          "bytes": 17436,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask feature-matrix",
           "command_mode": "spawned",
-          "content_sha256": "fea6fc28c556088663ae6dd71b499c8f713d147290efa7a9dc5e874f8ae1857a",
-          "source_fingerprint": "release-evidence-source:v1:e2237906b8b2d77ffd929dd5ed03a8dcd4f4c20fff6110373e07bed0c3623528",
-          "freshness_fingerprint": "release-evidence-freshness:v1:3769ade3f6cac91291f1ff3ae01ea20bf68e959e9f2eb822e6ab50aa73975a9e",
+          "content_sha256": "a41669da0ec5e49bbbd4109c4a8210bba5d46b924814ad020a71740dc8c467ee",
+          "source_fingerprint": "release-evidence-source:v1:d995ba43bd4f6a50c29029cde21e2c5e17e11adca60c1b8c5860c693aebaaca5",
+          "freshness_fingerprint": "release-evidence-freshness:v1:352bfaa1c5fca158aeba742fe6b36f589cefb29d65f5ab0597fcf44cfeb7e303",
           "blockers": []
         }
       ]
@@ -1882,10 +1882,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask feature-matrix",
         "command_mode": "spawned",
-        "bytes": 17454,
-        "content_sha256": "fea6fc28c556088663ae6dd71b499c8f713d147290efa7a9dc5e874f8ae1857a",
-        "source_fingerprint": "release-evidence-source:v1:e2237906b8b2d77ffd929dd5ed03a8dcd4f4c20fff6110373e07bed0c3623528",
-        "freshness_fingerprint": "release-evidence-freshness:v1:3769ade3f6cac91291f1ff3ae01ea20bf68e959e9f2eb822e6ab50aa73975a9e",
+        "bytes": 17436,
+        "content_sha256": "a41669da0ec5e49bbbd4109c4a8210bba5d46b924814ad020a71740dc8c467ee",
+        "source_fingerprint": "release-evidence-source:v1:d995ba43bd4f6a50c29029cde21e2c5e17e11adca60c1b8c5860c693aebaaca5",
+        "freshness_fingerprint": "release-evidence-freshness:v1:352bfaa1c5fca158aeba742fe6b36f589cefb29d65f5ab0597fcf44cfeb7e303",
         "blockers": []
       },
       {

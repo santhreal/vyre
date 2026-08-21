@@ -373,10 +373,6 @@ feature = "hash"
 
 [[pair]]
 member = "vyre-libs"
-feature = "intern"
-
-[[pair]]
-member = "vyre-libs"
 feature = "label"
 
 [[pair]]
