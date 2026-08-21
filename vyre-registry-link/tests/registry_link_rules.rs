@@ -65,6 +65,29 @@ fn rust_sources(dir: &Path, files: &mut Vec<PathBuf>) {
     }
 }
 
+/// Whether a crate publishes an `operation_catalog` module, at any depth.
+///
+/// `vyre-libs` keeps its catalog in `src/plumbing/registration/`, so a check
+/// that only looked at `src/operation_catalog.rs` read that crate as owning
+/// nothing. The ownership set then lost a counted source in silence, which is
+/// the exact shape of defect this file exists to make impossible.
+fn owns_an_operation_catalog(src: &Path) -> bool {
+    const MODULE: &str = "operation_catalog";
+    let mut files = Vec::new();
+    rust_sources(src, &mut files);
+    files.iter().any(|path| {
+        let is_file_module = path
+            .file_stem()
+            .is_some_and(|stem| stem == MODULE);
+        let is_directory_module = path.file_name().is_some_and(|name| name == "mod.rs")
+            && path
+                .parent()
+                .and_then(Path::file_name)
+                .is_some_and(|name| name == MODULE);
+        is_file_module || is_directory_module
+    })
+}
+
 /// A submission is `inventory::submit!` followed by the registration type. The
 /// type is matched on the following lines rather than anywhere in the file, so a
 /// doc comment naming the type is not read as a registration.
@@ -109,7 +132,7 @@ fn every_crate_that_owns_an_operation_catalog_is_a_source() {
     let root = checkout_root();
     let mut owners: Vec<String> = workspace_members(&root)
         .into_iter()
-        .filter(|member| root.join(member).join("src/operation_catalog.rs").is_file())
+        .filter(|member| owns_an_operation_catalog(&root.join(member).join("src")))
         .map(|member| crate_name(&member))
         .collect();
     owners.sort();
