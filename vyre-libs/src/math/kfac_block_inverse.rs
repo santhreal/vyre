@@ -225,6 +225,7 @@ fn cpu_ref_into(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     #[test]
     fn test_cpu_ref_1x1() {
         let blocks_in = vec![2.0];
@@ -308,7 +309,6 @@ mod tests {
         let expected_out = cpu_ref(&blocks_in, 1, 2);
 
         use std::sync::Arc;
-        use vyre_reference::reference_eval;
         use vyre_reference::value::Value;
 
         let to_value = |data: &[f32]| {
@@ -322,8 +322,8 @@ mod tests {
             to_value(&[0.0; 4]),  // s
         ];
 
-        let results = reference_eval(&p, &inputs).expect("Fix: interpreter failed");
-        let actual_bytes = results[0].to_bytes();
+        let results = eval_bytes("kfac_block_inverse", &p, inputs);
+        let actual_bytes = results[0].clone();
         let actual_out: Vec<f32> = actual_bytes
             .chunks_exact(4)
             .map(|c| f32::from_le_bytes(c.try_into().unwrap()))

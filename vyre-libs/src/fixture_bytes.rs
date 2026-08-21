@@ -102,6 +102,38 @@ pub(crate) fn try_eval_bytes(
         .collect())
 }
 
+/// Run a program with the interpreter's lanes in declaration order, or
+/// reversed.
+///
+/// A determinism probe runs the same program both ways and compares the
+/// buffers. Which entry point runs is the thing under test there, so the
+/// probe cannot go through [`eval_bytes`], which only knows the default
+/// order.
+#[cfg(test)]
+pub(crate) fn eval_bytes_lane_order(
+    label: &str,
+    program: &vyre_foundation::ir::Program,
+    buffers: Vec<Vec<u8>>,
+    reversed: bool,
+) -> Vec<Vec<u8>> {
+    let values: Vec<vyre_reference::value::Value> = buffers
+        .into_iter()
+        .map(vyre_reference::value::Value::from)
+        .collect();
+    let results = if reversed {
+        vyre_reference::reference_eval_lane_reversed(program, &values)
+    } else {
+        vyre_reference::reference_eval(program, &values)
+    };
+    results
+        .unwrap_or_else(|error| {
+            panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+        })
+        .iter()
+        .map(|value| value.to_bytes())
+        .collect()
+}
+
 /// Run a program whose arguments and one output are all f32.
 ///
 /// `output_len` is the element count the program declares for its output, not

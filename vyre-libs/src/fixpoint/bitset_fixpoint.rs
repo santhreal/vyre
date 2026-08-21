@@ -185,13 +185,12 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use vyre_reference::composition_witness::{
-        bitset_difference_flag_witness as reference_eval,
-        bitset_warm_start_witness as reference_eval_warm_start,
+        bitset_difference_flag_witness as difference_flag, bitset_warm_start_witness as warm_start,
     };
 
     #[test]
     fn flag_clears_when_bitsets_equal() {
-        assert_eq!(reference_eval(&[0b0011], &[0b0011]), 0);
+        assert_eq!(difference_flag(&[0b0011], &[0b0011]), 0);
     }
 
     #[test]
@@ -204,7 +203,7 @@ mod tests {
         let current = vec![0b0001];
         let next_after_transfer = vec![0b0011];
         assert_eq!(
-            reference_eval(&current, &next_after_transfer),
+            difference_flag(&current, &next_after_transfer),
             1,
             "transfer added bits → flag must set"
         );
@@ -213,7 +212,7 @@ mod tests {
         let current2 = next_after_transfer.clone();
         let next2 = next_after_transfer;
         assert_eq!(
-            reference_eval(&current2, &next2),
+            difference_flag(&current2, &next2),
             0,
             "no bits added on iteration 2 → converged"
         );
@@ -234,7 +233,7 @@ mod tests {
         // c0 = 0b0001, transfer says next = 0b0011 (delta bit 1),
         // seed = 0b0010 anticipates that delta. Updated = c0 | seed
         // = 0b0011 == next, so flag = 0 per the audited semantics.
-        let (updated, flag) = reference_eval_warm_start(&[0b0001], &[0b0011], &[0b0010]);
+        let (updated, flag) = warm_start(&[0b0001], &[0b0011], &[0b0010]);
         assert_eq!(updated, vec![0b0011]);
         // Note: per F-BF-01 flag compares c0 (not c1) vs next. c0 !=
         // next here, so flag is 1, not 0. This test proves the
@@ -245,7 +244,7 @@ mod tests {
 
     #[test]
     fn flag_sets_when_bitsets_diverge() {
-        assert_eq!(reference_eval(&[0b0001], &[0b0011]), 1);
+        assert_eq!(difference_flag(&[0b0001], &[0b0011]), 1);
     }
 
     #[test]
@@ -258,7 +257,7 @@ mod tests {
         // current", i.e. next == c0. Here c0=0b0001 != next=0b0011
         // → flag MUST be 1 because the transfer step (viewed against
         // the un-warmed state) did change things.
-        let (updated, flag) = reference_eval_warm_start(&[0b0001], &[0b0011], &[0b0010]);
+        let (updated, flag) = warm_start(&[0b0001], &[0b0011], &[0b0010]);
         assert_eq!(updated, vec![0b0011], "seed OR still rewrites current");
         assert_eq!(
             flag, 1,
@@ -270,7 +269,7 @@ mod tests {
     fn warm_start_flags_when_transfer_added_bits() {
         // current=0b0001, seed=0b0000 (no warm-start contribution),
         // transfer wrote 0b0011 into next → should signal change.
-        let (updated, flag) = reference_eval_warm_start(&[0b0001], &[0b0011], &[0b0000]);
+        let (updated, flag) = warm_start(&[0b0001], &[0b0011], &[0b0000]);
         assert_eq!(updated, vec![0b0001]);
         assert_eq!(flag, 1);
     }
@@ -278,8 +277,8 @@ mod tests {
     #[test]
     fn warm_start_with_zero_seed_matches_cold_semantics() {
         // Zero seed → warm start equivalent to cold start.
-        let (updated, flag) = reference_eval_warm_start(&[0b0001], &[0b0001], &[0b0000]);
+        let (updated, flag) = warm_start(&[0b0001], &[0b0001], &[0b0000]);
         assert_eq!(updated, vec![0b0001]);
-        assert_eq!(flag, reference_eval(&[0b0001], &[0b0001]));
+        assert_eq!(flag, difference_flag(&[0b0001], &[0b0001]));
     }
 }

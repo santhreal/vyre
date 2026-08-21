@@ -31,6 +31,7 @@ pub fn scallop_provenance_wide_program(
 mod tests {
     #![allow(clippy::identity_op, clippy::erasing_op)]
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn test_scallop_provenance_wide_program() {
@@ -66,7 +67,6 @@ mod tests {
         let p = scallop_provenance_wide_program("s", "nx", "j", "c", n, w, 2);
 
         use std::sync::Arc;
-        use vyre_reference::reference_eval;
         use vyre_reference::value::Value;
 
         let to_value = |data: &[u32]| {
@@ -82,8 +82,8 @@ mod tests {
             to_value(&join_rules),
         ];
 
-        let results = reference_eval(&p, &inputs).expect("Fix: interpreter failed");
-        let actual_bytes = results[0].to_bytes();
+        let results = eval_bytes("scallop_provenance_wide", &p, inputs);
+        let actual_bytes = results[0].clone();
         let actual_out: Vec<u32> = actual_bytes
             .chunks_exact(4)
             .map(|c| u32::from_le_bytes(c.try_into().unwrap()))

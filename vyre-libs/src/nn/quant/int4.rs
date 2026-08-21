@@ -329,6 +329,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::{
         composition_witness::{
             i4x8_batched_matmul_f32_scaled_witness, i4x8_batched_matmul_top1_f32_scaled_witness,
@@ -371,17 +372,17 @@ mod tests {
             "out",
             lhs.len() as u32,
         );
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
+            vec![
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&lhs_packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&rhs_packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(&[lhs_scale]).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(&[rhs_scale]).into()),
             ],
-        )
-        .expect("Fix: fused scaled packed INT4 dot wrapper must execute in the reference oracle.");
-        let raw = outputs[0].to_bytes();
+        );
+        let raw = outputs[0].clone();
         f32::from_le_bytes(
             raw.get(0..4)
                 .expect("Fix: scaled packed INT4 dot must emit one f32.")
@@ -407,23 +408,17 @@ mod tests {
         let cols = x.len() as u32;
         let packed = pack_i4_matrix_rows(weights);
         let program = int4_matvec_f32_scaled("weights", "x", "scales", "out", rows, cols);
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
+            vec![
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(x).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(scales).into()),
             ],
-        )
-        .expect(
-            "Fix: fused scaled packed INT4 matvec wrapper must execute in the reference oracle.",
         );
-        vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
-            rows as usize,
-            "int4 matvec output",
-        )
-        .expect("Fix: fused INT4 matvec output must decode as f32 rows.")
+        vyre_primitives::wire::unpack_f32_slice(&outputs[0], rows as usize, "int4 matvec output")
+            .expect("Fix: fused INT4 matvec output must decode as f32 rows.")
     }
 
     fn run_batched_matvec(
@@ -437,19 +432,17 @@ mod tests {
         let packed = pack_i4_matrix_rows(weights);
         let program =
             int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", batch, rows, cols);
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
+            vec![
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(x_batches).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(scales).into()),
             ],
-        )
-        .expect(
-            "Fix: batched fused scaled packed INT4 matvec wrapper must execute in the reference oracle.",
         );
         vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
+            &outputs[0],
             (batch * rows) as usize,
             "batched int4 matvec output",
         )
@@ -478,20 +471,18 @@ mod tests {
             rows,
             cols,
         );
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
+            vec![
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&weights_packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&activations_packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(row_scales).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(batch_scales).into()),
             ],
-        )
-        .expect(
-            "Fix: packed-activation batched INT4 matmul wrapper must execute in the reference oracle.",
         );
         vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
+            &outputs[0],
             (batch * rows) as usize,
             "batched int4 matmul output",
         )
@@ -519,18 +510,18 @@ mod tests {
             rows,
             cols,
         );
-        let outputs = reference_eval(
+        let outputs = eval_bytes(
+            "int4",
             &program,
-            &[
+            vec![
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&weights_packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_u32_slice(&activations_packed).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(row_scales).into()),
                 Value::Bytes(vyre_primitives::wire::pack_f32_slice(batch_scales).into()),
             ],
-        )
-        .expect("Fix: packed-activation INT4 top1 wrapper must execute in the reference oracle.");
+        );
         let packed = vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0].to_bytes(),
+            &outputs[0],
             (batch * 2) as usize,
             "batched int4 top1 packed output",
         )

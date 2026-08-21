@@ -31,6 +31,7 @@ pub fn sinkhorn_full_clustering_program(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
 
     /// The binding names one region's Sinkhorn program is built against.
     const FIXTURE: SinkhornBuffers<'static> = SinkhornBuffers::CANONICAL;
@@ -159,7 +160,6 @@ mod tests {
         let p = sinkhorn_full_clustering_program(FIXTURE, extents(2, 2, 1));
 
         use std::sync::Arc;
-        use vyre_reference::reference_eval;
         use vyre_reference::value::Value;
 
         let to_value = |data: &[u32]| {
@@ -180,8 +180,8 @@ mod tests {
             to_value(&[0_u32, 0]),
         ];
 
-        let results = reference_eval(&p, &inputs).expect("Fix: interpreter failed");
-        let actual_bytes = results[0].to_bytes();
+        let results = eval_bytes("sinkhorn_full_clustering", &p, inputs);
+        let actual_bytes = results[0].clone();
         let actual_u: Vec<u32> = actual_bytes
             .chunks_exact(4)
             .map(|c| u32::from_le_bytes(c.try_into().unwrap()))

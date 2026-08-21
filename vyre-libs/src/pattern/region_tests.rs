@@ -267,7 +267,6 @@ fn cap_regions_per_pattern_flag_program_emits_expected_buffers() {
 /// survivor flags it writes (the real device program, not a host mirror).
 fn eval_cap_survivors(pids: &[u32], k: u32) -> Vec<u32> {
     use std::sync::Arc;
-    use vyre_reference::reference_eval;
     use vyre_reference::value::Value;
 
     let count = pids.len() as u32;
@@ -276,7 +275,7 @@ fn eval_cap_survivors(pids: &[u32], k: u32) -> Vec<u32> {
         |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
     // Binding order: pids (in), survivors (out, seeded zero).
     let inputs = vec![to_value(pids), to_value(&vec![0u32; pids.len()])];
-    let results = reference_eval(&program, &inputs).expect("Fix: cap kernel interpreter failed");
+    let results = eval_bytes("region_tests", &program, inputs.clone());
     // The interpreter returns only the writable buffer(s); `survivors` is the
     // single output, so it is `results[0]`.
     results[0]
@@ -359,13 +358,12 @@ fn region_sort_program_zero_count_traps() {
 #[cfg(test)]
 fn run_u32_program(program: &vyre_foundation::ir::Program, inputs: &[&[u32]]) -> Vec<Vec<u32>> {
     use std::sync::Arc;
-    use vyre_reference::reference_eval;
     use vyre_reference::value::Value;
     let values: Vec<Vec<u8>> = inputs
         .iter()
         .map(|data| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data))))
         .collect();
-    let results = reference_eval(program, &values).expect("Fix: interpreter failed");
+    let results = eval_bytes("region_tests", program, values);
     results
         .iter()
         .map(|value| {
@@ -506,7 +504,6 @@ fn compact_first_per_region_pattern_flag_program_emits_expected_buffers() {
 /// and return the survivor flags it writes (the real device program).
 fn eval_compact_survivors(regions: &[u32], pids: &[u32]) -> Vec<u32> {
     use std::sync::Arc;
-    use vyre_reference::reference_eval;
     use vyre_reference::value::Value;
 
     let count = regions.len() as u32;
@@ -520,8 +517,7 @@ fn eval_compact_survivors(regions: &[u32], pids: &[u32]) -> Vec<u32> {
         to_value(pids),
         to_value(&vec![0u32; regions.len()]),
     ];
-    let results =
-        reference_eval(&program, &inputs).expect("Fix: compaction kernel interpreter failed");
+    let results = eval_bytes("region_tests", &program, inputs);
     // `survivors` is the single writable buffer, so it is `results[0]`.
     results[0]
         .to_bytes()

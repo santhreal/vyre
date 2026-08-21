@@ -358,6 +358,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::eval_bytes_lane_order;
     use std::sync::Arc;
     use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
 
@@ -635,13 +637,7 @@ mod tests {
 
         let (expected_dist, _) = cpu_ref(&src, &dst, &weight, &dist_init, 4, 10);
 
-        use vyre_reference::reference_eval;
-        use vyre_reference::value::Value;
-
-        let to_value = |data: &[u32]| {
-            let bytes = vyre_primitives::wire::pack_u32_slice(data);
-            Value::Bytes(Arc::from(bytes))
-        };
+        let to_value = vyre_primitives::wire::pack_u32_slice;
 
         let inputs = vec![
             to_value(&dist_init),
@@ -652,8 +648,8 @@ mod tests {
             to_value(&weight),
         ];
 
-        let results = reference_eval(&p, &inputs).expect("Fix: interpreter failed");
-        let actual_bytes = results[0].to_bytes();
+        let results = eval_bytes("bellman_shortest_path", &p, inputs);
+        let actual_bytes = &results[0];
         let actual_dist: Vec<u32> = actual_bytes
             .chunks_exact(4)
             .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
@@ -737,27 +733,18 @@ mod tests {
         weight: &[u32],
         changed_words: u32,
     ) -> (Vec<u32>, Vec<u32>) {
-        use vyre_reference::value::Value;
-
-        let to_value =
-            |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
-        let inputs = vec![
-            to_value(dist),
-            to_value(dist),
-            to_value(&vec![0_u32; changed_words as usize]),
-            to_value(src),
-            to_value(dst),
-            to_value(weight),
+        let pack = vyre_primitives::wire::pack_u32_slice;
+        let buffers = vec![
+            pack(dist),
+            pack(dist),
+            pack(&vec![0_u32; changed_words as usize]),
+            pack(src),
+            pack(dst),
+            pack(weight),
         ];
-        let results = if reversed {
-            vyre_reference::reference_eval_lane_reversed(program, &inputs)
-        } else {
-            vyre_reference::reference_eval(program, &inputs)
-        }
-        .expect("Fix: the reference interpreter must execute the bellman program.");
-        let decode = |value: &vyre_reference::value::Value| -> Vec<u32> {
-            value
-                .to_bytes()
+        let results = eval_bytes_lane_order("bellman_shortest_path", program, buffers, reversed);
+        let decode = |bytes: &[u8]| -> Vec<u32> {
+            bytes
                 .chunks_exact(4)
                 .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
                 .collect()

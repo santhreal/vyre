@@ -780,10 +780,10 @@ pub fn paged_cache_append(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::{
         decode_f32 as bytes_to_f32, f32_bytes as f32_to_bytes, u32_bytes as u32_to_bytes,
     };
-    use vyre_reference::reference_eval;
 
     #[test]
     fn paged_attention_validates_dimensions() {
@@ -918,8 +918,8 @@ mod tests {
             f32_to_bytes(&out_init),
         ];
 
-        let outputs = reference_eval(&program, &inputs).expect("eval");
-        let result = bytes_to_f32(&outputs[0].to_bytes());
+        let outputs = eval_bytes("paged_attention", &program, inputs.clone());
+        let result = bytes_to_f32(&outputs[0]);
 
         // Token 0 and token 2 have Q.K = 1.0, Token 1 and 3 have Q.K = 0.0
         // Softmax scores: exp(1) for tok 0, exp(0) for tok 1, exp(1) for tok 2, exp(0) for tok 3
@@ -978,8 +978,8 @@ mod tests {
             f32_to_bytes(&cache_data),
         ];
 
-        let outputs = reference_eval(&program, &inputs).expect("eval");
-        let result = bytes_to_f32(&outputs[0].to_bytes());
+        let outputs = eval_bytes("paged_attention", &program, inputs);
+        let result = bytes_to_f32(&outputs[0]);
 
         // Logical token 1 is in physical block 0, slot 1 (indices 2, 3)
         // Logical token 2 is in physical block 1, slot 0 (indices 4, 5)

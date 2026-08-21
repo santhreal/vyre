@@ -272,6 +272,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_foundation::visit::any_descendant;
 
     fn entry_region_body(program: &Program) -> &[Node] {
@@ -435,20 +436,12 @@ mod tests {
         for (case_idx, (inputs, expected)) in
             test_inputs.iter().zip(expected_output.iter()).enumerate()
         {
-            let mut val_inputs: Vec<vyre_reference::value::Value> = inputs
-                .iter()
-                .cloned()
-                .map(vyre_reference::value::Value::from)
-                .collect();
+            let mut buffers = inputs.clone();
             // out buffer is 4 * u32 (16 bytes) ReadWrite buffer
-            if val_inputs.len() < program.buffers().len() {
-                val_inputs.push(vyre_reference::value::Value::from(vec![0u8; 16]));
+            if buffers.len() < program.buffers().len() {
+                buffers.push(vec![0u8; 16]);
             }
-            let outputs: Vec<Vec<u8>> = vyre_reference::reference_eval(&program, &val_inputs)
-                .expect("reference eval must succeed for level_wave witness")
-                .into_iter()
-                .map(|val| val.to_bytes())
-                .collect();
+            let outputs = eval_bytes("level_wave", &program, buffers);
             assert_eq!(
                 outputs, *expected,
                 "reference eval must match expected output for case {case_idx}"
@@ -474,8 +467,6 @@ mod tests {
     #[test]
     fn callee_before_caller_commits_children_before_parents() {
         use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr};
-        use vyre_reference::reference_eval;
-        use vyre_reference::value::Value;
 
         let t = Expr::InvocationId { axis: 0 };
         let step_body = vec![
@@ -498,15 +489,14 @@ mod tests {
             4,
         );
 
-        let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
+        let pack = vyre_primitives::wire::pack_u32_slice;
         let inputs = vec![
             pack(&[0, 1, 2, 3]),
             pack(&[0, 0, 1, 2]),
             pack(&[0, 0, 0, 0]),
         ];
-        let results = reference_eval(&program, &inputs).expect("Fix: level-wave pass eval failed");
+        let results = eval_bytes("level_wave", &program, inputs);
         let out: Vec<u32> = results[0]
-            .to_bytes()
             .chunks_exact(4)
             .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
             .collect();

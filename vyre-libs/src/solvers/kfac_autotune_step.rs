@@ -148,6 +148,7 @@ pub fn kfac_autotune_step_via_with_scratch_into(
 mod tests {
     use super::*;
     use crate::dispatch_buffers::f32_slice_to_le_bytes;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::composition_witness::kfac_block_inverse_witness as reference_kfac_block_inverse;
 
     struct KfacDispatcher;
@@ -225,7 +226,6 @@ mod tests {
         let p = kfac_autotune_step_program("bo", "bi", "s", 1, 2);
 
         use std::sync::Arc;
-        use vyre_reference::reference_eval;
         use vyre_reference::value::Value;
 
         let to_value = |data: &[f32]| {
@@ -239,8 +239,8 @@ mod tests {
             to_value(&[0.0; 4]),
         ];
 
-        let results = reference_eval(&p, &inputs).expect("Fix: interpreter failed");
-        let actual_bytes = results[0].to_bytes();
+        let results = eval_bytes("kfac_autotune_step", &p, inputs.clone());
+        let actual_bytes = results[0].clone();
         let actual_out: Vec<f32> = actual_bytes
             .chunks_exact(4)
             .map(|c| f32::from_le_bytes(c.try_into().unwrap()))

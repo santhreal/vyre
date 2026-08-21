@@ -114,28 +114,16 @@ mod tests {
         words: u32,
         changed_word_count: u32,
     ) -> (Vec<u32>, Vec<u32>) {
-        use vyre_reference::value::Value;
-
-        let to_value = |data: &[u32]| {
-            Value::Bytes(std::sync::Arc::from(vyre_primitives::wire::pack_u32_slice(
-                data,
-            )))
-        };
+        let pack = vyre_primitives::wire::pack_u32_slice;
         let zeros = vec![0_u32; words as usize];
-        let inputs = vec![
-            to_value(&zeros),
-            to_value(&zeros),
-            to_value(&vec![0_u32; changed_word_count as usize]),
+        let buffers = vec![
+            pack(&zeros),
+            pack(&zeros),
+            pack(&vec![0_u32; changed_word_count as usize]),
         ];
-        let results = if reversed {
-            vyre_reference::reference_eval_lane_reversed(program, &inputs)
-        } else {
-            vyre_reference::reference_eval(program, &inputs)
-        }
-        .expect("Fix: the reference interpreter must execute the fixpoint program.");
-        let decode = |value: &vyre_reference::value::Value| -> Vec<u32> {
-            value
-                .to_bytes()
+        let results = eval_bytes_lane_order("persistent_fixpoint", program, buffers, reversed);
+        let decode = |bytes: &[u8]| -> Vec<u32> {
+            bytes
                 .chunks_exact(4)
                 .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
                 .collect()

@@ -79,7 +79,6 @@ fn exclusive_equals_inclusive_minus_input() {
 #[test]
 fn exclusive_difference_pass_executes_and_subtracts_input() {
     use std::sync::Arc;
-    use vyre_reference::reference_eval;
     use vyre_reference::value::Value;
 
     let input = [3u32, 1, 4, 1, 5, 9, 2, 6];
@@ -94,7 +93,7 @@ fn exclusive_difference_pass_executes_and_subtracts_input() {
         to_value(&input),
         to_value(&vec![0u32; input.len()]),
     ];
-    let results = reference_eval(&program, &inputs).expect("interpreter runs difference pass");
+    let results = eval_bytes("multi_block_prefix_scan_tests", &program, inputs.clone());
     let out: Vec<u32> = results[0]
         .to_bytes()
         .chunks_exact(4)
