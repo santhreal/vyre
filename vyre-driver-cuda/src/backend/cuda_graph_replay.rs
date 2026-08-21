@@ -326,6 +326,18 @@ impl CudaBackend {
         input_state: &CudaGraphReplayInputState,
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<Option<u64>, BackendError> {
+        if self.try_cuda_graph_materialized_cache_with_input_state_into(
+            cached,
+            inputs,
+            input_state,
+            outputs,
+        )? {
+            // The outputs the graph would produce are already on the host for
+            // exactly these inputs, so the launch is skipped and the device
+            // time it would have measured is zero rather than absent: the
+            // caller still gets a measurement, and it is the true one.
+            return Ok(Some(0));
+        }
         self.warmup()?;
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?;
 
@@ -368,13 +380,9 @@ impl CudaBackend {
             .elapsed_nanos_u64(started, "timed cuda graph replay wall latency")?;
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, None, None);
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        Ok(vyre_driver::TimedDispatchResult::device_timed(
+            outputs, wall_ns, device_ns,
+        ))
     }
 
     /// Convenience wrapper that allocates the output `Vec` internally.
