@@ -826,13 +826,7 @@ impl CudaBackend {
         let validation_caps = self.program_validation_caps();
         vyre_foundation::program_caps::check_backend_capabilities(
             validation_caps.backend_id,
-            validation_caps.supports_subgroup_ops,
-            validation_caps.supports_f16,
-            validation_caps.supports_bf16,
-            validation_caps.supports_indirect_dispatch,
-            validation_caps.supports_trap_propagation,
-            validation_caps.supports_distributed_collectives,
-            validation_caps.max_workgroup_size,
+            &validation_caps.support(),
             &required,
         )
         .map_err(|error| BackendError::InvalidProgram {

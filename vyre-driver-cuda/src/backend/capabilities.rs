@@ -377,6 +377,16 @@ impl CudaBackend {
             // the device profile must report the same answer.
             supports_trap_propagation: true,
             supports_distributed_collectives: false,
+            // Asked of the device, not asserted: cooperative launch needs
+            // compute capability 6.0 or later, and a device without it cannot
+            // run a whole-grid barrier at any geometry. Whether a specific
+            // dispatch fits co-resident is the separate question the residency
+            // check answers.
+            supports_grid_sync: self.supports_grid_sync(),
+            // CUDA refuses to emulate a whole-grid barrier by splitting into
+            // host launches, so callers get an unsupported-feature refusal
+            // instead of a silently slower path.
+            allows_host_grid_sync_split: false,
             max_workgroup_size: self.max_block_dim(),
         }
     }

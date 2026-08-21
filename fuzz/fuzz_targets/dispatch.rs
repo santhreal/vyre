@@ -101,13 +101,7 @@ fuzz_target!(|data: &[u8]| {
     if let Some(backend) = backend() {
         if let Err(missing) = vyre_foundation::program_caps::check_backend_capabilities(
             backend.id(),
-            backend.supports_subgroup_ops(),
-            backend.supports_f16(),
-            backend.supports_bf16(),
-            backend.supports_indirect_dispatch(),
-            true,
-            backend.supports_distributed_collectives(),
-            backend.max_workgroup_size(),
+            &vyre_driver::validation::ProgramValidationCaps::from_backend(backend).support(),
             &required,
         ) {
             let _ = missing;

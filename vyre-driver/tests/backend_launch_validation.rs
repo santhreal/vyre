@@ -81,6 +81,8 @@ fn backend_error_preserves_structured_validation_source() {
         supports_indirect_dispatch: false,
         supports_distributed_collectives: false,
         supports_trap_propagation: false,
+        supports_grid_sync: false,
+        allows_host_grid_sync_split: false,
         max_workgroup_size: [256, 256, 64],
     };
 

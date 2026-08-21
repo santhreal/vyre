@@ -261,25 +261,66 @@ pub fn scan(program: &Program) -> RequiredCapabilities {
     }
 }
 
-/// Return `Ok(())` when a backend with the given advertised capabilities
-/// can run a program whose required set is `required`, otherwise return
-/// the missing-capability explanation.
+/// What a backend advertises, as named fields.
 ///
-/// The caller passes in the boolean capability queries from
-/// [`crate::ir::Program`]'s backend trait (`supports_subgroup_ops`,
-/// `supports_f16`, etc.) so this function stays free of the
-/// `VyreBackend` trait import and can live in vyre-foundation.
+/// This used to be eight `bool` parameters in a row on
+/// [`check_backend_capabilities`]. Every call site had to get eight
+/// same-typed arguments in the right order, and transposing two of them
+/// compiles, runs, and silently admits a program the device cannot execute or
+/// refuses one it can. Naming them makes the transposition unspellable.
+// Deliberately neither `#[non_exhaustive]` nor `Default`. Every backend crate
+// builds this literal, so an added capability must fail to compile at each one
+// until that backend states its answer. `#[non_exhaustive]` would forbid the
+// literal outright and force a default-then-assign that absorbs a new field in
+// silence, which is the failure this struct exists to prevent.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BackendSupport {
+    /// Wave/subgroup collectives are available.
+    pub subgroup_ops: bool,
+    /// IEEE 754 binary16 operands are available.
+    pub half_precision: bool,
+    /// bfloat16 operands are available.
+    pub brain_float: bool,
+    /// `Node::IndirectDispatch` can be lowered.
+    pub indirect_dispatch: bool,
+    /// A `Node::Trap` propagates out of the kernel.
+    pub trap_propagation: bool,
+    /// Collective communication has real transport behind it.
+    pub distributed_collectives: bool,
+    /// A grid-scope barrier can be executed by some route the backend permits.
+    ///
+    /// Either the backend lowers a cooperative launch itself, or it accepts
+    /// the host split that turns one barrier into sequential dispatches. This
+    /// is not the same question as which route to take: it is whether any
+    /// exists. A backend that lowers no whole-grid barrier and also refuses
+    /// the split cannot run the program at any geometry, and a workgroup
+    /// barrier cannot stand in for one, so refusing it here is what makes
+    /// grid synchronisation a planning decision rather than an emitter
+    /// failure discovered after a target has been chosen.
+    pub grid_sync: bool,
+    /// Largest workgroup the device accepts, per axis. A zero axis is unknown
+    /// and never fires the size check.
+    pub max_workgroup_size: [u32; 3],
+}
+
+/// Return `Ok(())` when a backend that advertises `support` can run a program
+/// whose required set is `required`, otherwise return the missing-capability
+/// explanation.
 pub fn check_backend_capabilities(
     backend_id: &str,
-    supports_subgroup_ops: bool,
-    supports_half_precision: bool,
-    supports_brain_float: bool,
-    supports_indirect_dispatch: bool,
-    supports_trap_propagation: bool,
-    supports_distributed_collectives: bool,
-    max_workgroup_size: [u32; 3],
+    support: &BackendSupport,
     required: &RequiredCapabilities,
 ) -> Result<(), MissingCapability> {
+    let BackendSupport {
+        subgroup_ops: supports_subgroup_ops,
+        half_precision: supports_half_precision,
+        brain_float: supports_brain_float,
+        indirect_dispatch: supports_indirect_dispatch,
+        trap_propagation: supports_trap_propagation,
+        distributed_collectives: supports_distributed_collectives,
+        grid_sync: supports_grid_sync,
+        max_workgroup_size,
+    } = *support;
     let mut missing: Vec<String> = Vec::new();
     if required.subgroup_ops && !supports_subgroup_ops {
         missing.push("subgroup_ops".to_string());
@@ -295,6 +336,9 @@ pub fn check_backend_capabilities(
     }
     if required.trap && !supports_trap_propagation {
         missing.push("trap_propagation".to_string());
+    }
+    if required.grid_sync && !supports_grid_sync {
+        missing.push("grid_sync".to_string());
     }
     if required.distributed_collectives && !supports_distributed_collectives {
         missing.push("distributed_collectives".to_string());

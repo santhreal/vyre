@@ -258,22 +258,21 @@ impl CudaBackendRegistration {
     }
 
     fn validate_program_for_dispatch(&self, program: &Program) -> Result<(), BackendError> {
+        // Before the generic capability check, so a whole-grid barrier this
+        // device cannot launch is refused by name, with the compute
+        // capability and the three ways out, rather than as a bare missing
+        // `grid_sync` bit. The generic check still covers every backend that
+        // has no such diagnostic of its own.
+        self.reject_grid_sync_without_native_lowering(program)?;
         let required = vyre_foundation::program_caps::scan(program);
         vyre_foundation::program_caps::check_backend_capabilities(
             CUDA_BACKEND_ID,
-            self.supports_subgroup_ops(),
-            self.supports_f16(),
-            self.supports_bf16(),
-            self.supports_indirect_dispatch(),
-            true,
-            self.supports_distributed_collectives(),
-            self.max_workgroup_size(),
+            &vyre_driver::validation::ProgramValidationCaps::from_backend(self).support(),
             &required,
         )
         .map_err(|error| BackendError::InvalidProgram {
             fix: error.to_string(),
-        })?;
-        self.reject_grid_sync_without_native_lowering(program)
+        })
     }
 
     fn validate_resident_steps_for_dispatch(

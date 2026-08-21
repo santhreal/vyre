@@ -17,7 +17,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, Program,
 };
 use vyre_foundation::program_caps::{
-    check_backend_capabilities, scan, MissingCapability, RequiredCapabilities,
+    check_backend_capabilities, scan, BackendSupport, MissingCapability, RequiredCapabilities,
 };
 
 // ---------------------------------------------------------------------------
@@ -60,25 +60,24 @@ fn collective_program(entry: Vec<Node>) -> Program {
     )
 }
 
-/// Advertised backend capabilities, named rather than positional.
+/// Test-side constructors for [`BackendSupport`].
 ///
-/// `check_backend_capabilities` takes six `bool`s in a row. Written out at a
-/// call site they are unreadable and one transposed pair silently tests the
-/// wrong capability, which is why every case in this file builds them here.
-#[derive(Clone, Copy)]
-struct Advertised {
-    subgroup_ops: bool,
-    half_precision: bool,
-    brain_float: bool,
-    indirect_dispatch: bool,
-    trap_propagation: bool,
-    distributed_collectives: bool,
-    max_workgroup_size: [u32; 3],
+/// The advertised set used to be six `bool`s in a row on
+/// `check_backend_capabilities`, so this file built a named struct of its own
+/// to keep a transposed pair from testing the wrong capability. The library
+/// owns that struct now, and this names only the two extremes every case here
+/// starts from.
+trait Advertised: Sized {
+    fn none() -> Self;
+    fn all() -> Self;
+    fn with_max_workgroup_size(self, size: [u32; 3]) -> Self;
+    fn check(self, required: &RequiredCapabilities) -> Result<(), MissingCapability>;
+    fn rejects(self, required: &RequiredCapabilities) -> MissingCapability;
 }
 
-impl Advertised {
+impl Advertised for BackendSupport {
     /// A backend that advertises nothing and caps workgroups at 64 lanes.
-    const fn none() -> Self {
+    fn none() -> Self {
         Self {
             subgroup_ops: false,
             half_precision: false,
@@ -86,12 +85,13 @@ impl Advertised {
             indirect_dispatch: false,
             trap_propagation: false,
             distributed_collectives: false,
+            grid_sync: false,
             max_workgroup_size: [64, 1, 1],
         }
     }
 
     /// A backend that advertises everything and caps workgroups at 128 lanes.
-    const fn all() -> Self {
+    fn all() -> Self {
         Self {
             subgroup_ops: true,
             half_precision: true,
@@ -99,27 +99,18 @@ impl Advertised {
             indirect_dispatch: true,
             trap_propagation: true,
             distributed_collectives: true,
+            grid_sync: true,
             max_workgroup_size: [128, 1, 1],
         }
     }
 
-    const fn with_max_workgroup_size(mut self, size: [u32; 3]) -> Self {
+    fn with_max_workgroup_size(mut self, size: [u32; 3]) -> Self {
         self.max_workgroup_size = size;
         self
     }
 
     fn check(self, required: &RequiredCapabilities) -> Result<(), MissingCapability> {
-        check_backend_capabilities(
-            "test_backend",
-            self.subgroup_ops,
-            self.half_precision,
-            self.brain_float,
-            self.indirect_dispatch,
-            self.trap_propagation,
-            self.distributed_collectives,
-            self.max_workgroup_size,
-            required,
-        )
+        check_backend_capabilities("test_backend", &self, required)
     }
 
     fn rejects(self, required: &RequiredCapabilities) -> MissingCapability {
@@ -341,7 +332,7 @@ fn every_missing_bit_is_reported_in_one_error() {
     required.subgroup_ops = true;
     required.f16 = true;
     required.trap = true;
-    let error = Advertised::none().rejects(&required);
+    let error = BackendSupport::none().rejects(&required);
     assert_eq!(error.backend, "test_backend");
     assert_reports(&error, "subgroup_ops");
     assert_reports(&error, "f16");
@@ -355,9 +346,9 @@ fn missing_collective_transport_reports_the_transport_shape() {
     required.local_single_rank_collectives = 5;
     required.transport_collectives = 8;
 
-    let advertised = Advertised {
+    let advertised = BackendSupport {
         distributed_collectives: false,
-        ..Advertised::all()
+        ..BackendSupport::all()
     };
     let error = advertised.rejects(&required);
 
@@ -376,7 +367,7 @@ fn missing_collective_transport_reports_the_transport_shape() {
 fn a_workgroup_wider_than_the_backend_allows_is_reported_per_axis() {
     let mut required = RequiredCapabilities::none();
     required.max_workgroup_size = [256, 1, 1];
-    let error = Advertised::none()
+    let error = BackendSupport::none()
         .with_max_workgroup_size([128, 1, 1])
         .rejects(&required);
     assert_reports(&error, "workgroup_size");
@@ -395,7 +386,7 @@ fn a_zero_backend_workgroup_size_means_unlimited() {
     let mut required = RequiredCapabilities::none();
     required.max_workgroup_size = [256, 1, 1];
     assert_eq!(
-        Advertised::none()
+        BackendSupport::none()
             .with_max_workgroup_size([0, 0, 0])
             .check(&required),
         Ok(()),
@@ -414,7 +405,7 @@ fn a_fully_capable_backend_accepts_every_requirement() {
     required.distributed_collectives = true;
     required.max_workgroup_size = [64, 1, 1];
     assert_eq!(
-        Advertised::all().check(&required),
+        BackendSupport::all().check(&required),
         Ok(()),
         "fully supported backend must pass"
     );
@@ -510,56 +501,61 @@ fn scan_cases() -> Vec<ScanCase> {
     ]
 }
 
-/// One advertised-capability parameter of `check_backend_capabilities`, the
-/// requirement it gates, and the name it pushes into `MissingCapability`.
+/// One advertised [`BackendSupport`] field, the requirement it gates, and the
+/// name it pushes into `MissingCapability`.
 struct EnforcementCase {
-    parameter: &'static str,
+    field: &'static str,
     reported_as: &'static str,
     require: fn(&mut RequiredCapabilities),
-    withhold: fn(&mut Advertised),
+    withhold: fn(&mut BackendSupport),
 }
 
-/// Every `supports_*` parameter of `check_backend_capabilities`. Compared
-/// against the snapshot below, so a parameter added and then never read - the
-/// shape this workspace regresses into - turns the suite red instead of being
-/// silently ignored.
+/// Every boolean field of `BackendSupport`. Compared against the snapshot
+/// below, so a field added and then never read - the shape this workspace
+/// regresses into - turns the suite red instead of being silently ignored.
 fn enforcement_cases() -> Vec<EnforcementCase> {
     vec![
         EnforcementCase {
-            parameter: "supports_subgroup_ops",
+            field: "subgroup_ops",
             reported_as: "subgroup_ops",
             require: |required| required.subgroup_ops = true,
             withhold: |advertised| advertised.subgroup_ops = false,
         },
         EnforcementCase {
-            parameter: "supports_half_precision",
+            field: "half_precision",
             reported_as: "f16",
             require: |required| required.f16 = true,
             withhold: |advertised| advertised.half_precision = false,
         },
         EnforcementCase {
-            parameter: "supports_brain_float",
+            field: "brain_float",
             reported_as: "bf16",
             require: |required| required.bf16 = true,
             withhold: |advertised| advertised.brain_float = false,
         },
         EnforcementCase {
-            parameter: "supports_indirect_dispatch",
+            field: "indirect_dispatch",
             reported_as: "indirect_dispatch",
             require: |required| required.indirect_dispatch = true,
             withhold: |advertised| advertised.indirect_dispatch = false,
         },
         EnforcementCase {
-            parameter: "supports_trap_propagation",
+            field: "trap_propagation",
             reported_as: "trap_propagation",
             require: |required| required.trap = true,
             withhold: |advertised| advertised.trap_propagation = false,
         },
         EnforcementCase {
-            parameter: "supports_distributed_collectives",
+            field: "distributed_collectives",
             reported_as: "distributed_collectives",
             require: |required| required.distributed_collectives = true,
             withhold: |advertised| advertised.distributed_collectives = false,
+        },
+        EnforcementCase {
+            field: "grid_sync",
+            reported_as: "grid_sync",
+            require: |required| required.grid_sync = true,
+            withhold: |advertised| advertised.grid_sync = false,
         },
     ]
 }
@@ -590,30 +586,20 @@ fn snapshot_boolean_capability_fields() -> BTreeSet<String> {
     fields
 }
 
-/// Advertised-capability parameter names of `check_backend_capabilities`, from
-/// the snapshot's signature line.
-fn snapshot_advertised_parameters() -> BTreeSet<String> {
-    let signature = snapshot_text()
+/// Boolean field names of `BackendSupport`, from the snapshot.
+fn snapshot_advertised_fields() -> BTreeSet<String> {
+    let prefix = "pub vyre_foundation::program_caps::BackendSupport::";
+    let fields: BTreeSet<String> = snapshot_text()
         .lines()
-        .find(|line| line.starts_with("pub fn vyre_foundation::program_caps::check_backend_capabilities("))
-        .map(str::to_string)
-        .unwrap_or_else(|| {
-            panic!(
-                "Fix: the public-API snapshot has no `check_backend_capabilities` signature. Refresh it with scripts/check_public_api_snapshot.sh --refresh vyre-foundation."
-            )
-        });
-    let parameters: BTreeSet<String> = signature
-        .split(&[',', '(', ')'][..])
-        .map(str::trim)
-        .filter_map(|argument| argument.strip_suffix(": bool"))
-        .filter(|name| name.starts_with("supports_"))
+        .filter_map(|line| line.strip_prefix(prefix))
+        .filter_map(|rest| rest.strip_suffix(": bool"))
         .map(str::to_string)
         .collect();
     assert!(
-        !parameters.is_empty(),
-        "Fix: no `supports_*: bool` parameters parsed out of `{signature}`."
+        !fields.is_empty(),
+        "Fix: the public-API snapshot lists no boolean `BackendSupport` fields. Refresh it with scripts/check_public_api_snapshot.sh --refresh vyre-foundation."
     );
-    parameters
+    fields
 }
 
 #[test]
@@ -649,15 +635,15 @@ fn every_scan_case_is_required_by_its_program_and_not_by_a_scalar_one() {
 }
 
 #[test]
-fn every_advertised_parameter_has_an_enforcement_case() {
+fn every_advertised_field_has_an_enforcement_case() {
     let named: BTreeSet<String> = enforcement_cases()
         .iter()
-        .map(|case| case.parameter.to_string())
+        .map(|case| case.field.to_string())
         .collect();
     assert_eq!(
-        snapshot_advertised_parameters(),
+        snapshot_advertised_fields(),
         named,
-        "Fix: `enforcement_cases` in this file must name exactly the `supports_*` parameters of `check_backend_capabilities`. A parameter with no case is a capability the function accepts and may never read."
+        "Fix: `enforcement_cases` in this file must name exactly the boolean fields of `BackendSupport`. A field with no case is a capability the check accepts and may never read."
     );
 }
 
@@ -668,18 +654,18 @@ fn withholding_an_advertised_capability_rejects_the_program_that_needs_it() {
         (case.require)(&mut required);
 
         assert_eq!(
-            Advertised::all().check(&required),
+            BackendSupport::all().check(&required),
             Ok(()),
             "Fix: a backend advertising everything must accept a program requiring only `{}`.",
-            case.parameter
+            case.field
         );
 
-        let mut advertised = Advertised::all();
+        let mut advertised = BackendSupport::all();
         (case.withhold)(&mut advertised);
         let Err(error) = advertised.check(&required) else {
             panic!(
-                "Fix: `check_backend_capabilities` accepted a program requiring `{}` from a backend that withholds `{}`. The parameter is not read.",
-                case.reported_as, case.parameter
+                "Fix: `check_backend_capabilities` accepted a program requiring `{}` from a backend that withholds `{}`. The field is not read.",
+                case.reported_as, case.field
             );
         };
         assert_reports(&error, case.reported_as);

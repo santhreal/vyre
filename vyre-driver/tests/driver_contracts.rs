@@ -4,7 +4,9 @@ use std::collections::HashSet;
 
 use vyre_driver::{validate_program, BackendError, VyreBackend};
 use vyre_foundation::ir::{Node, OpId, Program};
-use vyre_foundation::program_caps::{check_backend_capabilities, RequiredCapabilities};
+use vyre_foundation::program_caps::{
+    check_backend_capabilities, BackendSupport, RequiredCapabilities,
+};
 
 // ---------------------------------------------------------------------------
 // Public validation errors remain actionable with Fix guidance
@@ -105,18 +107,18 @@ fn capability_negotiation_lists_all_missing_bits() {
     required.bf16 = true;
     required.indirect_dispatch = true;
     required.trap = true;
-    let err = check_backend_capabilities(
-        "test",
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        [1, 1, 1],
-        &required,
-    )
-    .unwrap_err();
+    required.grid_sync = true;
+    let advertises_nothing = BackendSupport {
+        subgroup_ops: false,
+        half_precision: false,
+        brain_float: false,
+        indirect_dispatch: false,
+        trap_propagation: false,
+        distributed_collectives: false,
+        grid_sync: false,
+        max_workgroup_size: [1, 1, 1],
+    };
+    let err = check_backend_capabilities("test", &advertises_nothing, &required).unwrap_err();
     let missing = err.missing;
     let expected: HashSet<&str> = [
         "subgroup_ops",
@@ -124,6 +126,7 @@ fn capability_negotiation_lists_all_missing_bits() {
         "bf16",
         "indirect_dispatch",
         "trap_propagation",
+        "grid_sync",
     ]
     .iter()
     .copied()

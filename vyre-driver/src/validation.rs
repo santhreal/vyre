@@ -188,6 +188,15 @@ pub struct ProgramValidationCaps {
     pub supports_distributed_collectives: bool,
     /// `Node::Trap` is lowered with backend-visible trap semantics.
     pub supports_trap_propagation: bool,
+    /// A whole-grid barrier is lowered natively, as a cooperative launch.
+    pub supports_grid_sync: bool,
+    /// The shared registry wrapper may emulate a whole-grid barrier for this
+    /// backend by splitting one program into sequential host dispatches.
+    ///
+    /// Held separately from `supports_grid_sync` because the two answer
+    /// different questions and a backend can refuse the emulation while
+    /// lowering nothing natively. Validation refuses only when both are false.
+    pub allows_host_grid_sync_split: bool,
     /// Maximum supported workgroup dimensions.
     pub max_workgroup_size: [u32; 3],
 }
@@ -203,8 +212,36 @@ impl ProgramValidationCaps {
             supports_bf16: backend.supports_bf16(),
             supports_indirect_dispatch: backend.supports_indirect_dispatch(),
             supports_distributed_collectives: backend.supports_distributed_collectives(),
+            // Every backend in this workspace leaves a host-readable record
+            // when a lane traps, so a trapping launch refuses instead of
+            // returning wrong data. A backend that cannot must stop reporting
+            // this here rather than at its own call site.
             supports_trap_propagation: true,
+            supports_grid_sync: backend.supports_grid_sync(),
+            allows_host_grid_sync_split: backend.allows_host_grid_sync_split(),
             max_workgroup_size: backend.max_workgroup_size(),
+        }
+    }
+
+    /// The same facts in the shape the foundation capability check takes.
+    ///
+    /// This is the only place a backend's advertisement is mapped onto
+    /// [`vyre_foundation::program_caps::BackendSupport`]. Written out at each
+    /// call site instead, eight same-typed values get re-spelled per caller
+    /// and a transposition reads as plausible code.
+    #[must_use]
+    pub fn support(&self) -> vyre_foundation::program_caps::BackendSupport {
+        vyre_foundation::program_caps::BackendSupport {
+            subgroup_ops: self.supports_subgroup_ops,
+            half_precision: self.supports_f16,
+            brain_float: self.supports_bf16,
+            indirect_dispatch: self.supports_indirect_dispatch,
+            trap_propagation: self.supports_trap_propagation,
+            distributed_collectives: self.supports_distributed_collectives,
+            // Either route runs the barrier. Which one is chosen happens after
+            // validation has established that one exists.
+            grid_sync: self.supports_grid_sync || self.allows_host_grid_sync_split,
+            max_workgroup_size: self.max_workgroup_size,
         }
     }
 }
@@ -242,13 +279,7 @@ pub fn validate_program_contract(
     let required = vyre_foundation::program_caps::scan(program);
     vyre_foundation::program_caps::check_backend_capabilities(
         caps.backend_id,
-        caps.supports_subgroup_ops,
-        caps.supports_f16,
-        caps.supports_bf16,
-        caps.supports_indirect_dispatch,
-        caps.supports_trap_propagation,
-        caps.supports_distributed_collectives,
-        caps.max_workgroup_size,
+        &caps.support(),
         &required,
     )
     .map_err(|error| BackendError::InvalidProgram {
