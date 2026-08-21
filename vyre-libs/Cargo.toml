@@ -73,7 +73,8 @@ label = ["bitset"]
 # `graph` names `math-kernels` because seven graph kernels reach
 # `math::fixed`, `math::fixed_u32_matmul` and `math::chebyshev_recurrence`.
 # The reverse edge does not exist: `math-kernels` compiles no graph module.
-# `telemetry` because `graph::alias_registry` bumps `alias_registry_calls`.
+# `telemetry` because `graph::dispatch::toposort` and `union_find_emit` bump
+# their counters through `crate::telemetry`.
 graph = ["bitset", "reduce", "hash", "fixpoint", "math-kernels", "telemetry"]
 predicate = ["graph", "bitset", "label"]
 # `math-kernels` names `reduce` because `math/prefix_scan.rs` sweeps
@@ -1149,3 +1150,13 @@ required-features = ["label"]
 name = "graph_primitive_binding_contracts"
 path = "tests/graph_primitive_binding_contracts.rs"
 required-features = ["graph"]
+
+[[test]]
+name = "csr_sweep_arm_coverage"
+path = "tests/csr_sweep_arm_coverage.rs"
+required-features = ["graph"]
+
+[[test]]
+name = "lr_tables_contracts"
+path = "tests/lr_tables_contracts.rs"
+required-features = ["parsing"]

@@ -71,6 +71,7 @@ impl RequiredCapabilities {
         indirect_dispatch: false,
         tensor_ops: false,
         trap: false,
+        grid_sync: false,
         distributed_collectives: false,
         local_single_rank_collectives: 0,
         transport_collectives: 0,
@@ -102,6 +103,7 @@ impl RequiredCapabilities {
             indirect_dispatch: true,
             tensor_ops: true,
             trap: true,
+            grid_sync: true,
             distributed_collectives: true,
             local_single_rank_collectives: 1,
             transport_collectives: 1,
@@ -117,52 +119,89 @@ impl RequiredCapabilities {
     /// and finite monotonic convergence on cyclic and multi-path call graphs.
     #[must_use]
     pub fn join(mut self, other: RequiredCapabilities) -> Self {
-        self.subgroup_ops |= other.subgroup_ops;
-        self.f16 |= other.f16;
-        self.bf16 |= other.bf16;
-        self.f64 |= other.f64;
-        self.async_dispatch |= other.async_dispatch;
-        self.indirect_dispatch |= other.indirect_dispatch;
-        self.tensor_ops |= other.tensor_ops;
-        self.trap |= other.trap;
-        self.distributed_collectives |= other.distributed_collectives;
+        // Destructured exhaustively: a new capability field fails to compile
+        // here rather than being silently dropped from the lattice.
+        let RequiredCapabilities {
+            subgroup_ops,
+            f16,
+            bf16,
+            f64,
+            async_dispatch,
+            indirect_dispatch,
+            tensor_ops,
+            trap,
+            grid_sync,
+            distributed_collectives,
+            local_single_rank_collectives,
+            transport_collectives,
+            max_workgroup_size,
+            static_storage_bytes,
+        } = other;
+        self.subgroup_ops |= subgroup_ops;
+        self.f16 |= f16;
+        self.bf16 |= bf16;
+        self.f64 |= f64;
+        self.async_dispatch |= async_dispatch;
+        self.indirect_dispatch |= indirect_dispatch;
+        self.tensor_ops |= tensor_ops;
+        self.trap |= trap;
+        self.grid_sync |= grid_sync;
+        self.distributed_collectives |= distributed_collectives;
         self.local_single_rank_collectives = self
             .local_single_rank_collectives
-            .max(other.local_single_rank_collectives);
-        self.transport_collectives = self.transport_collectives.max(other.transport_collectives);
+            .max(local_single_rank_collectives);
+        self.transport_collectives = self.transport_collectives.max(transport_collectives);
         for axis in 0..3 {
             self.max_workgroup_size[axis] =
-                self.max_workgroup_size[axis].max(other.max_workgroup_size[axis]);
+                self.max_workgroup_size[axis].max(max_workgroup_size[axis]);
         }
-        self.static_storage_bytes = self.static_storage_bytes.max(other.static_storage_bytes);
+        self.static_storage_bytes = self.static_storage_bytes.max(static_storage_bytes);
         self
     }
 
     /// Build the union of two capability sets (field-wise `OR` and `max`).
     #[must_use]
     pub fn union(mut self, other: RequiredCapabilities) -> Self {
-        self.subgroup_ops |= other.subgroup_ops;
-        self.f16 |= other.f16;
-        self.bf16 |= other.bf16;
-        self.f64 |= other.f64;
-        self.async_dispatch |= other.async_dispatch;
-        self.indirect_dispatch |= other.indirect_dispatch;
-        self.tensor_ops |= other.tensor_ops;
-        self.trap |= other.trap;
-        self.distributed_collectives |= other.distributed_collectives;
+        // Destructured exhaustively: see `join`.
+        let RequiredCapabilities {
+            subgroup_ops,
+            f16,
+            bf16,
+            f64,
+            async_dispatch,
+            indirect_dispatch,
+            tensor_ops,
+            trap,
+            grid_sync,
+            distributed_collectives,
+            local_single_rank_collectives,
+            transport_collectives,
+            max_workgroup_size,
+            static_storage_bytes,
+        } = other;
+        self.subgroup_ops |= subgroup_ops;
+        self.f16 |= f16;
+        self.bf16 |= bf16;
+        self.f64 |= f64;
+        self.async_dispatch |= async_dispatch;
+        self.indirect_dispatch |= indirect_dispatch;
+        self.tensor_ops |= tensor_ops;
+        self.trap |= trap;
+        self.grid_sync |= grid_sync;
+        self.distributed_collectives |= distributed_collectives;
         self.local_single_rank_collectives = self
             .local_single_rank_collectives
-            .saturating_add(other.local_single_rank_collectives);
+            .saturating_add(local_single_rank_collectives);
         self.transport_collectives = self
             .transport_collectives
-            .saturating_add(other.transport_collectives);
+            .saturating_add(transport_collectives);
         for axis in 0..3 {
             self.max_workgroup_size[axis] =
-                self.max_workgroup_size[axis].max(other.max_workgroup_size[axis]);
+                self.max_workgroup_size[axis].max(max_workgroup_size[axis]);
         }
         self.static_storage_bytes = self
             .static_storage_bytes
-            .saturating_add(other.static_storage_bytes);
+            .saturating_add(static_storage_bytes);
         self
     }
 }

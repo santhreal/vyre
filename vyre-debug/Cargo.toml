@@ -36,6 +36,9 @@ vyre-libs = { workspace = true, features = ["python-parser"] }
 bincode = { workspace = true }
 
 [dev-dependencies]
+# `neutral_target_debug_separation` reaches `vyre_lower::descriptor_builder`,
+# which the shipped surface gates behind `test-fixtures`.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-megakernel.workspace = true
 vyre-test-support.workspace = true
 assert_cmd = { workspace = true }
