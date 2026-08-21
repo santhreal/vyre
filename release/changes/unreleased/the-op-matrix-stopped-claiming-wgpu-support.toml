@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "docs/optimization/OP_MATRIX.toml claimed wgpu = \"supported\" for seven operations wgpu cannot compile. The generator already derives that cell from the program's own capability scan and reports not_applicable for a grid-scope rendezvous, since WGSL has only workgroup-scoped barriers, but the committed artifact predated the rule. The seven security dataflow rows now read not_applicable, so the release evidence no longer asserts coverage the parity suite disproves on the same tree."
