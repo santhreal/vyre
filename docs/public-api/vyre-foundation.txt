@@ -2203,7 +2203,7 @@ pub fn vyre_foundation::program_caps::MissingCapability::fmt(&self, f: &mut core
 pub fn vyre_foundation::program_caps::RequiredCapabilities::all() -> Self
 pub fn vyre_foundation::program_caps::RequiredCapabilities::join(self, other: vyre_foundation::program_caps::RequiredCapabilities) -> Self
 pub fn vyre_foundation::program_caps::RequiredCapabilities::union(self, other: vyre_foundation::program_caps::RequiredCapabilities) -> Self
-pub fn vyre_foundation::program_caps::check_backend_capabilities(backend_id: &str, supports_subgroup_ops: bool, supports_half_precision: bool, supports_brain_float: bool, supports_indirect_dispatch: bool, supports_trap_propagation: bool, supports_distributed_collectives: bool, max_workgroup_size: [u32; 3], required: &vyre_foundation::program_caps::RequiredCapabilities) -> core::result::Result<(), vyre_foundation::program_caps::MissingCapability>
+pub fn vyre_foundation::program_caps::check_backend_capabilities(backend_id: &str, support: &vyre_foundation::program_caps::BackendSupport, required: &vyre_foundation::program_caps::RequiredCapabilities) -> core::result::Result<(), vyre_foundation::program_caps::MissingCapability>
 pub fn vyre_foundation::program_caps::scan(program: &vyre_foundation::ir::Program) -> vyre_foundation::program_caps::RequiredCapabilities
 pub fn vyre_foundation::program_dispatch::DispatchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::program_dispatch::ProgramDispatcher::acquire_resident_static_uploads(&self, _cache_domain: u64, payloads: &[&[u8]]) -> core::result::Result<vyre_foundation::program_dispatch::ResidentStaticBufferSet, vyre_foundation::program_dispatch::DispatchError>
@@ -2812,6 +2812,7 @@ pub struct vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation
 pub struct vyre_foundation::perf::PerfMeasurement
 pub struct vyre_foundation::perf::PerfScope
 pub struct vyre_foundation::perf::SpanGuard
+pub struct vyre_foundation::program_caps::BackendSupport
 pub struct vyre_foundation::program_caps::MissingCapability
 pub struct vyre_foundation::program_dispatch::ResidentDispatchStep<'a>
 pub struct vyre_foundation::program_dispatch::ResidentReadRange
@@ -4117,6 +4118,14 @@ pub vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::domain: v
 pub vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::preconditions: alloc::vec::Vec<vyre_foundation::optimizer::rewrite_proof::ProofExpr>
 pub vyre_foundation::optimizer::rewrite_proof::RewriteProofObligation::rewrite: alloc::sync::Arc<str>
 pub vyre_foundation::perf::PerfMeasurement::elapsed_ns: u64
+pub vyre_foundation::program_caps::BackendSupport::brain_float: bool
+pub vyre_foundation::program_caps::BackendSupport::distributed_collectives: bool
+pub vyre_foundation::program_caps::BackendSupport::grid_sync: bool
+pub vyre_foundation::program_caps::BackendSupport::half_precision: bool
+pub vyre_foundation::program_caps::BackendSupport::indirect_dispatch: bool
+pub vyre_foundation::program_caps::BackendSupport::max_workgroup_size: [u32; 3]
+pub vyre_foundation::program_caps::BackendSupport::subgroup_ops: bool
+pub vyre_foundation::program_caps::BackendSupport::trap_propagation: bool
 pub vyre_foundation::program_caps::MissingCapability::backend: alloc::string::String
 pub vyre_foundation::program_caps::MissingCapability::missing: alloc::vec::Vec<alloc::string::String>
 pub vyre_foundation::program_caps::RequiredCapabilities::async_dispatch: bool
