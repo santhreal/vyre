@@ -126,6 +126,7 @@ impl BenchCase for SparseOutputCompactionCount {
                 reset_resource: 0,
                 reset_resource_kind: "counter",
                 reset_payload: &0u32.to_le_bytes(),
+                dispatch_config: &ctx.dispatch_config,
             },
             || dispatch_single(ctx, &prepared.program, &prepared.inputs),
         )?;

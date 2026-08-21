@@ -256,6 +256,7 @@ pub const fn vyre_driver::param_inlining::ParamInliningPolicy::disabled() -> Sel
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::large_inline_default() -> Self
 pub const fn vyre_driver::param_inlining::ParamInliningPolicy::small_inline_default() -> Self
 pub const fn vyre_driver::reservation_policy::ReservationPolicy::new(context: &'static str, fix: &'static str) -> Self
+pub const fn vyre_driver::target_dialect::TargetDialect::admissible_invocations_per_workgroup(&self, adapter: u32) -> u32
 pub const fn vyre_driver::transfer_accounting::TransferAccountingPolicy::new(domain: &'static str, fix_action: &'static str) -> Self
 pub const fn vyre_driver::tuner::Mode::production_default() -> Self
 pub const fn vyre_driver::tuner::Tuner::default_workgroup_size() -> [u32; 3]
@@ -1140,6 +1141,7 @@ pub fn vyre_driver::strategy::LoweringStrategy::name(&self) -> &str
 pub fn vyre_driver::strategy::LoweringStrategy::priority(&self) -> u32
 pub fn vyre_driver::strategy::select_precision_lowering(caps: &vyre_foundation::validate::options::BackendCapabilities, hint: &vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHint) -> vyre_driver::strategy::PrecisionLoweringPlan
 pub fn vyre_driver::strategy::select_strategy<'a>(strategies: &'a [alloc::boxed::Box<dyn vyre_driver::strategy::LoweringStrategy>], caps: &vyre_foundation::validate::options::BackendCapabilities, op: &vyre_spec::bin_op::BinOp) -> core::option::Option<&'a dyn vyre_driver::strategy::LoweringStrategy>
+pub fn vyre_driver::target_dialect::TargetDialect::admissible_workgroup_size(&self, adapter: [u32; 3]) -> [u32; 3]
 pub fn vyre_driver::target_dialect::TargetDialect::compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>
 pub fn vyre_driver::target_dialect::TargetDialect::profile(&self) -> core::result::Result<vyre_megakernel::envelope::TargetProfile, vyre_driver::BackendError>
 pub fn vyre_driver::trace_jit_policy::decide_trace_jit_speculation(inputs: vyre_driver::trace_jit_policy::TraceJitInputs) -> vyre_driver::trace_jit_policy::TraceJitDecision

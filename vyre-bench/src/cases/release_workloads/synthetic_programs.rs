@@ -1,6 +1,6 @@
 //! IR program builders for the synthetic release macro patterns.
 
-use super::synthetic_count::{SyntheticPattern, STRING_BITMAP_RESIDENT_BATCH_SIZE};
+use super::synthetic_count::SyntheticPattern;
 use super::synthetic_oracle::{
     AGGREGATION_LANES, AGGREGATION_THRESHOLD, ALIAS_LANES, ALIAS_THRESHOLD, CONDITION_LANES,
     CONDITION_THRESHOLD, C_AST_LANES, C_AST_THRESHOLD, EGRAPH_LANES, EGRAPH_THRESHOLD,
@@ -68,17 +68,15 @@ fn condition_eval_program(records: u32) -> Program {
     )
 }
 
+/// One record set per launch.
+///
+/// This used to have a release variant whose store loop wrote the same ballot
+/// word into sixteen output slots, and whose case then divided the launch by
+/// sixteen. Repeating the store does not repeat the loads or the ballot, so the
+/// divisor credited work the launch never did. The batch depth now lives in the
+/// resident pool, where each row runs the whole program again.
 pub(super) fn string_bitmap_scatter_program(records: u32) -> Program {
-    string_bitmap_scatter_program_with_batch(records, 1)
-}
-
-pub(super) fn string_bitmap_scatter_release_program(records: u32) -> Program {
-    string_bitmap_scatter_program_with_batch(records, STRING_BITMAP_RESIDENT_BATCH_SIZE as u32)
-}
-
-pub(super) fn string_bitmap_scatter_program_with_batch(records: u32, batch_size: u32) -> Program {
     let output_words = records.div_ceil(32);
-    let total_output_words = output_words * batch_size;
     let record_idx = Expr::var("record_idx");
     let selected = Expr::and(
         Expr::lt(record_idx.clone(), Expr::u32(records)),
@@ -93,7 +91,7 @@ pub(super) fn string_bitmap_scatter_program_with_batch(records: u32, batch_size:
     Program::wrapped(
         vec![
             BufferDecl::storage("out_flags", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(total_output_words)
+                .with_count(output_words)
                 .with_output_byte_range(0..(output_words as usize * 4)),
             BufferDecl::storage("pattern_bitmap", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
@@ -109,18 +107,10 @@ pub(super) fn string_bitmap_scatter_program_with_batch(records: u32, batch_size:
                     Expr::eq(Expr::SubgroupLocalId, Expr::u32(0)),
                     Expr::lt(record_idx.clone(), Expr::u32(records)),
                 ),
-                vec![Node::loop_for(
-                    "scatter_batch",
-                    Expr::u32(0),
-                    Expr::u32(batch_size),
-                    vec![Node::store(
-                        "out_flags",
-                        Expr::add(
-                            Expr::mul(Expr::var("scatter_batch"), Expr::u32(output_words)),
-                            Expr::shr(record_idx, Expr::u32(5)),
-                        ),
-                        Expr::var("scatter_word"),
-                    )],
+                vec![Node::store(
+                    "out_flags",
+                    Expr::shr(record_idx, Expr::u32(5)),
+                    Expr::var("scatter_word"),
                 )],
             ),
         ],

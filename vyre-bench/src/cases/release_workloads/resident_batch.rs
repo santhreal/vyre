@@ -45,6 +45,9 @@ pub(super) struct BatchPlan<'a> {
     /// The payload that clears the output resource. Its length is the reported
     /// reset byte count.
     pub(super) reset_payload: &'a [u8],
+    /// The config the batch dispatches under. A case that must pin its grid
+    /// sets `grid_override` here; otherwise the batch infers one from `inputs`.
+    pub(super) dispatch_config: &'a vyre_driver::DispatchConfig,
 }
 
 /// Dispatch the resident batch when the backend supports one, otherwise the
@@ -73,7 +76,7 @@ pub(super) fn dispatch_batch_or_single(
             plan.label, plan.reset_resource_kind
         ),
     )?;
-    let config = dispatch_config_with_inferred_grid(program, inputs, &ctx.dispatch_config)
+    let config = dispatch_config_with_inferred_grid(program, inputs, plan.dispatch_config)
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
 
     match resident_batch.dispatch_artifact_batch_timed(ctx, program, plan.batch_size, &config) {

@@ -146,6 +146,7 @@ impl BenchCase for CallgraphReachabilityStep {
                 reset_resource: prepared.output_resource_index,
                 reset_resource_kind: "frontier",
                 reset_payload,
+                dispatch_config: &ctx.dispatch_config,
             },
             || dispatch_single(ctx, &prepared.program, &prepared.graph.inputs),
         )?;

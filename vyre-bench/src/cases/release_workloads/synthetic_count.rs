@@ -3,6 +3,9 @@
 
 use super::macro_registry::ReleaseMacroFamily;
 use super::registration::{gpu_requirements, RELEASE_SUITES};
+use super::resident_batch::{
+    batch_metric_points, dispatch_batch_or_single, BatchPlan, BatchSample, SingleSample,
+};
 use super::run_assembly::{
     add_release_alias_metrics, bench_run_from_timed_with_accounting, encode_u32_words,
     resident_reset_transfer_accounting,
@@ -12,27 +15,24 @@ use super::synthetic_oracle::{
     synthetic_baseline_label, synthetic_cpu_count_over_inputs, synthetic_inputs,
     synthetic_logical_output_bytes, synthetic_output_reset_bytes,
 };
-use super::synthetic_programs::{
-    build_synthetic_release_program, string_bitmap_scatter_release_program,
-};
+use super::synthetic_programs::build_synthetic_release_program;
 use crate::api::case::{
     prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
     WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, MetricPoint};
-use crate::api::resident::{dispatch_program_timed, input_bytes_total, ResidentInputSet};
+use crate::api::resident::{
+    dispatch_program_timed, input_bytes_total, ResidentInputPool, ResidentInputSet,
+};
 use vyre::ir::Program;
 
-pub(super) const STRING_BITMAP_RESIDENT_BATCH_SIZE: usize = 16;
-
-type SyntheticDispatchResult = (
-    vyre_driver::TimedDispatchResult,
-    bool,
-    u64,
-    Option<u64>,
-    Option<u64>,
-);
+/// A synthetic release pattern writes one scalar, or one small bitmap, per
+/// launch, where the host submit, the completion wait and the readback cost
+/// several times the kernel. A resident batch replays the same program over its
+/// own resident copy of the inputs and reports the per-item cost, which is the
+/// steady-state figure the release claim is about.
+const SYNTHETIC_RESIDENT_BATCH_SIZE: usize = 16;
 
 pub(super) struct SyntheticCountWorkload {
     pub(super) id: &'static str,
@@ -56,6 +56,7 @@ struct SyntheticCountPrepared {
     output_reset_payload: Vec<u8>,
     baseline: SyntheticBaseline,
     resident: Option<ResidentInputSet>,
+    resident_batch: Option<ResidentInputPool>,
 }
 
 enum SyntheticBaseline {
@@ -80,44 +81,6 @@ pub(super) enum SyntheticPattern {
     AstMotifTraversal,
     MegakernelQueuedBatch,
     EgraphSaturation,
-}
-
-fn dispatch_single_synthetic_resident(
-    ctx: &BenchContext,
-    prepared: &SyntheticCountPrepared,
-) -> Result<SyntheticDispatchResult, BenchError> {
-    if let Some(resident) = prepared.resident.as_ref() {
-        if !prepared.output_reset_payload.is_empty() {
-            resident.upload_resource(
-                0,
-                &prepared.output_reset_payload,
-                "synthetic release resident output reset",
-            )?;
-        }
-        let dispatch = dispatch_program_timed(
-            ctx,
-            &prepared.program,
-            Some(resident),
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )?;
-        return Ok((
-            dispatch.timed,
-            dispatch.resident_used,
-            prepared.output_reset_payload.len() as u64,
-            None,
-            None,
-        ));
-    }
-
-    let dispatch = dispatch_program_timed(
-        ctx,
-        &prepared.program,
-        None,
-        &prepared.inputs,
-        &ctx.dispatch_config,
-    )?;
-    Ok((dispatch.timed, dispatch.resident_used, 0, None, None))
 }
 
 impl BenchCase for SyntheticCountWorkload {
@@ -151,9 +114,7 @@ impl BenchCase for SyntheticCountWorkload {
     fn requirements(&self) -> BenchRequirements {
         let input_bytes = u64::from(self.records) * pattern_input_count(self.pattern) as u64 * 4;
         let output_bytes = if self.pattern == SyntheticPattern::StringBitmapScatter {
-            u64::from(self.records.div_ceil(32))
-                * std::mem::size_of::<u32>() as u64
-                * STRING_BITMAP_RESIDENT_BATCH_SIZE as u64
+            u64::from(self.records.div_ceil(32)) * std::mem::size_of::<u32>() as u64
         } else {
             4
         };
@@ -170,20 +131,10 @@ impl BenchCase for SyntheticCountWorkload {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = if self.pattern == SyntheticPattern::StringBitmapScatter {
-            string_bitmap_scatter_release_program(self.records)
-        } else {
-            build_synthetic_release_program(self.pattern, self.records)
-        };
+        let program = build_synthetic_release_program(self.pattern, self.records);
         let (inputs, baseline) = match self.pattern {
             SyntheticPattern::StringBitmapScatter => {
-                let mut generated = string_bitmap_scatter_inputs(self.records);
-                generated.inputs[0].resize(
-                    self.records.div_ceil(32) as usize
-                        * std::mem::size_of::<u32>()
-                        * STRING_BITMAP_RESIDENT_BATCH_SIZE,
-                    0,
-                );
+                let generated = string_bitmap_scatter_inputs(self.records);
                 (
                     generated.inputs,
                     SyntheticBaseline::StringBitmap {
@@ -212,6 +163,14 @@ impl BenchCase for SyntheticCountWorkload {
             &inputs,
             "synthetic release workload",
         )?;
+        let resident_batch =
+            ResidentInputPool::upload_program_ordered_with_zeroed_outputs_optional(
+                ctx,
+                &program,
+                &inputs,
+                SYNTHETIC_RESIDENT_BATCH_SIZE,
+                "synthetic release workload batch",
+            )?;
         Ok(Box::new(SyntheticCountPrepared {
             program,
             inputs,
@@ -220,6 +179,7 @@ impl BenchCase for SyntheticCountWorkload {
             output_reset_payload,
             baseline,
             resident,
+            resident_batch,
         }))
     }
 
@@ -239,38 +199,29 @@ impl BenchCase for SyntheticCountWorkload {
                 .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
             );
         }
-        if let Some(resident) = prepared.resident.as_ref() {
-            if !prepared.output_reset_payload.is_empty() {
-                resident.upload_resource(
-                    0,
-                    &prepared.output_reset_payload,
-                    "synthetic release resident output reset",
-                )?;
-            }
-        }
-        let dispatch = dispatch_program_timed(
+        let sample = dispatch_batch_or_single(
             ctx,
             &prepared.program,
-            prepared.resident.as_ref(),
             &prepared.inputs,
-            &dispatch_config,
+            prepared.resident_batch.as_ref(),
+            &BatchPlan {
+                label: "synthetic release",
+                batch_size: SYNTHETIC_RESIDENT_BATCH_SIZE,
+                reset_resource: 0,
+                reset_resource_kind: "count output",
+                reset_payload: &prepared.output_reset_payload,
+                dispatch_config: &dispatch_config,
+            },
+            || single_sample(ctx, prepared, &dispatch_config),
         )?;
-        let mut timed = dispatch.timed;
-        let resident_used = dispatch.resident_used;
-        let resident_reset_bytes = if resident_used {
-            prepared.output_reset_payload.len() as u64
-        } else {
-            0
-        };
-        let (batch_wall_ns, batch_len) = if self.pattern == SyntheticPattern::StringBitmapScatter {
-            let batch_len = STRING_BITMAP_RESIDENT_BATCH_SIZE as u64;
-            let batch_wall_ns = timed.wall_ns;
-            timed.wall_ns = timed.wall_ns.div_ceil(batch_len);
-            timed.device_ns = timed.device_ns.map(|ns| ns.div_ceil(batch_len));
-            (Some(batch_wall_ns), Some(batch_len))
-        } else {
-            (None, None)
-        };
+        let batch_points = batch_metric_points("synthetic", &sample);
+        let BatchSample {
+            timed,
+            resident_used,
+            reset_bytes: resident_reset_bytes,
+            batch_wall_ns,
+            batch_len,
+        } = sample;
         let baseline_start = std::time::Instant::now();
         let (baseline_outputs, counted) = match &prepared.baseline {
             SyntheticBaseline::Count { .. } => {
@@ -322,26 +273,7 @@ impl BenchCase for SyntheticCountWorkload {
             logical_bytes_touched,
             accounting,
         )?;
-        run.metrics.custom.push(MetricPoint {
-            name: "synthetic_resident_buffers".to_string(),
-            value: u64::from(resident_used),
-        });
-        run.metrics.custom.push(MetricPoint {
-            name: "synthetic_resident_reset_bytes".to_string(),
-            value: resident_reset_bytes,
-        });
-        if let Some(batch_wall_ns) = batch_wall_ns {
-            run.metrics.custom.push(MetricPoint {
-                name: "synthetic_resident_batch_wall_ns".to_string(),
-                value: batch_wall_ns,
-            });
-        }
-        if let Some(batch_len) = batch_len {
-            run.metrics.custom.push(MetricPoint {
-                name: "synthetic_resident_batch_len".to_string(),
-                value: batch_len,
-            });
-        }
+        run.metrics.custom.extend(batch_points);
         match &prepared.baseline {
             SyntheticBaseline::Count { expected } => {
                 add_release_alias_metrics(self.pattern, self.records, *expected, &mut run);
@@ -375,4 +307,41 @@ impl BenchCase for SyntheticCountWorkload {
                 synthetic_logical_output_bytes(self.pattern, self.records),
             ))
     }
+}
+
+/// Clear the count output on the single resident set, then dispatch once.
+///
+/// This is what the batch falls back to when the device refused the pool, and
+/// what the scatter pattern always runs, because its program is the batch.
+fn single_sample(
+    ctx: &BenchContext,
+    prepared: &SyntheticCountPrepared,
+    dispatch_config: &vyre_driver::DispatchConfig,
+) -> Result<SingleSample, BenchError> {
+    if let Some(resident) = prepared.resident.as_ref() {
+        if !prepared.output_reset_payload.is_empty() {
+            resident.upload_resource(
+                0,
+                &prepared.output_reset_payload,
+                "synthetic release resident output reset",
+            )?;
+        }
+    }
+    let dispatch = dispatch_program_timed(
+        ctx,
+        &prepared.program,
+        prepared.resident.as_ref(),
+        &prepared.inputs,
+        dispatch_config,
+    )?;
+    let reset_bytes = if dispatch.resident_used {
+        prepared.output_reset_payload.len() as u64
+    } else {
+        0
+    };
+    Ok(SingleSample {
+        timed: dispatch.timed,
+        resident_used: dispatch.resident_used,
+        reset_bytes,
+    })
 }

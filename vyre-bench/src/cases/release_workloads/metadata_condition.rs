@@ -162,6 +162,7 @@ impl BenchCase for MetadataConditionBatch {
                 reset_resource: 0,
                 reset_resource_kind: "counter",
                 reset_payload: &0u32.to_le_bytes(),
+                dispatch_config: &ctx.dispatch_config,
             },
             || dispatch_single_metadata_resident(ctx, prepared),
         )?;
