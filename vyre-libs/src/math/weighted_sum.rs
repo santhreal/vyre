@@ -93,22 +93,18 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32_one as decode_one;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::{eval_bytes, f32_bytes};
 
-    fn run(weights: &[f32], values: &[f32]) -> f32 {
+    fn fma_sum(weights: &[f32], values: &[f32]) -> f32 {
         let n = weights.len() as u32;
-        let prog = weighted_sum_fma_f32("weights", "values", "output", n).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
-            &prog,
-            &[
-                Value::from(f32_bytes(weights)),
-                Value::from(f32_bytes(values)),
-                Value::from(vec![0u8; 4]),
-            ],
+        let program = weighted_sum_fma_f32("weights", "values", "output", n).expect("Fix: build");
+        decode_one(
+            &eval_bytes(
+                "weighted_sum_fma_f32",
+                &program,
+                vec![f32_bytes(weights), f32_bytes(values), vec![0u8; 4]],
+            )[0],
         )
-        .expect("Fix: weighted_sum_fma_f32 must execute in the reference interpreter.");
-        decode_one(&outputs[0].to_bytes())
     }
 
     /// Canonical fixture: 0.5·1 + 0.25·2 + 0.125·4 + 0.125·8 = 2.5.
@@ -116,7 +112,7 @@ mod tests {
     fn weighted_sum_fma_canonical_fixture() {
         let weights = [0.5_f32, 0.25, 0.125, 0.125];
         let values = [1.0_f32, 2.0, 4.0, 8.0];
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         assert!((actual - 2.5).abs() <= 1.0e-6, "{actual} != 2.5");
     }
 
@@ -125,7 +121,7 @@ mod tests {
     fn weighted_sum_fma_zero_weights_returns_zero() {
         let weights = [0.0_f32; 4];
         let values = [1.0_f32, 2.0, 3.0, 4.0];
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         assert_eq!(actual, 0.0);
     }
 
@@ -134,7 +130,7 @@ mod tests {
     fn weighted_sum_fma_unit_weights_equals_plain_sum() {
         let weights = [1.0_f32; 8];
         let values: Vec<f32> = (0..8).map(|i| i as f32 - 3.5).collect();
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         let expected: f32 = values.iter().sum();
         assert!(
             (actual - expected).abs() <= 1.0e-5,
@@ -160,7 +156,7 @@ mod tests {
             let n = 8;
             let weights: Vec<f32> = (0..n).map(|_| next()).collect();
             let values: Vec<f32> = (0..n).map(|_| next()).collect();
-            let actual = run(&weights, &values);
+            let actual = fma_sum(&weights, &values);
             let expected: f32 = weights.iter().zip(values.iter()).map(|(w, v)| w * v).sum();
             assert!(
                 (actual - expected).abs() <= 1.0e-4,
@@ -186,7 +182,7 @@ mod tests {
     fn weighted_sum_fma_single_element() {
         let weights = [3.0_f32];
         let values = [4.0_f32];
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         assert!((actual - 12.0).abs() <= 1.0e-5, "3*4 = 12, got {actual}");
     }
 
@@ -195,7 +191,7 @@ mod tests {
     fn weighted_sum_fma_nan_in_weights_propagates() {
         let weights = [1.0_f32, f32::NAN, 1.0];
         let values = [1.0_f32, 1.0, 1.0];
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         assert!(
             actual.is_nan(),
             "weighted sum with NaN weight must be NaN, got {actual}"
@@ -207,7 +203,7 @@ mod tests {
     fn weighted_sum_fma_nan_in_values_propagates() {
         let weights = [1.0_f32, 1.0, 1.0];
         let values = [1.0_f32, f32::NAN, 1.0];
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         assert!(
             actual.is_nan(),
             "weighted sum with NaN value must be NaN, got {actual}"
@@ -219,7 +215,7 @@ mod tests {
     fn weighted_sum_fma_inf_in_weights_propagates() {
         let weights = [1.0_f32, f32::INFINITY, 1.0];
         let values = [1.0_f32, 1.0, 1.0];
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         assert!(
             actual.is_infinite(),
             "weighted sum with Inf weight must be Inf, got {actual}"
@@ -231,7 +227,7 @@ mod tests {
     fn weighted_sum_fma_inf_in_values_propagates() {
         let weights = [1.0_f32, 1.0, 1.0];
         let values = [1.0_f32, f32::INFINITY, 1.0];
-        let actual = run(&weights, &values);
+        let actual = fma_sum(&weights, &values);
         assert!(
             actual.is_infinite(),
             "weighted sum with Inf value must be Inf, got {actual}"

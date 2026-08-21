@@ -57,22 +57,16 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_u32;
 
-    fn run(input: &[u32], lo: &[u32], hi: &[u32]) -> Vec<u32> {
-        let n = input.len() as u32;
-        let program = clamp_u32("input", "lo", "hi", "out", n.max(1));
-        let to_bytes = vyre_primitives::wire::pack_u32_slice;
-        let inputs = vec![
-            Value::Bytes(to_bytes(input).into()),
-            Value::Bytes(to_bytes(lo).into()),
-            Value::Bytes(to_bytes(hi).into()),
-            Value::Bytes(vec![0u8; (n.max(1) * 4) as usize].into()),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: clamp_u32 must run; restore this invariant before continuing.");
-        let raw = outputs[0].to_bytes();
-        vyre_primitives::wire::decode_u32_le_bytes_all(&raw)
+    fn clamped(input: &[u32], lo: &[u32], hi: &[u32]) -> Vec<u32> {
+        let n = (input.len() as u32).max(1);
+        eval_u32(
+            "clamp_u32",
+            &clamp_u32("input", "lo", "hi", "out", n),
+            &[input, lo, hi],
+            n as usize,
+        )
     }
 
     #[test]
@@ -80,7 +74,7 @@ mod tests {
         let input = [0u32, 5, 10, u32::MAX];
         let lo = [3u32, 3, 3, 100];
         let hi = [8u32, 8, 8, 200];
-        let got = run(&input, &lo, &hi);
+        let got = clamped(&input, &lo, &hi);
         let expected: Vec<u32> = input
             .iter()
             .zip(lo.iter())
@@ -95,6 +89,6 @@ mod tests {
         let input = [5u32];
         let lo = [0u32];
         let hi = [10u32];
-        assert_eq!(run(&input, &lo, &hi), vec![5]);
+        assert_eq!(clamped(&input, &lo, &hi), vec![5]);
     }
 }

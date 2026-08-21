@@ -645,48 +645,42 @@ mod primitive_tests {
 mod tests {
     use super::*;
     use crate::decode::scan::dummy_compiled_dfa;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::{bytes_to_u32, decode_u32_one, eval_bytes};
 
-    fn run(input: &[u8]) -> (Vec<u32>, u32) {
+    fn decoded(input: &[u8]) -> (Vec<u32>, u32) {
         let program = base64_decode("input", "output", input.len() as u32);
-        let decoded_capacity = decoded_capacity(input.len() as u32);
-        let inputs = vec![
-            Value::from(pack_words(
-                &input
-                    .iter()
-                    .map(|&byte| u32::from(byte))
-                    .collect::<Vec<_>>(),
-            )),
-            Value::from(pack_words(standard_decode_table_ref())),
-            Value::from(vec![0u8; decoded_capacity as usize * 4]),
-            Value::from(vec![0u8; 4]),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: base64 decode must run; restore this invariant before continuing.");
-        let decoded = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
-        let len_bytes = outputs[1].to_bytes();
-        let decoded_len =
-            u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
-        (decoded, decoded_len)
+        let capacity = decoded_capacity(input.len() as u32);
+        let widened: Vec<u32> = input.iter().map(|&byte| u32::from(byte)).collect();
+        let outputs = eval_bytes(
+            "base64_decode",
+            &program,
+            vec![
+                pack_words(&widened),
+                pack_words(standard_decode_table_ref()),
+                vec![0u8; capacity as usize * 4],
+                vec![0u8; 4],
+            ],
+        );
+        (bytes_to_u32(&outputs[0]), decode_u32_one(&outputs[1]))
     }
 
     #[test]
     fn aligned_input_decodes_three_bytes() {
-        let (decoded, decoded_len) = run(b"TWFu");
+        let (decoded, decoded_len) = decoded(b"TWFu");
         assert_eq!(&decoded[..3], &[77, 97, 110]);
         assert_eq!(decoded_len, 3);
     }
 
     #[test]
     fn padded_input_reports_real_length() {
-        let (decoded, decoded_len) = run(b"TQ==");
+        let (decoded, decoded_len) = decoded(b"TQ==");
         assert_eq!(decoded[0], 77);
         assert_eq!(decoded_len, 1);
     }
 
     #[test]
     fn invalid_character_clamps_without_panicking() {
-        let (decoded, decoded_len) = run(b"SGVsbG8*");
+        let (decoded, decoded_len) = decoded(b"SGVsbG8*");
         assert_eq!(&decoded[..6], &[72, 101, 108, 108, 111, 0]);
         assert_eq!(decoded_len, 6);
     }
@@ -733,7 +727,7 @@ mod tests {
 
     #[test]
     fn twelve_byte_input_decodes_nine_bytes_in_linear_time() {
-        let (decoded, decoded_len) = run(b"TWFuTWFuTWFu");
+        let (decoded, decoded_len) = decoded(b"TWFuTWFuTWFu");
         assert_eq!(&decoded[..9], &[77, 97, 110, 77, 97, 110, 77, 97, 110]);
         assert_eq!(decoded_len, 9);
     }
@@ -752,7 +746,7 @@ mod tests {
                 input.push(ALPHABET[(state as usize) % ALPHABET.len()]);
             }
 
-            let (actual, actual_len) = run(&input);
+            let (actual, actual_len) = decoded(&input);
             let (expected, expected_len) = reference_base64_decode_packed(&input);
             assert_eq!(actual_len, expected_len, "decoded length seed {seed}");
             assert_eq!(actual, expected, "decoded bytes seed {seed}");

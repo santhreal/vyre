@@ -330,33 +330,32 @@ mod primitive_tests {
 mod tests {
     use super::*;
     use crate::decode::scan::dummy_compiled_dfa;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::{bytes_to_u32, eval_bytes};
 
-    fn run(input: &[u8]) -> Vec<u32> {
+    fn decoded(input: &[u8]) -> Vec<u32> {
         let program = hex_decode("input", "output", input.len() as u32);
-        let inputs = vec![
-            Value::from(pack_words(
-                &input
-                    .iter()
-                    .map(|&byte| u32::from(byte))
-                    .collect::<Vec<_>>(),
-            )),
-            Value::from(vec![0u8; (input.len() / 2) * 4]),
-            Value::from(pack_words(hex_decode_table_ref())),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: hex decode must run; restore this invariant before continuing.");
-        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+        let widened: Vec<u32> = input.iter().map(|&byte| u32::from(byte)).collect();
+        bytes_to_u32(
+            &eval_bytes(
+                "hex_decode",
+                &program,
+                vec![
+                    pack_words(&widened),
+                    vec![0u8; (input.len() / 2) * 4],
+                    pack_words(hex_decode_table_ref()),
+                ],
+            )[0],
+        )
     }
 
     #[test]
     fn decodes_uppercase_hex() {
-        assert_eq!(run(b"4D616E"), vec![77, 97, 110]);
+        assert_eq!(decoded(b"4D616E"), vec![77, 97, 110]);
     }
 
     #[test]
     fn decodes_lowercase_hex() {
-        assert_eq!(run(b"68494a"), vec![104, 73, 74]);
+        assert_eq!(decoded(b"68494a"), vec![104, 73, 74]);
     }
 
     #[test]
@@ -364,14 +363,14 @@ mod tests {
         // 16-character input → 8 output bytes. Regression guard against
         // any O(n²) path that re-walks the input per output byte.
         assert_eq!(
-            run(b"4D616E6973657321"),
+            decoded(b"4D616E6973657321"),
             vec![77, 97, 110, 105, 115, 101, 115, 33]
         );
     }
 
     #[test]
     fn invalid_nibble_clamps_to_zero() {
-        assert_eq!(run(b"7aZ100"), vec![122, 1, 0]);
+        assert_eq!(decoded(b"7aZ100"), vec![122, 1, 0]);
     }
 
     #[test]
@@ -388,7 +387,7 @@ mod tests {
             }
 
             assert_eq!(
-                run(&input),
+                decoded(&input),
                 reference_hex_decode_packed(&input),
                 "hex wrapper seed {seed}"
             );

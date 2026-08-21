@@ -49,25 +49,22 @@ macro_rules! define_bit_count_u32_op {
             #[cfg(test)]
             mod tests {
                 use super::*;
-                use vyre_reference::value::Value;
+                use crate::fixture_bytes::eval_u32;
 
-                fn run(input: &[u32]) -> Vec<u32> {
-                    let n = input.len() as u32;
-                    let program = $function("input", "out", n.max(1));
-                    let to_bytes = vyre_primitives::wire::pack_u32_slice;
-                    let inputs = vec![
-                        Value::Bytes(to_bytes(input).into()),
-                        Value::Bytes(vec![0u8; (n.max(1) * 4) as usize].into()),
-                    ];
-                    let outputs = vyre_reference::reference_eval(&program, &inputs)
-                        .expect("Fix: bit-count u32 op must run in the reference interpreter.");
-                    vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+                fn counted(input: &[u32]) -> Vec<u32> {
+                    let n = (input.len() as u32).max(1);
+                    eval_u32(
+                        stringify!($function),
+                        &$function("input", "out", n),
+                        &[input],
+                        n as usize,
+                    )
                 }
 
                 #[test]
                 fn matches_rust_reference_samples() {
                     let input = [0u32, 1, 2, 3, 0x8000_0000, 0x00F0_0000, u32::MAX];
-                    let got = run(&input);
+                    let got = counted(&input);
                     let expected: Vec<u32> = input.iter().map(|value| value.$reference()).collect();
                     assert_eq!(got, expected);
                 }

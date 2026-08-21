@@ -339,19 +339,19 @@ mod tests {
         value::Value,
     };
 
-    fn run(lhs: &[i32], rhs: &[i32]) -> i32 {
+    fn dot(lhs: &[i32], rhs: &[i32]) -> i32 {
         let lhs_packed = pack_i4x8_witness(lhs);
         let rhs_packed = pack_i4x8_witness(rhs);
         let program = int4_dot_i32("lhs", "rhs", "out", lhs.len() as u32);
-        let outputs = reference_eval(
+        let raw = crate::fixture_bytes::eval_bytes(
+            "int4_dot_i32",
             &program,
-            &[
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&lhs_packed).into()),
-                Value::Bytes(vyre_primitives::wire::pack_u32_slice(&rhs_packed).into()),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&lhs_packed),
+                vyre_primitives::wire::pack_u32_slice(&rhs_packed),
             ],
         )
-        .expect("Fix: packed INT4 dot wrapper must execute in the reference oracle.");
-        let raw = outputs[0].to_bytes();
+        .swap_remove(0);
         i32::from_le_bytes(
             raw.get(0..4)
                 .expect("Fix: packed INT4 dot must emit one i32.")
@@ -550,9 +550,9 @@ mod tests {
         let lhs_packed = pack_i4x8_witness(&lhs);
         let rhs_packed = pack_i4x8_witness(&rhs);
 
-        assert_eq!(run(&lhs, &rhs), 40);
+        assert_eq!(dot(&lhs, &rhs), 40);
         assert_eq!(
-            run(&lhs, &rhs),
+            dot(&lhs, &rhs),
             i4x8_dot_i32_witness(&lhs_packed, &rhs_packed, 8)
         );
     }

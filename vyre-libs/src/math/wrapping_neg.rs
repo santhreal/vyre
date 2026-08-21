@@ -37,20 +37,16 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_u32;
 
-    fn run(input: &[u32]) -> Vec<u32> {
-        let n = input.len() as u32;
-        let program = wrapping_neg("input", "out", n.max(1));
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(input)),
-                Value::from(vec![0u8; (n.max(1) * 4) as usize]),
-            ],
+    fn negated(input: &[u32]) -> Vec<u32> {
+        let n = (input.len() as u32).max(1);
+        eval_u32(
+            "wrapping_neg",
+            &wrapping_neg("input", "out", n),
+            &[input],
+            n as usize,
         )
-        .expect("Fix: wrapping_neg must execute in the reference interpreter.");
-        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
     }
 
     #[test]
@@ -77,7 +73,11 @@ mod tests {
                 .copied()
                 .map(u32::wrapping_neg)
                 .collect::<Vec<_>>();
-            assert_eq!(run(&input), expected, "generated wrapping-neg case {case}");
+            assert_eq!(
+                negated(&input),
+                expected,
+                "generated wrapping-neg case {case}"
+            );
         }
     }
 }

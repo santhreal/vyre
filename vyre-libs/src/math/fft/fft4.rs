@@ -52,17 +52,15 @@ inventory::submit! {
 mod tests {
     use super::super::complex_length::naive_dft;
     use super::*;
-    use crate::fixture_bytes::{decode_f32, f32_bytes};
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
-    fn run(input: &[f32]) -> Vec<f32> {
-        let prog = fft4_complex("input", "output");
-        let outputs = vyre_reference::reference_eval(
-            &prog,
-            &[Value::from(f32_bytes(input)), Value::from(vec![0u8; 32])],
+    fn bins(input: &[f32]) -> Vec<f32> {
+        eval_f32(
+            "fft4_complex",
+            &fft4_complex("input", "output"),
+            &[input],
+            8,
         )
-        .expect("Fix: fft4_complex must execute in the reference interpreter.");
-        decode_f32(&outputs[0].to_bytes())
     }
 
     /// WHY: the two registered operations are the same transform at N=4, and
@@ -82,14 +80,9 @@ mod tests {
         ] {
             let wide = super::super::fft_radix2::fft_radix2_complex("input", "output", 4)
                 .expect("Fix: 4 is a valid radix-2 FFT size.");
-            let wide_out = vyre_reference::reference_eval(
-                &wide,
-                &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 32])],
-            )
-            .expect("Fix: fft_radix2_complex must execute in the reference interpreter.");
             assert_eq!(
-                run(&input),
-                decode_f32(&wide_out[0].to_bytes()),
+                bins(&input),
+                eval_f32("fft_radix2_complex", &wide, &[&input], 8),
                 "the two 4-point entry points disagree on {input:?}"
             );
         }
@@ -100,7 +93,7 @@ mod tests {
     #[test]
     fn fft4_impulse_yields_uniform_bins() {
         let input = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&input);
+        let actual = bins(&input);
         let expected = [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
         for (a, e) in actual.iter().zip(expected.iter()) {
             assert!((a - e).abs() <= 1.0e-5, "{a} != {e}");
@@ -112,7 +105,7 @@ mod tests {
     #[test]
     fn fft4_dc_signal_concentrates_in_dc_bin() {
         let input = [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
-        let actual = run(&input);
+        let actual = bins(&input);
         let expected = [4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         for (a, e) in actual.iter().zip(expected.iter()) {
             assert!((a - e).abs() <= 1.0e-5, "{a} != {e}");
@@ -126,7 +119,7 @@ mod tests {
     fn fft4_freq1_cosine_concentrates_in_bins_1_and_3() {
         // cos(2π·n/4) for n = 0, 1, 2, 3 = [1, 0, -1, 0]
         let input = [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0];
-        let actual = run(&input);
+        let actual = bins(&input);
         // X[0] = 0, X[1] = 2, X[2] = 0, X[3] = 2 (real-only output
         // because the input is real and even-symmetric).
         let expected = [0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0, 0.0];
@@ -148,7 +141,7 @@ mod tests {
         };
         for _ in 0..50 {
             let input: Vec<f32> = (0..8).map(|_| next()).collect();
-            let actual = run(&input);
+            let actual = bins(&input);
             let expected = naive_dft(&input, 4);
             for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
                 assert!(
@@ -169,7 +162,7 @@ mod tests {
     #[test]
     fn fft4_nan_input_propagates_to_real_parts() {
         let input = [f32::NAN, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&input);
+        let actual = bins(&input);
         for k in 0..4 {
             assert!(
                 actual[2 * k].is_nan(),
@@ -182,7 +175,7 @@ mod tests {
     #[test]
     fn fft4_nan_both_components_propagates_everywhere() {
         let input = [f32::NAN, f32::NAN, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&input);
+        let actual = bins(&input);
         for (i, &v) in actual.iter().enumerate() {
             assert!(
                 v.is_nan(),
@@ -196,7 +189,7 @@ mod tests {
     #[test]
     fn fft4_inf_input_propagates_to_real_parts() {
         let input = [f32::INFINITY, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&input);
+        let actual = bins(&input);
         for k in 0..4 {
             assert!(
                 actual[2 * k].is_infinite(),

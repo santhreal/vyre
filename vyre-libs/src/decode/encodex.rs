@@ -167,30 +167,21 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::{bytes_to_u32, decode_u32_one, eval_bytes};
 
-    fn run(input: &[u8]) -> (Vec<u32>, u32) {
+    fn histogram(input: &[u8]) -> (Vec<u32>, u32) {
         let program = encodex_gpu("input", "output", input.len() as u32);
-        let input_words = if input.is_empty() {
+        let input_words: Vec<u32> = if input.is_empty() {
             vec![0]
         } else {
-            input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()
+            input.iter().map(|&b| u32::from(b)).collect()
         };
-        let inputs = vec![
-            Value::from(pack_words(&input_words)),
-            Value::from(vec![0u8; 256 * 4]),
-            Value::from(vec![0u8; 4]),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: encodex must run; restore this invariant before continuing.");
-        let histogram = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
-        let enc_id = u32::from_le_bytes([
-            outputs[1].to_bytes()[0],
-            outputs[1].to_bytes()[1],
-            outputs[1].to_bytes()[2],
-            outputs[1].to_bytes()[3],
-        ]);
-        (histogram, enc_id)
+        let outputs = eval_bytes(
+            "encodex_gpu",
+            &program,
+            vec![pack_words(&input_words), vec![0u8; 256 * 4], vec![0u8; 4]],
+        );
+        (bytes_to_u32(&outputs[0]), decode_u32_one(&outputs[1]))
     }
 
     fn encodex_reference(input: &[u8]) -> u32 {
@@ -211,14 +202,14 @@ mod tests {
             EXPECTED_ENCODEX_ENC_3,
         ];
         for (input, expected) in FIXTURE_INPUTS.iter().zip(expected_encodings) {
-            let (_, actual) = run(input);
+            let (_, actual) = histogram(input);
             assert_eq!(actual.to_le_bytes(), expected);
         }
     }
 
     #[test]
     fn ascii_detected() {
-        let (histogram, enc_id) = run(b"Hello");
+        let (histogram, enc_id) = histogram(b"Hello");
         assert_eq!(histogram[72], 1);
         assert_eq!(histogram[101], 1);
         assert_eq!(histogram[108], 2);
@@ -229,7 +220,7 @@ mod tests {
     #[test]
     fn utf8_detected() {
         // é encoded as UTF-8 = 0xC3 0xA9
-        let (histogram, enc_id) = run(&[0xC3, 0xA9, 0xC3, 0xA9]);
+        let (histogram, enc_id) = histogram(&[0xC3, 0xA9, 0xC3, 0xA9]);
         assert_eq!(histogram[0xC3], 2);
         assert_eq!(histogram[0xA9], 2);
         assert_eq!(enc_id, ENC_UTF8);
@@ -237,7 +228,7 @@ mod tests {
 
     #[test]
     fn high_null_guesses_utf16le() {
-        let (histogram, enc_id) = run(&[0x00, 0x00, 0x00, 0x41]);
+        let (histogram, enc_id) = histogram(&[0x00, 0x00, 0x00, 0x41]);
         assert_eq!(histogram[0x00], 3);
         assert_eq!(histogram[0x41], 1);
         assert_eq!(enc_id, ENC_UTF16LE);
@@ -245,7 +236,7 @@ mod tests {
 
     #[test]
     fn iso8859_1_detected() {
-        let (histogram, enc_id) = run(&[0xE9, 0xE8, 0xEA]);
+        let (histogram, enc_id) = histogram(&[0xE9, 0xE8, 0xEA]);
         assert_eq!(histogram[0xE9], 1);
         assert_eq!(histogram[0xE8], 1);
         assert_eq!(histogram[0xEA], 1);
@@ -254,7 +245,7 @@ mod tests {
 
     #[test]
     fn empty_input_is_ascii() {
-        let (histogram, enc_id) = run(b"");
+        let (histogram, enc_id) = histogram(b"");
         assert!(histogram.iter().all(|&v| v == 0));
         assert_eq!(enc_id, ENC_ASCII);
     }
@@ -269,7 +260,7 @@ mod tests {
             b"Pure ASCII text here",
         ];
         for input in inputs {
-            let (_, gpu_id) = run(input);
+            let (_, gpu_id) = histogram(input);
             let reference_id = encodex_reference(input);
             assert_eq!(
                 gpu_id, reference_id,

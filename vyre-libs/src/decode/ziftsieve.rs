@@ -259,10 +259,16 @@ inventory::submit! {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod primitive_tests {
     use super::*;
+    use crate::fixture_bytes::{bytes_to_u32, eval_bytes};
     use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
     use vyre_reference::value::Value;
 
-    fn run(input: &[u8], seq_starts: &[u32], seq_lens: &[u32], seq_offsets: &[u32]) -> Vec<u32> {
+    fn literals(
+        input: &[u8],
+        seq_starts: &[u32],
+        seq_lens: &[u32],
+        seq_offsets: &[u32],
+    ) -> Vec<u32> {
         let seq_count = seq_starts.len() as u32;
         let max_output = seq_lens.iter().copied().sum::<u32>();
         let input_words = input.iter().map(|&b| u32::from(b)).collect::<Vec<_>>();
@@ -274,28 +280,32 @@ mod primitive_tests {
                 max_output,
             },
         );
-        let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_u32_slice(&input_words)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(seq_starts)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(seq_lens)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(seq_offsets)),
-            Value::from(vec![0u8; (max_output.max(1) as usize) * 4]),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: ziftsieve literal-copy primitive must run.");
-        let words = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
-        words.into_iter().take(max_output as usize).collect()
+        let outputs = eval_bytes(
+            "ziftsieve_literal_copy",
+            &program,
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&input_words),
+                vyre_primitives::wire::pack_u32_slice(seq_starts),
+                vyre_primitives::wire::pack_u32_slice(seq_lens),
+                vyre_primitives::wire::pack_u32_slice(seq_offsets),
+                vec![0u8; (max_output.max(1) as usize) * 4],
+            ],
+        );
+        bytes_to_u32(&outputs[0])
+            .into_iter()
+            .take(max_output as usize)
+            .collect()
     }
 
     #[test]
     fn single_literal() {
-        assert_eq!(run(&[0x10, b'A'], &[1], &[1], &[0]), vec![b'A' as u32]);
+        assert_eq!(literals(&[0x10, b'A'], &[1], &[1], &[0]), vec![b'A' as u32]);
     }
 
     #[test]
     fn two_sequences() {
         assert_eq!(
-            run(&[0x10, b'A', 0x20, b'B', b'C'], &[1, 3], &[1, 2], &[0, 1]),
+            literals(&[0x10, b'A', 0x20, b'B', b'C'], &[1, 3], &[1, 2], &[0, 1]),
             vec![b'A' as u32, b'B' as u32, b'C' as u32]
         );
     }
@@ -303,7 +313,7 @@ mod primitive_tests {
     #[test]
     fn zero_literal_sequence_is_nop() {
         assert_eq!(
-            run(&[0x00, 0x10, b'A'], &[0], &[0], &[0]),
+            literals(&[0x00, 0x10, b'A'], &[0], &[0], &[0]),
             Vec::<u32>::new()
         );
     }

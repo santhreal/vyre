@@ -211,27 +211,18 @@ inventory::submit! {
 mod tests {
     use super::super::complex_length::naive_dft;
     use super::*;
-    use crate::fixture_bytes::{decode_f32, f32_bytes};
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
-    fn run(n: u32, input: &[f32]) -> Vec<f32> {
-        let prog = fft_radix2_complex("input", "output", n).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
-            &prog,
-            &[
-                Value::from(f32_bytes(input)),
-                Value::from(vec![0u8; (2 * n as usize) * 4]),
-            ],
-        )
-        .expect("Fix: fft_radix2_complex must execute in the reference interpreter.");
-        decode_f32(&outputs[0].to_bytes())
+    fn bins(n: u32, input: &[f32]) -> Vec<f32> {
+        let program = fft_radix2_complex("input", "output", n).expect("Fix: build");
+        eval_f32("fft_radix2_complex", &program, &[input], 2 * n as usize)
     }
 
     /// N=2 FFT of [a, b] (both real) is [a+b, a-b].
     #[test]
     fn fft_radix2_n2_basic() {
         let input = [3.0, 0.0, 5.0, 0.0];
-        let actual = run(2, &input);
+        let actual = bins(2, &input);
         assert!((actual[0] - 8.0).abs() <= 1.0e-5); // X[0] re
         assert!((actual[1] - 0.0).abs() <= 1.0e-5);
         assert!((actual[2] + 2.0).abs() <= 1.0e-5); // X[1] re = 3 - 5 = -2
@@ -242,7 +233,7 @@ mod tests {
     #[test]
     fn fft_radix2_n4_impulse() {
         let input = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(4, &input);
+        let actual = bins(4, &input);
         let expected = [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0];
         for (a, e) in actual.iter().zip(expected.iter()) {
             assert!((a - e).abs() <= 1.0e-5, "{a} != {e}");
@@ -254,7 +245,7 @@ mod tests {
     fn fft_radix2_n8_impulse() {
         let mut input = vec![0.0_f32; 16];
         input[0] = 1.0;
-        let actual = run(8, &input);
+        let actual = bins(8, &input);
         for k in 0..8 {
             assert!((actual[2 * k] - 1.0).abs() <= 1.0e-5);
             assert!(actual[2 * k + 1].abs() <= 1.0e-5);
@@ -274,7 +265,7 @@ mod tests {
         };
         for _ in 0..30 {
             let input: Vec<f32> = (0..16).map(|_| next()).collect();
-            let actual = run(8, &input);
+            let actual = bins(8, &input);
             let expected = naive_dft(&input, 8);
             for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
                 assert!(
@@ -339,7 +330,7 @@ mod tests {
     fn fft_radix2_nan_input_propagates_to_real_parts() {
         let mut input = vec![0.0_f32; 16];
         input[0] = f32::NAN;
-        let actual = run(8, &input);
+        let actual = bins(8, &input);
         for k in 0..8 {
             assert!(
                 actual[2 * k].is_nan(),
@@ -354,7 +345,7 @@ mod tests {
         let mut input = vec![0.0_f32; 16];
         input[0] = f32::NAN;
         input[1] = f32::NAN;
-        let actual = run(8, &input);
+        let actual = bins(8, &input);
         for (i, &v) in actual.iter().enumerate() {
             assert!(
                 v.is_nan(),
@@ -369,7 +360,7 @@ mod tests {
     fn fft_radix2_inf_input_propagates_to_real_parts() {
         let mut input = vec![0.0_f32; 16];
         input[0] = f32::INFINITY;
-        let actual = run(8, &input);
+        let actual = bins(8, &input);
         for k in 0..8 {
             assert!(
                 actual[2 * k].is_infinite(),

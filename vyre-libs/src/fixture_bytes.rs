@@ -60,6 +60,67 @@ pub(crate) fn bytes_to_u32(slice: &[u8]) -> Vec<u32> {
     vyre_primitives::wire::decode_u32_le_bytes_all(slice)
 }
 
+/// Run a program through the reference interpreter and hand back raw buffers.
+///
+/// Every module test that wanted a reference answer used to pack its own
+/// buffers, call `reference_eval`, and decode the result, so the same eight
+/// lines existed once per module under a local `run`. Two of those copies had
+/// already drifted into passing a differently sized output buffer than the
+/// program declared. This is the one place the call is made.
+///
+/// `buffers` is the complete argument list in declaration order, outputs
+/// included: a zeroed vector of the right length is what the interpreter
+/// writes into, and a zero-length one is a real argument, not an omission.
+#[cfg(test)]
+pub(crate) fn eval_bytes(
+    label: &str,
+    program: &vyre_foundation::ir::Program,
+    buffers: Vec<Vec<u8>>,
+) -> Vec<Vec<u8>> {
+    let values: Vec<vyre_reference::value::Value> = buffers
+        .into_iter()
+        .map(vyre_reference::value::Value::from)
+        .collect();
+    vyre_reference::reference_eval(program, &values)
+        .unwrap_or_else(|error| {
+            panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+        })
+        .iter()
+        .map(|value| value.to_bytes())
+        .collect()
+}
+
+/// Run a program whose arguments and one output are all f32.
+///
+/// `output_len` is the element count the program declares for its output, not
+/// the input length: an operation that reduces or expands declares a different
+/// one, and sizing the buffer from an input is how a reduction test ends up
+/// reading a buffer the program never filled.
+#[cfg(test)]
+pub(crate) fn eval_f32(
+    label: &str,
+    program: &vyre_foundation::ir::Program,
+    inputs: &[&[f32]],
+    output_len: usize,
+) -> Vec<f32> {
+    let mut buffers: Vec<Vec<u8>> = inputs.iter().map(|input| f32_bytes(input)).collect();
+    buffers.push(vec![0u8; output_len * 4]);
+    decode_f32(&eval_bytes(label, program, buffers)[0])
+}
+
+/// Run a program whose arguments and one output are all u32.
+#[cfg(test)]
+pub(crate) fn eval_u32(
+    label: &str,
+    program: &vyre_foundation::ir::Program,
+    inputs: &[&[u32]],
+    output_len: usize,
+) -> Vec<u32> {
+    let mut buffers: Vec<Vec<u8>> = inputs.iter().map(|input| u32_bytes(input)).collect();
+    buffers.push(vec![0u8; output_len * 4]);
+    bytes_to_u32(&eval_bytes(label, program, buffers)[0])
+}
+
 /// Run a one-in one-out f32 program through the reference interpreter.
 ///
 /// The argument shape is the one every elementwise and per-row nn program under
@@ -71,17 +132,7 @@ pub(crate) fn eval_f32_unary(
     input: &[f32],
     program: &vyre_foundation::ir::Program,
 ) -> Vec<f32> {
-    let outputs = vyre_reference::reference_eval(
-        program,
-        &[
-            vyre_reference::value::Value::from(f32_bytes(input)),
-            vyre_reference::value::Value::from(vec![0u8; input.len() * 4]),
-        ],
-    )
-    .unwrap_or_else(|error| {
-        panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
-    });
-    decode_f32(&outputs[0].to_bytes())
+    eval_f32(label, program, &[input], input.len())
 }
 
 /// Compare a tiled f32 program against its scalar reference, lane by lane.

@@ -138,24 +138,21 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::f32_bytes;
     use vyre_reference::composition_witness::im2col_3x3_witness;
-    use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
     }
 
-    fn run(input: &[f32], h: u32, w: u32) -> Vec<f32> {
-        let prog = im2col_3x3("input", "output", h, w).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(&prog, &[Value::from(f32_bytes(input))])
-            .expect("Fix: im2col_3x3 must execute in the reference interpreter.");
-        decode(&outputs[0].to_bytes())
+    fn columns(input: &[f32], h: u32, w: u32) -> Vec<f32> {
+        let program = im2col_3x3("input", "output", h, w).expect("Fix: build");
+        decode(&crate::fixture_bytes::eval_bytes("im2col_3x3", &program, vec![f32_bytes(input)])[0])
     }
 
     /// Im2col on a 4x4 input matches the naive reference layout.
     #[test]
     fn im2col_matches_naive_on_4x4() {
         let input: Vec<f32> = (0..16).map(|i| i as f32 + 1.0).collect();
-        let actual = run(&input, 4, 4);
+        let actual = columns(&input, 4, 4);
         let expected = im2col_3x3_witness(&input, 4, 4);
         assert_eq!(actual.len(), expected.len());
         for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
@@ -169,7 +166,7 @@ mod tests {
     #[test]
     fn im2col_centre_pixel_holds_full_3x3() {
         let input: Vec<f32> = (0..9).map(|i| i as f32 + 1.0).collect();
-        let actual = run(&input, 3, 3);
+        let actual = columns(&input, 3, 3);
         // Centre pixel is (1, 1) flat index 4; its 9 taps span rows 0..3 cols 0..3 of input
         let centre_row = &actual[4 * 9..4 * 9 + 9];
         for (k, &v) in centre_row.iter().enumerate() {
@@ -188,7 +185,7 @@ mod tests {
     #[test]
     fn im2col_corner_pixel_zero_pads_5_of_9_taps() {
         let input: Vec<f32> = (0..9).map(|i| i as f32 + 1.0).collect();
-        let actual = run(&input, 3, 3);
+        let actual = columns(&input, 3, 3);
         let corner_row = &actual[0..9];
         // ky=0 (above), kx=0/1/2 → all out of bounds → 0
         assert_eq!(corner_row[0], 0.0);

@@ -141,7 +141,6 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -173,17 +172,15 @@ mod tests {
         out
     }
 
-    fn run(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
-        let prog = conv2d_3x3_direct("input", "kernel", "output", h, w).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
-            &prog,
-            &[
-                Value::from(f32_bytes(input)),
-                Value::from(f32_bytes(kernel)),
-            ],
+    fn convolved(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
+        let program = conv2d_3x3_direct("input", "kernel", "output", h, w).expect("Fix: build");
+        decode(
+            &crate::fixture_bytes::eval_bytes(
+                "conv2d_3x3_direct",
+                &program,
+                vec![f32_bytes(input), f32_bytes(kernel)],
+            )[0],
         )
-        .expect("Fix: conv2d_3x3_direct must execute in the reference interpreter.");
-        decode(&outputs[0].to_bytes())
     }
 
     /// Direct 3x3 conv on a 4x4 identity matrix with box kernel
@@ -194,7 +191,7 @@ mod tests {
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
         let kernel = vec![1.0; 9];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         let expected = naive_conv2d_3x3(&input, &kernel, 4, 4);
         assert_eq!(actual.len(), 16);
         for (a, e) in actual.iter().zip(expected.iter()) {
@@ -208,7 +205,7 @@ mod tests {
     fn conv2d_identity_kernel_passes_input_through() {
         let input: Vec<f32> = (0..16).map(|i| i as f32 - 7.5).collect();
         let kernel = vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         for (a, e) in actual.iter().zip(input.iter()) {
             assert!((a - e).abs() <= 1.0e-5, "{a} != {e}");
         }
@@ -228,7 +225,7 @@ mod tests {
         for _ in 0..30 {
             let input: Vec<f32> = (0..25).map(|_| next()).collect();
             let kernel: Vec<f32> = (0..9).map(|_| next()).collect();
-            let actual = run(5, 5, &input, &kernel);
+            let actual = convolved(5, 5, &input, &kernel);
             let expected = naive_conv2d_3x3(&input, &kernel, 5, 5);
             for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
                 assert!(
@@ -249,7 +246,7 @@ mod tests {
     fn conv2d_1x1_image() {
         let input = vec![5.0_f32];
         let kernel = vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(1, 1, &input, &kernel);
+        let actual = convolved(1, 1, &input, &kernel);
         assert_eq!(actual.len(), 1);
         assert!(
             (actual[0] - 5.0).abs() <= 1.0e-5,
@@ -263,7 +260,7 @@ mod tests {
     fn conv2d_nan_input_propagates() {
         let input = vec![f32::NAN; 16];
         let kernel = vec![1.0_f32; 9];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         for (i, &v) in actual.iter().enumerate() {
             assert!(
                 v.is_nan(),
@@ -277,7 +274,7 @@ mod tests {
     fn conv2d_inf_input_propagates() {
         let input = vec![f32::INFINITY; 16];
         let kernel = vec![1.0_f32; 9];
-        let actual = run(4, 4, &input, &kernel);
+        let actual = convolved(4, 4, &input, &kernel);
         for (i, &v) in actual.iter().enumerate() {
             assert!(
                 v.is_infinite(),

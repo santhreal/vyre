@@ -319,52 +319,55 @@ mod reference_eval_tests {
         build_char_class_table, char_class, C_ALPHA, C_CLOSE_BRACE, C_CLOSE_PAREN, C_DIGIT,
         C_MINUS, C_NEWLINE, C_OPEN_BRACE, C_OPEN_PAREN, C_PLUS, C_SLASH, C_STAR, C_WS,
     };
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::{bytes_to_u32, eval_bytes};
 
-    fn run(bytes: &[u8]) -> Vec<u32> {
+    fn classified(bytes: &[u8]) -> Vec<u32> {
         let table = build_char_class_table();
         let n = bytes.len().max(1) as u32;
         let program = char_class("source", "classified", n);
-        let inputs = vec![
-            Value::Bytes(vyre_primitives::wire::pack_bytes_as_u32_slice(bytes).into()),
-            Value::Bytes(vyre_primitives::wire::pack_u32_slice(&table).into()),
-            Value::Bytes(vec![0u8; (n as usize) * 4].into()),
-        ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: char_class must run; restore this invariant before continuing.");
-        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+        bytes_to_u32(
+            &eval_bytes(
+                "char_class",
+                &program,
+                vec![
+                    vyre_primitives::wire::pack_bytes_as_u32_slice(bytes),
+                    vyre_primitives::wire::pack_u32_slice(&table),
+                    vec![0u8; (n as usize) * 4],
+                ],
+            )[0],
+        )
     }
 
     #[test]
     fn classifies_ascii_letter_as_alpha() {
-        assert_eq!(run(b"Hello"), vec![C_ALPHA; 5]);
+        assert_eq!(classified(b"Hello"), vec![C_ALPHA; 5]);
     }
 
     #[test]
     fn classifies_digits() {
-        assert_eq!(run(b"123"), vec![C_DIGIT; 3]);
+        assert_eq!(classified(b"123"), vec![C_DIGIT; 3]);
     }
 
     #[test]
     fn classifies_whitespace_and_newline() {
-        assert_eq!(run(b" \t\n"), vec![C_WS, C_WS, C_NEWLINE]);
+        assert_eq!(classified(b" \t\n"), vec![C_WS, C_WS, C_NEWLINE]);
     }
 
     #[test]
     fn classifies_operators() {
-        assert_eq!(run(b"+-*/"), vec![C_PLUS, C_MINUS, C_STAR, C_SLASH]);
+        assert_eq!(classified(b"+-*/"), vec![C_PLUS, C_MINUS, C_STAR, C_SLASH]);
     }
 
     #[test]
     fn classifies_punctuation() {
         assert_eq!(
-            run(b"(){}"),
+            classified(b"(){}"),
             vec![C_OPEN_PAREN, C_CLOSE_PAREN, C_OPEN_BRACE, C_CLOSE_BRACE]
         );
     }
 
     #[test]
     fn identifier_chars_include_underscore() {
-        assert_eq!(run(b"_a"), vec![C_ALPHA, C_ALPHA]);
+        assert_eq!(classified(b"_a"), vec![C_ALPHA, C_ALPHA]);
     }
 }

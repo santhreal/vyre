@@ -371,7 +371,6 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -380,8 +379,8 @@ mod tests {
             .collect()
     }
 
-    fn run(signal: &[f32], kernel: &[f32], n: u32) -> Vec<f32> {
-        let prog = fft_convolve_circular_complex(
+    fn convolved(signal: &[f32], kernel: &[f32], n: u32) -> Vec<f32> {
+        let program = fft_convolve_circular_complex(
             "signal",
             "kernel",
             "signal_freq",
@@ -392,20 +391,15 @@ mod tests {
         )
         .expect("Fix: build");
         let byte_len = (2 * n as usize) * 4;
-        let outputs = vyre_reference::reference_eval(
-            &prog,
-            &[
-                Value::from(f32_bytes(signal)),
-                Value::from(f32_bytes(kernel)),
-                Value::from(vec![0u8; byte_len]),
-            ],
-        )
-        .expect("Fix: fft_convolve_circular_complex must execute in the reference interpreter.");
+        let outputs = crate::fixture_bytes::eval_bytes(
+            "fft_convolve_circular_complex",
+            &program,
+            vec![f32_bytes(signal), f32_bytes(kernel), vec![0u8; byte_len]],
+        );
         decode(
-            &outputs
+            outputs
                 .last()
-                .expect("Fix: output buffer must be returned after scratch buffers.")
-                .to_bytes(),
+                .expect("Fix: output buffer must be returned after scratch buffers."),
         )
     }
 
@@ -433,7 +427,7 @@ mod tests {
     fn fft_convolve_circular_real_fixture_matches_reference() {
         let signal = [1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0];
         let kernel = [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         let expected = naive_circular_complex(&signal, &kernel, 4);
         for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
             assert!((a - e).abs() <= 1.0e-4, "lane {i}: {a} != {e}");
@@ -444,7 +438,7 @@ mod tests {
     fn fft_convolve_circular_complex_fixture_matches_reference() {
         let signal = [1.0, 1.0, 0.0, -1.0, 2.0, 0.5, -3.0, 0.25];
         let kernel = [0.5, -1.0, 2.0, 0.0, -1.0, 0.5, 0.25, 1.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         let expected = naive_circular_complex(&signal, &kernel, 4);
         for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
             assert!((a - e).abs() <= 1.0e-4, "lane {i}: {a} != {e}");
@@ -475,7 +469,7 @@ mod tests {
         let mut signal = vec![0.0_f32; 8];
         signal[0] = f32::NAN;
         let kernel = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         assert!(
             actual.iter().any(|&v| v.is_nan()),
             "convolution with NaN signal must produce at least one NaN component"
@@ -490,7 +484,7 @@ mod tests {
         let mut signal = vec![0.0_f32; 8];
         signal[0] = f32::INFINITY;
         let kernel = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let actual = run(&signal, &kernel, 4);
+        let actual = convolved(&signal, &kernel, 4);
         assert!(
             actual.iter().any(|&v| v.is_nan() || v.is_infinite()),
             "convolution with Inf signal must produce NaN or Inf; got {:?}",
