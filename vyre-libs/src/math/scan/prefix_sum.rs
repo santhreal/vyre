@@ -80,10 +80,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
     use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::try_eval_bytes;
     use crate::fixture_bytes::u32_bytes;
-    use crate::fixture_bytes::{bytes_to_u32 as decode_u32_words, u32_bytes};
     use vyre_foundation::ir::{BufferAccess, Expr, Node};
     use vyre_foundation::visit::any_descendant;
 

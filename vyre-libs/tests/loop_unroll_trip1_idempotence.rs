@@ -5,6 +5,7 @@
 //! *second* optimize() (after phase-3 CSE/DCE shrank the body). The fix lifts the
 //! size cap for trip_count == 1 (no duplication => no blowup), so the promotion
 //! happens on the first pass and optimize() is idempotent.
+#![cfg(all(feature = "math-kernels", feature = "fixpoint"))]
 
 use vyre::ir::{Expr, Node};
 use vyre_foundation::optimizer::optimize;

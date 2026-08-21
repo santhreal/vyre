@@ -28,7 +28,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn generated_unary_backward_program_lengths_are_declared_exactly() {
@@ -63,7 +62,7 @@ pub(super) fn eval_unary_f32_backward(
 ) -> Vec<f32> {
     let n = input.len();
     assert_eq!(n, grad_out.len());
-    let outputs = eval_bytes(
+    let outputs = crate::fixture_bytes::eval_bytes(
         "unary_f32",
         program,
         vec![

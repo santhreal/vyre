@@ -81,7 +81,6 @@ macro_rules! define_atomic_serial_module {
         #[cfg(test)]
         mod tests {
             use super::*;
-    use crate::fixture_bytes::eval_bytes;
             use crate::math::atomic::testutil::{assert_serial_matches, SerialAtomicOracle};
 
             #[test]
@@ -354,6 +353,7 @@ pub(crate) fn build_atomic_compare_exchange(
 // Test helpers shared across atomic op unit tests.
 #[cfg(test)]
 pub(crate) mod testutil {
+    use crate::fixture_bytes::eval_bytes;
 
     pub(crate) use vyre_primitives::wire::pack_u32_slice as pack_u32;
 

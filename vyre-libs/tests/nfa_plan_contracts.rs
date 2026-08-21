@@ -1,4 +1,5 @@
 //! Generated NFA plan and table layout contracts.
+#![cfg(feature = "nfa")]
 
 #[cfg(feature = "pattern-nfa")]
 #[test]

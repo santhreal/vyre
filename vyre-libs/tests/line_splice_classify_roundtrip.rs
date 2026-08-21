@@ -2,6 +2,7 @@
 //! compatibility program and the raw-byte program against real C-shaped
 //! inputs. Catches IR-level bugs (wrong opcode, bad operand wiring, missing
 //! buffer binding) without needing the GPU driver.
+#![cfg(feature = "parsing-kernels")]
 
 use vyre_foundation::ir::DataType;
 use vyre_libs::parsing::line_splice_classify::{line_splice_classify, line_splice_classify_u8};

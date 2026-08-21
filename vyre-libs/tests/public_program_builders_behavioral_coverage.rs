@@ -15,7 +15,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
 use vyre_libs::elementwise::ElementwiseComposer;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_u32_le_bytes_all, pack_f32_slice, pack_u32_slice,
@@ -169,6 +169,7 @@ fn f32_binary_multiplication_over_signed_and_fractional_floats() {
 #[cfg(feature = "graph")]
 mod level_wave_tests {
     use super::*;
+    use vyre_foundation::ir::{BufferDecl, Node};
     use vyre_libs::graph::level_wave::level_wave_program_with_buffers_and_op_id;
 
     #[test]

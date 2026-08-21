@@ -1022,6 +1022,11 @@ path = "tests/sweep_graph_csr_bidirectional_oracle_matrix.rs"
 required-features = ["graph"]
 
 [[example]]
+name = "select1_optimizer_parity"
+path = "examples/select1_optimizer_parity.rs"
+required-features = ["bitset"]
+
+[[example]]
 name = "dominator_tree_e2e"
 path = "examples/dominator_tree_e2e.rs"
 required-features = ["graph"]
@@ -1160,3 +1165,33 @@ required-features = ["graph"]
 name = "lr_tables_contracts"
 path = "tests/lr_tables_contracts.rs"
 required-features = ["parsing"]
+
+[[test]]
+name = "line_splice_classify_roundtrip"
+path = "tests/line_splice_classify_roundtrip.rs"
+required-features = ["parsing-kernels"]
+
+[[test]]
+name = "loop_back_edge_audit"
+path = "tests/loop_back_edge_audit.rs"
+required-features = ["fixpoint", "graph", "parsing-kernels", "math-kernels"]
+
+[[test]]
+name = "loop_unroll_trip1_idempotence"
+path = "tests/loop_unroll_trip1_idempotence.rs"
+required-features = ["math-kernels", "fixpoint"]
+
+[[test]]
+name = "nfa_plan_contracts"
+path = "tests/nfa_plan_contracts.rs"
+required-features = ["nfa"]
+
+[[test]]
+name = "parser_graph_navigation_contracts"
+path = "tests/parser_graph_navigation_contracts.rs"
+required-features = ["graph"]
+
+[[test]]
+name = "proptest_bitset_zero"
+path = "tests/proptest_bitset_zero.rs"
+required-features = ["bitset"]

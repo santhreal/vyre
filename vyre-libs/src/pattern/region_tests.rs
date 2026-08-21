@@ -1,6 +1,7 @@
 //! Tests for the region post-processing programs against host oracles.
 
 use super::region::*;
+use crate::fixture_bytes::eval_bytes;
 
 fn cluster_metadata_for_sorted(input: &[RegionTriple]) -> (Vec<u32>, Vec<u32>) {
     let mut survivors = vec![0u32; input.len()];
@@ -266,13 +267,9 @@ fn cap_regions_per_pattern_flag_program_emits_expected_buffers() {
 /// Run the actual cap kernel IR on the reference interpreter and return the
 /// survivor flags it writes (the real device program, not a host mirror).
 fn eval_cap_survivors(pids: &[u32], k: u32) -> Vec<u32> {
-    use std::sync::Arc;
-    use vyre_reference::value::Value;
-
     let count = pids.len() as u32;
     let program = cap_regions_per_pattern_flag_program("pids", "survivors", k, count);
-    let to_value =
-        |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+    let to_value = |data: &[u32]| vyre_primitives::wire::pack_u32_slice(data);
     // Binding order: pids (in), survivors (out, seeded zero).
     let inputs = vec![to_value(pids), to_value(&vec![0u32; pids.len()])];
     let results = eval_bytes("region_tests", &program, inputs.clone());
@@ -356,8 +353,6 @@ fn region_sort_program_zero_count_traps() {
 /// byte-packed value per numbered storage/output buffer, in binding order.
 #[cfg(test)]
 fn run_u32_program(program: &vyre_foundation::ir::Program, inputs: &[&[u32]]) -> Vec<Vec<u32>> {
-    use std::sync::Arc;
-    use vyre_reference::value::Value;
     let values: Vec<Vec<u8>> = inputs
         .iter()
         .map(|data| vyre_primitives::wire::pack_u32_slice(data))
@@ -501,14 +496,10 @@ fn compact_first_per_region_pattern_flag_program_emits_expected_buffers() {
 /// Run the actual per-region compaction kernel IR on the reference interpreter
 /// and return the survivor flags it writes (the real device program).
 fn eval_compact_survivors(regions: &[u32], pids: &[u32]) -> Vec<u32> {
-    use std::sync::Arc;
-    use vyre_reference::value::Value;
-
     let count = regions.len() as u32;
     let program =
         compact_first_per_region_pattern_flag_program("regions", "pids", "survivors", count);
-    let to_value =
-        |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+    let to_value = |data: &[u32]| vyre_primitives::wire::pack_u32_slice(data);
     // Binding order: regions (in), pids (in), survivors (out, seeded zero).
     let inputs = vec![
         to_value(regions),

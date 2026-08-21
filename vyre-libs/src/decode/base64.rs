@@ -452,8 +452,6 @@ inventory::submit! {
 #[cfg(test)]
 mod primitive_tests {
     use super::*;
-    use crate::fixture_bytes::bytes_to_u32;
-    use crate::fixture_bytes::decode_u32_one;
     use crate::fixture_bytes::eval_bytes;
     fn build_standard_decode_table() -> [u32; 256] {
         let mut table = [INVALID; 256];

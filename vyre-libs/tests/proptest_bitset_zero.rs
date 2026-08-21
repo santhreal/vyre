@@ -1,4 +1,5 @@
 //! Property and generated adversarial gates for `bitset::zero`.
+#![cfg(feature = "bitset")]
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferAccess, DataType};

@@ -37,6 +37,16 @@
 //! so add it when you write one. `assorted_iteration_counts` exists because the
 //! shape can depend on the iteration budget, and a builder that clamps or
 //! specializes at 0 or 1 can be legal at one budget and not another.
+//!
+//! The audited builders live behind the `fixpoint`, `graph`, `parsing-kernels`
+//! and `math-kernels` features, so this target is built only when all four are
+//! enabled. Under a narrower feature set none of the thirteen exist to audit.
+#![cfg(all(
+    feature = "fixpoint",
+    feature = "graph",
+    feature = "parsing-kernels",
+    feature = "math-kernels"
+))]
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{Expr, Node, Program};

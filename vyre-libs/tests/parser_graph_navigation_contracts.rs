@@ -5,7 +5,7 @@
 //! trees, single-node trees, cap exhaustion, and validation.
 //!
 //! GPU acquisition: none  -  all tests use the reference interpreter.
-
+#![cfg(feature = "graph")]
 #![allow(deprecated)]
 
 mod wire_words;

@@ -78,16 +78,12 @@ fn exclusive_equals_inclusive_minus_input() {
 /// harness, same as the inclusive multi-block scan).
 #[test]
 fn exclusive_difference_pass_executes_and_subtracts_input() {
-    use std::sync::Arc;
-    use vyre_reference::value::Value;
-
     let input = [3u32, 1, 4, 1, 5, 9, 2, 6];
     let inclusive = reference_inclusive_scan(&input); // [3,4,8,9,14,23,25,31]
     let n = input.len() as u32;
     let program = try_exclusive_difference_pass("inclusive", "input", "output", n, 1024)
         .expect("difference pass builds");
-    let to_value =
-        |data: &[u32]| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data)));
+    let to_value = |data: &[u32]| vyre_primitives::wire::pack_u32_slice(data);
     let inputs = vec![
         to_value(&inclusive),
         to_value(&input),
@@ -105,7 +101,7 @@ fn exclusive_difference_pass_executes_and_subtracts_input() {
     );
 }
 
-/// Feed one Value per non-workgroup buffer in binding order (real input for
+/// Feed one byte buffer per non-workgroup buffer in binding order (real input for
 /// the `input`-named buffer, a zero slot for every fused scratch/output),
 /// run through the reference interpreter, and return the `output` buffer.
 /// The multi-block chain fuses in intermediate buffers (`__output_mbps_*`),
@@ -113,7 +109,6 @@ fn exclusive_difference_pass_executes_and_subtracts_input() {
 /// `output` among the returned ReadWrite buffers instead of assuming index 0.
 fn run_full_scan(program: &vyre_foundation::ir::Program, input: &[u32]) -> Vec<u32> {
     use vyre_foundation::ir::BufferAccess;
-    use vyre_reference::value::Value;
     let mut inputs = Vec::new();
     let mut output_idx = None;
     let mut writable_seen = 0usize;

@@ -9,7 +9,7 @@ use crate::fixture_bytes::eval_bytes;
 use crate::pattern::haystack::pack_haystack_u32;
 
 /// A u32 slice as one reference-backend input value.
-pub(crate) fn u32_input(words: &[u32]) -> Value {
+pub(crate) fn u32_input(words: &[u32]) -> Vec<u8> {
     pack_u32_slice(words)
 }
 
@@ -19,7 +19,7 @@ pub(crate) fn u32_input(words: &[u32]) -> Value {
 /// Ordered to match `classic_ac_dfa_buffer_decls`, which is the declaration side
 /// of the same ABI, so a binding reordered there fails these tests rather than
 /// silently feeding a program the wrong buffer.
-pub(crate) fn ac_dfa_table_inputs(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<Value> {
+pub(crate) fn ac_dfa_table_inputs(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<Vec<u8>> {
     vec![
         pack_haystack_u32(haystack),
         u32_input(&dfa.transitions),
@@ -34,7 +34,11 @@ pub(crate) fn ac_dfa_table_inputs(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<Val
 /// program shape adds past binding 5: a zeroed match counter, a presence bitmap,
 /// prefilter mask words. A count program binds a shorter prefix and uses
 /// [`ac_dfa_table_inputs`] instead of truncating this.
-pub(crate) fn ac_ranges_inputs(dfa: &CompiledDfa, haystack: &[u8], lengths: &[u32]) -> Vec<Value> {
+pub(crate) fn ac_ranges_inputs(
+    dfa: &CompiledDfa,
+    haystack: &[u8],
+    lengths: &[u32],
+) -> Vec<Vec<u8>> {
     let mut inputs = ac_dfa_table_inputs(dfa, haystack);
     inputs.reserve(3);
     inputs.push(u32_input(&dfa.output_records));
@@ -106,7 +110,7 @@ pub(crate) fn pattern_lengths(patterns: &[&[u8]]) -> Vec<u32> {
 
 /// Decode `(pattern_id, start, end)` triples from a `match_count` + `matches`
 /// reference-output pair.
-pub(crate) fn decode_match_triples(outputs: &[[u8]]) -> Vec<(u32, u32, u32)> {
+pub(crate) fn decode_match_triples(outputs: &[Vec<u8>]) -> Vec<(u32, u32, u32)> {
     let count = bytes_to_u32(&outputs[0])[0] as usize;
     let words = bytes_to_u32(&outputs[1]);
     words[..count.saturating_mul(3)]
@@ -118,10 +122,10 @@ pub(crate) fn decode_match_triples(outputs: &[[u8]]) -> Vec<(u32, u32, u32)> {
 /// Reference evaluation of an AC bounded-ranges program and assertions against expected match triples.
 pub(crate) fn evaluate_and_assert_ranges_matches(
     program: &Program,
-    inputs: &[[u8]],
+    inputs: &[Vec<u8>],
     expected: &[(u32, u32, u32)],
 ) {
-    let outputs = eval_bytes("test_dispatch_and_decode", program, inputs);
+    let outputs = eval_bytes("test_dispatch_and_decode", program, inputs.to_vec());
     let mut decoded = decode_match_triples(&outputs);
     decoded.sort_unstable();
     let mut expected_sorted = expected.to_vec();

@@ -330,13 +330,10 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::eval_bytes;
-    use vyre_reference::{
-        composition_witness::{
-            i4x8_batched_matmul_f32_scaled_witness, i4x8_batched_matmul_top1_f32_scaled_witness,
-            i4x8_batched_matvec_f32_scaled_witness, i4x8_dot_f32_scaled_witness,
-            i4x8_dot_i32_witness, i4x8_matvec_f32_scaled_witness, pack_i4x8_witness,
-        },
-        reference_eval,
+    use vyre_reference::composition_witness::{
+        i4x8_batched_matmul_f32_scaled_witness, i4x8_batched_matmul_top1_f32_scaled_witness,
+        i4x8_batched_matvec_f32_scaled_witness, i4x8_dot_f32_scaled_witness, i4x8_dot_i32_witness,
+        i4x8_matvec_f32_scaled_witness, pack_i4x8_witness,
     };
 
     fn dot(lhs: &[i32], rhs: &[i32]) -> i32 {

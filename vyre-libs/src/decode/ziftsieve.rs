@@ -261,7 +261,6 @@ mod primitive_tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32;
     use crate::fixture_bytes::eval_bytes;
-    use crate::fixture_bytes::{bytes_to_u32, eval_bytes};
     use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
 
     fn literals(
