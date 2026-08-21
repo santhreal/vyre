@@ -131,10 +131,13 @@ fn inferred_guard_bound_buffer(program: &Program) -> Option<&crate::ir::BufferDe
         .filter(|buffer| buffer.count() > 0)
         .max_by_key(|buffer| {
             (
-                // Prefer output / pipeline-live-out buffers as the bounds
-                // source because they define the result domain  -  input
-                // buffers may be oversized padding or reused across calls.
-                u8::from(buffer.is_output() || buffer.is_pipeline_live_out()),
+                // Prefer buffers the backend allocates and writes as the bounds
+                // source because they define the result domain -- input buffers
+                // may be oversized padding or reused across calls.
+                // `is_backend_allocated_output` is the single definition of
+                // that; spelling it as `is_output()` here ranked a plain
+                // `WriteOnly` result buffer as though it were an input.
+                u8::from(buffer.is_backend_allocated_output() || buffer.is_pipeline_live_out()),
                 buffer.count(),
             )
         })

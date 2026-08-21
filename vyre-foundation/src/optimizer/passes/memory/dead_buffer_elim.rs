@@ -143,10 +143,17 @@ fn compute_live_buffer_idents(program: &Program, use_facts: &UseFacts) -> FxHash
             .collect();
     }
 
+    // `is_backend_allocated_output` is the single cross-backend definition of
+    // what a backend allocates and reads back, and every executor calls it. A
+    // narrower root set here deletes the stores into a buffer the interpreter
+    // and the drivers still expect to contain a result: `is_output() ||
+    // is_pipeline_live_out()` missed every plain `WriteOnly` storage buffer,
+    // which is how a program whose whole body was one store to a `WriteOnly`
+    // output came back empty.
     let mut live = program
         .buffers()
         .iter()
-        .filter(|buffer| buffer.is_output() || buffer.is_pipeline_live_out())
+        .filter(|buffer| buffer.is_backend_allocated_output() || buffer.is_pipeline_live_out())
         .map(|buffer| Ident::new(Arc::clone(&buffer.name)))
         .collect::<FxHashSet<_>>();
     let mut worklist = Vec::with_capacity(live.len() + use_facts.indirect_dispatch_buffers.len());
@@ -222,7 +229,7 @@ fn filter_node(node: &Node, live: &LiveBufferSet<'_>) -> Option<Node> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferDecl, DataType, Expr};
+    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr};
 
     #[test]
     fn unread_buffer_removed() {
@@ -234,6 +241,63 @@ mod tests {
     fn output_buffer_preserved() {
         let optimized = run(sample_program(false));
         assert!(optimized.buffer("out").is_some());
+    }
+
+    /// WHY: `output_buffer_preserved` used `BufferDecl::output`, which sets the
+    /// `is_output` flag, and that was the only output shape liveness rooted on.
+    /// A plain `WriteOnly` storage buffer is just as much a backend-allocated
+    /// output -- `is_backend_allocated_output` says so, and the interpreter and
+    /// every driver allocate and read it back -- but it was not live, so the
+    /// only store in the program was deleted and the buffer came back holding
+    /// nothing. This covers each shape the predicate accepts rather than the
+    /// one that happened to be written first.
+    #[test]
+    fn every_backend_allocated_output_shape_keeps_its_store() {
+        for output in [
+            BufferDecl::output("out", 0, DataType::U32).with_count(1),
+            BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32).with_count(1),
+            BufferDecl::read_write("out", 0, DataType::U32)
+                .with_count(1)
+                .with_pipeline_live_out(true),
+        ] {
+            assert!(
+                output.is_backend_allocated_output(),
+                "the fixture must be an output the backend allocates"
+            );
+            let program = Program::wrapped(
+                vec![
+                    output.clone(),
+                    BufferDecl::storage("src", 1, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::load("src", Expr::u32(0)),
+                )],
+            );
+            let optimized = run(program);
+            assert!(
+                optimized.buffer("out").is_some(),
+                "the output declaration survives: {output:?}"
+            );
+            assert!(
+                stores_to_out(optimized.entry()),
+                "the store into the output survives: {output:?}"
+            );
+        }
+    }
+
+    /// Whether any node under `nodes` stores to `out`.
+    fn stores_to_out(nodes: &[Node]) -> bool {
+        let out = Ident::from("out");
+        nodes.iter().any(|node| {
+            crate::visit::any_descendant(
+                node,
+                &mut |node| matches!(node, Node::Store { buffer, .. } if *buffer == out),
+            )
+        })
     }
 
     fn run(program: Program) -> Program {

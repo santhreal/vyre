@@ -173,7 +173,9 @@ fn rewrite_segment_buffers_for_host_split(
         // overwrite it with a fresh WriteOnly buffer (which zeroes the earlier
         // segments' slots, the silent recall=0 mode for any fused rule whose
         // result-store does not land in the final segment).
-        let is_source_output = buffer.is_output() || buffer.is_pipeline_live_out();
+        // `is_output()` alone missed a plain `WriteOnly` result buffer, which is
+        // precisely the fresh-WriteOnly case this guard exists to prevent.
+        let is_source_output = buffer.is_backend_allocated_output() || buffer.is_pipeline_live_out();
         let earlier_segment_wrote_output = is_source_output
             && first_writer
                 .get(&name)
@@ -265,8 +267,14 @@ pub(super) fn original_output_names(program: &Program) -> Result<Vec<Ident>, Bac
     segment_output_names(program)
 }
 
+/// Whether a segment reads this buffer from the dispatch inputs.
+///
+/// `is_backend_allocated_output` is the single cross-backend definition of a
+/// buffer the backend allocates and writes rather than reads. Spelling it out
+/// again here is how the interpreter and a backend end up disagreeing about
+/// which buffers carry host bytes.
 pub(super) fn segment_buffer_consumes_input(buffer: &BufferDecl) -> bool {
-    if buffer.is_output() || buffer.is_pipeline_live_out() {
+    if buffer.is_backend_allocated_output() || buffer.is_pipeline_live_out() {
         return false;
     }
     matches!(
@@ -275,13 +283,15 @@ pub(super) fn segment_buffer_consumes_input(buffer: &BufferDecl) -> bool {
     )
 }
 
+/// Whether a segment leaves a result in this buffer.
+///
+/// Wider than [`BufferDecl::is_backend_allocated_output`] by the `ReadWrite`
+/// case: a segment that updates a buffer in place produces a value the next
+/// segment reads, whether or not the whole program returns it.
 pub(super) fn segment_buffer_produces_output(buffer: &BufferDecl) -> bool {
-    buffer.is_output()
+    buffer.is_backend_allocated_output()
         || buffer.is_pipeline_live_out()
-        || matches!(
-            buffer.access(),
-            BufferAccess::ReadWrite | BufferAccess::WriteOnly
-        )
+        || matches!(buffer.access(), BufferAccess::ReadWrite)
 }
 
 /// The buffers `nodes` reads and writes, at any nesting depth.

@@ -14,12 +14,21 @@
 //! either preserve the borrow or be recorded in `REBUILDS_WHEN_UNCHANGED`
 //! below. It cannot be added silently.
 //!
-//! What this does NOT catch: a pass that reports `changed: true` is free to
-//! rebuild, and this suite says nothing about whether it needed to.
+//! The mirror obligation is that `changed: true` means the program differs.
+//! Without it an empty [`REBUILDS_WHEN_UNCHANGED`] proves less the more passes
+//! overreport: a pass that claims a change it did not make is exempt from the
+//! borrow assertion, and it also costs the fixpoint another whole iteration to
+//! discover the same thing. `Program` compares structurally, so the claim is
+//! checked against the value rather than against a list of names.
+//!
+//! What this does NOT catch: a pass that reports `changed: true` and did change
+//! something is free to rebuild, and this suite says nothing about whether the
+//! change was worth making.
 
 use std::sync::Arc;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 use vyre_foundation::optimizer::registered_passes;
+use vyre_foundation::visit::any_descendant;
 
 /// Passes that still allocate a new entry tree while reporting no change.
 ///
@@ -28,6 +37,25 @@ use vyre_foundation::optimizer::registered_passes;
 /// rewrite on the same analysis the scheduler already consults, so the
 /// converged fixpoint iteration hands the caller's own program straight back.
 const REBUILDS_WHEN_UNCHANGED: &[&str] = &[];
+
+/// Passes whose change report on the inert fixture is a real change.
+///
+/// The fixture is inert to the *statement tree*, not to buffer and geometry
+/// facts, and these three read those: `region_inline` removes the wrapper
+/// `Program::wrapped` created, `autotune` adjusts dispatch dimensions and
+/// workgroup bounds, and `vectorization` promotes layout hints from buffer
+/// shape facts.
+///
+/// `dead_buffer_elim` was a fourth until the observable-output assertion below
+/// caught what it was changing: it rooted liveness in `is_output()` rather than
+/// the cross-backend `is_backend_allocated_output()`, so a plain `WriteOnly`
+/// storage buffer was not live and the only store in the program was deleted.
+///
+/// Membership is not what proves anything: the suite compares each pass's
+/// report against the value it returned, and holds every one of them to the
+/// fixture's observable output. The list records which passes are expected to
+/// have work here, so one quietly going inert is visible too.
+const CHANGES_AN_INERT_PROGRAM: &[&str] = &["autotune", "region_inline", "vectorization"];
 
 /// A program no structural pass has anything to do with: one region, one store
 /// of a literal to a distinct buffer, no control flow, no dead binding, no
@@ -46,6 +74,25 @@ fn inert_program() -> Program {
             Expr::load("src", Expr::u32(0)),
         )],
     )
+}
+
+/// Whether `program` still stores to the buffer the fixture exists to write.
+///
+/// Every pass here is ABI-preserving, so whatever it does to the wrapper, the
+/// buffer set, or the geometry, the store to `out` has to survive. Without this
+/// a pass could satisfy both assertions below by deleting the program.
+///
+/// The descent is `visit::any_descendant` rather than a match here: a pass may
+/// legitimately move the store under a guard or a loop, and a hand-written walk
+/// that knew only about `Region` would read that as a deletion, which is what
+/// it did.
+fn writes_the_output(program: &Program) -> bool {
+    let out = Ident::from("out");
+    let mut is_store = |node: &Node| matches!(node, Node::Store { buffer, .. } if *buffer == out);
+    program
+        .entry()
+        .iter()
+        .any(|node| any_descendant(node, &mut is_store))
 }
 
 /// The `Arc` behind the first `Region` body under `program`'s entry.
@@ -75,23 +122,53 @@ fn a_pass_that_reports_no_change_hands_back_the_callers_program() {
     );
 
     let mut rebuilt: Vec<&'static str> = Vec::new();
-    let mut unchanged = 0usize;
+    let mut claimed_change: Vec<&'static str> = Vec::new();
+    let mut claimed_without_changing: Vec<&'static str> = Vec::new();
     for pass in &passes {
         let program = inert_program();
         let before = region_body_arc(&program);
         let result = pass.transform(program);
+        assert!(
+            writes_the_output(&result.program),
+            "`{}` dropped the fixture's observable output. The store to `out` is \
+             the whole program; a pass that removes it has optimized away the \
+             thing the program exists to do.",
+            pass.pass_id()
+        );
         if result.changed {
+            claimed_change.push(pass.pass_id());
+            if result.program == inert_program() {
+                claimed_without_changing.push(pass.pass_id());
+            }
             continue;
         }
-        unchanged += 1;
         let after = region_body_arc(&result.program);
         if !Arc::ptr_eq(&before, &after) {
             rebuilt.push(pass.pass_id());
         }
     }
 
+    claimed_without_changing.sort_unstable();
+    assert_eq!(
+        claimed_without_changing,
+        Vec::<&str>::new(),
+        "a pass reported `changed: true` and returned a structurally identical \
+         program. That costs the fixpoint another whole iteration to discover \
+         the same thing, and exempts the pass from the borrow assertion below. \
+         Fix: report the change its analysis actually found."
+    );
+
+    let mut claimed_expected: Vec<&str> = CHANGES_AN_INERT_PROGRAM.to_vec();
+    claimed_expected.sort_unstable();
+    claimed_change.sort_unstable();
+    assert_eq!(
+        claimed_change, claimed_expected,
+        "the set of passes with something to do on the inert fixture moved. \
+         Fix: if a pass stopped acting on it, say so in CHANGES_AN_INERT_PROGRAM; \
+         if one started, check that the change is one the fixture warrants."
+    );
     assert!(
-        unchanged > 0,
+        claimed_change.len() < passes.len(),
         "no pass left the fixture alone, so the fixture is not inert and this suite proves nothing"
     );
     let mut expected: Vec<&str> = REBUILDS_WHEN_UNCHANGED.to_vec();
