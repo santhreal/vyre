@@ -169,7 +169,7 @@ evidence = [
   "evidence/benchmarks/cpu-only-100x-proof.json",
   "evidence/benchmarks/megakernel-condition-100x-proof.json",
   "evidence/benchmarks/workload-01-condition-eval.json",
-  "evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+  "evidence/benchmarks/workload-17-egraph-saturation.json",
   "evidence/benchmarks/workload-03-offset-count-aggregation.json",
   "evidence/benchmarks/workload-05-entropy-window.json",
   "evidence/benchmarks/workload-06-quantified-condition-loops.json",

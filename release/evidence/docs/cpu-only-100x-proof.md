@@ -10,7 +10,7 @@ Required generated evidence:
 - `release/evidence/benchmarks/cpu-only-100x-proof.json`
 - `release/evidence/benchmarks/megakernel-condition-100x-proof.json`
 - `release/evidence/benchmarks/workload-01-condition-eval.json`
-- `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json`
+- `release/evidence/benchmarks/workload-17-egraph-saturation.json`
 - `release/evidence/benchmarks/workload-03-offset-count-aggregation.json`
 - `release/evidence/benchmarks/workload-05-entropy-window.json`
 - `release/evidence/benchmarks/workload-06-quantified-condition-loops.json`
@@ -23,7 +23,8 @@ Required generated evidence:
 
 Release contract:
 
-- The current required 100x case ids are `release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.ast_motif_traversal.1m`, `release.megakernel_queue.1m`, and `sparse.compaction.count.1m`.
+- The current required 100x case ids are `release.condition_eval.1m`, `release.egraph_saturation.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.ast_motif_traversal.1m`, `release.megakernel_queue.1m`, and `sparse.compaction.count.1m`.
+- `release.string_bitmap_scatter.1m` is not one of them. It moves 8.65 MB, the scalar CPU reference streams that at 30 GB/s, and the release device peaks at 1792 GB/s, so its honest ratio is capped near 60x. Its recorded 100x came from a program that declared sixteen output sets, stored one ballot word into each and let the case divide the launch by sixteen. It keeps a CPU-SOTA contract at 25x.
 - Each required 100x case must declare a `CpuSota` baseline with `min_speedup_x >= 100.0`.
 - The aggregate 100x proof artifact must include correctness oracle evidence and CUDA benchmark samples for every required 100x contract case.
 - The aggregate 100x proof artifact must preserve source identity and CUDA environment provenance from its source workload reports, including `source_fingerprint`, `git`, GPU model, NVIDIA driver, CUDA runtime, and host CPU model where source reports provide it.

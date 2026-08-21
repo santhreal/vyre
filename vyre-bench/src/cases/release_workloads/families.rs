@@ -39,7 +39,15 @@ pub(super) static STRING_BITMAP_SCATTER: SyntheticCountWorkload = SyntheticCount
     metric_name: "scatter_records",
     family: ReleaseMacroFamily::Scan,
     records: 1_048_576,
-    min_speedup_x: 100.0,
+    // Not a 100x workload, and no engineering makes it one. It reads 8.65 MB and
+    // writes 128 KB, so it is bandwidth-bound at both ends: the scalar CPU
+    // reference streams it at 30 GB/s and this device peaks at 1792 GB/s, which
+    // caps the honest ratio near 60x. Measured 30.0x, half of peak. The 100.0
+    // that stood here was calibrated against a program that declared sixteen
+    // output sets, stored the same ballot word into each, and let the case
+    // divide the launch by sixteen; that divisor is gone and so is the number it
+    // produced.
+    min_speedup_x: 25.0,
     pattern: SyntheticPattern::StringBitmapScatter,
 };
 
