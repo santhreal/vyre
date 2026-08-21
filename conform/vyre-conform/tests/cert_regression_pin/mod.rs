@@ -221,6 +221,7 @@ fn cert_regression_pin_all_five_bundles() {
 // ---------------------------------------------------------------------------
 // Requires the wgpu backend factory to succeed against a live GPU device.
 // Missing backend registration is a release-host failure, not a skipped test.
+#[cfg(feature = "device-tests")]
 #[test]
 fn cert_regression_pin_backend_verification_gpu() {
     let cases: Vec<(&str, BundleBuilderFn)> = vec![

@@ -10,8 +10,6 @@
 //! the telemetry snapshot so the calling case keeps the counts that are its
 //! reason to exist.
 
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 /// A CSR graph as the queue parity cases feed it: node count plus the three

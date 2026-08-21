@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 pub(crate) fn resident_in_place_reference_outputs(

@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use crate::harness::{bytes_u32, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_libs::parsing::line_splice_classify::{

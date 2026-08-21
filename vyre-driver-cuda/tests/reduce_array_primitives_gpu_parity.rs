@@ -1,8 +1,7 @@
 //! Parity tests for vyre-primitives reduce::{gather, scatter, histogram,
 //! radix_sort, segment_reduce_sum}.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

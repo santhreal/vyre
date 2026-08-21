@@ -1,8 +1,6 @@
 //! Resident buffer lifetime: transfers, ranged batch views, resident and
 //! sequenced dispatch, and handle release on shutdown.
 
-#![cfg(feature = "device-tests")]
-
 use crate::*;
 
 use super::fixtures::word_to_word;

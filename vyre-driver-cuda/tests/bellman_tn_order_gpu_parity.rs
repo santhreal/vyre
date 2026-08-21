@@ -1,7 +1,6 @@
 //! Parity test: GPU bellman_tn_order matches the reference oracle.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

@@ -1,8 +1,7 @@
 //! Parity test: `vyre_libs::parsing::planar_rewrite::planar_rewrite_schedule`
 //! on CUDA matches its CPU reference for planar candidate scheduling.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

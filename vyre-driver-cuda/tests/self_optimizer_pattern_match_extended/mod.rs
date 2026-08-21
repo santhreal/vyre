@@ -7,8 +7,7 @@
 //! `harness::self_optimizer`; this file only groups the per-rule submodules and
 //! puts the harness in scope for their `use super::*`.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 #[path = "../harness/mod.rs"]
 mod harness;

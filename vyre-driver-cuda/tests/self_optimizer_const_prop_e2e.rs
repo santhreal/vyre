@@ -5,8 +5,7 @@
 //! a literal in an enclosing scope. Subsequent DCE drops the now-
 //! unused let bindings.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 #[path = "harness/self_optimizer_const_prop_bool.rs"]

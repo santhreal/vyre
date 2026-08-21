@@ -12,8 +12,7 @@
 //! V1 op coverage: literals + BinOp::{Add, Sub, Mul, BitAnd, BitOr,
 //! BitXor} on u32. Other arithmetic / typed ops extend mechanically.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 use harness::acquire_live_backend as live_backend;

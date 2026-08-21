@@ -5,8 +5,7 @@
 //! through `CudaProgramDispatcher`, and verifies the canonical
 //! buffer assigns equal canonicals to syntactically equal Exprs.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

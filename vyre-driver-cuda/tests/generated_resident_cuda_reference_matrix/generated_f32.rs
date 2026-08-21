@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 pub(crate) fn generated_f32_values(salt: u32) -> Vec<f32> {

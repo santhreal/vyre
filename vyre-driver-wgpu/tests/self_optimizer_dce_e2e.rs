@@ -8,8 +8,7 @@
 //! self-hosted GPU pass is semantically identical, with the substrate
 //! actually running on hardware.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 use harness::acquire_live_backend as live_backend;

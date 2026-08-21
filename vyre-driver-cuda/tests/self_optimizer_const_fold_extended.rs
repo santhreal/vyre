@@ -1,8 +1,7 @@
 //! Const-fold coverage for the shift, division, remainder, saturating and
 //! comparison ops, including the safe-zero guards that must refuse to fold.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

@@ -1,8 +1,6 @@
 //! One-shot and borrowed dispatch: program lowering, output ranges, config
 //! rejection, grid sizing, threadgroup and trap sidecar allocation.
 
-#![cfg(feature = "device-tests")]
-
 use crate::*;
 
 use super::fixtures::{one_word_output, stores_word};

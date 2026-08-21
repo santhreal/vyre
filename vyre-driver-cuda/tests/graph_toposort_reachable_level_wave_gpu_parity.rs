@@ -1,8 +1,7 @@
 //! Parity tests for vyre-primitives graph::toposort + graph::reachable
 //! + graph::level_wave.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

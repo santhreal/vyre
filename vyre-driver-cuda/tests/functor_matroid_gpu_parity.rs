@@ -1,8 +1,7 @@
 //! Parity test: vyre-primitives functor_apply + matroid_exchange_bfs_step
 //! match CPU oracles.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

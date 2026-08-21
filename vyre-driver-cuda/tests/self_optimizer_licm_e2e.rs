@@ -1,7 +1,6 @@
 //! End-to-end test: loop-invariant code motion in the GPU pipeline.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

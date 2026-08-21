@@ -3,8 +3,7 @@
 //! the kernel's per-Expr branch ladder. V2 will source the rule bank
 //! from data buffers; the kernel structure stays identical.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 use harness::acquire_live_backend as live_backend;

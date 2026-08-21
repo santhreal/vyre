@@ -12,8 +12,7 @@
 //! of `out`, so reading `outputs[0]` would read back the unchanged input, a
 //! test trap, not a kernel error.)
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

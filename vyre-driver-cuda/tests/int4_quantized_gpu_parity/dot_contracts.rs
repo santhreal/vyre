@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 /// Fixed-pattern packed operands for one dot lane count.

@@ -3,8 +3,7 @@
 //! This covers the large-input route that must dispatch through the
 //! multi-block scan chain rather than the historical single-lane loop.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

@@ -10,8 +10,7 @@
 //! suite. The three dispatches stay here, because that composition is what this
 //! backend owes proof of.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 use harness::acquire_live_backend as live_backend;

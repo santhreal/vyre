@@ -2,8 +2,7 @@
 //! matches its CPU reference across packed-u32 and raw-u8 source layouts,
 //! including word- and workgroup-boundary splices.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 #[path = "harness/line_splice_generated_corpus.rs"]

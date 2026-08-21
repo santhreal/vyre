@@ -1,8 +1,7 @@
 //! Parity test: vyre-primitives byte_histogram_256 + utf8_shape_counts
 //! match their reference oracles.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

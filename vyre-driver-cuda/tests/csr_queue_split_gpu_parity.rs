@@ -1,7 +1,6 @@
 //! CUDA parity for mixed scalar plus row-strided CSR queue traversal.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

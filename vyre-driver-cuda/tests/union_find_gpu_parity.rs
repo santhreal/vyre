@@ -4,8 +4,7 @@
 //! intermediate parent links but must agree on which nodes share a
 //! root.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

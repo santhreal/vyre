@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use crate::harness::GENERATED_LANE_COUNT as LANE_COUNT;
 
 pub(crate) const MAX_F32_ULP: u32 = 1;

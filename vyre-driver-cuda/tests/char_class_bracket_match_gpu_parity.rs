@@ -1,8 +1,7 @@
 //! Parity test: vyre-primitives char_class + bracket_match match
 //! their reference oracles.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

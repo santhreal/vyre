@@ -32,8 +32,7 @@
 //! `mla_decode` is behind the `nn-attention` feature and is absent from the
 //! default `vyre-libs` test gate, so nothing here has been exercised before.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

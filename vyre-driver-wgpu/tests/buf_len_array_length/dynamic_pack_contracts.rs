@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 /// Pack four byte lanes into one output word with a single non-atomic store.

@@ -1,8 +1,7 @@
 //! Parity test: `vyre_libs::predicate::edge` on CUDA matches its CPU
 //! reference for bare CSR forward traversal under an edge-kind mask.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

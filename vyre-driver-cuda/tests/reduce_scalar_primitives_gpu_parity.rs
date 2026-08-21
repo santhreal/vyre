@@ -1,8 +1,7 @@
 //! Parity tests for vyre-primitives reduce::{all, any, count, count_non_zero,
 //! max, min, sum, range_counts_u32, workgroup_any_u32}.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

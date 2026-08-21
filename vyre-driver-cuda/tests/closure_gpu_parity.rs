@@ -1,7 +1,6 @@
 //! Parity test: GPU reachability + lineage closures match reference oracle.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

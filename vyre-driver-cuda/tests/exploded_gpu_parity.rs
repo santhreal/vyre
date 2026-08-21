@@ -1,7 +1,6 @@
 //! Parity test: GPU IFDS exploded supergraph builder matches CPU oracle.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use vyre_driver_cuda::CudaBackend;
 
 #[test]

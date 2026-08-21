@@ -1,7 +1,6 @@
 //! CUDA parity for device-side active-frontier queue sparse traversal.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod batch_contracts;
 mod delta_contracts;

@@ -1,7 +1,6 @@
 //! Parity test: GPU scallop provenance closure matches Reference oracle.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

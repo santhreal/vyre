@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use crate::harness::{
     bytes_u32, find_output_buffer_index, is_required_input_buffer, u32_bytes, with_live_backend,
 };

@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 /// The small fixed graph the residency cases reuse: node 0 fans out to two

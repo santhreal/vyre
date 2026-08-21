@@ -11,8 +11,7 @@
 //! backends cannot assert different rewrites of the same program. The dispatcher
 //! and the DCE differential against the foundation CPU oracle stay here.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

@@ -11,8 +11,7 @@
 //! suite so both backends assert the same rewrite. The dispatch stays here: a
 //! pass proven through naga's WGSL is not proven through PTX.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 use harness::acquire_live_backend as live_backend;

@@ -4,8 +4,7 @@
 //! against the CPU oracle on real CUDA hardware. Asserts identical
 //! per-word popcount across a battery of inputs.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

@@ -2,8 +2,7 @@
 //! tag-family wrappers (in_function, in_file, in_package) match
 //! their CPU oracles.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

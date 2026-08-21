@@ -1,8 +1,7 @@
 //! Parity test for vyre-primitives text::encoding_classify against
 //! the histogram-based CPU classifier oracle.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

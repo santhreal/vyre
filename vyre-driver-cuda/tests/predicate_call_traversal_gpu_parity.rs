@@ -4,8 +4,7 @@
 //! All three delegate to csr_forward_traverse / csr_backward_traverse
 //! with a fixed edge-kind mask.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

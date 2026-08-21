@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 use vyre_reference::composition_witness::i4x8_dot_i32_witness as i4x8_dot_i32_cpu;

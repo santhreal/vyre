@@ -1,7 +1,5 @@
 //! Acquisition, registry submission, and reported device profile.
 
-#![cfg(feature = "device-tests")]
-
 use crate::*;
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]

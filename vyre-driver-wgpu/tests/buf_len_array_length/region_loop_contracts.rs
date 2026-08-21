@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 
 /// Wrap the buf_len writer body in three nested Region nodes. If `arrayLength`

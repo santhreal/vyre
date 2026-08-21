@@ -33,8 +33,7 @@
 //! enough that the back edge is crossed many times per dispatch, since each
 //! crossing is an independent chance for the race.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

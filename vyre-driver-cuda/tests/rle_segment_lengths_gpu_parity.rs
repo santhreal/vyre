@@ -1,8 +1,7 @@
 //! Parity test: `vyre_libs::decode::rle_segment_lengths` on CUDA matches
 //! its CPU reference for packed run lengths and values, across block boundaries.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

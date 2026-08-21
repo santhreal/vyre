@@ -4,8 +4,7 @@
 //! rewritten as `Var` references to the original. Verified on real
 //! CUDA hardware.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

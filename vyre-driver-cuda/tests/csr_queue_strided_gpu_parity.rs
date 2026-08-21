@@ -1,7 +1,6 @@
 //! CUDA parity for row-strided queue-driven CSR expansion.
 
-#![cfg(feature = "device-tests")]
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
 mod harness;
 

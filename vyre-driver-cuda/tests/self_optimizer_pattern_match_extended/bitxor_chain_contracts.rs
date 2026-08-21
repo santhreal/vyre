@@ -1,5 +1,3 @@
-#![cfg(feature = "device-tests")]
-
 use super::*;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
