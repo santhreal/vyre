@@ -10,13 +10,13 @@ mod device_buffer;
 mod dispatch_timeout;
 pub mod emit;
 pub mod engine;
-mod ext;
 mod materializer;
 mod numeric;
 mod padded_upload;
 #[cfg(feature = "parity-testing")]
 mod parity_probe;
 pub mod pipeline;
+mod raw_wgsl_dispatch;
 mod resident_dispatch;
 mod resident_download;
 mod resident_resource;
