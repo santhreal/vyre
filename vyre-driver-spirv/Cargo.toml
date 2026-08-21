@@ -62,3 +62,8 @@ required-features = ["spirv-val"]
 name = "dispatch"
 path = "tests/dispatch.rs"
 required-features = ["device-tests"]
+
+[[test]]
+name = "hostile_input_closure_contract"
+path = "tests/hostile_input_closure_contract.rs"
+required-features = ["device-tests"]

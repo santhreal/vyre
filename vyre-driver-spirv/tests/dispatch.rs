@@ -5,6 +5,8 @@
 //! every output lane to `vyre-reference`. A missing Vulkan device is a probe or
 //! driver configuration failure, so these tests fail rather than skip.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_spirv::SpirvBackendRegistration;
 use vyre_foundation::ir::Program;

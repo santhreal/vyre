@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:b8e1ebac5c90a7b5a7573f6ec660f4cf0e31bebc:dirty=true:worktree=ad51d427825f1cd0155e7084560f116f10befd6252a5126dc0ad70c7b80e1e30",
+  "source_fingerprint": "git:6c60c704e8799e34837f3f9d0022cf60be432171:dirty=true:worktree=0cabf0d07992d8510d34b698bd9040a740a024efb7b20c0d78b5967116f5fa07",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4280,
+  "scanned_files": 4281,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -54,7 +54,7 @@
     },
     {
       "pattern": "expect_call",
-      "count": 17
+      "count": 16
     },
     {
       "pattern": "panic_macro",
@@ -140,7 +140,7 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "release_blocker": false,
-      "count": 36
+      "count": 35
     },
     {
       "owner_lane": "driver_cuda",
@@ -405,7 +405,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 4
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -1875,16 +1875,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-libs/src/pattern/classic_ac/test_dispatch_and_decode.rs",
-      "line": 127,
-      "pattern": "expect_call",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-libs/src/pattern/dfa_compile/compile.rs",
       "line": 29,
       "pattern": "documented_panic_contract",
@@ -3806,7 +3796,7 @@
     },
     {
       "path": "vyre-registry-link/tests/registry_link_rules.rs",
-      "line": 212,
+      "line": 235,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4206,7 +4196,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1513,
+      "line": 1523,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -4962,12 +4952,6 @@
       "line": 333,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-libs/src/pattern/classic_ac/test_dispatch_and_decode.rs",
-      "line": 127,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: AC bounded-ranges program should evaluate in reference backend.\");"
     },
     {
       "path": "vyre-libs/src/pattern/dfa_compile/compile.rs",
@@ -6163,7 +6147,7 @@
     },
     {
       "path": "vyre-registry-link/tests/registry_link_rules.rs",
-      "line": 212,
+      "line": 235,
       "pattern": "source_inspection_test",
       "text": "test `every_crate_that_submits_a_backend_registration_is_declared_here` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_crate_that_submits_a_backend_registration_is_declared_here"
@@ -6439,7 +6423,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1513,
+      "line": 1523,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },

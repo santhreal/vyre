@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:b8e1ebac5c90a7b5a7573f6ec660f4cf0e31bebc:dirty=true:worktree=ad51d427825f1cd0155e7084560f116f10befd6252a5126dc0ad70c7b80e1e30",
+  "source_fingerprint": "git:6c60c704e8799e34837f3f9d0022cf60be432171:dirty=true:worktree=0cabf0d07992d8510d34b698bd9040a740a024efb7b20c0d78b5967116f5fa07",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -266,12 +266,6 @@
       "line": 333,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
-    },
-    {
-      "path": "vyre-libs/src/pattern/classic_ac/test_dispatch_and_decode.rs",
-      "line": 127,
-      "pattern": "expect_call",
-      "text": ".expect(\"Fix: AC bounded-ranges program should evaluate in reference backend.\");"
     },
     {
       "path": "vyre-libs/src/pattern/dfa_compile/compile.rs",
@@ -1127,7 +1121,7 @@
     },
     {
       "path": "xtask/src/gate_metadata.rs",
-      "line": 1513,
+      "line": 1523,
       "pattern": "documented_panic_contract",
       "text": "descriptor(gate_name).unwrap_or_else(|| panic!(\"gate `{gate_name}` is not in GATE_METADATA\"))"
     },
