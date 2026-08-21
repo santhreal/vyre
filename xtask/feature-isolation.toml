@@ -89,6 +89,10 @@ feature = "(none)"
 
 [[pair]]
 member = "vyre-conform"
+feature = "device-tests"
+
+[[pair]]
+member = "vyre-conform"
 feature = "gpu"
 
 [[pair]]
@@ -144,12 +148,20 @@ member = "vyre-driver-cuda"
 feature = "cuda"
 
 [[pair]]
+member = "vyre-driver-cuda"
+feature = "device-tests"
+
+[[pair]]
 member = "vyre-driver-metal"
 feature = "(default)"
 
 [[pair]]
 member = "vyre-driver-metal"
 feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-metal"
+feature = "device-tests"
 
 [[pair]]
 member = "vyre-driver-reference"
@@ -166,6 +178,10 @@ feature = "(default)"
 [[pair]]
 member = "vyre-driver-spirv"
 feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-spirv"
+feature = "device-tests"
 
 [[pair]]
 member = "vyre-driver-spirv"
@@ -178,6 +194,10 @@ feature = "(default)"
 [[pair]]
 member = "vyre-driver-wgpu"
 feature = "(none)"
+
+[[pair]]
+member = "vyre-driver-wgpu"
+feature = "device-tests"
 
 [[pair]]
 member = "vyre-driver-wgpu"
