@@ -194,12 +194,20 @@ impl ResidentInputPool {
     }
 
     /// Re-upload one resource index in every resident set.
+    ///
+    /// An empty payload uploads nothing. A resident allocation is sized once, and
+    /// a backend checks a full upload against that size, so a zero-length upload
+    /// is a length mismatch rather than a no-op. A case whose program overwrites
+    /// every output word it declares has nothing to reset and passes one.
     pub fn upload_resource_to_all_sets(
         &self,
         index: usize,
         payload: &[u8],
         context: &str,
     ) -> Result<(), BenchError> {
+        if payload.is_empty() {
+            return Ok(());
+        }
         let mut uploads = Vec::with_capacity(self.sets.len());
         for (set_index, set) in self.sets.iter().enumerate() {
             let resource = set.get(index).ok_or_else(|| {
@@ -402,5 +410,73 @@ mod tests {
             ..complete
         };
         assert_eq!(incomplete.per_item_device_ns(), None);
+    }
+
+    /// A materializer that refuses every resident upload, so an attempted upload
+    /// is observable as an error and a skipped one as `Ok`.
+    struct RefusingMaterializer {
+        device: vyre_driver::materialize::MaterializerDevice,
+    }
+
+    impl vyre_driver::ArtifactMaterializer for RefusingMaterializer {
+        fn device(&self) -> &dyn vyre_driver::Device {
+            &self.device
+        }
+
+        fn materialize(
+            &self,
+            _artifact: &vyre::Artifact,
+            _payload: &vyre::TargetPayload,
+        ) -> Result<Box<dyn vyre_driver::ArtifactInstance>, BackendError> {
+            Err(BackendError::UnsupportedFeature {
+                name: "materialize".to_string(),
+                backend: "refusing".to_string(),
+            })
+        }
+    }
+
+    fn pool_with_one_empty_set() -> ResidentInputPool {
+        let profile = vyre::TargetProfile::new("refusing", 1, [64, 1, 1], 64, 1_024, 0)
+            .expect("Fix: the fixture target profile must be valid.");
+        let device = vyre_driver::materialize::MaterializerDevice::acquire(
+            vyre_driver::materialize::DeviceSpec {
+                backend: "refusing",
+                device: "refusing-device".to_string(),
+                format_extension: "refusing",
+                format_version: 1,
+                profile,
+            },
+        )
+        .expect("Fix: the fixture device must acquire.");
+        ResidentInputPool {
+            materializer: Arc::new(RefusingMaterializer { device }),
+            sets: vec![Vec::new()],
+            input_count: 0,
+            next_set: 0,
+            cleanup_label: "fixture",
+        }
+    }
+
+    /// WHY: a resident allocation is sized once and a backend checks a full
+    /// upload against that size, so a zero-length reset is a length mismatch
+    /// rather than a no-op. A release case whose program overwrites every output
+    /// word it declares carries an empty reset payload, and that case must not
+    /// fail at the reset. The pool short-circuits before it resolves a resource,
+    /// which is what the second assertion pins: a non-empty payload still walks
+    /// the sets.
+    #[test]
+    fn an_empty_reset_payload_uploads_nothing() {
+        let pool = pool_with_one_empty_set();
+
+        pool.upload_resource_to_all_sets(0, &[], "fixture")
+            .expect("Fix: an empty reset payload must upload nothing.");
+
+        let error = pool
+            .upload_resource_to_all_sets(0, &[0u8; 4], "fixture")
+            .expect_err("Fix: a non-empty reset payload must still resolve its resource.");
+        assert!(
+            error.to_string().contains("missing resource at index 0"),
+            "unexpected error: {error}"
+        );
     }
 }
