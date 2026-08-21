@@ -62,10 +62,24 @@ pub fn gpu_optimize(
     // `dispatch` API. Each pass re-encodes; outputs flow CPU-side
     // between passes. Slower than the persistent path but works on
     // any backend that implements the basic `dispatch` method.
-    let program = gpu_canonicalize(program, dispatcher).map_err(GpuOptimizeError::Canonicalize)?;
-    let program = gpu_const_fold(program, dispatcher).map_err(GpuOptimizeError::ConstFold)?;
+    let program = gpu_sequential_three_pass(program, dispatcher)?;
     let program =
         gpu_algebraic_identities(program, dispatcher).map_err(GpuOptimizeError::PatternMatch)?;
-    let program = gpu_dce(program, dispatcher).map_err(GpuOptimizeError::Dce)?;
     Ok(program)
+}
+
+/// Run canonicalization, constant folding and dead-code elimination in order.
+///
+/// This is the borrowed-dispatch sequence every backend supports, without the
+/// algebraic pattern-match pass. `gpu_optimize` runs it as the first half of
+/// its non-resident route, and the cross-backend scaling bench runs exactly it
+/// so two backends' columns describe the same work. Both backend benches used
+/// to carry their own copy.
+pub fn gpu_sequential_three_pass(
+    program: Program,
+    dispatcher: &dyn ProgramDispatcher,
+) -> Result<Program, GpuOptimizeError> {
+    let program = gpu_canonicalize(program, dispatcher).map_err(GpuOptimizeError::Canonicalize)?;
+    let program = gpu_const_fold(program, dispatcher).map_err(GpuOptimizeError::ConstFold)?;
+    gpu_dce(program, dispatcher).map_err(GpuOptimizeError::Dce)
 }
