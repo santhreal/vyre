@@ -144,6 +144,7 @@ pub(in crate::pattern::classic_ac) fn suffix3_bloom_bit_index_expr(suffix: Expr)
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::pattern::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
         classic_ac_compile, classic_ac_scan_counts,
@@ -182,15 +183,10 @@ mod tests {
             &patterns,
         )));
         inputs.push(u32_input(&[haystack.len() as u32]));
-        inputs.push(vyre_reference::value::Value::from(vec![
-            0_u8;
-            haystack.len() * 4
-        ]));
-        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
-            "Fix: suffix3 prefiltered AC bounded count program should evaluate in reference backend.",
-        );
+        inputs.push(vec![0_u8; haystack.len() * 4]);
+        let outputs = eval_bytes("suffix3", &program, inputs);
 
-        assert_eq!(decode_u32(&outputs[0].to_bytes()), vec![expected]);
+        assert_eq!(decode_u32(&outputs[0]), vec![expected]);
     }
 
     #[test]

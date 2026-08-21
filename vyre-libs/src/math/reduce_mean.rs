@@ -87,8 +87,9 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32_one as decode_one;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::try_eval_bytes;
 
     #[test]
     fn tiled_reduce_mean_matches_scalar_reference_across_multiple_tiles() {
@@ -97,15 +98,12 @@ mod tests {
             .map(|i| ((i as f32) * 0.019).sin() * 4.0 + (i % 7) as f32)
             .collect();
         let eval_mean = |program: Program| -> f32 {
-            let outputs = vyre_reference::reference_eval(
+            let outputs = eval_bytes(
+                "reduce_mean",
                 &program,
-                &[
-                    Value::from(f32_bytes(&input)),
-                    Value::from(vec![0u8; core::mem::size_of::<f32>()]),
-                ],
-            )
-            .expect("Fix: reduce_mean program must execute in the reference interpreter.");
-            decode_one(&outputs[0].to_bytes())
+                vec![f32_bytes(&input), vec![0u8; core::mem::size_of::<f32>()]],
+            );
+            decode_one(&outputs[0])
         };
         let actual = eval_mean(reduce_mean("input", "output", n));
         let expected = eval_mean(reduce_mean_reference_program("input", "output", n));
@@ -118,11 +116,11 @@ mod tests {
     #[test]
     fn reduce_mean_rejects_empty_reduction_without_panicking() {
         let program = reduce_mean("input", "output", 0);
-        let err = vyre_reference::reference_eval(
+        let err = try_eval_bytes(
             &program,
-            &[
-                Value::from(vec![0u8; core::mem::size_of::<f32>()]),
-                Value::from(vec![0u8; core::mem::size_of::<f32>()]),
+            vec![
+                vec![0u8; core::mem::size_of::<f32>()],
+                vec![0u8; core::mem::size_of::<f32>()],
             ],
         )
         .expect_err("empty reduction must trap instead of constructing a fake mean");
@@ -143,15 +141,12 @@ mod tests {
     #[test]
     fn reduce_mean_single_element() {
         let program = reduce_mean("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "reduce_mean",
             &program,
-            &[
-                Value::from(f32_bytes(&[42.0_f32])),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: reduce_mean n=1 must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+            vec![f32_bytes(&[42.0_f32]), vec![0u8; 4]],
+        );
+        let actual = decode_one(&outputs[0]);
         assert!(
             (actual - 42.0).abs() <= 1.0e-5,
             "mean of [42] = 42, got {actual}"
@@ -162,15 +157,12 @@ mod tests {
     #[test]
     fn reduce_mean_nan_input_propagates() {
         let program = reduce_mean("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "reduce_mean",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0_f32, f32::NAN, 3.0, 4.0])),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: reduce_mean with NaN must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+            vec![f32_bytes(&[1.0_f32, f32::NAN, 3.0, 4.0]), vec![0u8; 4]],
+        );
+        let actual = decode_one(&outputs[0]);
         assert!(
             actual.is_nan(),
             "mean containing NaN must be NaN, got {actual}"
@@ -181,15 +173,12 @@ mod tests {
     #[test]
     fn reduce_mean_inf_input_propagates() {
         let program = reduce_mean("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "reduce_mean",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0_f32, f32::INFINITY, 3.0, 4.0])),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: reduce_mean with Inf must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+            vec![f32_bytes(&[1.0_f32, f32::INFINITY, 3.0, 4.0]), vec![0u8; 4]],
+        );
+        let actual = decode_one(&outputs[0]);
         assert!(
             actual.is_infinite() && actual.is_sign_positive(),
             "mean containing Inf must be Inf, got {actual}"
@@ -200,15 +189,15 @@ mod tests {
     #[test]
     fn reduce_mean_negative_inf_input_propagates() {
         let program = reduce_mean("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "reduce_mean",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0_f32, f32::NEG_INFINITY, 3.0, 4.0])),
-                Value::from(vec![0u8; 4]),
+            vec![
+                f32_bytes(&[1.0_f32, f32::NEG_INFINITY, 3.0, 4.0]),
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: reduce_mean with -Inf must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+        );
+        let actual = decode_one(&outputs[0]);
         assert!(
             actual.is_infinite() && actual.is_sign_negative(),
             "mean containing -Inf must be -Inf, got {actual}"

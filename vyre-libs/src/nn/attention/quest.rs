@@ -128,25 +128,25 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn quest_paging_nan_in_query_produces_nan_scores() {
         let query = [f32::NAN, 0.0];
         let meta = [0.0f32, 0.0, 1.0, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 2, 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(f32_bytes(&meta)),
-                Value::from(vec![0u8; 8]),
-                Value::from(vec![0u8; 8]),
+            vec![
+                f32_bytes(&query),
+                f32_bytes(&meta),
+                vec![0u8; 8],
+                vec![0u8; 8],
             ],
-        )
-        .expect("Fix: quest_paging must not panic on NaN query");
-        let scores = decode_f32(&outputs[0].to_bytes());
+        );
+        let scores = decode_f32(&outputs[0]);
         assert!(
             scores.iter().any(|v| v.is_nan()),
             "quest_paging NaN query must produce at least one NaN score"
@@ -157,18 +157,13 @@ mod tests {
     fn quest_paging_zero_pages() {
         let query = [1.0f32, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 0, 0, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(vec![]),
-                Value::from(vec![]),
-                Value::from(vec![]),
-            ],
-        )
-        .expect("Fix: quest_paging num_pages=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
-        assert!(outputs[1].to_bytes().is_empty());
+            vec![f32_bytes(&query), vec![], vec![], vec![]],
+        );
+        assert!(outputs[0].clone().is_empty());
+        assert!(outputs[1].clone().is_empty());
     }
 
     #[test]
@@ -176,17 +171,17 @@ mod tests {
         let query = [1.0f32, 0.0];
         let meta = [2.0f32, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 1, 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(f32_bytes(&meta)),
-                Value::from(vec![0u8; 4]),
-                Value::from(vec![0u8; 4]),
+            vec![
+                f32_bytes(&query),
+                f32_bytes(&meta),
+                vec![0u8; 4],
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: quest_paging single page must execute");
-        let io_queue = decode_u32(&outputs[1].to_bytes());
+        );
+        let io_queue = decode_u32(&outputs[1]);
         assert_eq!(io_queue[0], 0, "single page top-1 must be index 0");
     }
 
@@ -195,17 +190,17 @@ mod tests {
         let query = [1.0f32, 0.0];
         let meta = [1.0f32, 0.0, 2.0, 0.0];
         let program = quest_paging("q", "meta", "scores", "io", 2, 0, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "quest",
             &program,
-            &[
-                Value::from(f32_bytes(&query)),
-                Value::from(f32_bytes(&meta)),
-                Value::from(vec![0u8; 8]),
-                Value::from(vec![0u8; 8]),
+            vec![
+                f32_bytes(&query),
+                f32_bytes(&meta),
+                vec![0u8; 8],
+                vec![0u8; 8],
             ],
-        )
-        .expect("Fix: quest_paging k=0 must not panic");
-        let io_queue = decode_u32(&outputs[1].to_bytes());
+        );
+        let io_queue = decode_u32(&outputs[1]);
         assert_eq!(io_queue, vec![0, 0], "k=0 must zero-fill io_queue");
     }
 }

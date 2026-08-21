@@ -1,6 +1,7 @@
 //! Tests for the multi-block prefix scan against a host oracle.
 
 use super::*;
+use crate::fixture_bytes::eval_bytes;
 use vyre_foundation::visit::any_descendant;
 
 fn reference_inclusive_scan(input: &[u32]) -> Vec<u32> {
@@ -127,7 +128,7 @@ fn run_full_scan(program: &vyre_foundation::ir::Program, input: &[u32]) -> Vec<u
         } else {
             vec![0u8; (buf.count() as usize).saturating_mul(4)]
         };
-        inputs.push(Value::from(bytes));
+        inputs.push(bytes);
         if buf.access() == BufferAccess::ReadWrite {
             if buf.name() == "output" {
                 output_idx = Some(writable_seen);
@@ -135,8 +136,7 @@ fn run_full_scan(program: &vyre_foundation::ir::Program, input: &[u32]) -> Vec<u
             writable_seen += 1;
         }
     }
-    let outputs =
-        vyre_reference::reference_eval(program, &inputs).expect("multi-block scan must execute");
+    let outputs = eval_bytes("multi_block_prefix_scan_tests", program, inputs);
     let idx = output_idx.expect("output buffer must be a writable result");
     outputs[idx]
         .to_bytes()

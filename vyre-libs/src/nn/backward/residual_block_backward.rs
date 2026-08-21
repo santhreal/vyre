@@ -59,7 +59,6 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::residual_block_backward;
-    use vyre_reference::value::Value;
 
     fn f32_bytes(values: &[f32]) -> Vec<u8> {
         vyre_primitives::wire::pack_f32_slice(values)
@@ -69,12 +68,11 @@ mod tests {
     fn reference_outputs_all_residual_gradient_liveouts() {
         let program = residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4);
         let expected = f32_bytes(&[1.0, 2.0, 3.0, 4.0]);
-        let outputs = vyre_reference::reference_eval(&program, &[Value::from(expected.clone())])
-            .expect("Fix: residual_block_backward must return all backend-allocated gradients.");
+        let outputs = eval_bytes("residual_block_backward", &program, vec![expected.clone()]);
 
         assert_eq!(outputs.len(), 3);
-        assert_eq!(outputs[0].to_bytes(), expected);
-        assert_eq!(outputs[1].to_bytes(), expected);
-        assert_eq!(outputs[2].to_bytes(), expected);
+        assert_eq!(outputs[0].clone(), expected);
+        assert_eq!(outputs[1].clone(), expected);
+        assert_eq!(outputs[2].clone(), expected);
     }
 }

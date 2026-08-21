@@ -319,8 +319,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn u32_words(bytes: &[u8]) -> Vec<u32> {
         vyre_primitives::wire::decode_u32_le_bytes_all(bytes)
@@ -334,18 +334,14 @@ mod tests {
     fn moe_gate_outputs_unique_top_k_softmax_weights() {
         let scores: [f32; 8] = [0.5, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
         let program = moe_gate("scores", "indices", "weights", 8, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "gating",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 8]),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: moe_gate must execute in the reference interpreter.");
+            vec![f32_bytes(&scores), vec![0u8; 8], vec![0u8; 8]],
+        );
 
-        assert_eq!(u32_words(&outputs[0].to_bytes()), vec![5, 3]);
-        let weights = f32_words(&outputs[1].to_bytes());
+        assert_eq!(u32_words(&outputs[0]), vec![5, 3]);
+        let weights = f32_words(&outputs[1]);
         let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);
         let sum_exp = scores
             .iter()
@@ -371,23 +367,19 @@ mod tests {
         scores[150] = 5.0;
         scores[299] = 9.0;
         let program = moe_gate("scores", "indices", "weights", 300, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "gating",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 8]),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: moe_gate must execute in the reference interpreter.");
+            vec![f32_bytes(&scores), vec![0u8; 8], vec![0u8; 8]],
+        );
 
-        assert_eq!(u32_words(&outputs[0].to_bytes()), vec![299, 150]);
+        assert_eq!(u32_words(&outputs[0]), vec![299, 150]);
         let sum_exp = scores
             .iter()
             .map(|score| libm::expf(*score - 9.0))
             .sum::<f32>();
         let expected = [1.0 / sum_exp, libm::expf(5.0 - 9.0) / sum_exp];
-        let weights = f32_words(&outputs[1].to_bytes());
+        let weights = f32_words(&outputs[1]);
         for (actual, expected) in weights.iter().zip(expected.iter()) {
             assert!(
                 (actual - expected).abs() <= 1.0e-6,

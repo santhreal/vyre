@@ -77,17 +77,29 @@ pub(crate) fn eval_bytes(
     program: &vyre_foundation::ir::Program,
     buffers: Vec<Vec<u8>>,
 ) -> Vec<Vec<u8>> {
+    try_eval_bytes(program, buffers).unwrap_or_else(|error| {
+        panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
+    })
+}
+
+/// Run a program that is expected to trap, and hand back the refusal.
+///
+/// A trap contract asserts on the error, so it cannot go through
+/// [`eval_bytes`], which panics. Both share this body so the interpreter is
+/// still reached from one place.
+#[cfg(test)]
+pub(crate) fn try_eval_bytes(
+    program: &vyre_foundation::ir::Program,
+    buffers: Vec<Vec<u8>>,
+) -> Result<Vec<Vec<u8>>, vyre_reference::ReferenceError> {
     let values: Vec<vyre_reference::value::Value> = buffers
         .into_iter()
         .map(vyre_reference::value::Value::from)
         .collect();
-    vyre_reference::reference_eval(program, &values)
-        .unwrap_or_else(|error| {
-            panic!("Fix: {label} program must execute in the reference interpreter: {error:?}")
-        })
+    Ok(vyre_reference::reference_eval(program, &values)?
         .iter()
         .map(|value| value.to_bytes())
-        .collect()
+        .collect())
 }
 
 /// Run a program whose arguments and one output are all f32.

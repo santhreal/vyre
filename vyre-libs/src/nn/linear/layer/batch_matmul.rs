@@ -68,8 +68,8 @@ pub fn batch_matmul(
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn batch_matmul_single_batch_matches_matmul() {
@@ -81,16 +81,12 @@ mod tests {
                                                        // out[0,1,0] = 4*1 + 5*3 + 6*5 = 4 + 15 + 30 = 49
                                                        // out[0,1,1] = 4*2 + 5*4 + 6*6 = 8 + 20 + 36 = 64
         let program = batch_matmul("a", "b", "out", 1, 2, 3, 2).unwrap();
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "batch_matmul",
             &program,
-            &[
-                Value::from(f32_bytes(&a)),
-                Value::from(f32_bytes(&b)),
-                Value::from(vec![0u8; 4 * 4]),
-            ],
-        )
-        .expect("Fix: batch_matmul single batch must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&a), f32_bytes(&b), vec![0u8; 4 * 4]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out, vec![22.0, 28.0, 49.0, 64.0]);
     }
 
@@ -108,16 +104,12 @@ mod tests {
         // batch 0: identity @ b[0] = b[0] = [1,2,3,4]
         // batch 1: 2*identity @ b[1] = 2*b[1] = [10,12,14,16]
         let program = batch_matmul("a", "b", "out", 2, 2, 2, 2).unwrap();
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "batch_matmul",
             &program,
-            &[
-                Value::from(f32_bytes(&a)),
-                Value::from(f32_bytes(&b)),
-                Value::from(vec![0u8; 4 * 4 * 2]),
-            ],
-        )
-        .expect("Fix: batch_matmul two batches must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&a), f32_bytes(&b), vec![0u8; 4 * 4 * 2]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0, 10.0, 12.0, 14.0, 16.0]);
     }
 

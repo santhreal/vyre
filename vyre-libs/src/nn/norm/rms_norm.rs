@@ -158,9 +158,8 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::assert_tiled_matches_reference;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
+    use crate::fixture_bytes::try_eval_bytes;
 
     #[test]
     fn tiled_rms_norm_matches_scalar_reference_across_multiple_tiles() {
@@ -201,11 +200,8 @@ mod tests {
     #[test]
     fn zero_length_rms_norm_traps_without_panicking() {
         let program = rms_norm("input", "output", 0, 1.0e-5);
-        let err = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(vec![0u8; core::mem::size_of::<f32>()])],
-        )
-        .expect_err("zero-length rms_norm must trap instead of constructing a fake output");
+        let err = try_eval_bytes(&program, vec![vec![0u8; core::mem::size_of::<f32>()]])
+            .expect_err("zero-length rms_norm must trap instead of constructing a fake output");
         assert!(
             err.to_string().contains(EMPTY_RMS_FIX),
             "wrong error: {err}"
@@ -223,12 +219,7 @@ mod tests {
         let x = 1e-20f32;
         let input = [x; 4];
         let program = rms_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: rms_norm must not panic on tiny input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("rms_norm", &program, &[&input[..]], 4);
         let scale = 1.0 / (x * x + eps).sqrt();
         let expected = x * scale;
         for (i, &v) in out.iter().enumerate() {
@@ -248,12 +239,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [1e10f32, -1e10, 1e10, -1e10];
         let program = rms_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: rms_norm must not panic on large-variance input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("rms_norm", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.is_finite(),
@@ -273,12 +259,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [x];
         let program = rms_norm("input", "output", 1, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: rms_norm single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("rms_norm", &program, &[&input[..]], 1);
         let expected = x / (x * x + eps).sqrt();
         assert!(
             (out[0] - expected).abs() <= 1.0e-6,
@@ -295,12 +276,7 @@ mod tests {
         fn rms_norm_output_rms_is_one(input in prop::collection::vec(-1e10f32..1e10f32, 1..32)) {
             let n = input.len() as u32;
             let program = rms_norm("input", "output", n, 1e-5);
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; input.len() * 4])],
-            )
-            .expect("Fix: rms_norm must execute");
-            let out = decode_f32(&outputs[0].to_bytes());
+            let out = eval_f32("rms_norm", &program, &[&input[..]], input.len());
             let mean_sq = out.iter().map(|v| v * v).sum::<f32>() / out.len() as f32;
             prop_assert!(
                 (mean_sq - 1.0).abs() <= 1.0e-3,

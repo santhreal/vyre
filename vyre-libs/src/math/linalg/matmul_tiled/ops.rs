@@ -273,6 +273,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::value::Value;
 
     fn output_zero_bytes(program: &Program) -> Vec<u8> {
@@ -286,9 +287,8 @@ mod tests {
 
     fn run_program(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<u32> {
         let values = inputs.into_iter().map(Value::from).collect::<Vec<_>>();
-        let outputs = vyre_reference::reference_eval(program, &values)
-            .expect("Fix: tiled matmul must execute in the reference interpreter.");
-        decode_u32_words(&outputs[0].to_bytes())
+        let outputs = eval_bytes("ops", program, values);
+        decode_u32_words(&outputs[0])
     }
 
     fn expected_matmul(

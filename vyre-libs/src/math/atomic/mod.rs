@@ -81,6 +81,7 @@ macro_rules! define_atomic_serial_module {
         #[cfg(test)]
         mod tests {
             use super::*;
+    use crate::fixture_bytes::eval_bytes;
             use crate::math::atomic::testutil::{assert_serial_matches, SerialAtomicOracle};
 
             #[test]
@@ -418,12 +419,11 @@ pub(crate) mod testutil {
             Value::Bytes(pack_u32(&[initial_state]).into()),
             Value::Bytes(vec![0u8; n * 4].into()),
         ];
-        let outputs = vyre_reference::reference_eval(program, &inputs)
-            .expect("Fix: atomic op must run; restore this invariant before continuing.");
-        let state_bytes = outputs[0].to_bytes();
+        let outputs = eval_bytes("mod", program, inputs.clone());
+        let state_bytes = outputs[0].clone();
         let state = vyre_primitives::wire::read_u32_le_word(&state_bytes, 0, "atomic state")
             .expect("Fix: atomic state output must contain one u32.");
-        let trace_bytes = outputs[1].to_bytes();
+        let trace_bytes = outputs[1].clone();
         let trace = vyre_primitives::wire::decode_u32_le_bytes_all(&trace_bytes);
         (state, trace)
     }
@@ -441,12 +441,11 @@ pub(crate) mod testutil {
             Value::Bytes(pack_u32(&[initial_state]).into()),
             Value::Bytes(vec![0u8; n * 4].into()),
         ];
-        let outputs = vyre_reference::reference_eval(program, &inputs)
-            .expect("Fix: cas op must run; restore this invariant before continuing.");
-        let state_bytes = outputs[0].to_bytes();
+        let outputs = eval_bytes("mod", program, inputs);
+        let state_bytes = outputs[0].clone();
         let state = vyre_primitives::wire::read_u32_le_word(&state_bytes, 0, "cas state")
             .expect("Fix: CAS state output must contain one u32.");
-        let trace_bytes = outputs[1].to_bytes();
+        let trace_bytes = outputs[1].clone();
         let trace = vyre_primitives::wire::decode_u32_le_bytes_all(&trace_bytes);
         (state, trace)
     }

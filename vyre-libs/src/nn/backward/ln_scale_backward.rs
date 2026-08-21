@@ -67,7 +67,6 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::ln_scale_backward;
-    use vyre_reference::value::Value;
 
     fn f32_bytes(values: &[f32]) -> Vec<u8> {
         vyre_primitives::wire::pack_f32_slice(values)
@@ -76,18 +75,18 @@ mod tests {
     #[test]
     fn reference_outputs_grad_x_and_grad_scale_liveouts() {
         let program = ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "ln_scale_backward",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0, 2.0, 3.0, 4.0])),
-                Value::from(f32_bytes(&[0.5, 2.0, 1.0, 0.1])),
-                Value::from(f32_bytes(&[1.0, 1.0, 1.0, 1.0])),
+            vec![
+                f32_bytes(&[1.0, 2.0, 3.0, 4.0]),
+                f32_bytes(&[0.5, 2.0, 1.0, 0.1]),
+                f32_bytes(&[1.0, 1.0, 1.0, 1.0]),
             ],
-        )
-        .expect("Fix: ln_scale_backward must return both backend-allocated gradients.");
+        );
 
         assert_eq!(outputs.len(), 2);
-        assert_eq!(outputs[0].to_bytes(), f32_bytes(&[0.5, 2.0, 1.0, 0.1]));
-        assert_eq!(outputs[1].to_bytes(), f32_bytes(&[1.0, 2.0, 3.0, 4.0]));
+        assert_eq!(outputs[0].clone(), f32_bytes(&[0.5, 2.0, 1.0, 0.1]));
+        assert_eq!(outputs[1].clone(), f32_bytes(&[1.0, 2.0, 3.0, 4.0]));
     }
 }

@@ -45,29 +45,28 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::try_eval_bytes;
+    use crate::fixture_bytes::u32_bytes;
     use crate::fixture_bytes::{bytes_to_u32 as decode_u32_words, u32_bytes};
-    use vyre_reference::value::Value;
 
     #[test]
     fn broadcast_single_element() {
         let program = broadcast("src", "dst", 1);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "scalar_broadcast",
             &program,
-            &[Value::from(u32_bytes(&[99u32])), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: broadcast n=1 must execute");
-        let actual = decode_u32_words(&outputs[0].to_bytes());
+            vec![u32_bytes(&[99u32]), vec![0u8; 4]],
+        );
+        let actual = decode_u32_words(&outputs[0]);
         assert_eq!(actual, vec![99u32]);
     }
 
     #[test]
     fn broadcast_zero_elements_should_trap_or_be_consistent() {
         let program = broadcast("src", "dst", 0);
-        let error = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(u32_bytes(&[99u32])), Value::from(vec![0u8; 0])],
-        )
-        .expect_err("broadcast n=0 must trap instead of succeeding");
+        let error = try_eval_bytes(&program, vec![u32_bytes(&[99u32]), vec![0u8; 0]])
+            .expect_err("broadcast n=0 must trap instead of succeeding");
         let msg = error.to_string();
         assert!(
             msg.contains("trap") || msg.contains("Fix:"),

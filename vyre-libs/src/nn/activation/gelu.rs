@@ -55,9 +55,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     fn gelu_ref(x: f32) -> f32 {
         let x3 = x * x * x;
@@ -69,12 +67,7 @@ mod tests {
     fn gelu_all_zeros() {
         let input = [0.0f32; 4];
         let program = gelu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: gelu all-zeros must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("gelu", &program, &[&input[..]], 4);
         assert_eq!(out, vec![0.0; 4]);
     }
 
@@ -82,12 +75,7 @@ mod tests {
     fn gelu_positive_values() {
         let input = [1.0f32, 2.0, 3.0, 4.0];
         let program = gelu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: gelu positive values must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("gelu", &program, &[&input[..]], 4);
         for (i, (&v, expected)) in out
             .iter()
             .zip(input.iter().copied().map(gelu_ref))
@@ -104,12 +92,7 @@ mod tests {
     fn gelu_negative_values() {
         let input = [-1.0f32, -2.0, -0.5, -3.0];
         let program = gelu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: gelu negative values must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("gelu", &program, &[&input[..]], 4);
         for (i, (&v, expected)) in out
             .iter()
             .zip(input.iter().copied().map(gelu_ref))
@@ -125,22 +108,15 @@ mod tests {
     #[test]
     fn gelu_empty_tensor() {
         let program = gelu("input", "output", 0);
-        let outputs =
-            vyre_reference::reference_eval(&program, &[Value::from(vec![]), Value::from(vec![])])
-                .expect("Fix: gelu n=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+        let out = eval_f32("gelu", &program, &[&[] as &[f32]], 0);
+        assert!(out.is_empty());
     }
 
     #[test]
     fn gelu_nan_input_propagates_nan() {
         let input = [f32::NAN];
         let program = gelu("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: gelu must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("gelu", &program, &[&input[..]], 1);
         assert!(out[0].is_nan(), "gelu(NaN) must be NaN");
     }
 
@@ -150,15 +126,7 @@ mod tests {
             .map(|i| ((i as f32) * 0.017).sin() * 6.0 - 3.0)
             .collect::<Vec<_>>();
         let program = gelu("input", "output", input.len() as u32);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(vec![0u8; input.len() * core::mem::size_of::<f32>()]),
-            ],
-        )
-        .expect("Fix: generated gelu corpus must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("gelu", &program, &[&input[..]], input.len());
         for (index, (actual, expected)) in out
             .iter()
             .copied()

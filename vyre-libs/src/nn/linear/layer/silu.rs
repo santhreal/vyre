@@ -78,8 +78,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         vyre_primitives::wire::decode_f32_le_bytes_all(bytes)
@@ -99,17 +99,17 @@ mod tests {
         let w: Vec<f32> = (0..in_dim * out_dim).map(|i| i as f32 * 0.1).collect();
         let bias = vec![0.5, -0.25, 1.0, 0.0];
         let prog = linear_silu("x", "w", "b", "out", in_dim, out_dim).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "silu",
             &prog,
-            &[
-                Value::from(f32_bytes(&x)),
-                Value::from(f32_bytes(&w)),
-                Value::from(f32_bytes(&bias)),
-                Value::from(vec![0u8; (out_dim as usize) * 4]),
+            vec![
+                f32_bytes(&x),
+                f32_bytes(&w),
+                f32_bytes(&bias),
+                vec![0u8; (out_dim as usize) * 4],
             ],
-        )
-        .expect("Fix: linear_silu must execute in the reference interpreter.");
-        let actual = decode(&outputs[0].to_bytes());
+        );
+        let actual = decode(&outputs[0]);
         let expected: Vec<f32> = (0..out_dim as usize)
             .map(|i| {
                 let acc = bias[i]
@@ -144,17 +144,17 @@ mod tests {
     fn linear_silu_reuses_standalone_tiny_flush_semantics() {
         let subnormal = f32::from_bits(1);
         let prog = linear_silu("x", "w", "b", "out", 1, 1).expect("Fix: build linear_silu");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "silu",
             &prog,
-            &[
-                Value::from(f32_bytes(&[0.0])),
-                Value::from(f32_bytes(&[0.0])),
-                Value::from(f32_bytes(&[subnormal])),
-                Value::from(vec![0u8; 4]),
+            vec![
+                f32_bytes(&[0.0]),
+                f32_bytes(&[0.0]),
+                f32_bytes(&[subnormal]),
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: linear_silu must execute with subnormal bias");
-        let actual = decode(&outputs[0].to_bytes());
+        );
+        let actual = decode(&outputs[0]);
         assert_eq!(
             actual[0].to_bits(),
             0.0f32.to_bits(),

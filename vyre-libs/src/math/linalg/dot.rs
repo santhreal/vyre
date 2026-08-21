@@ -190,7 +190,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_u32_one as decode_one;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn tiled_dot_matches_scalar_reference_across_multiple_tiles() {
@@ -202,16 +202,16 @@ mod tests {
             .map(|i| i.wrapping_mul(29).wrapping_add(11))
             .collect::<Vec<_>>();
         let run = |program: Program| {
-            let outputs = vyre_reference::reference_eval(
+            let outputs = eval_bytes(
+                "dot",
                 &program,
-                &[
-                    Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
-                    Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
-                    Value::from(vec![0u8; core::mem::size_of::<u32>()]),
+                vec![
+                    crate::fixture_bytes::u32_bytes(&lhs),
+                    crate::fixture_bytes::u32_bytes(&rhs),
+                    vec![0u8; core::mem::size_of::<u32>()],
                 ],
-            )
-            .expect("Fix: dot program must execute in the reference interpreter.");
-            decode_one(&outputs[0].to_bytes())
+            );
+            decode_one(&outputs[0])
         };
         let actual = run(dot("lhs", "rhs", "out", n).expect("Fix: dot dimensions are valid"));
         let expected = run(dot_reference("lhs", "rhs", "out", n));
@@ -230,16 +230,16 @@ mod tests {
         let lhs = vec![7u32];
         let rhs = vec![3u32];
         let program = dot("lhs", "rhs", "out", 1).expect("Fix: dot n=1 must build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "dot",
             &program,
-            &[
-                Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
-                Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
-                Value::from(vec![0u8; 4]),
+            vec![
+                crate::fixture_bytes::u32_bytes(&lhs),
+                crate::fixture_bytes::u32_bytes(&rhs),
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: dot n=1 must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+        );
+        let actual = decode_one(&outputs[0]);
         assert_eq!(actual, 21u32, "dot of [7]·[3] = 21");
     }
 
@@ -258,16 +258,16 @@ mod tests {
         let lhs: Vec<u32> = (0..n).map(|i| i.wrapping_add(1)).collect();
         let rhs: Vec<u32> = (0..n).map(|i| i.wrapping_add(2)).collect();
         let program = dot("lhs", "rhs", "out", n).expect("Fix: dot n=1025 must build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "dot",
             &program,
-            &[
-                Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
-                Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
-                Value::from(vec![0u8; 4]),
+            vec![
+                crate::fixture_bytes::u32_bytes(&lhs),
+                crate::fixture_bytes::u32_bytes(&rhs),
+                vec![0u8; 4],
             ],
-        )
-        .expect("Fix: dot n=1025 must execute");
-        let actual = decode_one(&outputs[0].to_bytes());
+        );
+        let actual = decode_one(&outputs[0]);
         let expected: u32 = lhs
             .iter()
             .zip(rhs.iter())

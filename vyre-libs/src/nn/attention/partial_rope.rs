@@ -244,9 +244,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     #[test]
     fn rejects_invalid_rope_dims_without_panicking() {
@@ -272,17 +270,12 @@ mod tests {
         let cos = [1.0f32, 1.0];
         let sin = [0.0f32, 0.0];
         let program = partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "partial_rope",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(f32_bytes(&cos)),
-                Value::from(f32_bytes(&sin)),
-                Value::from(vec![0u8; 32]),
-            ],
-        )
-        .expect("Fix: partial_rope must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&input[..], &cos[..], &sin[..]],
+            8,
+        );
         assert!(
             out[0].is_nan(),
             "partial_rope must propagate NaN from input"
@@ -314,17 +307,12 @@ mod tests {
         let cos = [1.0f32, 1.0];
         let sin = [0.0f32, 0.0];
         let program = partial_rope("input", "cos", "sin", "output", 1, 1, 4, 2);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "partial_rope",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(f32_bytes(&cos)),
-                Value::from(f32_bytes(&sin)),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: partial_rope single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&input[..], &cos[..], &sin[..]],
+            4,
+        );
         // With sin=0, cos=1, RoPE is identity on pairs.
         assert_eq!(out, vec![1.0, 2.0, 3.0, 4.0]);
     }
@@ -335,17 +323,12 @@ mod tests {
         let cos = [f32::NAN, 1.0];
         let sin = [0.0f32, 0.0];
         let program = partial_rope("input", "cos", "sin", "output", 1, 1, 4, 2);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "partial_rope",
             &program,
-            &[
-                Value::from(f32_bytes(&input)),
-                Value::from(f32_bytes(&cos)),
-                Value::from(f32_bytes(&sin)),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: partial_rope must not panic on NaN cos table");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&input[..], &cos[..], &sin[..]],
+            4,
+        );
         assert!(
             out[0].is_nan() || out[1].is_nan(),
             "partial_rope NaN in cos table must propagate to rotated pair"

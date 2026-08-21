@@ -307,7 +307,7 @@ mod tests {
     }
 
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn cross_entropy_matches_logsumexp_reference() {
@@ -315,14 +315,13 @@ mod tests {
         let targets = [2_u32, 0];
         let program = cross_entropy("logits", "targets", "loss", 2, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * 2 * 256]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 2 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy must execute in the reference interpreter.");
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
         assert_eq!(
-            outputs[0].to_bytes(),
+            outputs[0].clone(),
             reference_cross_entropy_bytes(&logits, &targets, 4)
         );
     }
@@ -345,13 +344,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * 256]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy must not panic on NaN logits");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert!(
             loss.is_nan(),
             "cross_entropy with NaN logits must produce NaN loss, got {loss}"
@@ -366,13 +364,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * 256]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy must not panic on +Inf logits");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert!(
             loss.is_nan() || loss.is_infinite(),
             "cross_entropy with +Inf logits must produce NaN or Inf, got {loss}"
@@ -385,13 +382,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * 256]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy all-zeros must execute");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         let expected = (4.0f32).ln();
         assert!(
             (loss - expected).abs() <= 1.0e-4,
@@ -406,13 +402,12 @@ mod tests {
         let _targets = [1u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 4);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&[1u32])),
-            Value::from(vec![0u8; 4 * 256]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&[1u32]),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy all-ones must execute");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs.clone());
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         let expected = (4.0f32).ln();
         assert!(
             (loss - expected).abs() <= 1.0e-4,
@@ -426,13 +421,12 @@ mod tests {
         let targets = [0u32];
         let program = cross_entropy("logits", "targets", "loss", 1, 1);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_f32_slice(&logits)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&targets)),
-            Value::from(vec![0u8; 4 * 256]),
+            vyre_primitives::wire::pack_f32_slice(&logits),
+            vyre_primitives::wire::pack_u32_slice(&targets),
+            vec![0u8; 4 * 256],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: cross_entropy single token must execute");
-        let loss = f32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("cross_entropy", &program, inputs);
+        let loss = f32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert!(
             loss.abs() <= 1.0e-4,
             "cross_entropy single token single vocab must be 0.0, got {loss}"

@@ -541,7 +541,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn child_region_names_parent_and_primitive() {
@@ -573,16 +573,16 @@ mod tests {
     fn standalone_sum_f32_matches_reference_arithmetic() {
         let values = [1.25_f32, -2.0, 5.5, 3.25, 8.0];
         let program = workgroup_sum_f32("values", "out", values.len() as u32, 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "workgroup_tree",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_f32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<f32>()]),
+            vec![
+                vyre_primitives::wire::pack_f32_slice(&values),
+                vec![0_u8; core::mem::size_of::<f32>()],
             ],
-        )
-        .expect("Fix: workgroup_sum_f32 must execute in the reference interpreter.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0])[0],
             values.iter().copied().sum::<f32>()
         );
     }
@@ -591,16 +591,16 @@ mod tests {
     fn standalone_sum_u32_matches_reference_arithmetic() {
         let values = [1_u32, 2, 3, 4, 5, 6, 7];
         let program = workgroup_sum_u32("values", "out", values.len() as u32, 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "workgroup_tree",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<u32>()]),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&values),
+                vec![0_u8; core::mem::size_of::<u32>()],
             ],
-        )
-        .expect("Fix: workgroup_sum_u32 must execute in the reference interpreter.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0])[0],
             values.iter().copied().sum::<u32>()
         );
     }
@@ -609,16 +609,16 @@ mod tests {
     fn standalone_max_f32_matches_reference_arithmetic() {
         let values = [-3.0_f32, 9.5, 4.0, 1.25, 8.75];
         let program = workgroup_max_f32("values", "out", values.len() as u32, 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "workgroup_tree",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_f32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<f32>()]),
+            vec![
+                vyre_primitives::wire::pack_f32_slice(&values),
+                vec![0_u8; core::mem::size_of::<f32>()],
             ],
-        )
-        .expect("Fix: workgroup_max_f32 must execute in the reference interpreter.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0])[0],
             9.5
         );
     }
@@ -629,16 +629,16 @@ mod tests {
         // first lane or the `0` identity would be caught.
         let values = [3_u32, 17, 5, 42, 8, 1];
         let program = workgroup_max_u32("values", "out", values.len() as u32, 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "workgroup_tree",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<u32>()]),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&values),
+                vec![0_u8; core::mem::size_of::<u32>()],
             ],
-        )
-        .expect("Fix: workgroup_max_u32 must execute in the reference interpreter.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0])[0],
             values.iter().copied().max().expect("non-empty"),
             "workgroup_max_u32 must compute the unsigned max (42)"
         );
@@ -649,16 +649,16 @@ mod tests {
         // Min (-2.5) is not at index 0; an f32::MAX-identity or kept-first bug fails.
         let values = [3.0_f32, 9.5, -2.5, 1.25, 8.0];
         let program = workgroup_min_f32("values", "out", values.len() as u32, 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "workgroup_tree",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_f32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<f32>()]),
+            vec![
+                vyre_primitives::wire::pack_f32_slice(&values),
+                vec![0_u8; core::mem::size_of::<f32>()],
             ],
-        )
-        .expect("Fix: workgroup_min_f32 must execute in the reference interpreter.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0])[0],
             values.iter().copied().fold(f32::INFINITY, f32::min),
             "workgroup_min_f32 must compute the min (-2.5)"
         );
@@ -668,16 +668,16 @@ mod tests {
     fn standalone_min_u32_matches_reference_arithmetic() {
         let values = [17_u32, 3, 42, 8, 25];
         let program = workgroup_min_u32("values", "out", values.len() as u32, 4);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "workgroup_tree",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<u32>()]),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&values),
+                vec![0_u8; core::mem::size_of::<u32>()],
             ],
-        )
-        .expect("Fix: workgroup_min_u32 must execute in the reference interpreter.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0])[0],
             values.iter().copied().min().expect("non-empty"),
             "workgroup_min_u32 must compute the unsigned min (3)"
         );
@@ -687,30 +687,30 @@ mod tests {
     fn non_power_of_two_tile_reductions_match_reference_arithmetic() {
         let values = [4.0_f32, -7.0, 2.5, 9.0, 1.0, 3.25, -2.0];
         let sum_program = workgroup_sum_f32("values", "out", values.len() as u32, 3);
-        let sum_outputs = vyre_reference::reference_eval(
+        let sum_outputs = eval_bytes(
+            "workgroup_tree",
             &sum_program,
-            &[
-                Value::from(vyre_primitives::wire::pack_f32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<f32>()]),
+            vec![
+                vyre_primitives::wire::pack_f32_slice(&values),
+                vec![0_u8; core::mem::size_of::<f32>()],
             ],
-        )
-        .expect("Fix: workgroup_sum_f32 must support non-power-of-two tiles.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_f32_le_bytes_all(&sum_outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_f32_le_bytes_all(&sum_outputs[0].clone())[0],
             values.iter().copied().sum::<f32>()
         );
 
         let max_program = workgroup_max_f32("values", "out", values.len() as u32, 3);
-        let max_outputs = vyre_reference::reference_eval(
+        let max_outputs = eval_bytes(
+            "workgroup_tree",
             &max_program,
-            &[
-                Value::from(vyre_primitives::wire::pack_f32_slice(&values)),
-                Value::from(vec![0_u8; core::mem::size_of::<f32>()]),
+            vec![
+                vyre_primitives::wire::pack_f32_slice(&values),
+                vec![0_u8; core::mem::size_of::<f32>()],
             ],
-        )
-        .expect("Fix: workgroup_max_f32 must support non-power-of-two tiles.");
+        );
         assert_eq!(
-            vyre_primitives::wire::decode_f32_le_bytes_all(&max_outputs[0].to_bytes())[0],
+            vyre_primitives::wire::decode_f32_le_bytes_all(&max_outputs[0].clone())[0],
             9.0
         );
     }

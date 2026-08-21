@@ -446,25 +446,14 @@ pub fn mla_compress_kv(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     #[test]
     fn mla_compress_kv_identity() {
         let h = vec![2.0f32, 3.0];
         let w_dk = vec![1.0f32, 0.0, 0.0, 1.0];
         let program = mla_compress_kv("h", "w_dk", "c", 2, 2).unwrap();
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&h)),
-                Value::from(f32_bytes(&w_dk)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mla_compress_kv must execute");
-        let c = decode_f32(&outputs[0].to_bytes());
+        let c = eval_f32("mla", &program, &[&h[..], &w_dk[..]], 2);
         assert_eq!(c, vec![2.0, 3.0]);
     }
 
@@ -481,20 +470,12 @@ mod tests {
         )
         .unwrap();
 
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "mla",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&kv_cache)),
-                Value::from(f32_bytes(&kr_cache)),
-                Value::from(f32_bytes(&w_uk)),
-                Value::from(f32_bytes(&w_uv)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mla_decode must execute");
-
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&q[..], &kv_cache[..], &kr_cache[..], &w_uk[..], &w_uv[..]],
+            2,
+        );
         assert!(
             (out[0] - 1.0).abs() < 1e-4,
             "mla_decode out[0] = {}",
@@ -526,20 +507,12 @@ mod tests {
         )
         .unwrap();
 
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "mla",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&kv_cache)),
-                Value::from(f32_bytes(&kr_cache)),
-                Value::from(f32_bytes(&w_uk)),
-                Value::from(f32_bytes(&w_uv)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mla_decode two tokens must execute");
-
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&q[..], &kv_cache[..], &kr_cache[..], &w_uk[..], &w_uv[..]],
+            2,
+        );
         assert!(
             out[0] > 0.6 && out[0] < 0.7,
             "mla_decode out[0] = {}",

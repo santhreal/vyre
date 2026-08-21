@@ -265,7 +265,6 @@ mod tests {
 
     #[test]
     fn masks_high_bit_source_and_records_no_interpreter_oob() {
-        use vyre_reference::value::Value;
         // A U32 source element > 255 must fold into the 256-bin histogram via the
         // `& 0xFF` bin mask, never atomic-add past the last bin. Assert ZERO
         // interpreter OOB accesses (the mask keeps the atomic in bounds, not the
@@ -276,8 +275,8 @@ mod tests {
         let (outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,
             &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&[0x0141])), // > 255, low byte 0x41
-                Value::from(vec![0u8; 256 * 4]),
+                vyre_primitives::wire::pack_u32_slice(&[0x0141]), // > 255, low byte 0x41
+                vec![0u8; 256 * 4],
             ],
         )
         .expect("Fix: byte_histogram_256 must reference-evaluate a high-bit source element");

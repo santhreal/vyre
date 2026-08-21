@@ -266,6 +266,7 @@ pub fn regex_admission_by_region_program(
 #[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
 pub(crate) mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::pattern::haystack::pack_haystack_u32;
     use crate::pattern::regex_dfa::build_regex_dfa_pipeline;
     use vyre_primitives::wire::pack_u32_slice;
@@ -366,18 +367,16 @@ pub(crate) mod tests {
             log2_max_regions,
         );
         let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.output_records)),
-            vyre_reference::value::Value::from(pack_u32_slice(&region_starts)),
-            vyre_reference::value::Value::from(pack_u32_slice(&[0])),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(vec![0u8; expected.len() * 4]),
+            pack_haystack_u32(haystack),
+            pack_u32_slice(&dfa.transitions),
+            pack_u32_slice(&dfa.output_offsets),
+            pack_u32_slice(&dfa.output_records),
+            pack_u32_slice(&region_starts),
+            pack_u32_slice(&[0]),
+            pack_u32_slice(&[haystack.len() as u32]),
+            vec![0u8; expected.len() * 4],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
-            "Fix: regex admission-by-region program must evaluate in the reference backend",
-        );
+        let outputs = eval_bytes("regex_region_admission", &program, inputs);
 
         let got: Vec<u32> = outputs[0]
             .to_bytes()

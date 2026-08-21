@@ -49,9 +49,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     fn softcap_ref(x: f32, cap: f32) -> f32 {
         (x / cap).tanh() * cap
@@ -61,12 +59,7 @@ mod tests {
     fn logit_softcap_nan_input_propagates_nan() {
         let input = [f32::NAN];
         let program = logit_softcap("input", "output", 1, 30.0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: logit_softcap must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&input[..]], 1);
         assert!(out[0].is_nan(), "logit_softcap(NaN) must be NaN");
     }
 
@@ -74,42 +67,23 @@ mod tests {
     fn logit_softcap_inf_inputs() {
         let program = logit_softcap("input", "output", 2, 30.0);
         // +Inf → tanh(+Inf) * cap = 1.0 * cap = cap
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&[f32::INFINITY, 0.0])),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: logit_softcap must not panic on +Inf input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&[f32::INFINITY, 0.0][..]], 2);
         assert_eq!(out[0], 30.0, "logit_softcap(+Inf) must clamp to cap");
 
         // -Inf → tanh(-Inf) * cap = -1.0 * cap = -cap
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "logit_softcap",
             &program,
-            &[
-                Value::from(f32_bytes(&[f32::NEG_INFINITY, 0.0])),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: logit_softcap must not panic on -Inf input");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&[f32::NEG_INFINITY, 0.0][..]],
+            2,
+        );
         assert_eq!(out[0], -30.0, "logit_softcap(-Inf) must clamp to -cap");
     }
 
     #[test]
     fn logit_softcap_negative_zero_vs_positive_zero() {
         let program = logit_softcap("input", "output", 2, 30.0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&[0.0f32, -0.0f32])),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: logit_softcap must handle -0.0");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&[0.0f32, -0.0f32][..]], 2);
         assert_eq!(out[0].to_bits(), 0.0f32.to_bits());
         // tanh(-0.0/cap) = -0.0, -0.0 * cap = -0.0, but flush_tiny may flush
         assert_eq!(
@@ -123,12 +97,7 @@ mod tests {
     fn logit_softcap_subnormal_input_is_flushed_to_zero() {
         let sub = f32::from_bits(1);
         let program = logit_softcap("input", "output", 1, 30.0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&[sub])), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: logit_softcap must not panic on subnormal input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&[sub][..]], 1);
         assert_eq!(
             out[0].to_bits(),
             0.0f32.to_bits(),
@@ -140,12 +109,7 @@ mod tests {
     fn logit_softcap_all_zeros() {
         let input = [0.0f32; 4];
         let program = logit_softcap("input", "output", 4, 30.0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: logit_softcap all-zeros must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&input[..]], 4);
         assert_eq!(out, vec![0.0; 4]);
     }
 
@@ -153,12 +117,7 @@ mod tests {
     fn logit_softcap_all_ones() {
         let input = [1.0f32; 4];
         let program = logit_softcap("input", "output", 4, 30.0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: logit_softcap all-ones must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&input[..]], 4);
         let expected = softcap_ref(1.0, 30.0);
         for (i, &v) in out.iter().enumerate() {
             assert!(
@@ -172,12 +131,7 @@ mod tests {
     fn logit_softcap_all_max_f32() {
         let input = [f32::MAX; 4];
         let program = logit_softcap("input", "output", 4, 30.0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: logit_softcap all-max-f32 must not panic");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             assert_eq!(
                 v, 30.0,
@@ -190,12 +144,7 @@ mod tests {
     fn logit_softcap_single_element() {
         let input = [15.0f32];
         let program = logit_softcap("input", "output", 1, 30.0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: logit_softcap single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("logit_softcap", &program, &[&input[..]], 1);
         let expected = softcap_ref(15.0, 30.0);
         assert!(
             (out[0] - expected).abs() <= 1.0e-5,
@@ -206,9 +155,7 @@ mod tests {
     #[test]
     fn logit_softcap_empty_tensor() {
         let program = logit_softcap("input", "output", 0, 30.0);
-        let outputs =
-            vyre_reference::reference_eval(&program, &[Value::from(vec![]), Value::from(vec![])])
-                .expect("Fix: logit_softcap n=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+        let out = eval_f32("logit_softcap", &program, &[&[] as &[f32]], 0);
+        assert!(out.is_empty());
     }
 }

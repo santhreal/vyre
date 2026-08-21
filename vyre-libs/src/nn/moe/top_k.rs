@@ -62,23 +62,19 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
 mod tests {
     use super::super::topk_selection::u32_from_bytes;
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn top_k_descending_input() {
         let scores: Vec<f32> = (1..=8).map(|i| i as f32).collect();
         let program = top_k("input", "output", 8, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "top_k",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 2 * 4]),
-                Value::from(vec![0u8; 2 * 4]),
-            ],
-        )
-        .unwrap();
-        let indices = u32_from_bytes(&outputs[0].to_bytes());
+            vec![f32_bytes(&scores), vec![0u8; 2 * 4], vec![0u8; 2 * 4]],
+        );
+        let indices = u32_from_bytes(&outputs[0]);
         assert_eq!(indices[0], 7); // max = 8.0 at index 7
         assert_eq!(indices[1], 6); // second = 7.0 at index 6
     }
@@ -87,16 +83,12 @@ mod tests {
     fn top_k_ascending_input() {
         let scores: Vec<f32> = (1..=8).rev().map(|i| i as f32).collect();
         let program = top_k("input", "output", 8, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "top_k",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 2 * 4]),
-                Value::from(vec![0u8; 2 * 4]),
-            ],
-        )
-        .unwrap();
-        let indices = u32_from_bytes(&outputs[0].to_bytes());
+            vec![f32_bytes(&scores), vec![0u8; 2 * 4], vec![0u8; 2 * 4]],
+        );
+        let indices = u32_from_bytes(&outputs[0]);
         assert_eq!(indices[0], 0); // max = 8.0 at index 0
         assert_eq!(indices[1], 1); // second = 7.0 at index 1
     }
@@ -105,16 +97,12 @@ mod tests {
     fn top_k_with_duplicates() {
         let scores = vec![3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0];
         let program = top_k("input", "output", 8, 3);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "top_k",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 3 * 4]),
-                Value::from(vec![0u8; 3 * 4]),
-            ],
-        )
-        .unwrap();
-        let indices = u32_from_bytes(&outputs[0].to_bytes());
+            vec![f32_bytes(&scores), vec![0u8; 3 * 4], vec![0u8; 3 * 4]],
+        );
+        let indices = u32_from_bytes(&outputs[0]);
         // 9.0(5), 6.0(7), 5.0(4), 4.0(2), 3.0(0), 2.0(6), 1.0(1), 1.0(3)
         assert_eq!(indices[0], 5);
         assert_eq!(indices[1], 7);

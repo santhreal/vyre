@@ -452,6 +452,9 @@ inventory::submit! {
 #[cfg(test)]
 mod primitive_tests {
     use super::*;
+    use crate::fixture_bytes::bytes_to_u32;
+    use crate::fixture_bytes::decode_u32_one;
+    use crate::fixture_bytes::eval_bytes;
     fn build_standard_decode_table() -> [u32; 256] {
         let mut table = [INVALID; 256];
         for byte in b'A'..=b'Z' {
@@ -594,7 +597,6 @@ mod primitive_tests {
 
     #[test]
     fn table_index_is_masked_so_high_bit_input_cannot_read_out_of_bounds() {
-        use vyre_reference::value::Value;
         // "TWFu" decodes to "Man". The U32 input buffer can carry a >255 element
         // (it is unvalidated); here the first char is `0x100 | 'T'`. The `& 0xFF`
         // index mask must fold it back to 'T' so the decode is IDENTICAL to the
@@ -611,25 +613,21 @@ mod primitive_tests {
         ];
         let program = base64_decode_program("input", "table", "output", "decoded_len", input_len);
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_u32_slice(&dirty)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(
-                standard_decode_table_ref(),
-            )),
-            Value::from(vec![0u8; decoded_capacity(input_len) as usize * 4]),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&[0])),
+            vyre_primitives::wire::pack_u32_slice(&dirty),
+            vyre_primitives::wire::pack_u32_slice(standard_decode_table_ref()),
+            vec![0u8; decoded_capacity(input_len) as usize * 4],
+            vyre_primitives::wire::pack_u32_slice(&[0]),
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: base64 decode with a >255 input element must not fault the interpreter");
+        let outputs = eval_bytes("base64", &program, inputs);
         // Two outputs (output + decoded_len): locate each by name via the
         // interpreter's own output ABI, never by fixed position.
         let out_idx = vyre_reference::output_index(&program, "output")
             .expect("Fix: base64 output buffer must be a reference output");
         let len_idx = vyre_reference::output_index(&program, "decoded_len")
             .expect("Fix: base64 decoded_len buffer must be a reference output");
-        let words = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[out_idx].to_bytes());
+        let words = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[out_idx]);
         let decoded_len =
-            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[len_idx].to_bytes())[0]
-                as usize;
+            vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[len_idx])[0] as usize;
         let bytes: Vec<u8> = words
             .into_iter()
             .take(decoded_len)

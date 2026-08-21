@@ -146,8 +146,8 @@ pub fn matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> Result<Pr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {
         bytes
@@ -167,16 +167,12 @@ mod tests {
 
     fn run_strassen(a: &[f32], b: &[f32]) -> Vec<f32> {
         let prog = matmul_strassen_2x2("a", "b", "c");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "matmul_strassen",
             &prog,
-            &[
-                Value::from(f32_bytes(a)),
-                Value::from(f32_bytes(b)),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: matmul_strassen_2x2 must execute in the reference interpreter.");
-        decode(&outputs[0].to_bytes())
+            vec![f32_bytes(a), f32_bytes(b), vec![0u8; 16]],
+        );
+        decode(&outputs[0])
     }
 
     /// Strassen 2x2 matches naive 2x2 on the canonical [[1,2],[3,4]]
@@ -231,16 +227,16 @@ mod tests {
 
     fn run_one_level(a: &[f32], b: &[f32], n: u32) -> Vec<f32> {
         let prog = matmul_strassen_one_level("a", "b", "c", n).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "matmul_strassen",
             &prog,
-            &[
-                Value::from(f32_bytes(a)),
-                Value::from(f32_bytes(b)),
-                Value::from(vec![0u8; (n as usize) * (n as usize) * 4]),
+            vec![
+                f32_bytes(a),
+                f32_bytes(b),
+                vec![0u8; (n as usize) * (n as usize) * 4],
             ],
-        )
-        .expect("Fix: matmul_strassen_one_level must execute in the reference interpreter.");
-        decode(&outputs[0].to_bytes())
+        );
+        decode(&outputs[0])
     }
 
     /// One-level Strassen at N=4 matches naive 4x4 matmul.

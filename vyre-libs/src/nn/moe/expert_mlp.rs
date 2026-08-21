@@ -155,9 +155,7 @@ pub fn expert_mlp(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     #[test]
     fn expert_mlp_executes_fused_gate_up_swiglu_down() {
@@ -170,21 +168,20 @@ mod tests {
         let b_up = [0.0f32, 0.3];
         let w_down = [1.0f32, -0.5, 0.25, 0.75];
         let b_down = [0.2f32, -0.1];
-        let outputs = vyre_reference::reference_eval(
+        let actual = eval_f32(
+            "expert_mlp",
             &program,
             &[
-                Value::from(f32_bytes(&x)),
-                Value::from(f32_bytes(&w_gate)),
-                Value::from(f32_bytes(&b_gate)),
-                Value::from(f32_bytes(&w_up)),
-                Value::from(f32_bytes(&b_up)),
-                Value::from(f32_bytes(&w_down)),
-                Value::from(f32_bytes(&b_down)),
-                Value::from(vec![0u8; 8]),
+                &x[..],
+                &w_gate[..],
+                &b_gate[..],
+                &w_up[..],
+                &b_up[..],
+                &w_down[..],
+                &b_down[..],
             ],
-        )
-        .expect("Fix: expert_mlp fused Program must execute in reference interpreter");
-        let actual = decode_f32(&outputs[0].to_bytes());
+            2,
+        );
         let mut hidden = [0.0f32; 2];
         for h in 0..2 {
             let mut gate = b_gate[h];

@@ -139,7 +139,8 @@ pub fn matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::try_eval_bytes;
 
     fn next_u32(state: &mut u32) -> u32 {
         *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
@@ -153,11 +154,10 @@ mod tests {
     fn run_u32_output(program: &Program, inputs: Vec<Vec<u32>>, out_bytes: usize) -> Vec<u32> {
         let packed_inputs = inputs
             .into_iter()
-            .map(|bytes| Value::from(vyre_primitives::wire::pack_u32_slice(&bytes)))
+            .map(|bytes| vyre_primitives::wire::pack_u32_slice(&bytes))
             .collect::<Vec<_>>();
-        let outputs = vyre_reference::reference_eval(program, &packed_inputs)
-            .expect("Fix: program must execute; restore this invariant before continuing.");
-        let bytes = outputs[0].to_bytes();
+        let outputs = eval_bytes("matmul", program, packed_inputs);
+        let bytes = outputs[0].clone();
         let mut result = decode_u32_words(&bytes);
         assert_eq!(result.len(), out_bytes);
         result.truncate(out_bytes);
@@ -277,12 +277,12 @@ mod tests {
         let a: Vec<u32> = vec![];
         let b: Vec<u32> = vec![];
         let program = matmul("a", "b", "out", 2, 0, 3);
-        let error = vyre_reference::reference_eval(
+        let error = try_eval_bytes(
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&a)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&b)),
-                Value::from(vec![0u8; 6 * 4]),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&a),
+                vyre_primitives::wire::pack_u32_slice(&b),
+                vec![0u8; 6 * 4],
             ],
         )
         .expect_err("zero-K matmul must trap");

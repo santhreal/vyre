@@ -49,28 +49,23 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::eval_f32;
     use crate::fixture_bytes::u32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn relu_empty_tensor_produces_no_panic() {
         let program = relu("input", "output", 0);
-        let outputs =
-            vyre_reference::reference_eval(&program, &[Value::from(vec![]), Value::from(vec![])])
-                .expect("Fix: relu n=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+        let out = eval_f32("relu", &program, &[&[] as &[f32]], 0);
+        assert!(out.is_empty());
     }
 
     #[test]
     fn relu_single_element_identity() {
         let input = [42u32];
         let program = relu("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: relu single element must execute");
-        let out: Vec<u32> = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
+        let outputs = eval_bytes("relu", &program, vec![u32_bytes(&input), vec![0u8; 4]]);
+        let out: Vec<u32> = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
         assert_eq!(out, vec![42]);
     }
 
@@ -78,12 +73,8 @@ mod tests {
     fn relu_all_zeros_identity() {
         let input = [0u32, 0, 0, 0];
         let program = relu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: relu all-zeros must execute");
-        let out: Vec<u32> = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
+        let outputs = eval_bytes("relu", &program, vec![u32_bytes(&input), vec![0u8; 16]]);
+        let out: Vec<u32> = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
         assert_eq!(out, vec![0, 0, 0, 0]);
     }
 
@@ -91,12 +82,8 @@ mod tests {
     fn relu_all_max_u32_identity() {
         let input = [u32::MAX; 4];
         let program = relu("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: relu all-max-u32 must execute");
-        let out: Vec<u32> = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
+        let outputs = eval_bytes("relu", &program, vec![u32_bytes(&input), vec![0u8; 16]]);
+        let out: Vec<u32> = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
         assert_eq!(out, vec![u32::MAX; 4]);
     }
 }

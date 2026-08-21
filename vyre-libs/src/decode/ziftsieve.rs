@@ -259,9 +259,10 @@ inventory::submit! {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod primitive_tests {
     use super::*;
+    use crate::fixture_bytes::bytes_to_u32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::{bytes_to_u32, eval_bytes};
     use vyre_reference::composition_witness::ziftsieve_extract_literals_witness as ziftsieve_reference_extract_literals;
-    use vyre_reference::value::Value;
 
     fn literals(
         input: &[u8],
@@ -391,19 +392,14 @@ mod primitive_tests {
             },
         );
         let inputs = vec![
-            Value::from(vyre_primitives::wire::pack_u32_slice(input_words)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(seq_starts)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(seq_lens)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(seq_offsets)),
-            Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
-                sentinel;
-                max_output.max(1)
-                    as usize
-            ])),
+            vyre_primitives::wire::pack_u32_slice(input_words),
+            vyre_primitives::wire::pack_u32_slice(seq_starts),
+            vyre_primitives::wire::pack_u32_slice(seq_lens),
+            vyre_primitives::wire::pack_u32_slice(seq_offsets),
+            vyre_primitives::wire::pack_u32_slice(&vec![sentinel; max_output.max(1) as usize]),
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: out-of-contract ziftsieve copy must not fault the interpreter");
-        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+        let outputs = eval_bytes("ziftsieve", &program, inputs);
+        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0])
     }
 
     #[test]
@@ -480,11 +476,11 @@ mod primitive_tests {
         let (_outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,
             &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&[10, 20, 30, 40])),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&[0])), // literal_start
-                Value::from(vyre_primitives::wire::pack_u32_slice(&[4])), // literal_len overshoots the cap
-                Value::from(vyre_primitives::wire::pack_u32_slice(&[1])), // literal_offset → slots 1..4
-                Value::from(vyre_primitives::wire::pack_u32_slice(&[0u32; 3])),
+                vyre_primitives::wire::pack_u32_slice(&[10, 20, 30, 40]),
+                vyre_primitives::wire::pack_u32_slice(&[0]), // literal_start
+                vyre_primitives::wire::pack_u32_slice(&[4]), // literal_len overshoots the cap
+                vyre_primitives::wire::pack_u32_slice(&[1]), // literal_offset → slots 1..4
+                vyre_primitives::wire::pack_u32_slice(&[0u32; 3]),
             ],
         )
         .expect("Fix: ziftsieve copy must reference-evaluate");

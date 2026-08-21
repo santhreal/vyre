@@ -376,9 +376,8 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::assert_tiled_matches_reference;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
+    use crate::fixture_bytes::try_eval_bytes;
 
     #[test]
     fn builder_rejects_dtype_mismatch() {
@@ -468,12 +467,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [3.0f32; 4];
         let program = layer_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: layer_norm must not panic on zero-variance input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("layer_norm", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.abs() <= 1.0e-4,
@@ -490,12 +484,7 @@ mod tests {
         let eps = 1e-5_f32;
         let input = [1e20f32, -1e20, 1e20, -1e20];
         let program = layer_norm("input", "output", n, eps);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: layer_norm must not panic on large-variance input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("layer_norm", &program, &[&input[..]], 4);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.is_finite(),
@@ -514,12 +503,7 @@ mod tests {
         // output = (x - x) / sqrt(eps) = 0.
         let input = [5.0f32];
         let program = layer_norm("input", "output", 1, 1e-5);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: layer_norm single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("layer_norm", &program, &[&input[..]], 1);
         assert!(
             out[0].abs() <= 1.0e-4,
             "layer_norm single element must be ~0, got {}",
@@ -542,11 +526,8 @@ mod tests {
             "layer_norm n=0 shape error: {err:?}"
         );
         let program = layer_norm("input", "output", 0, 1e-5);
-        let eval_err = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(vec![0u8; 4]), Value::from(vec![0u8; 4])],
-        )
-        .expect_err("layer_norm n=0 must trap instead of producing output");
+        let eval_err = try_eval_bytes(&program, vec![vec![0u8; 4], vec![0u8; 4]])
+            .expect_err("layer_norm n=0 must trap instead of producing output");
         let msg = eval_err.to_string();
         assert!(
             msg.contains("trap") || msg.contains("Fix:"),
@@ -561,12 +542,7 @@ mod tests {
         fn layer_norm_output_mean_is_zero(input in prop::collection::vec(-1e10f32..1e10f32, 2..32)) {
             let n = input.len() as u32;
             let program = layer_norm("input", "output", n, 1e-5);
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; input.len() * 4])],
-            )
-            .expect("Fix: layer_norm must execute");
-            let out = decode_f32(&outputs[0].to_bytes());
+            let out = eval_f32("layer_norm", &program, &[&input[..]], input.len());
             let mean = out.iter().sum::<f32>() / out.len() as f32;
             prop_assert!(
                 mean.abs() <= 1.0e-3 || mean.is_nan(),

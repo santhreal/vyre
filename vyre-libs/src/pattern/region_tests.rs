@@ -361,7 +361,7 @@ fn run_u32_program(program: &vyre_foundation::ir::Program, inputs: &[&[u32]]) ->
     use std::sync::Arc;
     use vyre_reference::reference_eval;
     use vyre_reference::value::Value;
-    let values: Vec<Value> = inputs
+    let values: Vec<Vec<u8>> = inputs
         .iter()
         .map(|data| Value::Bytes(Arc::from(vyre_primitives::wire::pack_u32_slice(data))))
         .collect();

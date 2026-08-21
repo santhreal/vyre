@@ -335,9 +335,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     #[test]
     fn mlp_materializes_hidden_once_and_matches_reference() {
@@ -349,19 +347,12 @@ mod tests {
         let b1 = [0.0_f32; 4];
         let w2 = [1.0_f32, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
         let b2 = [0.0_f32, 0.0];
-        let outputs = vyre_reference::reference_eval(
+        let actual = eval_f32(
+            "mlp_4x_leaky_sq",
             &program,
-            &[
-                Value::from(f32_bytes(&x)),
-                Value::from(f32_bytes(&w1)),
-                Value::from(f32_bytes(&b1)),
-                Value::from(f32_bytes(&w2)),
-                Value::from(f32_bytes(&b2)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: mlp_4x_leaky_sq must execute in the reference interpreter.");
-        let actual = decode_f32(&outputs[0].to_bytes());
+            &[&x[..], &w1[..], &b1[..], &w2[..], &b2[..]],
+            2,
+        );
         let hidden = (0..4)
             .map(|j| {
                 let h = b1[j] + (0..2).map(|k| x[k] * w1[k * 4 + j]).sum::<f32>();

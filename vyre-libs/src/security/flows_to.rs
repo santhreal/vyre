@@ -98,6 +98,7 @@ pub fn flows_to_alias_only(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::try_eval_bytes;
     use crate::predicate::edge_kind;
     use vyre_reference::composition_witness::csr_forward_traverse_witness;
 
@@ -248,11 +249,7 @@ mod tests {
             to_bytes(&[0b0001]),     // fin
             to_bytes(&[0b0001]),     // fout
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let error = vyre_reference::reference_eval(&p, &values).expect_err(
+        let error = try_eval_bytes(&p, inputs).expect_err(
             "edge_count (10) exceeds actual edges (3) must trap or error in reference_eval",
         );
         let msg = error.to_string();

@@ -3,14 +3,14 @@
 use crate::pattern::CompiledDfa;
 use vyre_foundation::ir::Program;
 use vyre_primitives::wire::pack_u32_slice;
-use vyre_reference::value::Value;
 
 use crate::fixture_bytes::bytes_to_u32;
+use crate::fixture_bytes::eval_bytes;
 use crate::pattern::haystack::pack_haystack_u32;
 
 /// A u32 slice as one reference-backend input value.
 pub(crate) fn u32_input(words: &[u32]) -> Value {
-    Value::from(pack_u32_slice(words))
+    pack_u32_slice(words)
 }
 
 /// Bindings 0-2 of any AC dispatch: the packed haystack, the dense
@@ -21,7 +21,7 @@ pub(crate) fn u32_input(words: &[u32]) -> Value {
 /// silently feeding a program the wrong buffer.
 pub(crate) fn ac_dfa_table_inputs(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<Value> {
     vec![
-        Value::from(pack_haystack_u32(haystack)),
+        pack_haystack_u32(haystack),
         u32_input(&dfa.transitions),
         u32_input(&dfa.output_offsets),
     ]
@@ -106,11 +106,9 @@ pub(crate) fn pattern_lengths(patterns: &[&[u8]]) -> Vec<u32> {
 
 /// Decode `(pattern_id, start, end)` triples from a `match_count` + `matches`
 /// reference-output pair.
-pub(crate) fn decode_match_triples(
-    outputs: &[vyre_reference::value::Value],
-) -> Vec<(u32, u32, u32)> {
-    let count = bytes_to_u32(&outputs[0].to_bytes())[0] as usize;
-    let words = bytes_to_u32(&outputs[1].to_bytes());
+pub(crate) fn decode_match_triples(outputs: &[[u8]]) -> Vec<(u32, u32, u32)> {
+    let count = bytes_to_u32(&outputs[0])[0] as usize;
+    let words = bytes_to_u32(&outputs[1]);
     words[..count.saturating_mul(3)]
         .chunks_exact(3)
         .map(|chunk| (chunk[0], chunk[1], chunk[2]))
@@ -120,11 +118,10 @@ pub(crate) fn decode_match_triples(
 /// Reference evaluation of an AC bounded-ranges program and assertions against expected match triples.
 pub(crate) fn evaluate_and_assert_ranges_matches(
     program: &Program,
-    inputs: &[Value],
+    inputs: &[[u8]],
     expected: &[(u32, u32, u32)],
 ) {
-    let outputs = vyre_reference::reference_eval(program, inputs)
-        .expect("Fix: AC bounded-ranges program should evaluate in reference backend.");
+    let outputs = eval_bytes("test_dispatch_and_decode", program, inputs);
     let mut decoded = decode_match_triples(&outputs);
     decoded.sort_unstable();
     let mut expected_sorted = expected.to_vec();

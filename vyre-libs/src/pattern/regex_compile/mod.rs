@@ -430,11 +430,7 @@ mod tests {
             .iter()
             .map(|bytes| vyre_reference::value::Value::Bytes(bytes.as_slice().into()))
             .collect::<Vec<_>>();
-        let actual = vyre_reference::reference_eval(&program, &values)
-            .expect("Fix: canonical regex scan fixture must execute in the reference interpreter")
-            .into_iter()
-            .map(|value| value.to_bytes())
-            .collect::<Vec<_>>();
+        let actual = eval_bytes("mod", &program, values);
 
         assert_eq!(
             actual,

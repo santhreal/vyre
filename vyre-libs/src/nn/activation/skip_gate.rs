@@ -82,9 +82,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     fn sigmoid(x: f32) -> f32 {
         1.0 / (1.0 + (-x).exp())
@@ -96,17 +94,12 @@ mod tests {
         let branch = [1.0f32];
         let skip = [2.0f32];
         let program = skip_gate("gate", "branch", "skip", "output", 1);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
-            &[
-                Value::from(f32_bytes(&gate)),
-                Value::from(f32_bytes(&branch)),
-                Value::from(f32_bytes(&skip)),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: skip_gate must not panic on NaN gate");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&gate[..], &branch[..], &skip[..]],
+            1,
+        );
         assert!(out[0].is_nan(), "skip_gate(NaN gate) must be NaN");
     }
 
@@ -114,31 +107,29 @@ mod tests {
     fn skip_gate_inf_gate_selects_branch_or_skip() {
         let program = skip_gate("gate", "branch", "skip", "output", 2);
         // +Inf gate → sigmoid(+Inf)=1 → branch
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
             &[
-                Value::from(f32_bytes(&[f32::INFINITY, 0.0])),
-                Value::from(f32_bytes(&[10.0, 20.0])),
-                Value::from(f32_bytes(&[30.0, 40.0])),
-                Value::from(vec![0u8; 8]),
+                &[f32::INFINITY, 0.0][..],
+                &[10.0, 20.0][..],
+                &[30.0, 40.0][..],
             ],
-        )
-        .expect("Fix: skip_gate must not panic on +Inf gate");
-        let out = decode_f32(&outputs[0].to_bytes());
+            2,
+        );
         assert_eq!(out[0], 10.0, "skip_gate(+Inf gate) must select branch");
 
         // -Inf gate → sigmoid(-Inf)=0 → skip
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
             &[
-                Value::from(f32_bytes(&[f32::NEG_INFINITY, 0.0])),
-                Value::from(f32_bytes(&[10.0, 20.0])),
-                Value::from(f32_bytes(&[30.0, 40.0])),
-                Value::from(vec![0u8; 8]),
+                &[f32::NEG_INFINITY, 0.0][..],
+                &[10.0, 20.0][..],
+                &[30.0, 40.0][..],
             ],
-        )
-        .expect("Fix: skip_gate must not panic on -Inf gate");
-        let out = decode_f32(&outputs[0].to_bytes());
+            2,
+        );
         assert_eq!(out[0], 30.0, "skip_gate(-Inf gate) must select skip");
     }
 
@@ -148,17 +139,12 @@ mod tests {
         let branch = [f32::NAN];
         let skip = [2.0f32];
         let program = skip_gate("gate", "branch", "skip", "output", 1);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
-            &[
-                Value::from(f32_bytes(&gate)),
-                Value::from(f32_bytes(&branch)),
-                Value::from(f32_bytes(&skip)),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: skip_gate must not panic on NaN branch");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&gate[..], &branch[..], &skip[..]],
+            1,
+        );
         assert!(
             out[0].is_nan(),
             "skip_gate(NaN branch) must be NaN (sigmoid(0)=0.5, 0.5*NaN = NaN)"
@@ -171,17 +157,12 @@ mod tests {
         let branch = [1.0f32];
         let skip = [f32::NAN];
         let program = skip_gate("gate", "branch", "skip", "output", 1);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
-            &[
-                Value::from(f32_bytes(&gate)),
-                Value::from(f32_bytes(&branch)),
-                Value::from(f32_bytes(&skip)),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: skip_gate must not panic on NaN skip");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&gate[..], &branch[..], &skip[..]],
+            1,
+        );
         assert!(
             out[0].is_nan(),
             "skip_gate(NaN skip) must be NaN (0.5*NaN = NaN)"
@@ -191,34 +172,24 @@ mod tests {
     #[test]
     fn skip_gate_all_zeros() {
         let program = skip_gate("gate", "branch", "skip", "output", 4);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
-            &[
-                Value::from(f32_bytes(&[0.0; 4])),
-                Value::from(f32_bytes(&[0.0; 4])),
-                Value::from(f32_bytes(&[0.0; 4])),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: skip_gate all-zeros must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&[0.0; 4][..], &[0.0; 4][..], &[0.0; 4][..]],
+            4,
+        );
         assert_eq!(out, vec![0.0; 4]);
     }
 
     #[test]
     fn skip_gate_all_ones() {
         let program = skip_gate("gate", "branch", "skip", "output", 4);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
-            &[
-                Value::from(f32_bytes(&[1.0; 4])),
-                Value::from(f32_bytes(&[1.0; 4])),
-                Value::from(f32_bytes(&[1.0; 4])),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: skip_gate all-ones must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&[1.0; 4][..], &[1.0; 4][..], &[1.0; 4][..]],
+            4,
+        );
         let s = sigmoid(1.0);
         let expected = s * 1.0 + (1.0 - s) * 1.0;
         for (i, &v) in out.iter().enumerate() {
@@ -232,17 +203,12 @@ mod tests {
     #[test]
     fn skip_gate_single_element() {
         let program = skip_gate("gate", "branch", "skip", "output", 1);
-        let outputs = vyre_reference::reference_eval(
+        let out = eval_f32(
+            "skip_gate",
             &program,
-            &[
-                Value::from(f32_bytes(&[2.0])),
-                Value::from(f32_bytes(&[10.0])),
-                Value::from(f32_bytes(&[20.0])),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: skip_gate single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            &[&[2.0][..], &[10.0][..], &[20.0][..]],
+            1,
+        );
         let s = sigmoid(2.0);
         let expected = s * 10.0 + (1.0 - s) * 20.0;
         assert!(
@@ -254,16 +220,7 @@ mod tests {
     #[test]
     fn skip_gate_empty_tensor() {
         let program = skip_gate("gate", "branch", "skip", "output", 0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(vec![]),
-                Value::from(vec![]),
-                Value::from(vec![]),
-                Value::from(vec![]),
-            ],
-        )
-        .expect("Fix: skip_gate n=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+        let out = eval_f32("skip_gate", &program, &[&[] as &[f32]], 0);
+        assert!(out.is_empty());
     }
 }

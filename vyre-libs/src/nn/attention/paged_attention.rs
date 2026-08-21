@@ -784,7 +784,6 @@ mod tests {
         decode_f32 as bytes_to_f32, f32_bytes as f32_to_bytes, u32_bytes as u32_to_bytes,
     };
     use vyre_reference::reference_eval;
-    use vyre_reference::value::Value;
 
     #[test]
     fn paged_attention_validates_dimensions() {
@@ -912,11 +911,11 @@ mod tests {
         let out_init = vec![0.0f32; 2];
 
         let inputs = vec![
-            Value::from(f32_to_bytes(&q_data)),
-            Value::from(f32_to_bytes(&k_data)),
-            Value::from(f32_to_bytes(&v_data)),
-            Value::from(u32_to_bytes(&table_data)),
-            Value::from(f32_to_bytes(&out_init)),
+            f32_to_bytes(&q_data),
+            f32_to_bytes(&k_data),
+            f32_to_bytes(&v_data),
+            u32_to_bytes(&table_data),
+            f32_to_bytes(&out_init),
         ];
 
         let outputs = reference_eval(&program, &inputs).expect("eval");
@@ -974,9 +973,9 @@ mod tests {
         let table_data = vec![0u32, 1];
 
         let inputs = vec![
-            Value::from(f32_to_bytes(&chunk_data)),
-            Value::from(u32_to_bytes(&table_data)),
-            Value::from(f32_to_bytes(&cache_data)),
+            f32_to_bytes(&chunk_data),
+            u32_to_bytes(&table_data),
+            f32_to_bytes(&cache_data),
         ];
 
         let outputs = reference_eval(&program, &inputs).expect("eval");

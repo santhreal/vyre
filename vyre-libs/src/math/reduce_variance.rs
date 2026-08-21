@@ -112,19 +112,17 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32_one as decode_one;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::try_eval_bytes;
 
     fn eval_variance_reduction(program: Program, input: &[f32]) -> f32 {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "reduce_variance",
             &program,
-            &[
-                Value::from(f32_bytes(input)),
-                Value::from(vec![0u8; core::mem::size_of::<f32>()]),
-            ],
-        )
-        .expect("Fix: reduce_variance program must execute in the reference interpreter.");
-        decode_one(&outputs[0].to_bytes())
+            vec![f32_bytes(input), vec![0u8; core::mem::size_of::<f32>()]],
+        );
+        decode_one(&outputs[0])
     }
 
     fn sample_input(n: u32) -> Vec<f32> {
@@ -171,11 +169,11 @@ mod tests {
     #[test]
     fn reduce_variance_rejects_empty_reduction_without_panicking() {
         let program = reduce_variance("input", "output", 0);
-        let err = vyre_reference::reference_eval(
+        let err = try_eval_bytes(
             &program,
-            &[
-                Value::from(vec![0u8; core::mem::size_of::<f32>()]),
-                Value::from(vec![0u8; core::mem::size_of::<f32>()]),
+            vec![
+                vec![0u8; core::mem::size_of::<f32>()],
+                vec![0u8; core::mem::size_of::<f32>()],
             ],
         )
         .expect_err("empty reduction must trap instead of constructing a fake variance");

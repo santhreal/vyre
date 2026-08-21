@@ -335,7 +335,6 @@ fn linear_4bit_affine_grouped_batch_impl(
 #[cfg(test)]
 mod tests {
     use vyre_foundation::ir::{Expr, Node};
-    use vyre_reference::value::Value;
 
     use super::super::grouped_layout::AFFINE_GROUPED_WORKGROUP_SIZE;
     use super::super::planner_evidence::linear_4bit_affine_grouped_planner_evidence;
@@ -491,20 +490,13 @@ mod tests {
             AFFINE_GROUPED_WORKGROUP_SIZE,
             "Fix: grouped INT4 linear must keep the CUDA-measured cooperative release launch shape."
         );
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "affine_grouped",
             &program,
-            &[
-                Value::from(x),
-                Value::from(w),
-                Value::from(scale),
-                Value::from(zero_point),
-                Value::from(b),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: affine grouped int4 linear must execute");
+            vec![x, w, scale, zero_point, b, vec![0u8; 8]],
+        );
 
-        let out_vals = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
+        let out_vals = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0]);
 
         assert!(
             (out_vals[0] - 150.0).abs() < 1e-4,
@@ -538,19 +530,12 @@ mod tests {
             linear_4bit_affine_grouped_batched("x", "w", "scale", "zp", "b", "out", 8, 2, 4, 2)
                 .expect("Fix: valid batched affine grouped INT4 fixture must build");
 
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "affine_grouped",
             &program,
-            &[
-                Value::from(x),
-                Value::from(w),
-                Value::from(scale),
-                Value::from(zero_point),
-                Value::from(b),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: batched affine grouped INT4 linear must execute");
-        let out_vals = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
+            vec![x, w, scale, zero_point, b, vec![0u8; 16]],
+        );
+        let out_vals = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0]);
 
         assert_eq!(out_vals.len(), 4);
         assert!((out_vals[0] - 150.0).abs() < 1e-4);
@@ -661,24 +646,19 @@ mod tests {
                         "x", "w", "scale", "zp", "b", "out", in_dim, out_dim, group_size,
                     )
                     .expect("Fix: generated affine grouped fixture must build");
-                    let outputs = vyre_reference::reference_eval(
+                    let outputs = eval_bytes(
+                        "affine_grouped",
                         &program,
-                        &[
-                            Value::from(f32_bytes(&x)),
-                            Value::from(u32_bytes(&packed)),
-                            Value::from(f32_bytes(&scale)),
-                            Value::from(u32_bytes(&zero_point)),
-                            Value::from(f32_bytes(&bias)),
-                            Value::from(vec![0u8; out_dim as usize * 4]),
+                        vec![
+                            f32_bytes(&x),
+                            u32_bytes(&packed),
+                            f32_bytes(&scale),
+                            u32_bytes(&zero_point),
+                            f32_bytes(&bias),
+                            vec![0u8; out_dim as usize * 4],
                         ],
-                    )
-                    .unwrap_or_else(|error| {
-                        panic!(
-                            "Fix: generated affine grouped fixture must execute for out_dim={out_dim}, group_size={group_size}, seed={seed}: {error}"
-                        )
-                    });
-                    let actual =
-                        vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
+                    );
+                    let actual = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0]);
                     let expected = reference_affine_grouped(
                         &x,
                         &packed,

@@ -94,24 +94,20 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn qk_gain_nan_in_gain_propagates_nan() {
         let q = [1.0f32, 2.0, 3.0, 4.0];
         let gain = [f32::NAN, 1.0];
         let program = qk_gain("q_in", "q_out", "gain", 2, 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "qk_gain",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(vec![0u8; 16]),
-                Value::from(f32_bytes(&gain)),
-            ],
-        )
-        .expect("Fix: qk_gain must not panic on NaN gain");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), vec![0u8; 16], f32_bytes(&gain)],
+        );
+        let out = decode_f32(&outputs[0]);
         assert!(
             out[0].is_nan(),
             "qk_gain NaN gain head-0 lane-0 must be NaN"
@@ -129,16 +125,12 @@ mod tests {
         let q = [1.0f32, 2.0];
         let gain = [f32::INFINITY];
         let program = qk_gain("q_in", "q_out", "gain", 1, 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "qk_gain",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(vec![0u8; 8]),
-                Value::from(f32_bytes(&gain)),
-            ],
-        )
-        .expect("Fix: qk_gain must not panic on Inf gain");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), vec![0u8; 8], f32_bytes(&gain)],
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out[0], f32::INFINITY, "qk_gain Inf gain must produce Inf");
         assert_eq!(out[1], f32::INFINITY, "qk_gain Inf gain must produce Inf");
     }
@@ -148,16 +140,12 @@ mod tests {
         let q = [];
         let gain = [1.0f32];
         let program = qk_gain("q_in", "q_out", "gain", 1, 0, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "qk_gain",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(vec![]),
-                Value::from(f32_bytes(&gain)),
-            ],
-        )
-        .expect("Fix: qk_gain seq_len=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+            vec![f32_bytes(&q), vec![], f32_bytes(&gain)],
+        );
+        assert!(outputs[0].clone().is_empty());
     }
 
     #[test]
@@ -165,31 +153,19 @@ mod tests {
         let q = [5.0f32];
         let gain = [2.0f32];
         let program = qk_gain("q_in", "q_out", "gain", 1, 1, 1);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "qk_gain",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(vec![0u8; 4]),
-                Value::from(f32_bytes(&gain)),
-            ],
-        )
-        .expect("Fix: qk_gain single element must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), vec![0u8; 4], f32_bytes(&gain)],
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(out[0], 10.0, "qk_gain single element mismatch");
     }
 
     #[test]
     fn qk_gain_empty_tensor() {
         let program = qk_gain("q_in", "q_out", "gain", 1, 0, 2);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(vec![]),
-                Value::from(vec![]),
-                Value::from(f32_bytes(&[1.0])),
-            ],
-        )
-        .expect("Fix: qk_gain total=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+        let outputs = eval_bytes("qk_gain", &program, vec![vec![], vec![], f32_bytes(&[1.0])]);
+        assert!(outputs[0].clone().is_empty());
     }
 }

@@ -52,6 +52,7 @@ pub(crate) fn cpu_dominator_sets(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::security::flow_composition::diamond_dominance_tree;
     use vyre_reference::composition_witness::csr_backward_traverse_witness as cpu_ref;
 
@@ -138,12 +139,8 @@ mod tests {
             to_bytes(&[0b1000]),     // fin = {3}
             to_bytes(&[0b1000]),     // fout seed = {3}
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let gpu_out = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("dominance_predecessors", &p, inputs);
+        let gpu_out = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
 
         let dom = cpu_dominator_sets(4, 0, &[(0, 1), (0, 2), (1, 3), (2, 3)]);
         let true_dom_bitset: u32 = dom[3].iter().map(|&n| 1u32 << n).sum();

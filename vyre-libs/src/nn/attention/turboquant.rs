@@ -184,8 +184,8 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn turboquant_nan_in_q_propagates_to_output() {
@@ -194,17 +194,12 @@ mod tests {
         let kp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let vp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 2, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "turboquant",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(kp),
-                Value::from(vp),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: turboquant must not panic on NaN q");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert!(
             out.iter().all(|v| v.is_nan()),
             "turboquant NaN in q must produce NaN output, got {:?}",
@@ -218,17 +213,12 @@ mod tests {
         let kp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let vp = crate::fixture_bytes::u32_bytes(&[0u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 0, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "turboquant",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(kp),
-                Value::from(vp),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: turboquant seq_len=0 must not panic");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert_eq!(
             out,
             vec![0.0, 0.0],
@@ -245,17 +235,12 @@ mod tests {
         // v_packed: same
         let vp = crate::fixture_bytes::u32_bytes(&[9u32]);
         let program = turboquant_attention("q", "kp", "vp", "out", 1, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "turboquant",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(kp),
-                Value::from(vp),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: turboquant single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), kp, vp, vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         // score = dot([1,1], [1,1]) = 2
         // out[d] = score * v[0,d] = 2 * 1 = 2 for both lanes
         assert_eq!(out, vec![2.0, 2.0]);

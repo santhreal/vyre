@@ -45,7 +45,7 @@ pub(crate) fn bit_count_u32_program(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     fn eval(kind: BitCountKind, input: &[u32]) -> Vec<u32> {
         let program = bit_count_u32_program(
@@ -55,15 +55,15 @@ mod tests {
             input.len() as u32,
             kind,
         );
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "bit_count_u32",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(input)),
-                Value::from(vec![0_u8; input.len() * core::mem::size_of::<u32>()]),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(input),
+                vec![0_u8; input.len() * core::mem::size_of::<u32>()],
             ],
-        )
-        .expect("Fix: bit-count unary program must execute in the reference interpreter.");
-        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+        );
+        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0])
     }
 
     #[test]

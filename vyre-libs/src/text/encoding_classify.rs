@@ -146,6 +146,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::composition_witness::encoding_classify_histogram_witness as classify_from_histogram;
 
     #[test]
@@ -178,12 +179,12 @@ mod tests {
             .iter()
             .flat_map(|value| value.to_le_bytes())
             .collect::<Vec<_>>();
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "encoding_classify",
             &encoding_classify("histogram", "encoding", 4),
-            &[vyre_reference::value::Value::from(bytes)],
-        )
-        .expect("encoding classifier must evaluate");
-        let encoded = outputs[0].to_bytes();
+            vec![bytes],
+        );
+        let encoded = outputs[0].clone();
         assert_eq!(
             u32::from_le_bytes(encoded[..4].try_into().expect("one u32 output")),
             ENC_UTF16LE

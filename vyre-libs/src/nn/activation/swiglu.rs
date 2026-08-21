@@ -74,9 +74,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fixture_bytes::decode_f32;
-    use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_f32;
 
     fn swiglu_ref(g: f32, u: f32) -> f32 {
         let sigmoid_g = 1.0 / (1.0 + (-g).exp());
@@ -88,16 +86,7 @@ mod tests {
         let gate = [0.0f32; 4];
         let up = [1.0f32; 4];
         let program = swiglu("gate", "up", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&gate)),
-                Value::from(f32_bytes(&up)),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: swiglu all-zeros must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("swiglu", &program, &[&gate[..], &up[..]], 4);
         assert_eq!(out, vec![0.0; 4]);
     }
 
@@ -106,16 +95,7 @@ mod tests {
         let gate = [1.0f32, -1.0, 0.5, -0.5];
         let up = [2.0f32, 3.0, 4.0, 5.0];
         let program = swiglu("gate", "up", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&gate)),
-                Value::from(f32_bytes(&up)),
-                Value::from(vec![0u8; 16]),
-            ],
-        )
-        .expect("Fix: swiglu varied values must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("swiglu", &program, &[&gate[..], &up[..]], 4);
         for (i, (&v, (&g, &u))) in out.iter().zip(gate.iter().zip(up.iter())).enumerate() {
             let expected = swiglu_ref(g, u);
             assert!(
@@ -137,16 +117,7 @@ mod tests {
         let gate = [f32::NAN];
         let up = [1.0f32];
         let program = swiglu("gate", "up", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(f32_bytes(&gate)),
-                Value::from(f32_bytes(&up)),
-                Value::from(vec![0u8; 4]),
-            ],
-        )
-        .expect("Fix: swiglu must not panic on NaN gate");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("swiglu", &program, &[&gate[..], &up[..]], 1);
         assert!(out[0].is_nan(), "swiglu(NaN gate) must be NaN");
     }
 }

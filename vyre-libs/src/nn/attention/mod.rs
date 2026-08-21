@@ -67,7 +67,6 @@ pub(crate) fn eval_qkv_program(
     on_failure: &str,
 ) -> Vec<f32> {
     use crate::fixture_bytes::{decode_f32, f32_bytes};
-    use vyre_reference::value::Value;
 
     let out_bytes = program
         .buffers()
@@ -75,17 +74,17 @@ pub(crate) fn eval_qkv_program(
         .find(|b| b.name() == "out")
         .map(|b| b.count() as usize * core::mem::size_of::<f32>())
         .expect("Fix: output buffer present");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = eval_bytes(
+        "mod",
         program,
-        &[
-            Value::from(f32_bytes(q)),
-            Value::from(f32_bytes(k)),
-            Value::from(f32_bytes(v)),
-            Value::from(vec![0u8; out_bytes]),
+        vec![
+            f32_bytes(q),
+            f32_bytes(k),
+            f32_bytes(v),
+            vec![0u8; out_bytes],
         ],
-    )
-    .unwrap_or_else(|err| panic!("{on_failure} ({err:?})"));
-    decode_f32(&outputs[0].to_bytes())
+    );
+    decode_f32(&outputs[0])
 }
 #[cfg(test)]
 pub(crate) fn synth_qkv_fixtures(elements: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>) {

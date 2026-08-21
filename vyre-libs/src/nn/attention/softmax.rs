@@ -232,8 +232,9 @@ mod tests {
     use super::*;
     use crate::fixture_bytes::assert_tiled_matches_reference;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::eval_f32;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     /// A library op states what it needs and stops there. What the region
     /// marker prints in one dialect's text is that emitter's contract, not
@@ -367,12 +368,7 @@ mod tests {
         // This tests that the max-subtraction stabilizer works even at scale.
         let input = [88.0f32; 8];
         let program = softmax("input", "output", 8);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 32])],
-        )
-        .expect("Fix: softmax must not panic on all-large values");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("softmax", &program, &[&input[..]], 8);
         let expected = 1.0 / 8.0;
         for (i, &v) in out.iter().enumerate() {
             assert!(
@@ -394,12 +390,7 @@ mod tests {
     fn softmax_single_token() {
         let input = [2.5f32];
         let program = softmax("input", "output", 1);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 4])],
-        )
-        .expect("Fix: softmax single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("softmax", &program, &[&input[..]], 1);
         assert_eq!(out[0], 1.0, "softmax of a single element must be 1.0");
     }
 
@@ -407,12 +398,7 @@ mod tests {
     fn softmax_nan_in_input_propagates() {
         let input = [f32::NAN, 1.0, 2.0, 3.0];
         let program = softmax("input", "output", 4);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; 16])],
-        )
-        .expect("Fix: softmax must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        let out = eval_f32("softmax", &program, &[&input[..]], 4);
         // At least one output lane must be NaN because NaN poisons the sum.
         assert!(
             out.iter().any(|v| v.is_nan()),
@@ -428,12 +414,8 @@ mod tests {
         fn softmax_sums_to_one(input in prop::collection::vec(prop::num::f32::NORMAL, 1..16)) {
             let n = input.len() as u32;
             let program = softmax("input", "output", n);
-            let outputs = vyre_reference::reference_eval(
-                &program,
-                &[Value::from(f32_bytes(&input)), Value::from(vec![0u8; input.len() * 4])],
-            )
-            .expect("Fix: softmax must execute");
-            let out = decode_f32(&outputs[0].to_bytes());
+            let outputs = eval_bytes("softmax", &program, vec![f32_bytes(&input), vec![0u8; input.len() * 4]]);
+            let out = decode_f32(&outputs[0]);
             let sum = out.iter().sum::<f32>();
             prop_assert!(
                 (sum - 1.0).abs() <= 1.0e-4,

@@ -53,6 +53,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use proptest::prelude::*;
 
     #[test]
@@ -90,12 +91,8 @@ mod tests {
         let p = label_by_family("node_tags", "out", 4, 0b0010);
         let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
         let inputs = vec![to_bytes(&[0, 0, 0, 0]), to_bytes(&[0])];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let out_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("label_by_family", &p, inputs.clone());
+        let out_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(out_word, 0, "empty node_tags must produce empty nodeset");
     }
 
@@ -104,12 +101,8 @@ mod tests {
         let p = label_by_family("node_tags", "out", 4, 0);
         let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
         let inputs = vec![to_bytes(&[0xFF, 0xFF, 0xFF, 0xFF]), to_bytes(&[0])];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let out_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("label_by_family", &p, inputs.clone());
+        let out_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(out_word, 0, "family_mask = 0 must match nothing");
     }
 
@@ -118,12 +111,8 @@ mod tests {
         let p = label_by_family("node_tags", "out", 4, 0xFFFFFFFF);
         let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
         let inputs = vec![to_bytes(&[0x01, 0x02, 0x04, 0x08]), to_bytes(&[0])];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let out_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("label_by_family", &p, inputs.clone());
+        let out_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(
             out_word, 0b1111,
             "family_mask = 0xFFFFFFFF must match all non-zero tags"
@@ -135,12 +124,8 @@ mod tests {
         let p = label_by_family("node_tags", "out", 32, 0b0001);
         let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
         let inputs = vec![to_bytes(&[0xFFFFFFFF; 32]), to_bytes(&[0; 1])];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let out_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("label_by_family", &p, inputs.clone());
+        let out_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(
             out_word, 0xFFFFFFFF,
             "max node_count with all tags set must return full bitset"
@@ -174,11 +159,9 @@ mod tests {
                 to_bytes(&tags),
                 to_bytes(&vec![0u32; words as usize]),
             ];
-            let values: Vec<vyre_reference::value::Value> =
-                inputs.into_iter().map(vyre_reference::value::Value::from).collect();
-            let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
+            let outputs = eval_bytes("label_by_family", &p, inputs);
             let gpu_words: Vec<u32> =
-                vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
+                vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
             prop_assert_eq!(gpu_words, expected);
         }
     }

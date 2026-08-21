@@ -5,6 +5,7 @@
 //! rather than merely for being present.
 
 use super::*;
+use crate::fixture_bytes::eval_bytes;
 
 /// WHY: conformance accepts registered bytes as proof for every backend row, so the regex
 /// DFA fixture must equal an independent reference execution rather than merely be present.
@@ -25,11 +26,7 @@ fn registered_regex_dfa_expected_bytes_match_reference_execution() {
         .iter()
         .map(|bytes| vyre_reference::value::Value::Bytes(bytes.as_slice().into()))
         .collect::<Vec<_>>();
-    let actual = vyre_reference::reference_eval(&pipeline.program, &values)
-        .expect("Fix: canonical regex DFA fixture must execute in the reference interpreter")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect::<Vec<_>>();
+    let actual = eval_bytes("regex_dfa_tests", &pipeline.program, values);
 
     assert_eq!(
         actual,

@@ -167,26 +167,22 @@ fn softmax_top_k_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 mod tests {
     use super::super::topk_selection::{f32_from_bytes, u32_from_bytes};
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn softmax_top_k_basic() {
         // scores = [1.0, 2.0, 3.0]  -  softmax ≈ [0.090, 0.245, 0.665]
         let scores = vec![1.0f32, 2.0, 3.0];
         let program = softmax_top_k("scores", "indices", "weights", 3, 2);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "softmax_top_k",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 2 * 4]),
-                Value::from(vec![0u8; 2 * 4]),
-            ],
-        )
-        .unwrap();
+            vec![f32_bytes(&scores), vec![0u8; 2 * 4], vec![0u8; 2 * 4]],
+        );
 
-        let indices = u32_from_bytes(&outputs[0].to_bytes());
-        let weights = f32_from_bytes(&outputs[1].to_bytes());
+        let indices = u32_from_bytes(&outputs[0]);
+        let weights = f32_from_bytes(&outputs[1]);
 
         assert_eq!(indices[0], 2); // 3.0 is max
         assert_eq!(indices[1], 1); // 2.0 is second
@@ -208,17 +204,13 @@ mod tests {
     fn softmax_top_k_weights_sum_to_one() {
         let scores: Vec<f32> = (1..=8).map(|i| i as f32).collect();
         let program = softmax_top_k("scores", "indices", "weights", 8, 3);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "softmax_top_k",
             &program,
-            &[
-                Value::from(f32_bytes(&scores)),
-                Value::from(vec![0u8; 3 * 4]),
-                Value::from(vec![0u8; 3 * 4]),
-            ],
-        )
-        .unwrap();
+            vec![f32_bytes(&scores), vec![0u8; 3 * 4], vec![0u8; 3 * 4]],
+        );
 
-        let weights = f32_from_bytes(&outputs[1].to_bytes());
+        let weights = f32_from_bytes(&outputs[1]);
         let total: f32 = weights.iter().sum();
         // The top-3 weights don't sum to 1.0, but the internal sum is 1.0.
         // Just verify the weights are positive and ordered correctly.

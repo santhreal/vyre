@@ -80,10 +80,12 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
+    use crate::fixture_bytes::try_eval_bytes;
+    use crate::fixture_bytes::u32_bytes;
     use crate::fixture_bytes::{bytes_to_u32 as decode_u32_words, u32_bytes};
     use vyre_foundation::ir::{BufferAccess, Expr, Node};
     use vyre_foundation::visit::any_descendant;
-    use vyre_reference::value::Value;
 
     /// Run `scan_prefix_sum` through the reference interpreter and return the
     /// `output` buffer. `reference_eval` takes one Value per non-workgroup buffer
@@ -106,7 +108,7 @@ mod tests {
             } else {
                 vec![0u8; (buf.count() as usize).saturating_mul(4)]
             };
-            inputs.push(Value::from(bytes));
+            inputs.push(bytes);
             if buf.access() == BufferAccess::ReadWrite {
                 if buf.name() == "output" {
                     output_result_index = Some(writable_seen);
@@ -114,10 +116,9 @@ mod tests {
                 writable_seen += 1;
             }
         }
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: prefix sum must execute");
+        let outputs = eval_bytes("prefix_sum", &program, inputs);
         let idx = output_result_index.expect("output buffer must be present and writable");
-        decode_u32_words(&outputs[idx].to_bytes())
+        decode_u32_words(&outputs[idx])
     }
 
     #[test]
@@ -130,11 +131,8 @@ mod tests {
     #[test]
     fn prefix_sum_empty_n_zero_should_trap() {
         let program = scan_prefix_sum("input", "output", 0);
-        let error = vyre_reference::reference_eval(
-            &program,
-            &[Value::from(vec![0u8; 0]), Value::from(vec![0u8; 0])],
-        )
-        .expect_err("n=0 prefix_sum must trap instead of returning empty");
+        let error = try_eval_bytes(&program, vec![vec![0u8; 0], vec![0u8; 0]])
+            .expect_err("n=0 prefix_sum must trap instead of returning empty");
         let msg = error.to_string();
         assert!(
             msg.contains("trap") || msg.contains("Fix:"),

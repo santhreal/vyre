@@ -98,7 +98,6 @@ pub fn linear_4bit(
 
 #[cfg(test)]
 mod tests {
-    use vyre_reference::value::Value;
 
     use super::linear_4bit;
     use crate::fixture_bytes::{f32_bytes, u32_bytes};
@@ -122,19 +121,13 @@ mod tests {
         let out_size = 2usize * 4;
 
         let program = linear_4bit("x", "w", "b", "out", 8, 2).unwrap();
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "unpack_on_demand",
             &program,
-            &[
-                Value::from(x),
-                Value::from(w),
-                Value::from(b),
-                Value::from(vec![0u8; out_size]),
-            ],
-        )
-        .expect("Fix: reference eval must succeed");
+            vec![x, w, b, vec![0u8; out_size]],
+        );
 
-        let out_vals: Vec<f32> =
-            vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
+        let out_vals: Vec<f32> = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0]);
 
         // Column 0: sum_k x[k] * nibble[k] = 1*1 + 2*2 + 3*3 + 4*4 + 5*5 + 6*6 + 7*7 + 8*8 = 204
         assert!(

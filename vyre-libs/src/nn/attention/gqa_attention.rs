@@ -363,8 +363,8 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn gqa_attention_zero_sequence_length_rejected() {
@@ -383,17 +383,17 @@ mod tests {
         let k = [1.0f32, 0.0];
         let v = [10.0f32, 20.0];
         let prog = gqa_attention("q", "k", "v", "out", n_q, n_kv, s, d).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "gqa_attention",
             &prog,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; (n_q * s * d) as usize * 4]),
+            vec![
+                f32_bytes(&q),
+                f32_bytes(&k),
+                f32_bytes(&v),
+                vec![0u8; (n_q * s * d) as usize * 4],
             ],
-        )
-        .expect("Fix: gqa_attention single token must execute");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         // With one token, softmax is [1.0], so output equals V broadcast.
         for (i, &v) in out.iter().enumerate() {
             let expected = if i % 2 == 0 { 10.0 } else { 20.0 };
@@ -414,17 +414,17 @@ mod tests {
         let k = [1e20f32; 4];
         let v = [1.0f32; 4];
         let prog = gqa_attention("q", "k", "v", "out", n_q, n_kv, s, d).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "gqa_attention",
             &prog,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; (n_q * s * d) as usize * 4]),
+            vec![
+                f32_bytes(&q),
+                f32_bytes(&k),
+                f32_bytes(&v),
+                vec![0u8; (n_q * s * d) as usize * 4],
             ],
-        )
-        .expect("Fix: gqa_attention must not panic on large QK values");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.is_finite(),
@@ -443,17 +443,17 @@ mod tests {
         let k = [0.0f32, 0.0];
         let v = [1.0f32, 2.0];
         let prog = gqa_attention("q", "k", "v", "out", n_q, n_kv, s, d).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "gqa_attention",
             &prog,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; (n_q * s * d) as usize * 4]),
+            vec![
+                f32_bytes(&q),
+                f32_bytes(&k),
+                f32_bytes(&v),
+                vec![0u8; (n_q * s * d) as usize * 4],
             ],
-        )
-        .expect("Fix: gqa_attention must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         assert!(
             out.iter().any(|v| v.is_nan()),
             "gqa_attention must propagate NaN in Q/K/V instead of silently producing finite output {:?}",

@@ -236,6 +236,7 @@ pub fn classic_ac_program(
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn single_pattern_matches() {
@@ -339,28 +340,20 @@ mod tests {
         );
 
         let inputs = vec![
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
+            crate::fixture_bytes::u32_bytes(
                 &haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>(),
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
-                &ac.dfa.transitions,
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
-                &ac.dfa.output_offsets,
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
-                &ac.dfa.output_records,
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(&[0u32])),
-            vyre_reference::value::Value::from(vec![0u8; 1024 * 4]),
+            ),
+            crate::fixture_bytes::u32_bytes(&ac.dfa.transitions),
+            crate::fixture_bytes::u32_bytes(&ac.dfa.output_offsets),
+            crate::fixture_bytes::u32_bytes(&ac.dfa.output_records),
+            crate::fixture_bytes::u32_bytes(&[0u32]),
+            vec![0u8; 1024 * 4],
         ];
 
-        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
-            "Fix: classic_ac_program must execute; restore this invariant before continuing.",
-        );
+        let outputs = eval_bytes("mod", &program, inputs.clone());
 
-        let match_count = decode_u32_words(&outputs[0].to_bytes())[0];
-        let gpu_matches_raw = decode_u32_words(&outputs[1].to_bytes());
+        let match_count = decode_u32_words(&outputs[0])[0];
+        let gpu_matches_raw = decode_u32_words(&outputs[1]);
         let gpu_matches: Vec<u32> = gpu_matches_raw[..match_count as usize].to_vec();
 
         // Reference scan gives (pattern_id, end_pos); GPU gives just pattern_id
@@ -396,30 +389,22 @@ mod tests {
         );
 
         let inputs = vec![
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
+            crate::fixture_bytes::u32_bytes(
                 &haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>(),
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
-                &ac.dfa.transitions,
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
-                &ac.dfa.output_offsets,
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
-                &ac.dfa.output_records,
-            )),
-            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(&[0u32])),
-            vyre_reference::value::Value::from(vec![0u8; 2 * 4]),
+            ),
+            crate::fixture_bytes::u32_bytes(&ac.dfa.transitions),
+            crate::fixture_bytes::u32_bytes(&ac.dfa.output_offsets),
+            crate::fixture_bytes::u32_bytes(&ac.dfa.output_records),
+            crate::fixture_bytes::u32_bytes(&[0u32]),
+            vec![0u8; 2 * 4],
         ];
 
-        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
-            "Fix: classic_ac_program must execute; restore this invariant before continuing.",
-        );
+        let outputs = eval_bytes("mod", &program, inputs);
 
-        let match_count = decode_u32_words(&outputs[0].to_bytes())[0];
+        let match_count = decode_u32_words(&outputs[0])[0];
         // Total matches = 1 + 2 + 3 = 6, but only 2 slots.
         assert_eq!(match_count, 6, "match_count must reflect total discoveries");
-        let stored = decode_u32_words(&outputs[1].to_bytes());
+        let stored = decode_u32_words(&outputs[1]);
         assert_eq!(stored.len(), 2, "only 2 slots allocated");
     }
 

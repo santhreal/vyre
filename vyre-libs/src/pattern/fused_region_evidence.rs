@@ -236,6 +236,7 @@ pub fn fused_region_evidence_program(
 #[cfg(all(test, feature = "pattern-regex", feature = "pattern-dfa"))]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::pattern::haystack::pack_haystack_u32;
     use crate::pattern::regex_region_admission::tests::dfa_for;
     use vyre_primitives::wire::pack_u32_slice;
@@ -339,22 +340,21 @@ mod tests {
         );
         let bitmap_words = (region_count * words) as usize;
         let inputs = vec![
-            vyre_reference::value::Value::from(pack_haystack_u32(haystack)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.transitions)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.output_offsets)),
-            vyre_reference::value::Value::from(pack_u32_slice(&dfa.output_records)),
-            vyre_reference::value::Value::from(pack_u32_slice(&region_starts)),
-            vyre_reference::value::Value::from(pack_u32_slice(&[0])),
-            vyre_reference::value::Value::from(pack_u32_slice(&position_mask)),
-            vyre_reference::value::Value::from(pack_u32_slice(&admission_mask)),
-            vyre_reference::value::Value::from(pack_u32_slice(&[haystack.len() as u32])),
-            vyre_reference::value::Value::from(vec![0u8; bitmap_words * 4]),
-            vyre_reference::value::Value::from(pack_u32_slice(&[0])),
-            vyre_reference::value::Value::from(vec![0u8; max_matches as usize * 3 * 4]),
-            vyre_reference::value::Value::from(vec![0u8; bitmap_words * 4]),
+            pack_haystack_u32(haystack),
+            pack_u32_slice(&dfa.transitions),
+            pack_u32_slice(&dfa.output_offsets),
+            pack_u32_slice(&dfa.output_records),
+            pack_u32_slice(&region_starts),
+            pack_u32_slice(&[0]),
+            pack_u32_slice(&position_mask),
+            pack_u32_slice(&admission_mask),
+            pack_u32_slice(&[haystack.len() as u32]),
+            vec![0u8; bitmap_words * 4],
+            pack_u32_slice(&[0]),
+            vec![0u8; max_matches as usize * 3 * 4],
+            vec![0u8; bitmap_words * 4],
         ];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: fused region-evidence program must evaluate in the reference backend");
+        let outputs = eval_bytes("fused_region_evidence", &program, inputs);
 
         let words_of = |v: &vyre_reference::value::Value| -> Vec<u32> {
             v.to_bytes()

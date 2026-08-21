@@ -196,6 +196,7 @@ pub fn count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u3
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::composition_witness::{
         count_sketch_query_witness, count_sketch_table_len, count_sketch_update_witness,
         try_count_sketch_query_into_witness,
@@ -392,7 +393,6 @@ mod tests {
 
     #[test]
     fn ir_update_matches_cpu_and_skips_out_of_range_column() {
-        use vyre_reference::value::Value;
         // The GPU IR had NO col<w check while the CPU reference SKIPS out-of-range
         // columns (`if col >= w { continue }`). This is a GPU/CPU parity regression
         // LOCK: rows 1 and 2 carry columns col==w and col>w (out of range) that the
@@ -410,18 +410,15 @@ mod tests {
         count_sketch_update_cpu(&mut cpu_table, &hashes, &signs_i32, d, w);
 
         let program = count_sketch_update("table", "hashes", "signs", d, w);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "sketch",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
-                    0u32;
-                    (d * w) as usize
-                ])),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&hashes)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&signs_u32)),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&vec![0u32; (d * w) as usize]),
+                vyre_primitives::wire::pack_u32_slice(&hashes),
+                vyre_primitives::wire::pack_u32_slice(&signs_u32),
             ],
-        )
-        .expect("Fix: count_sketch_update must reference-evaluate");
+        );
         let table_idx = vyre_reference::output_index(&program, "table")
             .expect("Fix: count_sketch_update `table` must be a reference output");
         let gpu_table =
@@ -443,7 +440,6 @@ mod tests {
 
     #[test]
     fn out_of_range_column_records_zero_interpreter_oob_accesses() {
-        use vyre_reference::value::Value;
         // A col far past `w` makes addr = t*w + col overshoot the d*w table. The
         // col<w gate must skip the read-modify-write with control flow, so
         // reference_eval reports ZERO OOB accesses. The pre-fix ungated scatter to
@@ -457,12 +453,9 @@ mod tests {
         let (_outputs, report) = vyre_reference::reference_eval_oob_report(
             &program,
             &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
-                    0u32;
-                    (d * w) as usize
-                ])),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&hashes)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&signs)),
+                vyre_primitives::wire::pack_u32_slice(&vec![0u32; (d * w) as usize]),
+                vyre_primitives::wire::pack_u32_slice(&hashes),
+                vyre_primitives::wire::pack_u32_slice(&signs),
             ],
         )
         .expect("Fix: count_sketch_update must reference-evaluate");

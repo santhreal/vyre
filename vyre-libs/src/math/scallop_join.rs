@@ -229,6 +229,7 @@ mod tests {
 
     use super::*;
     use crate::fixpoint::persistent_fixpoint::count_grid_sync;
+    use crate::fixture_bytes::eval_bytes;
     use crate::math::semiring_gemm::Semiring;
     use vyre_reference::composition_witness::{
         scallop_join_fixpoint_witness as cpu_ref, scallop_join_fixpoint_witness_into,
@@ -553,8 +554,8 @@ mod tests {
             to_value(&join_rules),
         ];
 
-        let results = vyre_reference::reference_eval(&p, &inputs).expect("Fix: interpreter failed");
-        let actual_bytes = results[0].to_bytes();
+        let results = eval_bytes("scallop_join", &p, inputs);
+        let actual_bytes = results[0].clone();
         let actual_state: Vec<u32> = actual_bytes
             .chunks_exact(4)
             .map(|c| u32::from_le_bytes(c.try_into().unwrap()))

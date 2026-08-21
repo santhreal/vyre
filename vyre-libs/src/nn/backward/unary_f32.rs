@@ -28,6 +28,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
 
     #[test]
     fn generated_unary_backward_program_lengths_are_declared_exactly() {
@@ -62,14 +63,14 @@ pub(super) fn eval_unary_f32_backward(
 ) -> Vec<f32> {
     let n = input.len();
     assert_eq!(n, grad_out.len());
-    let outputs = vyre_reference::reference_eval(
+    let outputs = eval_bytes(
+        "unary_f32",
         program,
-        &[
-            vyre_reference::value::Value::from(vyre_primitives::wire::pack_f32_slice(input)),
-            vyre_reference::value::Value::from(vyre_primitives::wire::pack_f32_slice(grad_out)),
-            vyre_reference::value::Value::from(vec![0u8; n * core::mem::size_of::<f32>()]),
+        vec![
+            vyre_primitives::wire::pack_f32_slice(input),
+            vyre_primitives::wire::pack_f32_slice(grad_out),
+            vec![0u8; n * core::mem::size_of::<f32>()],
         ],
-    )
-    .expect(error_msg);
-    vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes())
+    );
+    vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0])
 }

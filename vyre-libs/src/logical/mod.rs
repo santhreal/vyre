@@ -68,19 +68,19 @@ define_synthesized_logical_binary!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_reference::value::Value;
+    use crate::fixture_bytes::eval_bytes;
 
     fn eval_u32_binary(program: &vyre_foundation::ir::Program, a: &[u32], b: &[u32]) -> Vec<u32> {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "mod",
             program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(a)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(b)),
-                Value::from(vec![0_u8; a.len() * core::mem::size_of::<u32>()]),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(a),
+                vyre_primitives::wire::pack_u32_slice(b),
+                vec![0_u8; a.len() * core::mem::size_of::<u32>()],
             ],
-        )
-        .expect("Fix: logical elementwise program must execute in the reference interpreter.");
-        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
+        );
+        vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0])
     }
 
     #[test]

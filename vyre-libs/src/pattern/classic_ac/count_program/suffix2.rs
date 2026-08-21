@@ -96,6 +96,7 @@ pub fn build_ac_bounded_count_suffix2_prefilter_program(dfa: &CompiledDfa) -> Pr
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::pattern::classic_ac::test_dispatch_and_decode::{
         ac_dfa_table_inputs, u32_input, with_reference_dispatch_lanes,
     };
@@ -139,15 +140,10 @@ mod tests {
         )));
         inputs.push(u32_input(&classic_ac_candidate_suffix2_mask_words(&ac.dfa)));
         inputs.push(u32_input(&[haystack.len() as u32]));
-        inputs.push(vyre_reference::value::Value::from(vec![
-            0_u8;
-            haystack.len() * 4
-        ]));
-        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
-            "Fix: suffix2 prefiltered AC bounded count program should evaluate in reference backend.",
-        );
+        inputs.push(vec![0_u8; haystack.len() * 4]);
+        let outputs = eval_bytes("suffix2", &program, inputs);
 
-        assert_eq!(decode_u32(&outputs[0].to_bytes()), vec![expected]);
+        assert_eq!(decode_u32(&outputs[0]), vec![expected]);
     }
 
     #[test]

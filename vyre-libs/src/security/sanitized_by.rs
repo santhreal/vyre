@@ -66,6 +66,7 @@ pub(crate) fn sanitized_by_fixture_expected() -> Vec<Vec<Vec<u8>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use crate::predicate::edge_kind;
 
     #[test]
@@ -133,12 +134,8 @@ mod tests {
             to_bytes(&[0b0010]),
             to_bytes(&[0b0001]),
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let fout_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("sanitized_by", &p, inputs.clone());
+        let fout_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(
             fout_word, 0b0011,
             "sanitized_by must mark the sanitizer when taint arrives at it; \
@@ -162,12 +159,8 @@ mod tests {
             to_bytes(&[0b0010]),  // san = {1}
             to_bytes(&[0b0010]),  // fout seed = {1}
         ];
-        let values: Vec<vyre_reference::value::Value> = inputs
-            .into_iter()
-            .map(vyre_reference::value::Value::from)
-            .collect();
-        let outputs = vyre_reference::reference_eval(&p, &values).unwrap();
-        let fout_word = u32::from_le_bytes(outputs[0].to_bytes()[0..4].try_into().unwrap());
+        let outputs = eval_bytes("sanitized_by", &p, inputs);
+        let fout_word = u32::from_le_bytes(outputs[0].clone()[0..4].try_into().unwrap());
         assert_eq!(
             fout_word, 0b0010,
             "sanitized_by must NOT propagate from sanitizer node 1; fout should remain {{1}}"

@@ -225,6 +225,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::composition_witness::{
         conv1d_witness as cpu_conv1d, conv1d_witness_into as cpu_conv1d_into,
     };
@@ -290,18 +291,17 @@ mod tests {
         input: &[u32],
         weights: &[u32],
     ) -> Vec<u32> {
-        use vyre_reference::value::Value;
-        let pack = |w: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(w));
-        let outputs = vyre_reference::reference_eval(
+        let pack = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+        let outputs = eval_bytes(
+            "conv1d",
             &conv1d_program(count, radius),
-            &[
+            vec![
                 pack(input),
                 pack(&vec![0u32; count as usize]),
                 pack(weights),
                 pack(&pack_params(count, stride, radius)),
             ],
-        )
-        .expect("conv1d program must execute in the reference interpreter");
+        );
         outputs[0]
             .to_bytes()
             .chunks_exact(4)

@@ -662,8 +662,8 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     #[test]
     fn parallel_attention_matches_scalar_reference() {
@@ -686,17 +686,17 @@ mod tests {
                 .find(|buffer| buffer.name() == "out")
                 .map(|buffer| buffer.count() as usize * core::mem::size_of::<f32>())
                 .expect("Fix: attention fixture must declare the output buffer.");
-            let outputs = vyre_reference::reference_eval(
+            let outputs = eval_bytes(
+                "scaled_dot_product",
                 &program,
-                &[
-                    Value::from(f32_bytes(&q)),
-                    Value::from(f32_bytes(&k)),
-                    Value::from(f32_bytes(&v)),
-                    Value::from(vec![0u8; out_bytes]),
+                vec![
+                    f32_bytes(&q),
+                    f32_bytes(&k),
+                    f32_bytes(&v),
+                    vec![0u8; out_bytes],
                 ],
-            )
-            .expect("Fix: attention program must execute in the reference interpreter.");
-            decode_f32(&outputs[0].to_bytes())
+            );
+            decode_f32(&outputs[0])
         };
         let actual = run(attention("q", "k", "v", "out", s, d));
         let expected = run(attention_reference("q", "k", "v", "out", s, d));

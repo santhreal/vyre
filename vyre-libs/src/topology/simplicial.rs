@@ -139,6 +139,7 @@ pub fn simplicial_triangle_message(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::composition_witness::simplicial_triangle_message_witness as simplicial_triangle_message_cpu;
 
     fn approx_eq(a: f64, b: f64) -> bool {
@@ -216,7 +217,6 @@ mod tests {
 
     #[test]
     fn ir_message_skips_malformed_triangle_matching_cpu_zero() {
-        use vyre_reference::value::Value;
         // The GPU IR had NO `e < n_edges` check while the CPU reference skips
         // triangles that reference an out-of-range edge (leaving the message 0,
         // locked by `cpu_malformed_triangle_inputs_leave_zero_messages`). This is a
@@ -233,19 +233,15 @@ mod tests {
         let triangle_edges = [0u32, 1, 2, 3, 0, 0];
 
         let program = simplicial_triangle_message("e", "te", "tm", n_edges, n_triangles, d);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "simplicial",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&edge_features)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&triangle_edges)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&vec![
-                    0u32;
-                    (n_triangles * d)
-                        as usize
-                ])),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&edge_features),
+                vyre_primitives::wire::pack_u32_slice(&triangle_edges),
+                vyre_primitives::wire::pack_u32_slice(&vec![0u32; (n_triangles * d) as usize]),
             ],
-        )
-        .expect("Fix: simplicial_triangle_message must reference-evaluate");
+        );
         let tm_idx = vyre_reference::output_index(&program, "tm")
             .expect("Fix: triangle_messages must be a reference output");
         let messages = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[tm_idx].to_bytes());

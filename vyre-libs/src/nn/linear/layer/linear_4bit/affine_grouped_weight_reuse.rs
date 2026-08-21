@@ -154,7 +154,6 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
 #[cfg(test)]
 mod tests {
     use vyre_foundation::ir::BufferAccess;
-    use vyre_reference::value::Value;
 
     use super::super::affine_grouped::linear_4bit_affine_grouped_batched;
     use super::super::grouped_layout::AFFINE_GROUPED_WEIGHT_TILE;
@@ -176,19 +175,19 @@ mod tests {
             linear_4bit_affine_grouped_batched("x", "w", "scale", "zp", "b", "out", 256, 8, 64, 8)
                 .expect("Fix: valid cross-batch grouped INT4 fixture must build");
 
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "affine_grouped_weight_reuse",
             &program,
-            &[
-                Value::from(f32_bytes(&activations)),
-                Value::from(u32_bytes(&packed)),
-                Value::from(f32_bytes(&scale)),
-                Value::from(u32_bytes(&zero_point)),
-                Value::from(f32_bytes(&bias)),
-                Value::from(vec![0_u8; 8 * 8 * core::mem::size_of::<f32>()]),
+            vec![
+                f32_bytes(&activations),
+                u32_bytes(&packed),
+                f32_bytes(&scale),
+                u32_bytes(&zero_point),
+                f32_bytes(&bias),
+                vec![0_u8; 8 * 8 * core::mem::size_of::<f32>()],
             ],
-        )
-        .expect("Fix: cross-batch grouped INT4 weight reuse must execute");
-        let values = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0].to_bytes());
+        );
+        let values = vyre_primitives::wire::decode_f32_le_bytes_all(&outputs[0]);
 
         assert_eq!(values.len(), 8 * 8);
         for batch in 0..8 {

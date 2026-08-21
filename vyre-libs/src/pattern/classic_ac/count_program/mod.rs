@@ -328,6 +328,7 @@ pub fn build_ac_bounded_count_prefilter_program(dfa: &CompiledDfa) -> Program {
 mod tests {
     use super::*;
     use crate::fixture_bytes::bytes_to_u32 as decode_u32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::pattern::classic_ac::classic_ac_compile;
     use crate::pattern::classic_ac::classic_ac_scan_counts;
     use crate::pattern::classic_ac::test_dispatch_and_decode::{
@@ -346,14 +347,10 @@ mod tests {
         );
         let mut inputs = ac_dfa_table_inputs(&ac.dfa, haystack);
         inputs.push(u32_input(&[haystack.len() as u32]));
-        inputs.push(vyre_reference::value::Value::from(vec![
-            0_u8;
-            haystack.len() * 4
-        ]));
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: AC bounded count program should evaluate in reference backend.");
+        inputs.push(vec![0_u8; haystack.len() * 4]);
+        let outputs = eval_bytes("mod", &program, inputs.clone());
 
-        assert_eq!(decode_u32(&outputs[0].to_bytes()), vec![expected]);
+        assert_eq!(decode_u32(&outputs[0]), vec![expected]);
     }
 
     #[test]
@@ -385,15 +382,10 @@ mod tests {
             &ac.dfa,
         )));
         inputs.push(u32_input(&[haystack.len() as u32]));
-        inputs.push(vyre_reference::value::Value::from(vec![
-            0_u8;
-            haystack.len() * 4
-        ]));
-        let outputs = vyre_reference::reference_eval(&program, &inputs).expect(
-            "Fix: prefiltered AC bounded count program should evaluate in reference backend.",
-        );
+        inputs.push(vec![0_u8; haystack.len() * 4]);
+        let outputs = eval_bytes("mod", &program, inputs);
 
-        assert_eq!(decode_u32(&outputs[0].to_bytes()), vec![expected]);
+        assert_eq!(decode_u32(&outputs[0]), vec![expected]);
     }
 
     #[test]

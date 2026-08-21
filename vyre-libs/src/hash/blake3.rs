@@ -225,6 +225,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::composition_witness::{
         blake3_g_witness as cpu_blake3_g, blake3_round_witness as cpu_blake3_round,
     };
@@ -275,13 +276,12 @@ mod tests {
     /// `[1,1,1]` with `state`(RO,0), `message`(RO,1), `out`(RW,2), so `out` is the
     /// only writable buffer and lands at `outputs[0]`.
     fn run_state16_ir(program: &Program, state: &[u32; 16], message: &[u32]) -> [u32; 16] {
-        use vyre_reference::value::Value;
-        let pack = |w: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(w));
-        let outputs = vyre_reference::reference_eval(
+        let pack = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+        let outputs = eval_bytes(
+            "blake3",
             program,
-            &[pack(state), pack(message), pack(&[0u32; 16])],
-        )
-        .expect("blake3 program must execute in the reference interpreter");
+            vec![pack(state), pack(message), pack(&[0u32; 16])],
+        );
         let words: Vec<u32> = outputs[0]
             .to_bytes()
             .chunks_exact(4)

@@ -284,6 +284,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::eval_bytes;
     use vyre_reference::composition_witness::{ntt_forward_witness, ntt_inverse_witness};
 
     fn ntt_forward_cpu(a: &mut [u32]) {
@@ -399,21 +400,19 @@ mod tests {
 
     #[test]
     fn ir_butterfly_stage_matches_exact_modular_reference() {
-        use vyre_reference::value::Value;
-
         let n = 4;
         let root = mod_pow(GENERATOR_G, (PRIME_P - 1) / n);
         let input = [PRIME_P - 1, 2, 3, 4];
         let twiddles = [1, root];
         let program = ntt_butterfly_stage("data", "tw", n, 1);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "ntt",
             &program,
-            &[
-                Value::from(vyre_primitives::wire::pack_u32_slice(&input)),
-                Value::from(vyre_primitives::wire::pack_u32_slice(&twiddles)),
+            vec![
+                vyre_primitives::wire::pack_u32_slice(&input),
+                vyre_primitives::wire::pack_u32_slice(&twiddles),
             ],
-        )
-        .expect("Fix: NTT butterfly stage must execute in the reference interpreter.");
+        );
         let got = outputs[0]
             .to_bytes()
             .chunks_exact(4)

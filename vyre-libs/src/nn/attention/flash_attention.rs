@@ -130,8 +130,8 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::eval_bytes;
     use crate::fixture_bytes::f32_bytes;
-    use vyre_reference::value::Value;
 
     /// Online-softmax flash-attention agrees with the offline 3-pass
     /// `attention_reference` on a non-trivial fixture.
@@ -176,17 +176,17 @@ mod tests {
             [128, 1, 1],
             "Fix: s=9 must bypass direct_attention_program and use the online flash kernel."
         );
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "flash_attention",
             &program,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; (s * d) as usize * 4]),
+            vec![
+                f32_bytes(&q),
+                f32_bytes(&k),
+                f32_bytes(&v),
+                vec![0u8; (s * d) as usize * 4],
             ],
-        )
-        .expect("Fix: flash_attention online kernel must execute in the reference interpreter.");
-        let actual = decode_f32(&outputs[0].to_bytes());
+        );
+        let actual = decode_f32(&outputs[0]);
         assert_eq!(actual.len(), s as usize);
         for (idx, value) in actual.iter().enumerate() {
             assert!(
@@ -220,17 +220,17 @@ mod tests {
         let k = vec![0.5_f32, 1.5, 2.5, 3.5];
         let v = vec![10.0_f32, 20.0, 30.0, 40.0];
         let prog = flash_attention("q", "k", "v", "out", 1, d).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "flash_attention",
             &prog,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; (d as usize) * 4]),
+            vec![
+                f32_bytes(&q),
+                f32_bytes(&k),
+                f32_bytes(&v),
+                vec![0u8; (d as usize) * 4],
             ],
-        )
-        .expect("Fix: eval");
-        let actual = decode_f32(&outputs[0].to_bytes());
+        );
+        let actual = decode_f32(&outputs[0]);
         for (a, e) in actual.iter().zip(v.iter()) {
             assert!(
                 (a - e).abs() <= 1.0e-4,
@@ -248,17 +248,17 @@ mod tests {
         let k = [1e20f32, 1e20, 1e20, 1e20];
         let v = [1.0f32, 2.0, 3.0, 4.0];
         let prog = flash_attention("q", "k", "v", "out", s, d).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "flash_attention",
             &prog,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; (s * d) as usize * 4]),
+            vec![
+                f32_bytes(&q),
+                f32_bytes(&k),
+                f32_bytes(&v),
+                vec![0u8; (s * d) as usize * 4],
             ],
-        )
-        .expect("Fix: flash_attention must not panic on very large QK values");
-        let out = decode_f32(&outputs[0].to_bytes());
+        );
+        let out = decode_f32(&outputs[0]);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.is_finite(),
@@ -275,17 +275,12 @@ mod tests {
         let k = [0.0f32, 0.0];
         let v = [1.0f32, 2.0];
         let prog = flash_attention("q", "k", "v", "out", s, d).expect("Fix: build");
-        let outputs = vyre_reference::reference_eval(
+        let outputs = eval_bytes(
+            "flash_attention",
             &prog,
-            &[
-                Value::from(f32_bytes(&q)),
-                Value::from(f32_bytes(&k)),
-                Value::from(f32_bytes(&v)),
-                Value::from(vec![0u8; 8]),
-            ],
-        )
-        .expect("Fix: flash_attention must not panic on NaN input");
-        let out = decode_f32(&outputs[0].to_bytes());
+            vec![f32_bytes(&q), f32_bytes(&k), f32_bytes(&v), vec![0u8; 8]],
+        );
+        let out = decode_f32(&outputs[0]);
         assert!(
             out.iter().any(|v| v.is_nan()),
             "flash_attention must propagate NaN in Q/K/V instead of silently producing finite output {:?}",
