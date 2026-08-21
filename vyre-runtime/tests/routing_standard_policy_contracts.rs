@@ -4,7 +4,7 @@
 //! a consumer does.
 
 use vyre_foundation::execution_plan::{
-    AccuracyPlan, AccuracyStrategy, AutotunePlan, AutotuneStrategy, DispatchStrategy,
+    AccuracyPlan, AutotunePlan, AutotuneStrategy, ConformanceStrength, DispatchStrategy,
     ExecutionPlan, FusionPlan, FusionStrategy, LayoutStrategy, MemoryPlan, ProvenancePlan,
     ProvenanceStrategy, ReadbackStrategy, StrategyPlan,
 };
@@ -35,7 +35,7 @@ fn plan(node_count: usize, static_bytes: u64) -> ExecutionPlan {
             emit_region_trace: false,
         },
         accuracy: AccuracyPlan {
-            shadow_reference_recommended: false,
+            exhaustive_conformance_required: false,
             reason: "test fixture",
         },
         autotune: AutotunePlan {
@@ -50,7 +50,7 @@ fn plan(node_count: usize, static_bytes: u64) -> ExecutionPlan {
         strategy: StrategyPlan {
             fusion: FusionStrategy::Isolated,
             dispatch: DispatchStrategy::PersistentRuntime,
-            accuracy: AccuracyStrategy::Direct,
+            conformance: ConformanceStrength::Standard,
             autotune: AutotuneStrategy::DeclaredShape,
             provenance: ProvenanceStrategy::Minimal,
             layout: LayoutStrategy::Empty,

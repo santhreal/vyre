@@ -65,8 +65,10 @@ input. Determinism is the contract.
 
 ## Cross-crate contracts
 
-- `vyre-driver::shadow::ReferenceExecutor` wires this interpreter into the
-  driver without creating a driver-to-reference dependency cycle.
+- No production crate can reach this interpreter. `vyre-foundation`,
+  `vyre-driver`, `vyre-runtime` and the concrete backends depend on it only
+  as a dev-dependency, and the conformance harness is the one package that
+  depends on it normally.
 - The crate consumes `vyre_foundation::Program` and the `vyre_foundation::ir`
   types.
 - `Expr::Call` is resolved through `OperationRegistry::global()` and the CPU

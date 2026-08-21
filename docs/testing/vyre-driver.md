@@ -108,7 +108,6 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `routing_registry_surface` | `vyre-driver/tests/routing_registry_surface.rs` | None | `./cargo_full test -p vyre-driver --test routing_registry_surface` |
 | `test` | `runtime_watchdog_proofs` | `vyre-driver/tests/runtime_watchdog_proofs.rs` | None | `./cargo_full test -p vyre-driver --test runtime_watchdog_proofs` |
 | `test` | `scan_graph_update_classifier_registry` | `vyre-driver/tests/scan_graph_update_classifier_registry.rs` | None | `./cargo_full test -p vyre-driver --test scan_graph_update_classifier_registry` |
-| `test` | `shadow_contracts` | `vyre-driver/tests/shadow_contracts.rs` | None | `./cargo_full test -p vyre-driver --test shadow_contracts` |
 | `test` | `shape_prediction_contracts` | `vyre-driver/tests/shape_prediction_contracts.rs` | None | `./cargo_full test -p vyre-driver --test shape_prediction_contracts` |
 | `test` | `speculation_verdict_contracts` | `vyre-driver/tests/speculation_verdict_contracts.rs` | None | `./cargo_full test -p vyre-driver --test speculation_verdict_contracts` |
 | `test` | `strategy_contracts` | `vyre-driver/tests/strategy_contracts.rs` | None | `./cargo_full test -p vyre-driver --test strategy_contracts` |

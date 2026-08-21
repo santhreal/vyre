@@ -137,8 +137,6 @@ pub(crate) mod routing;
 /// driver crate's scaling suite.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod self_optimizer_bench;
-/// Sampled CPU-reference shadow execution of live dispatches.
-pub mod shadow;
 /// N8 substrate: predicted-next-shape fingerprint API. Records
 /// recent dispatch fingerprints and predicts the next via repeat /
 /// short-cycle detection so the async dispatch path can prefetch

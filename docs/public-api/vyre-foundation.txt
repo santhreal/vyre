@@ -598,8 +598,8 @@ pub enum vyre_foundation::CooperativeWidth
 pub enum vyre_foundation::ElementPolicy
 pub enum vyre_foundation::GeometryLoweringError
 pub enum vyre_foundation::Uniformity
-pub enum vyre_foundation::execution_plan::AccuracyStrategy
 pub enum vyre_foundation::execution_plan::AutotuneStrategy
+pub enum vyre_foundation::execution_plan::ConformanceStrength
 pub enum vyre_foundation::execution_plan::DispatchStrategy
 pub enum vyre_foundation::execution_plan::FusionStrategy
 pub enum vyre_foundation::execution_plan::LayoutStrategy
@@ -3019,10 +3019,8 @@ pub vyre_foundation::dialect_lookup::Signature::inputs: &'static [vyre_foundatio
 pub vyre_foundation::dialect_lookup::Signature::outputs: &'static [vyre_foundation::dialect_lookup::TypedParam]
 pub vyre_foundation::dialect_lookup::TypedParam::name: &'static str
 pub vyre_foundation::dialect_lookup::TypedParam::ty: &'static str
+pub vyre_foundation::execution_plan::AccuracyPlan::exhaustive_conformance_required: bool
 pub vyre_foundation::execution_plan::AccuracyPlan::reason: &'static str
-pub vyre_foundation::execution_plan::AccuracyPlan::shadow_reference_recommended: bool
-pub vyre_foundation::execution_plan::AccuracyStrategy::Direct
-pub vyre_foundation::execution_plan::AccuracyStrategy::ShadowReference
 pub vyre_foundation::execution_plan::AutotunePlan::parallel_region_size: [u32; 3]
 pub vyre_foundation::execution_plan::AutotunePlan::reason: &'static str
 pub vyre_foundation::execution_plan::AutotunePlan::recommended: bool
@@ -3040,6 +3038,8 @@ pub vyre_foundation::execution_plan::BufferPlan::kind: vyre_foundation::ir::Memo
 pub vyre_foundation::execution_plan::BufferPlan::name: alloc::string::String
 pub vyre_foundation::execution_plan::BufferPlan::output_range: core::option::Option<core::ops::range::Range<usize>>
 pub vyre_foundation::execution_plan::BufferPlan::static_size_bytes: core::option::Option<u64>
+pub vyre_foundation::execution_plan::ConformanceStrength::Exhaustive
+pub vyre_foundation::execution_plan::ConformanceStrength::Standard
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::backend: &'static str
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::peak_static_bytes: u64
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::per_buffer_bytes: u64
@@ -3115,8 +3115,8 @@ pub vyre_foundation::execution_plan::ReadbackStrategy::Full::bytes: u64
 pub vyre_foundation::execution_plan::ReadbackStrategy::Trimmed
 pub vyre_foundation::execution_plan::ReadbackStrategy::Trimmed::avoided_bytes: u64
 pub vyre_foundation::execution_plan::ReadbackStrategy::Trimmed::visible_bytes: u64
-pub vyre_foundation::execution_plan::StrategyPlan::accuracy: vyre_foundation::execution_plan::AccuracyStrategy
 pub vyre_foundation::execution_plan::StrategyPlan::autotune: vyre_foundation::execution_plan::AutotuneStrategy
+pub vyre_foundation::execution_plan::StrategyPlan::conformance: vyre_foundation::execution_plan::ConformanceStrength
 pub vyre_foundation::execution_plan::StrategyPlan::dispatch: vyre_foundation::execution_plan::DispatchStrategy
 pub vyre_foundation::execution_plan::StrategyPlan::fusion: vyre_foundation::execution_plan::FusionStrategy
 pub vyre_foundation::execution_plan::StrategyPlan::layout: vyre_foundation::execution_plan::LayoutStrategy

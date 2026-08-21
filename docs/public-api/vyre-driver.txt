@@ -173,9 +173,6 @@ impl vyre_driver::pgo::PgoTable
 impl vyre_driver::reservation_policy::ReservationPolicy
 impl vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>
 impl vyre_driver::result_compaction::ResultCompactionScratch
-impl vyre_driver::shadow::ConformanceCase
-impl vyre_driver::shadow::ConformanceMatrix
-impl vyre_driver::shadow::ReferenceExecutor
 impl vyre_driver::shape_prediction::ShapeHistory
 impl vyre_driver::target_dialect::TargetDialect
 impl vyre_driver::transfer_accounting::TransferAccountingPolicy
@@ -368,7 +365,6 @@ pub enum vyre_driver::pipeline_fusion::CrossPipelineConflict
 pub enum vyre_driver::pipeline_fusion::CrossPipelineFusionDecision
 pub enum vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'a>
 pub enum vyre_driver::result_compaction::ResultCompactionError
-pub enum vyre_driver::shadow::ConformanceError
 pub enum vyre_driver::speculation_verdict::SpeculationVerdict
 pub enum vyre_driver::strategy::LoweredExpr
 pub enum vyre_driver::strategy::PrecisionLoweringPlan
@@ -1116,16 +1112,6 @@ pub fn vyre_driver::self_optimizer_bench::cpu_pipeline_on_oracle_stack(program: 
 pub fn vyre_driver::self_optimizer_bench::report_scaling(backend: &str, dispatcher: &dyn vyre_foundation::program_dispatch::ProgramDispatcher, gpu_pipeline: fn(vyre_foundation::ir_inner::model::program::definition::Program, &dyn vyre_foundation::program_dispatch::ProgramDispatcher) -> vyre_foundation::ir_inner::model::program::definition::Program)
 pub fn vyre_driver::self_optimizer_bench::timed_cpu_pipeline_on_oracle_stack(program: vyre_foundation::ir_inner::model::program::definition::Program) -> u128
 pub fn vyre_driver::self_optimizer_bench::wide_program(count: usize) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_driver::shadow::ConformanceCase::inputs(&self) -> &[alloc::vec::Vec<u8>]
-pub fn vyre_driver::shadow::ConformanceCase::label(&self) -> &str
-pub fn vyre_driver::shadow::ConformanceCase::new(label: impl core::convert::Into<alloc::string::String>, inputs: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> Self
-pub fn vyre_driver::shadow::ConformanceMatrix::cases(&self) -> &[vyre_driver::shadow::ConformanceCase]
-pub fn vyre_driver::shadow::ConformanceMatrix::is_empty(&self) -> bool
-pub fn vyre_driver::shadow::ConformanceMatrix::new(cases: alloc::vec::Vec<vyre_driver::shadow::ConformanceCase>) -> Self
-pub fn vyre_driver::shadow::ConformanceMatrix::push(&mut self, case: vyre_driver::shadow::ConformanceCase)
-pub fn vyre_driver::shadow::ReferenceExecutor::new<F>(run: F) -> Self where F: core::ops::function::Fn(&vyre_foundation::ir_inner::model::program::definition::Program, &[alloc::vec::Vec<u8>]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError> + core::marker::Send + core::marker::Sync + 'static
-pub fn vyre_driver::shadow::ReferenceExecutor::run(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
-pub fn vyre_driver::shadow::assert_exhaustive_byte_identity(pipeline: &dyn vyre_driver::CompiledPipeline, program: &vyre_foundation::ir_inner::model::program::definition::Program, reference: &vyre_driver::shadow::ReferenceExecutor, matrix: &vyre_driver::shadow::ConformanceMatrix, config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::shadow::ConformanceError>
 pub fn vyre_driver::shape_prediction::ShapeHistory::contains(&self, fingerprint: &vyre_driver::shape_prediction::ShapeFingerprint) -> bool
 pub fn vyre_driver::shape_prediction::ShapeHistory::default() -> Self
 pub fn vyre_driver::shape_prediction::ShapeHistory::is_empty(&self) -> bool
@@ -1268,7 +1254,6 @@ pub mod vyre_driver::resident_transfer_fixtures
 pub mod vyre_driver::resident_transfer_fusion
 pub mod vyre_driver::result_compaction
 pub mod vyre_driver::self_optimizer_bench
-pub mod vyre_driver::shadow
 pub mod vyre_driver::shape_prediction
 pub mod vyre_driver::speculation_verdict
 pub mod vyre_driver::strategy
@@ -1440,10 +1425,6 @@ pub struct vyre_driver::result_compaction::ResultCompactionPlan
 pub struct vyre_driver::result_compaction::ResultCompactionScratch
 pub struct vyre_driver::result_compaction::ResultSlot
 pub struct vyre_driver::self_optimizer_bench::ScalingFixture
-pub struct vyre_driver::shadow::ConformanceCase
-pub struct vyre_driver::shadow::ConformanceMatrix
-pub struct vyre_driver::shadow::DivergenceEvent
-pub struct vyre_driver::shadow::ReferenceExecutor
 pub struct vyre_driver::shape_prediction::ShapeHistory
 pub struct vyre_driver::speculation_verdict::SpeculationObservation
 pub struct vyre_driver::target_dialect::EmittedDialectModule
@@ -2512,21 +2493,6 @@ pub vyre_driver::result_compaction::ResultSlot::meaningful_bytes: u64
 pub vyre_driver::result_compaction::ResultSlot::slot: u32
 pub vyre_driver::self_optimizer_bench::ScalingFixture::build: fn(usize) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub vyre_driver::self_optimizer_bench::ScalingFixture::label: &'static str
-pub vyre_driver::shadow::ConformanceError::BackendRejected
-pub vyre_driver::shadow::ConformanceError::BackendRejected::case_label: alloc::string::String
-pub vyre_driver::shadow::ConformanceError::BackendRejected::source: vyre_driver::BackendError
-pub vyre_driver::shadow::ConformanceError::Diverged
-pub vyre_driver::shadow::ConformanceError::Diverged::event: alloc::boxed::Box<vyre_driver::shadow::DivergenceEvent>
-pub vyre_driver::shadow::ConformanceError::Diverged::event_case_label: alloc::string::String
-pub vyre_driver::shadow::ConformanceError::EmptyMatrix
-pub vyre_driver::shadow::ConformanceError::ReferenceRejected
-pub vyre_driver::shadow::ConformanceError::ReferenceRejected::case_label: alloc::string::String
-pub vyre_driver::shadow::ConformanceError::ReferenceRejected::source: vyre_driver::BackendError
-pub vyre_driver::shadow::DivergenceEvent::backend_output: alloc::vec::Vec<alloc::vec::Vec<u8>>
-pub vyre_driver::shadow::DivergenceEvent::case_label: alloc::string::String
-pub vyre_driver::shadow::DivergenceEvent::inputs: alloc::vec::Vec<alloc::vec::Vec<u8>>
-pub vyre_driver::shadow::DivergenceEvent::program_fingerprint: [u8; 32]
-pub vyre_driver::shadow::DivergenceEvent::reference_output: alloc::vec::Vec<alloc::vec::Vec<u8>>
 pub vyre_driver::speculation_verdict::SpeculationObservation::baseline_dispatches: u32
 pub vyre_driver::speculation_verdict::SpeculationObservation::baseline_mean_ns: u64
 pub vyre_driver::speculation_verdict::SpeculationObservation::side_compile_cost_ns: u64

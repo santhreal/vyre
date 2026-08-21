@@ -1,9 +1,9 @@
 //! Execution-planning contract tests.
 
 use vyre_foundation::execution_plan::{
-    plan, plan_with_options, AccuracyStrategy, AutotuneStrategy, DispatchStrategy, FusionStrategy,
-    InnovationTrack, LayoutStrategy, PlanError, PolicyRoute, ProvenanceStrategy, ReadbackStrategy,
-    SchedulingPolicy,
+    plan, plan_with_options, AutotuneStrategy, ConformanceStrength, DispatchStrategy,
+    FusionStrategy, InnovationTrack, LayoutStrategy, PlanError, PolicyRoute, ProvenanceStrategy,
+    ReadbackStrategy, SchedulingPolicy,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
@@ -69,7 +69,7 @@ fn strategy_encodes_all_seven_tracks_for_small_trimmed_program() {
     let plan = plan(&ranged_output_program()).expect("canonical ranged output program must plan");
     assert_eq!(plan.strategy.fusion, FusionStrategy::Candidate);
     assert_eq!(plan.strategy.dispatch, DispatchStrategy::PersistentRuntime);
-    assert_eq!(plan.strategy.accuracy, AccuracyStrategy::Direct);
+    assert_eq!(plan.strategy.conformance, ConformanceStrength::Standard);
     assert_eq!(plan.strategy.autotune, AutotuneStrategy::DeclaredShape);
     assert_eq!(plan.strategy.provenance, ProvenanceStrategy::GpuTrace);
     assert_eq!(plan.strategy.layout, LayoutStrategy::Static);
