@@ -41,11 +41,7 @@ impl NormalizeAtomicsPass {
         if !stats.has_node_if() || stats.atomic_op_count == 0 {
             return PassAnalysis::SKIP;
         }
-        if program.entry().iter().any(node_has_atomic_condition) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(program.entry().iter().any(node_has_atomic_condition))
     }
 
     /// Hoist atomics out of branch conditions while preserving statement order.

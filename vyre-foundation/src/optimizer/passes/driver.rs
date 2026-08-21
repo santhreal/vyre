@@ -45,15 +45,12 @@ pub(crate) fn analyze_candidates(
     if !carries_every_kind(program, required) {
         return PassAnalysis::SKIP;
     }
-    if program
-        .entry()
-        .iter()
-        .any(|node| any_descendant(node, candidate))
-    {
-        PassAnalysis::RUN
-    } else {
-        PassAnalysis::SKIP
-    }
+    PassAnalysis::run_if(
+        program
+            .entry()
+            .iter()
+            .any(|node| any_descendant(node, candidate)),
+    )
 }
 
 /// `RUN` when `program` carries every node kind in `required` and `candidate`
@@ -71,11 +68,7 @@ pub(crate) fn analyze_candidate_bodies(
     if !carries_every_kind(program, required) {
         return PassAnalysis::SKIP;
     }
-    if any_body(program.entry(), candidate) {
-        PassAnalysis::RUN
-    } else {
-        PassAnalysis::SKIP
-    }
+    PassAnalysis::run_if(any_body(program.entry(), candidate))
 }
 
 /// True iff `program`'s cached kind bitset carries every mask in `required`.

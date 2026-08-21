@@ -20,6 +20,17 @@ impl PassAnalysis {
 
     /// Analysis result that asks the scheduler to skip the pass.
     pub const SKIP: Self = Self { should_run: false };
+
+    /// Run when the predicate holds, skip when it does not.
+    ///
+    /// A pass decides by evaluating one condition, so the answer is that
+    /// condition rather than a branch around two constants.
+    #[must_use]
+    pub const fn run_if(condition: bool) -> Self {
+        Self {
+            should_run: condition,
+        }
+    }
 }
 
 /// Result of one pass transformation.

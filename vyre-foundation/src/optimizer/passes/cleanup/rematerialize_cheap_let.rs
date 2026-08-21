@@ -80,11 +80,7 @@ impl RematerializeCheapLetPass {
         if !program.stats().has_node_let() {
             return PassAnalysis::SKIP;
         }
-        if scan_for_candidate(program.entry()) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(scan_for_candidate(program.entry()))
     }
 
     /// Walk the entry tree and rematerialize cheap single-binding Lets.

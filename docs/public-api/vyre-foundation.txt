@@ -440,6 +440,7 @@ pub const fn vyre_foundation::operation::TargetId::new(id: &'static str) -> core
 pub const fn vyre_foundation::operation::TolerancePolicy::f32_ulp(maximum: u32) -> Self
 pub const fn vyre_foundation::optimizer::AdapterCaps::conservative() -> Self
 pub const fn vyre_foundation::optimizer::AdapterCaps::high_end() -> Self
+pub const fn vyre_foundation::optimizer::PassAnalysis::run_if(condition: bool) -> Self
 pub const fn vyre_foundation::optimizer::PassMetadata::new(name: &'static str, requires: &'static [&'static str], invalidates: &'static [&'static str]) -> Self
 pub const fn vyre_foundation::optimizer::RewriteBatchPlan::empty(candidate_count: usize, threshold: usize) -> Self
 pub const fn vyre_foundation::optimizer::RewriteCandidate::new(row: u32, col: u32) -> Self

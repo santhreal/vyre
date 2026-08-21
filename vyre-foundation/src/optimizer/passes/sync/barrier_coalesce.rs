@@ -66,11 +66,10 @@ impl BarrierCoalescePass {
         // the four body-bearing variants and ended in `_ => false`, so a pair
         // inside a fifth variant read as absent, the gate returned SKIP, and
         // the pass never ran on a program it could have coalesced.
-        if any_body(program.entry(), &mut sequence_has_consecutive_barriers) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(any_body(
+            program.entry(),
+            &mut sequence_has_consecutive_barriers,
+        ))
     }
 
     /// Walk the entry tree; for every body containing consecutive

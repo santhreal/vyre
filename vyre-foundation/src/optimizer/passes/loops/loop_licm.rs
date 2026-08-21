@@ -96,15 +96,12 @@ impl LoopLicm {
             return PassAnalysis::SKIP;
         }
         let read_only = read_only_buffers(program);
-        if program
-            .entry()
-            .iter()
-            .any(|node| has_hoistable_let_in_any_loop(node, &read_only))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(
+            program
+                .entry()
+                .iter()
+                .any(|node| has_hoistable_let_in_any_loop(node, &read_only)),
+        )
     }
 
     /// Walk the program; rewrite every container body that owns a

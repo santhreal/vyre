@@ -88,15 +88,12 @@ impl LoopSoftwarePipeline {
             return PassAnalysis::SKIP;
         }
         let facts = ProgramFacts::build_cached(program);
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_has_pipelinable_loop(n, &facts))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(
+            program
+                .entry()
+                .iter()
+                .any(|n| node_has_pipelinable_loop(n, &facts)),
+        )
     }
 
     /// Walk the entry tree; rewrite every pipelinable Loop into

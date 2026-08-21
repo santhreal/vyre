@@ -55,13 +55,10 @@ impl RegionFusionHintPass {
         {
             return PassAnalysis::SKIP;
         }
-        if entry_has_top_level_candidate_pair(program.entry())
-            || program.entry().iter().any(has_candidate_pair)
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(
+            entry_has_top_level_candidate_pair(program.entry())
+                || program.entry().iter().any(has_candidate_pair),
+        )
     }
 
     /// Walk the entry tree and fuse every matching Region pair.

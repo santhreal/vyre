@@ -29,12 +29,9 @@ use crate::ir::Program;
 use crate::optimizer::PassAnalysis;
 
 pub(crate) fn expression_bearing_analysis(program: &Program) -> PassAnalysis {
-    if program
-        .stats()
-        .has_any_node_kind(crate::ir::stats::NODE_KIND_EXPRESSION_BEARING_MASK)
-    {
-        PassAnalysis::RUN
-    } else {
-        PassAnalysis::SKIP
-    }
+    PassAnalysis::run_if(
+        program
+            .stats()
+            .has_any_node_kind(crate::ir::stats::NODE_KIND_EXPRESSION_BEARING_MASK),
+    )
 }

@@ -28,14 +28,11 @@ impl RegionInlinePass {
         // visited. If no Region was observed (rare, since Program::wrapped
         // emits a top-level Region), the recursive any_descendant walk
         // can be skipped entirely.
-        if program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_REGION)
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(
+            program
+                .stats()
+                .has_any_node_kind(crate::ir::stats::NODE_KIND_REGION),
+        )
     }
 
     /// Flatten small regions into the surrounding body.

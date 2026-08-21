@@ -34,11 +34,10 @@ impl AtomicMinimizePass {
         // hand-written scan this replaces ended in a catch-all node arm, so an
         // identity atomic reachable only through `Trap::address` or an async
         // copy offset made this report SKIP and the pass never ran.
-        if any_expr_in(program.entry(), &mut is_identity_relaxed_atomic) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(any_expr_in(
+            program.entry(),
+            &mut is_identity_relaxed_atomic,
+        ))
     }
 
     /// Walk the program and collapse identity atomics.

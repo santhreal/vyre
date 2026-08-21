@@ -72,11 +72,7 @@ impl LoopRedundantBoundCheckElidePass {
         if !stats.has_any_node_kind(NODE_KIND_LOOP) || !stats.has_any_node_kind(NODE_KIND_IF) {
             return PassAnalysis::SKIP;
         }
-        if program.entry().iter().any(node_has_redundant_guard) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(program.entry().iter().any(node_has_redundant_guard))
     }
 
     /// Walk the entry tree and elide redundant bound checks.
