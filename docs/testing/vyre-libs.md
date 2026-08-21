@@ -98,6 +98,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `bellman_oob_edge_parity` | `vyre-libs/tests/bellman_oob_edge_parity.rs` | None | `./cargo_full test -p vyre-libs --test bellman_oob_edge_parity` |
 | `test` | `bellman_shortest_path_via_reference_parity` | `vyre-libs/tests/bellman_shortest_path_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test bellman_shortest_path_via_reference_parity` |
 | `test` | `bellman_shortest_path_via_reference_parity` | `vyre-libs/tests/bellman_shortest_path_via_reference_parity.rs` | `solvers` | `./cargo_full test -p vyre-libs --test bellman_shortest_path_via_reference_parity` |
+| `test` | `betti_persistence_parity` | `vyre-libs/tests/betti_persistence_parity.rs` | None | `./cargo_full test -p vyre-libs --test betti_persistence_parity` |
 | `test` | `bigint_add_carry_ir_parity_proptest` | `vyre-libs/tests/bigint_add_carry_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test bigint_add_carry_ir_parity_proptest` |
 | `test` | `bitset_dense_matvec_pipeline_generated` | `vyre-libs/tests/bitset_dense_matvec_pipeline_generated.rs` | None | `./cargo_full test -p vyre-libs --test bitset_dense_matvec_pipeline_generated` |
 | `test` | `bitset_dense_matvec_pipeline_generated` | `vyre-libs/tests/bitset_dense_matvec_pipeline_generated.rs` | `encoding` | `./cargo_full test -p vyre-libs --test bitset_dense_matvec_pipeline_generated` |
@@ -185,6 +186,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `fnv1a_dyn_parity` | `vyre-libs/tests/fnv1a_dyn_parity.rs` | None | `./cargo_full test -p vyre-libs --test fnv1a_dyn_parity` |
 | `test` | `four_russians_dense_matvec_generated` | `vyre-libs/tests/four_russians_dense_matvec_generated.rs` | None | `./cargo_full test -p vyre-libs --test four_russians_dense_matvec_generated` |
 | `test` | `four_russians_dense_matvec_generated` | `vyre-libs/tests/four_russians_dense_matvec_generated.rs` | `bitset` | `./cargo_full test -p vyre-libs --test four_russians_dense_matvec_generated` |
+| `test` | `fractional_kernel_parity` | `vyre-libs/tests/fractional_kernel_parity.rs` | None | `./cargo_full test -p vyre-libs --test fractional_kernel_parity` |
 | `test` | `frontend_dialect_contracts` | `vyre-libs/tests/frontend_dialect_contracts.rs` | None | `./cargo_full test -p vyre-libs --test frontend_dialect_contracts` |
 | `test` | `frontier_absorb_parity` | `vyre-libs/tests/frontier_absorb_parity.rs` | None | `./cargo_full test -p vyre-libs --test frontier_absorb_parity` |
 | `test` | `frontier_load_balancing_policies` | `vyre-libs/tests/frontier_load_balancing_policies.rs` | None | `./cargo_full test -p vyre-libs --test frontier_load_balancing_policies` |
@@ -602,6 +604,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `url_network_security_policies` | `vyre-libs/tests/url_network_security_policies.rs` | None | `./cargo_full test -p vyre-libs --test url_network_security_policies` |
 | `test` | `utf8_shape_counts_ir_parity_proptest` | `vyre-libs/tests/utf8_shape_counts_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test utf8_shape_counts_ir_parity_proptest` |
 | `test` | `vast_tree_walk_ir_parity_proptest` | `vyre-libs/tests/vast_tree_walk_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test vast_tree_walk_ir_parity_proptest` |
+| `test` | `vector_neighbor_graph` | `vyre-libs/tests/vector_neighbor_graph.rs` | None | `./cargo_full test -p vyre-libs --test vector_neighbor_graph` |
 | `test` | `vietoris_rips_via_reference_parity` | `vyre-libs/tests/vietoris_rips_via_reference_parity.rs` | None | `./cargo_full test -p vyre-libs --test vietoris_rips_via_reference_parity` |
 | `test` | `vietoris_rips_via_reference_parity` | `vyre-libs/tests/vietoris_rips_via_reference_parity.rs` | `solvers` | `./cargo_full test -p vyre-libs --test vietoris_rips_via_reference_parity` |
 | `test` | `visual_compositions` | `vyre-libs/tests/visual_compositions.rs` | None | `./cargo_full test -p vyre-libs --test visual_compositions` |
