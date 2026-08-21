@@ -10,6 +10,7 @@ const CAP_INDIRECT_DISPATCH: u32 = 1 << 5;
 const CAP_TENSOR_OPS: u32 = 1 << 6;
 const CAP_TRAP: u32 = 1 << 7;
 const CAP_DISTRIBUTED_COLLECTIVES: u32 = 1 << 8;
+const CAP_GRID_SYNC: u32 = 1 << 9;
 
 // Bit positions for `ProgramStats::node_kinds_present`. Mirrors the
 // variant declaration order in `ir_inner::model::generated::Node` and
@@ -426,8 +427,14 @@ fn walk_node(
             *kinds |= NODE_KIND_RETURN;
             ir.control_flow();
         }
-        Node::Barrier { .. } => {
+        Node::Barrier { ordering } => {
             *kinds |= NODE_KIND_BARRIER;
+            // Grid scope is the one barrier ordering that is not a scheduling
+            // detail: it rendezvous across workgroups, so a target without a
+            // cooperative launch cannot emit the program at any geometry.
+            if matches!(ordering, crate::memory_model::MemoryOrdering::GridSync) {
+                *bits |= CAP_GRID_SYNC;
+            }
             ir.control_flow();
         }
         Node::Resume { .. } => {

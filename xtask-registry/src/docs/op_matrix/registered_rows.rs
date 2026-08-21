@@ -4,7 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use structure_gate::source_scan::{carries_rust_source, source_directory_named};
+use vyre_foundation::ir::Program;
 use vyre_foundation::operation::OperationTier as OpTier;
+use vyre_foundation::program_caps;
 
 use super::record::OpRecord;
 
@@ -20,11 +22,13 @@ use super::record::OpRecord;
 pub(super) fn registered_records(root: &Path, problems: &mut Vec<String>) -> Vec<OpRecord> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
     let mut tiers = BTreeMap::<String, OpTier>::new();
+    let mut wgpu_cells = BTreeMap::<String, &'static str>::new();
 
     let registry = vyre_registry_link::operation::live_operation_registry();
     for entry in registry.iter() {
         push_registered(&mut ids, entry.id, "vyre-foundation::operation", problems);
         tiers.insert(entry.id.to_string(), entry.tier);
+        wgpu_cells.insert(entry.id.to_string(), wgpu_cell(entry.build));
     }
 
     // One directory search per namespace and domain, not per operation. The
@@ -34,7 +38,8 @@ pub(super) fn registered_records(root: &Path, problems: &mut Vec<String>) -> Vec
     ids.into_iter()
         .filter_map(|(id, sources)| {
             let tier = tiers.get(&id).copied().unwrap_or(OpTier::Unknown);
-            match record_for_registered_id(root, &mut owners, &id, tier, sources) {
+            let wgpu = wgpu_cells.get(&id).copied().unwrap_or("experimental");
+            match record_for_registered_id(root, &mut owners, &id, tier, sources, wgpu) {
                 Ok(record) => Some(record),
                 Err(problem) => {
                     problems.push(problem);
@@ -43,6 +48,27 @@ pub(super) fn registered_records(root: &Path, problems: &mut Vec<String>) -> Vec
             }
         })
         .collect()
+}
+
+/// What the matrix may claim about wgpu for one operation.
+///
+/// Derived from the operation, never listed beside it. WGSL offers only
+/// workgroup-scoped barriers and no cooperative launch, so the emitter refuses
+/// a program that rendezvous at grid scope rather than quietly narrowing the
+/// scope. A row that claimed `supported` for such an operation asserted
+/// coverage that the parity suite disproves on the same tree.
+///
+/// An operation registering no builder cannot be observed here at all, so it
+/// reads as unproven instead of being assumed to work.
+fn wgpu_cell(build: Option<fn() -> Program>) -> &'static str {
+    let Some(build) = build else {
+        return "experimental";
+    };
+    if program_caps::scan(&build()).grid_sync {
+        "not_applicable"
+    } else {
+        "supported"
+    }
 }
 
 /// Every op id the live registry declares.
@@ -78,6 +104,7 @@ fn record_for_registered_id(
     id: &str,
     tier: OpTier,
     sources: BTreeSet<String>,
+    wgpu: &'static str,
 ) -> Result<OpRecord, String> {
     if tier == OpTier::Unknown {
         return Err(format!(
@@ -100,7 +127,7 @@ fn record_for_registered_id(
         reference: "supported",
         foundation_ir: "supported",
         cuda: "supported",
-        wgpu: "supported",
+        wgpu,
         spirv: "experimental",
         release_blocking_notes: release_notes(id, tier)?,
         tests: test_paths(id, tier)?,

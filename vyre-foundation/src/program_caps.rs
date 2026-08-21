@@ -42,6 +42,10 @@ pub struct RequiredCapabilities {
     pub tensor_ops: bool,
     /// The program uses a `Node::Trap`  -  backend needs trap propagation.
     pub trap: bool,
+    /// The program contains a grid-scope barrier. The backend must offer a
+    /// cooperative launch; a workgroup-scoped barrier cannot stand in for one,
+    /// so a target without it cannot emit the program at any geometry.
+    pub grid_sync: bool,
     /// The program uses collective communication nodes that require transport.
     pub distributed_collectives: bool,
     /// Count of collective nodes that can lower to local single-rank IR.
@@ -209,6 +213,7 @@ pub fn scan(program: &Program) -> RequiredCapabilities {
         indirect_dispatch: stats.indirect_dispatch(),
         tensor_ops: stats.tensor_ops(),
         trap: stats.trap(),
+        grid_sync: stats.grid_sync(),
         distributed_collectives: collective_plan.requires_transport(),
         local_single_rank_collectives: collective_plan.local_single_rank_collectives(),
         transport_collectives: collective_plan.transport_collectives(),
