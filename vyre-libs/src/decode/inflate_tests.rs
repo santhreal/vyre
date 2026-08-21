@@ -7,10 +7,10 @@ use super::inflate::{
     STORED_HEADER_FIX,
 };
 use crate::buffer_names::fixed_name;
+use crate::fixture_bytes::eval_bytes;
 use crate::pattern::dfa_compile;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::composition_witness::{inflate_stored_witness, InflateStoredWitness};
-use vyre_reference::value::Value;
 
 fn inflate_error(input: &[u32]) -> &'static str {
     match input.first().copied().unwrap_or(0) >> 1 & 0x3 {
@@ -116,29 +116,36 @@ fn inflate_stored_rejects_truncated_payload() {
     assert!(reference_inflate_stored(&input).is_none());
 }
 
-fn run(input: &[u8]) -> (Vec<u32>, u32) {
+/// Widen packed bytes to one `u32` per byte, the shape these programs read.
+fn widen(bytes: &[u8]) -> Vec<u32> {
+    bytes.iter().map(|&byte| u32::from(byte)).collect()
+}
+
+/// The little-endian `u32` an inflated-length buffer carries.
+fn read_len(bytes: &[u8]) -> u32 {
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+fn inflate_words(input: &[u8]) -> (Vec<u32>, u32) {
     let program = inflate_stored_block("input", "output", input.len() as u32);
-    let inputs = vec![
-        Value::from(pack_words(
-            &input
-                .iter()
-                .map(|&byte| u32::from(byte))
-                .collect::<Vec<_>>(),
-        )),
-        Value::from(vec![0u8; input.len() * 4]),
-        Value::from(vec![0u8; 4]),
-    ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
-        .expect("Fix: inflate must run; restore this invariant before continuing.");
-    let decoded = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes());
-    let len_bytes = outputs[1].to_bytes();
-    let decoded_len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
+    let outputs = eval_bytes(
+        "inflate_stored_block",
+        &program,
+        vec![
+            pack_words(&widen(input)),
+            vec![0u8; input.len() * 4],
+            vec![0u8; 4],
+        ],
+    );
+    let decoded = vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0]);
+    let decoded_len = read_len(&outputs[1]);
     (decoded, decoded_len)
 }
 
 #[test]
 fn stored_block_decodes_without_host_roundtrip() {
-    let (decoded, decoded_len) = run(&[0x01, 0x05, 0x00, 0xFA, 0xFF, b'h', b'e', b'l', b'l', b'o']);
+    let (decoded, decoded_len) =
+        inflate_words(&[0x01, 0x05, 0x00, 0xFA, 0xFF, b'h', b'e', b'l', b'l', b'o']);
     assert_eq!(&decoded[..5], &[104, 101, 108, 108, 111]);
     assert_eq!(decoded_len, 5);
 }
@@ -187,41 +194,33 @@ fn fused_stored_block_matches_parity_with_separate_inflate_then_aho() {
         input_len,
         compiled.state_count,
     );
-    let fused_inputs = vec![
-        Value::from(pack_words(
-            &stored_block
-                .iter()
-                .map(|&b| u32::from(b))
-                .collect::<Vec<_>>(),
-        )),
-        Value::from(vec![0u8; input_len as usize * 4]),
-        Value::from(pack_words(&compiled.transitions)),
-        Value::from(pack_words(&compiled.accept)),
-        Value::from(vec![0u8; input_len as usize * 4]),
-        Value::from(vec![0u8; 4]),
-    ];
-    let fused_outputs = vyre_reference::reference_eval(&fused_program, &fused_inputs)
-        .expect("Fix: fused must run; restore this invariant before continuing.");
-    let fused_matches =
-        vyre_primitives::wire::decode_u32_le_bytes_all(&fused_outputs[1].to_bytes());
+    let fused_outputs = eval_bytes(
+        "inflate_stored_block_then_aho_corasick",
+        &fused_program,
+        vec![
+            pack_words(&widen(&stored_block)),
+            vec![0u8; input_len as usize * 4],
+            pack_words(&compiled.transitions),
+            pack_words(&compiled.accept),
+            vec![0u8; input_len as usize * 4],
+            vec![0u8; 4],
+        ],
+    );
+    let fused_matches = vyre_primitives::wire::decode_u32_le_bytes_all(&fused_outputs[1]);
 
     // --- Separate inflate ---
     let inflate_program = inflate_stored_block("input", "output", input_len);
-    let inflate_inputs = vec![
-        Value::from(pack_words(
-            &stored_block
-                .iter()
-                .map(|&b| u32::from(b))
-                .collect::<Vec<_>>(),
-        )),
-        Value::from(vec![0u8; input_len as usize * 4]),
-        Value::from(vec![0u8; 4]),
-    ];
-    let inflate_outputs = vyre_reference::reference_eval(&inflate_program, &inflate_inputs)
-        .expect("Fix: inflate must run; restore this invariant before continuing.");
-    let decoded_bytes = inflate_outputs[0].to_bytes();
-    let len_bytes = inflate_outputs[1].to_bytes();
-    let decoded_len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
+    let inflate_outputs = eval_bytes(
+        "inflate_stored_block",
+        &inflate_program,
+        vec![
+            pack_words(&widen(&stored_block)),
+            vec![0u8; input_len as usize * 4],
+            vec![0u8; 4],
+        ],
+    );
+    let decoded_bytes = &inflate_outputs[0];
+    let decoded_len = read_len(&inflate_outputs[1]);
 
     // --- Separate aho ---
     let aho_program = crate::pattern::aho_corasick(
@@ -232,16 +231,17 @@ fn fused_stored_block_matches_parity_with_separate_inflate_then_aho() {
         decoded_len,
         compiled.state_count,
     );
-    let aho_inputs = vec![
-        Value::from(decoded_bytes[..decoded_len as usize * 4].to_vec()),
-        Value::from(pack_words(&compiled.transitions)),
-        Value::from(pack_words(&compiled.accept)),
-        Value::from(vec![0u8; decoded_len as usize * 4]),
-    ];
-    let aho_outputs = vyre_reference::reference_eval(&aho_program, &aho_inputs)
-        .expect("Fix: aho must run; restore this invariant before continuing.");
-    let separate_matches =
-        vyre_primitives::wire::decode_u32_le_bytes_all(&aho_outputs[0].to_bytes());
+    let aho_outputs = eval_bytes(
+        "aho_corasick",
+        &aho_program,
+        vec![
+            decoded_bytes[..decoded_len as usize * 4].to_vec(),
+            pack_words(&compiled.transitions),
+            pack_words(&compiled.accept),
+            vec![0u8; decoded_len as usize * 4],
+        ],
+    );
+    let separate_matches = vyre_primitives::wire::decode_u32_le_bytes_all(&aho_outputs[0]);
 
     assert_eq!(
         &fused_matches[..decoded_len as usize],
@@ -304,7 +304,7 @@ fn generated_stored_blocks_match_reference_and_clear_length_once() {
         input.extend_from_slice(&nlen.to_le_bytes());
         input.extend_from_slice(&payload);
 
-        let (actual, actual_len) = run(&input);
+        let (actual, actual_len) = inflate_words(&input);
         let (expected, expected_len) = reference_inflate_stored_bytes(&input)
             .unwrap_or_else(|error| panic!("generated stored block rejected seed {seed}: {error}"));
         assert_eq!(actual_len, expected_len, "inflated length seed {seed}");
