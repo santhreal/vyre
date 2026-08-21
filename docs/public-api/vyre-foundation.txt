@@ -2705,7 +2705,6 @@ pub struct vyre_foundation::optimizer::DerivedPassOrder
 pub struct vyre_foundation::optimizer::FusionCertificate
 pub struct vyre_foundation::optimizer::OptimizerRunReport
 pub struct vyre_foundation::optimizer::PassAnalysis
-pub struct vyre_foundation::optimizer::PassCtx<'a>
 pub struct vyre_foundation::optimizer::PassExplanation
 pub struct vyre_foundation::optimizer::PassMetadata
 pub struct vyre_foundation::optimizer::PassMetricDelta
@@ -3644,11 +3643,6 @@ pub vyre_foundation::optimizer::PassBoundaryClass::BackendAware
 pub vyre_foundation::optimizer::PassBoundaryClass::DomainSpecific
 pub vyre_foundation::optimizer::PassBoundaryClass::RuntimeAware
 pub vyre_foundation::optimizer::PassBoundaryClass::Unknown
-pub vyre_foundation::optimizer::PassCtx::adapter_caps: &'a vyre_foundation::optimizer::AdapterCaps
-pub vyre_foundation::optimizer::PassCtx::analyses: &'a mut vyre_foundation::optimizer::AnalysisCache
-pub vyre_foundation::optimizer::PassCtx::diagnostics: &'a mut alloc::vec::Vec<vyre_foundation::diagnostics::Diagnostic>
-pub vyre_foundation::optimizer::PassCtx::fact_cache: &'a mut vyre_foundation::optimizer::fact_cache::FactCache
-pub vyre_foundation::optimizer::PassCtx::program: &'a mut vyre_foundation::ir::Program
 pub vyre_foundation::optimizer::PassExplanation::benchmark: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::PassExplanation::boundary_class: core::option::Option<vyre_foundation::optimizer::PassBoundaryClass>
 pub vyre_foundation::optimizer::PassExplanation::catalog_status: vyre_foundation::optimizer::CatalogLookupStatus
@@ -3657,9 +3651,6 @@ pub vyre_foundation::optimizer::PassExplanation::cost_model_family: core::option
 pub vyre_foundation::optimizer::PassExplanation::decision: vyre_foundation::optimizer::PassRunDecision
 pub vyre_foundation::optimizer::PassExplanation::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::delta: vyre_foundation::optimizer::PassMetricDelta
-pub vyre_foundation::optimizer::PassExplanation::fact_cache_invalidated: bool
-pub vyre_foundation::optimizer::PassExplanation::fact_cache_recomputed: bool
-pub vyre_foundation::optimizer::PassExplanation::fact_cache_reused: bool
 pub vyre_foundation::optimizer::PassExplanation::invalidated_analyses: &'static [&'static str]
 pub vyre_foundation::optimizer::PassExplanation::invariant: core::option::Option<&'static str>
 pub vyre_foundation::optimizer::PassExplanation::iteration: usize
@@ -3729,9 +3720,6 @@ pub vyre_foundation::optimizer::PassRunMetric::decision: vyre_foundation::optimi
 pub vyre_foundation::optimizer::PassRunMetric::declared_invalidations: &'static [&'static str]
 pub vyre_foundation::optimizer::PassRunMetric::effect_bits_after: u32
 pub vyre_foundation::optimizer::PassRunMetric::effect_bits_before: u32
-pub vyre_foundation::optimizer::PassRunMetric::fact_cache_invalidated: bool
-pub vyre_foundation::optimizer::PassRunMetric::fact_cache_recomputed: bool
-pub vyre_foundation::optimizer::PassRunMetric::fact_cache_reused: bool
 pub vyre_foundation::optimizer::PassRunMetric::instruction_count_after: u64
 pub vyre_foundation::optimizer::PassRunMetric::instruction_count_before: u64
 pub vyre_foundation::optimizer::PassRunMetric::ir_heap_allocations_after: usize

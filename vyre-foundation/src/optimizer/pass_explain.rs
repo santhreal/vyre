@@ -132,12 +132,6 @@ pub struct PassExplanation {
     /// Analyses/capability tags the pass declares it may invalidate when it
     /// lands a rewrite.
     pub declared_invalidations: &'static [&'static str],
-    /// Whether the scheduler-owned fact cache was reused.
-    pub fact_cache_reused: bool,
-    /// Whether the scheduler-owned fact cache was recomputed.
-    pub fact_cache_recomputed: bool,
-    /// Whether the scheduler-owned fact cache was invalidated.
-    pub fact_cache_invalidated: bool,
     /// Runtime spent in transform, in nanoseconds.
     pub runtime_ns: u128,
     /// Catalog lookup status.
@@ -198,9 +192,6 @@ impl PassExplanation {
                 &[]
             },
             declared_invalidations: metric.declared_invalidations,
-            fact_cache_reused: metric.fact_cache_reused,
-            fact_cache_recomputed: metric.fact_cache_recomputed,
-            fact_cache_invalidated: metric.fact_cache_invalidated,
             runtime_ns: metric.runtime_ns,
             catalog_status,
             pass_order_origin,
@@ -322,12 +313,6 @@ mod tests {
             refusal_kind: (decision == PassRunDecision::Refused).then_some("cost_increase"),
             required_analyses: REQUIRED_ANALYSES,
             declared_invalidations: DECLARED_INVALIDATIONS,
-            fact_cache_reused: matches!(
-                decision,
-                PassRunDecision::RanUnchanged | PassRunDecision::Changed
-            ),
-            fact_cache_recomputed: !matches!(decision, PassRunDecision::CleanSkipped),
-            fact_cache_invalidated: decision == PassRunDecision::Changed,
             effect_bits_before: 0b001,
             effect_bits_after: 0b101,
             linear_type_violations_before: 0,
@@ -406,9 +391,6 @@ mod tests {
         assert!(explanation.preserved_analyses.is_empty());
         assert_eq!(explanation.invalidated_analyses, DECLARED_INVALIDATIONS);
         assert_eq!(explanation.declared_invalidations, DECLARED_INVALIDATIONS);
-        assert!(explanation.fact_cache_reused);
-        assert!(explanation.fact_cache_recomputed);
-        assert!(explanation.fact_cache_invalidated);
         assert_eq!(explanation.delta.nodes, -3);
         assert_eq!(explanation.delta.control_flow_count, 2);
         assert_eq!(explanation.delta.effect_bits, 4);
@@ -459,9 +441,6 @@ mod tests {
         assert_eq!(explanation.preserved_analyses, REQUIRED_ANALYSES);
         assert!(explanation.invalidated_analyses.is_empty());
         assert_eq!(explanation.declared_invalidations, DECLARED_INVALIDATIONS);
-        assert!(explanation.fact_cache_reused);
-        assert!(explanation.fact_cache_recomputed);
-        assert!(!explanation.fact_cache_invalidated);
     }
 
     #[test]

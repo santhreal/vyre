@@ -134,7 +134,7 @@ mod scheduler;
 #[path = "../../tests/internal/optimizer/mod.rs"]
 mod tests;
 
-pub use ctx::{scheduling_error_to_diagnostic, AdapterCaps, AnalysisCache, PassCtx};
+pub use ctx::{scheduling_error_to_diagnostic, AdapterCaps, AnalysisCache};
 pub use derived_order::{
     derive_pass_order, derive_registered_pass_order, DerivedPassEdge, DerivedPassEdgeKind,
     DerivedPassNode, DerivedPassOrder,

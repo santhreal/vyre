@@ -14,49 +14,10 @@ use super::{
 use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;
 use crate::optimizer::{
-    fact_cache::FactCache, registered_passes, requirements_satisfied, OptimizerError, PassMetadata,
-    ProgramPassKind, ProgramPassRegistration,
+    registered_passes, requirements_satisfied, OptimizerError, PassMetadata, ProgramPassKind,
+    ProgramPassRegistration,
 };
 use crate::perf::PerfScope;
-
-#[derive(Debug, Default)]
-pub(crate) struct SchedulerFactState {
-    facts: Option<FactCache>,
-}
-
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-struct SchedulerFactEvent {
-    reused: bool,
-    recomputed: bool,
-}
-
-impl SchedulerFactState {
-    fn prepare(&mut self, program: &Program) -> SchedulerFactEvent {
-        if self
-            .facts
-            .as_ref()
-            .is_some_and(|facts| facts.is_fresh_for(program))
-        {
-            return SchedulerFactEvent {
-                reused: true,
-                recomputed: false,
-            };
-        }
-        self.facts = Some(FactCache::derive(program));
-        SchedulerFactEvent {
-            reused: false,
-            recomputed: true,
-        }
-    }
-
-    fn invalidate(&mut self) -> bool {
-        let Some(facts) = self.facts.as_mut() else {
-            return false;
-        };
-        facts.invalidate();
-        true
-    }
-}
 
 fn introduces_forbidden_effects(
     before: crate::lower::effects::ProgramEffects,
@@ -283,7 +244,6 @@ impl PassScheduler {
         let mut last_pass = "<none>";
         let mut dirty = self.initial_dirty_flags();
         let mut next_dirty = vec![false; self.passes.len()];
-        let mut fact_state = SchedulerFactState::default();
         let mut gates = GateFactState::default();
         let mut metrics = Vec::with_capacity(
             self.execution_order
@@ -299,7 +259,6 @@ impl PassScheduler {
                 &mut next_dirty,
                 iteration,
                 &mut metrics,
-                &mut fact_state,
                 &mut gates,
             )?;
             program = next;
@@ -521,7 +480,6 @@ impl PassScheduler {
         next_dirty: &mut [bool],
         iteration: usize,
         metrics: &mut Vec<PassRunMetric>,
-        fact_state: &mut SchedulerFactState,
         gates: &mut GateFactState,
     ) -> Result<(Program, bool, Option<&'static str>), OptimizerError> {
         let mut available = (!self.requirements_prevalidated).then(|| {
@@ -568,9 +526,6 @@ impl PassScheduler {
                 refusal_kind: None,
                 required_analyses: metadata.requires,
                 declared_invalidations: metadata.invalidates,
-                fact_cache_reused: false,
-                fact_cache_recomputed: false,
-                fact_cache_invalidated: false,
                 effect_bits_before: 0,
                 effect_bits_after: 0,
                 linear_type_violations_before: 0,
@@ -599,9 +554,6 @@ impl PassScheduler {
             };
 
             if dirty.get(pass_index).copied().unwrap_or(false) {
-                let fact_event = fact_state.prepare(&program);
-                metric.fact_cache_reused = fact_event.reused;
-                metric.fact_cache_recomputed = fact_event.recomputed;
                 if !pass.analyze(&program).should_run {
                     metric.decision = PassRunDecision::AnalysisSkipped;
                     metrics.push(metric);
@@ -714,7 +666,6 @@ impl PassScheduler {
                 if metric.changed {
                     changed = true;
                     changed_by = Some(pass.pass_id());
-                    metric.fact_cache_invalidated = fact_state.invalidate();
                     next_dirty.fill(true);
                 }
             }

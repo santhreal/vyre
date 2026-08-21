@@ -3120,7 +3120,6 @@ pub static vyre_libs::parsing::lr_tables::C11_EXPR: vyre_libs::parsing::lr_table
 pub static vyre_libs::parsing::lr_tables::GOTO_TABLE: &[u32]
 pub static vyre_libs::parsing::lr_tables::PRODUCTIONS: &[vyre_libs::parsing::lr_tables::Production]
 pub static vyre_libs::telemetry::adjustment_set_pass_dependency_calls: core::sync::atomic::AtomicU64
-pub static vyre_libs::telemetry::alias_registry_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::amg_pass_solver_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::bellman_tn_order_calls: core::sync::atomic::AtomicU64
 pub static vyre_libs::telemetry::bitset_mask_algebra_calls: core::sync::atomic::AtomicU64

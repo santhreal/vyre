@@ -12,9 +12,6 @@
 //! * [`AdapterCaps`]  -  the subset of concrete adapter info that
 //!   passes care about, in a backend-neutral shape. Backends fill
 //!   this in; passes read it.
-//! * [`PassCtx`]  -  the mutable context handed to passes that opt
-//!   into the ctx-based API. Accretes [`crate::diagnostics::Diagnostic`]s,
-//!   carries the caps, exposes a typed analysis cache.
 //! * [`scheduling_error_to_diagnostic`]  -  maps the existing
 //!   `crate::PassSchedulingError` onto a structured
 //!   diagnostic with the stable `E-PASS-CYCLE` / `E-PASS-REQUIRE`
@@ -200,30 +197,6 @@ impl std::fmt::Debug for AnalysisCache {
             .field("entries", &self.entries.len())
             .finish()
     }
-}
-
-/// Mutable context handed to ctx-aware passes.
-///
-/// See [`crate::optimizer::ProgramPass`] for the ctx-aware extension API; ctx-aware
-/// passes take a `PassCtx` instead and push diagnostics onto
-/// [`PassCtx::diagnostics`] rather than returning them from the
-/// `transform` method.
-pub struct PassCtx<'a> {
-    /// The program under transformation. Passes mutate this in
-    /// place; fixpoint convergence is tracked by the scheduler.
-    pub program: &'a mut crate::ir_inner::model::program::Program,
-    /// The adapter capabilities the final backend will see.
-    pub adapter_caps: &'a AdapterCaps,
-    /// Analysis cache shared across passes in one schedule run.
-    pub analyses: &'a mut AnalysisCache,
-    /// Shared fact substrate (shape / use / type facts) for this
-    /// schedule run. The scheduler initializes it before the first
-    /// pass and invalidates it whenever a pass changes the program.
-    pub fact_cache: &'a mut crate::optimizer::fact_cache::FactCache,
-    /// Diagnostics accumulated during this pass run. Severity
-    /// `Error` halts the scheduler; `Warning` and `Note` surface
-    /// after the run completes.
-    pub diagnostics: &'a mut Vec<Diagnostic>,
 }
 
 /// Map a [`crate::optimizer::PassSchedulingError`] onto a structured

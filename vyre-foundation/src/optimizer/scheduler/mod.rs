@@ -221,15 +221,6 @@ pub struct PassRunMetric {
     /// Analyses/capability tags this pass declares invalid when it lands a
     /// rewrite.
     pub declared_invalidations: &'static [&'static str],
-    /// Whether the scheduler-owned fact cache was reused for this dirty
-    /// pass analysis.
-    pub fact_cache_reused: bool,
-    /// Whether the scheduler-owned fact cache was recomputed for this
-    /// dirty pass analysis.
-    pub fact_cache_recomputed: bool,
-    /// Whether this pass landed a rewrite and invalidated the scheduler-owned
-    /// fact cache.
-    pub fact_cache_invalidated: bool,
     /// Program effect-row bits before the pass when effect-handler
     /// enforcement is enabled; otherwise zero.
     pub effect_bits_before: u32,
