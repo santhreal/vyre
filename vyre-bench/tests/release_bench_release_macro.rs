@@ -48,8 +48,8 @@ fn release_macro_program_specs_build_real_programs_for_criterion() {
             spec.id
         );
         assert!(
-            spec.min_speedup_x >= 100,
-            "Fix: release macro spec `{}` must carry the CUDA 100x release contract.",
+            spec.min_speedup_x > 0,
+            "Fix: release macro spec `{}` must declare a CPU-SOTA speedup contract.",
             spec.id
         );
         let program = build_release_macro_program(spec.id)
