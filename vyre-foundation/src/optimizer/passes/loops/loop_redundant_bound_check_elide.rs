@@ -82,6 +82,9 @@ impl LoopRedundantBoundCheckElidePass {
     /// Walk the entry tree and elide redundant bound checks.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let program = program.map_entry(|entry| {
             entry

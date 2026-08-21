@@ -111,6 +111,9 @@ impl LoopLicm {
     /// `Node::Loop` whose interior has at least one hoistable Let.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let read_only = read_only_buffers(&program);
         let program = program.map_entry(|entry| hoist_in_body(entry, &read_only, &mut changed));

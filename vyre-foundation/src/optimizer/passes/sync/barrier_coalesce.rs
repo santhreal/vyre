@@ -77,6 +77,9 @@ impl BarrierCoalescePass {
     /// barriers, replace them with the join.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let program = program.map_entry(|entry| coalesce_nodes(entry, &mut changed));
         PassResult { program, changed }

@@ -103,6 +103,9 @@ impl LoopSoftwarePipeline {
     /// prologue + steady-state + epilogue.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let facts = ProgramFacts::build_cached(&program);
         let mut changed = false;
         let program = program.map_entry(|entry| {

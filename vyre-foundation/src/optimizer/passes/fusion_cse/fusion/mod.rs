@@ -52,16 +52,18 @@ impl Fusion {
 
     /// Inline single-use pure bindings so load/op/store pipelines lower as one kernel body.
     #[must_use]
-    #[expect(
-        clippy::needless_pass_by_value,
-        reason = "pass transform consumes Program to preserve the ProgramPass ownership contract"
-    )]
     pub fn transform(program: Program) -> PassResult {
         let fused = fuse_nodes(program.entry(), program.buffers(), &program);
         // Canonical fingerprints intentionally erase semantically transparent
         // statement ordering. Pass scheduling needs exact structural change
         // detection so a rewrite that reorders statements re-runs earlier passes.
-        let changed = program.entry() != fused.as_slice();
+        if program.entry() == fused.as_slice() {
+            // Nothing fused, so the caller's tree is already the answer.
+            // Rebuilding it drops the Arc behind every Region body and the facts
+            // cached against it, on the fixpoint iteration whose only job is to
+            // prove convergence.
+            return PassResult::unchanged(program);
+        }
         // Reuse the buffer Arc + buffer_index instead of rebuilding via
         // Program::wrapped (which deep-clones buffers and re-interns names).
         // entry_op_id and non_composable_with_self are already preserved by
@@ -69,7 +71,7 @@ impl Fusion {
         let optimized = program.with_rewritten_entry(fused);
         PassResult {
             program: optimized,
-            changed,
+            changed: true,
         }
     }
 }

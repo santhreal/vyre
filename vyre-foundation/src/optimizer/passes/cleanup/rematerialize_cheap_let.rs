@@ -90,6 +90,9 @@ impl RematerializeCheapLetPass {
     /// Walk the entry tree and rematerialize cheap single-binding Lets.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let program = program.map_entry(|entry| rewrite_sequence(entry, &mut changed));
         PassResult { program, changed }

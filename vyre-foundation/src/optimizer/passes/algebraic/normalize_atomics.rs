@@ -50,6 +50,9 @@ impl NormalizeAtomicsPass {
 
     /// Hoist atomics out of branch conditions while preserving statement order.
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut state = RewriteState::default();
         let program = program.map_entry(|entry| rewrite_nodes(entry, &mut state));
         PassResult {

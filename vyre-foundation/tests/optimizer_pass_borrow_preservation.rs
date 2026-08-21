@@ -23,33 +23,11 @@ use vyre_foundation::optimizer::registered_passes;
 
 /// Passes that still allocate a new entry tree while reporting no change.
 ///
-/// Every name here is outstanding work, not an exemption on principle. A pass
-/// leaves this list by routing its descent through a borrowing rewrite; it
-/// enters the list only when somebody records why it cannot.
-const REBUILDS_WHEN_UNCHANGED: &[&str] = &[
-    // Each of these still descends with an owned walk that cannot report "no
-    // change", so it allocates a fresh entry tree even on the runs where its
-    // rule never fires. Three carry context down the tree, which the shared
-    // borrowing descent does not take yet: `loop_var_range_fold` needs the
-    // enclosing induction range, `loop_licm` needs the loop it is hoisting out
-    // of, and `loop_software_pipeline` needs the stage assignment. The rest are
-    // whole-body rewriters whose rule is a fold over a sibling sequence rather
-    // than a per-node replacement.
-    //
-    // `canonicalize`, `cse` and `dce` left this list when their engines stopped
-    // being the last word: they still rebuild internally, but the pass now
-    // compares the rebuild against the program it was handed and returns that
-    // program when the two match, so the caller's borrow survives.
-    "barrier_coalesce",
-    "fusion",
-    "loop_licm",
-    "loop_redundant_bound_check_elide",
-    "loop_software_pipeline",
-    "loop_var_range_fold",
-    "normalize_atomics",
-    "region_fusion_hint",
-    "rematerialize_cheap_let",
-];
+/// Empty, and it stays empty. A pass enters this list only when somebody
+/// records why its descent cannot report "no change"; it leaves by gating the
+/// rewrite on the same analysis the scheduler already consults, so the
+/// converged fixpoint iteration hands the caller's own program straight back.
+const REBUILDS_WHEN_UNCHANGED: &[&str] = &[];
 
 /// A program no structural pass has anything to do with: one region, one store
 /// of a literal to a distinct buffer, no control flow, no dead binding, no

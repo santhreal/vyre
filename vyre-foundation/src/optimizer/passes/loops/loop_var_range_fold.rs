@@ -89,6 +89,9 @@ impl LoopVarRangeFoldPass {
     /// Walk the entry tree and fold every range-determined If.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let shape_facts = ProgramShapeFacts::derive_cached(&program);
         let program = program.map_entry(|entry| {
