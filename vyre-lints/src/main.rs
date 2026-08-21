@@ -181,7 +181,23 @@ const LINTS: &[Lint] = &[
         flag: "check-module-forks",
         kinds: &[ViolationKind::ModuleFork],
         default_roots: |workspace| {
-            fixed_roots(workspace, &["vyre-primitives/src/graph", "vyre-libs/src/graph"])
+            // `vyre-primitives/src/graph` was one half of this pair until the
+            // graph composition moved wholly into `vyre-libs`, which left the
+            // lint declaring a root that no longer exists: it then scanned
+            // nothing and reported success. The boundary it defends is
+            // unchanged, so it is re-pointed at the pair that still carries
+            // it, intrinsic hardware ops against composed device helpers.
+            //
+            // The whole-crate pair is deliberately not used. `catalog.rs`,
+            // `wire.rs` and `operation_catalog.rs` each appear in both crates
+            // as an independent read-only projection of the one registry
+            // `vyre-foundation` owns, and exempting those names to get the
+            // wider scan green would blind the lint to a real fork that
+            // happened to pick one of them.
+            fixed_roots(
+                workspace,
+                &["vyre-primitives/src/hardware", "vyre-libs/src/device"],
+            )
         },
         missing_root_fix:
             "Fix: update the duplicate-module scan roots instead of silently shrinking scan coverage.",
