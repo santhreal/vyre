@@ -214,12 +214,6 @@ fn every_registered_float_op_states_its_fused_multiply_adds() {
 /// Operations that still leave a float multiply feeding an add, and how many
 /// sites each leaves. Shrink-only: see the module comment.
 const UNSTATED_CONTRACTIONS: &[(&str, usize)] = &[
-    ("vyre-libs::math::fft::fft_convolve_circular_complex", 32),
-    ("vyre-libs::math::fft::fft_radix2", 8),
-    (
-        "vyre-libs::math::fft::pointwise_complex_multiply_conjugate",
-        8,
-    ),
     ("vyre-libs::math::givens_rotate_pair", 2),
     ("vyre-libs::math::jacobi_apply_rotation", 8),
     (

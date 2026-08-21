@@ -152,16 +152,20 @@ fn multiply_and_conjugate_body(
         let ai = Expr::var(ai_name);
         let br = Expr::var(br_name);
         let bi = Expr::var(bi_name);
+        // One `fma` each, not a multiply feeding an add: a backend may
+        // contract that shape and the reference may not, so the two sides
+        // would round a different number of times on the same program.
         body.push(Node::let_bind(
             prod_re_name.clone(),
-            Expr::sub(
-                Expr::mul(ar.clone(), br.clone()),
-                Expr::mul(ai.clone(), bi.clone()),
+            Expr::fma(
+                ar.clone(),
+                br.clone(),
+                Expr::negate(Expr::mul(ai.clone(), bi.clone())),
             ),
         ));
         body.push(Node::let_bind(
             prod_im_name.clone(),
-            Expr::add(Expr::mul(ar, bi), Expr::mul(ai, br)),
+            Expr::fma(ar, bi, Expr::mul(ai, br)),
         ));
         body.push(Node::store(
             product_freq,
