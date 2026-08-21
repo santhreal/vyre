@@ -196,11 +196,6 @@ pub mod state_index_frontier;
 #[cfg(feature = "graph")]
 pub mod persistent_bfs;
 
-/// IR Extension interface registering Alias-solving opcodes to the compiler
-/// front-end.
-#[cfg(all(test, feature = "graph"))]
-pub mod alias_registry;
-
 /// Lock-free Union-Find for subset alias resolving constraint grids.
 #[cfg(feature = "graph")]
 pub mod union_find;

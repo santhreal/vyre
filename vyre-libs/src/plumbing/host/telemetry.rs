@@ -93,7 +93,6 @@ counters! {
     knowledge_compile_pass_precondition_calls,
     adjustment_set_pass_dependency_calls,
     dataflow_fixpoint_calls,
-    alias_registry_calls,
     toposort_calls,
     graph_dispatch_calls,
     functorial_pass_composition_calls,
@@ -121,7 +120,6 @@ mod tests {
         assert!(names.contains(&"matroid_megakernel_scheduler_calls"));
         assert!(names.contains(&"vsa_fingerprint_calls"));
         assert!(names.contains(&"scallop_provenance_calls"));
-        assert!(names.contains(&"alias_registry_calls"));
         assert!(names.contains(&"toposort_calls"));
         assert!(names.contains(&"graph_dispatch_calls"));
     }
