@@ -240,6 +240,10 @@ impl crate::gate::GateBehavior for RepoHygiene {
             }
         }
 
+        for finding in super::worktree_lifetime::findings(&ctx.root)? {
+            report.find(finding);
+        }
+
         Ok(report)
     }
 }

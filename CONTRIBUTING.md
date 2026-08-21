@@ -43,7 +43,8 @@ trait rather than the macro that produced it.
 The target directory stays shared. Splitting it per worktree multiplies a
 terabyte-scale `debug/deps` by the worktree count. Worktree lifetime is the
 bound instead: create one only for an unmerged branch, and delete it when that
-branch merges.
+branch merges. `repo-hygiene` reports a worktree still on a branch that has
+merged into `integration` or `main`.
 
 When an error names a symbol the source in front of you already defines,
 rebuild that one crate and trust the next error:

@@ -88,6 +88,7 @@ pub mod unification;
 pub mod use_paths;
 pub mod wire_determinism;
 pub mod workspace_build;
+pub mod worktree_lifetime;
 
 use crate::gate::GateBehavior;
 
