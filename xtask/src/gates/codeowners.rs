@@ -396,15 +396,16 @@ impl crate::gate::GateBehavior for Codeowners {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
     use super::*;
 
     /// Read the committed manifest for a test that needs the real roster.
+    ///
+    /// The root is resolved from the working directory at run time. A compiled
+    /// unit is reused across checkouts that share a target directory, so a root
+    /// baked in at compile time names whichever tree built last and this test
+    /// would judge that tree's manifest while claiming to judge this one.
     fn committed_manifest() -> Manifest {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("xtask sits under the workspace root");
+        let root = crate::checkout::checkout_root();
         let text = std::fs::read_to_string(root.join(MANIFEST)).expect("the manifest is committed");
         parse_manifest(&text).expect("the committed manifest parses")
     }

@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:83e389a0f43da66e134d323e36f375190d1670d3:dirty=true:worktree=7e3dc801731642e92d79fc7368bcec7534893c86ba0688009bac0f83ce10f084",
+  "source_fingerprint": "git:496e38ab21dbe41ad26f3a06e4fb51416b3e1d11:dirty=true:worktree=6054e31a1969f516388a4518a0b95504c6221b982508d434548ad061028b9993",
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -276,7 +276,7 @@
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 63,
+      "feature_count": 62,
       "has_default_feature": true,
       "default_feature_members": [
         "math-linalg",
@@ -308,7 +308,6 @@
         "graph",
         "graph-dispatch",
         "hash",
-        "intern",
         "label",
         "llm",
         "logical",
