@@ -6,7 +6,6 @@ use std::path::Path;
 use structure_gate::source_scan::{carries_rust_source, source_directory_named};
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::OperationTier as OpTier;
-use vyre_foundation::program_caps;
 
 use super::record::OpRecord;
 
@@ -52,23 +51,30 @@ pub(super) fn registered_records(root: &Path, problems: &mut Vec<String>) -> Vec
 
 /// What the matrix may claim about wgpu for one operation.
 ///
-/// Derived from the operation, never listed beside it. WGSL offers only
-/// workgroup-scoped barriers and no cooperative launch, so the emitter refuses
-/// a program that rendezvous at grid scope rather than quietly narrowing the
-/// scope. A row that claimed `supported` for such an operation asserted
-/// coverage that the parity suite disproves on the same tree.
+/// This asked `program_caps::scan(..).grid_sync` and answered `not_applicable`
+/// when the program rendezvous at grid scope. That is the wrong question. It
+/// establishes what the program NEEDS, never whether the backend has a route,
+/// and wgpu has one: it lowers no cooperative launch, but
+/// `VyreBackend::allows_host_grid_sync_split` defaults to true and it does not
+/// override it, so the registry wrapper splits the barrier into sequential
+/// host dispatches. `BackendSupport::grid_sync` is deliberately the disjunction
+/// of those two routes for exactly this reason. Claiming a refusal here marked
+/// seven operations `not_applicable` that the recorded wgpu conformance run
+/// observes passing.
 ///
-/// An operation registering no builder cannot be observed here at all, so it
-/// reads as unproven instead of being assumed to work.
+/// The real backend answer comes from a device and is not reachable from
+/// documentation generation, so this does not guess at one. Whether a cell may
+/// claim `supported` is judged against the recorded conformance run by
+/// `conformance-matrix`, which is an observation rather than a host-side
+/// prediction of one.
+///
+/// An operation registering no builder cannot be observed at all, so it reads
+/// as unproven instead of being assumed to work.
 fn wgpu_cell(build: Option<fn() -> Program>) -> &'static str {
-    let Some(build) = build else {
+    if build.is_none() {
         return "experimental";
-    };
-    if program_caps::scan(&build()).grid_sync {
-        "not_applicable"
-    } else {
-        "supported"
     }
+    "supported"
 }
 
 /// Every op id the live registry declares.

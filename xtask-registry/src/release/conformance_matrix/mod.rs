@@ -4,6 +4,7 @@
 //!
 //! - `evidence` the shape of the document this gate writes
 //! - `case_classes` per op and backend, which test-case classes are covered
+//! - `evidence_agreement` matrix claims against the recorded conformance runs
 //! - `scan_matrix` the scan compatibility rows and what invalidates one
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -28,6 +29,7 @@ use self::scan_matrix::read_scan_conformance_matrix;
 
 mod case_classes;
 mod evidence;
+mod evidence_agreement;
 mod scan_matrix;
 
 /// Registered conformance op floor. 49 is the count measured when the floor was
@@ -144,6 +146,10 @@ impl xtask::gate::GateBehavior for ConformanceMatrixGate {
                 blockers.push(blocker.clone());
             }
         }
+        blockers.extend(evidence_agreement::disagreements(
+            &vyre_root,
+            &catalog.release_backend_specs,
+        ));
         for finding in &scan_conformance_findings {
             blockers.push(format!(
                 "scan conformance row `{}` engine {:?} is invalid: {}",

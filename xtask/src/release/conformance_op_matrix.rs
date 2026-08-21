@@ -317,3 +317,99 @@ pub fn inspect_conformance_test_evidence(
         unreadable_paths,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a catalog with one required op and the three backend cells given.
+    fn catalog(reference: &str, cuda: &str, wgpu: &str) -> OpMatrixCatalog {
+        let op = "vyre-libs::security::taint_pollution";
+        OpMatrixCatalog {
+            required_ops: [op.to_string()].into_iter().collect(),
+            duplicate_required_op_rows: BTreeSet::new(),
+            release_backend_rows: vec![
+                format!("{op}:reference:{reference}"),
+                format!("{op}:cuda:{cuda}"),
+                format!("{op}:wgpu:{wgpu}"),
+            ],
+            release_backend_specs: Vec::new(),
+            missing_release_backend_rows: Vec::new(),
+            blocked_release_rows: Vec::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    fn blockers_for(catalog: &OpMatrixCatalog) -> Vec<String> {
+        let mut blockers = Vec::new();
+        evaluate_op_matrix_coverage(
+            catalog,
+            |_| true,
+            |count| format!("{count} missing"),
+            &mut blockers,
+        );
+        blockers
+    }
+
+    /// WHY: every required operation owes a `supported` cell for reference,
+    /// cuda and wgpu, and this function had no test at all, so the threshold
+    /// it turns on was unpinned.
+    #[test]
+    fn three_supported_cells_answer_a_required_operation() {
+        assert_eq!(
+            blockers_for(&catalog("supported", "supported", "supported")),
+            Vec::<String>::new()
+        );
+    }
+
+    /// WHY: `experimental` is the status that means nobody looked, and
+    /// `not_applicable` was briefly written into this matrix by a generator
+    /// that mistook what a program needs for what a backend refuses. Neither
+    /// is a release answer, and a rule that accepted either would have let
+    /// that mistake ship as coverage.
+    #[test]
+    fn an_unproven_or_refused_cell_does_not_answer_its_row() {
+        for status in ["experimental", "not_applicable"] {
+            let blockers = blockers_for(&catalog("supported", "supported", status));
+            assert_eq!(blockers.len(), 1, "{status}: {blockers:?}");
+            assert!(
+                blockers[0].contains("2 supported release backend row(s), expected 3"),
+                "{status}: {blockers:?}"
+            );
+        }
+    }
+
+    /// WHY: the rule is arithmetic over three cells per required operation, so
+    /// the way it breaks is an off-by-one on the operation count rather than a
+    /// wrong verdict on one cell. Two operations with one unproven cell between
+    /// them pin both the threshold and the reported numbers.
+    #[test]
+    fn the_supported_count_is_three_cells_for_every_required_operation() {
+        let mut two = catalog("supported", "supported", "supported");
+        let second = "vyre-libs::bitset::and";
+        two.required_ops.insert(second.to_string());
+        two.release_backend_rows.extend([
+            format!("{second}:reference:supported"),
+            format!("{second}:cuda:supported"),
+            format!("{second}:wgpu:experimental"),
+        ]);
+        let blockers = blockers_for(&two);
+        assert_eq!(blockers.len(), 1, "{blockers:?}");
+        assert!(
+            blockers[0].contains("5 supported release backend row(s), expected 6"),
+            "{blockers:?}"
+        );
+    }
+
+    /// WHY: `blocked_release` is stripped from the rows before counting, so
+    /// without its own blocker it would read as a missing cell rather than as
+    /// a release blocker, and the two carry different corrective actions.
+    #[test]
+    fn a_blocked_release_row_blocks_on_its_own_terms() {
+        let mut blocked = catalog("supported", "supported", "supported");
+        blocked.blocked_release_rows = vec!["family:wgpu".to_string()];
+        let blockers = blockers_for(&blocked);
+        assert_eq!(blockers.len(), 1, "{blockers:?}");
+        assert!(blockers[0].contains("blocked_release"), "{blockers:?}");
+    }
+}
