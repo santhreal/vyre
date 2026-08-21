@@ -7,7 +7,7 @@
 //! kernel-launch orchestration. The public surface is re-exported below.
 
 /// Device-side allocation pools, pinned-host pools, and `cuda_check`.
-pub mod allocations;
+pub(crate) mod allocations;
 /// Capability, feature-flag, and validation-cache policy.
 pub(crate) mod capabilities;
 /// Checked CUDA copy primitives shared by host, resident, and graph paths.

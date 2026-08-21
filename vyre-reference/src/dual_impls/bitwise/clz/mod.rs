@@ -1,6 +1,3 @@
-/// Count-leading-zero dual implementation reference.
-pub mod reference {}
-
 /// Operation ID for count-leading-zero dual references.
 pub const OP_ID: &str = "primitive.bitwise.clz";
 

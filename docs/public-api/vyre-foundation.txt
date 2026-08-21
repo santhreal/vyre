@@ -2519,7 +2519,6 @@ pub mod vyre_foundation::optimizer::algebraic_rules
 pub mod vyre_foundation::optimizer::corpus
 pub mod vyre_foundation::optimizer::cost
 pub mod vyre_foundation::optimizer::diff_compile
-pub mod vyre_foundation::optimizer::dsl
 pub mod vyre_foundation::optimizer::effect_lattice
 pub mod vyre_foundation::optimizer::eqsat
 pub mod vyre_foundation::optimizer::eqsat_gpu

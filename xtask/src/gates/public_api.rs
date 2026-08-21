@@ -144,6 +144,16 @@ impl crate::gate::GateBehavior for PublicApiSnapshot {
                     ))
                 }
             };
+            for module in modules_without_members(&current) {
+                report.find(Finding::in_file(
+                    snapshot.clone(),
+                    format!(
+                        "`{}` exports `pub mod {module}`, and nothing is reachable through it",
+                        row.package
+                    ),
+                    "give the module a public item, or drop `pub` so an empty path stops appearing in the stable surface",
+                ));
+            }
             if ctx.write {
                 install(
                     &absolute,
@@ -176,6 +186,27 @@ impl crate::gate::GateBehavior for PublicApiSnapshot {
         }
         Ok(report)
     }
+}
+
+/// Public module paths in `listing` that no other listed item lives under.
+///
+/// An inherent `impl` attaches its methods to the type's own path, so a module
+/// carrying nothing but `impl` blocks is invisible here by design: it publishes
+/// no path of its own and should not be `pub`. A module whose only members are
+/// nested modules keeps them, because those nested paths mention it.
+fn modules_without_members(listing: &str) -> Vec<String> {
+    let lines: Vec<&str> = listing.lines().filter(|line| !line.is_empty()).collect();
+    let mut empty = Vec::new();
+    for line in &lines {
+        let Some(path) = line.strip_prefix("pub mod ") else {
+            continue;
+        };
+        let prefix = format!("{path}::");
+        if !lines.iter().any(|other| other.contains(&prefix)) {
+            empty.push(path.to_string());
+        }
+    }
+    empty
 }
 
 /// Write one snapshot, recording what the write changed.
@@ -549,5 +580,36 @@ mod tests {
             ))
             .unwrap_err();
         assert!(error.message.contains("not a snapshotted package"));
+    }
+
+    /// WHY: a `pub mod` that publishes no path is a promise with nothing behind
+    /// it, and the two ways a module legitimately looks bare in the listing are
+    /// a nested module and an inherent impl. The first must stay green, the
+    /// second is exactly the case that should go private.
+    #[test]
+    fn a_public_module_with_no_reachable_item_is_reported() {
+        let listing = "\
+pub fn crate_x::alpha::run()
+pub mod crate_x
+pub mod crate_x::alpha
+pub mod crate_x::beta
+pub mod crate_x::beta::nested
+pub const crate_x::beta::nested::LIMIT: u32
+pub mod crate_x::gamma
+";
+        assert_eq!(modules_without_members(listing), vec!["crate_x::gamma"]);
+    }
+
+    /// WHY: the detector reads whole path segments, so a module whose name is a
+    /// prefix of a sibling must not borrow the sibling's members.
+    #[test]
+    fn a_name_that_prefixes_a_sibling_is_still_empty() {
+        let listing = "\
+pub mod crate_x
+pub mod crate_x::scan
+pub mod crate_x::scanner
+pub fn crate_x::scanner::run()
+";
+        assert_eq!(modules_without_members(listing), vec!["crate_x::scan"]);
     }
 }

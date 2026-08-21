@@ -47,38 +47,32 @@
 /// # Panics
 /// Panics when `alpha` is not finite or `n` is zero. Callers that must recover use the
 /// `try_` twin.
-#[cfg(test)]
 #[must_use]
 fn grunwald_letnikov_kernel(alpha: f64, n: u32) -> Vec<f64> {
     vyre_reference::composition_witness::grunwald_letnikov_kernel_witness(alpha, n)
 }
 
-#[cfg(test)]
 fn grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) {
     if let Err(error) = try_grunwald_letnikov_kernel_into(alpha, n, out) {
         panic!("Grünwald-Letnikov kernel generation failed: {error}");
     }
 }
 
-#[cfg(test)]
 fn try_grunwald_letnikov_kernel_into(alpha: f64, n: u32, out: &mut Vec<f64>) -> Result<(), String> {
     vyre_reference::composition_witness::try_grunwald_letnikov_kernel_witness_into(alpha, n, out)
 }
 
-#[cfg(test)]
 #[must_use]
 fn kernel_to_fixed_16_16(kernel: &[f64], step: f64, alpha: f64) -> Vec<u32> {
     vyre_reference::composition_witness::kernel_to_fixed_16_16_witness(kernel, step, alpha)
 }
 
-#[cfg(test)]
 fn kernel_to_fixed_16_16_into(kernel: &[f64], step: f64, alpha: f64, out: &mut Vec<u32>) {
     vyre_reference::composition_witness::kernel_to_fixed_16_16_witness_into(
         kernel, step, alpha, out,
     )
 }
 
-#[cfg(test)]
 fn try_kernel_to_fixed_16_16_into(
     kernel: &[f64],
     step: f64,
@@ -90,7 +84,6 @@ fn try_kernel_to_fixed_16_16_into(
     )
 }
 
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -108,12 +101,9 @@ mod tests {
         out: &mut Vec<f64>,
     ) -> Result<(), String> {
         if f.len() > out.capacity() {
-            crate::plumbing::host::scratch::reserve_items(
-                out,
-                f.len() - out.len(),
-                "fractional calculus CPU oracle",
-                "fractional_derivative output",
-            )?;
+            out.try_reserve(f.len() - out.len()).map_err(|error| {
+                format!("Fix: fractional calculus CPU oracle could not reserve scratch: {error}.")
+            })?;
         }
         vyre_reference::composition_witness::try_fractional_derivative_witness_into(
             f, alpha, step, kernel, out,
@@ -270,12 +260,33 @@ mod tests {
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated fractional derivative CPU oracle should evaluate");
             let expected = independent_fractional_derivative(&f, alpha, step);
 
-            crate::math::assert_slices_approx_eq(case, &out, &expected, approx_eq);
+            assert_slices_approx_eq(case, &out, &expected, approx_eq);
         }
     }
 
     fn independent_fractional_derivative(f: &[f64], alpha: f64, step: f64) -> Vec<f64> {
         vyre_reference::composition_witness::fractional_derivative_witness(f, alpha, step)
+    }
+
+    fn assert_slices_approx_eq(
+        case: usize,
+        actual: &[f64],
+        expected: &[f64],
+        approx_eq: impl Fn(f64, f64) -> bool,
+    ) {
+        assert_eq!(actual.len(), expected.len(), "case {case}: output length");
+        for idx in 0..actual.len() {
+            if expected[idx].is_nan() {
+                assert!(actual[idx].is_nan(), "case {case} idx {idx}: expected NaN");
+            } else {
+                assert!(
+                    approx_eq(actual[idx], expected[idx]),
+                    "case {case} idx {idx}: expected {}, got {}",
+                    expected[idx],
+                    actual[idx]
+                );
+            }
+        }
     }
 
     #[test]

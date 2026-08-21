@@ -179,10 +179,6 @@ pub mod motif;
 #[cfg(feature = "graph")]
 pub mod scc_decompose;
 
-/// Vector nearest-neighbor graph construction plus graph-ranking parity.
-#[cfg(all(test, feature = "graph"))]
-pub mod vector_neighbor_graph;
-
 /// Exploded-supergraph builder  -  (CFG x fact) pairs as graph vertices so
 /// IFDS/IDE reduces to `csr_forward_traverse`.
 #[cfg(feature = "graph")]

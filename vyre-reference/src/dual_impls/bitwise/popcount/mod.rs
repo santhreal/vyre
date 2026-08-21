@@ -1,6 +1,3 @@
-/// Population-count dual implementation reference.
-pub mod reference {}
-
 /// Operation ID for population-count dual references.
 pub const OP_ID: &str = "primitive.bitwise.popcount";
 

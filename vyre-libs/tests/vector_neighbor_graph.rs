@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 //! Vector-to-neighbor-graph fusion contract.
 //!
 //! This module is the shared boundary between ANN-style vector ranking and
@@ -249,7 +247,6 @@ fn validate_vector_graph_inputs(
     Ok(())
 }
 
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -278,6 +275,19 @@ mod tests {
             evidence.frontier_leaderboard_artifact,
             VECTOR_GRAPH_FUSION_FRONTIER_LEADERBOARD
         );
+        assert_eq!(evidence.schema_version, VECTOR_GRAPH_FUSION_SCHEMA_VERSION);
+        assert_eq!(evidence.comparator, VECTOR_GRAPH_FUSION_COMPARATOR);
+        assert_eq!(evidence.metric_family, VECTOR_GRAPH_FUSION_METRIC_FAMILY);
+        assert_eq!(evidence.dataset_id, "ann.line.connected");
+        assert_eq!(evidence.release_floor, "release-floor:ann-vector");
+        assert_eq!(evidence.failure_mode, "graph-recall-regression");
+        assert_eq!(evidence.node_count, 5);
+        assert_eq!(evidence.dimension, 1);
+        assert_eq!(evidence.neighbor_k, 2);
+        assert_eq!(evidence.rank_k, 3);
+        assert_eq!(evidence.graph_reached_count, 5);
+        assert_eq!(evidence.csr_targets.len(), 10);
+        assert!((evidence.direct_top_k[0].distance() - 0.01).abs() < 1e-6);
     }
 
     #[test]

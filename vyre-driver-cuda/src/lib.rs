@@ -85,7 +85,7 @@ mod token_fact_frontier_execution_tests;
 /// CUDA warp-word bit-parallel automata layout evidence.
 pub(crate) mod warp_word_automata;
 
-pub use backend::{allocations, CachedCudaGraph};
+pub use backend::CachedCudaGraph;
 pub use backend::{
     CudaBackend, CudaPtxSourceCacheSnapshot, CudaResidentBuffer, CudaStreamOrderedPool,
     CudaTelemetrySnapshot,

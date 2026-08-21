@@ -1,5 +1,5 @@
 /// Equality-comparison dual implementation reference.
-pub mod reference;
+mod reference;
 
 /// Operation ID for equality-comparison dual references.
 pub const OP_ID: &str = "primitive.compare.eq";

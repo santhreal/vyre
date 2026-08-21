@@ -13,10 +13,6 @@
 //! linear threshold).
 
 /// CHD perfect-hash construction + lookup.
-#[cfg(test)]
-pub(crate) mod perfect_hash;
+pub mod perfect_hash;
 
-#[cfg(test)]
-pub use perfect_hash::{build_chd, PerfectHash};
-#[cfg(test)]
-pub use perfect_hash::{try_build_chd, BuildError};
+pub use perfect_hash::{build_chd, try_build_chd, BuildError, PerfectHash};

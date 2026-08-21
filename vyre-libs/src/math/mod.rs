@@ -243,11 +243,6 @@ pub(crate) mod u32_binary_map;
 #[cfg(feature = "math-kernels")]
 pub mod dp_accountant;
 
-/// Fractional-calculus kernel  -  Gruenwald-Letnikov weight generator that
-/// feeds the existing `conv1d` primitive.
-#[cfg(feature = "math-kernels")]
-pub mod fractional;
-
 /// Submodular greedy step  -  argmax-of-marginals primitive driving
 /// (1 - 1/e)-approximation greedy maximization.
 #[cfg(feature = "math-kernels")]

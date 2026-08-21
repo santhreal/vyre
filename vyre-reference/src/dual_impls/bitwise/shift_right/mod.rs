@@ -1,5 +1,5 @@
 /// Right-shift dual implementation reference.
-pub mod reference;
+mod reference;
 
 /// Operation ID for right-shift dual references.
 pub const OP_ID: &str = "primitive.bitwise.shift_right";

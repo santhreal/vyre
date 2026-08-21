@@ -21,7 +21,6 @@
 //! Implementation: a single-pass union-find over the upper-triangle
 //! edges. O(E·α(V))  -  practically linear in the edge count.
 
-#[cfg(test)]
 mod tests {
     use vyre_reference::composition_witness::betti_persistence_witness as betti_persistence_cpu;
 

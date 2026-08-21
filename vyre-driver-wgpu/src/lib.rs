@@ -10,7 +10,7 @@ mod device_buffer;
 mod dispatch_timeout;
 pub mod emit;
 pub mod engine;
-pub mod ext;
+mod ext;
 mod materializer;
 mod numeric;
 mod padded_upload;

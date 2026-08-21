@@ -1,5 +1,5 @@
 /// Less-than comparison dual implementation reference.
-pub mod reference;
+mod reference;
 
 /// Operation ID for less-than-comparison dual references.
 pub const OP_ID: &str = "primitive.compare.lt";

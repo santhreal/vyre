@@ -469,7 +469,6 @@ pub fn vyre_driver_cuda::synthetic_device_caps::synthetic_sm120_envelope_default
 pub fn vyre_driver_cuda::validate_cuda_megakernel_speedup_evidence_csv(csv: &str, required_speedup_x: f64) -> core::result::Result<vyre_driver_cuda::CudaMegakernelSpeedupProof, vyre_driver_cuda::CudaMegakernelSpeedupGateError>
 pub fn vyre_driver_cuda::validate_cuda_megakernel_speedup_gate(samples: &[vyre_driver_cuda::CudaMegakernelSpeedupSample], required_speedup_x: f64) -> core::result::Result<vyre_driver_cuda::CudaMegakernelSpeedupProof, vyre_driver_cuda::CudaMegakernelSpeedupGateError>
 pub mod vyre_driver_cuda
-pub mod vyre_driver_cuda::allocations
 pub mod vyre_driver_cuda::codegen
 pub mod vyre_driver_cuda::jit_cache
 pub mod vyre_driver_cuda::occupancy

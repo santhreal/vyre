@@ -311,7 +311,6 @@ pub mod vyre_driver_wgpu::emit
 pub mod vyre_driver_wgpu::engine
 pub mod vyre_driver_wgpu::engine::graph
 pub mod vyre_driver_wgpu::engine::multi_gpu
-pub mod vyre_driver_wgpu::ext
 pub mod vyre_driver_wgpu::pipeline
 pub mod vyre_driver_wgpu::pipeline::persistent
 pub mod vyre_driver_wgpu::runtime

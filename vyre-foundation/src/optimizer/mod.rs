@@ -65,7 +65,7 @@ pub mod shape_facts;
 
 /// Shared algebraic rewrite legality rules consumed by semantic `Program` passes.
 pub mod algebraic_rules;
-pub mod dsl;
+pub(crate) mod dsl;
 /// Equality-saturation engine substrate: minimal EGraph, rewrite families,
 /// saturation, and cost-based extraction.
 pub mod eqsat;

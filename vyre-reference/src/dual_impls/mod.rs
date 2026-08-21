@@ -41,13 +41,13 @@ pub mod compare;
 /// docs
 pub(crate) mod evaluator;
 /// docs
-pub mod hash;
+pub(crate) mod hash;
 mod indexed_reference_impls;
 /// docs
-pub mod memory;
+pub(crate) mod memory;
 mod scalar_reference_impls;
 /// docs
-pub mod scan;
+pub(crate) mod scan;
 /// docs
-pub mod workgroup;
+pub(crate) mod workgroup;
 pub use evaluator::{EvalError, ReferenceEvaluator};
