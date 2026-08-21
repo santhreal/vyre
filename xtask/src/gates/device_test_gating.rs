@@ -36,7 +36,8 @@
 //! while the coverage is gone. So every member declaring the feature must be
 //! named by a workflow step that turns it on.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
 
 use quote::ToTokens;
 
@@ -73,16 +74,22 @@ impl crate::gate::GateBehavior for DeviceTestGating {
 
         let sources = tree.all_rust();
         report.cover_complete("rust source files", sources.len());
-        for path in sources {
-            let source = tree.read(&path)?;
-            let Ok(file) = syn::parse_file(&source) else {
+        let mut parsed = BTreeMap::new();
+        for path in &sources {
+            if let Ok(file) = syn::parse_file(&tree.read(path)?) {
+                parsed.insert(path.clone(), file);
+            }
+        }
+        let admitted_files = admitted_closure(&parsed);
+        for path in &sources {
+            let Some(file) = parsed.get(path) else {
                 continue;
             };
-            if admitted(&file.attrs) {
+            if admitted_files.contains(path) {
                 continue;
             }
             let display = path.display().to_string();
-            let in_test = scan::is_test_tree(&path);
+            let in_test = scan::is_test_tree(path);
             for name in ungated_acquisitions(&file.items, in_test, &backends) {
                 report.find(Finding::new(
                     format!("{display}: test code acquires {name} with no hardware admission"),
@@ -100,6 +107,148 @@ impl crate::gate::GateBehavior for DeviceTestGating {
         }
         Ok(report)
     }
+}
+
+/// Every file the admission reaches, following `mod` declarations.
+///
+/// A module file carries no attributes of its own. `tests/foo.rs` gates the
+/// whole target with one inner attribute and `tests/foo/bar.rs` inherits it,
+/// so reading each file in isolation reports a submodule that cannot be
+/// compiled without the feature at all. That reading also pushes the tree
+/// toward restating the attribute in every submodule, which is a second copy
+/// of one fact and drifts the moment a root's gate changes.
+///
+/// Both directions count: a root whose own attributes admit passes admission
+/// to everything it declares, and an admitted `mod` item passes it to that one
+/// child even when the parent is ungated.
+fn admitted_closure(parsed: &BTreeMap<PathBuf, syn::File>) -> BTreeSet<PathBuf> {
+    let mut admitted_files = BTreeSet::new();
+    let mut frontier: Vec<PathBuf> = parsed
+        .iter()
+        .filter(|(_, file)| admitted(&file.attrs))
+        .map(|(path, _)| path.clone())
+        .collect();
+    for (path, file) in parsed {
+        for child in declared_modules(parsed, path, &file.items, true) {
+            frontier.push(child);
+        }
+    }
+    while let Some(path) = frontier.pop() {
+        if !admitted_files.insert(path.clone()) {
+            continue;
+        }
+        let Some(file) = parsed.get(&path) else {
+            continue;
+        };
+        frontier.extend(declared_modules(parsed, &path, &file.items, false));
+    }
+    admitted_files
+}
+
+/// The files `items` declares as modules, resolved against the parsed tree.
+///
+/// `admitted_only` restricts the answer to `mod` items the admission governs
+/// directly, which is how a gated declaration inside an ungated parent is
+/// found. Otherwise every declaration is followed, because the parent is
+/// already admitted and passes that on.
+fn declared_modules(
+    parsed: &BTreeMap<PathBuf, syn::File>,
+    parent: &Path,
+    items: &[syn::Item],
+    admitted_only: bool,
+) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    for item in items {
+        let syn::Item::Mod(module) = item else {
+            continue;
+        };
+        if let Some((_, inner)) = &module.content {
+            if !admitted_only || admitted(&module.attrs) {
+                found.extend(declared_modules(parsed, parent, inner, false));
+            }
+            continue;
+        }
+        if admitted_only && !admitted(&module.attrs) {
+            continue;
+        }
+        if let Some(path) = module_file(parsed, parent, module) {
+            found.push(path);
+        }
+    }
+    found
+}
+
+/// The file a `mod name;` in `parent` names.
+///
+/// A crate root, a `mod.rs` and a `#[path]` attribute each place children in a
+/// different directory, and a test target root is read both ways in this tree.
+/// Every shape is offered to the parsed set and the one that exists answers,
+/// so the resolver never has to decide which convention a target follows.
+fn module_file(
+    parsed: &BTreeMap<PathBuf, syn::File>,
+    parent: &Path,
+    module: &syn::ItemMod,
+) -> Option<PathBuf> {
+    let dir = parent.parent().unwrap_or(Path::new(""));
+    let is_root = parent
+        .file_name()
+        .and_then(std::ffi::OsStr::to_str)
+        .is_some_and(|name| matches!(name, "mod.rs" | "lib.rs" | "main.rs"));
+    let nested = parent
+        .file_stem()
+        .filter(|_| !is_root)
+        .map(|stem| dir.join(stem));
+    let bases: Vec<PathBuf> = std::iter::once(dir.to_path_buf()).chain(nested).collect();
+    if let Some(declared) = path_attribute(&module.attrs) {
+        return bases
+            .iter()
+            .map(|base| normalize(&base.join(&declared)))
+            .find(|candidate| parsed.contains_key(candidate));
+    }
+    let name = module.ident.to_string();
+    bases
+        .iter()
+        .flat_map(|base| {
+            [
+                base.join(format!("{name}.rs")),
+                base.join(&name).join("mod.rs"),
+            ]
+        })
+        .find(|candidate| parsed.contains_key(candidate))
+}
+
+/// The literal of a `#[path = "..."]` attribute.
+fn path_attribute(attrs: &[syn::Attribute]) -> Option<String> {
+    attrs.iter().find_map(|attr| {
+        if !attr.path().is_ident("path") {
+            return None;
+        }
+        let syn::Meta::NameValue(meta) = &attr.meta else {
+            return None;
+        };
+        let syn::Expr::Lit(literal) = &meta.value else {
+            return None;
+        };
+        match &literal.lit {
+            syn::Lit::Str(text) => Some(text.value()),
+            _ => None,
+        }
+    })
+}
+
+/// A path with `.` and `..` components resolved lexically.
+fn normalize(path: &Path) -> PathBuf {
+    let mut parts: Vec<std::ffi::OsString> = Vec::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                parts.pop();
+            }
+            other => parts.push(other.as_os_str().to_owned()),
+        }
+    }
+    parts.iter().collect()
 }
 
 /// Every member declaring the admission feature is built with it somewhere.
@@ -197,22 +346,62 @@ fn backend_roster(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
     Ok(roster)
 }
 
-/// The type name a `pub struct *Backend` line declares.
+/// The type-name suffixes a hardware-owning handle is declared with.
+///
+/// `*Backend` was the whole roster once, and it let two real acquisitions
+/// through: `SpirvBackendRegistration::acquire` opens a Vulkan device, and
+/// `CudaDeviceHandle::acquire_ordinal` initialises a CUDA context. Both sat in
+/// hosted CPU legs and failed there. A driver crate that owns hardware names
+/// the owner with one of these.
+const ROSTER_SUFFIXES: &[&str] = &["Backend", "BackendRegistration", "DeviceHandle"];
+
+/// The type name a `pub struct` line declares, when it names a hardware owner.
 fn declared_backend(line: &str) -> Option<String> {
     let rest = line.trim_start().strip_prefix("pub struct ")?;
     let name: String = rest
         .chars()
         .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
         .collect();
-    (name.ends_with("Backend") && name.len() > "Backend".len()).then_some(name)
+    ROSTER_SUFFIXES
+        .iter()
+        .any(|suffix| name.len() > suffix.len() && name.ends_with(suffix))
+        .then_some(name)
 }
 
-/// The constructors that reach hardware.
+/// The constructor name stems that reach hardware.
 ///
-/// `acquire` is the CUDA entry point and `new` the wgpu one. Every other
-/// association on a backend type takes an already-live handle, so a helper
-/// signature and a doc link are not acquisitions.
+/// Matched as stems, not exact names: `acquire` is the CUDA and Vulkan entry
+/// point and `new` the wgpu one, but the CUDA context is opened through
+/// `acquire_ordinal`, so an exact-name list misses it. Every other association
+/// on these types takes an already-live handle, so a helper signature and a
+/// doc link are still not acquisitions.
 const CONSTRUCTORS: &[&str] = &["acquire", "new"];
+
+/// Whether `rendered` calls a hardware constructor on `name`.
+///
+/// The identifier after `::` is read out and matched whole, so `new` matches
+/// `new(` and `new_from_parts(` but never `newtype_of(`, and the trailing `(`
+/// is required because naming a path is not calling it.
+fn acquires(rendered: &str, name: &str) -> bool {
+    let needle = format!("{name}::");
+    let mut rest = rendered;
+    while let Some(at) = rest.find(&needle) {
+        let after = &rest[at + needle.len()..];
+        let ident: String = after
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+            .collect();
+        if after[ident.len()..].starts_with('(')
+            && CONSTRUCTORS
+                .iter()
+                .any(|stem| ident == *stem || ident.starts_with(&format!("{stem}_")))
+        {
+            return true;
+        }
+        rest = after;
+    }
+    false
+}
 
 /// Whether an attribute list admits the item to run on hardware.
 ///
@@ -285,12 +474,12 @@ fn ungated_acquisitions(
         // is a string, not a call, and reading it as one made this file report
         // itself.
         let rendered = code_tokens(item.to_token_stream()).replace(' ', "");
-        found.extend(backends.iter().filter_map(|name| {
-            CONSTRUCTORS
+        found.extend(
+            backends
                 .iter()
-                .any(|ctor| rendered.contains(&format!("{name}::{ctor}(")))
-                .then(|| name.clone())
-        }));
+                .filter(|name| acquires(&rendered, name))
+                .cloned(),
+        );
     }
     found
 }
@@ -539,6 +728,137 @@ mod literal_tests {
         assert_eq!(
             ungated_acquisitions(&file.items, true, &backends),
             vec!["CudaBackend".to_string()]
+        );
+    }
+}
+
+#[cfg(test)]
+mod closure_tests {
+    use super::*;
+
+    fn tree(files: &[(&str, &str)]) -> BTreeMap<PathBuf, syn::File> {
+        files
+            .iter()
+            .map(|(path, source)| {
+                (
+                    PathBuf::from(path),
+                    syn::parse_file(source).expect("fixture must parse"),
+                )
+            })
+            .collect()
+    }
+
+    /// WHY: a test target gates itself once, at its root, and its submodules
+    /// carry no attribute of their own. Reading each file alone reported every
+    /// one of them as an ungated acquisition, which named 47 files that cannot
+    /// be compiled without the feature at all. The alternative the gate pushed
+    /// the tree toward was restating the attribute in every submodule, which
+    /// is a second copy of one fact.
+    #[test]
+    fn a_submodule_of_an_admitted_root_is_admitted() {
+        let parsed = tree(&[
+            (
+                "vyre-driver-cuda/tests/resident.rs",
+                "#![cfg(all(test, feature = \"device-tests\"))]\nmod lane;\n",
+            ),
+            (
+                "vyre-driver-cuda/tests/resident/lane.rs",
+                "#[test]\nfn live() { let _ = CudaBackend::acquire(); }\n",
+            ),
+        ]);
+        let admitted_files = admitted_closure(&parsed);
+        assert!(
+            admitted_files.contains(Path::new("vyre-driver-cuda/tests/resident/lane.rs")),
+            "Fix: the closure must follow `mod lane;` out of an admitted root"
+        );
+    }
+
+    /// WHY: admission must reach the whole subtree, not one level. A module
+    /// that declares another is the shape every `mod.rs` in this tree has.
+    #[test]
+    fn admission_reaches_a_transitive_submodule() {
+        let parsed = tree(&[
+            (
+                "vyre-driver-wgpu/tests/parity.rs",
+                "#![cfg(feature = \"device-tests\")]\nmod inner;\n",
+            ),
+            ("vyre-driver-wgpu/tests/parity/inner/mod.rs", "mod deep;\n"),
+            (
+                "vyre-driver-wgpu/tests/parity/inner/deep.rs",
+                "#[test]\nfn live() { let _ = WgpuBackend::new(); }\n",
+            ),
+        ]);
+        let admitted_files = admitted_closure(&parsed);
+        assert!(admitted_files.contains(Path::new("vyre-driver-wgpu/tests/parity/inner/deep.rs")));
+    }
+
+    /// WHY: the closure must not admit a file nothing gated. A sibling target
+    /// in the same directory that acquires a device is the defect this gate
+    /// exists for, and a resolver that matched on directory rather than on the
+    /// declaration would swallow it.
+    #[test]
+    fn a_sibling_target_no_admitted_root_declares_stays_ungated() {
+        let parsed = tree(&[
+            (
+                "vyre-driver-cuda/tests/resident.rs",
+                "#![cfg(feature = \"device-tests\")]\nmod lane;\n",
+            ),
+            (
+                "vyre-driver-cuda/tests/resident/lane.rs",
+                "pub fn helper() {}\n",
+            ),
+            (
+                "vyre-driver-cuda/tests/loose.rs",
+                "#[test]\nfn live() { let _ = CudaBackend::acquire(); }\n",
+            ),
+        ]);
+        let admitted_files = admitted_closure(&parsed);
+        assert!(!admitted_files.contains(Path::new("vyre-driver-cuda/tests/loose.rs")));
+    }
+
+    /// WHY: a gated `mod` item inside an ungated parent admits that one child.
+    /// Without it the only way to gate one module of a shared root would be to
+    /// gate the root, which takes the ungated tests with it.
+    #[test]
+    fn a_gated_module_declaration_admits_its_child() {
+        let parsed = tree(&[
+            (
+                "conform/vyre-conform/tests/cert.rs",
+                "#[cfg(feature = \"device-tests\")]\nmod gpu;\nmod cpu;\n",
+            ),
+            (
+                "conform/vyre-conform/tests/cert/gpu.rs",
+                "#[test]\nfn live() { let _ = WgpuBackend::new(); }\n",
+            ),
+            (
+                "conform/vyre-conform/tests/cert/cpu.rs",
+                "#[test]\nfn live() { let _ = WgpuBackend::new(); }\n",
+            ),
+        ]);
+        let admitted_files = admitted_closure(&parsed);
+        assert!(admitted_files.contains(Path::new("conform/vyre-conform/tests/cert/gpu.rs")));
+        assert!(!admitted_files.contains(Path::new("conform/vyre-conform/tests/cert/cpu.rs")));
+    }
+
+    /// WHY: `#[path]` is how this tree points a `src` module at a file under
+    /// `tests/`, and a resolver that ignored it would leave that file looking
+    /// like it belongs to nobody.
+    #[test]
+    fn a_path_attribute_resolves_to_the_file_it_names() {
+        let parsed = tree(&[
+            (
+                "vyre-driver-cuda/src/lib.rs",
+                "#![cfg(feature = \"device-tests\")]\n#[path = \"../tests/internal/live.rs\"]\nmod live;\n",
+            ),
+            (
+                "vyre-driver-cuda/tests/internal/live.rs",
+                "#[test]\nfn live() { let _ = CudaBackend::acquire(); }\n",
+            ),
+        ]);
+        let admitted_files = admitted_closure(&parsed);
+        assert!(
+            admitted_files.contains(Path::new("vyre-driver-cuda/tests/internal/live.rs")),
+            "Fix: `#[path]` names the file, so the closure must follow it"
         );
     }
 }

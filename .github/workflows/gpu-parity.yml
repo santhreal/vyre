@@ -76,6 +76,14 @@ jobs:
         run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --test unary_int_parity -- --test-threads=1 --nocapture
       - name: async transfer byte-span (unaligned offset + partial tail) parity vs reference on real GPU
         run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test async_transfer_byte_span_parity -- --test-threads=1 --nocapture
+      # The lib unit tests that acquire an adapter. Every step above names a
+      # `--test` target, which never builds the lib test binary, so without
+      # this step the in-crate device tests are admitted by a feature no lane
+      # turns on and stop running anywhere.
+      - name: wgpu in-crate device unit tests on real GPU
+        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests --lib -- --test-threads=1 --nocapture
+      - name: SPIR-V dispatch parity on real Vulkan device
+        run: ./cargo_full test -p vyre-driver-spirv --features device-tests --test dispatch -- --test-threads=1 --nocapture
 
   cuda-driver-contracts:
     name: CUDA backend contracts

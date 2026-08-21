@@ -27,12 +27,12 @@ path = "src/lib.rs"
 [[test]]
 name = "countless_readwrite_output_parity"
 path = "tests/countless_readwrite_output_parity/mod.rs"
-required-features = ["gpu"]
+required-features = ["device-tests"]
 
 [[test]]
 name = "reference_parity_classes"
 path = "tests/reference_parity_classes/mod.rs"
-required-features = ["gpu"]
+required-features = ["device-tests"]
 
 [features]
 default = ["gpu"]
@@ -44,9 +44,11 @@ gpu = [
     "vyre-registry-link/wgpu",
 ]
 # A test that drives the built binary through a real device is compiled only
-# where the device is. `gpu` links the concrete drivers, which every lane does;
-# this admits the tests that acquire one.
-device-tests = []
+# where the device is. `gpu` links the concrete drivers, which every lane does,
+# so requiring it admits nothing: it is on by default. The admission is this
+# feature, which `conform.yml` turns on for the runner that has the device, and
+# it pulls in `gpu` because a test that acquires a backend also has to link it.
+device-tests = ["gpu"]
 
 [dependencies]
 blake3 = { workspace = true }

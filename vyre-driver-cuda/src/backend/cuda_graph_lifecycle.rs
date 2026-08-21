@@ -496,6 +496,7 @@ mod tests {
         assert_eq!(pool.cached_bytes(), 0);
     }
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn cuda_graph_padded_input_upload_zero_fills_tail() {
         // Pinned host memory requires an initialized, thread-bound CUDA

@@ -32,6 +32,12 @@ default = []
 # closed when the validator is missing.
 spirv-val = []
 
+# `tests/dispatch.rs` acquires a live Vulkan compute device and fails loudly
+# when there is none, which is right on a runner that has one and turns every
+# hosted CPU leg red on a runner that does not. `gpu-parity.yml` turns this on
+# for the machine with the device.
+device-tests = []
+
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
@@ -51,3 +57,8 @@ tempfile.workspace = true
 name = "spirv_parity"
 path = "tests/spirv_parity.rs"
 required-features = ["spirv-val"]
+
+[[test]]
+name = "dispatch"
+path = "tests/dispatch.rs"
+required-features = ["device-tests"]

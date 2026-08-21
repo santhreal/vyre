@@ -19,6 +19,7 @@ fn poisoned_bind_group_cache_lock_recovers_without_aborting_dispatch_path() {
     .expect("Fix: poisoned bind-group cache must recover so GPU dispatch does not abort");
 }
 
+#[cfg(feature = "device-tests")]
 #[test]
 fn bind_group_cache_lru_heap_stays_capacity_scale() {
     let arc = crate::runtime::cached_device()

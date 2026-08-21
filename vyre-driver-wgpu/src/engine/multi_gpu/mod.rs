@@ -534,6 +534,7 @@ impl MultiGpuExecutor {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn live_gpu_enumeration_uses_wgpu_adapters() {
         let live = MultiGpuExecutor::enumerate_live_gpus();
@@ -550,6 +551,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn acquire_indices_rejects_duplicate_live_ordinals_before_dispatch() {
         let live = MultiGpuExecutor::enumerate_live_gpus();
