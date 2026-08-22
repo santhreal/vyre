@@ -189,9 +189,17 @@ fn find_matching_delimiter_nodes(
         nodes.push(Node::let_bind(out_var, Expr::u32(INVALID_POS)));
     }
     nodes.push(Node::let_bind(depth.clone(), Expr::u32(0)));
+    // A missing open position is the sentinel, and `INVALID_POS + 1` wraps to 0,
+    // which would scan the whole token stream and report the first unmatched
+    // close token as the match. Starting at the end makes the range empty.
+    let scan_start = Expr::select(
+        Expr::eq(open_pos.clone(), Expr::u32(INVALID_POS)),
+        Expr::u32(haystack_len),
+        Expr::add(open_pos, Expr::u32(1)),
+    );
     nodes.push(Node::loop_for(
         scan.clone(),
-        Expr::add(open_pos, Expr::u32(1)),
+        scan_start,
         Expr::u32(haystack_len),
         vec![
             Node::let_bind(tok.clone(), load_u32(tok_types, Expr::var(scan.clone()))),
