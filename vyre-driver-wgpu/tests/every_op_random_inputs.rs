@@ -9,9 +9,12 @@
 #![cfg(feature = "device-tests")]
 #![allow(clippy::filter_map_bool_then, clippy::unnecessary_map_or)]
 #![allow(deprecated)]
+use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use proptest::test_runner::{Config, TestRunner};
+use vyre::ir::Program;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
@@ -34,6 +37,63 @@ fn require_backend() -> &'static WgpuBackend {
             "every_op_random_input_stress: GPU adapter probe failed. Fix: verify nvidia-smi, WGPU_BACKEND, Vulkan drivers, and wgpu adapter selection.",
         )
     })
+}
+
+/// Wall-clock ceiling on one oracle evaluation, in seconds.
+///
+/// The reference is the only oracle in this sweep, and a program whose loop
+/// trip count is read from its own input runs for as long as that value says.
+/// One random `u32` is enough to ask for four billion iterations, which turned
+/// this target from a suite into a process that never returned. The ceiling is
+/// far above the milliseconds every bounded op needs on the fixture extents.
+/// `VYRE_ORACLE_DEADLINE_SECS` raises it, which is how a suspected offender is
+/// measured rather than guessed at.
+const ORACLE_DEADLINE_SECS: u64 = 20;
+
+/// The ceiling this run enforces.
+fn oracle_deadline() -> Duration {
+    let seconds = std::env::var("VYRE_ORACLE_DEADLINE_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|&value| value > 0)
+        .unwrap_or(ORACLE_DEADLINE_SECS);
+    Duration::from_secs(seconds)
+}
+
+/// What the oracle said about one random case.
+enum Oracle {
+    /// Output bytes to compare against the device.
+    Answered(Vec<Vec<u8>>),
+    /// Rejected or panicked, so this input has no oracle and is not compared.
+    Declined,
+    /// Still running at the ceiling, which is a defect in the program under
+    /// test, not a property of the input.
+    TimedOut,
+}
+
+/// Evaluate one case on the reference, bounded by [`oracle_deadline`].
+///
+/// The evaluation runs on its own thread so a trip count taken from input data
+/// is reported by name instead of holding the whole target. A thread past the
+/// ceiling is left to the process exit: interrupting the interpreter mid-step
+/// would need a cancellation path the oracle deliberately does not have.
+fn bounded_reference_eval(program: &Program, inputs: &[Value]) -> Oracle {
+    let (sender, receiver) = channel();
+    let program = program.clone();
+    let inputs = inputs.to_vec();
+    std::thread::spawn(move || {
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            vyre_reference::reference_eval(&program, &inputs)
+        }));
+        let _ = sender.send(outcome);
+    });
+    match receiver.recv_timeout(oracle_deadline()) {
+        Ok(Ok(Ok(outputs))) => {
+            Oracle::Answered(outputs.into_iter().map(|value| value.to_bytes()).collect())
+        }
+        Ok(Ok(Err(_)) | Err(_)) | Err(RecvTimeoutError::Disconnected) => Oracle::Declined,
+        Err(RecvTimeoutError::Timeout) => Oracle::TimedOut,
+    }
 }
 
 #[test]
@@ -105,8 +165,10 @@ fn every_op_random_input_stress() {
         let lowered = optimize(program.clone()).expect("registered optimizer must converge");
         let mut op_cases = 0u64;
         let mut op_failures = 0usize;
+        let mut op_timeouts = 0usize;
 
         for case_idx in 0..count {
+            let mut randomized: Vec<&str> = Vec::new();
             let random_inputs = if entry.id.contains("amg_v_cycle") {
                 random_amg_v_cycle_inputs(fixture_case, &mut runner)
             } else {
@@ -122,6 +184,7 @@ fn every_op_random_input_stress() {
                         } else {
                             random_buffer_for(entry.id, buffer, len, &mut runner)
                         };
+                        randomized.push(buffer.name());
                         random_inputs.push(random);
                     } else {
                         random_inputs.push(fixture_case[buffer_idx].clone());
@@ -131,18 +194,19 @@ fn every_op_random_input_stress() {
             };
 
             let cpu_values: Vec<Value> = random_inputs.iter().cloned().map(Value::from).collect();
-            let cpu_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                vyre_reference::reference_eval(&program, &cpu_values)
-            }));
-
-            let cpu_outputs = match cpu_result {
-                Ok(Ok(outputs)) => outputs
-                    .into_iter()
-                    .map(|v| v.to_bytes())
-                    .collect::<Vec<_>>(),
-                Ok(Err(_)) | Err(_) => {
-                    // Reference rejected or panicked  -  no oracle for this input.
-                    continue;
+            let cpu_outputs = match bounded_reference_eval(&program, &cpu_values) {
+                Oracle::Answered(outputs) => outputs,
+                // Reference rejected or panicked  -  no oracle for this input.
+                Oracle::Declined => continue,
+                Oracle::TimedOut => {
+                    op_timeouts += 1;
+                    failures.push(format!(
+                        "{} seed={seed} case={case_idx}: the reference did not answer inside {:?} with random [{}]. Fix: bound the loop trip count by the extents of the buffer it indexes; a count read from input data spins for hours on the device as well as here.",
+                        entry.id,
+                        oracle_deadline(),
+                        randomized.join(", ")
+                    ));
+                    break;
                 }
             };
 
@@ -194,8 +258,8 @@ fn every_op_random_input_stress() {
 
         total_cases += op_cases;
         println!(
-            "stress: {}  -  {} random cases evaluated, {} failures",
-            entry.id, op_cases, op_failures
+            "stress: {}  -  {} random cases evaluated, {} failures, {} oracle timeouts",
+            entry.id, op_cases, op_failures, op_timeouts
         );
     }
 

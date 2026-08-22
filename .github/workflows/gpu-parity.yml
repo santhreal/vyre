@@ -177,14 +177,17 @@ jobs:
       # on a hosted runner. That makes this lane the only place they run, so it
       # runs the whole crate rather than a named selection: a target nobody
       # named would otherwise be gated into never executing at all.
+      # Release, like every named step above: these lanes run the whole crate,
+      # and a debug reference interpreter is the cost of the suite rather than
+      # the cost of the device work it is checking.
       - name: Every CUDA driver test on a real device
-        run: ./cargo_full test -p vyre-driver-cuda --features device-tests,cuda -- --test-threads=1
+        run: ./cargo_full test --release -p vyre-driver-cuda --features device-tests,cuda -- --test-threads=1
       - name: Every wgpu driver test on a real device
-        run: ./cargo_full test -p vyre-driver-wgpu --features device-tests -- --test-threads=1
+        run: ./cargo_full test --release -p vyre-driver-wgpu --features device-tests -- --test-threads=1
       - name: Bytecode VM stack-carrier parity on real CUDA and WGPU
-        run: ./cargo_full test -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture
+        run: ./cargo_full test --release -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture
       - name: Benchmark harness suites on a real device
-        run: ./cargo_full test -p vyre-bench --features device-tests --tests -- --test-threads=1
+        run: ./cargo_full test --release -p vyre-bench --features device-tests --tests -- --test-threads=1
 
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement
