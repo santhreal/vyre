@@ -11,17 +11,53 @@ use harness::{
     bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
     cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
+use std::sync::LazyLock;
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_cuda::{cuda_factory, CudaBackend};
+use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
+use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps};
 
-/// Lane count for every case here. 512 blocks of 256 threads sits well inside
-/// the cooperative residency ceiling on a grid-sync capable device while still
-/// spreading block start times widely enough that segment 1's read of the LAST
-/// lane's slot genuinely depends on the barrier. An 8-block grid does NOT: every
-/// block starts within a few microseconds, so the output is correct even with the
-/// barrier released early, and the gate passes while the defect is present. That
-/// was measured, not assumed.
-const LANES: u32 = 512 * CROSS_BLOCK_GRID_SYNC_WORKGROUP;
+/// Blocks the fixture wants. 512 blocks of 256 threads spreads block start
+/// times widely enough that segment 1's read of the LAST lane's slot genuinely
+/// depends on the barrier. An 8-block grid does NOT: every block starts within
+/// a few microseconds, so the output is correct even with the barrier released
+/// early, and the gate passes while the defect is present. That was measured,
+/// not assumed.
+const DESIRED_BLOCKS: u32 = 512;
+
+/// Blocks below which the fixture stops being able to fail. Measured: an
+/// 8-block grid passes with no barrier at all, so a device that cannot host a
+/// wide cooperative grid must fail loudly here rather than run a gate that
+/// cannot catch the defect.
+const MIN_BLOCKS: u32 = 64;
+
+/// Lanes for every case here, sized to the grid this device can hold resident.
+///
+/// A cooperative launch needs every block co-resident, and that ceiling is a
+/// device fact: it is `min(max_threads_per_sm / workgroup, max_blocks_per_sm)`
+/// per SM times the SM count. A fixed 512-block grid is inside it on a part
+/// with 128 SMs and outside it on one with 80, where the dispatch is refused
+/// before it runs and the contract goes unproven on hardware that supports it.
+/// The grid is therefore the smaller of the width the fixture wants and the
+/// width the device can host.
+fn lanes() -> u32 {
+    static LANES: LazyLock<u32> = LazyLock::new(|| {
+        let probed = CudaDeviceCaps::probe(0)
+            .expect("Fix: direct CUDA capability probe of device 0 must succeed on the GPU fleet.");
+        let resident =
+            cooperative_thread_residency_block_limit(&probed, CROSS_BLOCK_GRID_SYNC_WORKGROUP);
+        let blocks = DESIRED_BLOCKS.min(u32::try_from(resident).unwrap_or(u32::MAX));
+        assert!(
+            blocks >= MIN_BLOCKS,
+            "Fix: `{}` holds only {resident} co-resident block(s) of \
+             {CROSS_BLOCK_GRID_SYNC_WORKGROUP} threads, below the {MIN_BLOCKS} this fixture needs \
+             to detect an early barrier release. A narrower grid passes with no barrier at all, so \
+             the suite must not run here.",
+            probed.name,
+        );
+        blocks * CROSS_BLOCK_GRID_SYNC_WORKGROUP
+    });
+    *LANES
+}
 
 /// Launch repetitions for the reuse gates. A stale counter is released early on
 /// the SECOND launch, so 2 is the minimum that can fail; going further catches a
@@ -51,7 +87,7 @@ fn live_registered_backend() -> Box<dyn VyreBackend> {
 /// segment-0 or readback fault rather than a barrier fault.
 fn assert_grid_sync_output(out_bytes: &[u8], context: &str) {
     let actual = bytes_u32(out_bytes);
-    let expected = cross_block_grid_sync_expected(LANES);
+    let expected = cross_block_grid_sync_expected(lanes());
     assert_eq!(
         actual.len(),
         expected.len(),
@@ -83,7 +119,7 @@ fn assert_grid_sync_output(out_bytes: &[u8], context: &str) {
             "Fix: {context} produced out[{lane}] = {got}, expected {want}. Block {} of {}. \
              {diagnosis}",
             u32::try_from(lane).unwrap_or(u32::MAX) / CROSS_BLOCK_GRID_SYNC_WORKGROUP,
-            LANES / CROSS_BLOCK_GRID_SYNC_WORKGROUP
+            lanes() / CROSS_BLOCK_GRID_SYNC_WORKGROUP
         );
     }
 }
@@ -115,9 +151,9 @@ fn out_buffer(outputs: &[Vec<u8>], context: &str) -> Vec<u8> {
 fn resident_grid_sync_dispatch_synchronizes_on_its_second_launch() {
     let backend = CudaBackend::acquire()
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");
-    let program = cross_block_grid_sync_program(LANES);
+    let program = cross_block_grid_sync_program(lanes());
     let config = DispatchConfig::default();
-    let inputs = cross_block_grid_sync_inputs(LANES);
+    let inputs = cross_block_grid_sync_inputs(lanes());
     let out_bytes = inputs[0].len();
 
     let mut handles = Vec::with_capacity(3);
@@ -191,9 +227,9 @@ fn concurrent_cooperative_dispatches_through_one_shared_backend_stay_correct() {
 
     let backend = live_registered_backend();
     let backend: &dyn VyreBackend = backend.as_ref();
-    let program = cross_block_grid_sync_program(LANES);
+    let program = cross_block_grid_sync_program(lanes());
     let config = DispatchConfig::default();
-    let inputs = cross_block_grid_sync_inputs(LANES);
+    let inputs = cross_block_grid_sync_inputs(lanes());
 
     let failures = std::thread::scope(|scope| {
         let workers: Vec<_> = (0..THREADS)
@@ -208,7 +244,7 @@ fn concurrent_cooperative_dispatches_through_one_shared_backend_stay_correct() {
                             Ok(outputs) => match outputs.last() {
                                 Some(out) => {
                                     let actual = bytes_u32(out);
-                                    let expected = cross_block_grid_sync_expected(LANES);
+                                    let expected = cross_block_grid_sync_expected(lanes());
                                     if actual != expected {
                                         let lane = actual
                                             .iter()
@@ -280,10 +316,10 @@ fn concurrent_cooperative_dispatches_on_independent_backends_stay_correct() {
     const THREADS: usize = 4;
     const PER_THREAD: usize = 8;
 
-    let program = cross_block_grid_sync_program(LANES);
+    let program = cross_block_grid_sync_program(lanes());
     let config = DispatchConfig::default();
-    let inputs = cross_block_grid_sync_inputs(LANES);
-    let expected = cross_block_grid_sync_expected(LANES);
+    let inputs = cross_block_grid_sync_inputs(lanes());
+    let expected = cross_block_grid_sync_expected(lanes());
 
     let failures = std::thread::scope(|scope| {
         let workers: Vec<_> = (0..THREADS)

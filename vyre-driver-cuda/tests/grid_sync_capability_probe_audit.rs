@@ -10,8 +10,8 @@
 //! `CudaBackend::hardware_supports_grid_sync` (must equal the freshly probed
 //! `compute_capability >= (6, 0) && cooperative_launch`) and
 //! `occupancy::cooperative_thread_residency_block_limit` (must equal
-//! `(max_threads_per_sm / workgroup) * multi_processor_count` computed from the
-//! same fresh probe).
+//! `min(max_threads_per_sm / workgroup, max_blocks_per_sm) * multi_processor_count`
+//! computed from the same fresh probe).
 //!
 //! The residency ceiling is load-bearing beyond this crate: it is the maximum
 //! whole-grid block count a `MemoryOrdering::GridSync` program can launch with
@@ -74,6 +74,15 @@ fn hardware_grid_sync_claim_equals_the_independently_probed_predicate() {
 /// derived from the wrong probe field) silently caps or over-promises the grid a
 /// cooperative launch may use. Over-promising is the dangerous direction, since
 /// `cuLaunchCooperativeKernel` then fails at launch instead of at plan time.
+///
+/// Two per-SM ceilings apply and the bound is the smaller: the thread budget
+/// `max_threads_per_sm / workgroup` and the hardware block cap
+/// `max_blocks_per_sm`. Which one binds is a property of the device, so the
+/// expectation is recomputed from both probe fields rather than from the thread
+/// budget alone: on a part whose block cap is 16 the thread budget over-promises
+/// by half at workgroup 64, and a bound that admits it fails inside the driver.
+/// The synthetic cases below hold each ceiling binding in turn so the
+/// expectation cannot pass by accident on one device class.
 #[test]
 fn cooperative_residency_ceiling_is_computed_from_probed_sm_geometry() {
     let probed = CudaDeviceCaps::probe(0)
@@ -89,13 +98,19 @@ fn cooperative_residency_ceiling_is_computed_from_probed_sm_geometry() {
     );
 
     for width in AUDITED_WORKGROUP_WIDTHS {
-        let expected = u64::from(threads_per_sm / width) * u64::from(sm_count);
+        let by_threads = threads_per_sm / width;
+        let expected = u64::from(match probed.max_blocks_per_sm_u32() {
+            Some(cap) => by_threads.min(cap),
+            None => by_threads,
+        }) * u64::from(sm_count);
         let actual = cooperative_thread_residency_block_limit(&probed, width);
         assert_eq!(
-            actual, expected,
+            actual,
+            expected,
             "Fix: cooperative_thread_residency_block_limit({width}) must equal \
-             (max_threads_per_sm / workgroup) * multi_processor_count = \
-             ({threads_per_sm} / {width}) * {sm_count} = {expected}, got {actual}.",
+             min(max_threads_per_sm / workgroup, max_blocks_per_sm) * multi_processor_count \
+             = min({by_threads}, {:?}) * {sm_count} = {expected}, got {actual}.",
+            probed.max_blocks_per_sm_u32(),
         );
         assert!(
             actual > 0,
@@ -110,6 +125,43 @@ fn cooperative_residency_ceiling_is_computed_from_probed_sm_geometry() {
         cooperative_thread_residency_block_limit(&probed, 0),
         0,
         "Fix: a zero workgroup width must yield a zero residency bound."
+    );
+
+    // Each ceiling binding in turn, on caps this host may not have. A bound
+    // that reads one field and ignores the other passes on the device where
+    // that field happens to bind and fails here.
+    let mut block_capped = probed.clone();
+    block_capped.max_threads_per_sm = 2048;
+    block_capped.max_blocks_per_sm = 8;
+    block_capped.multi_processor_count = 10;
+    assert_eq!(
+        cooperative_thread_residency_block_limit(&block_capped, 64),
+        80,
+        "Fix: with 32 blocks of 64 threads inside the thread budget and a hardware cap of 8 \
+         blocks per SM, the bound is 8 * 10; a thread-only bound returns 320 and the driver \
+         rejects the launch."
+    );
+
+    let mut thread_capped = probed.clone();
+    thread_capped.max_threads_per_sm = 1024;
+    thread_capped.max_blocks_per_sm = 32;
+    thread_capped.multi_processor_count = 10;
+    assert_eq!(
+        cooperative_thread_residency_block_limit(&thread_capped, 512),
+        20,
+        "Fix: with a 1024-thread budget and 512-thread blocks the thread budget binds at 2 \
+         blocks per SM; a cap-only bound returns 320."
+    );
+
+    let mut cap_unreported = probed.clone();
+    cap_unreported.max_threads_per_sm = 1024;
+    cap_unreported.max_blocks_per_sm = 0;
+    cap_unreported.multi_processor_count = 10;
+    assert_eq!(
+        cooperative_thread_residency_block_limit(&cap_unreported, 256),
+        40,
+        "Fix: a driver that does not report the block cap must keep the thread-only bound \
+         rather than lose cooperative launches."
     );
 
     // Print the audited ceiling so the number that bounds per-dispatch
