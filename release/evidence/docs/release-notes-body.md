@@ -4650,6 +4650,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   midpoint and from luma as a single non-negative magnitude, so neither the
   contrast nor the saturate stage evaluates a wrapping subtraction as the
   unused arm of a select.
+- A single-invocation operation guards its serial body on `workgroup_id.x == 0
+  && local_id.x == 0`, so a fusion that widens the arm still admits one
+  invocation instead of repeating the same read-modify-write from every
+  invocation of workgroup 0.
 - A library composition whose writable footprint exceeds one workgroup now
   confines its serial body to workgroup zero, so the FFT convolution, the
   radix-2 transform, the BLAKE3 quartet, round and compression, the AMG V-cycle
@@ -5890,6 +5894,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   implementations gave one program two answers depending on which arm read it.
   `V113`, the malformed-alias-frame code the deleted copy raised, is retired
   from the registry and the code catalog.
+- Fusion refuses to widen an arm that keeps a running result in read-write
+  storage under a guard on workgroup identity alone, the third unsafe shape
+  beside workgroup memory and barriers.
 - Every cargo-fuzz job now installs and selects nightly, matching the sanitizer
   flags the libFuzzer runner passes to rustc.
 - Every gate now resolves the checkout it reports on from the working directory

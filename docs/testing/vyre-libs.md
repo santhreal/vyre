@@ -366,6 +366,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `sheaf_spectrum_via_reference_parity` | `vyre-libs/tests/sheaf_spectrum_via_reference_parity.rs` | `solvers` | `./cargo_full test -p vyre-libs --test sheaf_spectrum_via_reference_parity` |
 | `test` | `sigmoid_gate_typed_contract` | `vyre-libs/tests/sigmoid_gate_typed_contract.rs` | `nn-activation` | `./cargo_full test -p vyre-libs --test sigmoid_gate_typed_contract` |
 | `test` | `simplicial_triangle_message_fixed_point_parity` | `vyre-libs/tests/simplicial_triangle_message_fixed_point_parity.rs` | None | `./cargo_full test -p vyre-libs --test simplicial_triangle_message_fixed_point_parity` |
+| `test` | `single_invocation_guard_contracts` | `vyre-libs/tests/single_invocation_guard_contracts.rs` | None | `./cargo_full test -p vyre-libs --test single_invocation_guard_contracts` |
 | `test` | `sinkhorn_iterate_ir_parity` | `vyre-libs/tests/sinkhorn_iterate_ir_parity.rs` | None | `./cargo_full test -p vyre-libs --test sinkhorn_iterate_ir_parity` |
 | `test` | `sinkhorn_scale_ir_parity_proptest` | `vyre-libs/tests/sinkhorn_scale_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test sinkhorn_scale_ir_parity_proptest` |
 | `test` | `sinkhorn_via_reference_parity` | `vyre-libs/tests/sinkhorn_via_reference_parity.rs` | `solvers` | `./cargo_full test -p vyre-libs --test sinkhorn_via_reference_parity` |
