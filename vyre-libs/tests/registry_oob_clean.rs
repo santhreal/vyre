@@ -11,46 +11,21 @@
 //! The reference interpreter absorbs the read as a zero, which is precisely the
 //! masking a backend that does not bounds-check will not do.
 //!
-//! The four nets themselves live in `vyre_test_support::registry_nets`, which
-//! both registered surfaces call, so neither can drift into judging its
-//! population by a different rule. What is crate-specific is here: the
-//! population comes from the library catalog at run time, so a registration
-//! added tomorrow is judged tomorrow.
+//! The nets and the catalog walk live in `vyre_test_support::registry_nets`,
+//! which every registered surface calls, so no surface can drift into judging
+//! its population by a different rule. What is crate-specific is the catalog
+//! named here, and it is read at run time, so a registration added tomorrow is
+//! judged tomorrow.
 
 #![forbid(unsafe_code)]
 
-use vyre_reference::value::Value;
-use vyre_test_support::registry_nets::{RegistrySweep, SweepCase};
+use vyre_test_support::registry_nets::RegistrySweep;
 
-/// Every fixture case the library catalog publishes.
-///
-/// The catalog is refused when empty: an empty walk passes every net without
-/// proving anything.
 fn sweep() -> RegistrySweep {
-    let entries: Vec<_> = vyre_libs::operation_catalog::all_entries().collect();
-    assert!(
-        !entries.is_empty(),
-        "Fix: the library catalog is empty, so this run judges no registration at all"
-    );
-
-    let mut cases = Vec::new();
-    for entry in entries {
-        let Some(inputs_fn) = entry.test_inputs else {
-            continue;
-        };
-        let program = entry
-            .program()
-            .expect("Fix: registered library operation must provide a neutral builder");
-        for (index, case) in inputs_fn().into_iter().enumerate() {
-            let inputs: Vec<Value> = case.into_iter().map(Value::from).collect();
-            cases.push(SweepCase::new(
-                format!("{} (fixture case {index})", entry.id),
-                program.clone(),
-                inputs,
-            ));
-        }
-    }
-    RegistrySweep::new("the library catalog", cases)
+    RegistrySweep::from_catalog(
+        "the library catalog",
+        vyre_libs::operation_catalog::all_entries(),
+    )
 }
 
 #[test]

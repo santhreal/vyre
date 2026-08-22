@@ -21,6 +21,7 @@
 //! clean is the exact failure these nets exist to remove.
 
 use vyre_foundation::ir::Program;
+use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
 
 use crate::pass_programs::overfire_grid;
@@ -61,6 +62,60 @@ impl RegistrySweep {
     #[must_use]
     pub fn new(surface: &'static str, cases: Vec<SweepCase>) -> Self {
         Self { surface, cases }
+    }
+
+    /// Every fixture case a catalog of registered operations publishes.
+    ///
+    /// The catalog walk is the same on every surface: refuse an empty one,
+    /// carry an unfixtured entry as out of reach rather than dropping it in
+    /// silence, and pair each fixture case with the program its entry builds.
+    /// Writing it per crate is what let one surface skip a case the other
+    /// refused.
+    ///
+    /// # Panics
+    /// Panics when the catalog is empty, which passes every net without
+    /// proving anything, or when a registered entry builds no program.
+    #[must_use]
+    pub fn from_catalog(
+        surface: &'static str,
+        entries: impl Iterator<Item = SemanticOperation>,
+    ) -> Self {
+        let mut cases = Vec::new();
+        let mut total = 0usize;
+        let mut fixtured = 0usize;
+
+        for entry in entries {
+            total += 1;
+            let Some(inputs_fn) = entry.test_inputs else {
+                continue;
+            };
+            fixtured += 1;
+            let program = entry.program().unwrap_or_else(|| {
+                panic!(
+                    "Fix: registered operation `{}` carries a fixture but builds no program",
+                    entry.id
+                )
+            });
+            for (index, case) in inputs_fn().into_iter().enumerate() {
+                cases.push(SweepCase::new(
+                    format!("{} (fixture case {index})", entry.id),
+                    program.clone(),
+                    case.into_iter().map(Value::from).collect(),
+                ));
+            }
+        }
+
+        assert!(
+            total > 0,
+            "Fix: {surface} registered nothing on this run, so every net below judges an empty \
+             population. Select the domain features so the catalog populates."
+        );
+        eprintln!(
+            "{surface}: {fixtured}/{total} entries fixtured, {} case(s), {} entry(s) out of reach",
+            cases.len(),
+            total - fixtured
+        );
+        Self::new(surface, cases)
     }
 
     /// No case reads or writes out of bounds on its own fixture inputs.

@@ -9,63 +9,26 @@
 //! an IR program with an ungated data-derived index works on the reference,
 //! while a backend that bounds-checks nothing reads garbage or corrupts memory.
 //!
-//! The four nets themselves live in `vyre_test_support::registry_nets`, which
-//! the library surface calls with its own catalog. They were written twice
-//! before that, once per crate, and the second copy drifted: one refused a case
-//! it could not evaluate and the other skipped it, so the same class of defect
-//! failed on one surface and went unjudged on the other.
+//! The nets and the catalog walk live in `vyre_test_support::registry_nets`,
+//! which the library surface calls with its own catalog. They were written
+//! twice before that, once per crate, and the copies drifted: one refused a
+//! case it could not evaluate and the other skipped it, so the same class of
+//! defect failed on one surface and went unjudged on the other.
 //!
-//! What is crate-specific is here: the population comes from the primitive
-//! catalog at run time, so a registration added tomorrow is judged tomorrow,
-//! and IR validity is asserted over every registered primitive rather than only
-//! the fixtured ones.
+//! What is crate-specific is the catalog named here, plus IR validity, which is
+//! asserted over every registered primitive rather than only the fixtured ones.
 #![cfg(feature = "inventory-registry")]
 
 mod gate_fixtures;
 
 use vyre_reference::value::Value;
-use vyre_test_support::registry_nets::{RegistrySweep, SweepCase};
+use vyre_test_support::registry_nets::RegistrySweep;
 
-/// Every fixture case the primitive catalog publishes.
-///
-/// An unfixtured primitive is out of reach of the four nets and is counted so
-/// the coverage line is honest about what went unchecked; IR validity below
-/// judges it anyway.
 fn sweep() -> RegistrySweep {
-    let mut cases = Vec::new();
-    let mut total = 0usize;
-    let mut fixtured = 0usize;
-
-    for entry in vyre_primitives::operation_catalog::all_entries() {
-        total += 1;
-        let Some(inputs_fn) = entry.test_inputs else {
-            continue;
-        };
-        fixtured += 1;
-        let program = entry
-            .program()
-            .expect("Fix: registered primitive must provide a neutral builder");
-        for (index, case) in inputs_fn().into_iter().enumerate() {
-            let inputs: Vec<Value> = case.into_iter().map(Value::from).collect();
-            cases.push(SweepCase::new(
-                format!("{} (fixture case {index})", entry.id),
-                program.clone(),
-                inputs,
-            ));
-        }
-    }
-
-    assert!(
-        total > 0,
-        "Fix: no registered primitives seen; select the domain features (--features inventory-registry,all-lego) \
-         so the catalog populates."
-    );
-    eprintln!(
-        "registry net coverage: {fixtured}/{total} ops fixtured, {} case(s), {} unfixtured op(s) out of reach",
-        cases.len(),
-        total - fixtured
-    );
-    RegistrySweep::new("the primitive catalog", cases)
+    RegistrySweep::from_catalog(
+        "the primitive catalog",
+        vyre_primitives::operation_catalog::all_entries(),
+    )
 }
 
 #[test]
@@ -90,9 +53,9 @@ fn every_registered_primitive_is_race_free_under_lane_reversal() {
 
 /// Every registered primitive emits IR that passes validation, fixtured or not.
 ///
-/// The four nets above reach only the ops that carry a fixture, so an unfixtured
-/// registration with an IR defect (a duplicate-binding shadow, which the
-/// no-shadowing validator and the CUDA backend both reject) would land
+/// The four nets above reach only the entries that carry a fixture, so an
+/// unfixtured registration with an IR defect (a duplicate-binding shadow, which
+/// the no-shadowing validator and the CUDA backend both reject) would land
 /// undetected. Validation runs before input binding, so an IR-invalid program
 /// reports `failed IR validation` whatever inputs are supplied, while a valid
 /// program on empty inputs reports a benign missing input, ignored here. This
