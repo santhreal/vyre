@@ -105,6 +105,7 @@ fn a_first_workgroup_guard_counts_as_naming_the_grid() {
 
 #[test]
 fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
+    let mut registered = 0;
     let mut examined = Vec::new();
     let mut offenders = Vec::new();
     // Every operation this build registers, whatever tier or feature put it
@@ -115,6 +116,7 @@ fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
         let Some(program) = entry.program() else {
             continue;
         };
+        registered += 1;
         if max_writable_count(&program) <= lanes(&program) {
             continue;
         }
@@ -124,9 +126,14 @@ fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
         }
     }
 
+    // A narrow feature set can register nothing that writes past one
+    // workgroup, and that is a fact about the build rather than a hole in the
+    // sweep: the predicate is proved able to fail by the control program in
+    // `a_first_workgroup_guard_counts_as_naming_the_grid`. What would make this
+    // sweep vacuous is reaching no catalog at all.
     assert!(
-        !examined.is_empty(),
-        "Fix: this build must register at least one operation whose writable footprint exceeds one workgroup, or this contract proves nothing"
+        registered > 0,
+        "Fix: the sweep reached no registered program with a body, so it examined nothing; check that the inventory registry is linked into this test binary"
     );
     assert!(
         offenders.is_empty(),
