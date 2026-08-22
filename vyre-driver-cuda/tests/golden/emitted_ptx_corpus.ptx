@@ -23,7 +23,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -79,7 +79,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -104,7 +105,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -160,7 +161,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -185,7 +187,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -241,7 +243,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -266,7 +269,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<6>;
+    .reg .pred  %p<7>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -326,7 +329,8 @@ $L_u32_div_done_1:
     selp.u32    %r38, %r3, %r39, %p5;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p6, %r3, %r29;
+    @%p6 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -351,7 +355,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<6>;
+    .reg .pred  %p<7>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -411,7 +415,8 @@ $L_u32_mod_done_1:
     selp.u32    %r38, %r3, %r39, %p5;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p6, %r3, %r29;
+    @%p6 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -436,7 +441,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -492,7 +497,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -517,7 +523,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<41>;
     .reg .u64   %rd<13>;
 
@@ -574,7 +580,8 @@ module group FusionGroupId(0)
     selp.u32    %r39, %r3, %r40, %p4;
     mul.wide.u32    %rd11, %r39, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -599,7 +606,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<41>;
     .reg .u64   %rd<13>;
 
@@ -656,7 +663,8 @@ module group FusionGroupId(0)
     selp.u32    %r39, %r3, %r40, %p4;
     mul.wide.u32    %rd11, %r39, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -681,7 +689,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -737,7 +745,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -762,7 +771,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -818,7 +827,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -843,7 +853,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -899,7 +909,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -924,7 +935,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -980,7 +991,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1005,7 +1017,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -1061,7 +1073,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p4;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1086,7 +1099,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<6>;
+    .reg .pred  %p<7>;
     .reg .u32   %r<42>;
     .reg .u64   %rd<13>;
 
@@ -1145,7 +1158,8 @@ module group FusionGroupId(0)
     selp.u32    %r40, %r3, %r41, %p5;
     mul.wide.u32    %rd11, %r40, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r39;
+    setp.lt.u32    %p6, %r3, %r29;
+    @%p6 st.global.u32    [%rd12], %r39;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1168,7 +1182,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<4>;
+    .reg .pred  %p<5>;
     .reg .u32   %r<36>;
     .reg .u64   %rd<9>;
 
@@ -1214,7 +1228,8 @@ module group FusionGroupId(0)
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd7, %r34, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.u32    [%rd8], %r33;
+    setp.lt.u32    %p4, %r3, %r28;
+    @%p4 st.global.u32    [%rd8], %r33;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1237,7 +1252,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<4>;
+    .reg .pred  %p<5>;
     .reg .u32   %r<36>;
     .reg .u64   %rd<9>;
 
@@ -1283,7 +1298,8 @@ module group FusionGroupId(0)
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd7, %r34, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.u32    [%rd8], %r33;
+    setp.lt.u32    %p4, %r3, %r28;
+    @%p4 st.global.u32    [%rd8], %r33;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1306,7 +1322,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<4>;
+    .reg .pred  %p<5>;
     .reg .u32   %r<36>;
     .reg .u64   %rd<9>;
 
@@ -1352,7 +1368,8 @@ module group FusionGroupId(0)
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd7, %r34, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.u32    [%rd8], %r33;
+    setp.lt.u32    %p4, %r3, %r28;
+    @%p4 st.global.u32    [%rd8], %r33;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1375,7 +1392,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<4>;
+    .reg .pred  %p<5>;
     .reg .u32   %r<37>;
     .reg .u64   %rd<9>;
 
@@ -1422,7 +1439,8 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p3;
     mul.wide.u32    %rd7, %r35, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.u32    [%rd8], %r34;
+    setp.lt.u32    %p4, %r3, %r28;
+    @%p4 st.global.u32    [%rd8], %r34;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1445,7 +1463,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<4>;
+    .reg .pred  %p<5>;
     .reg .u32   %r<36>;
     .reg .u64   %rd<9>;
 
@@ -1491,7 +1509,8 @@ module group FusionGroupId(0)
     selp.u32    %r34, %r3, %r35, %p3;
     mul.wide.u32    %rd7, %r34, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.u32    [%rd8], %r33;
+    setp.lt.u32    %p4, %r3, %r28;
+    @%p4 st.global.u32    [%rd8], %r33;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1516,7 +1535,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<9>;
+    .reg .pred  %p<10>;
     .reg .u32   %r<37>;
     .reg .f32   %f<11>;
     .reg .u64   %rd<13>;
@@ -1582,10 +1601,11 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p7;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
+    setp.lt.u32    %p8, %r3, %r29;
     mul.ftz.f32    %f9, %f8, 0f3f800000;
-    setp.nan.f32    %p8, %f9, %f9;
-    selp.f32    %f10, 0f7fc00000, %f9, %p8;
-    st.global.f32    [%rd12], %f10;
+    setp.nan.f32    %p9, %f9, %f9;
+    selp.f32    %f10, 0f7fc00000, %f9, %p9;
+    @%p8 st.global.f32    [%rd12], %f10;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1610,7 +1630,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<9>;
+    .reg .pred  %p<10>;
     .reg .u32   %r<37>;
     .reg .f32   %f<11>;
     .reg .u64   %rd<13>;
@@ -1676,10 +1696,11 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p7;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
+    setp.lt.u32    %p8, %r3, %r29;
     mul.ftz.f32    %f9, %f8, 0f3f800000;
-    setp.nan.f32    %p8, %f9, %f9;
-    selp.f32    %f10, 0f7fc00000, %f9, %p8;
-    st.global.f32    [%rd12], %f10;
+    setp.nan.f32    %p9, %f9, %f9;
+    selp.f32    %f10, 0f7fc00000, %f9, %p9;
+    @%p8 st.global.f32    [%rd12], %f10;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1704,7 +1725,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<9>;
+    .reg .pred  %p<10>;
     .reg .u32   %r<37>;
     .reg .f32   %f<11>;
     .reg .u64   %rd<13>;
@@ -1770,10 +1791,11 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p7;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
+    setp.lt.u32    %p8, %r3, %r29;
     mul.ftz.f32    %f9, %f8, 0f3f800000;
-    setp.nan.f32    %p8, %f9, %f9;
-    selp.f32    %f10, 0f7fc00000, %f9, %p8;
-    st.global.f32    [%rd12], %f10;
+    setp.nan.f32    %p9, %f9, %f9;
+    selp.f32    %f10, 0f7fc00000, %f9, %p9;
+    @%p8 st.global.f32    [%rd12], %f10;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1798,7 +1820,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<9>;
+    .reg .pred  %p<10>;
     .reg .u32   %r<37>;
     .reg .f32   %f<11>;
     .reg .u64   %rd<13>;
@@ -1864,10 +1886,11 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p7;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
+    setp.lt.u32    %p8, %r3, %r29;
     mul.ftz.f32    %f9, %f8, 0f3f800000;
-    setp.nan.f32    %p8, %f9, %f9;
-    selp.f32    %f10, 0f7fc00000, %f9, %p8;
-    st.global.f32    [%rd12], %f10;
+    setp.nan.f32    %p9, %f9, %f9;
+    selp.f32    %f10, 0f7fc00000, %f9, %p9;
+    @%p8 st.global.f32    [%rd12], %f10;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1892,7 +1915,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<9>;
+    .reg .pred  %p<10>;
     .reg .u32   %r<37>;
     .reg .f32   %f<11>;
     .reg .u64   %rd<13>;
@@ -1958,10 +1981,11 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p7;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
+    setp.lt.u32    %p8, %r3, %r29;
     mul.ftz.f32    %f9, %f8, 0f3f800000;
-    setp.nan.f32    %p8, %f9, %f9;
-    selp.f32    %f10, 0f7fc00000, %f9, %p8;
-    st.global.f32    [%rd12], %f10;
+    setp.nan.f32    %p9, %f9, %f9;
+    selp.f32    %f10, 0f7fc00000, %f9, %p9;
+    @%p8 st.global.f32    [%rd12], %f10;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -1986,7 +2010,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<37>;
     .reg .s32   %s<3>;
     .reg .u64   %rd<13>;
@@ -2043,7 +2067,8 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p4;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.s32    [%rd12], %s2;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.s32    [%rd12], %s2;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2068,7 +2093,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<37>;
     .reg .s32   %s<3>;
     .reg .u64   %rd<13>;
@@ -2125,7 +2150,8 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p4;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.s32    [%rd12], %s2;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.s32    [%rd12], %s2;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2150,7 +2176,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<9>;
+    .reg .pred  %p<10>;
     .reg .u32   %r<37>;
     .reg .s32   %s<3>;
     .reg .u64   %rd<13>;
@@ -2218,7 +2244,8 @@ $L_i32_div_done_1:
     selp.u32    %r35, %r3, %r36, %p8;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.s32    [%rd12], %s2;
+    setp.lt.u32    %p9, %r3, %r29;
+    @%p9 st.global.s32    [%rd12], %s2;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2243,7 +2270,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<9>;
+    .reg .pred  %p<10>;
     .reg .u32   %r<37>;
     .reg .s32   %s<3>;
     .reg .u64   %rd<13>;
@@ -2308,7 +2335,8 @@ $L_i32_mod_done_1:
     selp.u32    %r35, %r3, %r36, %p8;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.s32    [%rd12], %s2;
+    setp.lt.u32    %p9, %r3, %r29;
+    @%p9 st.global.s32    [%rd12], %s2;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2333,7 +2361,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<37>;
     .reg .s32   %s<3>;
     .reg .u64   %rd<13>;
@@ -2390,7 +2418,8 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p4;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.s32    [%rd12], %s2;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.s32    [%rd12], %s2;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2415,7 +2444,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<37>;
     .reg .s32   %s<3>;
     .reg .u64   %rd<13>;
@@ -2472,7 +2501,8 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p4;
     mul.wide.u32    %rd11, %r35, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.s32    [%rd12], %s2;
+    setp.lt.u32    %p5, %r3, %r29;
+    @%p5 st.global.s32    [%rd12], %s2;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2495,7 +2525,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<35>;
     .reg .f32   %f<3>;
     .reg .u64   %rd<9>;
@@ -2542,10 +2572,11 @@ module group FusionGroupId(0)
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd7, %r33, 4;
     add.u64    %rd8, %rd4, %rd7;
+    setp.lt.u32    %p4, %r3, %r28;
     mul.ftz.f32    %f1, %f0, 0f3f800000;
-    setp.nan.f32    %p4, %f1, %f1;
-    selp.f32    %f2, 0f7fc00000, %f1, %p4;
-    st.global.f32    [%rd8], %f2;
+    setp.nan.f32    %p5, %f1, %f1;
+    selp.f32    %f2, 0f7fc00000, %f1, %p5;
+    @%p4 st.global.f32    [%rd8], %f2;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2568,7 +2599,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<5>;
+    .reg .pred  %p<6>;
     .reg .u32   %r<34>;
     .reg .s32   %s<1>;
     .reg .f32   %f<3>;
@@ -2619,7 +2650,8 @@ module group FusionGroupId(0)
     selp.u32    %r32, %r3, %r33, %p4;
     mul.wide.u32    %rd7, %r32, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.s32    [%rd8], %s0;
+    setp.lt.u32    %p5, %r3, %r28;
+    @%p5 st.global.s32    [%rd8], %s0;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2642,7 +2674,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<4>;
+    .reg .pred  %p<5>;
     .reg .u32   %r<35>;
     .reg .s32   %s<1>;
     .reg .u64   %rd<9>;
@@ -2689,7 +2721,8 @@ module group FusionGroupId(0)
     selp.u32    %r33, %r3, %r34, %p3;
     mul.wide.u32    %rd7, %r33, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.u32    [%rd8], %r32;
+    setp.lt.u32    %p4, %r3, %r28;
+    @%p4 st.global.u32    [%rd8], %r32;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2714,7 +2747,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<6>;
+    .reg .pred  %p<7>;
     .reg .u32   %r<40>;
     .reg .u64   %rd<13>;
 
@@ -2771,7 +2804,8 @@ module group FusionGroupId(0)
     selp.u32    %r38, %r3, %r39, %p5;
     mul.wide.u32    %rd11, %r38, 4;
     add.u64    %rd12, %rd6, %rd11;
-    st.global.u32    [%rd12], %r37;
+    setp.lt.u32    %p6, %r3, %r29;
+    @%p6 st.global.u32    [%rd12], %r37;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2796,7 +2830,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<10>;
+    .reg .pred  %p<11>;
     .reg .u32   %r<54>;
     .reg .u64   %rd<21>;
 
@@ -2883,7 +2917,8 @@ module group FusionGroupId(0)
     selp.u32    %r52, %r3, %r53, %p9;
     mul.wide.u32    %rd19, %r52, 4;
     add.u64    %rd20, %rd6, %rd19;
-    st.global.u32    [%rd20], %r51;
+    setp.lt.u32    %p10, %r3, %r29;
+    @%p10 st.global.u32    [%rd20], %r51;
 $L_if_end_0:
 $L_exit:
     ret;
@@ -2906,7 +2941,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<7>;
+    .reg .pred  %p<9>;
     .reg .u32   %r<44>;
     .reg .u64   %rd<13>;
 
@@ -2956,12 +2991,13 @@ module group FusionGroupId(0)
     selp.u32    %r35, %r3, %r36, %p4;
     mul.wide.u32    %rd7, %r35, 4;
     add.u64    %rd8, %rd4, %rd7;
-    st.global.u32    [%rd8], %r34;
+    setp.lt.u32    %p5, %r3, %r28;
+    @%p5 st.global.u32    [%rd8], %r34;
     bra $L_if_end_2;
 $L_if_else_1:
     mov.u32    %r38, 0;
-    setp.lt.u32    %p5, %r3, %r27;
-    selp.u32    %r37, %r3, %r38, %p5;
+    setp.lt.u32    %p6, %r3, %r27;
+    selp.u32    %r37, %r3, %r38, %p6;
     mul.wide.u32    %rd9, %r37, 4;
     add.u64    %rd10, %rd2, %rd9;
     ld.global.u32    %r39, [%rd10];
@@ -2969,11 +3005,12 @@ $L_if_else_1:
     mov.u32    %r40, 7;
     add.u32    %r41, %r39, %r40;
     mov.u32    %r43, 0;
-    setp.lt.u32    %p6, %r3, %r28;
-    selp.u32    %r42, %r3, %r43, %p6;
+    setp.lt.u32    %p7, %r3, %r28;
+    selp.u32    %r42, %r3, %r43, %p7;
     mul.wide.u32    %rd11, %r42, 4;
     add.u64    %rd12, %rd4, %rd11;
-    st.global.u32    [%rd12], %r41;
+    setp.lt.u32    %p8, %r3, %r28;
+    @%p8 st.global.u32    [%rd12], %r41;
 $L_if_end_2:
 $L_if_end_0:
 $L_exit:
@@ -2997,7 +3034,7 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<7>;
+    .reg .pred  %p<9>;
     .reg .u32   %r<46>;
     .reg .u64   %rd<13>;
 
@@ -3037,35 +3074,37 @@ module group FusionGroupId(0)
     selp.u32    %r31, %r3, %r32, %p2;
     mul.wide.u32    %rd5, %r31, 4;
     add.u64    %rd6, %rd4, %rd5;
-    st.global.u32    [%rd6], %r30;
+    setp.lt.u32    %p3, %r3, %r28;
+    @%p3 st.global.u32    [%rd6], %r30;
     mov.u32    %r33, 0;
     mov.u32    %r34, 4;
     // for step in [%r33, %r34)
     mov.u32    %r35, %r33;
     mov.u32    %r36, 1;
 $L_for_head_1:
-    setp.ge.u32 %p3, %r35, %r34;
-    @%p3 bra $L_for_exit_2;
+    setp.ge.u32 %p4, %r35, %r34;
+    @%p4 bra $L_for_exit_2;
     mov.u32    %r38, 0;
-    setp.lt.u32    %p4, %r3, %r28;
-    selp.u32    %r37, %r3, %r38, %p4;
+    setp.lt.u32    %p5, %r3, %r28;
+    selp.u32    %r37, %r3, %r38, %p5;
     mul.wide.u32    %rd7, %r37, 4;
     add.u64    %rd8, %rd4, %rd7;
     ld.global.u32    %r39, [%rd8];
     // schedule: hoist independent op#4 into load-use gap after op#3
     mov.u32    %r41, 0;
-    setp.lt.u32    %p5, %r3, %r27;
-    selp.u32    %r40, %r3, %r41, %p5;
+    setp.lt.u32    %p6, %r3, %r27;
+    selp.u32    %r40, %r3, %r41, %p6;
     mul.wide.u32    %rd9, %r40, 4;
     add.u64    %rd10, %rd2, %rd9;
     ld.global.u32    %r42, [%rd10];
     mad.lo.u32    %r43, %r42, %r35, %r39;
     mov.u32    %r45, 0;
-    setp.lt.u32    %p6, %r3, %r28;
-    selp.u32    %r44, %r3, %r45, %p6;
+    setp.lt.u32    %p7, %r3, %r28;
+    selp.u32    %r44, %r3, %r45, %p7;
     mul.wide.u32    %rd11, %r44, 4;
     add.u64    %rd12, %rd4, %rd11;
-    st.global.u32    [%rd12], %r43;
+    setp.lt.u32    %p8, %r3, %r28;
+    @%p8 st.global.u32    [%rd12], %r43;
     add.u32    %r35, %r35, %r36;
     bra $L_for_head_1;
 $L_for_exit_2:
