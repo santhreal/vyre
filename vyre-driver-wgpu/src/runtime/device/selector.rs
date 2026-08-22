@@ -136,7 +136,7 @@ pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
 /// Returns `BackendError` when probe-result metadata cannot be reserved.
 pub(crate) fn try_enumerate_adapters() -> Result<Vec<wgpu::AdapterInfo>> {
     let instance = super::acquire::new_instance();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let mut infos = Vec::new();
     reserve_probe_vec(&mut infos, adapters.len(), "adapter enumeration metadata")?;
     infos.extend(adapters.iter().map(wgpu::Adapter::get_info));
@@ -148,7 +148,7 @@ pub(crate) fn try_enumerate_adapters() -> Result<Vec<wgpu::AdapterInfo>> {
 pub fn has_real_gpu_adapter() -> bool {
     let instance = super::acquire::new_instance();
     instance
-        .enumerate_adapters(wgpu::Backends::all())
+        .enumerate_adapters(super::acquire::COMPUTE_BACKENDS)
         .iter()
         .any(|adapter| crate::capabilities::is_real_gpu(&adapter.get_info()))
 }
@@ -164,7 +164,7 @@ pub fn has_real_gpu_adapter() -> bool {
 /// Returns `BackendError` when the adapter is no longer visible.
 pub fn adapter_for_info(expected: &wgpu::AdapterInfo) -> Result<wgpu::Adapter> {
     let instance = super::acquire::new_instance();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let mut probed = Vec::new();
     reserve_probe_vec(&mut probed, adapters.len(), "adapter recovery probe report")?;
     for adapter in adapters {
@@ -207,7 +207,7 @@ fn adapter_info_matches(candidate: &wgpu::AdapterInfo, expected: &wgpu::AdapterI
 #[must_use]
 pub fn adapter_probe_report() -> AdapterProbeReport {
     let instance = super::acquire::new_instance();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let mut report = AdapterProbeReport {
         probed: Vec::new(),
         missing: Vec::new(),
@@ -267,7 +267,7 @@ pub fn adapter_probe_report() -> AdapterProbeReport {
 /// Returns `BackendError` when no adapter matches.
 pub fn select_adapter(criteria: &AdapterCriteria) -> Result<(usize, wgpu::AdapterInfo)> {
     let instance = super::acquire::new_instance();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     for (idx, adapter) in adapters.iter().enumerate() {
         let info = adapter.get_info();
         if adapter_is_selectable(&info, criteria) {
@@ -358,7 +358,7 @@ async fn acquire_gpu_for_adapter_identity(
     crate::runtime::device::EnabledFeatures,
 )> {
     let instance = super::acquire::new_instance();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     for adapter in &adapters {
         let info = adapter.get_info();
         if identity.matches(&info) {
@@ -407,7 +407,7 @@ pub async fn acquire_gpu_for_adapter(
     crate::runtime::device::EnabledFeatures,
 )> {
     let instance = super::acquire::new_instance();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let adapter = adapters.get(index).ok_or_else(|| BackendError::new(format!(
         "adapter index {index} out of range (saw {} adapters). Fix: call enumerate_adapters() first to see valid indices.",
         adapters.len()

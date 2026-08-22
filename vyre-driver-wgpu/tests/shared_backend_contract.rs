@@ -66,7 +66,8 @@ fn shared_backend_reports_same_capabilities_as_concrete_backend() {
     );
 }
 
-/// Acquiring a backend from many threads at once must succeed on every thread.
+/// Acquiring and releasing a backend from many threads at once must finish on
+/// every thread.
 ///
 /// A `wgpu::Instance` owns the Vulkan loader instance and loader startup is not
 /// reentrant, so two threads creating an instance together left one of them
@@ -75,36 +76,50 @@ fn shared_backend_reports_same_capabilities_as_concrete_backend() {
 /// failed assertion: the process dies with SIGSEGV and takes the harness with
 /// it, so this test fails by disappearing. The barrier releases every thread
 /// into acquisition at once, which is the state that faulted.
+///
+/// Release is the other half, and it is the half that hung. While an instance
+/// enabled GL, teardown closed a cycle across the Vulkan loader lock, an EGL
+/// lock, and a thread-exit destructor `vkDestroyDevice` was joining, so a
+/// conformance run that acquired one backend per worker stopped for hours with
+/// no output. Each thread therefore drops its backend and reports afterwards,
+/// and the report is collected under a deadline: a thread stuck in teardown
+/// cannot be joined, so a regression has to fail as an expired wait rather than
+/// as a suite that never returns.
 #[test]
-fn concurrent_backend_acquisition_succeeds_on_every_thread() {
+fn concurrent_backend_acquisition_and_release_finishes_on_every_thread() {
     let threads = std::thread::available_parallelism().map_or(8, |count| count.get().max(8));
     let barrier = Arc::new(Barrier::new(threads));
-    let acquisitions = (0..threads)
-        .map(|_| {
-            let barrier = Arc::clone(&barrier);
-            std::thread::spawn(move || {
-                barrier.wait();
-                WgpuBackend::acquire().map(|backend| backend.adapter_info().name.clone())
-            })
-        })
-        .collect::<Vec<_>>()
-        .into_iter()
-        .map(|handle| {
-            handle
-                .join()
-                .expect("Fix: a concurrent wgpu acquisition thread must not panic")
-        })
-        .collect::<Vec<_>>();
+    let (report, reports) = std::sync::mpsc::channel();
+    for _ in 0..threads {
+        let barrier = Arc::clone(&barrier);
+        let report = report.clone();
+        std::thread::spawn(move || {
+            barrier.wait();
+            let acquired = WgpuBackend::acquire().map(|backend| {
+                let name = backend.adapter_info().name.clone();
+                drop(backend);
+                name
+            });
+            let _ = report.send(acquired);
+        });
+    }
+    drop(report);
 
-    let adapters = acquisitions
-        .iter()
-        .map(|acquisition| match acquisition {
-            Ok(name) => name.clone(),
+    let deadline = std::time::Duration::from_secs(120);
+    let mut adapters = BTreeSet::new();
+    for index in 0..threads {
+        match reports.recv_timeout(deadline) {
+            Ok(Ok(name)) => {
+                adapters.insert(name);
+            }
+            Ok(Err(error)) => {
+                panic!("Fix: concurrent wgpu acquisition failed on one of {threads} threads: {error}")
+            }
             Err(error) => panic!(
-                "Fix: concurrent wgpu acquisition failed on one of {threads} threads: {error}"
+                "Fix: {index} of {threads} concurrent acquisitions reported within {deadline:?} ({error}). A thread that acquired a backend and did not report has not finished releasing it; instance and device teardown must not block on another thread's teardown."
             ),
-        })
-        .collect::<BTreeSet<_>>();
+        }
+    }
     assert_eq!(
         adapters.len(),
         1,

@@ -26,13 +26,32 @@ fn loader_startup() -> MutexGuard<'static, ()> {
         .unwrap_or_else(PoisonError::into_inner)
 }
 
+/// Backends this driver dispatches compute through.
+///
+/// Every backend here runs a compute pipeline. `Backends::all()` additionally
+/// carries GL, which reaches the same physical device a Vulkan or Metal adapter
+/// already reports, adds no compute capability this driver lowers to, and costs
+/// an EGL context in every instance that enables it.
+///
+/// That context is not free to create and destroy. The NVIDIA EGL runtime
+/// registers a thread-local whose destructor takes an EGL-internal lock at
+/// thread exit, and `vkDestroyDevice` joins driver threads that run that
+/// destructor. Two threads tearing down instances at once close a cycle:
+/// one waits inside `vkDestroyDevice` for a thread parked in the EGL
+/// destructor, that lock is held by the thread destroying the other instance,
+/// and that thread waits on the Vulkan loader lock the first one holds. No
+/// deadline breaks it, because a thread already inside a thread-exit destructor
+/// cannot be cancelled. Not enabling GL is what removes the cycle: this driver
+/// never wanted the adapter.
+pub(crate) const COMPUTE_BACKENDS: wgpu::Backends = wgpu::Backends::VULKAN
+    .union(wgpu::Backends::METAL)
+    .union(wgpu::Backends::DX12)
+    .union(wgpu::Backends::BROWSER_WEBGPU);
+
 /// One wgpu instance, created and destroyed with no other loader work in flight.
 ///
-/// The instance stays per acquisition rather than shared. The GLES backend inside
-/// an instance owns an EGL context, an EGL context is current on exactly one
-/// thread, and a second thread reaching the same instance gets `EGL_BAD_ACCESS`.
-/// Serializing the loader transitions is what the fault needs; sharing the
-/// instance is not.
+/// The instance stays per acquisition rather than shared, so that two backends
+/// can hold two physical devices and device-loss recovery can replace one.
 pub(crate) struct LoaderInstance(Option<wgpu::Instance>);
 
 impl Deref for LoaderInstance {
@@ -61,7 +80,10 @@ impl Drop for LoaderInstance {
 /// Construct one wgpu instance, with no other loader transition in flight.
 pub(crate) fn new_instance() -> LoaderInstance {
     let _startup = loader_startup();
-    LoaderInstance(Some(wgpu::Instance::default()))
+    LoaderInstance(Some(wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        backends: COMPUTE_BACKENDS,
+        ..Default::default()
+    })))
 }
 
 /// Snapshot of features that were actually enabled when the cached
@@ -245,7 +267,7 @@ pub async fn acquire_gpu() -> Result<(
     }
 
     let instance = new_instance();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(COMPUTE_BACKENDS);
     let mut candidates = Vec::new();
     reserve_probe_vec(
         &mut candidates,
@@ -728,5 +750,54 @@ mod tests {
             !features.contains(wgpu::Features::PIPELINE_CACHE) && !enabled.pipeline_cache,
             "Vulkan without the adapter feature must not phantom-enable PIPELINE_CACHE"
         );
+    }
+
+    /// Every backend wgpu publishes is either dispatched through or excluded
+    /// with a reason.
+    ///
+    /// `COMPUTE_BACKENDS` is a hand-written mask, so a wgpu upgrade that adds a
+    /// backend would silently leave it out of both the instance and every
+    /// adapter probe. The member set is read from `Backends::all()` rather than
+    /// restated, so a new member belongs to neither list and turns this red
+    /// until someone records which one it joins.
+    #[test]
+    fn every_published_backend_is_dispatched_or_excluded_with_a_reason() {
+        const EXCLUDED: [(wgpu::Backends, &str); 2] = [
+            (
+                wgpu::Backends::GL,
+                "reaches a device Vulkan or Metal already reports, lowers no compute this driver \
+                 emits, and costs an EGL context whose thread-exit teardown deadlocks against \
+                 concurrent device destruction",
+            ),
+            (
+                wgpu::Backends::NOOP,
+                "executes nothing, so a program dispatched on it proves nothing",
+            ),
+        ];
+
+        let excluded = EXCLUDED
+            .iter()
+            .fold(wgpu::Backends::empty(), |mask, (backend, _)| {
+                mask | *backend
+            });
+        assert!(
+            !COMPUTE_BACKENDS.intersects(excluded),
+            "Fix: {:?} is both dispatched through and excluded.",
+            COMPUTE_BACKENDS & excluded
+        );
+        assert_eq!(
+            COMPUTE_BACKENDS | excluded,
+            wgpu::Backends::all(),
+            "Fix: {:?} is a backend wgpu publishes that this driver neither dispatches through nor \
+             excludes with a reason. Add it to COMPUTE_BACKENDS, or to EXCLUDED naming why a \
+             compute program must not run there.",
+            wgpu::Backends::all() - (COMPUTE_BACKENDS | excluded)
+        );
+        for (backend, reason) in EXCLUDED {
+            assert!(
+                !reason.trim().is_empty(),
+                "Fix: {backend:?} is excluded with no reason recorded."
+            );
+        }
     }
 }
