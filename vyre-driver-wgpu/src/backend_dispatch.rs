@@ -2,7 +2,7 @@
 
 use crate::staging_reserve::{reserve_backend_vec, reserve_smallvec, reserve_vec};
 use crate::{AdapterRecoveryTarget, DispatchArena, WgpuBackend};
-use std::hash::{BuildHasherDefault, Hasher};
+use std::hash::BuildHasherDefault;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -192,21 +192,18 @@ impl WgpuBackend {
         self.persistent_pool.load_full().as_ref().clone()
     }
 
+    /// The resident path answers a dispatch from a compiled pipeline, so it
+    /// identifies one the same way every other pipeline cache does. A bespoke
+    /// key lived here and hashed the wire bytes with `FxHasher`, naming neither
+    /// the adapter, the ABI, the naga build nor the emitter lowering digest: a
+    /// second identity that could serve a pipeline the previous emitter
+    /// compiled, and re-encoded the whole program on every dispatch to do it.
     fn resident_pipeline_cache_key(
         &self,
         program: &Program,
         config: &vyre_driver::DispatchConfig,
-    ) -> Result<(u64, u64, usize), vyre_driver::BackendError> {
-        let wire = program.to_wire().map_err(|source| {
-            vyre_driver::BackendError::new(format!(
-                "WGPU resident pipeline cache could not encode Program: {source}. Fix: validate the Program before resident dispatch."
-            ))
-        })?;
-        let mut program_hasher = rustc_hash::FxHasher::default();
-        program_hasher.write(&wire);
-        let mut config_hasher = rustc_hash::FxHasher::default();
-        config_hasher.write(format!("{config:?}").as_bytes());
-        Ok((program_hasher.finish(), config_hasher.finish(), wire.len()))
+    ) -> [u8; 32] {
+        crate::pipeline::disk_cache::early_pipeline_cache_key(program, &self.adapter_info, config)
     }
 
     /// Compile `program` against this backend's current device, buffer pool and
@@ -241,7 +238,7 @@ impl WgpuBackend {
         program: &Program,
         config: &vyre_driver::DispatchConfig,
     ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_driver::BackendError> {
-        let key = self.resident_pipeline_cache_key(program, config)?;
+        let key = self.resident_pipeline_cache_key(program, config);
         if let Some(hit) = self.resident_pipeline_cache.get(&key) {
             return Ok(hit.clone());
         }

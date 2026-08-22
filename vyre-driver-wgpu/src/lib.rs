@@ -67,7 +67,7 @@ pub struct WgpuBackend {
     >,
     pub(crate) resident_pipeline_cache: Arc<
         dashmap::DashMap<
-            (u64, u64, usize),
+            [u8; 32],
             Arc<crate::pipeline::WgpuPipeline>,
             BuildHasherDefault<rustc_hash::FxHasher>,
         >,
