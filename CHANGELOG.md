@@ -4352,6 +4352,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   child region that had derived its name from its parent operation, and the
   collapse of the C declaration prefix walk onto one owner whose disqualifier
   token set differs from the copy the annotate builders had been reading.
+- Eleven registered compositions whose writable footprint exceeds one workgroup
+  now index their global writes by a grid-varying id or confine them to the
+  first workgroup, so a multi-workgroup launch no longer repeats the same
+  writes in every workgroup.
 - A backend that lowers a whole-grid barrier is no longer routed through the
   host split. `VyreBackend::supports_grid_sync` and
   `VyreBackend::cooperative_grid_sync_fits` are two halves of one answer, and
@@ -4568,6 +4572,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A row in .github/CI_REQUIRED.md naming a workflow the checkout does not carry
   fails the ci-required gate, and the workflows whose path filters and
   directories no longer exist are deleted rather than parked.
+- The WGPU resident pipeline cache keys entries by canonical pipeline identity
+  instead of a 64-bit FxHash of the program wire, so a resident dispatch cannot
+  be answered by a pipeline compiled for another adapter, ABI, naga build or
+  emitter lowering digest.
 - A retired release claim is any dotted number that starts with the retired
   train, so a four component version is reported, and the same digits inside
   another train version or inside a hash are not.
@@ -4616,6 +4624,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   directory covered. Cargo invocation resolution moved into that gate, which
   reads workflows and manifests rather than Rust source text, so its
   structural-gate row is deleted rather than re-pointed.
+- The visual filter chain computes each channel distance from the contrast
+  midpoint and from luma as a single non-negative magnitude, so neither the
+  contrast nor the saturate stage evaluates a wrapping subtraction as the
+  unused arm of a select.
 - A library composition whose writable footprint exceeds one workgroup now
   confines its serial body to workgroup zero, so the FFT convolution, the
   radix-2 transform, the BLAKE3 quartet, round and compression, the AMG V-cycle
