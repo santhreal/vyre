@@ -179,6 +179,8 @@ pub mod monorepo;
 pub mod mutation_testing;
 #[cfg(feature = "ir-fixtures")]
 pub mod pass_programs;
+#[cfg(feature = "ir-fixtures")]
+pub mod registry_nets;
 pub mod replay_capsule;
 #[cfg(feature = "ir-fixtures")]
 pub use pass_programs::overfire_grid;

@@ -11,240 +11,64 @@
 //! The reference interpreter absorbs the read as a zero, which is precisely the
 //! masking a backend that does not bounds-check will not do.
 //!
-//! Each net derives its population from the catalog at run time, so a
-//! registration added tomorrow is judged tomorrow, and each names the ops it
-//! could not reach rather than reporting a clean sweep of a subset.
+//! The four nets themselves live in `vyre_test_support::registry_nets`, which
+//! both registered surfaces call, so neither can drift into judging its
+//! population by a different rule. What is crate-specific is here: the
+//! population comes from the library catalog at run time, so a registration
+//! added tomorrow is judged tomorrow.
 
 #![forbid(unsafe_code)]
 
 use vyre_reference::value::Value;
-use vyre_test_support::overfire_grid;
+use vyre_test_support::registry_nets::{RegistrySweep, SweepCase};
 
-/// The library catalog, refused when empty: an empty walk passes every net
-/// below without proving anything.
-fn fixtured_entries() -> Vec<vyre_foundation::operation::SemanticOperation> {
+/// Every fixture case the library catalog publishes.
+///
+/// The catalog is refused when empty: an empty walk passes every net without
+/// proving anything.
+fn sweep() -> RegistrySweep {
     let entries: Vec<_> = vyre_libs::operation_catalog::all_entries().collect();
     assert!(
         !entries.is_empty(),
         "Fix: the library catalog is empty, so this run judges no registration at all"
     );
-    entries
-        .into_iter()
-        .filter(|entry| entry.test_inputs.is_some())
-        .collect()
-}
 
-fn program_of(
-    entry: &vyre_foundation::operation::SemanticOperation,
-) -> vyre_foundation::ir::Program {
-    entry
-        .program()
-        .expect("Fix: registered library operation must provide a neutral builder")
-}
-
-fn cases(entry: &vyre_foundation::operation::SemanticOperation) -> Vec<Vec<Value>> {
-    let inputs_fn = entry
-        .test_inputs
-        .expect("Fix: this walk is filtered to fixtured entries");
-    inputs_fn()
-        .into_iter()
-        .map(|case| case.into_iter().map(Value::from).collect())
-        .collect()
-}
-
-/// Every net below walks the same population, so a case one net cannot evaluate
-/// is a case that net did not judge. Reporting a clean sweep of the remainder is
-/// the failure mode these nets exist to remove, so each one names its skips and
-/// refuses them.
-fn refuse_skips(net: &str, checked_cases: usize, skipped: &[String]) {
-    assert!(
-        checked_cases > 0,
-        "Fix: {net} exercised no library fixture, so it proves nothing"
-    );
-    assert!(
-        skipped.is_empty(),
-        "Fix: {net} could not evaluate {} of {} library fixture case(s), so it judged a subset and \
-         reported it as a sweep. A registered fixture the reference cannot run is a defect in the \
-         fixture or the builder, not a case to skip. Un-evaluable:\n{}",
-        skipped.len(),
-        checked_cases + skipped.len(),
-        skipped.join("\n")
-    );
+    let mut cases = Vec::new();
+    for entry in entries {
+        let Some(inputs_fn) = entry.test_inputs else {
+            continue;
+        };
+        let program = entry
+            .program()
+            .expect("Fix: registered library operation must provide a neutral builder");
+        for (index, case) in inputs_fn().into_iter().enumerate() {
+            let inputs: Vec<Value> = case.into_iter().map(Value::from).collect();
+            cases.push(SweepCase::new(
+                format!("{} (fixture case {index})", entry.id),
+                program.clone(),
+                inputs,
+            ));
+        }
+    }
+    RegistrySweep::new("the library catalog", cases)
 }
 
 #[test]
 fn every_registered_composition_is_oob_clean_on_its_fixtures() {
-    let mut offenders = Vec::new();
-    let mut checked_cases = 0usize;
-    let mut eval_errored: Vec<String> = Vec::new();
-
-    for entry in fixtured_entries() {
-        let program = program_of(&entry);
-        for (case_idx, values) in cases(&entry).into_iter().enumerate() {
-            match vyre_reference::reference_eval_oob_report(&program, &values) {
-                Ok((_out, report)) => {
-                    checked_cases += 1;
-                    if report.total() > 0 {
-                        offenders.push(format!(
-                            "{} (fixture case {case_idx}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
-                            entry.id, report.oob_loads, report.oob_stores, report.oob_atomics
-                        ));
-                    }
-                }
-                Err(err) => eval_errored.push(format!("{} (case {case_idx}): {err}", entry.id)),
-            }
-        }
-    }
-
-    refuse_skips("the library OOB sweep", checked_cases, &eval_errored);
-    assert!(
-        offenders.is_empty(),
-        "Fix: {} of {checked_cases} checked library fixture case(s) accessed a buffer OUT OF BOUNDS on their own \
-         valid input. The reference absorbs the access (zero-filled load, dropped store) so the answer looks \
-         right, while a backend that does not bounds-check reads garbage or corrupts memory. Gate the index with \
-         CONTROL FLOW: `Expr::select(i < n, load(buf, i), fallback)` evaluates the load for every i. Offenders:\n{}",
-        offenders.len(),
-        offenders.join("\n")
-    );
+    sweep().assert_oob_clean();
 }
 
 #[test]
 fn every_registered_composition_is_oob_clean_under_grid_overfire() {
-    let mut offenders = Vec::new();
-    let mut skipped = Vec::new();
-    let mut checked_cases = 0usize;
-
-    for entry in fixtured_entries() {
-        let program = program_of(&entry);
-        let grid = overfire_grid(&program);
-        for (case_idx, values) in cases(&entry).into_iter().enumerate() {
-            match vyre_reference::reference_eval_with_dispatch_oob_report(&program, &values, grid) {
-                Ok((_out, report)) => {
-                    checked_cases += 1;
-                    if report.total() > 0 {
-                        offenders.push(format!(
-                            "{} (fixture case {case_idx}, grid>={grid}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
-                            entry.id, report.oob_loads, report.oob_stores, report.oob_atomics
-                        ));
-                    }
-                }
-                Err(err) => skipped.push(format!("{} (case {case_idx}): {err}", entry.id)),
-            }
-        }
-    }
-
-    refuse_skips("the library over-fire OOB sweep", checked_cases, &skipped);
-    assert!(
-        offenders.is_empty(),
-        "Fix: {} of {checked_cases} checked library fixture case(s) accessed a buffer OUT OF BOUNDS when the \
-         dispatch was OVER-FIRED by one workgroup. A backend dispatches whole workgroups, so the lanes past the \
-         logical count DO run and every per-lane guard must survive them. Offenders:\n{}",
-        offenders.len(),
-        offenders.join("\n")
-    );
+    sweep().assert_oob_clean_under_overfire();
 }
 
 #[test]
 fn every_registered_composition_output_is_invariant_under_grid_overfire() {
-    let mut offenders = Vec::new();
-    let mut skipped = Vec::new();
-    let mut checked_cases = 0usize;
-
-    for entry in fixtured_entries() {
-        let program = program_of(&entry);
-        let grid = overfire_grid(&program);
-        for (case_idx, values) in cases(&entry).into_iter().enumerate() {
-            let baseline = match vyre_reference::reference_eval(&program, &values) {
-                Ok(baseline) => baseline,
-                Err(err) => {
-                    skipped.push(format!("{} (case {case_idx}): {err}", entry.id));
-                    continue;
-                }
-            };
-            let overfired =
-                match vyre_reference::reference_eval_with_dispatch(&program, &values, grid) {
-                    Ok(overfired) => overfired,
-                    Err(err) => {
-                        skipped.push(format!("{} (case {case_idx}, over-fired): {err}", entry.id));
-                        continue;
-                    }
-                };
-            checked_cases += 1;
-            let base_bytes: Vec<Vec<u8>> = baseline.iter().map(Value::to_bytes).collect();
-            let over_bytes: Vec<Vec<u8>> = overfired.iter().map(Value::to_bytes).collect();
-            if base_bytes != over_bytes {
-                let where_ = base_bytes
-                    .iter()
-                    .zip(over_bytes.iter())
-                    .position(|(a, b)| a != b)
-                    .map_or_else(
-                        || format!("output count {} vs {}", base_bytes.len(), over_bytes.len()),
-                        |idx| format!("output #{idx} differs"),
-                    );
-                offenders.push(format!(
-                    "{} (fixture case {case_idx}, grid>={grid}): {where_}",
-                    entry.id
-                ));
-            }
-        }
-    }
-
-    refuse_skips(
-        "the library over-fire invariance sweep",
-        checked_cases,
-        &skipped,
-    );
-    assert!(
-        offenders.is_empty(),
-        "Fix: {} of {checked_cases} checked library fixture case(s) produced a DIFFERENT output when the dispatch \
-         was OVER-FIRED by one workgroup. The extra lanes run on hardware, so a write they reach that no natural \
-         lane touches diverges from the oracle every other test trusts, with no out-of-bounds access to show for \
-         it. Gate every write on the logical count. Offenders:\n{}",
-        offenders.len(),
-        offenders.join("\n")
-    );
+    sweep().assert_output_invariant_under_overfire();
 }
 
 #[test]
 fn every_registered_composition_is_race_free_under_lane_reversal() {
-    let mut offenders = Vec::new();
-    let mut skipped = Vec::new();
-    let mut checked_cases = 0usize;
-
-    for entry in fixtured_entries() {
-        let program = program_of(&entry);
-        for (case_idx, values) in cases(&entry).into_iter().enumerate() {
-            let forward = match vyre_reference::reference_eval(&program, &values) {
-                Ok(forward) => forward,
-                Err(err) => {
-                    skipped.push(format!("{} (case {case_idx}): {err}", entry.id));
-                    continue;
-                }
-            };
-            let reversed = match vyre_reference::reference_eval_lane_reversed(&program, &values) {
-                Ok(reversed) => reversed,
-                Err(err) => {
-                    skipped.push(format!("{} (case {case_idx}, reversed): {err}", entry.id));
-                    continue;
-                }
-            };
-            checked_cases += 1;
-            let forward_bytes: Vec<Vec<u8>> = forward.iter().map(Value::to_bytes).collect();
-            let reversed_bytes: Vec<Vec<u8>> = reversed.iter().map(Value::to_bytes).collect();
-            if forward_bytes != reversed_bytes {
-                offenders.push(format!("{} (fixture case {case_idx})", entry.id));
-            }
-        }
-    }
-
-    refuse_skips("the library lane-reversal sweep", checked_cases, &skipped);
-    assert!(
-        offenders.is_empty(),
-        "Fix: {} of {checked_cases} checked library fixture case(s) changed their output when the lane STEP ORDER \
-         was reversed, which means two lanes write one slot without an atomic. The reference resolves that \
-         deterministically and hardware does not, so the answer is stable here and driver-defined there. Give \
-         every shared slot a commutative atomic or disjoint ownership. Offenders:\n{}",
-        offenders.len(),
-        offenders.join("\n")
-    );
+    sweep().assert_race_free_under_lane_reversal();
 }

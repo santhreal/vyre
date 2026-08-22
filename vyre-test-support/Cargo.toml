@@ -78,3 +78,7 @@ required-features = ["ir-fixtures"]
 [[test]]
 name = "differential_matrix_contracts"
 required-features = ["ir-fixtures"]
+
+[[test]]
+name = "registry_nets_fire"
+required-features = ["ir-fixtures"]
