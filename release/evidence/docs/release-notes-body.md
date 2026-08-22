@@ -3898,6 +3898,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dispatches compute through, which excludes GL and the no-op backend, and the
   concurrency contract collects each thread's report under a deadline so a
   regression fails as an expired wait instead of a suite that never returns.
+- The 1D convolution builds its boundary offset from one non-negative distance
+  instead of computing both directions of the same subtraction as the two arms
+  of a select, where one arm wrapped in every lane.
 - The CPU reference backend synthesized a zeroed value for every
   backend-allocated output and passed it to the interpreter, so its dispatch
   argument list was one entry longer than the artifact ABI a device enforces.
@@ -3971,6 +3974,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with more than one group. A value an entry produces without reading it is no
   longer requested from the caller as a host input, because an inter-group
   intermediate is device state rather than a caller buffer.
+- The conformance parity matrix declares the device-tests feature, so it runs
+  on a lane that has an adapter instead of reporting every operation unmeasured
+  on a hosted runner with none.
 - A conformance lens contract acquired a real backend on every runner.
   `vyre-conform`'s `lens_parity` reached hardware through
   `production::live_test_backend`, which a default test run compiles
@@ -4348,6 +4354,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   child region that had derived its name from its parent operation, and the
   collapse of the C declaration prefix walk onto one owner whose disqualifier
   token set differs from the copy the annotate builders had been reading.
+- Eleven registered compositions whose writable footprint exceeds one workgroup
+  now index their global writes by a grid-varying id or confine them to the
+  first workgroup, so a multi-workgroup launch no longer repeats the same
+  writes in every workgroup.
 - A backend that lowers a whole-grid barrier is no longer routed through the
   host split. `VyreBackend::supports_grid_sync` and
   `VyreBackend::cooperative_grid_sync_fits` are two halves of one answer, and
@@ -4564,6 +4574,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A row in .github/CI_REQUIRED.md naming a workflow the checkout does not carry
   fails the ci-required gate, and the workflows whose path filters and
   directories no longer exist are deleted rather than parked.
+- The WGPU resident pipeline cache keys entries by canonical pipeline identity
+  instead of a 64-bit FxHash of the program wire, so a resident dispatch cannot
+  be answered by a pipeline compiled for another adapter, ABI, naga build or
+  emitter lowering digest.
 - A retired release claim is any dotted number that starts with the retired
   train, so a four component version is reported, and the same digits inside
   another train version or inside a hash are not.
@@ -4612,6 +4626,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   directory covered. Cargo invocation resolution moved into that gate, which
   reads workflows and manifests rather than Rust source text, so its
   structural-gate row is deleted rather than re-pointed.
+- The visual filter chain computes each channel distance from the contrast
+  midpoint and from luma as a single non-negative magnitude, so neither the
+  contrast nor the saturate stage evaluates a wrapping subtraction as the
+  unused arm of a select.
+- A library composition whose writable footprint exceeds one workgroup now
+  confines its serial body to workgroup zero, so the FFT convolution, the
+  radix-2 transform, the BLAKE3 quartet, round and compression, the AMG V-cycle
+  phase, the 2x2 Strassen contraction and the UTF-8 shape counter no longer
+  repeat their global writes in every workgroup of the grid a backend derives
+  from the output length.
 - The sharded release conformance run waits for one worker at a time, so a
   clean run exits zero and a failed shard is counted once.
 - The elementwise map builders live in the builder module rather than under
@@ -4797,6 +4821,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   exempt. The selector chooses a compiler, not a command; the rule now strips
   it and reads the command underneath, which also makes `cargo +stable build` a
   precise match rather than an accidental one.
+- Every tracked shell script now stays inside the bash dialect the oldest
+  interpreter in the CI matrix provides, and the ci-shell gate reads scripts as
+  well as workflow steps, so the release shard pool no longer counts every
+  worker as a failed shard on macOS.
 - An artifact whose math reaches `Exp`, `Log`, `Sin`, `Cos` or `Tanh` compiles
   for CUDA. The PTX emitter refused to lower those ops to a native instruction
   unless `PtxEmitOptions::ulp_budget` was positive, so 21 registered ops failed

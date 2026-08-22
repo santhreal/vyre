@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:9d34a0eb14e85a5a972bb0c9d9cd84ecad824461:dirty=false",
+  "source_fingerprint": "git:c09214c207a78d1a73c44853adb53961d3147326:dirty=false",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -562,6 +562,12 @@
       "text": "panic!("
     },
     {
+      "path": "vyre-test-support/src/registry_nets.rs",
+      "line": 94,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
       "path": "vyre-test-support/src/differential_matrix.rs",
       "line": 70,
       "pattern": "unwrap_call",
@@ -587,31 +593,31 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 299,
+      "line": 301,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} source file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 342,
+      "line": 344,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|e| panic!(\"{crate_name} test file {path:?} must be readable: {e}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 437,
+      "line": 439,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!("
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 445,
+      "line": 447,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "vyre-driver-wgpu/src/runtime/device/acquire.rs",
-      "line": 50,
+      "line": 69,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: a LoaderInstance is only empty while it is being dropped\")"
     },
