@@ -25,11 +25,6 @@ pub const OP_ID: &str = "vyre-libs::math::conv1d";
 /// Maximum supported kernel half-width.
 pub const MAX_RADIUS: u32 = 64;
 
-/// `min(a, b)` expressed via `select(lt(a, b), a, b)`.
-fn expr_min(a: Expr, b: Expr) -> Expr {
-    Expr::select(Expr::lt(a.clone(), b.clone()), a, b)
-}
-
 /// Emit the 1D convolution loop for a single output element.
 ///
 /// Each invocation at index `gid.x` reads `2*radius+1` input elements
@@ -67,47 +62,37 @@ pub fn conv1d_node(input: &str, output: &str, weights: &str, params: &str) -> No
                         Expr::u32(0),
                         Expr::var("diameter"),
                         vec![
-                            // Offset from center: k - radius (can be negative,
-                            // but we work in u32 and clamp the final index).
-                            // src_raw = idx + (k - radius) * stride
-                            // We compute carefully to avoid u32 underflow:
-                            //   if k >= radius:
-                            //     src_raw = idx + (k - radius) * stride
-                            //   else:
-                            //     src_raw = idx - (radius - k) * stride
-                            //   then clamp to [0, count-1]
+                            // Offset from center. Both arms of a select always
+                            // evaluate, so the distance is built from one
+                            // non-negative subtraction rather than one per
+                            // direction: `k - radius` and `radius - k` as two
+                            // arms means one of them wraps in every lane.
+                            //   dist   = |k - radius|
+                            //   offset = dist * stride
+                            //   k >= radius: min(idx + offset, count - 1)
+                            //   k <  radius: idx - min(idx, offset), floored at 0
+                            Node::let_bind(
+                                "dist",
+                                Expr::sub(
+                                    Expr::max(Expr::var("k"), Expr::var("radius")),
+                                    Expr::min(Expr::var("k"), Expr::var("radius")),
+                                ),
+                            ),
+                            Node::let_bind(
+                                "offset",
+                                Expr::mul(Expr::var("dist"), Expr::var("stride")),
+                            ),
                             Node::let_bind(
                                 "src_idx",
                                 Expr::select(
                                     Expr::ge(Expr::var("k"), Expr::var("radius")),
-                                    // k >= radius: add offset
-                                    expr_min(
-                                        Expr::add(
-                                            Expr::var("idx"),
-                                            Expr::mul(
-                                                Expr::sub(Expr::var("k"), Expr::var("radius")),
-                                                Expr::var("stride"),
-                                            ),
-                                        ),
+                                    Expr::min(
+                                        Expr::add(Expr::var("idx"), Expr::var("offset")),
                                         Expr::sub(Expr::var("count"), Expr::u32(1)),
                                     ),
-                                    // k < radius: subtract offset, floor at 0
-                                    Expr::select(
-                                        Expr::ge(
-                                            Expr::var("idx"),
-                                            Expr::mul(
-                                                Expr::sub(Expr::var("radius"), Expr::var("k")),
-                                                Expr::var("stride"),
-                                            ),
-                                        ),
-                                        Expr::sub(
-                                            Expr::var("idx"),
-                                            Expr::mul(
-                                                Expr::sub(Expr::var("radius"), Expr::var("k")),
-                                                Expr::var("stride"),
-                                            ),
-                                        ),
-                                        Expr::u32(0),
+                                    Expr::sub(
+                                        Expr::var("idx"),
+                                        Expr::min(Expr::var("idx"), Expr::var("offset")),
                                     ),
                                 ),
                             ),
