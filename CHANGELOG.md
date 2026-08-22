@@ -3902,6 +3902,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dispatches compute through, which excludes GL and the no-op backend, and the
   concurrency contract collects each thread's report under a deadline so a
   regression fails as an expired wait instead of a suite that never returns.
+- The 1D convolution builds its boundary offset from one non-negative distance
+  instead of computing both directions of the same subtraction as the two arms
+  of a select, where one arm wrapped in every lane.
 - The CPU reference backend synthesized a zeroed value for every
   backend-allocated output and passed it to the interpreter, so its dispatch
   argument list was one entry longer than the artifact ABI a device enforces.
