@@ -4961,6 +4961,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   counting the same omission twice sent a reader to a row that does not exist.
 - An unrelated finding no longer hides an orphaned testing guide; only an empty
   crate record set suppresses the orphan scan.
+- A backend that cannot report its compute-unit count reports `0`, and the
+  grid-stride reduction benchmark read that as one workgroup. On WGPU it
+  therefore launched a one-million-element reduction at a single block: the
+  correct sum at 0.08 times a multithreaded CPU baseline, which only a
+  performance contract could see. `DeviceProfile::grid_stride_workgroups` now
+  answers the question, returning the reported count when there is one and no
+  cap when there is not, and the reduction builder clamps the request to what
+  the shape admits. The value is a ceiling and never an index.
 - `abstraction-gate` no longer demands an operation registration for a region
   that names no operation. Two prefixes mean the same thing: `inline::`, minted
   by `reparent_entry_node` for a body the composer reparented onto its caller,
