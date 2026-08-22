@@ -36,6 +36,14 @@ use vyre_bench::api::case::BenchCase;
 /// frontend's lexer state-transition pass and there is no builder left to
 /// build it. No parsing workload remains; `release.ast_motif_traversal.1m` is a
 /// synthetic traversal with no frontend dependency.
+///
+/// `foundation.scan.inclusive.u32.1m.cub` joined when the harness gained its
+/// first GPU-SOTA baseline. Every other baseline compares a device composition
+/// against a CPU library, which for a scan answers a question nobody asked; this
+/// one measures the same inclusive scan against `cub::DeviceScan` on the same
+/// device. It open-codes the case trait because it compiles and caches a CUB
+/// translation unit at measurement time, so it names no declaration owner and
+/// joins no clone family.
 const EXPECTED_CASE_IDS: &[&str] = &[
     "adversarial.register_exhaustion.u32_1024",
     "bigint.modexp.4096",
@@ -58,6 +66,7 @@ const EXPECTED_CASE_IDS: &[&str] = &[
     "foundation.matmul.256",
     "foundation.optimizer.impact",
     "foundation.reduce.sum.crossover",
+    "foundation.scan.inclusive.u32.1m.cub",
     "foundation.stencil3.u32.1m",
     "foundation.transpose.512",
     "hashtable.openaddr.probe.10m",

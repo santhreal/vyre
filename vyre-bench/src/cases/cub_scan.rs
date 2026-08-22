@@ -48,8 +48,8 @@ const BASELINE_SOURCE_NAME: &str = "cub_inclusive_scan.cu";
 
 pub struct CubScanBench;
 
-/// This owner's name, as reported by the case it builds.
-pub(crate) const CUB_SCAN_OWNER: &str = "cases::cub_scan::CubScanBench";
+/// This case's name in a prepared-payload diagnostic.
+pub(crate) const CUB_SCAN_CASE: &str = "cases::cub_scan::CubScanBench";
 
 /// What the CUB run reported.
 struct CubMeasurement {
@@ -85,10 +85,6 @@ impl CubMeasurement {
 impl BenchCase for CubScanBench {
     fn id(&self) -> BenchId {
         BenchId("foundation.scan.inclusive.u32.1m.cub".to_string())
-    }
-
-    fn declaration_owner(&self) -> &'static str {
-        CUB_SCAN_OWNER
     }
 
     fn metadata(&self) -> BenchMetadata {
@@ -151,7 +147,7 @@ impl BenchCase for CubScanBench {
     }
 
     fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
-        prepared_as::<Program>(prepared, CUB_SCAN_OWNER).ok()
+        prepared_as::<Program>(prepared, CUB_SCAN_CASE).ok()
     }
 
     fn run(
@@ -159,7 +155,7 @@ impl BenchCase for CubScanBench {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let program = prepared_as::<Program>(prepared, CUB_SCAN_OWNER)?.clone();
+        let program = prepared_as::<Program>(prepared, CUB_SCAN_CASE)?.clone();
         let inputs = vec![vyre_primitives::wire::pack_u32_slice(&host_input())];
         let input_bytes = inputs.iter().map(Vec::len).sum::<usize>() as u64;
 
