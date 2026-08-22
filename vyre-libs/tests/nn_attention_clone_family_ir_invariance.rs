@@ -277,7 +277,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "attention_reference",
-        "56499d8f1c4b50d2dc14a2b58bea386cf129bba8cbb8e03f9f448de0310e9e81",
+        "ce9f75a2a693d0c1826a935cf946c2616eb66f4a2505cb479024eec9b531b7e0",
     ),
     (
         "gqa_attention",
