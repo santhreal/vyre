@@ -109,7 +109,18 @@ pub fn ziftsieve_literal_copy_body(buffers: ZiftsieveBuffers<'_>, seq_count: u32
                 Node::loop_for(
                     "i",
                     Expr::u32(0),
-                    Expr::var("literal_len"),
+                    // The trip count is producer data, so an out-of-contract
+                    // `literal_len` asks for up to four billion iterations: on
+                    // the reference that is hours, on a device it is a watchdog
+                    // reset. No iteration at or past the smaller of the two
+                    // buffer lengths can do anything, because the guard below
+                    // adds a non-negative base to `i` before comparing it with
+                    // that same length, so clamping the count here discards
+                    // only iterations that were already no-ops.
+                    Expr::min(
+                        Expr::var("literal_len"),
+                        Expr::min(Expr::buf_len(input), Expr::buf_len(output)),
+                    ),
                     // Gate the data-derived copy on BOTH buffer bounds with control flow
                     // (an `if_then`, NOT `Expr::select`: select still evaluates the OOB
                     // load on a real GPU). The seq_* indices are unvalidated producer
