@@ -4258,6 +4258,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   refused instead of bound at zero bytes.
 - hot-path-scan matches a pattern at a path boundary, so SmallVec::new is no
   longer counted as Vec::new and one FxHashMap::new is one finding.
+- A launch whose block width the caller left free is widened into the target's
+  per-axis workgroup ceiling instead of refused. A program that declares one
+  output element per lane asks for one workgroup per block of lanes, so 16.8
+  million lanes in the declared blocks of 256 asked for 65536 workgroups, one
+  past what a graphics-derived target admits, and the dispatch was rejected for
+  a launch the same device runs in blocks of 1024. The launch resolver now
+  rejects a block whose inferred grid the target refuses before anything ranks
+  it, and widens an unpinned launch to the narrowest candidate that fits. A
+  caller-pinned block or grid is untouched, and a program that reads its
+  workgroup or local id keeps its declared width because its result depends on
+  it.
 - A package error behavior override no longer stands in for a missing layer
   profile, and an override declared empty is reported instead of rendering a
   heading with nothing under it.
