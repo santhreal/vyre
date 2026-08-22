@@ -92,19 +92,23 @@ fn ref_exists(root: &Path, reference: &str) -> bool {
 }
 
 /// Whether every commit on `branch` is already on `target`.
+///
+/// The child's streams are captured rather than inherited: a delegated gate's
+/// stdout is the report its parent parses, so a git message about an unknown
+/// rev would arrive inside that report.
 fn is_ancestor(root: &Path, branch: &str, target: &str) -> Result<bool, GateError> {
-    let status = Command::new("git")
+    let output = Command::new("git")
         .arg("-C")
         .arg(root)
         .args(["merge-base", "--is-ancestor", branch, target])
-        .status()
+        .output()
         .map_err(|error| {
             GateError::new(
                 format!("cannot ask git whether `{branch}` merged into `{target}`: {error}"),
                 "install git, or run this gate inside a git checkout",
             )
         })?;
-    Ok(status.success())
+    Ok(output.status.success())
 }
 
 /// Run a git command and return its stdout.
