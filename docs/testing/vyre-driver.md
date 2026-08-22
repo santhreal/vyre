@@ -118,6 +118,7 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `trace_context_telemetry_contracts` | `vyre-driver/tests/trace_context_telemetry_contracts.rs` | None | `./cargo_full test -p vyre-driver --test trace_context_telemetry_contracts` |
 | `test` | `trace_jit_policy_contracts` | `vyre-driver/tests/trace_jit_policy_contracts.rs` | None | `./cargo_full test -p vyre-driver --test trace_jit_policy_contracts` |
 | `test` | `transfer_accounting_contracts` | `vyre-driver/tests/transfer_accounting_contracts.rs` | None | `./cargo_full test -p vyre-driver --test transfer_accounting_contracts` |
+| `test` | `unreported_device_facts` | `vyre-driver/tests/unreported_device_facts.rs` | None | `./cargo_full test -p vyre-driver --test unreported_device_facts` |
 | `test` | `vyre_backend_forwarding_closure` | `vyre-driver/tests/vyre_backend_forwarding_closure.rs` | None | `./cargo_full test -p vyre-driver --test vyre_backend_forwarding_closure` |
 
 ## Test classes

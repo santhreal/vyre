@@ -39,6 +39,7 @@ The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains
 | `test` | `divergent_trap_and_grid_barrier` | `vyre-emit-ptx/tests/divergent_trap_and_grid_barrier.rs` | None | `./cargo_full test -p vyre-emit-ptx --test divergent_trap_and_grid_barrier` |
 | `test` | `emit_contracts` | `vyre-emit-ptx/tests/emit_contracts/mod.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emit_contracts` |
 | `test` | `emitted_artifact_byte_stability` | `vyre-emit-ptx/tests/emitted_artifact_byte_stability.rs` | None | `./cargo_full test -p vyre-emit-ptx --test emitted_artifact_byte_stability` |
+| `test` | `global_store_bounds` | `vyre-emit-ptx/tests/global_store_bounds.rs` | None | `./cargo_full test -p vyre-emit-ptx --test global_store_bounds` |
 | `test` | `grid_sync_loop_refusal` | `vyre-emit-ptx/tests/grid_sync_loop_refusal.rs` | None | `./cargo_full test -p vyre-emit-ptx --test grid_sync_loop_refusal` |
 | `test` | `lowering_digest` | `vyre-emit-ptx/tests/lowering_digest.rs` | None | `./cargo_full test -p vyre-emit-ptx --test lowering_digest` |
 | `test` | `nested_return_branch` | `vyre-emit-ptx/tests/nested_return_branch.rs` | None | `./cargo_full test -p vyre-emit-ptx --test nested_return_branch` |

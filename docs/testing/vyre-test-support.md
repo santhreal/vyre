@@ -46,6 +46,8 @@ The crate lives at `vyre-test-support`. The `test-support` owner maintains its
 | `test` | `extension_variant_coverage` | `vyre-test-support/tests/extension_variant_coverage.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test extension_variant_coverage` |
 | `test` | `memory_order_coverage` | `vyre-test-support/tests/memory_order_coverage.rs` | None | `./cargo_full test -p vyre-test-support --test memory_order_coverage` |
 | `test` | `memory_order_coverage` | `vyre-test-support/tests/memory_order_coverage.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test memory_order_coverage` |
+| `test` | `registry_nets_fire` | `vyre-test-support/tests/registry_nets_fire.rs` | None | `./cargo_full test -p vyre-test-support --test registry_nets_fire` |
+| `test` | `registry_nets_fire` | `vyre-test-support/tests/registry_nets_fire.rs` | `ir-fixtures` | `./cargo_full test -p vyre-test-support --test registry_nets_fire` |
 | `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes

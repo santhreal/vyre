@@ -641,6 +641,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shadow, and the tier vocabulary in the tier-claim gate. Each now states the
   rule where the code has to follow it. The document remains the manual; a
   comment that points at a file cannot tell when that file is deleted.
+- `CONTRIBUTING.md` states the stale build artifact recovery as a product fact.
+  The section described how work is produced here and named the build
+  directory, which is a property of one machine that a reader who has just
+  cloned the repository can act on none of. The recovery rule is unchanged:
+  when a build error names a symbol the source in front of you already defines,
+  rebuild that one crate.
 - The heuristic audit reads an author's note, not any sentence that names a
   policy. A marker now has to open a plain comment: a doc comment describing a
   cache's eviction policy to its caller, a term used mid-paragraph while
@@ -2113,6 +2119,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   protection decision for every workspace member, so a new crate fails the gate
   until one is written down, and branch protection now requires the code-owner
   review that made those lines binding in the first place.
+- The four registry parity nets have one implementation. Every registered
+  surface owes the same contracts: a registered program reads no buffer out of
+  bounds on its own fixture, stays in bounds when the dispatch over-fires by a
+  whole workgroup, returns the same bytes at both grids, and returns the same
+  bytes when the lane step order is reversed. The nets were written once per
+  crate and the copies drifted, so the same un-evaluable fixture was refused on
+  one surface and skipped on the other, which reported a clean sweep of a
+  subset. `vyre_test_support::registry_nets` now holds the driver, `vyre-libs`
+  and `vyre-primitives` supply only their populations, and a new control suite
+  hands each net a population carrying exactly the defect it names and requires
+  it to fail.
 - The host-oracle elimination gate names a call site's context with an enum
   instead of restating a field list at every recording site, and asks one
   predicate per loop form whether that loop dispatches. The finding walk and
@@ -3871,6 +3888,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the CUDA driver profile, the external-operation contract page, the hot-path
   and benchmark target policies, and the optimization ownership data in the
   documentation evidence map.
+- Concurrent wgpu backend acquisition deadlocked on teardown. Every instance
+  enabled the GL backend, whose EGL runtime registers a thread-local destructor
+  that takes an EGL lock at thread exit, and `vkDestroyDevice` joins threads
+  that run it: two workers releasing backends at once closed a cycle across
+  that lock, the Vulkan loader lock, and the join, which no deadline can break.
+  A conformance run with one backend per worker stopped for hours with no
+  output. Instances and adapter probes now name the backends this driver
+  dispatches compute through, which excludes GL and the no-op backend, and the
+  concurrency contract collects each thread's report under a deadline so a
+  regression fails as an expired wait instead of a suite that never returns.
 - The CPU reference backend synthesized a zeroed value for every
   backend-allocated output and passed it to the interpreter, so its dispatch
   argument list was one entry longer than the artifact ABI a device enforces.
@@ -3944,6 +3971,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with more than one group. A value an entry produces without reading it is no
   longer requested from the caller as a host input, because an inter-group
   intermediate is device state rather than a caller buffer.
+- A conformance lens contract acquired a real backend on every runner.
+  `vyre-conform`'s `lens_parity` reached hardware through
+  `production::live_test_backend`, which a default test run compiles
+  everywhere, and acquiring CUDA without a driver aborts the process from
+  inside the dependency rather than returning an error. `live_test_backend` now
+  compiles only under `device-tests`, so the compiler refuses an unadmitted
+  caller; the two contracts that acquire a backend moved to
+  `lens_parity_device` and `ulp_audit` gained the same admission.
 - vyre-bench/tests/release_macro_cuda_live.rs acquired a real CUDA backend on
   every hosted matrix leg, where cudarc aborts the process rather than
   returning an error, so the whole leg went red with a panic from inside a
@@ -4930,6 +4965,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The testing guide orphan scan is suppressed only when a row never reached the
   render set, so a finding about one member no longer hides every leftover
   guide in the directory.
+- A global store whose element index falls outside the bound buffer is
+  discarded on both backends instead of being redirected onto element 0. Index
+  clamping is sound for a load, whose value is dropped, and corrupting for a
+  store; the kernel-wide dispatch-extent exit does not bound a shorter buffer
+  in the same program. Scalar, byte-element, vector-op and fused-vector stores
+  each carry their own buffer's bounds test, which is what makes device results
+  agree with the reference interpreter for a program whose buffers have
+  different lengths.
 - The operation matrix reads the owner directory for a domain from the tree, so
   an id whose domain moved under another module, such as the optimizer and
   quantization compositions under nn, names the directory that carries its code

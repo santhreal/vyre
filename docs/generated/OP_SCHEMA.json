@@ -11537,6 +11537,11 @@
           "depth": 0,
           "operation": "vyre-libs::math::fft::fft4_complex",
           "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::math::fft::fft_radix2",
+          "registered": true
         }
       ]
     },
@@ -33599,7 +33604,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 16,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           }
         ],
         "inputs": [],
@@ -34041,7 +34046,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 4,
-            "pipeline_live_out": false
+            "pipeline_live_out": true
           }
         ],
         "inputs": [],

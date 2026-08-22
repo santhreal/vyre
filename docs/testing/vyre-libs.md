@@ -219,6 +219,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `graph_toposort_contracts` | `vyre-libs/tests/graph_toposort_contracts.rs` | None | `./cargo_full test -p vyre-libs --test graph_toposort_contracts` |
 | `test` | `graph_toposort_contracts` | `vyre-libs/tests/graph_toposort_contracts.rs` | `graph` | `./cargo_full test -p vyre-libs --test graph_toposort_contracts` |
 | `test` | `grid_stride_tree_buffer_contract` | `vyre-libs/tests/grid_stride_tree_buffer_contract.rs` | None | `./cargo_full test -p vyre-libs --test grid_stride_tree_buffer_contract` |
+| `test` | `grid_stride_tree_sum_covers_every_element` | `vyre-libs/tests/grid_stride_tree_sum_covers_every_element.rs` | None | `./cargo_full test -p vyre-libs --test grid_stride_tree_sum_covers_every_element` |
 | `test` | `hash_crc32_ir_parity_proptest` | `vyre-libs/tests/hash_crc32_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test hash_crc32_ir_parity_proptest` |
 | `test` | `hash_incremental_adversarial_generated` | `vyre-libs/tests/hash_incremental_adversarial_generated.rs` | None | `./cargo_full test -p vyre-libs --test hash_incremental_adversarial_generated` |
 | `test` | `hash_registration_witnesses` | `vyre-libs/tests/hash_registration_witnesses.rs` | None | `./cargo_full test -p vyre-libs --test hash_registration_witnesses` |
@@ -446,6 +447,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `registered_operation_validation` | `vyre-libs/tests/registered_operation_validation.rs` | None | `./cargo_full test -p vyre-libs --test registered_operation_validation` |
 | `test` | `registration_drift` | `vyre-libs/tests/registration_drift.rs` | None | `./cargo_full test -p vyre-libs --test registration_drift` |
 | `test` | `registry_closure` | `vyre-libs/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-libs --test registry_closure` |
+| `test` | `registry_oob_clean` | `vyre-libs/tests/registry_oob_clean.rs` | None | `./cargo_full test -p vyre-libs --test registry_oob_clean` |
 | `test` | `resolve_family_ir_parity_proptest` | `vyre-libs/tests/resolve_family_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test resolve_family_ir_parity_proptest` |
 | `test` | `resolve_family_ir_parity_proptest` | `vyre-libs/tests/resolve_family_ir_parity_proptest.rs` | `label` | `./cargo_full test -p vyre-libs --test resolve_family_ir_parity_proptest` |
 | `test` | `resource_budget_complexity_policies` | `vyre-libs/tests/resource_budget_complexity_policies.rs` | None | `./cargo_full test -p vyre-libs --test resource_budget_complexity_policies` |
