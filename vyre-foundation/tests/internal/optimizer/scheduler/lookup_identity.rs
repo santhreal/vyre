@@ -2,6 +2,31 @@
 
 use super::*;
 
+/// Twenty distinct pass names, enough that the scheduler's lookup tables are
+/// exercised by index rather than by a single-entry map.
+const STRESS_PASS_NAMES: [&str; 20] = [
+    "stress_pass_00",
+    "stress_pass_01",
+    "stress_pass_02",
+    "stress_pass_03",
+    "stress_pass_04",
+    "stress_pass_05",
+    "stress_pass_06",
+    "stress_pass_07",
+    "stress_pass_08",
+    "stress_pass_09",
+    "stress_pass_10",
+    "stress_pass_11",
+    "stress_pass_12",
+    "stress_pass_13",
+    "stress_pass_14",
+    "stress_pass_15",
+    "stress_pass_16",
+    "stress_pass_17",
+    "stress_pass_18",
+    "stress_pass_19",
+];
+
 #[test]
 fn scheduler_lookup_tables_use_static_str_keys() {
     // Structural assertion: pass_index must be FxHashMap<&'static str, usize>.
@@ -12,11 +37,12 @@ fn scheduler_lookup_tables_use_static_str_keys() {
 
     // N=20 passes: build scheduler, topo-sort runs inside with_passes, then
     // exercise the lookup loop via the metrics runner and direct query methods.
-    let mut names: Vec<&'static str> = Vec::with_capacity(20);
-    for i in 0..20 {
-        let name: &'static str = Box::leak(format!("stress_pass_{i}").into_boxed_str());
-        names.push(name);
-    }
+    //
+    // The names are literals rather than leaked boxes. A leak is what a
+    // `&'static str` key costs, and the free that paid it back reconstituted a
+    // `Box` from a shared reference while the scheduler still held that key:
+    // a retag the aliasing model rejects over memory a live table points at.
+    let names: Vec<&'static str> = STRESS_PASS_NAMES.to_vec();
     let passes: Vec<_> = names
         .iter()
         .map(|&name| {
@@ -50,14 +76,6 @@ fn scheduler_lookup_tables_use_static_str_keys() {
             scheduler20.pass_index.contains_key(name),
             "pass_index must contain {name}"
         );
-    }
-
-    // Free the leaked boxed strings to prevent sanitizer alarms.
-    #[allow(unsafe_code)]
-    for name in names {
-        unsafe {
-            let _ = Box::from_raw(name as *const str as *mut str);
-        }
     }
 }
 
