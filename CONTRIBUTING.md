@@ -30,20 +30,20 @@ executable Cargo binary for nested gate commands.
 
 Per-crate test instructions live under `docs/testing/`, one page per crate.
 
-### A stale artifact from another worktree
+### A stale build artifact
 
-Worktrees share one cargo target directory. Cargo reuses a compiled artifact
-when package name, version and features match, so a crate built from one
-worktree's source is served to another whose source differs. The resulting
-error names the wrong thing: a trait method that the building tree's own source
-already declares, or a macro argument its source already accepts. Proc-macro
-crates are the worst case, because a stale dylib reports errors naming the
-trait rather than the macro that produced it.
+Every checkout on a machine shares one build directory. Cargo reuses a compiled
+artifact when package name, version and features match, so a crate compiled from
+one source state is served to a build whose source differs. The resulting error
+names the wrong thing: a trait method the source in front of you already
+declares, or a macro argument its source already accepts. Proc-macro crates are
+the worst case, because a stale dylib reports errors naming the trait rather
+than the macro that produced it.
 
-The target directory stays shared. Splitting it per worktree multiplies a
-terabyte-scale `debug/deps` by the worktree count. Worktree lifetime is the
-bound instead: create one only for an unmerged branch, and delete it when that
-branch merges. `repo-hygiene` reports a worktree still on a branch that has
+The build directory stays shared. Splitting it per checkout multiplies a
+terabyte-scale `debug/deps` by the checkout count. A checkout's lifetime is the
+bound instead: keep one only while its branch is unmerged, and delete it when
+that branch merges. `repo-hygiene` reports a checkout still on a branch that has
 merged into `integration` or `main`.
 
 When an error names a symbol the source in front of you already defines,

@@ -26,7 +26,6 @@ vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs
 vyre-driver-wgpu/src/runtime/shader/compile_compute_pipeline.rs
 vyre-driver-wgpu/tests/nvme_gpu_ingest_e2e.rs
 vyre-emit-ptx/tests/nvrtc_compile_gate/cuda.rs
-vyre-foundation/tests/internal/optimizer/scheduler/lookup_identity.rs
 vyre-primitives/src/wire.rs
 vyre-runtime/src/lib.rs
 vyre-runtime/src/uring/ring.rs
