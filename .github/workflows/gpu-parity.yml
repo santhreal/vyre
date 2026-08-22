@@ -196,7 +196,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run GPU mandatory tests
-        run: ./cargo_full test -p vyre-conform --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
+        run: ./cargo_full test -p vyre-conform --release --features device-tests --test parity_matrix --test ulp_audit -- --nocapture
 
   cuda-conformance-all-ops:
     name: CUDA conformance all ops
