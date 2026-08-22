@@ -3979,6 +3979,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The cross-dialect reach-through audit asks whether the library source root
   carries Rust source instead of whether its directory exists, because a
   directory outlives the deletion of every file in it.
+- Ten registered compositions read outside their input buffers. `Expr::select`
+  evaluates both arms and `Expr::and` evaluates both operands, so a load whose
+  value is discarded still performs the read, and a sentinel index such as the
+  `u32::MAX` the Python parsers use for a missing token reaches memory. The six
+  `python312_*` parsers, the Python lexer, the 3x3 stencil that `math::conv2d`
+  samples, `nn::partial_rope`, and `nn::linear_4bit_affine_grouped` now fold
+  every sentinel-indexed load into range before it is issued, which preserves
+  the zero out of range that the reference interpreter already returned.
+  `vyre-libs` also gained the whole-registry nets `vyre-primitives` already
+  had: every catalogued composition is checked for out-of-bounds access on its
+  own fixtures and under an over-fired grid, for output invariance under that
+  grid, and for race freedom under lane reversal.
 - A grid-sync program whose grid exceeds the device's cooperative residency now
   takes the host-orchestrated split from every CUDA dispatch entry point.
   `dispatch` and `dispatch_borrowed` consulted the residency route;
@@ -4326,6 +4338,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   nothing. It now derives every nonzero `process::exit` in the xtask crates at
   run time and requires an enclosing block to write the cause on either stream,
   so a silent exit added anywhere in the tooling fails it.
+- `grid_stride_tree_sum_u32` took its single-block form whenever the caller
+  asked for one block, and that form reads one tile and nothing else, so a
+  reduction over more elements than a tile returned a prefix and reported it as
+  the total. A backend whose device profile reports no compute units asks for
+  one block, which made a 1M-element release reduction return the sum of its
+  first 256 elements. One block now takes the strided pass like any other
+  count, both tail loads are gated by a branch instead of a select so a lane
+  past the element or block count no longer reads past the buffer end, the
+  partial store is guarded on the block index so a launch wider than the built
+  grid discards the extra blocks instead of writing past the partial buffer,
+  and the release reduction case pins the grid its program was built for.
 - The Metal parity gate resolves vyre-conform and the driver crate to their
   workspace member directories instead of joining the package name onto the
   checkout root.
@@ -4570,6 +4593,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   so the count it holds back grows by every construction site in the files that
   moved. The header states what the file is: the default configuration of the
   shipped lint, read by no workspace gate.
+- Three registered compositions published a different result once the dispatch
+  was rounded up past the grid they were built for.
+  `builder::strided_accumulate` let every workgroup write the final
+  single-value store, and the Jacobi eigen body shared by
+  `math::symmetric_eigen_jacobi` and `math::tensor_train_decompose` seeded the
+  identity eigenbasis across whichever workgroups were launched, so a second
+  workgroup re-seeded it after the first had finished sweeping and the caller
+  received an identity matrix. Both now state the constraint in the IR: the
+  accumulate store is guarded on the first workgroup and lane zero, and the
+  whole cooperative Jacobi body runs under a first-workgroup guard, which is
+  workgroup-uniform and therefore keeps the barriers inside it legal.
 - The single-workgroup prefix scan indexes its workgroup scratch with `LocalId`
   and runs under a `WorkgroupId == 0` fence. It read `InvocationId`, the global
   id, which is the same number only when the launch is one workgroup wide. At
