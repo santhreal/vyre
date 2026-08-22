@@ -278,6 +278,25 @@ pub struct Stencil3x3Tap {
     pub input_index: Expr,
 }
 
+impl Stencil3x3Tap {
+    /// [`Self::input_index`] folded inside the image.
+    ///
+    /// A tap outside the image contributes zero-padding, and every caller says
+    /// so with a select over [`Self::in_bounds`]. A select evaluates both arms,
+    /// so the load in the taken arm runs for an out-of-image tap too and reads
+    /// past the allocation on a backend that does not bounds-check. Indexing
+    /// through this instead keeps that read inside the image, where its value is
+    /// discarded by the same select.
+    #[must_use]
+    pub fn bounded_input_index(&self) -> Expr {
+        Expr::select(
+            self.in_bounds.clone(),
+            self.input_index.clone(),
+            Expr::u32(0),
+        )
+    }
+}
+
 /// The nine taps of the zero-padded 3x3 patch centered at `(y, x)` in im2col column order.
 #[must_use]
 pub fn stencil_3x3_taps(y: &Expr, x: &Expr, height: u32, width: u32) -> Vec<Stencil3x3Tap> {
@@ -301,7 +320,7 @@ pub fn stencil_3x3_taps(y: &Expr, x: &Expr, height: u32, width: u32) -> Vec<Sten
 pub fn sample_stencil_3x3_or_zero(input: &str, tap: &Stencil3x3Tap) -> Expr {
     Expr::select(
         tap.in_bounds.clone(),
-        Expr::load(input, tap.input_index.clone()),
+        Expr::load(input, tap.bounded_input_index()),
         Expr::f32(0.0),
     )
 }
@@ -698,14 +717,24 @@ mod tests {
         // Center tap (ky=1, kx=1 -> dy=0, dx=0) has column 4
         let center = &taps[4];
         assert_eq!(center.column, 4);
+        // The sampled expression loads through the FOLDED index, not the raw
+        // one: an out-of-image tap is discarded by the select, but the load in
+        // the taken arm still runs, so a raw index reads past the image. The
+        // whole-registry gate in `tests/registry_oob_clean.rs` measures the
+        // access; this pins which index the sampler hands the load.
         let sampled = sample_stencil_3x3_or_zero("input", center);
         assert_eq!(
             sampled,
             Expr::select(
                 center.in_bounds.clone(),
-                Expr::load("input", center.input_index.clone()),
+                Expr::load("input", center.bounded_input_index()),
                 Expr::f32(0.0),
             )
+        );
+        assert_ne!(
+            center.bounded_input_index(),
+            center.input_index,
+            "Fix: the folded index must differ from the raw one, or nothing is being bounded"
         );
     }
 

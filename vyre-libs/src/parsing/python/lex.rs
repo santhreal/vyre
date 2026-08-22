@@ -17,6 +17,21 @@ fn load_byte(buffer: &str, index: Expr) -> Expr {
     crate::builder::state_machine::TableStateMachineComposer::masked_byte_load(buffer, index)
 }
 
+/// A source byte at `index`, or zero past the end of the source.
+///
+/// The keyword matcher and the lookbehind read positions a comparison in the
+/// same expression later discards, and both `Expr::and` and `Expr::select`
+/// evaluate every operand. The index is folded into range before the load, so a
+/// read that will be discarded is still inside the buffer.
+fn load_byte_bounded(buffer: &str, index: Expr, haystack_len: u32) -> Expr {
+    let in_range = Expr::lt(index.clone(), Expr::u32(haystack_len));
+    Expr::select(
+        in_range.clone(),
+        load_byte(buffer, Expr::select(in_range, index, Expr::u32(0))),
+        Expr::u32(0),
+    )
+}
+
 fn ascii(ch: u8) -> Expr {
     Expr::u32(ch as u32)
 }
@@ -49,13 +64,23 @@ fn is_ident_start(value: Expr) -> Expr {
     Expr::or(is_alpha(value.clone()), Expr::eq(value, ascii(b'_')))
 }
 
-fn keyword_match(haystack: &str, base: Expr, len_var: &str, word: &[u8]) -> Expr {
+fn keyword_match(
+    haystack: &str,
+    base: Expr,
+    len_var: &str,
+    word: &[u8],
+    haystack_len: u32,
+) -> Expr {
     let mut expr = Expr::eq(Expr::var(len_var), Expr::u32(word.len() as u32));
     for (offset, byte) in word.iter().enumerate() {
         expr = Expr::and(
             expr,
             Expr::eq(
-                load_byte(haystack, Expr::add(base.clone(), Expr::u32(offset as u32))),
+                load_byte_bounded(
+                    haystack,
+                    Expr::add(base.clone(), Expr::u32(offset as u32)),
+                    haystack_len,
+                ),
                 ascii(*byte),
             ),
         );
@@ -63,50 +88,50 @@ fn keyword_match(haystack: &str, base: Expr, len_var: &str, word: &[u8]) -> Expr
     expr
 }
 
-fn classify_keyword(haystack: &str, base: Expr) -> Vec<Node> {
+fn classify_keyword(haystack: &str, base: Expr, haystack_len: u32) -> Vec<Node> {
     vec![
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"def"),
+            keyword_match(haystack, base.clone(), "token_len", b"def", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_DEF))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"async"),
+            keyword_match(haystack, base.clone(), "token_len", b"async", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_ASYNC))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"class"),
+            keyword_match(haystack, base.clone(), "token_len", b"class", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_CLASS))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"import"),
+            keyword_match(haystack, base.clone(), "token_len", b"import", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_IMPORT))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"from"),
+            keyword_match(haystack, base.clone(), "token_len", b"from", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_FROM))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"as"),
+            keyword_match(haystack, base.clone(), "token_len", b"as", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_AS))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"with"),
+            keyword_match(haystack, base.clone(), "token_len", b"with", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_WITH))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"await"),
+            keyword_match(haystack, base.clone(), "token_len", b"await", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_AWAIT))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"match"),
+            keyword_match(haystack, base.clone(), "token_len", b"match", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_MATCH))],
         ),
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"case"),
+            keyword_match(haystack, base.clone(), "token_len", b"case", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_CASE))],
         ),
         Node::if_then(
-            keyword_match(haystack, base, "token_len", b"except"),
+            keyword_match(haystack, base, "token_len", b"except", haystack_len),
             vec![Node::assign("token_type", Expr::u32(TOK_EXCEPT))],
         ),
     ]
@@ -131,9 +156,20 @@ pub fn python312_lexer(
         Node::let_bind("ch", load_byte(haystack, t.clone())),
         Node::let_bind(
             "prev",
+            // `t - 1` wraps to `u32::MAX` at the first byte, and the select
+            // evaluates its taken and untaken arm alike, so the index is folded
+            // into range before the load.
             Expr::select(
                 Expr::gt(t.clone(), Expr::u32(0)),
-                load_byte(haystack, Expr::sub(t.clone(), Expr::u32(1))),
+                load_byte_bounded(
+                    haystack,
+                    Expr::select(
+                        Expr::gt(t.clone(), Expr::u32(0)),
+                        Expr::sub(t.clone(), Expr::u32(1)),
+                        Expr::u32(0),
+                    ),
+                    haystack_len,
+                ),
                 Expr::u32(0),
             ),
         ),
@@ -307,7 +343,7 @@ pub fn python312_lexer(
                 Node::assign("token_len", Expr::var("scan_len")),
             ]
             .into_iter()
-            .chain(classify_keyword(haystack, t.clone()))
+            .chain(classify_keyword(haystack, t.clone(), haystack_len))
             .collect(),
         ),
         Node::if_then(

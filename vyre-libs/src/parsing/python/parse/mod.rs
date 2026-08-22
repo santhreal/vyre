@@ -37,6 +37,24 @@ pub(crate) fn load_u32(buffer: &str, index: Expr) -> Expr {
     Expr::load(buffer, index)
 }
 
+/// The word at `pos` in a per-token buffer, or zero when `pos` names no token.
+///
+/// A scan reports a miss as `INVALID_POS`, and every caller reads that as "no
+/// token": type zero, span zero. Indexing the buffer with the sentinel and
+/// letting the interpreter's zero-fill supply the answer works on the reference
+/// alone, since a backend that does not bounds-check reads whatever follows the
+/// allocation. The index is folded into range before the load, so the access is
+/// always inside the buffer, and the out-of-range answer is stated here instead
+/// of being borrowed from out-of-bounds semantics.
+pub(crate) fn token_word_at(buffer: &str, pos: Expr, token_capacity: u32) -> Expr {
+    let in_range = Expr::lt(pos.clone(), Expr::u32(token_capacity));
+    Expr::select(
+        in_range.clone(),
+        load_u32(buffer, Expr::select(in_range, pos, Expr::u32(0))),
+        Expr::u32(0),
+    )
+}
+
 pub(crate) fn search_next_token(
     out_var: &str,
     start_expr: Expr,

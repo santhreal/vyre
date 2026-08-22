@@ -3,7 +3,7 @@
 use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, find_matching_delimiter_into, load_u32, search_next_token,
-    search_next_token_into, search_prev_token, store_words,
+    search_next_token_into, search_prev_token, store_words, token_word_at,
 };
 use crate::parsing::python::{
     DEF_RECORD_WORDS, IMPORT_RECORD_WORDS, INVALID_POS, WITH_RECORD_WORDS,
@@ -58,7 +58,7 @@ pub fn python312_extract_structure(
         Expr::and(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_ASYNC)),
             Expr::eq(
-                load_u32(tok_types, Expr::var("async_next")),
+                token_word_at(tok_types, Expr::var("async_next"), haystack_len),
                 Expr::u32(TOK_DEF),
             ),
         ),
@@ -91,7 +91,7 @@ pub fn python312_extract_structure(
         Expr::and(
             Expr::ne(Expr::var("emit_kind"), Expr::u32(0)),
             Expr::eq(
-                load_u32(tok_types, Expr::var("name_pos")),
+                token_word_at(tok_types, Expr::var("name_pos"), haystack_len),
                 Expr::u32(TOK_IDENTIFIER),
             ),
         ),
@@ -110,7 +110,7 @@ pub fn python312_extract_structure(
             Node::let_bind("after_params", Expr::u32(INVALID_POS)),
             Node::if_then_else(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("post_name")),
+                    token_word_at(tok_types, Expr::var("post_name"), haystack_len),
                     Expr::u32(TOK_LBRACKET),
                 ),
                 search_next_token_into(
@@ -123,7 +123,7 @@ pub fn python312_extract_structure(
             ),
             Node::if_then(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("after_type_params")),
+                    token_word_at(tok_types, Expr::var("after_type_params"), haystack_len),
                     Expr::u32(TOK_LPAREN),
                 ),
                 vec![
@@ -153,7 +153,7 @@ pub fn python312_extract_structure(
             ),
             Node::if_then(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("after_params")),
+                    token_word_at(tok_types, Expr::var("after_params"), haystack_len),
                     Expr::u32(TOK_COLON),
                 ),
                 vec![Node::assign("colon_pos", Expr::var("after_params"))],
@@ -169,8 +169,8 @@ pub fn python312_extract_structure(
             "slot",
             &[
                 Expr::var("emit_kind"),
-                load_u32(tok_starts, Expr::var("name_pos")),
-                load_u32(tok_lens, Expr::var("name_pos")),
+                token_word_at(tok_starts, Expr::var("name_pos"), haystack_len),
+                token_word_at(tok_lens, Expr::var("name_pos"), haystack_len),
                 Expr::var("params_start"),
                 Expr::var("params_end"),
                 Expr::var("colon_pos"),
@@ -222,11 +222,11 @@ pub fn python312_extract_imports(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_IDENTIFIER)),
             Expr::or(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("prev_tok")),
+                    token_word_at(tok_types, Expr::var("prev_tok"), haystack_len),
                     Expr::u32(TOK_IMPORT),
                 ),
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("prev_tok")),
+                    token_word_at(tok_types, Expr::var("prev_tok"), haystack_len),
                     Expr::u32(TOK_FROM),
                 ),
             ),
@@ -235,7 +235,7 @@ pub fn python312_extract_imports(
             "record_kind",
             Expr::select(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("prev_tok")),
+                    token_word_at(tok_types, Expr::var("prev_tok"), haystack_len),
                     Expr::u32(TOK_IMPORT),
                 ),
                 Expr::u32(1),
@@ -247,7 +247,7 @@ pub fn python312_extract_imports(
         Expr::and(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_IDENTIFIER)),
             Expr::eq(
-                load_u32(tok_types, Expr::var("prev_tok")),
+                token_word_at(tok_types, Expr::var("prev_tok"), haystack_len),
                 Expr::u32(TOK_COMMA),
             ),
         ),
@@ -311,7 +311,7 @@ pub fn python312_extract_with_blocks(
         Expr::and(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_WITH)),
             Expr::ne(
-                load_u32(tok_types, Expr::var("prev_tok")),
+                token_word_at(tok_types, Expr::var("prev_tok"), haystack_len),
                 Expr::u32(TOK_ASYNC),
             ),
         ),
@@ -327,7 +327,7 @@ pub fn python312_extract_with_blocks(
         Expr::and(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_ASYNC)),
             Expr::eq(
-                load_u32(tok_types, Expr::var("async_next")),
+                token_word_at(tok_types, Expr::var("async_next"), haystack_len),
                 Expr::u32(TOK_WITH),
             ),
         ),
@@ -353,7 +353,7 @@ pub fn python312_extract_with_blocks(
         Expr::and(
             Expr::ne(Expr::var("with_pos"), Expr::u32(INVALID_POS)),
             Expr::eq(
-                load_u32(tok_types, Expr::var("manager_pos")),
+                token_word_at(tok_types, Expr::var("manager_pos"), haystack_len),
                 Expr::u32(TOK_IDENTIFIER),
             ),
         ),

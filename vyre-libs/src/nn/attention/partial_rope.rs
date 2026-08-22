@@ -163,7 +163,17 @@ fn build_partial_rope_at_offset(
     );
     let pair = Expr::div(dim.clone(), Expr::u32(2));
     let parity = Expr::rem(dim.clone(), Expr::u32(2));
-    let pair_base = Expr::sub(i.clone(), parity.clone());
+    // Every read below feeds a rotation the element-wise select discards for a
+    // dimension outside the rotary span, and a select evaluates both arms. The
+    // indices are therefore folded into the span before the loads: inside it the
+    // pair and the table entry are in range by construction, outside it the
+    // value is unused and reading element zero costs nothing.
+    let in_rope = Expr::lt(dim.clone(), Expr::u32(rope_dims));
+    let pair_base = Expr::select(
+        in_rope.clone(),
+        Expr::sub(i.clone(), parity.clone()),
+        Expr::u32(0),
+    );
     let x0 = Expr::cast(DataType::F32, Expr::load(input, pair_base.clone()));
     let x1 = Expr::cast(
         DataType::F32,
@@ -174,7 +184,7 @@ fn build_partial_rope_at_offset(
             Expr::add(token, Expr::u32(position_offset)),
             Expr::u32(half_rope),
         ),
-        pair,
+        Expr::select(in_rope, pair, Expr::u32(0)),
     );
     let cos_v = Expr::load(cos_table, table_idx.clone());
     let sin_v = Expr::load(sin_table, table_idx);

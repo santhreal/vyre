@@ -1,7 +1,10 @@
 //! Extraction of Python call sites and their top-level keyword arguments.
 
 use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
-use super::{find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words};
+use super::{
+    find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words,
+    token_word_at,
+};
 use crate::parsing::python::{CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS};
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_spec::python_token::{
@@ -45,7 +48,7 @@ pub fn python312_extract_calls(
         Expr::and(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_IDENTIFIER)),
             Expr::ne(
-                load_u32(tok_types, Expr::var("prev_tok")),
+                token_word_at(tok_types, Expr::var("prev_tok"), haystack_len),
                 Expr::u32(TOK_DOT),
             ),
         ),
@@ -70,7 +73,7 @@ pub fn python312_extract_calls(
             Expr::eq(Expr::var("is_call_head"), Expr::u32(1)),
             Expr::and(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("after_name")),
+                    token_word_at(tok_types, Expr::var("after_name"), haystack_len),
                     Expr::u32(TOK_LPAREN),
                 ),
                 Expr::ne(Expr::var("rparen"), Expr::u32(INVALID_POS)),
@@ -149,11 +152,11 @@ pub fn python312_extract_calls(
                         .chain(vec![Node::if_then(
                             Expr::and(
                                 Expr::eq(
-                                    load_u32(tok_types, Expr::var("kw_eq_pos")),
+                                    token_word_at(tok_types, Expr::var("kw_eq_pos"), haystack_len),
                                     Expr::u32(TOK_EQ),
                                 ),
                                 Expr::ne(
-                                    load_u32(tok_types, Expr::var("kw_prev")),
+                                    token_word_at(tok_types, Expr::var("kw_prev"), haystack_len),
                                     Expr::u32(TOK_DOT),
                                 ),
                             ),
@@ -204,7 +207,7 @@ pub fn python312_extract_calls(
                 Expr::var("kw_count"),
                 Expr::select(
                     Expr::eq(
-                        load_u32(tok_types, Expr::var("prev_tok")),
+                        token_word_at(tok_types, Expr::var("prev_tok"), haystack_len),
                         Expr::u32(TOK_AWAIT),
                     ),
                     Expr::u32(1),

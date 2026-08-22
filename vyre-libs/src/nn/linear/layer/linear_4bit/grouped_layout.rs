@@ -62,12 +62,28 @@ pub(super) fn affine_grouped_buffers(
     ]
 }
 
+/// `index` folded inside a buffer of `count` elements.
+///
+/// Every packed-word and sidecar read below sits in the taken arm of a select
+/// whose condition already decides whether the value matters: a non-leader lane,
+/// a reduction step past the input, or a padded output the workgroup grid rounded
+/// up to. A select evaluates both arms, so the read runs for those lanes too and
+/// lands past the buffer on a backend that does not bounds-check. Folding the
+/// index keeps it inside, where the same select discards what it read.
+pub(super) fn bounded_index(index: Expr, count: u32) -> Expr {
+    Expr::select(
+        Expr::lt(index.clone(), Expr::u32(count)),
+        index,
+        Expr::u32(0),
+    )
+}
+
 /// Lane-cooperative packed-word fetch: the leader of each 8-lane group loads the
 /// `u32` holding its eight nibbles and shuffles it across the group.
 ///
 /// `bound` gates the leader's load against the reduction length. Callers whose
-/// `k` range is exactly the workgroup width pass `None`, which leaves the load
-/// unguarded.
+/// `k` range is exactly the workgroup width pass `None`, which leaves the gate
+/// off; `packed_count` still keeps the index inside the weight buffer.
 pub(super) fn push_packed_word_fetch(
     nodes: &mut Vec<Node>,
     lane: &Expr,
@@ -75,6 +91,7 @@ pub(super) fn push_packed_word_fetch(
     word_leader_k: Expr,
     packed_idx: Expr,
     bound: Option<u32>,
+    packed_count: u32,
 ) {
     let leader = Expr::eq(Expr::var("lane_in_word"), Expr::u32(0));
     let load_when = match bound {
@@ -93,7 +110,11 @@ pub(super) fn push_packed_word_fetch(
         Node::let_bind("word_leader_k", word_leader_k),
         Node::let_bind(
             "packed_word_lane",
-            Expr::select(load_when, Expr::load(w_packed, packed_idx), Expr::u32(0)),
+            Expr::select(
+                load_when,
+                Expr::load(w_packed, bounded_index(packed_idx, packed_count)),
+                Expr::u32(0),
+            ),
         ),
         Node::let_bind(
             "packed_word",
@@ -109,13 +130,17 @@ pub(super) fn push_lane0_sidecar_loads(
     lane: &Expr,
     scale: &str,
     zero_point: &str,
+    sidecar_count: u32,
 ) {
     nodes.extend([
         Node::let_bind(
             "scale_lane",
             Expr::select(
                 Expr::eq(lane.clone(), Expr::u32(0)),
-                Expr::load(scale, Expr::var("sidecar_idx")),
+                Expr::load(
+                    scale,
+                    bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+                ),
                 Expr::f32(0.0),
             ),
         ),
@@ -123,7 +148,10 @@ pub(super) fn push_lane0_sidecar_loads(
             "zero_point_lane",
             Expr::select(
                 Expr::eq(lane.clone(), Expr::u32(0)),
-                Expr::load(zero_point, Expr::var("sidecar_idx")),
+                Expr::load(
+                    zero_point,
+                    bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+                ),
                 Expr::u32(0),
             ),
         ),

@@ -85,9 +85,10 @@ pub(super) fn linear_4bit_affine_grouped_weight_reuse(
         Expr::bitand(local.clone(), Expr::u32(0xffff_fff8)),
         packed_idx,
         None,
+        total_u32s,
     );
     body.push(Node::let_bind("sidecar_idx", sidecar_idx));
-    push_lane0_sidecar_loads(&mut body, &lane, scale, zero_point);
+    push_lane0_sidecar_loads(&mut body, &lane, scale, zero_point, sidecar_count);
     push_group_affine_terms(
         &mut body,
         broadcast_from_lane0("scale_lane"),

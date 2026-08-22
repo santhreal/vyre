@@ -5,7 +5,7 @@
 //! owns the two pieces all of them share: the bounded dotted-name segment walk
 //! and the GPU program envelope around it.
 
-use super::{load_u32, search_next_token_into};
+use super::{search_next_token_into, token_word_at};
 use crate::parsing::composition::child_phase;
 use crate::parsing::python::{INVALID_POS, MAX_DOTTED_SEGMENTS};
 use vyre_foundation::composition::wrap_anonymous_region;
@@ -68,7 +68,7 @@ impl DottedName<'_> {
                 ),
                 Node::if_then(
                     Expr::eq(
-                        load_u32(self.tok_types, Expr::var("dot_pos")),
+                        token_word_at(self.tok_types, Expr::var("dot_pos"), self.haystack_len),
                         Expr::u32(TOK_DOT),
                     ),
                     search_next_token_into(
@@ -80,7 +80,7 @@ impl DottedName<'_> {
                 ),
                 Node::if_then(
                     Expr::eq(
-                        load_u32(self.tok_types, Expr::var("after_dot")),
+                        token_word_at(self.tok_types, Expr::var("after_dot"), self.haystack_len),
                         Expr::u32(TOK_IDENTIFIER),
                     ),
                     vec![
@@ -90,7 +90,7 @@ impl DottedName<'_> {
                 ),
                 Node::if_then(
                     Expr::ne(
-                        load_u32(self.tok_types, Expr::var("after_dot")),
+                        token_word_at(self.tok_types, Expr::var("after_dot"), self.haystack_len),
                         Expr::u32(TOK_IDENTIFIER),
                     ),
                     vec![Node::assign("cursor", Expr::u32(INVALID_POS))],
@@ -102,13 +102,13 @@ impl DottedName<'_> {
     /// `(source_offset, source_length)` of the resolved chain.
     pub(crate) fn span(&self, tok_starts: &str, tok_lens: &str) -> [Expr; 2] {
         [
-            load_u32(tok_starts, self.head.clone()),
+            token_word_at(tok_starts, self.head.clone(), self.haystack_len),
             Expr::add(
                 Expr::sub(
-                    load_u32(tok_starts, Expr::var(self.accumulator)),
-                    load_u32(tok_starts, self.head.clone()),
+                    token_word_at(tok_starts, Expr::var(self.accumulator), self.haystack_len),
+                    token_word_at(tok_starts, self.head.clone(), self.haystack_len),
                 ),
-                load_u32(tok_lens, Expr::var(self.accumulator)),
+                token_word_at(tok_lens, Expr::var(self.accumulator), self.haystack_len),
             ),
         ]
     }

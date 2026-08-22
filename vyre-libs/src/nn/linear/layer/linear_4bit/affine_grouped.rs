@@ -6,11 +6,11 @@ use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::affine_grouped_weight_reuse::linear_4bit_affine_grouped_weight_reuse;
 use super::grouped_layout::{
-    affine_grouped_buffers, affine_grouped_output_extent, broadcast_from_lane0, dequantized_weight,
-    lane_decomposition, packed_column_index, push_group_affine_terms, push_lane0_sidecar_loads,
-    push_packed_word_fetch, push_warp_reduction_store, AFFINE_GROUPED_LANES_PER_OUTPUT,
-    AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP, AFFINE_GROUPED_WARPS_PER_WORKGROUP,
-    AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
+    affine_grouped_buffers, affine_grouped_output_extent, bounded_index, broadcast_from_lane0,
+    dequantized_weight, lane_decomposition, packed_column_index, push_group_affine_terms,
+    push_lane0_sidecar_loads, push_packed_word_fetch, push_warp_reduction_store,
+    AFFINE_GROUPED_LANES_PER_OUTPUT, AFFINE_GROUPED_OP_ID, AFFINE_GROUPED_OUTPUTS_PER_WORKGROUP,
+    AFFINE_GROUPED_WARPS_PER_WORKGROUP, AFFINE_GROUPED_WEIGHT_TILE, AFFINE_GROUPED_WORKGROUP_SIZE,
 };
 
 /// Build a fused affine INT4 linear Program:
@@ -184,6 +184,7 @@ fn linear_4bit_affine_grouped_batch_impl(
                 word_leader_k_expr,
                 packed_idx.clone(),
                 Some(in_dim),
+                total_u32s,
             );
             chunk.push(Node::if_then(
                 Expr::lt(k.clone(), Expr::u32(in_dim)),
@@ -203,7 +204,7 @@ fn linear_4bit_affine_grouped_batch_impl(
                 Node::let_bind("group_base", group_base_expr),
                 Node::let_bind("sidecar_idx", sidecar_idx_expr),
             ];
-            push_lane0_sidecar_loads(&mut group, &lane, scale, zero_point);
+            push_lane0_sidecar_loads(&mut group, &lane, scale, zero_point, sidecar_count);
             push_group_affine_terms(
                 &mut group,
                 broadcast_from_lane0("scale_lane"),
@@ -261,12 +262,19 @@ fn linear_4bit_affine_grouped_batch_impl(
             ),
             packed_idx,
             Some(in_dim),
+            total_u32s,
         );
         chunk.push(Node::let_bind("sidecar_idx", chunk_sidecar_idx));
         push_group_affine_terms(
             &mut chunk,
-            Expr::load(scale, Expr::var("sidecar_idx")),
-            Expr::load(zero_point, Expr::var("sidecar_idx")),
+            Expr::load(
+                scale,
+                bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+            ),
+            Expr::load(
+                zero_point,
+                bounded_index(Expr::var("sidecar_idx"), sidecar_count),
+            ),
         );
         chunk.push(Node::if_then(
             Expr::lt(k.clone(), Expr::u32(in_dim)),

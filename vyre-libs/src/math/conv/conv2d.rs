@@ -67,9 +67,9 @@ pub fn conv2d_3x3_direct(
                                 Expr::add(
                                     Expr::var("acc"),
                                     Expr::select(
-                                        tap.in_bounds,
+                                        tap.in_bounds.clone(),
                                         Expr::mul(
-                                            Expr::load(input, tap.input_index),
+                                            Expr::load(input, tap.bounded_input_index()),
                                             Expr::load(kernel, Expr::u32(tap.column)),
                                         ),
                                         Expr::f32(0.0),

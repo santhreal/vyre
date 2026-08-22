@@ -3,6 +3,7 @@
 use super::walk::{pack_sparse_tokens, pack_words_padded_bytes, DottedName, TokenPass};
 use super::{
     find_matching_delimiter, load_u32, search_next_token, search_next_token_into, store_words,
+    token_word_at,
 };
 use crate::parsing::python::{DECORATOR_RECORD_WORDS, INVALID_POS};
 use vyre_foundation::ir::{Expr, Node, Program};
@@ -60,7 +61,7 @@ pub fn python312_extract_decorators(
         Expr::and(
             Expr::eq(Expr::var("tok"), Expr::u32(TOK_AT)),
             Expr::eq(
-                load_u32(tok_types, Expr::var("decorator_name")),
+                token_word_at(tok_types, Expr::var("decorator_name"), haystack_len),
                 Expr::u32(TOK_IDENTIFIER),
             ),
         ),
@@ -74,7 +75,7 @@ pub fn python312_extract_decorators(
             ))
             .chain(vec![Node::if_then_else(
                 Expr::eq(
-                    load_u32(tok_types, Expr::var("after_decorator")),
+                    token_word_at(tok_types, Expr::var("after_decorator"), haystack_len),
                     Expr::u32(TOK_LPAREN),
                 ),
                 search_next_token_into(
@@ -93,7 +94,7 @@ pub fn python312_extract_decorators(
             .chain(vec![
                 Node::if_then(
                     Expr::eq(
-                        load_u32(tok_types, Expr::var("target_tok")),
+                        token_word_at(tok_types, Expr::var("target_tok"), haystack_len),
                         Expr::u32(TOK_DEF),
                     ),
                     vec![
@@ -111,7 +112,7 @@ pub fn python312_extract_decorators(
                 ),
                 Node::if_then(
                     Expr::eq(
-                        load_u32(tok_types, Expr::var("target_tok")),
+                        token_word_at(tok_types, Expr::var("target_tok"), haystack_len),
                         Expr::u32(TOK_CLASS),
                     ),
                     vec![
@@ -129,7 +130,7 @@ pub fn python312_extract_decorators(
                 ),
                 Node::if_then(
                     Expr::eq(
-                        load_u32(tok_types, Expr::var("target_tok")),
+                        token_word_at(tok_types, Expr::var("target_tok"), haystack_len),
                         Expr::u32(TOK_ASYNC),
                     ),
                     vec![
@@ -163,8 +164,8 @@ pub fn python312_extract_decorators(
                     span[0].clone(),
                     span[1].clone(),
                     Expr::var("target_kind"),
-                    load_u32(tok_starts, Expr::var("target_name")),
-                    load_u32(tok_lens, Expr::var("target_name")),
+                    token_word_at(tok_starts, Expr::var("target_name"), haystack_len),
+                    token_word_at(tok_lens, Expr::var("target_name"), haystack_len),
                     Expr::var("target_tok"),
                 ],
             ))
