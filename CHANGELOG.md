@@ -4280,6 +4280,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The merged-worktree gate captures git's streams instead of inheriting them,
   so a message about an unknown rev cannot land inside the report a parent gate
   parses.
+- The Python delimiter matcher started its scan one token past the opening
+  position, and a missing opening position is the `u32::MAX` sentinel, which
+  wraps to zero. A caller that passed the sentinel therefore scanned the whole
+  token stream and reported the first unmatched closing token as the match.
+  Every caller happens to discard that result, so no output changed, but the
+  scan now starts at the end of the stream when the opening position is absent,
+  which matches nothing and reads nothing.
 - The shared module walk reads a cfg(not(test)) declaration as production
   source rather than as test source, so a module carrying it stays on every
   feature route it belongs to.
