@@ -34,7 +34,9 @@ fn fixtured_entries() -> Vec<vyre_foundation::operation::SemanticOperation> {
         .collect()
 }
 
-fn program_of(entry: &vyre_foundation::operation::SemanticOperation) -> vyre_foundation::ir::Program {
+fn program_of(
+    entry: &vyre_foundation::operation::SemanticOperation,
+) -> vyre_foundation::ir::Program {
     entry
         .program()
         .expect("Fix: registered library operation must provide a neutral builder")
@@ -48,6 +50,26 @@ fn cases(entry: &vyre_foundation::operation::SemanticOperation) -> Vec<Vec<Value
         .into_iter()
         .map(|case| case.into_iter().map(Value::from).collect())
         .collect()
+}
+
+/// Every net below walks the same population, so a case one net cannot evaluate
+/// is a case that net did not judge. Reporting a clean sweep of the remainder is
+/// the failure mode these nets exist to remove, so each one names its skips and
+/// refuses them.
+fn refuse_skips(net: &str, checked_cases: usize, skipped: &[String]) {
+    assert!(
+        checked_cases > 0,
+        "Fix: {net} exercised no library fixture, so it proves nothing"
+    );
+    assert!(
+        skipped.is_empty(),
+        "Fix: {net} could not evaluate {} of {} library fixture case(s), so it judged a subset and \
+         reported it as a sweep. A registered fixture the reference cannot run is a defect in the \
+         fixture or the builder, not a case to skip. Un-evaluable:\n{}",
+        skipped.len(),
+        checked_cases + skipped.len(),
+        skipped.join("\n")
+    );
 }
 
 #[test]
@@ -74,14 +96,7 @@ fn every_registered_composition_is_oob_clean_on_its_fixtures() {
         }
     }
 
-    eprintln!(
-        "library OOB sweep: {checked_cases} fixture case(s) checked, {} un-evaluable",
-        eval_errored.len()
-    );
-    assert!(
-        checked_cases > 0,
-        "Fix: no library fixture was exercised, so the sweep proves nothing"
-    );
+    refuse_skips("the library OOB sweep", checked_cases, &eval_errored);
     assert!(
         offenders.is_empty(),
         "Fix: {} of {checked_cases} checked library fixture case(s) accessed a buffer OUT OF BOUNDS on their own \
@@ -96,30 +111,29 @@ fn every_registered_composition_is_oob_clean_on_its_fixtures() {
 #[test]
 fn every_registered_composition_is_oob_clean_under_grid_overfire() {
     let mut offenders = Vec::new();
+    let mut skipped = Vec::new();
     let mut checked_cases = 0usize;
 
     for entry in fixtured_entries() {
         let program = program_of(&entry);
         let grid = overfire_grid(&program);
         for (case_idx, values) in cases(&entry).into_iter().enumerate() {
-            if let Ok((_out, report)) =
-                vyre_reference::reference_eval_with_dispatch_oob_report(&program, &values, grid)
-            {
-                checked_cases += 1;
-                if report.total() > 0 {
-                    offenders.push(format!(
-                        "{} (fixture case {case_idx}, grid>={grid}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
-                        entry.id, report.oob_loads, report.oob_stores, report.oob_atomics
-                    ));
+            match vyre_reference::reference_eval_with_dispatch_oob_report(&program, &values, grid) {
+                Ok((_out, report)) => {
+                    checked_cases += 1;
+                    if report.total() > 0 {
+                        offenders.push(format!(
+                            "{} (fixture case {case_idx}, grid>={grid}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
+                            entry.id, report.oob_loads, report.oob_stores, report.oob_atomics
+                        ));
+                    }
                 }
+                Err(err) => skipped.push(format!("{} (case {case_idx}): {err}", entry.id)),
             }
         }
     }
 
-    assert!(
-        checked_cases > 0,
-        "Fix: no library fixture was exercised under over-fire, so the sweep proves nothing"
-    );
+    refuse_skips("the library over-fire OOB sweep", checked_cases, &skipped);
     assert!(
         offenders.is_empty(),
         "Fix: {} of {checked_cases} checked library fixture case(s) accessed a buffer OUT OF BOUNDS when the \
@@ -133,20 +147,28 @@ fn every_registered_composition_is_oob_clean_under_grid_overfire() {
 #[test]
 fn every_registered_composition_output_is_invariant_under_grid_overfire() {
     let mut offenders = Vec::new();
+    let mut skipped = Vec::new();
     let mut checked_cases = 0usize;
 
     for entry in fixtured_entries() {
         let program = program_of(&entry);
         let grid = overfire_grid(&program);
         for (case_idx, values) in cases(&entry).into_iter().enumerate() {
-            let Ok(baseline) = vyre_reference::reference_eval(&program, &values) else {
-                continue;
+            let baseline = match vyre_reference::reference_eval(&program, &values) {
+                Ok(baseline) => baseline,
+                Err(err) => {
+                    skipped.push(format!("{} (case {case_idx}): {err}", entry.id));
+                    continue;
+                }
             };
-            let Ok(overfired) =
-                vyre_reference::reference_eval_with_dispatch(&program, &values, grid)
-            else {
-                continue;
-            };
+            let overfired =
+                match vyre_reference::reference_eval_with_dispatch(&program, &values, grid) {
+                    Ok(overfired) => overfired,
+                    Err(err) => {
+                        skipped.push(format!("{} (case {case_idx}, over-fired): {err}", entry.id));
+                        continue;
+                    }
+                };
             checked_cases += 1;
             let base_bytes: Vec<Vec<u8>> = baseline.iter().map(Value::to_bytes).collect();
             let over_bytes: Vec<Vec<u8>> = overfired.iter().map(Value::to_bytes).collect();
@@ -167,9 +189,10 @@ fn every_registered_composition_output_is_invariant_under_grid_overfire() {
         }
     }
 
-    assert!(
-        checked_cases > 0,
-        "Fix: no library fixture was compared across grids, so the sweep proves nothing"
+    refuse_skips(
+        "the library over-fire invariance sweep",
+        checked_cases,
+        &skipped,
     );
     assert!(
         offenders.is_empty(),
@@ -185,17 +208,25 @@ fn every_registered_composition_output_is_invariant_under_grid_overfire() {
 #[test]
 fn every_registered_composition_is_race_free_under_lane_reversal() {
     let mut offenders = Vec::new();
+    let mut skipped = Vec::new();
     let mut checked_cases = 0usize;
 
     for entry in fixtured_entries() {
         let program = program_of(&entry);
         for (case_idx, values) in cases(&entry).into_iter().enumerate() {
-            let Ok(forward) = vyre_reference::reference_eval(&program, &values) else {
-                continue;
+            let forward = match vyre_reference::reference_eval(&program, &values) {
+                Ok(forward) => forward,
+                Err(err) => {
+                    skipped.push(format!("{} (case {case_idx}): {err}", entry.id));
+                    continue;
+                }
             };
-            let Ok(reversed) = vyre_reference::reference_eval_lane_reversed(&program, &values)
-            else {
-                continue;
+            let reversed = match vyre_reference::reference_eval_lane_reversed(&program, &values) {
+                Ok(reversed) => reversed,
+                Err(err) => {
+                    skipped.push(format!("{} (case {case_idx}, reversed): {err}", entry.id));
+                    continue;
+                }
             };
             checked_cases += 1;
             let forward_bytes: Vec<Vec<u8>> = forward.iter().map(Value::to_bytes).collect();
@@ -206,10 +237,7 @@ fn every_registered_composition_is_race_free_under_lane_reversal() {
         }
     }
 
-    assert!(
-        checked_cases > 0,
-        "Fix: no library fixture was stepped in both lane orders, so the sweep proves nothing"
-    );
+    refuse_skips("the library lane-reversal sweep", checked_cases, &skipped);
     assert!(
         offenders.is_empty(),
         "Fix: {} of {checked_cases} checked library fixture case(s) changed their output when the lane STEP ORDER \
