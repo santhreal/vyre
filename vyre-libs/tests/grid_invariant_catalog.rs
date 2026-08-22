@@ -105,6 +105,16 @@ fn a_first_workgroup_guard_counts_as_naming_the_grid() {
 
 #[test]
 fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
+    // Naming the library catalog links this crate into the test binary, and its
+    // inventory registrations come with it. An integration test that touches
+    // only `vyre-foundation` links no registrations at all, and the sweep then
+    // examines an empty registry and proves nothing.
+    let library_entries = vyre_libs::operation_catalog::all_entries().count();
+    assert!(
+        library_entries > 0,
+        "Fix: this build registers no library operation, so the sweep has no population to read"
+    );
+
     let mut registered = 0;
     let mut examined = Vec::new();
     let mut offenders = Vec::new();
@@ -126,14 +136,14 @@ fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
         }
     }
 
-    // A narrow feature set can register nothing that writes past one
-    // workgroup, and that is a fact about the build rather than a hole in the
-    // sweep: the predicate is proved able to fail by the control program in
+    // A narrow feature set can register nothing that writes past one workgroup,
+    // and that is a fact about the build rather than a hole in the sweep: the
+    // predicate is proved able to fail by the control program in
     // `a_first_workgroup_guard_counts_as_naming_the_grid`. What would make this
-    // sweep vacuous is reaching no catalog at all.
+    // sweep vacuous is reading fewer programs than the catalog it just counted.
     assert!(
-        registered > 0,
-        "Fix: the sweep reached no registered program with a body, so it examined nothing; check that the inventory registry is linked into this test binary"
+        registered >= library_entries,
+        "Fix: the sweep read {registered} programs against a catalog of {library_entries}; a registration with no program body cannot be checked for this shape"
     );
     assert!(
         offenders.is_empty(),

@@ -124,6 +124,11 @@ fn a_mirrored_difference_in_two_arms_is_detected_and_a_magnitude_is_not() {
 
 #[test]
 fn no_registered_program_selects_between_both_directions_of_a_difference() {
+    // Naming the library catalog links this crate into the test binary, and its
+    // inventory registrations come with it. An integration test that touches
+    // only `vyre-foundation` links no registrations at all, and the sweep then
+    // reads an empty registry and proves nothing.
+    let library_entries = vyre_libs::operation_catalog::all_entries().count();
     let mut examined = 0usize;
     let mut offenders = Vec::new();
     for entry in OperationRegistry::global().iter() {
@@ -137,8 +142,8 @@ fn no_registered_program_selects_between_both_directions_of_a_difference() {
     }
 
     assert!(
-        examined > 0,
-        "Fix: this build must register at least one operation, or this contract proves nothing"
+        library_entries > 0 && examined >= library_entries,
+        "Fix: the sweep read {examined} programs against a catalog of {library_entries}; it must reach at least every registered library operation"
     );
     assert!(
         offenders.is_empty(),
