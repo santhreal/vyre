@@ -59,8 +59,7 @@ fn generated_input(len: usize, seed: u32) -> Vec<u32> {
 
 fn run(program: &Program, input: &[u32]) -> Vec<u8> {
     let input_bytes = vyre_primitives::wire::pack_u32_slice(input);
-    let output_bytes = vec![0u8; input.len().max(1) * 4];
-    run_eval_single(program, vec![input_bytes, output_bytes])
+    run_eval_single(program, vec![input_bytes])
 }
 
 #[test]

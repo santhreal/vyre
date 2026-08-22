@@ -47,8 +47,7 @@ pub fn inverse_sqrt_f32(input: &str, out: &str, n: u32) -> Program {
 
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
     let input = vec![1.0f32, 4.0, 9.0, 16.0];
-    let len = input.len() * 4;
-    vec![vec![pack_f32(&input), vec![0u8; len]]]
+    vec![vec![pack_f32(&input)]]
 }
 
 const EXPECTED_INVERSE_SQRT_OUTPUT_BYTES: [u8; 16] = [
@@ -88,10 +87,7 @@ mod tests {
     fn assert_case(input: &[f32]) {
         let n = input.len() as u32;
         let program = inverse_sqrt_f32("input", "out", n.max(1));
-        let outputs = run_program(
-            &program,
-            vec![pack_f32(input), vec![0u8; (n.max(1) * 4) as usize]],
-        );
+        let outputs = run_program(&program, vec![pack_f32(input)]);
         assert_eq!(outputs, vec![test_cpu_ref(input)]);
     }
 

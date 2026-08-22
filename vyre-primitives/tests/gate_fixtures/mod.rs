@@ -7,7 +7,6 @@
 
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_reference::value::Value;
 
 /// Execute a registered operation on the CPU reference interpreter.
 #[allow(dead_code)]
@@ -15,10 +14,7 @@ pub(crate) fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<
     let program = entry
         .program()
         .expect("Fix: registered hardware intrinsic must provide a neutral builder");
-    let values: Vec<Value> = inputs
-        .iter()
-        .map(|bytes| Value::Bytes(bytes.clone().into()))
-        .collect();
+    let values = vyre_reference::reference_inputs(&program, inputs.to_vec());
     vyre_reference::reference_eval(&program, &values)
         .expect("Fix: registered hardware intrinsic must execute on the CPU oracle.")
         .into_iter()
@@ -29,10 +25,7 @@ pub(crate) fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<
 /// Execute a Program on the CPU reference interpreter, asserting exactly one output buffer.
 #[allow(dead_code)]
 pub(crate) fn run_eval_single(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<u8> {
-    let values: Vec<Value> = inputs
-        .into_iter()
-        .map(|bytes| Value::Bytes(bytes.into()))
-        .collect();
+    let values = vyre_reference::reference_inputs(program, inputs);
     let outputs = vyre_reference::reference_eval(program, &values)
         .expect("Fix: hardware intrinsic builder must execute on the CPU oracle.");
     assert_eq!(

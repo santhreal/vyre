@@ -5,7 +5,7 @@
 
 use vyre_foundation::ir::{Expr, Program};
 
-use crate::hardware::packed_u32_input_with_output;
+use crate::hardware::packed_u32_input;
 /// Canonical op id shared by semantics, fixtures, and driver registration.
 pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_ballot";
 
@@ -30,7 +30,7 @@ pub fn subgroup_ballot(cond_input: &str, out: &str, n: u32) -> Program {
 }
 
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-    packed_u32_input_with_output(&[0, 1, 0, 1])
+    packed_u32_input(&[0, 1, 0, 1])
 }
 
 const EXPECTED_SUBGROUP_BALLOT_OUTPUT_BYTES: [u8; 16] = [

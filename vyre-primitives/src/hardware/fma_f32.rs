@@ -34,13 +34,7 @@ fn test_inputs() -> Vec<Vec<Vec<u8>>> {
     let a = vec![0.0f32, 1.0, -2.5, f32::MAX];
     let b = vec![1.0f32, -3.0, 4.0, 0.5];
     let c = vec![0.0f32, 0.25, -1.0, 2.0];
-    let len = a.len() * 4;
-    vec![vec![
-        pack_f32(&a),
-        pack_f32(&b),
-        pack_f32(&c),
-        vec![0u8; len],
-    ]]
+    vec![vec![pack_f32(&a), pack_f32(&b), pack_f32(&c)]]
 }
 
 const EXPECTED_FMA_OUTPUT_BYTES: [u8; 16] = [
@@ -81,15 +75,7 @@ mod tests {
     fn assert_case(a: &[f32], b: &[f32], c: &[f32]) {
         let n = a.len() as u32;
         let program = fma_f32("a", "b", "c", "out", n.max(1));
-        let outputs = run_program(
-            &program,
-            vec![
-                pack_f32(a),
-                pack_f32(b),
-                pack_f32(c),
-                vec![0u8; (n.max(1) * 4) as usize],
-            ],
-        );
+        let outputs = run_program(&program, vec![pack_f32(a), pack_f32(b), pack_f32(c)]);
         assert_eq!(outputs, vec![test_cpu_ref(a, b, c)]);
     }
 

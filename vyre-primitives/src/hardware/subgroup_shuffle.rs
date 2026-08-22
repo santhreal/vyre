@@ -62,8 +62,7 @@ pub fn subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> Program
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
     let values = vec![10u32, 20, 30, 40];
     let lanes = vec![0u32, 1, 0, 2];
-    let len = values.len() * 4;
-    vec![vec![pack_u32(&values), pack_u32(&lanes), vec![0u8; len]]]
+    vec![vec![pack_u32(&values), pack_u32(&lanes)]]
 }
 
 const EXPECTED_SUBGROUP_SHUFFLE_OUTPUT_BYTES: [u8; 16] = [
@@ -117,14 +116,7 @@ mod tests {
     fn assert_case(values: &[u32], lanes: &[u32]) {
         let n = values.len() as u32;
         let program = subgroup_shuffle("values", "lanes", "out", n.max(1));
-        let outputs = run_program(
-            &program,
-            vec![
-                pack_u32(values),
-                pack_u32(lanes),
-                vec![0u8; (n.max(1) * 4) as usize],
-            ],
-        );
+        let outputs = run_program(&program, vec![pack_u32(values), pack_u32(lanes)]);
         assert_eq!(outputs, vec![test_cpu_ref(values, lanes)]);
     }
 

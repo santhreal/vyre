@@ -113,7 +113,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
         }
 
         fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-            crate::hardware::packed_u32_input_with_output($fixture)
+            crate::hardware::packed_u32_input($fixture)
         }
 
         const EXPECTED_REGISTRATION_BYTES: &[u8] = $expected_bytes;
@@ -194,7 +194,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
         }
 
         fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-            crate::hardware::packed_u32_input_with_output($fixture)
+            crate::hardware::packed_u32_input($fixture)
         }
 
         const EXPECTED_REGISTRATION_BYTES: &[u8] = $fixture_bytes;
@@ -458,11 +458,12 @@ pub(crate) fn ternary_f32_program(
     )
 }
 
-pub(crate) fn packed_u32_input_with_output(words: &[u32]) -> Vec<Vec<Vec<u8>>> {
-    vec![vec![
-        crate::wire::pack_u32_slice(words),
-        vec![0u8; words.len() * 4],
-    ]]
+/// Registration fixture: one case, one packed input buffer.
+///
+/// A backend-allocated output takes no host slot, so a fixture that carried a
+/// zeroed placeholder for one described a call the artifact ABI rejects.
+pub(crate) fn packed_u32_input(words: &[u32]) -> Vec<Vec<Vec<u8>>> {
+    vec![vec![crate::wire::pack_u32_slice(words)]]
 }
 
 pub(crate) fn pack_f32(values: &[f32]) -> Vec<u8> {
@@ -475,20 +476,13 @@ where
 {
     let n = input.len() as u32;
     let program = build("input", "out", n.max(1));
-    let outputs = run_program(
-        &program,
-        vec![
-            crate::wire::pack_u32_slice(input),
-            vec![0u8; (n.max(1) * 4) as usize],
-        ],
-    );
+    let outputs = run_program(&program, vec![crate::wire::pack_u32_slice(input)]);
     assert_eq!(outputs, vec![crate::wire::pack_u32_slice(expected)]);
 }
 
 #[cfg(test)]
 pub(crate) fn run_program(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    use vyre_reference::value::Value;
-    let values: Vec<Value> = inputs.into_iter().map(|b| Value::Bytes(b.into())).collect();
+    let values = vyre_reference::reference_inputs(program, inputs);
     vyre_reference::reference_eval(program, &values)
         .expect("Fix: intrinsic must execute; restore this invariant before continuing.")
         .into_iter()

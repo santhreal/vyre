@@ -3,7 +3,7 @@
 
 use vyre_foundation::ir::{Expr, Program};
 
-use crate::hardware::packed_u32_input_with_output;
+use crate::hardware::packed_u32_input;
 /// Canonical op id shared by semantics, fixtures, and driver registration.
 pub const OP_ID: &str = "vyre-primitives::hardware::subgroup_add";
 
@@ -30,7 +30,7 @@ pub fn subgroup_add(values: &str, out: &str, n: u32) -> Program {
 }
 
 fn test_inputs() -> Vec<Vec<Vec<u8>>> {
-    packed_u32_input_with_output(&[1, 2, 3, 4])
+    packed_u32_input(&[1, 2, 3, 4])
 }
 
 const EXPECTED_SUBGROUP_ADD_OUTPUT_BYTES: [u8; 16] = [
