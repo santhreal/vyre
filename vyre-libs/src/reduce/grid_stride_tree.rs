@@ -56,7 +56,11 @@ pub fn grid_stride_tree_sum_u32(
 ) -> Program {
     let tile = tile.max(1);
     let blocks = grid_stride_tree_sum_u32_blocks(count, tile, blocks);
-    if count <= tile || blocks == 1 {
+    // One block is not a reason to take the single-block form: that form reads
+    // one tile and nothing else, so at `count > tile` it would sum a prefix and
+    // report it as the total. The strided pass covers the input at any block
+    // count, including one.
+    if count <= tile {
         return single_block_tree_sum_u32(values, out, count, tile);
     }
 
@@ -76,15 +80,19 @@ fn single_block_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> 
 
     let body = vec![
         Node::let_bind("local", local.clone()),
-        Node::let_bind(
-            "acc",
-            Expr::select(
-                Expr::lt(local.clone(), Expr::u32(count)),
+        // The lane's element is loaded under a branch, not selected after the
+        // fact: `Expr::select` evaluates both arms, so a lane past `count` would
+        // still read `values[local]` past the buffer end. Every lane seeds its
+        // scratch slot first, so the tail lanes contribute the identity.
+        Node::store(scratch, local.clone(), Expr::u32(0)),
+        Node::if_then(
+            Expr::lt(local.clone(), Expr::u32(count)),
+            vec![Node::store(
+                scratch,
+                local.clone(),
                 Expr::load(values, local.clone()),
-                Expr::u32(0),
-            ),
+            )],
         ),
-        Node::store(scratch, local.clone(), Expr::var("acc")),
         Node::barrier(),
         sum_u32_child(
             SUM_U32_OP_ID,
@@ -177,8 +185,16 @@ fn pass1_block_reduction(
             scratch,
             WorkgroupReductionScope::EveryWorkgroup,
         ),
+        // The store is guarded on the block index as well as the lane, so a
+        // launch wider than the grid this program was built for discards the
+        // extra blocks instead of writing past `partials`. The blocks inside the
+        // grid still cover the input, so an over-wide launch is slower and not
+        // wrong.
         Node::if_then(
-            Expr::eq(local, Expr::u32(0)),
+            Expr::and(
+                Expr::eq(local, Expr::u32(0)),
+                Expr::lt(block.clone(), Expr::u32(blocks)),
+            ),
             vec![Node::store(
                 partials,
                 block,
@@ -208,15 +224,19 @@ fn pass2_combine_reduction(partials: &str, out: &str, num_blocks: u32, tile: u32
         Expr::is_first_workgroup(),
         vec![
             Node::let_bind("local", local.clone()),
-            Node::let_bind(
-                "val",
-                Expr::select(
-                    Expr::lt(local.clone(), Expr::u32(num_blocks)),
+            // Branch, not select: `Expr::select` evaluates both arms, so a lane
+            // past `num_blocks` would read `partials` past its end. The tile is
+            // a power of two and the block count need not be, so that tail
+            // exists on most shapes.
+            Node::store(scratch, local.clone(), Expr::u32(0)),
+            Node::if_then(
+                Expr::lt(local.clone(), Expr::u32(num_blocks)),
+                vec![Node::store(
+                    scratch,
+                    local.clone(),
                     Expr::load(partials, local.clone()),
-                    Expr::u32(0),
-                ),
+                )],
             ),
-            Node::store(scratch, local.clone(), Expr::var("val")),
             Node::barrier(),
             sum_u32_child(
                 SUM_U32_OP_ID,

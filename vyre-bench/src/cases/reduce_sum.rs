@@ -251,9 +251,11 @@ fn prepare_size(count: u32, tree_blocks: u32, tile_ceiling: u32) -> ReductionSiz
     ReductionSizePrepared {
         count,
         tree_tile,
-        // A single-block reduction infers its own grid; only the multi-block
-        // form needs the launch pinned to the count it was built for.
-        tree_grid: (tree_blocks > 1).then_some([tree_blocks, 1, 1]),
+        // The tree program's grid is a contract of the program at every block
+        // count: pass 1 strides the input over exactly this many blocks and
+        // sizes its partial buffer to them. Leaving the launch to inference
+        // spans the widest declared buffer instead, which is the whole input.
+        tree_grid: Some([tree_blocks, 1, 1]),
         values: values.clone(),
         atomic_program: sum::reduce_sum("values", "out", count),
         tree_program: grid_stride_tree::grid_stride_tree_sum_u32(
