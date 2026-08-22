@@ -1414,7 +1414,7 @@ seam = "foundation-ir"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["bitset", "graph", "nn-linear-4bit", "predicate"]
+features = ["bitset", "graph", "math-scan", "nn-linear-4bit", "predicate"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

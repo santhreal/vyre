@@ -202,7 +202,7 @@ graph TD
 | `vyre-bench` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `false` | `true` | `private` | `portable-driver` |
 | `vyre-bench` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
 | `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-bench` | `vyre-libs` | product operation builders | `bitset`, `graph`, `nn-linear-4bit`, `predicate` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
+| `vyre-bench` | `vyre-libs` | product operation builders | `bitset`, `graph`, `math-scan`, `nn-linear-4bit`, `predicate` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-bench` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
 | `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |

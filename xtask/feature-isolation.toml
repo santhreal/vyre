@@ -293,7 +293,7 @@ feature = "(default),analysis,encoding,full,solvers"
 
 [[pair]]
 member = "vyre-libs"
-feature = "(default),bitset,graph,nn-linear-4bit,predicate"
+feature = "(default),bitset,graph,math-scan,nn-linear-4bit,predicate"
 
 [[pair]]
 member = "vyre-libs"
