@@ -85,8 +85,7 @@ impl ExampleOp {
             vec![
                 BufferDecl::storage(input_name, 0, BufferAccess::ReadOnly, DataType::U32)
                     .with_count(n),
-                BufferDecl::storage(output_name, 1, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(n),
+                BufferDecl::output(output_name, 1, DataType::U32).with_count(n),
             ],
             workgroup,
             vec![wrap_region(generator, body, None)],
