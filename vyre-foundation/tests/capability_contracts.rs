@@ -498,6 +498,15 @@ fn scan_cases() -> Vec<ScanCase> {
                 }])
             },
         },
+        ScanCase {
+            field: "grid_sync",
+            read: |caps| caps.grid_sync,
+            program: || {
+                scalar_program(vec![Node::Barrier {
+                    ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
+                }])
+            },
+        },
     ]
 }
 
