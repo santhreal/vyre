@@ -206,6 +206,7 @@ pub const fn vyre_driver::BindingSet::resources(&self) -> &alloc::collections::b
 pub const fn vyre_driver::Deprecation::new(op_id: &'static str, deprecated_since: vyre_driver::Semver, note: &'static str) -> Self
 pub const fn vyre_driver::DeviceProfile::adapter_caps(self) -> vyre_foundation::optimizer::ctx::AdapterCaps
 pub const fn vyre_driver::DeviceProfile::conservative(backend: &'static str) -> Self
+pub const fn vyre_driver::DeviceProfile::grid_stride_workgroups(self) -> u32
 pub const fn vyre_driver::DeviceProfile::strategy_capabilities(self) -> vyre_foundation::validate::options::BackendCapabilities
 pub const fn vyre_driver::DeviceProfile::validation_capabilities(self) -> vyre_foundation::validate::options::BackendCapabilities
 pub const fn vyre_driver::DeviceTimingQuality::as_str(self) -> &'static str

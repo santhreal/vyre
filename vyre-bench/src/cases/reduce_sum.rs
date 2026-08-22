@@ -80,11 +80,12 @@ impl BenchCase for ReduceSumBench {
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         // The fused tree reduction carries a whole-grid fence, so it launches
         // cooperatively and every workgroup must be co-resident. One workgroup
-        // per compute unit is the widest grid that holds at this tile, and it
-        // is read from the probed device so the grid is a fact of the machine
-        // being measured rather than a constant baked into the composition.
+        // per compute unit is the widest grid that holds at this tile. A backend
+        // that cannot report a compute-unit count places no cap on the request,
+        // and the builder clamps it to what the shape admits: reading the
+        // unreported count as one workgroup measured 0.08x of the CPU baseline.
         let profile = ctx.preferred_backend.device_profile();
-        let tree_blocks = profile.compute_units.max(1);
+        let tree_blocks = profile.grid_stride_workgroups();
         let tile_ceiling = tree_tile_ceiling(&profile);
         let small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling);
         let large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling);
@@ -429,6 +430,32 @@ mod tests {
                 saturated.tree_grid,
                 Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
                 "Fix: more blocks than tiles leaves blocks with nothing to reduce"
+            );
+        }
+    }
+
+    /// WHY: the WGPU adapter probe reports no compute-unit count, and reading
+    /// that as one workgroup launched a one-million-element reduction at a
+    /// single block. It computed the right answer at 0.08x of the CPU baseline,
+    /// so only a performance contract could see it. This pins the request for
+    /// every backend whose profile leaves the count unreported.
+    #[test]
+    fn an_unreported_compute_unit_count_still_fills_the_grid() {
+        for tile_ceiling in [1024u32, 256] {
+            let profile = profile_with(tile_ceiling, tile_ceiling);
+            assert_eq!(
+                profile.compute_units, 0,
+                "Fix: this case only means something while the profile leaves the count unreported"
+            );
+            let prepared = prepare_size(
+                LARGE_COUNT,
+                profile.grid_stride_workgroups(),
+                tree_tile_ceiling(&profile),
+            );
+            assert_eq!(
+                prepared.tree_grid,
+                Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
+                "Fix: an unreported compute-unit count must leave the shape to cap the grid, not collapse it to one block"
             );
         }
     }

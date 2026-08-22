@@ -288,6 +288,23 @@ impl DeviceProfile {
     pub const fn strategy_capabilities(self) -> validate::BackendCapabilities {
         self.validation_capabilities()
     }
+
+    /// Workgroups a grid-stride kernel should ask for to keep the device busy.
+    ///
+    /// `compute_units` is `0` when the backend cannot report it, and one
+    /// workgroup is not what unknown means: a one-million-element reduction
+    /// launched at one workgroup measured 0.08x of a multithreaded CPU
+    /// baseline. An unknown count is therefore no cap at all, and the receiving
+    /// builder clamps the request down to what the shape admits, so the value
+    /// is a ceiling and never an index.
+    #[must_use]
+    pub const fn grid_stride_workgroups(self) -> u32 {
+        if self.compute_units == 0 {
+            u32::MAX
+        } else {
+            self.compute_units
+        }
+    }
 }
 
 impl From<DeviceProfile> for AdapterCaps {

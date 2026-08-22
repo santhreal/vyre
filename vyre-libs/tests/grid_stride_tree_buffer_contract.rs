@@ -145,7 +145,16 @@ fn pass_one_strides_far_enough_to_cover_every_element() {
         (65536, 1024, 3),
         (8192, 256, 5),
         (1_000_001, 1024, 170),
+        // What a backend that reports no compute-unit count asks for: no device
+        // cap at all, so the shape is the only thing standing between the
+        // request and the launch.
+        (1_048_576, 256, u32::MAX),
+        (1_048_576, 1024, u32::MAX),
     ] {
+        assert!(
+            count > tile,
+            "Fix: this sweep reads the strided loop bounds, and a count within one tile takes the single-block form, which has no loop"
+        );
         let blocks = grid_stride_tree_sum_u32_blocks(count, tile, requested);
         let program = grid_stride_tree_sum_u32("values", "out", count, tile, requested);
         let mut bounds = Vec::new();

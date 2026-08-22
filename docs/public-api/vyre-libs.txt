@@ -176,6 +176,7 @@ impl vyre_libs::state_machine::TableStateMachineComposer<'_>
 impl vyre_libs::stencil::CellGridShape
 impl vyre_libs::stencil::Grid2DComposer
 impl vyre_libs::stencil::Grid2DShape
+impl vyre_libs::stencil::Stencil3x3Tap
 impl vyre_libs::visual::GaussianBlurStages
 impl vyre_libs::visual::GaussianKernel
 impl vyre_libs::visual::GridShape
@@ -2660,6 +2661,7 @@ pub fn vyre_libs::stencil::Grid2DComposer::new(op_id: &'static str, width: u32, 
 pub fn vyre_libs::stencil::Grid2DComposer::with_buffers(self, buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>) -> Self
 pub fn vyre_libs::stencil::Grid2DComposer::with_child_region(self, child_op_id: &'static str, parent_op_id: &'static str) -> Self
 pub fn vyre_libs::stencil::Grid2DComposer::with_workgroup_size(self, workgroup_size: [u32; 3]) -> Self
+pub fn vyre_libs::stencil::Stencil3x3Tap::bounded_input_index(&self) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::stencil::avg4_channel(c0: vyre_foundation::ir_inner::model::generated::Expr, c1: vyre_foundation::ir_inner::model::generated::Expr, c2: vyre_foundation::ir_inner::model::generated::Expr, c3: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::stencil::axis_in_bounds(coord: &vyre_foundation::ir_inner::model::generated::Expr, delta: i32, extent: u32) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs::stencil::blend_channel_coverage(fg_c: vyre_foundation::ir_inner::model::generated::Expr, bg_c: vyre_foundation::ir_inner::model::generated::Expr, cov: vyre_foundation::ir_inner::model::generated::Expr, inv_cov: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
