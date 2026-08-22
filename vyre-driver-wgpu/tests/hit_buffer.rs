@@ -35,12 +35,14 @@ fn run_emit_reference(
         rule_ids.len() as u32,
         max_hits,
     );
+    // One Value per buffer the reference accepts as an input. `out_hits` is
+    // backend-allocated, so it takes none: a placeholder for it is the extra
+    // Value the artifact ABI rejects on a device.
     let inputs = vec![
         Value::Bytes(pack_words(rule_ids).into()),
         Value::Bytes(pack_words(file_ids).into()),
         Value::Bytes(pack_words(span_starts).into()),
         Value::Bytes(pack_words(span_lens).into()),
-        Value::Bytes(vec![0u8; (max_hits * 4 * 4) as usize].into()),
         Value::Bytes(pack_words(&[0]).into()),
         Value::Bytes(pack_words(&[0]).into()),
     ];
