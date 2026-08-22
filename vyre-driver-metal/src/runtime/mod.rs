@@ -70,7 +70,9 @@ pub struct MetalBackend {
     /// unrelated buffer of the same id.
     pub(super) resident_owner: ResidentOwner,
     pub(super) next_resident: AtomicU64,
-    pub(super) pipeline_cache: Mutex<BTreeMap<[u8; 32], MetalCompiledPipeline>>,
+    /// Private because `MetalCompiledPipeline` is visible only inside this
+    /// module tree, and every reader of the cache lives in it.
+    pipeline_cache: Mutex<BTreeMap<[u8; 32], MetalCompiledPipeline>>,
     pub(super) metrics: MetalMetricCounters,
     /// SIMD-group width as reported by the first compiled `ComputePipelineState`.
     /// `0` means "not yet probed". Metal does not expose this at the Device level;
@@ -131,7 +133,7 @@ impl MetalBackend {
         self.device.name().to_string()
     }
 
-    pub(super) fn dispatch_planned_buffers(
+    fn dispatch_planned_buffers(
         &self,
         program: &Program,
         binding_plan: &BindingPlan,
@@ -182,7 +184,7 @@ impl MetalBackend {
         lock_resident_buffer_table(&self.resident_buffers, operation)
     }
 
-    pub(super) fn lock_pipeline_cache(
+    fn lock_pipeline_cache(
         &self,
         operation: &'static str,
     ) -> Result<MutexGuard<'_, BTreeMap<[u8; 32], MetalCompiledPipeline>>, BackendError> {
