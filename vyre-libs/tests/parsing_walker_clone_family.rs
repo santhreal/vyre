@@ -464,27 +464,30 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 /// framing header. Prior historical moves: `python/decorators` moved when
 /// the missing `cursor != INVALID_POS` guard was fixed in the unified dotted-name
 /// walk, and the two `shunting` entries moved when anonymous child regions
-/// replaced op-id suffix naming.
+/// replaced op-id suffix naming. All five `python/*` entries moved together when
+/// every sentinel-indexed token load was folded into range before it issued: the
+/// index expression changed at each load site, the values did not, and the `go`
+/// and `core` entries stayed put because they index nothing with a sentinel.
 const EXPECTED: &[(&str, &str)] = &[
     (
         "python/structure",
-        "b92dab430a3874395cb5cd54a3d7b07734f8bb44e3e07e0cabd418de1c51f869",
+        "0a905e8a25ab1fae018287f7a193ee7930dc302c37723b82333d418c1b644123",
     ),
     (
         "python/imports",
-        "2f78a7b96051f33417ed06aeda68e8fe515e114541b2a58de004478ceb5efd0d",
+        "a780f3b16258f5e70a46818e753f5ed33ce3ad688f1d3d0ab0618d7f94eccb52",
     ),
     (
         "python/with_blocks",
-        "933708a7843f045e53043866556cd32732ef1664873b4cb05dc3e4e9e290020d",
+        "631fa405e05ea46255de38d656fcb754de71562d67da951616b9ead75e27398e",
     ),
     (
         "python/calls",
-        "5c9135ca0c3a343935b68af1ec51bf8d8538fe47f9266cc3202c2b8443a63d94",
+        "7754284f6a47c09caea3860ccb2cf5ad03525e5d378ef8bfa441e81bb1df3c57",
     ),
     (
         "python/decorators",
-        "11098cde885bb626c3ac3739674020acdaf26a057dc1fb09a3408670481a867f",
+        "5dfe371735dcbfa6af633a669a5c8f5ab92d37495d570332826dae89cd653e08",
     ),
     (
         "go/packages_and_imports",

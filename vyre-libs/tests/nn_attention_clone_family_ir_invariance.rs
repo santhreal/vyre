@@ -219,6 +219,11 @@ fn entry_points() -> Vec<(&'static str, Program)> {
 /// `mla_decode` and `flash_attention_2` continue to share the exact online-softmax
 /// core verified by `mla_and_flash_attention_2_share_the_online_softmax_skeleton`.
 ///
+/// `partial_rope` alone moved when its pair base and rotation-table index were
+/// folded through the `dim < rope_dims` predicate that already selected the
+/// result: an `Expr::select` evaluates both arms, so the discarded arm was
+/// issuing a load past the table. The values it computes are unchanged.
+///
 /// Value semantics, workgroup tiling, memory layout, and ABI contracts across all
 /// 26 members are preserved unchanged.
 const EXPECTED: [(&str, &str); 26] = [
@@ -312,7 +317,7 @@ const EXPECTED: [(&str, &str); 26] = [
     ),
     (
         "partial_rope",
-        "2ecebe1bdc45e1f8192e7970a780648d1ca2cbdb4de83d2ee7fcda6e19baf37b",
+        "2d83f47ff07aa25d653d22c9c1b545afd0190201ca838868f8957e2dbf5017fc",
     ),
     (
         "qk_gain",
