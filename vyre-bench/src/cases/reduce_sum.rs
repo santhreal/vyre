@@ -402,8 +402,9 @@ mod tests {
             assert_eq!(small.inputs[0].len(), 32 * 4);
             assert_eq!(small.expected.len(), 4);
             assert_eq!(
-                small.tree_grid, None,
-                "Fix: 32 elements at tile 32 need one block, and a one-block tree infers its own grid"
+                small.tree_grid,
+                Some([1, 1, 1]),
+                "Fix: 32 elements at tile 32 need one block, and the launch pins it rather than letting the widest buffer infer a wider grid"
             );
 
             let large = prepare_size(LARGE_COUNT, compute_units, tile_ceiling);
