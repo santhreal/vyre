@@ -35,6 +35,14 @@
 //! feature is not gated, it is deleted, and every remaining lane stays green
 //! while the coverage is gone. So every member declaring the feature must be
 //! named by a workflow step that turns it on.
+//!
+//! The third rule is that an admission has to exclude something. A test target
+//! gated on a feature the package turns on by default compiles in every lane,
+//! so the cfg reads like a hardware admission and performs none.
+//! `conform/vyre-conform` shipped exactly that: `default = ["gpu"]` and five
+//! artifact-submitting tests behind `#![cfg(feature = "gpu")]`, which every
+//! hosted leg linked and aborted on. A target that reaches hardware names
+//! `device-tests`; one that does not names no feature at all.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -102,6 +110,48 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                 ));
             }
         }
+        let mut judged = 0usize;
+        for member in tree.member_manifests()? {
+            let Some(features) = member.manifest.get("features").and_then(toml::Value::as_table)
+            else {
+                continue;
+            };
+            if !features.contains_key(FEATURE) {
+                continue;
+            }
+            let on_by_default = default_feature_closure(features);
+            let root = format!("{}/tests/", member.path);
+            for (path, file) in &parsed {
+                if !is_test_target_root(path, &root) {
+                    continue;
+                }
+                judged += 1;
+                let named = cfg_features(&file.attrs);
+                if !admits_every_lane(&named, &on_by_default) {
+                    continue;
+                }
+                report.find(Finding::new(
+                    format!(
+                        "{}: the only admission is {}, which `{}` turns on by default",
+                        path.display(),
+                        named
+                            .iter()
+                            .map(|name| format!("`{name}`"))
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                        member.name
+                    ),
+                    format!(
+                        "gate the target on `{FEATURE}` when it reaches hardware, or drop the cfg \
+                         when it does not; a default-on feature reads like an admission and leaves \
+                         the target in every lane, including the hosted ones with no device"
+                    ),
+                ));
+            }
+        }
+        report.note(format!(
+            "{judged} test target root(s) in members declaring `{FEATURE}`"
+        ));
         for finding in unenabled_admissions(&tree)? {
             report.find(finding);
         }
@@ -282,6 +332,77 @@ fn unenabled_admissions(tree: &Tree) -> Result<Vec<Finding>, GateError> {
             )
         })
         .collect())
+}
+
+/// The features a package turns on by default, transitively over its own table.
+fn default_feature_closure(features: &toml::Table) -> BTreeSet<String> {
+    let mut closure = BTreeSet::new();
+    let mut frontier = vec!["default".to_string()];
+    while let Some(name) = frontier.pop() {
+        let Some(enabled) = features.get(&name).and_then(toml::Value::as_array) else {
+            continue;
+        };
+        for entry in enabled {
+            let Some(text) = entry.as_str() else { continue };
+            // A dependency feature (`dep:x`, `x/y`) is not this package's own.
+            if text.contains(':') || text.contains('/') {
+                continue;
+            }
+            if closure.insert(text.to_string()) {
+                frontier.push(text.to_string());
+            }
+        }
+    }
+    closure
+}
+
+/// Whether the path is one cargo test target's root file.
+///
+/// Cargo compiles `tests/<name>.rs` and `tests/<dir>/main.rs`; every other file
+/// under `tests/` is a module of one of those and carries no attributes of its
+/// own.
+fn is_test_target_root(path: &Path, tests_root: &str) -> bool {
+    let Ok(rest) = path.strip_prefix(tests_root) else {
+        return false;
+    };
+    let parts: Vec<_> = rest.components().collect();
+    match parts.len() {
+        1 => path.extension().is_some_and(|ext| ext == "rs"),
+        2 => path.file_name().is_some_and(|name| name == "main.rs"),
+        _ => false,
+    }
+}
+
+/// The features named by a file's inner `#![cfg(...)]` attributes.
+fn cfg_features(attrs: &[syn::Attribute]) -> BTreeSet<String> {
+    let mut named = BTreeSet::new();
+    for attr in attrs {
+        if !matches!(attr.style, syn::AttrStyle::Inner(_)) || !attr.path().is_ident("cfg") {
+            continue;
+        }
+        let rendered = attr.to_token_stream().to_string();
+        let mut rest = rendered.as_str();
+        while let Some(at) = rest.find("feature = \"") {
+            rest = &rest[at + "feature = \"".len()..];
+            let Some(end) = rest.find('"') else { break };
+            named.insert(rest[..end].to_string());
+            rest = &rest[end..];
+        }
+    }
+    named
+}
+
+/// Whether a target's cfg admission leaves it in every lane.
+///
+/// A target gated only on features the package enables by default compiles
+/// wherever the package is tested, so the cfg states an admission it does not
+/// perform. `vyre-conform` shipped one: `#![cfg(feature = "gpu")]` over five
+/// tests that submit an artifact, with `default = ["gpu"]`, so every hosted CI
+/// leg linked them and aborted inside the CUDA driver.
+fn admits_every_lane(named: &BTreeSet<String>, on_by_default: &BTreeSet<String>) -> bool {
+    !named.is_empty()
+        && !named.contains(FEATURE)
+        && named.iter().all(|name| on_by_default.contains(name))
 }
 
 /// The packages some workflow step builds with the admission feature.
@@ -859,6 +980,102 @@ mod closure_tests {
         assert!(
             admitted_files.contains(Path::new("vyre-driver-cuda/tests/internal/live.rs")),
             "Fix: `#[path]` names the file, so the closure must follow it"
+        );
+    }
+}
+
+/// WHY: the rule that `vyre-conform` stated in a manifest comment and nothing
+/// enforced. `gpu` is on by default there, so gating five artifact-submitting
+/// tests on it left them in every hosted CI leg, where acquiring CUDA aborts
+/// inside the driver. Each half is exercised: what counts as this package's own
+/// default closure, which file cargo compiles as a target root, which features
+/// an inner cfg names, and which combination admits every lane.
+#[cfg(test)]
+mod default_admission_tests {
+    use super::*;
+
+    fn features(text: &str) -> toml::Table {
+        text.parse::<toml::Table>().expect("fixture must parse")
+    }
+
+    fn named(list: &[&str]) -> BTreeSet<String> {
+        list.iter().map(|name| (*name).to_string()).collect()
+    }
+
+    #[test]
+    fn a_default_closure_follows_only_this_packages_own_features() {
+        let table = features(
+            "default = [\"cli\", \"gpu\"]\ncli = [\"dep:clap\"]\ngpu = [\"vyre-registry-link/cuda\", \"linked\"]\nlinked = []\nunrelated = []\n",
+        );
+        assert_eq!(
+            default_feature_closure(&table),
+            named(&["cli", "gpu", "linked"]),
+            "Fix: a default feature enables its own transitive features and no dependency feature"
+        );
+    }
+
+    #[test]
+    fn a_package_with_no_default_feature_turns_nothing_on() {
+        let table = features("device-tests = []\ncuda = []\n");
+        assert!(default_feature_closure(&table).is_empty());
+    }
+
+    #[test]
+    fn a_test_target_root_is_the_file_cargo_compiles() {
+        let root = "conform/vyre-conform/tests/";
+        assert!(is_test_target_root(
+            Path::new("conform/vyre-conform/tests/production_route.rs"),
+            root
+        ));
+        assert!(is_test_target_root(
+            Path::new("conform/vyre-conform/tests/suite/main.rs"),
+            root
+        ));
+        assert!(
+            !is_test_target_root(Path::new("conform/vyre-conform/tests/suite/case.rs"), root),
+            "Fix: a module under a target carries no attributes of its own"
+        );
+        assert!(!is_test_target_root(
+            Path::new("conform/vyre-conform/src/lib.rs"),
+            root
+        ));
+        assert!(!is_test_target_root(
+            Path::new("vyre-driver-wgpu/tests/hit_buffer.rs"),
+            root
+        ));
+    }
+
+    #[test]
+    fn a_cfg_admission_is_read_from_the_inner_attributes() {
+        let file = syn::parse_file(
+            "#![cfg(all(not(target_os = \"macos\"), feature = \"device-tests\"))]\n#[cfg(feature = \"item-only\")]\n#[test]\nfn t() {}\n",
+        )
+        .expect("fixture must parse");
+        assert_eq!(cfg_features(&file.attrs), named(&["device-tests"]));
+        let bare = syn::parse_file("#[test]\nfn t() {}\n").expect("fixture must parse");
+        assert!(cfg_features(&bare.attrs).is_empty());
+    }
+
+    #[test]
+    fn only_a_default_only_admission_admits_every_lane() {
+        let on_by_default = named(&["gpu", "cli"]);
+        assert!(admits_every_lane(&named(&["gpu"]), &on_by_default));
+        assert!(admits_every_lane(&named(&["gpu", "cli"]), &on_by_default));
+        assert!(
+            !admits_every_lane(&named(&["gpu", FEATURE]), &on_by_default),
+            "Fix: a real admission beside a default-on feature still excludes a lane"
+        );
+        assert!(
+            !admits_every_lane(&named(&[FEATURE]), &on_by_default),
+            "Fix: the admission feature is the shape the rule asks for"
+        );
+        assert!(
+            !admits_every_lane(&named(&["parity-testing"]), &on_by_default),
+            "Fix: a feature nothing turns on by default does exclude a lane"
+        );
+        assert!(
+            !admits_every_lane(&BTreeSet::new(), &on_by_default),
+            "Fix: a target with no cfg claims no admission, so it states nothing false"
         );
     }
 }
