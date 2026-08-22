@@ -135,10 +135,24 @@ fn adapter_limits_match_live_device_limits() {
         info.name
     );
 
+    // Invocations per workgroup is reported as what this backend can run, not
+    // what the device would allow: the WGSL dialect emits at most 256, and every
+    // recorded wgpu artifact carries that number while a CUDA one carries 1024.
+    // A device that allows more must not raise the report, or a caller plans a
+    // workgroup the compiler then refuses. The caps snapshot is what the
+    // optimizer plans against, so the two must agree.
+    let reported_invocations = backend.max_compute_invocations_per_workgroup();
     assert_eq!(
-        backend.max_compute_invocations_per_workgroup(),
+        reported_invocations,
+        backend.adapter_caps().max_invocations_per_workgroup,
+        "Fix: max_compute_invocations_per_workgroup must match the adapter_caps snapshot the optimizer plans against. Adapter: {}",
+        info.name
+    );
+    assert!(
+        reported_invocations > 0
+            && reported_invocations <= device_limits.max_compute_invocations_per_workgroup,
+        "Fix: this backend reports {reported_invocations} invocations per workgroup, outside the 1..={} the live device admits. Adapter: {}",
         device_limits.max_compute_invocations_per_workgroup,
-        "Fix: max_compute_invocations_per_workgroup must match live device limits. Adapter: {}",
         info.name
     );
 }
