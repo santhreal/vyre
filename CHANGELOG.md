@@ -3975,6 +3975,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with more than one group. A value an entry produces without reading it is no
   longer requested from the caller as a host input, because an inter-group
   intermediate is device state rather than a caller buffer.
+- The conformance parity matrix declares the device-tests feature, so it runs
+  on a lane that has an adapter instead of reporting every operation unmeasured
+  on a hosted runner with none.
 - A conformance lens contract acquired a real backend on every runner.
   `vyre-conform`'s `lens_parity` reached hardware through
   `production::live_test_backend`, which a default test run compiles
@@ -4819,6 +4822,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   exempt. The selector chooses a compiler, not a command; the rule now strips
   it and reads the command underneath, which also makes `cargo +stable build` a
   precise match rather than an accidental one.
+- Every tracked shell script now stays inside the bash dialect the oldest
+  interpreter in the CI matrix provides, and the ci-shell gate reads scripts as
+  well as workflow steps, so the release shard pool no longer counts every
+  worker as a failed shard on macOS.
 - An artifact whose math reaches `Exp`, `Log`, `Sin`, `Cos` or `Tanh` compiles
   for CUDA. The PTX emitter refused to lower those ops to a native instruction
   unless `PtxEmitOptions::ulp_budget` was positive, so 21 registered ops failed
