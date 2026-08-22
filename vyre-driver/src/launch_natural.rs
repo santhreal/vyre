@@ -66,6 +66,12 @@ pub fn resolve_launch_workgroup_for_mode(
 /// A recorded compiled geometry outranks every dispatch override and the launch
 /// tuner. Only an untracked launch reaches the tuner, so a compiled group's
 /// workgroup cannot change between compilation and dispatch.
+///
+/// Whatever the tuner mode decides is then judged against the target's per-axis
+/// workgroup ceiling. Ranking is a performance question and legality is not: a
+/// block whose inferred grid the device refuses is not a slow choice, it is a
+/// launch that cannot run, so an unpinned launch is widened into the ceiling
+/// before anything ranks it.
 #[must_use]
 pub fn resolve_launch_workgroup_for_geometry(
     program: &Program,
@@ -82,11 +88,16 @@ pub fn resolve_launch_workgroup_for_geometry(
         return workgroup;
     }
     let declared = program.workgroup_size();
-    if mode != Mode::NaturalGradient || config.grid_override.is_some() {
+    if config.grid_override.is_some() {
         return declared;
     }
-    natural_gradient_cold_start_workgroup(program, declared, element_count, limits)
-        .unwrap_or(declared)
+    let selected = if mode == Mode::NaturalGradient {
+        natural_gradient_cold_start_workgroup(program, declared, element_count, limits)
+            .unwrap_or(declared)
+    } else {
+        declared
+    };
+    widen_into_grid_ceiling(program, selected, element_count, limits)
 }
 
 /// Record a measured launch result for the natural-gradient launch resolver.
@@ -251,6 +262,7 @@ fn select_natural_launch_workgroup(
         .chain(std::iter::once(declared[0]))
     {
         if !candidate_x_fits_limits(candidate_x, limits)
+            || !candidate_grid_fits(candidate_x, element_count, limits)
             || samples
                 .iter()
                 .any(|sample: &TuningMeasurement| sample.workgroup_size[0] == candidate_x)
@@ -276,6 +288,7 @@ fn select_natural_launch_workgroup(
                 || workgroup_size[2] != 1
                 || elapsed_ns == 0
                 || !candidate_x_fits_limits(workgroup_size[0], limits)
+                || !candidate_grid_fits(workgroup_size[0], element_count, limits)
                 || samples
                     .iter()
                     .any(|sample| sample.workgroup_size == workgroup_size)
@@ -486,6 +499,54 @@ fn candidate_x_fits_limits(candidate_x: u32, limits: LaunchGeometryLimits) -> bo
     candidate_x != 0
         && candidate_x <= limits.max_threads_per_block
         && candidate_x <= limits.max_block_dim[0]
+}
+
+/// Whether a 1D launch of `element_count` lanes in blocks of `candidate_x` asks
+/// for a grid the target admits.
+///
+/// A zero ceiling means no device was probed, and an empty launch has no grid to
+/// judge; both pass rather than refusing what the target accepts.
+fn candidate_grid_fits(candidate_x: u32, element_count: u32, limits: LaunchGeometryLimits) -> bool {
+    if candidate_x == 0 || element_count == 0 || limits.max_grid_dim[0] == 0 {
+        return true;
+    }
+    element_count.div_ceil(candidate_x) <= limits.max_grid_dim[0]
+}
+
+/// Widen a 1D block until its inferred grid fits the target's per-axis ceiling.
+///
+/// A program that declares one output element per lane asks for one workgroup
+/// per block of lanes, so a large launch reaches a graphics-derived ceiling long
+/// before it reaches any memory limit: 16.8 million lanes in blocks of 256 ask
+/// for 65536 workgroups, one past what the API admits. The same lane space in
+/// blocks of 1024 asks for 16384 and runs. Refusing it instead would take every
+/// large launch off the backend over a block width nobody chose.
+///
+/// Only a launch the tuner may already reshape is widened: a program that reads
+/// its workgroup or local id observes the block width, so its result depends on
+/// it, and one holding workgroup-shared memory partitions by block. For those the
+/// over-wide grid stays and the dispatch is refused by name.
+fn widen_into_grid_ceiling(
+    program: &Program,
+    selected: [u32; 3],
+    element_count: u32,
+    limits: LaunchGeometryLimits,
+) -> [u32; 3] {
+    if selected[1] != 1
+        || selected[2] != 1
+        || candidate_grid_fits(selected[0], element_count, limits)
+        || !is_natural_gradient_launch_tunable(program, selected, element_count)
+    {
+        return selected;
+    }
+    WORKGROUP_CANDIDATES
+        .iter()
+        .copied()
+        .filter(|&candidate_x| candidate_x > selected[0])
+        .filter(|&candidate_x| candidate_x_fits_limits(candidate_x, limits))
+        .filter(|&candidate_x| candidate_grid_fits(candidate_x, element_count, limits))
+        .min()
+        .map_or(selected, |candidate_x| [candidate_x, 1, 1])
 }
 
 fn peak_resident_threads_per_compute_unit(

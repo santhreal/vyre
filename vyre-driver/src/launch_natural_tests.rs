@@ -582,3 +582,162 @@ fn measured_feedback_can_still_select_a_width_cold_start_would_reject() {
         "Fix: residency governs the cold start only. Measured feedback must remain able to choose a width cold start would never propose."
     );
 }
+
+/// A 1D storage program whose lane space is `count` and whose body reads only
+/// the global invocation id, so its result does not depend on the block width.
+fn width_agnostic_program(count: u32) -> Program {
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(count)],
+        [32, 1, 1],
+        vec![Node::store("out", Expr::gid_x(), Expr::u32(7))],
+    )
+}
+
+fn ceiling_limits(max_blocks_per_axis: u32) -> LaunchGeometryLimits {
+    LaunchGeometryLimits {
+        backend: "test",
+        max_threads_per_block: 1024,
+        max_block_dim: [1024, 1024, 64],
+        max_grid_dim: [max_blocks_per_axis; 3],
+        max_threads_per_sm: 0,
+    }
+}
+
+/// WHY: a block width nobody chose must not decide whether a launch runs. A
+/// program that declares one output element per lane asks for one workgroup per
+/// block of lanes, so a large launch reaches a graphics-derived per-axis ceiling
+/// while the same lane space in wider blocks launches. Refusing it prices
+/// legality into a ranking decision and takes every large launch off the
+/// backend.
+///
+/// The ceilings swept here are the candidate widths themselves, read from
+/// `WORKGROUP_CANDIDATES`, so adding a candidate widens this case rather than
+/// leaving it behind. Where no candidate can fit, the declared width stays and
+/// the dispatch is refused downstream by name.
+#[test]
+fn a_launch_past_the_grid_ceiling_widens_in_every_tuner_mode() {
+    let element_count = 65_536;
+    let program = width_agnostic_program(element_count);
+    let widest = WORKGROUP_CANDIDATES
+        .iter()
+        .copied()
+        .max()
+        .expect("Fix: the tuner must publish at least one candidate width.");
+    for mode in [Mode::NaturalGradient, Mode::On, Mode::OffUseDefault] {
+        for &ceiling in WORKGROUP_CANDIDATES {
+            let limits = ceiling_limits(ceiling);
+            let selected = resolve_launch_workgroup_for_geometry(
+                &program,
+                &DispatchConfig::default(),
+                limits,
+                element_count,
+                mode,
+                LaunchGeometry::Untracked,
+            );
+            let reachable = element_count.div_ceil(widest) <= ceiling;
+            assert_eq!(
+                candidate_grid_fits(selected[0], element_count, limits),
+                reachable,
+                "Fix: {mode:?} resolved {selected:?} for {element_count} lanes under a {ceiling}-workgroup ceiling. A width the ceiling admits exists whenever {widest} lanes per block fit."
+            );
+            assert!(
+                selected[0] <= widest && selected[1] == 1 && selected[2] == 1,
+                "Fix: widening must stay inside the candidate widths, got {selected:?}."
+            );
+        }
+    }
+}
+
+/// WHY: widening is only sound for a program whose result does not depend on the
+/// block width. One that reads its workgroup or local id observes the width
+/// directly, so a wider block would change what every lane computes. Such a
+/// launch keeps its declared width and is refused by the grid check, which names
+/// the ceiling and the reshape.
+#[test]
+fn a_launch_whose_program_reads_its_block_keeps_the_declared_width() {
+    let element_count = 65_536;
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(element_count)],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::add(
+                Expr::mul(Expr::WorkgroupId { axis: 0 }, Expr::u32(32)),
+                Expr::LocalId { axis: 0 },
+            ),
+            Expr::u32(7),
+        )],
+    );
+    let limits = ceiling_limits(64);
+    assert_eq!(
+        resolve_launch_workgroup_for_geometry(
+            &program,
+            &DispatchConfig::default(),
+            limits,
+            element_count,
+            Mode::NaturalGradient,
+            LaunchGeometry::Untracked,
+        ),
+        [32, 1, 1],
+        "Fix: a program that reads its block id must keep the width it declared, whatever the grid ceiling costs it."
+    );
+}
+
+/// WHY: widening reshapes a launch the caller left free. A caller who pinned the
+/// block asked for that block, and one who pinned the grid computed it against
+/// the declared block, so changing either behind them would launch a shape
+/// nobody asked for.
+#[test]
+fn a_pinned_block_or_grid_is_never_widened() {
+    let element_count = 65_536;
+    let program = width_agnostic_program(element_count);
+    let limits = ceiling_limits(64);
+    let mut pinned_block = DispatchConfig::default();
+    pinned_block.workgroup_override = Some([32, 1, 1]);
+    assert_eq!(
+        resolve_launch_workgroup_for_geometry(
+            &program,
+            &pinned_block,
+            limits,
+            element_count,
+            Mode::NaturalGradient,
+            LaunchGeometry::Untracked,
+        ),
+        [32, 1, 1],
+        "Fix: a caller-pinned block is authoritative."
+    );
+    let mut pinned_grid = DispatchConfig::default();
+    pinned_grid.grid_override = Some([1, 1, 1]);
+    assert_eq!(
+        resolve_launch_workgroup_for_geometry(
+            &program,
+            &pinned_grid,
+            limits,
+            element_count,
+            Mode::NaturalGradient,
+            LaunchGeometry::Untracked,
+        ),
+        program.workgroup_size(),
+        "Fix: a caller-pinned grid was computed against the declared block."
+    );
+}
+
+/// WHY: the tuner ranks by estimated latency, and a block whose grid the target
+/// refuses has no latency to rank. Leaving it in the sample set lets a policy
+/// step select a launch that cannot run, which is how legality gets priced
+/// instead of decided.
+#[test]
+fn the_tuner_never_ranks_a_block_whose_grid_the_target_refuses() {
+    let element_count = 65_536;
+    for &ceiling in WORKGROUP_CANDIDATES {
+        let limits = ceiling_limits(ceiling);
+        if let Some(selected) =
+            select_natural_launch_workgroup([32, 1, 1], element_count, limits, None)
+        {
+            assert!(
+                candidate_grid_fits(selected[0], element_count, limits),
+                "Fix: the tuner ranked {selected:?} for {element_count} lanes under a {ceiling}-workgroup ceiling, a grid the target refuses."
+            );
+        }
+    }
+}
