@@ -4,10 +4,10 @@
 //! an artifact through a linked backend. `gpu` is on by default, so gating on it
 //! admitted these tests on every hosted matrix leg, where no device exists and
 //! acquiring CUDA aborts the process from inside the driver rather than
-//! returning an error. The target is admitted by `device-tests`, which
-//! `conform.yml` turns on for the runner that has the device.
-
-#![cfg(feature = "device-tests")]
+//! returning an error. The target is registered with
+//! `required-features = ["device-tests"]`, which `conform.yml` turns on for the
+//! runner that has the device: cargo then skips the target where the feature is
+//! off instead of compiling these routes down to an empty test binary.
 
 use std::time::Duration;
 

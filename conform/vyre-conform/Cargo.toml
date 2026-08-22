@@ -56,6 +56,12 @@ name = "parity_matrix"
 path = "tests/parity_matrix.rs"
 required-features = ["device-tests"]
 
+# Every route here compiles and submits an artifact through a linked backend.
+# Split out of `production_route`, whose step-bound contract needs no device.
+[[test]]
+name = "production_route_device"
+required-features = ["device-tests"]
+
 [features]
 default = ["gpu"]
 gpu = [

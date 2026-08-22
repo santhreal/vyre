@@ -54,6 +54,7 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `op_matrix_truth` | `conform/vyre-conform/tests/op_matrix_truth/mod.rs` | None | `./cargo_full test -p vyre-conform --test op_matrix_truth` |
 | `test` | `parity_matrix` | `conform/vyre-conform/tests/parity_matrix.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test parity_matrix` |
 | `test` | `production_route` | `conform/vyre-conform/tests/production_route.rs` | None | `./cargo_full test -p vyre-conform --test production_route` |
+| `test` | `production_route_device` | `conform/vyre-conform/tests/production_route_device.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test production_route_device` |
 | `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes/mod.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
 | `test` | `replay_capsule_contract` | `conform/vyre-conform/tests/replay_capsule_contract.rs` | None | `./cargo_full test -p vyre-conform --test replay_capsule_contract` |
 | `test` | `schema_compatibility` | `conform/vyre-conform/tests/schema_compatibility.rs` | None | `./cargo_full test -p vyre-conform --test schema_compatibility` |

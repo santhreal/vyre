@@ -42,7 +42,9 @@
 //! `conform/vyre-conform` shipped exactly that: `default = ["gpu"]` and five
 //! artifact-submitting tests behind `#![cfg(feature = "gpu")]`, which every
 //! hosted leg linked and aborted on. A target that reaches hardware names
-//! `device-tests`; one that does not names no feature at all.
+//! `device-tests`; one that does not names no feature at all. A manifest
+//! `required-features` and an inner cfg are the same statement in two places,
+//! so both are read as one admission set.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -112,7 +114,10 @@ impl crate::gate::GateBehavior for DeviceTestGating {
         }
         let mut judged = 0usize;
         for member in tree.member_manifests()? {
-            let Some(features) = member.manifest.get("features").and_then(toml::Value::as_table)
+            let Some(features) = member
+                .manifest
+                .get("features")
+                .and_then(toml::Value::as_table)
             else {
                 continue;
             };
@@ -120,13 +125,17 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                 continue;
             }
             let on_by_default = default_feature_closure(features);
+            let declared = declared_test_admissions(&member.manifest, &member.path);
             let root = format!("{}/tests/", member.path);
             for (path, file) in &parsed {
                 if !is_test_target_root(path, &root) {
                     continue;
                 }
                 judged += 1;
-                let named = cfg_features(&file.attrs);
+                let mut named = cfg_features(&file.attrs);
+                if let Some(required) = declared.get(path) {
+                    named.extend(required.iter().cloned());
+                }
                 if !admits_every_lane(&named, &on_by_default) {
                     continue;
                 }
@@ -142,9 +151,11 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                         member.name
                     ),
                     format!(
-                        "gate the target on `{FEATURE}` when it reaches hardware, or drop the cfg \
-                         when it does not; a default-on feature reads like an admission and leaves \
-                         the target in every lane, including the hosted ones with no device"
+                        "admit the target with `{FEATURE}` when it reaches hardware, in the \
+                         manifest as `required-features` or at the file root as an inner cfg, and \
+                         drop the admission when it does not; a default-on feature reads like an \
+                         admission and leaves the target in every lane, including the hosted ones \
+                         with no device"
                     ),
                 ));
             }
@@ -371,6 +382,47 @@ fn is_test_target_root(path: &Path, tests_root: &str) -> bool {
         2 => path.file_name().is_some_and(|name| name == "main.rs"),
         _ => false,
     }
+}
+
+/// The features each declared `[[test]]` target requires, by source path.
+///
+/// Cargo reads the manifest and nothing else, so a target listed here with
+/// `required-features` is admitted by those names whether or not the file
+/// repeats them. A path defaults to `tests/<name>.rs`, which is the same file
+/// [`is_test_target_root`] recognizes.
+fn declared_test_admissions(
+    manifest: &toml::Table,
+    member_path: &str,
+) -> BTreeMap<PathBuf, BTreeSet<String>> {
+    let mut declared = BTreeMap::new();
+    let Some(targets) = manifest.get("test").and_then(toml::Value::as_array) else {
+        return declared;
+    };
+    for target in targets {
+        let Some(table) = target.as_table() else {
+            continue;
+        };
+        let Some(name) = table.get("name").and_then(toml::Value::as_str) else {
+            continue;
+        };
+        let relative = table
+            .get("path")
+            .and_then(toml::Value::as_str)
+            .map_or_else(|| format!("tests/{name}.rs"), str::to_string);
+        let required = table
+            .get("required-features")
+            .and_then(toml::Value::as_array)
+            .map(|entries| {
+                entries
+                    .iter()
+                    .filter_map(toml::Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default();
+        declared.insert(PathBuf::from(format!("{member_path}/{relative}")), required);
+    }
+    declared
 }
 
 /// The features named by a file's inner `#![cfg(...)]` attributes.
@@ -989,7 +1041,8 @@ mod closure_tests {
 /// tests on it left them in every hosted CI leg, where acquiring CUDA aborts
 /// inside the driver. Each half is exercised: what counts as this package's own
 /// default closure, which file cargo compiles as a target root, which features
-/// an inner cfg names, and which combination admits every lane.
+/// an inner cfg and a manifest `required-features` name, and which combination
+/// admits every lane.
 #[cfg(test)]
 mod default_admission_tests {
     use super::*;
@@ -1077,5 +1130,28 @@ mod default_admission_tests {
             !admits_every_lane(&BTreeSet::new(), &on_by_default),
             "Fix: a target with no cfg claims no admission, so it states nothing false"
         );
+    }
+
+    #[test]
+    fn a_manifest_admission_is_read_from_the_declared_targets() {
+        let manifest = features(
+            "[[test]]\nname = \"parity_matrix\"\npath = \"tests/parity_matrix.rs\"\nrequired-features = [\"device-tests\"]\n\n[[test]]\nname = \"routes\"\nrequired-features = [\"gpu\"]\n\n[[test]]\nname = \"plain\"\n",
+        );
+        let declared = declared_test_admissions(&manifest, "conform/vyre-conform");
+        assert_eq!(
+            declared.get(Path::new("conform/vyre-conform/tests/parity_matrix.rs")),
+            Some(&named(&[FEATURE]))
+        );
+        assert_eq!(
+            declared.get(Path::new("conform/vyre-conform/tests/routes.rs")),
+            Some(&named(&["gpu"])),
+            "Fix: a target with no explicit path is compiled from `tests/<name>.rs`"
+        );
+        assert_eq!(
+            declared.get(Path::new("conform/vyre-conform/tests/plain.rs")),
+            Some(&BTreeSet::new()),
+            "Fix: a target declaring no required feature claims no admission"
+        );
+        assert!(declared_test_admissions(&features("[package]\nname = \"x\"\n"), "x").is_empty());
     }
 }
