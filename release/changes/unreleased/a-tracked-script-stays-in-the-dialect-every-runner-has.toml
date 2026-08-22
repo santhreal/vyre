@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every tracked shell script now stays inside the bash dialect the oldest interpreter in the CI matrix provides, and the ci-shell gate reads scripts as well as workflow steps, so the release shard pool no longer counts every worker as a failed shard on macOS."

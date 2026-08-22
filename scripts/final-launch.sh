@@ -97,7 +97,8 @@ if [[ -z "$repo_visibility" ]]; then
     printf 'Fix: GitHub repository %s is not visible to gh; refusing final launch before publish.\n' "$VYRE_RELEASE_PUBLIC_REPO" >&2
     exit 2
 fi
-if [[ "${repo_visibility^^}" != "PUBLIC" ]]; then
+repo_visibility_upper="$(printf '%s' "$repo_visibility" | tr '[:lower:]' '[:upper:]')"
+if [[ "$repo_visibility_upper" != "PUBLIC" ]]; then
     printf 'Fix: GitHub repository %s visibility is %s, expected PUBLIC. %s visibility is intentionally untouched.\n' "$VYRE_RELEASE_PUBLIC_REPO" "$repo_visibility" "$VYRE_RELEASE_PRIVATE_REPO" >&2
     exit 2
 fi

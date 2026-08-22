@@ -37,7 +37,10 @@ fi
 
 (cd "$ROOT" && ./cargo_full run -q -p xtask --bin xtask -- ci-required)
 
-mapfile -t CONTEXTS < <(
+CONTEXTS=()
+while IFS= read -r context; do
+  CONTEXTS+=("$context")
+done < <(
   awk '
     /^## Scheduled or Manual Deep Gates/ { stop=1 }
     stop { next }

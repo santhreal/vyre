@@ -49,7 +49,10 @@ if [[ "$blocker_count" != "0" ]]; then
     exit 1
 fi
 
-mapfile -t PUBLISH_ENTRIES < <(jq -r '.publish_order[] | [.package, .version, .manifest] | @tsv' "$PACKAGE_READINESS")
+PUBLISH_ENTRIES=()
+while IFS= read -r entry; do
+    PUBLISH_ENTRIES+=("$entry")
+done < <(jq -r '.publish_order[] | [.package, .version, .manifest] | @tsv' "$PACKAGE_READINESS")
 if [[ "${#PUBLISH_ENTRIES[@]}" -eq 0 ]]; then
     printf 'Fix: publish_order is empty in %s.\n' "$PACKAGE_READINESS" >&2
     exit 1

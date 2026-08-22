@@ -28,7 +28,10 @@ vyre_read_toml_values() {
     if ! output="$(python3 "$reader" "$manifest" "$label" "$@")"; then
         return 2
     fi
-    mapfile -t VYRE_TOML_VALUES <<< "$output"
+    VYRE_TOML_VALUES=()
+    while IFS= read -r value; do
+        VYRE_TOML_VALUES+=("$value")
+    done <<< "$output"
     if [[ "${#VYRE_TOML_VALUES[@]}" -ne "$expected_count" ]]; then
         printf 'Fix: %s produced %s %s value(s), expected %s.\n' "$manifest" "${#VYRE_TOML_VALUES[@]}" "$label" "$expected_count" >&2
         return 2

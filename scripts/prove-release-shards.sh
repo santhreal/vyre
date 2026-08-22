@@ -95,28 +95,31 @@ run_shard() {
 
 mkdir -p "$OUT_DIR"
 shard_paths=()
-active_jobs=0
+worker_pids=()
+joined=0
 failures=0
+# Join a recorded pid rather than whichever worker finishes first. `wait -n` is
+# bash 4 and macOS runs bash 3.2, where it printed `invalid option` once per
+# worker and every shard was counted as a failure. `wait "$pid"` reports that
+# worker's own status on every bash in the matrix; the pool then drains in
+# submission order, which costs a little throughput and no accounting.
 for ((index = 0; index < SHARDS; index += 1)); do
     shard_path="$OUT_DIR/shard-${index}-of-${SHARDS}.json"
     shard_paths+=("$shard_path")
     run_shard "$index" "$shard_path" &
-    active_jobs=$((active_jobs + 1))
-    if [[ "$active_jobs" -ge "$SHARD_WORKERS" ]]; then
-        # `wait -n`, not `wait`: a bare wait reaps every worker and reports the
-        # status of the last one, so a failed shard was counted as a pass and
-        # the counter then said one worker was still running when none was.
-        if ! wait -n; then
+    worker_pids+=("$!")
+    if [[ $((${#worker_pids[@]} - joined)) -ge "$SHARD_WORKERS" ]]; then
+        if ! wait "${worker_pids[joined]}"; then
             failures=$((failures + 1))
         fi
-        active_jobs=$((active_jobs - 1))
+        joined=$((joined + 1))
     fi
 done
-while [[ "$active_jobs" -gt 0 ]]; do
-    if ! wait -n; then
+while [[ "$joined" -lt "${#worker_pids[@]}" ]]; do
+    if ! wait "${worker_pids[joined]}"; then
         failures=$((failures + 1))
     fi
-    active_jobs=$((active_jobs - 1))
+    joined=$((joined + 1))
 done
 if [[ "$failures" -gt 0 ]]; then
     printf 'Fix: %s release conformance shard worker(s) failed.\n' "$failures" >&2

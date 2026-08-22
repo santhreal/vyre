@@ -254,8 +254,122 @@ impl crate::gate::GateBehavior for CiRequired {
 /// The shell every step of a Windows-capable workflow is written for.
 const SHELL: &str = "bash";
 
+/// A construct the oldest bash this tree's matrix runs does not provide, and
+/// what to write instead.
+///
+/// macOS ships bash 3.2 as `/bin/bash` and carries no newer one on `PATH`
+/// before it, so `#!/usr/bin/env bash` resolves to 3.2 on that runner. A bash 4
+/// builtin in a tracked script is therefore a script that only runs on Linux,
+/// and it fails there by doing nothing visible: `wait -n` printed
+/// `invalid option` for every worker in the release shard pool, the pool
+/// counted each one as a failed shard, and the conformance job reported four
+/// failed workers on a run whose shards were never started.
+const LEGACY_BASH_GAPS: &[(&str, &str)] = &[
+    (
+        "wait -n",
+        "keep the worker pids in an array and `wait \"$pid\"` for the oldest while the pool is \
+         full; that reports the same per-worker status without the bash 4 builtin",
+    ),
+    (
+        "mapfile",
+        "read the stream into the array explicitly: `arr=(); while IFS= read -r line; do \
+         arr+=(\"$line\"); done < <(command)`",
+    ),
+    (
+        "readarray",
+        "read the stream into the array explicitly: `arr=(); while IFS= read -r line; do \
+         arr+=(\"$line\"); done < <(command)`",
+    ),
+    (
+        "declare -A",
+        "carry the pairs in two indexed arrays or a delimited string; bash 3.2 has no \
+         associative array",
+    ),
+    (
+        "local -A",
+        "carry the pairs in two indexed arrays or a delimited string; bash 3.2 has no \
+         associative array",
+    ),
+    (
+        "typeset -A",
+        "carry the pairs in two indexed arrays or a delimited string; bash 3.2 has no \
+         associative array",
+    ),
+    (
+        "|&",
+        "write `2>&1 |`, which every bash in the matrix parses the same way",
+    ),
+    (
+        "&>>",
+        "write `>>file 2>&1`, which every bash in the matrix parses the same way",
+    ),
+];
+
+/// True when the path names a shell script this gate reads.
+fn is_shell_script(relative: &str) -> bool {
+    let name = relative.rsplit('/').next().unwrap_or(relative);
+    name.ends_with(".sh") || name.ends_with(".bash") || !name.contains('.')
+}
+
+/// The case-modification operator inside a parameter expansion on this line, if
+/// any. `${v^^}`, `${v,,}`, `${v^}` and `${v,}` are all bash 4.
+fn case_modification_expansion(line: &str) -> Option<char> {
+    let bytes = line.as_bytes();
+    let mut index = 0;
+    while let Some(open) = line[index..].find("${") {
+        let start = index + open + 2;
+        let Some(close) = line[start..].find('}') else {
+            return None;
+        };
+        let end = start + close;
+        // The operator sits at the end of the expansion, after the name.
+        for position in (start..end).rev() {
+            match bytes[position] {
+                b'^' => return Some('^'),
+                b',' => return Some(','),
+                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_' => {}
+                _ => break,
+            }
+        }
+        index = end + 1;
+    }
+    None
+}
+
+/// Every bash 4 construct in one script.
+fn legacy_bash_findings(relative: &str, text: &str) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (index, line) in text.lines().enumerate() {
+        let numbered = u32::try_from(index + 1).unwrap_or(u32::MAX);
+        if line.trim_start().starts_with('#') {
+            continue;
+        }
+        for (construct, fix) in LEGACY_BASH_GAPS {
+            if line.contains(construct) {
+                findings.push(Finding::at(
+                    relative,
+                    numbered,
+                    format!("`{construct}` needs bash 4"),
+                    *fix,
+                ));
+            }
+        }
+        if let Some(operator) = case_modification_expansion(line) {
+            findings.push(Finding::at(
+                relative,
+                numbered,
+                format!("`${{name{operator}}}` case modification needs bash 4"),
+                "fold the case with `tr '[:lower:]' '[:upper:]'` or compare both spellings; \
+                 bash 3.2 has no case-modification expansion",
+            ));
+        }
+    }
+    findings
+}
+
 /// Every step of a workflow that runs on Windows declares the shell it is
-/// written for.
+/// written for, and every tracked shell script stays inside the language the
+/// oldest bash in the matrix speaks.
 ///
 /// A `run:` step with no `shell:` key runs under `bash` on a Linux or macOS
 /// runner and under PowerShell on a Windows one, so the same script text is two
@@ -264,6 +378,10 @@ const SHELL: &str = "bash";
 /// `$perl:` as a scope-qualified variable, which is a parse error, so the step
 /// failed on every Windows job in the matrix and the failure said nothing about
 /// perl. A shell nobody here writes for is a shell nobody here reviews.
+///
+/// The same argument reaches the scripts those steps call. One dialect per tree
+/// means the dialect the whole matrix provides, so a bash 4 builtin belongs to
+/// no lane here even though it runs on this workstation.
 pub struct CiShell;
 
 impl crate::gate::GateBehavior for CiShell {
@@ -271,9 +389,21 @@ impl crate::gate::GateBehavior for CiShell {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let mut steps = 0;
+        let mut scripts = 0;
 
         for path in tree.paths() {
             let relative = path.to_string_lossy().to_string();
+            if is_shell_script(&relative) {
+                let text = tree.read(path)?;
+                if !text.starts_with("#!") {
+                    continue;
+                }
+                scripts += 1;
+                report
+                    .findings
+                    .extend(legacy_bash_findings(&relative, &text));
+                continue;
+            }
             if !is_workflow(&relative) {
                 continue;
             }
@@ -306,6 +436,7 @@ impl crate::gate::GateBehavior for CiShell {
         }
 
         report.cover_complete("windows-capable workflow steps", steps);
+        report.cover_complete("tracked shell scripts", scripts);
         Ok(report)
     }
 }
@@ -1469,5 +1600,71 @@ jobs:
         assert!(!varies_by_ref("gates"));
         assert!(varies_by_ref("gates-${{ github.ref }}"));
         assert!(varies_by_ref("gates-${{ github.head_ref }}"));
+    }
+
+    /// WHY: every one of these lines was tracked in this tree and ran fine on
+    /// Linux. `wait -n` is the one that reached CI: the macOS runner printed
+    /// `wait: -n: invalid option` once per worker, the shard pool counted each
+    /// as a failed shard, and the job reported four failed workers for a run
+    /// whose shards never started. A scan that cannot name these lines would
+    /// certify a portability claim it never checked.
+    #[test]
+    fn the_scan_names_every_bash_four_construct_this_tree_has_carried() {
+        let script = "#!/usr/bin/env bash\n\
+                      if ! wait -n; then failures=1; fi\n\
+                      mapfile -t CONTEXTS < <(awk '{print}' \"$DOC\")\n\
+                      readarray -t rows <<< \"$output\"\n\
+                      declare -A seen\n\
+                      if [[ \"${repo_visibility^^}\" != PUBLIC ]]; then exit 2; fi\n\
+                      printf '%s' \"${name,}\"\n\
+                      command |& tee log\n\
+                      command &>> log\n";
+        let findings = legacy_bash_findings("scripts/sample.sh", script);
+        let lines: Vec<Option<u32>> = findings.iter().map(|finding| finding.line).collect();
+        assert_eq!(
+            lines,
+            vec![
+                Some(2),
+                Some(3),
+                Some(4),
+                Some(5),
+                Some(6),
+                Some(7),
+                Some(8),
+                Some(9)
+            ],
+            "Fix: the scan must name one finding per offending line: {findings:#?}"
+        );
+    }
+
+    /// WHY: a scan that flags the expansions bash 3.2 does have would push
+    /// authors to rewrite working scripts, and a gate nobody trusts gets
+    /// silenced. Every form here is in the tree today.
+    #[test]
+    fn the_scan_leaves_expansions_bash_three_already_has() {
+        let script = "#!/usr/bin/env bash\n\
+                      printf '%s' \"${PUBLISH_ENTRIES[0]}\"\n\
+                      printf '%s' \"${#PUBLISH_ENTRIES[@]}\"\n\
+                      printf '%s' \"${VYRE_RELEASE_BACKEND:-all}\"\n\
+                      printf '%s' \"${BASH_SOURCE[0]}\"\n\
+                      printf '%s' \"${path//,/ }\"\n\
+                      # mapfile -t stale < <(true)\n\
+                      wait \"${worker_pids[joined]}\"\n";
+        let findings = legacy_bash_findings("scripts/sample.sh", script);
+        assert!(
+            findings.is_empty(),
+            "Fix: these are bash 3.2 constructs and a comment, and none may be reported: {findings:#?}"
+        );
+    }
+
+    /// WHY: the scan reads shell scripts, and the tree's own entry point
+    /// (`cargo_full`) carries no extension at all.
+    #[test]
+    fn a_shell_script_is_recognized_with_or_without_an_extension() {
+        assert!(is_shell_script("scripts/prove-release-shards.sh"));
+        assert!(is_shell_script("scripts/lib/toml_reader.sh"));
+        assert!(is_shell_script("cargo_full"));
+        assert!(!is_shell_script("xtask/src/gates/ci_contract.rs"));
+        assert!(!is_shell_script(".github/workflows/ci.yml"));
     }
 }
