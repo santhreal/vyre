@@ -47,6 +47,15 @@ required-features = ["device-tests"]
 name = "ulp_audit"
 required-features = ["device-tests"]
 
+# The parity matrix measures every registered operation on every concrete
+# backend and reports an unmeasured pair as a defect, which is the correct
+# contract on a device lane and an unsatisfiable one on a hosted runner with no
+# adapter at all.
+[[test]]
+name = "parity_matrix"
+path = "tests/parity_matrix.rs"
+required-features = ["device-tests"]
+
 [features]
 default = ["gpu"]
 gpu = [
