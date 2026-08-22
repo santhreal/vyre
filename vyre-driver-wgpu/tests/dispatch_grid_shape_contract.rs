@@ -129,15 +129,13 @@ fn a_grid_at_the_device_ceiling_dispatches() {
 /// grid past the ceiling gets asked for without anyone choosing it.
 ///
 /// The workgroup is pinned to the shape the program already declares, because a
-/// program that leaves it free is retuned before the grid is inferred: the block
-/// tuner reads the output word count and picks the widest block the device
-/// accepts, which divides the same lane space into fewer workgroups. With 256
-/// lanes pinned, one word past the ceiling's worth of lanes is one workgroup past
-/// the ceiling.
+/// program that leaves it free is resolved against the dialect envelope before
+/// the grid is inferred. This dialect admits 256 invocations per workgroup, which
+/// is what the program declares, so there is no wider block to widen into and the
+/// pinned and unpinned launches resolve to the same shape.
 ///
-/// What it does not catch: an indirect dispatch, and the retuned path, which
-/// `a_launch_left_unpinned_is_retuned_instead_of_refused` covers from the other
-/// side.
+/// What it does not catch: an indirect dispatch, and the widened path, which no
+/// launch on this dialect reaches.
 #[test]
 fn an_inferred_grid_wider_than_the_device_ceiling_is_refused() {
     let backend = live_backend();
@@ -181,35 +179,56 @@ fn an_inferred_grid_wider_than_the_device_ceiling_is_refused() {
     );
 }
 
-/// WHY: the negative control for the case above, and the reason the ceiling is
-/// hard to reach by accident. A program that declares one output element per lane
-/// and leaves the workgroup free is retuned before its grid is inferred: the tuner
-/// reads the output word count and widens the block, so the same lane space needs
-/// fewer workgroups and the launch stays inside the ceiling. A refusal here would
-/// take every large launch off this backend, and a ceiling check placed before the
-/// tuning would refuse a launch the device accepts.
+/// WHY: the largest launch this backend can run in one dispatch is the product of
+/// two numbers it reports, and both edges of that product are contracts. One
+/// element inside it must run, because refusing it would take a launch the device
+/// accepts off the backend, and one element past it must be refused by name
+/// rather than aborting inside a recorded command buffer.
 ///
-/// The lane space is one word past what 256-lane blocks could launch, which is the
-/// exact program the case above refuses when the block is pinned. The two together
-/// say the refusal follows the resolved launch rather than the declared one.
+/// The boundary is read from the backend: workgroups per axis times the
+/// invocations per workgroup the dialect admits. A wider block would divide the
+/// same lane space into fewer workgroups, but the WGSL envelope caps a workgroup
+/// at the invocation count every conformant implementation guarantees, so on this
+/// dialect the declared block is already the widest and the product is a hard
+/// capability ceiling. A launch past it needs several dispatches.
+///
+/// What it does not prove: that a program whose lane space is past the boundary
+/// is split for the caller. It is not, and the refusal says so.
 #[test]
-fn a_launch_left_unpinned_is_retuned_instead_of_refused() {
+fn the_widest_launch_the_envelope_admits_dispatches_and_one_lane_past_it_is_refused() {
     let backend = live_backend();
     let ceiling = backend.max_compute_workgroups_per_dimension();
-    let words = ceiling
-        .checked_add(1)
-        .and_then(|groups| groups.checked_mul(256))
-        .expect("Fix: the ceiling must leave room for one more workgroup of 256 lanes.");
+    let lanes_per_workgroup = backend.max_compute_invocations_per_workgroup();
+    let widest = ceiling
+        .checked_mul(lanes_per_workgroup)
+        .expect("Fix: the reported ceiling and workgroup width must have a representable product.");
     let outputs = backend
         .dispatch(
-            &one_dimensional_program(words),
+            &one_dimensional_program(widest),
             &[],
             &DispatchConfig::default(),
         )
         .expect(
-            "Fix: a launch whose block the caller left free must be retuned into the device's \
-             workgroup ceiling, not refused.",
+            "Fix: the widest launch the reported limits admit must dispatch. Refusing it takes a launch the device accepts off this backend.",
         );
     assert_eq!(outputs.len(), 1);
     assert_eq!(outputs[0], 7_u32.to_le_bytes().repeat(4));
+
+    let past = widest
+        .checked_add(1)
+        .expect("Fix: the boundary must leave room for one more lane.");
+    let error = backend
+        .dispatch(
+            &one_dimensional_program(past),
+            &[],
+            &DispatchConfig::default(),
+        )
+        .expect_err(
+            "Fix: a launch one lane past the widest admissible shape must be refused, not recorded.",
+        );
+    let message = error.to_string();
+    assert!(
+        message.contains(&ceiling.to_string()) && message.contains("Fix:"),
+        "Fix: the refusal must name the ceiling it exceeded: {message}"
+    );
 }

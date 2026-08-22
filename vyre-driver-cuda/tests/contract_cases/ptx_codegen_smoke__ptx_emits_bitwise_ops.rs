@@ -448,13 +448,33 @@ fn ptx_emits_if_then_else() {
     );
     let secondary_text =
         program_to_ptx(&program, &default_config()).expect("Fix: If/else must lower to PTX.");
-    assert!(
-        secondary_text.contains("@%") && secondary_text.contains("@!%"),
-        "Fix: simple PTX if/else store bodies must lower to complementary predicated stores."
+    let stores: Vec<&str> = secondary_text
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.contains("st.global.u32"))
+        .collect();
+    assert_eq!(
+        stores.len(),
+        2,
+        "Fix: PTX if/else must emit both predicated stores, got {stores:?}."
     );
-    assert!(
-        secondary_text.matches("st.global.u32").count() == 2,
-        "Fix: PTX if/else must emit both predicated stores."
+    let guards: Vec<&str> = stores
+        .iter()
+        .map(|line| {
+            line.split_whitespace()
+                .next()
+                .expect("Fix: a store line has at least one token.")
+        })
+        .collect();
+    for guard in &guards {
+        assert!(
+            guard.starts_with('@'),
+            "Fix: every arm of a simple if/else store body must be issued under a predicate, got `{guard}`."
+        );
+    }
+    assert_ne!(
+        guards[0], guards[1],
+        "Fix: the two arms must be issued under complementary predicates, not the same one."
     );
     assert!(
         !secondary_text.contains("$L_if_else_") && !secondary_text.contains("$L_if_end_"),
