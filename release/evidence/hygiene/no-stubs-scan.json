@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:d8af8afb638887e0d0bf0603db5f5d7e0b0f41c3:dirty=true:worktree=357f3c6af02b565e26923264c8ee44ee20354d7e53521dc3e87b35bceca3d548",
+  "source_fingerprint": "git:a5442b175d1511562b08a268ed0b97ce754ee63f:dirty=false",
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -74,6 +74,12 @@
       "line": 420,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
+    },
+    {
+      "path": "vyre-primitives/src/hardware/mod.rs",
+      "line": 464,
+      "pattern": "placeholder_text",
+      "text": "/// zeroed placeholder for one described a call the artifact ABI rejects."
     },
     {
       "path": "conform/vyre-conform-spec/src/schema.rs",

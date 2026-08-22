@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "warm_us_per_file": 3.793,
-  "cold_pipeline_build_ms": 1.313648,
-  "gbs_scan_throughput": 556.667,
+  "warm_us_per_file": 4.989,
+  "cold_pipeline_build_ms": 1.279698,
+  "gbs_scan_throughput": 606.201,
   "ulp_drift_max": 0,
-  "max_vram_mib": 32607,
+  "max_vram_mib": 24564,
   "source_artifacts": [
     "release/evidence/benchmarks/workload-01-condition-eval.json",
     "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",

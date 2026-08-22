@@ -1,10 +1,10 @@
 {
-  "source_fingerprint": "git:d8af8afb638887e0d0bf0603db5f5d7e0b0f41c3:dirty=true:worktree=357f3c6af02b565e26923264c8ee44ee20354d7e53521dc3e87b35bceca3d548",
+  "source_fingerprint": "git:9d34a0eb14e85a5a972bb0c9d9cd84ecad824461:dirty=false",
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4286,
+  "scanned_files": 4290,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -62,7 +62,7 @@
     },
     {
       "pattern": "placeholder_text",
-      "count": 29
+      "count": 30
     },
     {
       "pattern": "source_inspection_test",
@@ -180,7 +180,7 @@
       "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false,
-      "count": 5
+      "count": 6
     },
     {
       "owner_lane": "driver_shared",
@@ -495,7 +495,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 5
+      "count": 6
     },
     {
       "owner_lane": "driver_shared",
@@ -1746,7 +1746,7 @@
     },
     {
       "path": "vyre-libs/src/reduce/grid_stride_tree.rs",
-      "line": 69,
+      "line": 73,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -3161,6 +3161,16 @@
       "owner_lane": "lower_emit",
       "surface": "production",
       "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-primitives/src/hardware/mod.rs",
+      "line": 464,
+      "pattern": "placeholder_text",
+      "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false
     },
@@ -4887,7 +4897,7 @@
     },
     {
       "path": "vyre-libs/src/reduce/grid_stride_tree.rs",
-      "line": 69,
+      "line": 73,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"grid_stride_tree_sum_u32 fusion failed: {error}\"),"
     },
@@ -5736,6 +5746,12 @@
       "line": 27,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"{error}\"));"
+    },
+    {
+      "path": "vyre-primitives/src/hardware/mod.rs",
+      "line": 464,
+      "pattern": "placeholder_text",
+      "text": "/// zeroed placeholder for one described a call the artifact ABI rejects."
     },
     {
       "path": "vyre-lower/src/rewrites/vector_memory.rs",

@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:6c60c704e8799e34837f3f9d0022cf60be432171:dirty=true:worktree=0cabf0d07992d8510d34b698bd9040a740a024efb7b20c0d78b5967116f5fa07",
+  "source_fingerprint": "git:9d34a0eb14e85a5a972bb0c9d9cd84ecad824461:dirty=false",
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -191,7 +191,7 @@
     },
     {
       "path": "vyre-libs/src/reduce/grid_stride_tree.rs",
-      "line": 69,
+      "line": 73,
       "pattern": "documented_panic_contract",
       "text": "Err(error) => panic!(\"grid_stride_tree_sum_u32 fusion failed: {error}\"),"
     },

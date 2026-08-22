@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:83e389a0f43da66e134d323e36f375190d1670d3:dirty=true:worktree=007aaf59ffd3d0a633ea7da3d55bc584eaaedc5f72172aeed58900dfb4685978",
+  "source_fingerprint": "git:9d34a0eb14e85a5a972bb0c9d9cd84ecad824461:dirty=false",
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -171,7 +171,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_dispatch/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 128257,
+      "source_bytes": 128092,
       "implementation_tokens": [
         "dispatch_resident",
         "ptx"
@@ -334,7 +334,7 @@
       "path": "vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14574,
+      "source_bytes": 14521,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"
