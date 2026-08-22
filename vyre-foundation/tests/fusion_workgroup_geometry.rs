@@ -126,7 +126,6 @@ fn serial_arm(name: &str, workgroup: u32, guard: Expr) -> Program {
     Program::wrapped(buffers, [workgroup, 1, 1], body)
 }
 
-
 fn geometry_error(result: Result<Program, FusionError>) -> String {
     match result {
         Ok(program) => panic!(
@@ -292,7 +291,9 @@ fn a_serial_arm_guarded_on_its_workgroup_is_not_widened() {
         serial_workgroup_guard_arm("serial", 1),
     ]));
     assert!(
-        message.contains("arm 1") && message.contains("[256, 1, 1]") && message.contains("[1, 1, 1]"),
+        message.contains("arm 1")
+            && message.contains("[256, 1, 1]")
+            && message.contains("[1, 1, 1]"),
         "the refusal must name the arm and both geometries: {message}"
     );
     assert!(
