@@ -291,6 +291,10 @@ pub struct Step {
     pub all_features: bool,
     /// Whether it passes `--no-default-features`.
     pub no_default_features: bool,
+    /// Whether the verb is `test`.
+    pub tests: bool,
+    /// Whether the harness is told to run one test thread.
+    pub one_test_thread: bool,
 }
 
 impl Step {
@@ -433,6 +437,25 @@ fn block_scalar(lines: &[&str], index: usize) -> Option<(usize, Vec<(usize, Stri
     Some((end, commands))
 }
 
+/// Whether the harness arguments after a bare `--` ask for one test thread.
+fn one_test_thread(harness: &[&str]) -> bool {
+    let mut index = 0;
+    while index < harness.len() {
+        let token = harness[index];
+        index += 1;
+        let value = match token.split_once('=') {
+            Some(("--test-threads", value)) => Some(value.to_string()),
+            Some(_) => None,
+            None if token == "--test-threads" => harness.get(index).map(|next| (*next).to_string()),
+            None => None,
+        };
+        if let Some(value) = value {
+            return strip_quotes(&value) == "1";
+        }
+    }
+    false
+}
+
 /// Read one command into the selectors it names.
 ///
 /// Both the `cargo` and the `./cargo_full` spellings are read, because the
@@ -463,6 +486,7 @@ fn read_command(origin: &str, line: usize, command: &str) -> Option<Step> {
         origin: origin.to_string(),
         line: u32::try_from(line).unwrap_or(u32::MAX),
         runs: tokens[verb] == "run",
+        tests: tokens[verb] == "test",
         ..Step::default()
     };
     let mut index = verb + 1;
@@ -470,6 +494,7 @@ fn read_command(origin: &str, line: usize, command: &str) -> Option<Step> {
         let token = tokens[index];
         index += 1;
         if token == "--" {
+            step.one_test_thread = one_test_thread(&tokens[index..]);
             break;
         }
         let (flag, inline) = match token.split_once('=') {
@@ -677,7 +702,51 @@ pub fn findings(step: &Step, packages: &BTreeMap<String, Package>) -> Vec<Findin
         }
     }
 
+    findings.extend(device_thread_findings(step));
     findings
+}
+
+/// Packages whose device tests each acquire their own device context.
+///
+/// A test in one of these builds its own adapter, queue and pipeline set rather
+/// than sharing a fixture, so a parallel harness has several threads in one
+/// process driving the same device at once. The vendor userspace driver
+/// busy-spins under that shape: one target was observed spending 96% of its
+/// wall time inside the vendor GL library with the device idle and two sibling
+/// test threads blocked, for over half an hour, having produced no output. A
+/// step that hangs is worse than a step that fails, because it holds the runner
+/// until the job timeout and reports nothing about what it was proving.
+const DEVICE_SERIAL_PACKAGES: [&str; 4] = [
+    "vyre-bench",
+    "vyre-driver-cuda",
+    "vyre-driver-spirv",
+    "vyre-driver-wgpu",
+];
+
+/// Why a device-test step leaves the harness free to run device tests in
+/// parallel.
+fn device_thread_findings(step: &Step) -> Vec<Finding> {
+    if !step.tests || step.one_test_thread {
+        return Vec::new();
+    }
+    let device = step.all_features || step.features.iter().any(|name| name == "device-tests");
+    if !device {
+        return Vec::new();
+    }
+    step.packages
+        .iter()
+        .filter(|name| DEVICE_SERIAL_PACKAGES.contains(&name.as_str()))
+        .map(|name| {
+            Finding::at(
+                step.origin.clone(),
+                step.line,
+                format!(
+                    "the step runs `{name}` device tests without `-- --test-threads=1`, so the harness drives one device from several threads at once and the step can hang instead of failing"
+                ),
+                "append `-- --test-threads=1` to the command",
+            )
+        })
+        .collect()
 }
 
 /// Why a `cargo run` does not resolve to exactly one binary.
@@ -1146,6 +1215,83 @@ mod tests {
         )
         .expect("a command");
         assert!(findings(&step, &BTreeMap::new()).is_empty());
+    }
+
+    /// WHY: a device test in one of these packages acquires its own adapter and
+    /// queue, so a parallel harness puts several threads of one process on the
+    /// same device and the step hangs rather than failing. The variant space is
+    /// the package list itself, so a package added to it is covered here
+    /// without editing this test. Both spellings of the harness flag count as
+    /// serialized, and neither a hosted step nor a `cargo run` is this rule's
+    /// business.
+    #[test]
+    fn a_device_test_step_that_leaves_the_harness_parallel_fails() {
+        for name in DEVICE_SERIAL_PACKAGES {
+            let parallel = read_command(
+                "gpu-parity.yml",
+                7,
+                &format!(
+                    "./cargo_full test -p {name} --features device-tests --test dispatch -- --nocapture"
+                ),
+            )
+            .expect("a command");
+            assert!(
+                messages(&device_thread_findings(&parallel)).contains("--test-threads=1"),
+                "{name} runs device tests in parallel and is not reported"
+            );
+            let wide = read_command(
+                "gpu-parity.yml",
+                7,
+                &format!("./cargo_full test -p {name} --all-features -- --nocapture"),
+            )
+            .expect("a command");
+            assert_eq!(
+                device_thread_findings(&wide).len(),
+                1,
+                "{name} all-features"
+            );
+            for harness in [
+                "--test-threads=1 --nocapture",
+                "--nocapture --test-threads 1",
+            ] {
+                let serial = read_command(
+                    "gpu-parity.yml",
+                    7,
+                    &format!(
+                        "./cargo_full test -p {name} --features device-tests --test dispatch -- {harness}"
+                    ),
+                )
+                .expect("a command");
+                assert!(
+                    device_thread_findings(&serial).is_empty(),
+                    "{name} serialized with `{harness}` is reported anyway"
+                );
+            }
+            let hosted = read_command(
+                "ci.yml",
+                7,
+                &format!("./cargo_full test -p {name} --test dispatch"),
+            )
+            .expect("a command");
+            assert!(
+                device_thread_findings(&hosted).is_empty(),
+                "{name} without device tests is reported"
+            );
+        }
+        let outside = read_command(
+            "conform.yml",
+            41,
+            "./cargo_full test -p vyre-conform --features device-tests",
+        )
+        .expect("a command");
+        assert!(device_thread_findings(&outside).is_empty());
+        let demo = read_command(
+            "gpu-parity.yml",
+            48,
+            "./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo",
+        )
+        .expect("a command");
+        assert!(device_thread_findings(&demo).is_empty());
     }
 
     /// WHY: a package that ships two binaries and declares no `default-run`
