@@ -314,31 +314,6 @@ inventory::submit! {
 mod tests {
     use super::*;
 
-    /// The nodes one workgroup runs, with the guard that keeps every other
-    /// workgroup out asserted on the way in.
-    ///
-    /// The phase-placement tests below read the scope where the phases live, so
-    /// they would pass just as well against a body that dropped the guard. This
-    /// is where that guard is pinned.
-    fn workgroup_scope(body: &[Node]) -> &[Node] {
-        assert_eq!(
-            body.len(),
-            1,
-            "Fix: the body must be exactly the workgroup guard, got {body:?}"
-        );
-        match &body[0] {
-            Node::If { cond, then, .. } => {
-                assert_eq!(
-                    *cond,
-                    Expr::is_first_workgroup(),
-                    "Fix: the sweep must be guarded on the first workgroup, or a wider dispatch re-seeds the eigenbasis"
-                );
-                then
-            }
-            other => panic!("Fix: the body must open with the workgroup guard, got {other:?}"),
-        }
-    }
-
     #[test]
     fn zero_order_is_rejected() {
         let program = symmetric_eigen_jacobi("a", "evec", "eval", 0);
@@ -372,66 +347,5 @@ mod tests {
             [LANES, 1, 1],
             "Fix: jacobi_workgroup() must return [LANES, 1, 1]."
         );
-    }
-
-    #[test]
-    fn jacobi_cooperative_phases_not_serialized() {
-        let whole = jacobi_eigen_body("a", "evec", "eval", 4);
-        let body = workgroup_scope(&whole);
-        // The cooperative phases spread across the owning workgroup's lanes, so
-        // they sit in that scope and not inside the lane-serial guard.
-        let has_identity = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_identity_fill::OP_ID));
-        let has_sign = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::eigenvector_column_sign::OP_ID));
-        let has_diagonal = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_diagonal_extract::OP_ID));
-
-        assert!(
-            has_identity,
-            "Fix: matrix_identity_fill must be at top-level cooperative scope, not inside serial."
-        );
-        assert!(has_sign, "Fix: eigenvector_column_sign must be at top-level cooperative scope, not inside serial.");
-        assert!(has_diagonal, "Fix: matrix_diagonal_extract must be at top-level cooperative scope, not inside serial.");
-
-        // Sweep loop must have rotation inside serial If-guard
-        let sweep_loop = body
-            .iter()
-            .find(|node| matches!(node, Node::Loop { var, .. } if var == "jac_sweep"))
-            .expect("jac_sweep loop");
-        if let Node::Loop {
-            body: sweep_body, ..
-        } = sweep_loop
-        {
-            let rotation_is_in_if = sweep_body.iter().any(|node| matches!(node, Node::If { then, .. } if then.iter().any(|inner| matches!(inner, Node::If { then: inner_then, .. } if inner_then.iter().any(|r| matches!(r, Node::Region { generator, .. } if generator.as_str() == crate::math::jacobi_apply_rotation::OP_ID))))));
-            assert!(
-                rotation_is_in_if,
-                "Fix: jacobi_apply_rotation must remain guarded inside serial execution."
-            );
-        }
-    }
-
-    #[test]
-    fn jacobi_barriers_placed_correctly() {
-        let whole = jacobi_eigen_body("a", "evec", "eval", 4);
-        let body = workgroup_scope(&whole);
-        // Position of identity fill and following barrier
-        let identity_idx = body.iter().position(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_identity_fill::OP_ID)).expect("identity fill");
-        assert!(
-            matches!(body.get(identity_idx + 1), Some(Node::Barrier { .. })),
-            "Fix: a workgroup barrier must immediately follow cooperative identity fill."
-        );
-
-        // Sweep loop has barrier after rotation
-        let sweep_loop = body
-            .iter()
-            .find(|node| matches!(node, Node::Loop { var, .. } if var == "jac_sweep"))
-            .expect("jac_sweep loop");
-        if let Node::Loop {
-            body: sweep_body, ..
-        } = sweep_loop
-        {
-            assert!(
-                matches!(sweep_body.last(), Some(Node::Barrier { .. })),
-                "Fix: a workgroup barrier must follow each rotation sweep."
-            );
-        }
     }
 }

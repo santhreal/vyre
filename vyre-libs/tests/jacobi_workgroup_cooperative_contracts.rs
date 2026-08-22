@@ -43,6 +43,33 @@ fn check_local_id_binding(program: &Program) -> bool {
     })
 }
 
+/// The nodes one workgroup runs, with the guard that keeps every other
+/// workgroup out asserted on the way in.
+///
+/// The phase-placement contracts below read the scope the phases live in, so
+/// they would pass just as well against a body that dropped the guard. This is
+/// where that guard is pinned. Without it a dispatch rounded up past the built
+/// grid lets a second workgroup re-seed the identity eigenbasis after the first
+/// has finished sweeping.
+fn workgroup_scope(body: &[Node]) -> &[Node] {
+    assert_eq!(
+        body.len(),
+        1,
+        "Fix: the body must be exactly the workgroup guard, got {body:?}"
+    );
+    match &body[0] {
+        Node::If { cond, then, .. } => {
+            assert_eq!(
+                *cond,
+                Expr::is_first_workgroup(),
+                "Fix: the sweep must be guarded on the first workgroup"
+            );
+            then
+        }
+        other => panic!("Fix: the body must open with the workgroup guard, got {other:?}"),
+    }
+}
+
 #[test]
 fn all_four_primitives_dispatch_declared_workgroup_lanes() {
     assert_eq!(jacobi_workgroup(), [LANES, 1, 1]);
@@ -105,9 +132,10 @@ fn all_four_primitives_bind_local_id() {
 
 #[test]
 fn jacobi_cooperative_phases_are_not_serialized() {
-    let body = jacobi_eigen_body("a", "evec", "eval", 4);
+    let whole = jacobi_eigen_body("a", "evec", "eval", 4);
+    let body = workgroup_scope(&whole);
 
-    // 1. Identity fill region is top-level (not in an If)
+    // 1. Identity fill region is in the workgroup scope, not inside the lane guard
     let identity_node = body.iter().find(
         |n| matches!(n, Node::Region { generator, .. } if generator.as_str() == IDENTITY_OP_ID),
     );
@@ -157,7 +185,8 @@ fn jacobi_cooperative_phases_are_not_serialized() {
 
 #[test]
 fn jacobi_barriers_placed_at_data_boundaries() {
-    let body = jacobi_eigen_body("a", "evec", "eval", 4);
+    let whole = jacobi_eigen_body("a", "evec", "eval", 4);
+    let body = workgroup_scope(&whole);
 
     // Barrier immediately after identity fill
     let identity_pos = body
