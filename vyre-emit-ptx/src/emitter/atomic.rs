@@ -9,17 +9,22 @@ use crate::reg::{PtxType, Reg};
 use crate::EmitError;
 
 /// A resolved atomic target: the PTX state space, the address register holding
-/// the element address in that space, and an optional bounds predicate.
+/// the element address in that space, and the bounds predicate the atomic is
+/// issued under.
 ///
 /// The state space is part of the instruction mnemonic in PTX
 /// (`atom.global.add.u32` vs `atom.shared.add.u32`) and an address is only
 /// meaningful in its own space, so the two must be produced together. Emitting
 /// `.global` against a shared address either faults with
 /// `CUDA_ERROR_ILLEGAL_ADDRESS` or silently reads unrelated global memory.
+///
+/// The predicate is not optional. Every atomic this emitter issues is bounded
+/// by its own binding's length, so an unpredicated form has nothing left to
+/// represent and is not offered.
 struct AtomicAddress {
     space: &'static str,
     addr: Reg,
-    in_bounds: Option<Reg>,
+    in_bounds: Reg,
 }
 
 impl BodyCtx<'_> {
@@ -79,26 +84,19 @@ impl BodyCtx<'_> {
         } = self.emit_atomic_address(binding_slot, index_reg, &element_type, memory_class)?;
         let type_suffix = atomic_type_suffix(atomic_op, elem_ty)?;
         let result_reg = self.alloc(elem_ty);
-        if let Some(in_bounds) = in_bounds {
-            let zero_lit = match elem_ty {
-                PtxType::F32 => "0f00000000",
-                _ => "0",
-            };
-            let _ = writeln!(
-                self.text,
-                "    mov.{}    {result_reg}, {zero_lit};",
-                elem_ty.ptx_type_str()
-            );
-            let _ = writeln!(
-                self.text,
-                "    @{in_bounds} atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
-            );
-        } else {
-            let _ = writeln!(
-                self.text,
-                "    atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
-            );
-        }
+        let zero_lit = match elem_ty {
+            PtxType::F32 => "0f00000000",
+            _ => "0",
+        };
+        let _ = writeln!(
+            self.text,
+            "    mov.{}    {result_reg}, {zero_lit};",
+            elem_ty.ptx_type_str()
+        );
+        let _ = writeln!(
+            self.text,
+            "    @{in_bounds} atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
+        );
         self.bind_result(op, result_reg)
     }
 
@@ -109,6 +107,12 @@ impl BodyCtx<'_> {
     /// predicate. Changing those to the clamping form used by plain loads would
     /// silently redirect an out-of-range atomic onto element 0 instead of
     /// predicating it off, corrupting that element.
+    ///
+    /// The predicate is unconditional. A kernel with no shared memory and no
+    /// barrier exits every lane whose global id reaches the dispatch element
+    /// count, which is the largest buffer's length; an atomic on a shorter
+    /// buffer in the same program is still out of range, and here the address is
+    /// not clamped either, so the access leaves the allocation entirely.
     ///
     /// Workgroup-shared bindings take the 32-bit shared-window path. Their
     /// length is NOT in the params buffer (`preload_bindings` skips shared
@@ -136,18 +140,15 @@ impl BodyCtx<'_> {
                     reason: "shared atomic address must resolve to a register".into(),
                 });
             };
-            let in_bounds = match (self.full_workgroup_entry, element_count) {
-                (true, Some(count)) => Some(self.emit_index_lt_immediate_pred(index_reg, count)),
-                (true, None) => {
-                    return Err(EmitError::InvalidBinding {
-                        slot: binding_slot,
-                        reason: "shared atomic binding must declare an element count so the \
-                                 bounds predicate has a bound"
-                            .into(),
-                    });
-                }
-                (false, _) => None,
+            let Some(count) = element_count else {
+                return Err(EmitError::InvalidBinding {
+                    slot: binding_slot,
+                    reason: "shared atomic binding must declare an element count so the bounds \
+                             predicate has a bound"
+                        .into(),
+                });
             };
+            let in_bounds = self.emit_index_lt_immediate_pred(index_reg, count);
             return Ok(AtomicAddress {
                 space: address.space,
                 addr,
@@ -169,9 +170,7 @@ impl BodyCtx<'_> {
                          be resolved to real storage before PTX emission."
                     ),
                 })?;
-        let in_bounds = self
-            .full_workgroup_entry
-            .then(|| self.emit_index_reg_in_bounds_pred(binding_slot, index_reg));
+        let in_bounds = self.emit_index_reg_in_bounds_pred(binding_slot, index_reg);
         let stride = element_type
             .size_bytes()
             .ok_or_else(|| EmitError::UnsupportedDataType(format!("{element_type:?}")))?;
@@ -262,26 +261,19 @@ impl BodyCtx<'_> {
             in_bounds,
         } = self.emit_atomic_address(binding_slot, index_reg, &element_type, memory_class)?;
         let result_reg = self.alloc(elem_ty);
-        if let Some(in_bounds) = in_bounds {
-            let zero_lit = match elem_ty {
-                PtxType::F32 => "0f00000000",
-                _ => "0",
-            };
-            let _ = writeln!(
-                self.text,
-                "    mov.{}    {result_reg}, {zero_lit};",
-                elem_ty.ptx_type_str()
-            );
-            let _ = writeln!(
-                self.text,
-                "    @{in_bounds} atom.{space}.cas.b32    {result_reg}, [{addr}], {cmp_reg}, {new_reg};"
-            );
-        } else {
-            let _ = writeln!(
-                self.text,
-                "    atom.{space}.cas.b32    {result_reg}, [{addr}], {cmp_reg}, {new_reg};"
-            );
-        }
+        let zero_lit = match elem_ty {
+            PtxType::F32 => "0f00000000",
+            _ => "0",
+        };
+        let _ = writeln!(
+            self.text,
+            "    mov.{}    {result_reg}, {zero_lit};",
+            elem_ty.ptx_type_str()
+        );
+        let _ = writeln!(
+            self.text,
+            "    @{in_bounds} atom.{space}.cas.b32    {result_reg}, [{addr}], {cmp_reg}, {new_reg};"
+        );
         self.bind_result(op, result_reg)
     }
 }

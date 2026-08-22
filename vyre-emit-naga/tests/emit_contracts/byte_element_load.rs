@@ -161,12 +161,11 @@ fn u8_store_global_emits_byte_rmw_with_clear_and_merge() {
         entry_has_binary(&module, naga::BinaryOperator::InclusiveOr),
         "U8 byte-store must merge cleared word with new byte via InclusiveOr"
     );
-    let store_count = module.entry_points[0]
-        .function
-        .body
-        .iter()
-        .filter(|stmt| matches!(stmt, naga::Statement::Store { .. }))
-        .count();
+    // The store sits under its buffer's bounds guard, so a top-level count
+    // reads zero for a store that is plainly emitted.
+    let store_count = count_statements(entry_body(&module), &|statement| {
+        matches!(statement, naga::Statement::Store { .. })
+    });
     assert_eq!(
         store_count, 1,
         "U8 byte-store must collapse to one Statement::Store on the underlying u32 word"

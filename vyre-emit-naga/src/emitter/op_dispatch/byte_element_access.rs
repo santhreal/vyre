@@ -1,6 +1,6 @@
 //! Byte-element load and store emission over word-addressed bindings.
 
-use naga::{BinaryOperator, Expression, Span, Statement};
+use naga::{BinaryOperator, Expression};
 use vyre_foundation::ir::DataType;
 use vyre_lower::KernelOp;
 
@@ -239,13 +239,9 @@ impl BodyBuilder<'_> {
         // the earlier `pointer` handle was consumed by the `Load`
         // we emitted above.
         let store_pointer = self.binding_element_pointer_by_slot(slot, word_index)?;
-        self.function.body.push(
-            Statement::Store {
-                pointer: store_pointer,
-                value: store_value,
-            },
-            Span::UNDEFINED,
-        );
-        Ok(())
+        // `buffer_len_expr` reports a byte-element binding's length in bytes, so
+        // the byte index, not the word index, is the value that has to be in
+        // range for this word to belong to the buffer.
+        self.push_bounds_guarded_global_store(slot, byte_index, store_pointer, store_value)
     }
 }

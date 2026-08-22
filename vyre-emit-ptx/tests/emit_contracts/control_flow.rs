@@ -12,6 +12,80 @@ fn predication_kernel(id: &str, count: u32) -> KernelDescriptorBuilder {
         .dispatch(64, 1, 1)
 }
 
+/// Predicate register each global store is issued under, in emission order.
+///
+/// A store that carries no `@` prefix appears here as an empty string, which
+/// no assertion below accepts: an unpredicated global store is the
+/// out-of-range write this emitter exists to avoid.
+fn store_predicates(ptx: &str) -> Vec<String> {
+    ptx.lines()
+        .filter(|line| line.contains(" st.global"))
+        .map(|line| {
+            line.trim()
+                .split_whitespace()
+                .next()
+                .filter(|token| token.starts_with('@'))
+                .unwrap_or_default()
+                .to_owned()
+        })
+        .collect()
+}
+
+/// `(destination, left, right)` for every `and.pred` in `ptx`.
+fn pred_conjunctions(ptx: &str) -> Vec<(String, String, String)> {
+    ptx.lines()
+        .filter_map(|line| {
+            let rest = line.trim().strip_prefix("and.pred")?;
+            let mut operands = rest
+                .trim_end_matches(';')
+                .split(',')
+                .map(|operand| operand.trim().to_owned());
+            Some((operands.next()?, operands.next()?, operands.next()?))
+        })
+        .collect()
+}
+
+/// `(destination, source)` for every `not.pred` in `ptx`.
+fn pred_negations(ptx: &str) -> Vec<(String, String)> {
+    ptx.lines()
+        .filter_map(|line| {
+            let rest = line.trim().strip_prefix("not.pred")?;
+            let mut operands = rest
+                .trim_end_matches(';')
+                .split(',')
+                .map(|operand| operand.trim().to_owned());
+            Some((operands.next()?, operands.next()?))
+        })
+        .collect()
+}
+
+/// Arm-liveness predicate feeding each store, given the store's own predicate.
+///
+/// A global store is issued under the conjunction of the arm it belongs to
+/// with its buffer's bounds test, arm first. Reading the conjunction back is
+/// how these tests still observe which arm a store belongs to.
+fn arm_predicates(ptx: &str) -> Vec<String> {
+    let conjunctions = pred_conjunctions(ptx);
+    store_predicates(ptx)
+        .into_iter()
+        .map(|predicate| {
+            let register = predicate
+                .strip_prefix('@')
+                .unwrap_or_else(|| panic!("global store must be predicated, found {predicate:?}"));
+            conjunctions
+                .iter()
+                .find(|(destination, ..)| destination == register)
+                .map(|(_, arm, _)| arm.clone())
+                .unwrap_or_else(|| {
+                    panic!(
+                        "store predicate {register} must be the conjunction of arm liveness \
+                         with the buffer bounds test"
+                    )
+                })
+        })
+        .collect()
+}
+
 #[test]
 fn region_op_passes_through_with_comment() {
     let kernel = descriptor("region")
@@ -186,8 +260,15 @@ fn short_if_else_stores_are_dual_predicated_without_reconvergence_branch() {
 
     let s = emit(&kernel).unwrap();
 
-    assert!(s.contains("@%p"));
-    assert!(s.contains("@!%p"));
+    let arms = arm_predicates(&s);
+    assert_eq!(arms.len(), 2, "both store arms must be emitted");
+    assert!(
+        pred_negations(&s)
+            .iter()
+            .any(|(destination, source)| *destination == arms[1] && *source == arms[0]),
+        "the else arm must be issued under the negation of the then arm's predicate, \
+         found arms {arms:?}"
+    );
     assert_eq!(s.matches(" st.global.u32").count(), 2);
     assert!(
         !s.contains("$L_if_else_") && !s.contains("$L_if_end_"),
@@ -219,8 +300,15 @@ fn short_if_else_literal_store_bodies_are_dual_predicated_without_branch() {
 
     let s = emit(&kernel).unwrap();
 
-    assert!(s.contains("@%p"));
-    assert!(s.contains("@!%p"));
+    let arms = arm_predicates(&s);
+    assert_eq!(arms.len(), 2, "both store arms must be emitted");
+    assert!(
+        pred_negations(&s)
+            .iter()
+            .any(|(destination, source)| *destination == arms[1] && *source == arms[0]),
+        "the else arm must be issued under the negation of the then arm's predicate, \
+         found arms {arms:?}"
+    );
     assert_eq!(s.matches(" st.global.u32").count(), 2);
     assert!(
         !s.contains("$L_if_else_") && !s.contains("$L_if_end_"),

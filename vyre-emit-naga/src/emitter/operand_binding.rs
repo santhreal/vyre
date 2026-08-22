@@ -13,7 +13,7 @@
 //! - `literal_type` / `type_for_data_type` / `binary_result_type`  -
 //!   IR-type → naga-type lookups.
 
-use naga::{BinaryOperator, Expression, Type};
+use naga::{BinaryOperator, Expression, Span, Statement, Type};
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::{KernelBody, KernelOp, LiteralValue};
 
@@ -121,6 +121,45 @@ impl BodyBuilder<'_> {
             }));
         }
         Ok(words)
+    }
+
+    /// Push a global store that a runtime index cannot redirect.
+    ///
+    /// WGSL has no unchecked store: naga's bounds-check policy rewrites an
+    /// out-of-range storage write to the nearest in-range element rather than
+    /// dropping it, so a store past the end of a buffer overwrites a live
+    /// element with whatever value the widest lane carried. A program whose
+    /// buffers have different lengths hits that on the shorter one, because the
+    /// dispatch extent comes from the longest.
+    ///
+    /// The reference interpreter discards such a store. Guarding it here is what
+    /// makes the two agree, and the pointer is still built from the raw index so
+    /// naga's own clamp remains as the fault-free fallback it was.
+    pub(super) fn push_bounds_guarded_global_store(
+        &mut self,
+        slot: u32,
+        index: naga::Handle<Expression>,
+        pointer: naga::Handle<Expression>,
+        value: naga::Handle<Expression>,
+    ) -> Result<(), EmitError> {
+        let index = self.coerce_value_to_type(index, self.types.u32_ty);
+        let length = self.buffer_len_expr(slot)?;
+        let condition = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Less,
+            left: index,
+            right: length,
+        });
+        let mut accept = naga::Block::new();
+        accept.push(Statement::Store { pointer, value }, Span::UNDEFINED);
+        self.function.body.push(
+            Statement::If {
+                condition,
+                accept,
+                reject: naga::Block::new(),
+            },
+            Span::UNDEFINED,
+        );
+        Ok(())
     }
 
     pub(super) fn child_block(

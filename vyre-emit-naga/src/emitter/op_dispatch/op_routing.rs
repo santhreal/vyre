@@ -140,10 +140,14 @@ impl BodyBuilder<'_> {
                     Some(ty) => self.coerce_value_to_type(raw_value, ty),
                     None => raw_value,
                 };
-                self.function
-                    .body
-                    .push(Statement::Store { pointer, value }, Span::UNDEFINED);
-                Ok(())
+                if matches!(op.kind, KernelOpKind::StoreShared) {
+                    self.function
+                        .body
+                        .push(Statement::Store { pointer, value }, Span::UNDEFINED);
+                    return Ok(());
+                }
+                let index = self.value_operand(op, 1)?;
+                self.push_bounds_guarded_global_store(slot, index, pointer, value)
             }
             OpDispatchRoute::VectorLoad => with_route_kind!(
                 op,
@@ -206,9 +210,12 @@ impl BodyBuilder<'_> {
                             Some(ty) => self.coerce_value_to_type(raw_value, ty),
                             None => raw_value,
                         };
-                        self.function
-                            .body
-                            .push(Statement::Store { pointer, value }, Span::UNDEFINED);
+                        self.push_bounds_guarded_global_store(
+                            slot,
+                            offset_expr,
+                            pointer,
+                            value,
+                        )?;
                     }
                     Ok(())
                 }

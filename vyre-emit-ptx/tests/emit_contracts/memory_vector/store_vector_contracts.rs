@@ -32,9 +32,22 @@ fn emit_fuses_four_adjacent_u32_stores_to_ptx_vector_store() {
     .unwrap();
     assert!(s.contains("st.global.v4.u32"));
     assert!(!s.contains("st.global.u32"));
+    // The bounds guard the fused store carries adds an immediate to reach the
+    // last element it writes, so the dead scalar chain is identified by its
+    // register operand rather than by the mnemonic.
+    let index_chain_adds: Vec<&str> = s
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("add.u32"))
+        .filter(|line| {
+            line.rsplit(',')
+                .next()
+                .is_some_and(|operand| operand.trim().trim_end_matches(';').starts_with('%'))
+        })
+        .collect();
     assert!(
-        !s.contains("add.u32"),
-        "fused vector store must not leave dead scalar index-increment adds:\n{s}"
+        index_chain_adds.is_empty(),
+        "fused vector store must not leave dead scalar index-increment adds {index_chain_adds:?}:\n{s}"
     );
 }
 

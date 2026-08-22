@@ -1,10 +1,9 @@
 //! Predicate composition for guarded stores.
 //!
 //! Owns the rule that decides which predicate a store is issued under: an
-//! incoming branch predicate, the element-count bounds check the
-//! full-workgroup entry requires, or the conjunction of both. It writes only
-//! the predicate arithmetic; the store instruction itself comes from
-//! `memory`.
+//! incoming branch predicate, the element-count bounds check every global store
+//! requires, or the conjunction of both. It writes only the predicate
+//! arithmetic; the store instruction itself comes from `memory`.
 
 use std::fmt::Write as _;
 
@@ -46,6 +45,21 @@ impl BodyCtx<'_> {
         Ok(true)
     }
 
+    /// Compose the predicate a store is issued under.
+    ///
+    /// A global store always carries its buffer's bounds check. The address it
+    /// writes through is clamped (`memory::clamp_index_to_buffer_length`), which
+    /// keeps an out-of-range address from faulting but redirects the write onto
+    /// element 0, so a store past the end silently overwrites the first element
+    /// with whatever value the widest lane carried. The entry-wide exit a kernel
+    /// without shared memory emits does not cover it: that exit compares the
+    /// global id against the dispatch element count, which is the largest
+    /// buffer's length, and says nothing about a shorter buffer in the same
+    /// program.
+    ///
+    /// Shared bindings keep the address the workgroup window resolves and are
+    /// bounded by their compile-time length, so they take the incoming predicate
+    /// unchanged.
     pub(super) fn store_guard_for_index(
         &mut self,
         binding_slot: u32,
@@ -54,7 +68,7 @@ impl BodyCtx<'_> {
         existing: Option<(&str, Reg)>,
     ) -> Result<Option<(String, Reg)>, EmitError> {
         let existing = existing.map(|(prefix, pred)| (prefix.to_string(), pred));
-        if !self.full_workgroup_entry || !matches!(memory_class, MemoryClass::Global) {
+        if !matches!(memory_class, MemoryClass::Global) {
             return Ok(existing);
         }
 

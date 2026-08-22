@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A global store whose element index falls outside the bound buffer is discarded on both backends instead of being redirected onto element 0. Index clamping is sound for a load, whose value is dropped, and corrupting for a store; the kernel-wide dispatch-extent exit does not bound a shorter buffer in the same program. Scalar, byte-element, vector-op and fused-vector stores each carry their own buffer's bounds test, which is what makes device results agree with the reference interpreter for a program whose buffers have different lengths."

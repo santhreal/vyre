@@ -217,9 +217,17 @@ impl BodyCtx<'_> {
                         value
                     });
                 }
+                // A `v{width}` store writes `width` consecutive elements from
+                // one address, so the element that has to be in range is the
+                // last one. `emit_global_address_operand` clamps the base index
+                // to keep the address inside the allocation, which would
+                // otherwise redirect the whole vector onto element 0.
+                let last_index =
+                    self.emit_index_plus_immediate(index_op_id, u32::from(*width) - 1)?;
+                let in_bounds = self.emit_index_reg_in_bounds_pred(binding_slot, last_index);
                 let _ = write!(
                     self.text,
-                    "    st.global.v{}.{}    ",
+                    "    @{in_bounds} st.global.v{}.{}    ",
                     width,
                     vector_ty.ptx_type_str()
                 );

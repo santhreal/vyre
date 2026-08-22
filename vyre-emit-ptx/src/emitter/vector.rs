@@ -248,9 +248,16 @@ impl BodyCtx<'_> {
             let value = self.lookup_operand(value_op_id)?;
             regs.push(self.canonical_store_reg(value, &element_type, elem_ty));
         }
+        // The chain writes `chain.len()` consecutive elements from one
+        // address, so the last of them is the element that decides whether
+        // the whole vector belongs to the buffer. Without this the clamped
+        // base address redirects an out-of-range chain onto element 0.
+        let last_index =
+            self.emit_index_plus_immediate(index_op_id, chain.len().saturating_sub(1) as u32)?;
+        let in_bounds = self.emit_index_reg_in_bounds_pred(binding_slot, last_index);
         let _ = write!(
             self.text,
-            "    st.global.v{}.{}    ",
+            "    @{in_bounds} st.global.v{}.{}    ",
             chain.len(),
             vector_ty.ptx_type_str()
         );
