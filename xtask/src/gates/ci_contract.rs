@@ -313,8 +313,11 @@ fn is_shell_script(relative: &str) -> bool {
 
 /// The case-modification operator inside a parameter expansion on this line, if
 /// any. `${v^^}`, `${v,,}`, `${v^}` and `${v,}` are all bash 4.
+///
+/// The operator has to follow the name and nothing else. A `,` or `^` that ends
+/// some other expansion is not one: `${list:+$list,}` appends a literal comma
+/// and `${sep:-,}` defaults to one, and both parse in bash 3.2.
 fn case_modification_expansion(line: &str) -> Option<char> {
-    let bytes = line.as_bytes();
     let mut index = 0;
     while let Some(open) = line[index..].find("${") {
         let start = index + open + 2;
@@ -322,18 +325,36 @@ fn case_modification_expansion(line: &str) -> Option<char> {
             return None;
         };
         let end = start + close;
-        // The operator sits at the end of the expansion, after the name.
-        for position in (start..end).rev() {
-            match bytes[position] {
-                b'^' => return Some('^'),
-                b',' => return Some(','),
-                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_' => {}
-                _ => break,
-            }
+        if let Some(operator) = case_modification_operator(&line[start..end]) {
+            return Some(operator);
         }
         index = end + 1;
     }
     None
+}
+
+/// The case-modification operator that makes up the whole suffix of one
+/// expansion body, if that is all the body carries after the name.
+fn case_modification_operator(body: &str) -> Option<char> {
+    let name_len = body
+        .find(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+        .unwrap_or(body.len());
+    if name_len == 0 {
+        return None;
+    }
+    let mut suffix = &body[name_len..];
+    // `${names[1]^^}` carries the same operator behind a subscript.
+    if let Some(rest) = suffix.strip_prefix('[') {
+        match rest.find(']') {
+            Some(closing) => suffix = &rest[closing + 1..],
+            None => return None,
+        }
+    }
+    match suffix {
+        "^" | "^^" => Some('^'),
+        "," | ",," => Some(','),
+        _ => None,
+    }
 }
 
 /// Every bash 4 construct in one script.
@@ -1648,6 +1669,9 @@ jobs:
                       printf '%s' \"${VYRE_RELEASE_BACKEND:-all}\"\n\
                       printf '%s' \"${BASH_SOURCE[0]}\"\n\
                       printf '%s' \"${path//,/ }\"\n\
+                      printf '%s' \"${compared:+$compared,}\"\n\
+                      printf '%s' \"${separator:-,}\"\n\
+                      printf '%s' \"${prefix%,}\"\n\
                       # mapfile -t stale < <(true)\n\
                       wait \"${worker_pids[joined]}\"\n";
         let findings = legacy_bash_findings("scripts/sample.sh", script);
@@ -1655,6 +1679,16 @@ jobs:
             findings.is_empty(),
             "Fix: these are bash 3.2 constructs and a comment, and none may be reported: {findings:#?}"
         );
+    }
+
+    /// WHY: the operator is the same construct behind a subscript, and a scan
+    /// that stops at the name would pass `${row[0]^^}` on to a 3.2 runner.
+    #[test]
+    fn the_scan_names_a_case_operator_behind_a_subscript() {
+        assert_eq!(case_modification_operator("row[0]^^"), Some('^'));
+        assert_eq!(case_modification_operator("row[index],"), Some(','));
+        assert_eq!(case_modification_operator("row[0]"), None);
+        assert_eq!(case_modification_operator("row[0"), None);
     }
 
     /// WHY: the scan reads shell scripts, and the tree's own entry point
