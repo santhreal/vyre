@@ -207,10 +207,13 @@ fn preorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride: 
             Expr::u32(node_count),
             vec![Node::if_then(
                 Expr::and(
-                    Expr::var("active"),
+                    Expr::is_first_workgroup(),
                     Expr::and(
-                        Expr::lt(Expr::var("oi"), Expr::u32(out_cap)),
-                        valid_node(Expr::var("n")),
+                        Expr::var("active"),
+                        Expr::and(
+                            Expr::lt(Expr::var("oi"), Expr::u32(out_cap)),
+                            valid_node(Expr::var("n")),
+                        ),
                     ),
                 ),
                 vec![
@@ -304,10 +307,13 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
             Expr::u32(node_count),
             vec![Node::if_then(
                 Expr::and(
-                    Expr::var("active"),
+                    Expr::is_first_workgroup(),
                     Expr::and(
-                        Expr::lt(Expr::var("oi"), Expr::u32(out_cap)),
-                        valid_node(Expr::var("n")),
+                        Expr::var("active"),
+                        Expr::and(
+                            Expr::lt(Expr::var("oi"), Expr::u32(out_cap)),
+                            valid_node(Expr::var("n")),
+                        ),
                     ),
                 ),
                 vec![
@@ -493,7 +499,9 @@ fn tree_walk_program(
 ) -> Program {
     // The walk is serial: one lane climbs the tree and appends to `out`. One
     // workgroup owns it, because the grid a backend derives from the output
-    // length would run the whole walk once per workgroup.
+    // length would run the whole walk once per workgroup. Each body carries
+    // that guard as the first conjunct of the step condition that holds every
+    // store, so confining the walk costs no nesting level.
     Program::wrapped(
         vec![
             BufferDecl::storage(nodes, 0, BufferAccess::ReadOnly, DataType::U32)
@@ -502,10 +510,7 @@ fn tree_walk_program(
                 .with_count(out_words),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(
-            op_id,
-            vec![Node::if_then(Expr::is_first_workgroup(), body)],
-        )],
+        vec![wrap_anonymous_region(op_id, body)],
     )
 }
 
