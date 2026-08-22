@@ -641,6 +641,10 @@ pub(crate) fn build_strassen_2x2(
         BufferDecl::output(c, 2, DataType::F32).with_count(4),
     ];
 
+    // Every store index is a constant, so the four output words are the same in
+    // every workgroup of the grid a backend derives from the output length. One
+    // workgroup owns the contraction.
+    let body = vec![Node::if_then(Expr::is_first_workgroup(), body)];
     let region = if generator.starts_with("anonymous::") {
         wrap_anonymous_region(generator, body)
     } else {

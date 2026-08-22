@@ -133,7 +133,13 @@ pub fn blake3_g_program(state: &str, message: &str, out: &str) -> Program {
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(16),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(BLAKE3_G_OP_ID, body)],
+        // One workgroup owns the whole quartet: the state is a 16-word buffer the
+        // body rewrites in place, and the grid the backend derives from that
+        // length would give every workgroup the same rewrite.
+        vec![wrap_anonymous_region(
+            BLAKE3_G_OP_ID,
+            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+        )],
     )
 }
 
@@ -157,7 +163,11 @@ pub fn blake3_round_program(state: &str, message: &str, out: &str) -> Program {
             BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(16),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(BLAKE3_ROUND_OP_ID, body)],
+        // One workgroup owns the whole round, for the reason blake3_g_program states.
+        vec![wrap_anonymous_region(
+            BLAKE3_ROUND_OP_ID,
+            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+        )],
     )
 }
 

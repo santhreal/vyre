@@ -127,7 +127,13 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
                 .with_output_byte_range(0..8),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(UTF8_SHAPE_COUNTS_OP_ID, body)],
+        // The scan walks all 256 histogram slots and writes two words at constant
+        // indices, so one workgroup owns it. The backend derives a two-workgroup
+        // grid from the output length.
+        vec![wrap_anonymous_region(
+            UTF8_SHAPE_COUNTS_OP_ID,
+            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+        )],
     )
 }
 

@@ -76,6 +76,12 @@ pub fn fft_convolve_circular_complex(
         scale_conjugate_body(output, n),
     ));
 
+    // The three scratch buffers are workgroup memory and the stages read each
+    // other through them, so the composition is only defined inside a single
+    // workgroup. The backend derives a 1D grid from the output length, and the
+    // scale stage reads back the buffer the inverse FFT just wrote, so a second
+    // workgroup would rescale or overwrite lanes the first already finished.
+    // Workgroup zero owns the whole convolution.
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(signal, 0, BufferAccess::ReadOnly, DataType::F32)
@@ -88,7 +94,10 @@ pub fn fft_convolve_circular_complex(
             BufferDecl::output(output, 2, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, entry)],
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::is_first_workgroup(), entry)],
+        )],
     )
     .with_entry_op_id(OP_ID))
 }
@@ -253,7 +262,10 @@ fn pointwise_complex_multiply_conjugate_program() -> Program {
         [1, 1, 1],
         vec![wrap_anonymous_region(
             MULTIPLY_OP_ID,
-            multiply_and_conjugate_body("signal_freq", "kernel_freq", "product_freq", n),
+            vec![Node::if_then(
+                Expr::is_first_workgroup(),
+                multiply_and_conjugate_body("signal_freq", "kernel_freq", "product_freq", n),
+            )],
         )],
     )
     .with_entry_op_id(MULTIPLY_OP_ID)
@@ -271,7 +283,10 @@ fn scale_conjugate_inverse_program() -> Program {
         [1, 1, 1],
         vec![wrap_anonymous_region(
             SCALE_OP_ID,
-            scale_conjugate_body_from("product_freq", "output", n),
+            vec![Node::if_then(
+                Expr::is_first_workgroup(),
+                scale_conjugate_body_from("product_freq", "output", n),
+            )],
         )],
     )
     .with_entry_op_id(SCALE_OP_ID)

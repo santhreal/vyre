@@ -218,6 +218,7 @@ The crate lives at `vyre-libs`. The `product-libraries` owner maintains its
 | `test` | `graph_single_source_contracts` | `vyre-libs/tests/graph_single_source_contracts.rs` | `graph-dispatch` | `./cargo_full test -p vyre-libs --test graph_single_source_contracts` |
 | `test` | `graph_toposort_contracts` | `vyre-libs/tests/graph_toposort_contracts.rs` | None | `./cargo_full test -p vyre-libs --test graph_toposort_contracts` |
 | `test` | `graph_toposort_contracts` | `vyre-libs/tests/graph_toposort_contracts.rs` | `graph` | `./cargo_full test -p vyre-libs --test graph_toposort_contracts` |
+| `test` | `grid_invariant_catalog` | `vyre-libs/tests/grid_invariant_catalog.rs` | None | `./cargo_full test -p vyre-libs --test grid_invariant_catalog` |
 | `test` | `grid_stride_tree_buffer_contract` | `vyre-libs/tests/grid_stride_tree_buffer_contract.rs` | None | `./cargo_full test -p vyre-libs --test grid_stride_tree_buffer_contract` |
 | `test` | `grid_stride_tree_sum_covers_every_element` | `vyre-libs/tests/grid_stride_tree_sum_covers_every_element.rs` | None | `./cargo_full test -p vyre-libs --test grid_stride_tree_sum_covers_every_element` |
 | `test` | `hash_crc32_ir_parity_proptest` | `vyre-libs/tests/hash_crc32_ir_parity_proptest.rs` | None | `./cargo_full test -p vyre-libs --test hash_crc32_ir_parity_proptest` |

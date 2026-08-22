@@ -147,7 +147,13 @@ pub fn blake3_compress(
             BufferDecl::output(chaining_out, 3, DataType::U32).with_count(8),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(OP_ID, body)],
+        // One workgroup owns the compression. The eight output words are the same
+        // in every workgroup of the grid the backend derives from that length, so
+        // an unguarded body would have several workgroups write them at once.
+        vec![wrap_anonymous_region(
+            OP_ID,
+            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+        )],
     )
 }
 

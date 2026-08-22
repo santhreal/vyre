@@ -4616,6 +4616,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   directory covered. Cargo invocation resolution moved into that gate, which
   reads workflows and manifests rather than Rust source text, so its
   structural-gate row is deleted rather than re-pointed.
+- A library composition whose writable footprint exceeds one workgroup now
+  confines its serial body to workgroup zero, so the FFT convolution, the
+  radix-2 transform, the BLAKE3 quartet, round and compression, the AMG V-cycle
+  phase, the 2x2 Strassen contraction and the UTF-8 shape counter no longer
+  repeat their global writes in every workgroup of the grid a backend derives
+  from the output length.
 - The sharded release conformance run waits for one worker at a time, so a
   clean run exits zero and a failed shard is counted once.
 - The elementwise map builders live in the builder module rather than under
