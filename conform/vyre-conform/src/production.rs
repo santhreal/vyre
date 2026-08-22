@@ -604,7 +604,18 @@ impl ReplayCapsule {
         session.submit(&input_slices)
     }
 }
-/// Find a live dispatch-capable non-oracle backend registration, honoring `VYRE_BACKEND`.
+
+/// Find a live dispatch-capable non-oracle backend registration, honoring
+/// `VYRE_BACKEND`.
+///
+/// Compiled only under `device-tests`, which is the admission a runner with a
+/// device turns on. Every caller acquires hardware, and `device-test-gating`
+/// reads a backend constructor in test source rather than a call graph, so a
+/// test reaching a device through this helper was invisible to it: two
+/// `lens_parity` tests ran on every hosted matrix leg and aborted inside cudarc
+/// with a missing `libcuda.so`. The `cfg` makes the compiler answer the
+/// question the scan cannot.
+#[cfg(feature = "device-tests")]
 #[doc(hidden)]
 pub fn live_test_backend() -> Result<&'static BackendRegistration, String> {
     let selected = std::env::var("VYRE_BACKEND")

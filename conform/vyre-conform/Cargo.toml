@@ -34,6 +34,19 @@ name = "reference_parity_classes"
 path = "tests/reference_parity_classes/mod.rs"
 required-features = ["device-tests"]
 
+# Both contracts here acquire a live backend through
+# `production::live_test_backend`, so the target compiles only where a device
+# is admitted. Split out of `lens_parity`, whose remaining contracts need none.
+[[test]]
+name = "lens_parity_device"
+required-features = ["device-tests"]
+
+# The ULP audit compares a device result against the reference, so it acquires
+# one too.
+[[test]]
+name = "ulp_audit"
+required-features = ["device-tests"]
+
 [features]
 default = ["gpu"]
 gpu = [
