@@ -9,6 +9,7 @@
 
 mod cli_docs;
 mod handrolled_operations;
+mod implementation_family_closure;
 mod operation_schema;
 mod operation_schema_placement;
 mod registration_visibility;

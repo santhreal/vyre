@@ -172,14 +172,6 @@ pub const IMPLEMENTATION_FAMILY_ROWS: &[(&str, &str)] = &[
         "vyre-libs::math::fixed_u32_matmul_program",
     ),
     (
-        "vyre-libs::math::sinkhorn_scale",
-        "vyre-libs::math::u32_binary_map",
-    ),
-    (
-        "vyre-libs::math::gaussian_rdp_step",
-        "vyre-libs::math::u32_binary_map",
-    ),
-    (
         "vyre-libs::math::iht_threshold",
         "vyre-libs::math::u32_vector_scalar_map",
     ),
