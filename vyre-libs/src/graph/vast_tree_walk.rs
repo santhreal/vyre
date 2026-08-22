@@ -207,7 +207,7 @@ fn preorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride: 
             Expr::u32(node_count),
             vec![Node::if_then(
                 Expr::and(
-                    Expr::is_first_workgroup(),
+                    Expr::is_first_invocation(),
                     Expr::and(
                         Expr::var("active"),
                         Expr::and(
@@ -307,7 +307,7 @@ fn postorder_body(nodes: &str, out: &str, node_count: u32, out_cap: u32, stride:
             Expr::u32(node_count),
             vec![Node::if_then(
                 Expr::and(
-                    Expr::is_first_workgroup(),
+                    Expr::is_first_invocation(),
                     Expr::and(
                         Expr::var("active"),
                         Expr::and(

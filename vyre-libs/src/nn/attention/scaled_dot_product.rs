@@ -606,12 +606,13 @@ fn attention_reference_program(
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
         workgroup,
-        // The row loop writes every output element, so one workgroup owns it.
-        // The grid a backend derives from the output length would otherwise
-        // repeat the whole attention pass in every workgroup.
+        // The row loop writes every output element, so one invocation owns it.
+        // The grid a backend derives from the output length, and any fusion that
+        // widens this arm, would otherwise repeat the whole attention pass per
+        // invocation.
         vec![wrap_region(
             generator,
-            vec![Node::if_then(Expr::is_first_workgroup(), vec![outer_loop])],
+            vec![Node::if_then(Expr::is_first_invocation(), vec![outer_loop])],
             None,
         )],
     ))

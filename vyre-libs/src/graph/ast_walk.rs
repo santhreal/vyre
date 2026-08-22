@@ -93,10 +93,10 @@ pub fn ast_walk_postorder(out: &str, node_count: u32) -> Program {
         [1, 1, 1],
         vec![wrap_anonymous_region(
             "vyre-libs::graph::ast_walk_postorder_spine",
-            // The loop emits the whole sequence, so one workgroup owns it. The
-            // grid a backend derives from the output length would otherwise
-            // repeat every store in every workgroup.
-            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+            // The loop emits the whole sequence, so one invocation owns it. The
+            // grid a backend derives from the output length, and any fusion that
+            // widens this arm, would otherwise repeat every store per invocation.
+            vec![Node::if_then(Expr::is_first_invocation(), body)],
         )],
     )
 }

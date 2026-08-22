@@ -37,10 +37,11 @@ pub(crate) fn bit_update_program(
         ),
     };
     // The update reads and writes one word at a constant index, so every
-    // workgroup of the grid a backend derives from the buffer length would
-    // repeat it. One workgroup owns the word.
+    // invocation of the grid a backend derives from the buffer length, and every
+    // invocation a fusion widens this arm to, would repeat it. One invocation
+    // owns the word.
     let body = vec![Node::if_then(
-        Expr::is_first_workgroup(),
+        Expr::is_first_invocation(),
         vec![Node::if_then(
             Expr::lt(Expr::u32(word), Expr::u32(words)),
             vec![Node::store(target, Expr::u32(word), value)],

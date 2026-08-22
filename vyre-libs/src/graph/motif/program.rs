@@ -157,17 +157,18 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
     // Motif matching is serial: one lane loops over every motif edge in order
     // and accumulates `matched_edges`. A [256,1,1] workgroup would burn 255
     // idle lanes, so the workgroup is one lane wide. That does not make the
-    // launch single-workgroup: a backend derives the grid from the writable
-    // output length, so every node gets a workgroup and each one would repeat
-    // the whole scan over the shared hit and witness buffers. The first
-    // workgroup owns the scan.
+    // launch single-invocation: a backend derives the grid from the writable
+    // output length, so every node gets a workgroup, and a fusion can widen the
+    // arm past one lane. Either way each added invocation would repeat the whole
+    // scan over the shared hit and witness buffers, so the guard names the one
+    // invocation that owns it.
     Program::wrapped(
         buffers,
         MOTIF_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
             OP_ID,
             vec![Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_invocation(),
                 vec![
                     Node::loop_for(
                         "node",
