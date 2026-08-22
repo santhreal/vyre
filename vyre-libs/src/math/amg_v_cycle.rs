@@ -341,12 +341,14 @@ inventory::submit! {
                     BufferDecl::output("fine_out", 1, DataType::U32).with_count(4),
                 ],
                 [1, 1, 1],
-                // The serial loop writes all four cells, so one workgroup runs it.
-                // The backend derives a four-workgroup grid from the output length.
+                // The serial loop writes all four cells, so one invocation runs it.
+                // The backend derives a four-workgroup grid from the output length,
+                // and a fusion can widen the arm past one invocation, so the guard
+                // names the invocation rather than the workgroup.
                 vec![wrap_anonymous_region(
                     V_CYCLE_PHASE_OP_ID,
                     vec![Node::if_then(
-                        Expr::is_first_workgroup(),
+                        Expr::is_first_invocation(),
                         vec![Node::loop_for(
                             "idx",
                             Expr::u32(0),

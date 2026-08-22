@@ -128,11 +128,14 @@ pub fn utf8_shape_counts(histogram: &str, out: &str) -> Program {
         ],
         [1, 1, 1],
         // The scan walks all 256 histogram slots and writes two words at constant
-        // indices, so one workgroup owns it. The backend derives a two-workgroup
-        // grid from the output length.
+        // indices, so one invocation owns it. The backend derives a two-workgroup
+        // grid from the output length. The guard names the invocation, not the
+        // workgroup: a fusion widens this arm to the fused workgroup, where
+        // `workgroup_id.x == 0` admits every invocation in it and each repeats
+        // the same saturating adds into the same two slots.
         vec![wrap_anonymous_region(
             UTF8_SHAPE_COUNTS_OP_ID,
-            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+            vec![Node::if_then(Expr::is_first_invocation(), body)],
         )],
     )
 }

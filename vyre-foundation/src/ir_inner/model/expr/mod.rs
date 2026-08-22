@@ -191,6 +191,25 @@ impl Expr {
         Self::eq(Self::WorkgroupId { axis: 0 }, Self::u32(0))
     }
 
+    /// Predicate `workgroup_id.x == 0 && local_id.x == 0`: the one invocation
+    /// that owns a serial body.
+    ///
+    /// A serial scan that keeps its running result in read-write storage must
+    /// run exactly once. [`is_first_workgroup`](Self::is_first_workgroup)
+    /// expresses that only while the workgroup holds one invocation, and a
+    /// fusion widens an arm to the fused workgroup, where the same body runs
+    /// once per added invocation over the same slots. This predicate is the
+    /// same lane in a one-wide geometry and the only lane in any other, so a
+    /// program that means "one invocation" says so and stays fusable.
+    #[must_use]
+    #[inline]
+    pub fn is_first_invocation() -> Self {
+        Self::and(
+            Self::is_first_workgroup(),
+            Self::eq(Self::LocalId { axis: 0 }, Self::u32(0)),
+        )
+    }
+
     /// `local_invocation_id.x`
     #[must_use]
     #[inline]

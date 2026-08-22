@@ -81,7 +81,10 @@ pub fn fft_convolve_circular_complex(
     // workgroup. The backend derives a 1D grid from the output length, and the
     // scale stage reads back the buffer the inverse FFT just wrote, so a second
     // workgroup would rescale or overwrite lanes the first already finished.
-    // Workgroup zero owns the whole convolution.
+    // One invocation owns the whole convolution: every stage rewrites the shared
+    // frequency scratch in place, so a second invocation repeats the chain over
+    // the same words. The guard names the invocation so a fusion that widens the
+    // arm still admits one.
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(signal, 0, BufferAccess::ReadOnly, DataType::F32)
@@ -96,7 +99,7 @@ pub fn fft_convolve_circular_complex(
         [1, 1, 1],
         vec![wrap_anonymous_region(
             OP_ID,
-            vec![Node::if_then(Expr::is_first_workgroup(), entry)],
+            vec![Node::if_then(Expr::is_first_invocation(), entry)],
         )],
     )
     .with_entry_op_id(OP_ID))
@@ -260,10 +263,12 @@ fn pointwise_complex_multiply_conjugate_program() -> Program {
             BufferDecl::output("product_freq", 2, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
+        // The body writes every output lane at a constant index, so one
+        // invocation owns it under any grid or fused geometry.
         vec![wrap_anonymous_region(
             MULTIPLY_OP_ID,
             vec![Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_invocation(),
                 multiply_and_conjugate_body("signal_freq", "kernel_freq", "product_freq", n),
             )],
         )],
@@ -281,10 +286,12 @@ fn scale_conjugate_inverse_program() -> Program {
             BufferDecl::output("output", 1, DataType::F32).with_count(elements),
         ],
         [1, 1, 1],
+        // The body writes every output lane at a constant index, so one
+        // invocation owns it under any grid or fused geometry.
         vec![wrap_anonymous_region(
             SCALE_OP_ID,
             vec![Node::if_then(
-                Expr::is_first_workgroup(),
+                Expr::is_first_invocation(),
                 scale_conjugate_body_from("product_freq", "output", n),
             )],
         )],

@@ -55,12 +55,15 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
         ],
         [1, 1, 1],
         // The selection scan is serial over `n` and keeps its running best in
-        // read-write scratch, so one workgroup owns it. The grid a backend
-        // derives from the output length would give every workgroup its own
-        // pass over the same scratch and the same output words.
+        // read-write scratch, so exactly one invocation owns it. The guard names
+        // the invocation, not the workgroup: a fusion widens this arm to the
+        // fused workgroup, and `workgroup_id.x == 0` then admits every
+        // invocation in workgroup 0, each running the same insertion over the
+        // same slots. Measured on a 256-wide fusion: the result named one input
+        // lane twice.
         vec![wrap_anonymous_region(
             "vyre-libs::nn::top_k",
-            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+            vec![Node::if_then(Expr::is_first_invocation(), body)],
         )],
     )
 }

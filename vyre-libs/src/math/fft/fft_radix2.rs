@@ -185,10 +185,11 @@ pub(super) fn radix2_program(
         }
     }
     // The butterflies rewrite the output buffer in place across stages, so the
-    // transform is only defined when one workgroup runs it. The backend derives
-    // a 1D grid from the output length, which would otherwise give every
-    // workgroup its own copy of the same read-modify-write chain.
-    let body = vec![Node::if_then(Expr::is_first_workgroup(), body)];
+    // transform is only defined when one invocation runs it. The backend derives
+    // a 1D grid from the output length, and a fusion widens this arm to the fused
+    // workgroup, either of which would otherwise give every invocation its own
+    // copy of the same read-modify-write chain.
+    let body = vec![Node::if_then(Expr::is_first_invocation(), body)];
     let entry = if op_id == OP_ID {
         wrap_anonymous_region(OP_ID, body)
     } else {
