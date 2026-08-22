@@ -69,43 +69,38 @@ pub fn filter_chain(
     body.extend(clamp255("b"));
 
     // 2. Contrast: channel = ((channel - 128) * contrast >> 16) + 128
-    // To handle underflow (channel < 128), use select-based signed math:
-    //   if channel >= 128:
-    //     delta = (channel - 128) * contrast >> 16
-    //     result = 128 + delta
-    //   else:
-    //     delta = (128 - channel) * contrast >> 16
-    //     result = 128 - delta
+    // Both arms of a select evaluate, so a reverse subtraction written as the
+    // unused arm still wraps. Split the distance from the midpoint into two
+    // non-negative parts, exactly one of which is nonzero, and no intermediate
+    // leaves range: `up` scales the above-midpoint distance, `down` the below.
     let contrast_adjust = |ch: &str| -> Vec<Node> {
-        let delta_pos = format!("{ch}_cdp");
-        let delta_neg = format!("{ch}_cdn");
+        let up = format!("{ch}_cup");
+        let down = format!("{ch}_cdn");
+        let base = format!("{ch}_cbase");
         vec![
             Node::let_bind(
-                &delta_pos,
+                &up,
                 super::fixed_mul_16_16_unsigned_expr(
-                    Expr::sub(Expr::var(ch), Expr::u32(128)),
+                    Expr::sub(Expr::max(Expr::var(ch), Expr::u32(128)), Expr::u32(128)),
                     Expr::u32(ct_fp),
                 ),
             ),
             Node::let_bind(
-                &delta_neg,
+                &down,
                 super::fixed_mul_16_16_unsigned_expr(
-                    Expr::sub(Expr::u32(128), Expr::var(ch)),
+                    Expr::sub(Expr::u32(128), Expr::min(Expr::var(ch), Expr::u32(128))),
                     Expr::u32(ct_fp),
                 ),
             ),
-            Node::assign(
-                ch,
+            Node::let_bind(
+                &base,
                 Expr::select(
-                    Expr::ge(Expr::var(ch), Expr::u32(128)),
-                    Expr::add(Expr::u32(128), Expr::var(&delta_pos)),
-                    Expr::select(
-                        Expr::ge(Expr::u32(128), Expr::var(&delta_neg)),
-                        Expr::sub(Expr::u32(128), Expr::var(&delta_neg)),
-                        Expr::u32(0),
-                    ),
+                    Expr::ge(Expr::u32(128), Expr::var(&down)),
+                    Expr::sub(Expr::u32(128), Expr::var(&down)),
+                    Expr::u32(0),
                 ),
             ),
+            Node::assign(ch, Expr::add(Expr::var(&base), Expr::var(&up))),
         ]
     };
     body.extend(contrast_adjust("r"));
@@ -127,38 +122,42 @@ pub fn filter_chain(
         ),
     ));
 
+    // 3. Saturate: luma + (channel - luma) * saturate, in the same two-part
+    // form as the contrast stage so no intermediate underflows.
     let saturate_ch = |ch: &str| -> Vec<Node> {
-        // channel = luma + (channel - luma) * sat >> 16
-        // Handle underflow with select.
-        let delta = format!("{ch}_sd");
+        let up = format!("{ch}_sup");
+        let down = format!("{ch}_sdn");
+        let base = format!("{ch}_sbase");
         vec![
             Node::let_bind(
-                &delta,
-                Expr::select(
-                    Expr::ge(Expr::var(ch), Expr::var("luma")),
-                    super::fixed_mul_16_16_unsigned_expr(
-                        Expr::sub(Expr::var(ch), Expr::var("luma")),
-                        Expr::u32(sat_fp),
+                &up,
+                super::fixed_mul_16_16_unsigned_expr(
+                    Expr::sub(
+                        Expr::max(Expr::var(ch), Expr::var("luma")),
+                        Expr::var("luma"),
                     ),
-                    // channel < luma: negative delta
-                    super::fixed_mul_16_16_unsigned_expr(
-                        Expr::sub(Expr::var("luma"), Expr::var(ch)),
-                        Expr::u32(sat_fp),
-                    ),
+                    Expr::u32(sat_fp),
                 ),
             ),
-            Node::assign(
-                ch,
-                Expr::select(
-                    Expr::ge(Expr::var(ch), Expr::var("luma")),
-                    Expr::add(Expr::var("luma"), Expr::var(&delta)),
-                    Expr::select(
-                        Expr::ge(Expr::var("luma"), Expr::var(&delta)),
-                        Expr::sub(Expr::var("luma"), Expr::var(&delta)),
-                        Expr::u32(0),
+            Node::let_bind(
+                &down,
+                super::fixed_mul_16_16_unsigned_expr(
+                    Expr::sub(
+                        Expr::var("luma"),
+                        Expr::min(Expr::var(ch), Expr::var("luma")),
                     ),
+                    Expr::u32(sat_fp),
                 ),
             ),
+            Node::let_bind(
+                &base,
+                Expr::select(
+                    Expr::ge(Expr::var("luma"), Expr::var(&down)),
+                    Expr::sub(Expr::var("luma"), Expr::var(&down)),
+                    Expr::u32(0),
+                ),
+            ),
+            Node::assign(ch, Expr::add(Expr::var(&base), Expr::var(&up))),
         ]
     };
     body.extend(saturate_ch("r"));
