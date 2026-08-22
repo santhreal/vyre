@@ -4302,6 +4302,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - docs-references reads every markdown link target as a path claim, so a target
   with no file suffix and a target naming a directory are resolved instead of
   skipped.
+- `decode::ziftsieve_literal_copy` took its copy length straight from the
+  per-sequence length buffer, so a producer value outside the contract asked
+  for up to four billion iterations: hours in the reference interpreter and a
+  watchdog reset on a device, with every one of those iterations discarded by
+  the bounds guard it already carried. The trip count is now clamped by the
+  extents of the input and output buffers, which is the point past which no
+  iteration can read or write anything, so the emitted result is unchanged for
+  every in-contract block and a hostile length costs the length of the smaller
+  buffer instead of the value in the block.
 - The reader that finds which file defines an operation no longer loses every
   literal after a char literal holding a double quote, so a lexer is placed
   where it is registered.
