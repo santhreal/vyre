@@ -42,8 +42,15 @@ fn strided_accumulate_program() -> Program {
             |idx, acc| Expr::add(acc, Expr::load("values", idx)),
         ),
         Node::barrier(),
+        // The result is one value, so exactly one workgroup may write it. A
+        // dispatch is rounded up to whole workgroups, and a second workgroup
+        // reduces lanes outside the input: its accumulator is the identity, and
+        // an unguarded store would publish that instead of the answer.
         Node::if_then(
-            Expr::eq(Expr::var("local"), Expr::u32(0)),
+            Expr::and(
+                Expr::is_first_workgroup(),
+                Expr::eq(Expr::var("local"), Expr::u32(0)),
+            ),
             vec![Node::store(
                 "out",
                 Expr::u32(0),

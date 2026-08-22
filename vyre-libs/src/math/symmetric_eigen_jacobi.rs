@@ -84,10 +84,13 @@ pub fn jacobi_sweeps(n: u32) -> u32 {
 ///
 /// The body binds `local` and reduces the pivot through the scratch of
 /// [`jacobi_scratch_buffers`], so a program that splices it declares those buffers and runs
-/// [`jacobi_workgroup`] lanes. It guards its own writes: the identity seeding, the rotation, the
-/// sign pass and the diagonal read-out run on lane 0 of the first workgroup, and every barrier sits
-/// outside those guards, so a wider dispatch computes the same pivot without a second workgroup
-/// touching `a`.
+/// [`jacobi_workgroup`] lanes. One workgroup owns the whole sweep: the identity seeding, the
+/// sign pass and the diagonal read-out spread across that workgroup's lanes and the rotation
+/// runs on its lane 0. A second workgroup would re-seed `V` to the identity after the first
+/// finished and then rotate nothing, since the rotation is lane-guarded, publishing an identity
+/// eigenbasis over the answer. A dispatch is rounded up to whole workgroups, so the workgroup
+/// guard is what keeps the extra ones out; it is uniform inside a workgroup, which is what lets
+/// the barriers sit inside it.
 #[must_use]
 pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> Vec<Node> {
     let sweeps = jacobi_sweeps(n);
@@ -150,18 +153,21 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
         Node::barrier(),
     ]);
 
-    vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        // The accumulator seed, the sign canonicalization and the diagonal
-        // read-out each touch cells no other lane touches, so they run across
-        // the workgroup at the width this program declares. Only the rotation
-        // is serial, and it is serial because the next sweep reads it.
-        matrix_identity_fill_region(OP_ID, eigenvectors, n, LANES),
-        Node::barrier(),
-        Node::loop_for("jac_sweep", Expr::u32(0), Expr::u32(sweeps), sweep),
-        eigenvector_column_sign_region(OP_ID, eigenvectors, n, LANES),
-        matrix_diagonal_extract_region(OP_ID, a, eigenvalues, n, LANES),
-    ]
+    vec![Node::if_then(
+        Expr::is_first_workgroup(),
+        vec![
+            Node::let_bind("local", Expr::LocalId { axis: 0 }),
+            // The accumulator seed, the sign canonicalization and the diagonal
+            // read-out each touch cells no other lane touches, so they run across
+            // the workgroup at the width this program declares. Only the rotation
+            // is serial, and it is serial because the next sweep reads it.
+            matrix_identity_fill_region(OP_ID, eigenvectors, n, LANES),
+            Node::barrier(),
+            Node::loop_for("jac_sweep", Expr::u32(0), Expr::u32(sweeps), sweep),
+            eigenvector_column_sign_region(OP_ID, eigenvectors, n, LANES),
+            matrix_diagonal_extract_region(OP_ID, a, eigenvalues, n, LANES),
+        ],
+    )]
 }
 
 /// Emit [`jacobi_eigen_body`] as a child region of `parent_op_id`.
@@ -200,6 +206,8 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
         Err(message) => return trap_program(OP_ID, Some((eigenvalues, DataType::F32)), message),
     };
 
+    // The body owns the workgroup guard, so a wider dispatch cannot re-seed the
+    // eigenbasis. Nothing is added here.
     let body = jacobi_eigen_body(a, eigenvectors, eigenvalues, n);
     let mut buffers = vec![
         BufferDecl::storage(a, 0, BufferAccess::ReadWrite, DataType::F32).with_count(cells),
@@ -208,8 +216,6 @@ pub fn symmetric_eigen_jacobi(a: &str, eigenvectors: &str, eigenvalues: &str, n:
         BufferDecl::storage(eigenvalues, 2, BufferAccess::ReadWrite, DataType::F32).with_count(n),
     ];
     buffers.extend(jacobi_scratch_buffers());
-    // No lane guard here: the body guards the phases that write and leaves the barriers uniform, so
-    // a guard around the whole thing would put every barrier inside a non-uniform branch.
     Program::wrapped(
         buffers,
         jacobi_workgroup(),
@@ -308,6 +314,31 @@ inventory::submit! {
 mod tests {
     use super::*;
 
+    /// The nodes one workgroup runs, with the guard that keeps every other
+    /// workgroup out asserted on the way in.
+    ///
+    /// The phase-placement tests below read the scope where the phases live, so
+    /// they would pass just as well against a body that dropped the guard. This
+    /// is where that guard is pinned.
+    fn workgroup_scope(body: &[Node]) -> &[Node] {
+        assert_eq!(
+            body.len(),
+            1,
+            "Fix: the body must be exactly the workgroup guard, got {body:?}"
+        );
+        match &body[0] {
+            Node::If { cond, then, .. } => {
+                assert_eq!(
+                    *cond,
+                    Expr::is_first_workgroup(),
+                    "Fix: the sweep must be guarded on the first workgroup, or a wider dispatch re-seeds the eigenbasis"
+                );
+                then
+            }
+            other => panic!("Fix: the body must open with the workgroup guard, got {other:?}"),
+        }
+    }
+
     #[test]
     fn zero_order_is_rejected() {
         let program = symmetric_eigen_jacobi("a", "evec", "eval", 0);
@@ -345,8 +376,10 @@ mod tests {
 
     #[test]
     fn jacobi_cooperative_phases_not_serialized() {
-        let body = jacobi_eigen_body("a", "evec", "eval", 4);
-        // Identity fill region, column sign region, and diagonal extract region must be at top-level body
+        let whole = jacobi_eigen_body("a", "evec", "eval", 4);
+        let body = workgroup_scope(&whole);
+        // The cooperative phases spread across the owning workgroup's lanes, so
+        // they sit in that scope and not inside the lane-serial guard.
         let has_identity = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_identity_fill::OP_ID));
         let has_sign = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::eigenvector_column_sign::OP_ID));
         let has_diagonal = body.iter().any(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_diagonal_extract::OP_ID));
@@ -377,7 +410,8 @@ mod tests {
 
     #[test]
     fn jacobi_barriers_placed_correctly() {
-        let body = jacobi_eigen_body("a", "evec", "eval", 4);
+        let whole = jacobi_eigen_body("a", "evec", "eval", 4);
+        let body = workgroup_scope(&whole);
         // Position of identity fill and following barrier
         let identity_idx = body.iter().position(|node| matches!(node, Node::Region { generator, .. } if generator.as_str() == crate::math::matrix_identity_fill::OP_ID)).expect("identity fill");
         assert!(
