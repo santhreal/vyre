@@ -258,8 +258,16 @@ fn main(
 "#;
 
 /// Build a long-running program that requires measurable execution time.
+///
+/// One invocation per output word, so the element count also decides the grid.
+/// WebGPU admits at most 65535 workgroups per axis and this program declares a
+/// 1D launch, so the count has to stay inside that product or every dispatch of
+/// it is refused before it reaches the device.
 pub(crate) fn long_running_program() -> Program {
-    const OUTPUT_WORDS: u32 = 16 * 1024 * 1024;
+    const WORKGROUP_INVOCATIONS: u32 = 256;
+    const MAX_WORKGROUPS_PER_AXIS: u32 = 65_535;
+    const OUTPUT_WORDS: u32 = 8 * 1024 * 1024;
+    const _: () = assert!(OUTPUT_WORDS.div_ceil(WORKGROUP_INVOCATIONS) <= MAX_WORKGROUPS_PER_AXIS);
     let mut body = Vec::with_capacity(515);
     body.push(Node::let_bind("idx", Expr::gid_x()));
     body.push(Node::let_bind("acc", Expr::var("idx")));
@@ -283,7 +291,7 @@ pub(crate) fn long_running_program() -> Program {
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(OUTPUT_WORDS)
             .with_output_byte_range(0..4)],
-        [256, 1, 1],
+        [WORKGROUP_INVOCATIONS, 1, 1],
         body,
     )
 }
