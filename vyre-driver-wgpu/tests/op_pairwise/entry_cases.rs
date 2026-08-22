@@ -1,4 +1,5 @@
 use super::all_entries_vec::*;
+use super::harness::bounded_oracle::{bounded_oracle, oracle_deadline, Oracle};
 use super::harness::f32_to_ordered;
 use proptest::prelude::*;
 use std::collections::BTreeMap;
@@ -456,8 +457,49 @@ fn try_run_reference(
         .map_err(|error| format!("Fix: {op_a} -> {op_b} reference_eval failed: {error}"))
 }
 
-fn run_reference(op_a: &str, op_b: &str, program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    try_run_reference(op_a, op_b, program, inputs).unwrap_or_else(|error| panic!("{error}"))
+/// Run the reference on a fused program under the shared oracle ceiling.
+///
+/// A fusion wires a producer's output into a consumer's input, so a consumer
+/// whose loop trip count is read from that input takes its bound from computed
+/// data rather than from a fixture. One such pair held this target for over an
+/// hour with the interpreter at 100% of one core and the device idle, and the
+/// job it runs in was cancelled with no finding. The ceiling turns that into a
+/// failure naming the pair.
+fn bounded_run_reference(
+    op_a: &'static str,
+    op_b: &'static str,
+    program: &Program,
+    inputs: &[Vec<u8>],
+) -> Oracle<Vec<Vec<u8>>> {
+    let program = program.clone();
+    let inputs = inputs.to_vec();
+    bounded_oracle(move || try_run_reference(op_a, op_b, &program, &inputs))
+}
+
+/// Fail with the pair and the case that passed the ceiling.
+fn oracle_timeout(op_a: &str, op_b: &str, case: &str) -> String {
+    format!(
+        "Fix: {op_a} -> {op_b} {case}: the reference did not answer inside {:?}. The fused \
+         program's work is bounded by a value the producer computed, so bound the trip count by \
+         the extents of the buffer the body indexes; a count taken from data spins on the device \
+         as well as here.",
+        oracle_deadline()
+    )
+}
+
+/// The named-pair fixtures require an answer, so a decline or a timeout is a
+/// failure rather than a case with no oracle.
+fn run_reference(
+    op_a: &'static str,
+    op_b: &'static str,
+    program: &Program,
+    inputs: &[Vec<u8>],
+) -> Vec<Vec<u8>> {
+    match bounded_run_reference(op_a, op_b, program, inputs) {
+        Oracle::Answered(outputs) => outputs,
+        Oracle::Declined(reason) => panic!("{reason}"),
+        Oracle::TimedOut => panic!("{}", oracle_timeout(op_a, op_b, "named-pair fixture")),
+    }
 }
 
 fn run_gpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
@@ -848,6 +890,12 @@ fn assert_outputs_equal(
 // Proptest configuration
 // ------------------------------------------------------------------
 
+/// Cases per proptest, and a ceiling on how long a failure may be shrunk.
+///
+/// Every case here compiles a fused program, dispatches it and evaluates the
+/// reference, so a shrink pass costs as much as a case. Shrinking a case that
+/// passed the oracle ceiling would cost the ceiling again per attempt, which is
+/// how a bounded failure turns back into a job that never reports.
 fn proptest_config() -> ProptestConfig {
     let cases = if std::env::var("CI_EXHAUSTIVE").is_ok() {
         50_000
@@ -856,6 +904,7 @@ fn proptest_config() -> ProptestConfig {
     };
     ProptestConfig {
         cases,
+        max_shrink_time: 60_000,
         ..ProptestConfig::default()
     }
 }
@@ -904,7 +953,13 @@ proptest! {
         let fused_inputs = build_fused_inputs(&comp, a_case, b_case);
 
         // CPU reference oracle.
-        let cpu = run_reference(a.id, b.id, composed, &fused_inputs);
+        let cpu = match bounded_run_reference(a.id, b.id, composed, &fused_inputs) {
+            Oracle::Answered(cpu) => cpu,
+            Oracle::Declined(reason) => panic!("{reason}"),
+            Oracle::TimedOut => {
+                panic!("{}", oracle_timeout(a.id, b.id, &format!("case {case_idx}")))
+            }
+        };
 
         // GPU backend.
         let gpu = match run_gpu(composed, &fused_inputs) {
@@ -995,8 +1050,8 @@ proptest! {
 
                 let fused_inputs = build_fused_inputs(&comp, a_case, b_case);
 
-                match try_run_reference(a.id, b.id, composed, &fused_inputs) {
-                    Ok(cpu) => {
+                match bounded_run_reference(a.id, b.id, composed, &fused_inputs) {
+                    Oracle::Answered(cpu) => {
                         let gpu = run_gpu(composed, &fused_inputs).unwrap_or_else(|reason| {
                             panic!(
                                 "Fix: {} -> {} GPU dispatch failed in adversarial pairwise parity: {reason}",
@@ -1015,7 +1070,7 @@ proptest! {
                         }
                         .assert_outputs_equal(tolerance, &output_elements(composed));
                     }
-                    Err(reason) => {
+                    Oracle::Declined(reason) => {
                         assert!(
                             reason.contains("Fix:"),
                             "Fix: {} -> {}: reference rejection missing actionable hint: {}",
@@ -1023,6 +1078,9 @@ proptest! {
                             b.id,
                             reason
                         );
+                    }
+                    Oracle::TimedOut => {
+                        panic!("{}", oracle_timeout(a.id, b.id, &format!("case {case_idx}")));
                     }
                 }
             }
@@ -1146,4 +1204,56 @@ fn a_self_exclusive_parser_is_not_piped_into_itself() {
         reason.contains("self-exclusive") || reason.contains("non-composable"),
         "Fix: the refusal must name the self-exclusivity contract: {reason}"
     );
+}
+
+/// A fused `top_k` must select the same lane on every path it runs on.
+///
+/// Measured divergence this locks out: `nn::top_k -> bitset::xor_into` returned
+/// index 6 from the reference and index 7 from the device at the same output
+/// offset, on a fixture whose top values tie. A tie broken by arrival order is
+/// a silent wrong answer: the buffer is populated, the shapes match, and only
+/// the lane identity is wrong, so nothing but a differential sees it.
+///
+/// Every witness pair runs, the pre-lowering optimizer is compared as its own
+/// path, and each dispatch is repeated: a selector whose extra invocations all
+/// run the same insertion is wrong intermittently, so one green dispatch proves
+/// nothing. The geometry is deliberately not pinned. An invocation-exact arm is
+/// legal at any width, so the contract is the selected lane, not the workgroup
+/// the fusion chose.
+#[test]
+fn top_k_into_bitset_xor_selects_the_same_lane_on_every_path() {
+    let a = entry_named("vyre-libs::nn::top_k");
+    let b = entry_named("vyre-libs::bitset::xor_into");
+    let composition = try_compose(a, b).expect("Fix: top_k must compose with bitset::xor_into");
+    let optimized = vyre_foundation::optimizer::optimize(composition.program.clone())
+        .expect("registered optimizer must converge");
+    let elements = output_elements(&composition.program);
+    let tolerance = fp_parity::effective_tolerance(a.id, &composition.program)
+        .max(fp_parity::effective_tolerance(b.id, &composition.program));
+
+    for a_case in entry_cases(a) {
+        for b_case in entry_cases(b) {
+            let inputs = build_fused_inputs(&composition, &a_case, &b_case);
+            let expected = run_reference(a.id, b.id, &composition.program, &inputs);
+            assert_outputs_equal(
+                a.id,
+                "pre-lowering optimizer",
+                tolerance,
+                &elements,
+                &expected,
+                &run_reference(a.id, b.id, &optimized, &inputs),
+            );
+            for repeat in 0..8 {
+                assert_outputs_equal(
+                    a.id,
+                    &format!("WGPU dispatch {repeat}"),
+                    tolerance,
+                    &elements,
+                    &expected,
+                    &run_gpu(&composition.program, &inputs)
+                        .expect("Fix: top_k fusion must dispatch"),
+                );
+            }
+        }
+    }
 }

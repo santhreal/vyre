@@ -2,6 +2,7 @@
 // Integration test module for the containing Vyre package.
 #![allow(dead_code, unused_imports)]
 
+pub(crate) mod bounded_oracle;
 pub(crate) mod every_op_random_inputs;
 pub(crate) mod self_optimizer;
 

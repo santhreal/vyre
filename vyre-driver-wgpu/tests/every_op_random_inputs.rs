@@ -9,9 +9,7 @@
 #![cfg(feature = "device-tests")]
 #![allow(clippy::filter_map_bool_then, clippy::unnecessary_map_or)]
 #![allow(deprecated)]
-use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::sync::OnceLock;
-use std::time::Duration;
 
 use proptest::test_runner::{Config, TestRunner};
 use vyre::ir::Program;
@@ -24,6 +22,7 @@ use vyre_reference::value::Value;
 
 mod harness;
 
+use harness::bounded_oracle::{bounded_oracle, oracle_deadline, Oracle};
 use harness::every_op_random_inputs::{
     compare_outputs, gpu_dispatch_inputs, is_program_graph_frontier, missing_capability_reason,
     op_seed, random_amg_v_cycle_inputs, random_buffer_for, random_program_graph_frontier,
@@ -39,61 +38,15 @@ fn require_backend() -> &'static WgpuBackend {
     })
 }
 
-/// Wall-clock ceiling on one oracle evaluation, in seconds.
-///
-/// The reference is the only oracle in this sweep, and a program whose loop
-/// trip count is read from its own input runs for as long as that value says.
-/// One random `u32` is enough to ask for four billion iterations, which turned
-/// this target from a suite into a process that never returned. The ceiling is
-/// far above the milliseconds every bounded op needs on the fixture extents.
-/// `VYRE_ORACLE_DEADLINE_SECS` raises it, which is how a suspected offender is
-/// measured rather than guessed at.
-const ORACLE_DEADLINE_SECS: u64 = 20;
-
-/// The ceiling this run enforces.
-fn oracle_deadline() -> Duration {
-    let seconds = std::env::var("VYRE_ORACLE_DEADLINE_SECS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .filter(|&value| value > 0)
-        .unwrap_or(ORACLE_DEADLINE_SECS);
-    Duration::from_secs(seconds)
-}
-
-/// What the oracle said about one random case.
-enum Oracle {
-    /// Output bytes to compare against the device.
-    Answered(Vec<Vec<u8>>),
-    /// Rejected or panicked, so this input has no oracle and is not compared.
-    Declined,
-    /// Still running at the ceiling, which is a defect in the program under
-    /// test, not a property of the input.
-    TimedOut,
-}
-
-/// Evaluate one case on the reference, bounded by [`oracle_deadline`].
-///
-/// The evaluation runs on its own thread so a trip count taken from input data
-/// is reported by name instead of holding the whole target. A thread past the
-/// ceiling is left to the process exit: interrupting the interpreter mid-step
-/// would need a cancellation path the oracle deliberately does not have.
-fn bounded_reference_eval(program: &Program, inputs: &[Value]) -> Oracle {
-    let (sender, receiver) = channel();
+/// Evaluate one case on the reference, bounded by the shared oracle ceiling.
+fn bounded_reference_eval(program: &Program, inputs: &[Value]) -> Oracle<Vec<Vec<u8>>> {
     let program = program.clone();
     let inputs = inputs.to_vec();
-    std::thread::spawn(move || {
-        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            vyre_reference::reference_eval(&program, &inputs)
-        }));
-        let _ = sender.send(outcome);
-    });
-    match receiver.recv_timeout(oracle_deadline()) {
-        Ok(Ok(Ok(outputs))) => {
-            Oracle::Answered(outputs.into_iter().map(|value| value.to_bytes()).collect())
-        }
-        Ok(Ok(Err(_)) | Err(_)) | Err(RecvTimeoutError::Disconnected) => Oracle::Declined,
-        Err(RecvTimeoutError::Timeout) => Oracle::TimedOut,
-    }
+    bounded_oracle(move || {
+        vyre_reference::reference_eval(&program, &inputs)
+            .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
+            .map_err(|error| error.to_string())
+    })
 }
 
 #[test]
@@ -197,7 +150,7 @@ fn every_op_random_input_stress() {
             let cpu_outputs = match bounded_reference_eval(&program, &cpu_values) {
                 Oracle::Answered(outputs) => outputs,
                 // Reference rejected or panicked  -  no oracle for this input.
-                Oracle::Declined => continue,
+                Oracle::Declined(_) => continue,
                 Oracle::TimedOut => {
                     op_timeouts += 1;
                     failures.push(format!(
