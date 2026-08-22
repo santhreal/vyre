@@ -197,9 +197,12 @@ mod tests {
         let [Node::Region { body, .. }] = program.entry() else {
             panic!("Fix: blake3_compress must remain a single provenance Region.");
         };
+        let [Node::If { then, .. }] = body.as_slice() else {
+            panic!("Fix: blake3_compress must keep its body under one first-workgroup guard.");
+        };
 
         assert_eq!(
-            body.len(),
+            then.len(),
             BLAKE3_COMPRESS_BODY_NODE_COUNT,
             "Fix: BLAKE3 compress body reservation must stay exact as the top-level IR shape evolves."
         );

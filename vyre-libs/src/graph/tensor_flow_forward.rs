@@ -306,9 +306,12 @@ pub fn tensor_flow_propagate_edges_program() -> Program {
             BufferDecl::storage("tout", 3, BufferAccess::ReadWrite, DataType::U32).with_count(4),
         ],
         [1, 1, 1],
+        // The sweep walks every edge from a fixed source and writes the shared
+        // tensor words, so one workgroup owns it. The grid a backend derives
+        // from the output length would repeat the sweep per workgroup.
         vec![wrap_anonymous_region(
             TENSOR_FLOW_PROPAGATE_EDGES_OP_ID,
-            body,
+            vec![Node::if_then(Expr::is_first_workgroup(), body)],
         )],
     )
 }

@@ -45,9 +45,14 @@ pub fn softmax_top_k(
     Program::wrapped(
         softmax_top_k_buffers(scores, out_indices, out_weights, n, k),
         [1, 1, 1],
+        // The scan is serial over `n` and keeps its running best in read-write
+        // scratch, so one workgroup owns it, for the reason top_k states.
         vec![wrap_anonymous_region(
             OP_ID,
-            softmax_top_k_body(scores, out_indices, out_weights, n, k),
+            vec![Node::if_then(
+                Expr::is_first_workgroup(),
+                softmax_top_k_body(scores, out_indices, out_weights, n, k),
+            )],
         )],
     )
 }

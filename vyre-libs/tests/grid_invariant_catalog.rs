@@ -1,4 +1,4 @@
-//! A library composition that needs more than one workgroup names the grid.
+//! A registered program that needs more than one workgroup names the grid.
 //!
 //! WHY: a concrete backend derives a 1D grid from the largest writable buffer,
 //! so a program whose writable footprint exceeds one workgroup's lanes runs in
@@ -10,15 +10,17 @@
 //! it worse, because each workgroup then recomputes the whole pipeline from its
 //! own copy.
 //!
-//! The population comes from the library catalog at run time, so a new
-//! composition with this shape turns the suite red until it either indexes by a
-//! grid-varying id or confines itself to workgroup zero.
+//! The population is every operation this build registers, read at run time, so
+//! a new composition or primitive witness with this shape turns the suite red
+//! until it either indexes by a grid-varying id or confines itself to workgroup
+//! zero.
 //!
 //! What this does not prove: that a program naming a grid-varying index
 //! partitions its output correctly. It rejects the shape that cannot be correct
 //! under any grid.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::visit::walk_exprs;
 
 fn lanes(program: &Program) -> u64 {
@@ -102,25 +104,29 @@ fn a_first_workgroup_guard_counts_as_naming_the_grid() {
 }
 
 #[test]
-fn every_multi_workgroup_catalog_program_names_a_grid_varying_index() {
+fn every_multi_workgroup_registered_program_names_a_grid_varying_index() {
     let mut examined = Vec::new();
     let mut offenders = Vec::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
-        let program = entry
-            .program()
-            .expect("Fix: a library catalog entry must build its neutral Program");
+    // Every operation this build registers, whatever tier or feature put it
+    // there, not just the library view: a primitive witness is dispatched the
+    // same way.
+    for entry in OperationRegistry::global().iter() {
+        let id = entry.id;
+        let Some(program) = entry.program() else {
+            continue;
+        };
         if max_writable_count(&program) <= lanes(&program) {
             continue;
         }
-        examined.push(entry.id);
+        examined.push(id);
         if !names_grid_varying_index(&program) {
-            offenders.push(entry.id);
+            offenders.push(id);
         }
     }
 
     assert!(
         !examined.is_empty(),
-        "Fix: the linked library features must publish at least one composition whose writable footprint exceeds one workgroup, or this contract proves nothing"
+        "Fix: this build must register at least one operation whose writable footprint exceeds one workgroup, or this contract proves nothing"
     );
     assert!(
         offenders.is_empty(),

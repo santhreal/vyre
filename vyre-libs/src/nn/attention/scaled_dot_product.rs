@@ -606,7 +606,14 @@ fn attention_reference_program(
             BufferDecl::output(out, 3, DataType::F32).with_count(elements),
         ],
         workgroup,
-        vec![wrap_region(generator, vec![outer_loop], None)],
+        // The row loop writes every output element, so one workgroup owns it.
+        // The grid a backend derives from the output length would otherwise
+        // repeat the whole attention pass in every workgroup.
+        vec![wrap_region(
+            generator,
+            vec![Node::if_then(Expr::is_first_workgroup(), vec![outer_loop])],
+            None,
+        )],
     ))
 }
 

@@ -54,7 +54,14 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
             BufferDecl::read_write(BEST_IDXS, 3, DataType::U32).with_count(k),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region("vyre-libs::nn::top_k", body)],
+        // The selection scan is serial over `n` and keeps its running best in
+        // read-write scratch, so one workgroup owns it. The grid a backend
+        // derives from the output length would give every workgroup its own
+        // pass over the same scratch and the same output words.
+        vec![wrap_anonymous_region(
+            "vyre-libs::nn::top_k",
+            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+        )],
     )
 }
 

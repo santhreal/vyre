@@ -491,6 +491,9 @@ fn tree_walk_program(
     out_words: u32,
     body: Vec<Node>,
 ) -> Program {
+    // The walk is serial: one lane climbs the tree and appends to `out`. One
+    // workgroup owns it, because the grid a backend derives from the output
+    // length would run the whole walk once per workgroup.
     Program::wrapped(
         vec![
             BufferDecl::storage(nodes, 0, BufferAccess::ReadOnly, DataType::U32)
@@ -499,7 +502,10 @@ fn tree_walk_program(
                 .with_count(out_words),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous_region(op_id, body)],
+        vec![wrap_anonymous_region(
+            op_id,
+            vec![Node::if_then(Expr::is_first_workgroup(), body)],
+        )],
     )
 }
 

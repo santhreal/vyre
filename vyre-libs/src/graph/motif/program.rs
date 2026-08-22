@@ -154,31 +154,35 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
         materialize,
     ));
 
-    // PHASE7_GRAPH C2: motif is fundamentally serial  -  one thread loops
-    // over every motif edge in order and accumulates `matched_edges`.
-    // Using a [256,1,1] workgroup with a `gid_x() == 0` gate burns 255
-    // idle lanes per workgroup. Dispatch a single 1-lane workgroup
-    // instead so the wasted parallelism is gone, and drop the redundant
-    // gate.
+    // Motif matching is serial: one lane loops over every motif edge in order
+    // and accumulates `matched_edges`. A [256,1,1] workgroup would burn 255
+    // idle lanes, so the workgroup is one lane wide. That does not make the
+    // launch single-workgroup: a backend derives the grid from the writable
+    // output length, so every node gets a workgroup and each one would repeat
+    // the whole scan over the shared hit and witness buffers. The first
+    // workgroup owns the scan.
     Program::wrapped(
         buffers,
         MOTIF_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(
             OP_ID,
-            vec![
-                Node::loop_for(
-                    "node",
-                    Expr::u32(0),
-                    Expr::u32(shape.node_count),
-                    clear_outputs,
-                ),
-                Node::let_bind("matched_edges", Expr::u32(0)),
-                Node::Block(scan_edges),
-                Node::if_then(
-                    Expr::eq(Expr::var("matched_edges"), Expr::u32(edge_count)),
-                    publish_full_match,
-                ),
-            ],
+            vec![Node::if_then(
+                Expr::is_first_workgroup(),
+                vec![
+                    Node::loop_for(
+                        "node",
+                        Expr::u32(0),
+                        Expr::u32(shape.node_count),
+                        clear_outputs,
+                    ),
+                    Node::let_bind("matched_edges", Expr::u32(0)),
+                    Node::Block(scan_edges),
+                    Node::if_then(
+                        Expr::eq(Expr::var("matched_edges"), Expr::u32(edge_count)),
+                        publish_full_match,
+                    ),
+                ],
+            )],
         )],
     )
 }
