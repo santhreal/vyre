@@ -33,7 +33,9 @@ mod fuse;
 #[path = "../../../tests/internal/execution_plan/fusion/mod.rs"]
 mod tests;
 
-pub use fuse::{fuse_programs, fuse_programs_vec, merge_programs_shared};
+pub use fuse::{
+    fuse_programs, fuse_programs_vec, merge_programs_shared, relies_on_single_invocation_workgroup,
+};
 
 /// Error returned when a fusion batch cannot be combined safely.
 #[derive(Debug, Clone, PartialEq, Eq)]

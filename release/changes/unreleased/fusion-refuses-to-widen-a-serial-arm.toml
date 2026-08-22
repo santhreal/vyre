@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Fusion refuses to widen an arm that keeps a running result in read-write storage under a guard on workgroup identity alone, the third unsafe shape beside workgroup memory and barriers."

@@ -3,8 +3,8 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::execution_plan::SchedulingPolicy;
-use crate::ir::{BufferAccess, BufferDecl, Ident, Node, Program};
-use crate::visit::any_descendant;
+use crate::ir::{BinOp, BufferAccess, BufferDecl, Expr, Ident, Node, Program};
+use crate::visit::{any_descendant, for_each_expr};
 
 use super::alpha_rename::{multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer};
 use super::collectors::collect_buffer_targets;
@@ -385,6 +385,16 @@ fn reject_non_composable_self_fusion(programs: &[Program]) -> Result<(), FusionE
 /// reached by every invocation in the workgroup is undefined, and in practice
 /// the result is intermittently wrong rather than reliably wrong.
 ///
+/// The third shape needs no barrier and no workgroup memory. An arm can hold
+/// its running result in read-write storage and admit it with a guard on its
+/// workgroup identity alone, which is exact only while that workgroup is one
+/// invocation wide. Measured: `nn::top_k` declares `[1, 1, 1]` and guards its
+/// insertion scan on `workgroup_id.x == 0`; fused behind a 256-wide
+/// elementwise arm, all 256 invocations of workgroup 0 ran the same insertion
+/// and the result named one input lane twice. An arm that constrains the
+/// invocation as well, the `workgroup_id.x == 0 && local_id.x == 0` pattern, is
+/// exact under any width and stays fusable.
+///
 /// Failing closed is the only correct answer here. Fusion cannot rewrite the
 /// arm for the wider geometry, and quietly emitting the racy kernel gives the
 /// caller a program that passes most of the time.
@@ -402,11 +412,21 @@ fn reject_workgroup_geometry_change(
             .iter()
             .any(|buf| buf.access() == BufferAccess::Workgroup);
         let synchronizes = has_barrier(prog.entry());
-        let reason = match (uses_workgroup_memory, synchronizes) {
-            (true, true) => "keeps state in workgroup memory and synchronizes its workgroup",
-            (true, false) => "keeps state in workgroup memory sized for its own workgroup",
-            (false, true) => "synchronizes its workgroup with a barrier",
-            (false, false) => continue,
+        let serial_under_workgroup_guard = relies_on_single_invocation_workgroup(prog);
+        let reason = match (
+            uses_workgroup_memory,
+            synchronizes,
+            serial_under_workgroup_guard,
+        ) {
+            (true, true, _) => "keeps state in workgroup memory and synchronizes its workgroup",
+            (true, false, _) => "keeps state in workgroup memory sized for its own workgroup",
+            (false, true, _) => "synchronizes its workgroup with a barrier",
+            (false, false, true) => {
+                "keeps a running result in read-write storage under a guard on its workgroup \
+                 identity, so every invocation the wider workgroup adds repeats the same \
+                 read-modify-write"
+            }
+            (false, false, false) => continue,
         };
         return Err(FusionError::WorkgroupGeometry(
             FusionWorkgroupGeometryError {
@@ -431,6 +451,71 @@ fn has_barrier(nodes: &[Node]) -> bool {
     nodes
         .iter()
         .any(|node| any_descendant(node, &mut |n| matches!(n, Node::Barrier { .. })))
+}
+
+/// Does this program's serial body rely on being one invocation wide?
+///
+/// A program that keeps a running result in read-write storage and admits that
+/// body on its workgroup identity alone is exact only while the workgroup holds
+/// one invocation. Run it wider, by fusion or by a rebuild, and every added
+/// invocation repeats the same read-modify-write over the same slots. Naming
+/// the invocation instead costs nothing in its own geometry and is exact in
+/// any, so this reports a program that has not done so.
+///
+/// Fusion refuses to widen such an arm, and the op catalog holds every
+/// registered single-invocation program to the invocation-exact form.
+#[must_use]
+pub fn relies_on_single_invocation_workgroup(prog: &Program) -> bool {
+    keeps_state_in_read_write_storage(prog)
+        && guards_on_workgroup_identity(prog)
+        && !guards_on_invocation_identity(prog)
+}
+
+/// Does this arm carry a result across invocations in read-write storage?
+///
+/// Read-write storage is the only place an arm can keep a running value that
+/// outlives one invocation without declaring workgroup memory, so it is what
+/// makes a repeated body observable rather than merely wasteful.
+fn keeps_state_in_read_write_storage(prog: &Program) -> bool {
+    prog.buffers()
+        .iter()
+        .any(|buf| buf.access() == BufferAccess::ReadWrite)
+}
+
+/// Does this arm decide what to run from its workgroup identity?
+fn guards_on_workgroup_identity(prog: &Program) -> bool {
+    compares_against(prog, &|expr| matches!(expr, Expr::WorkgroupId { .. }))
+}
+
+/// Does this arm decide what to run from its invocation identity?
+///
+/// Either id answers: a guard on the local invocation is exact inside one
+/// workgroup, and a guard on the global invocation is exact across the launch.
+fn guards_on_invocation_identity(prog: &Program) -> bool {
+    compares_against(prog, &|expr| {
+        matches!(expr, Expr::LocalId { .. } | Expr::InvocationId { .. })
+    })
+}
+
+/// Is any identity the predicate accepts an operand of a comparison?
+///
+/// A comparison is what turns an id into a decision. An id used as an index is
+/// not a guard: every invocation runs that body and addresses its own element,
+/// which is exactly the shape a wider workgroup is safe for.
+fn compares_against(prog: &Program, is_identity: &dyn Fn(&Expr) -> bool) -> bool {
+    let mut found = false;
+    for_each_expr(prog.entry(), |expr| {
+        if let Expr::BinOp { op, left, right } = expr {
+            if matches!(
+                op,
+                BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge
+            ) && (is_identity(left.as_ref()) || is_identity(right.as_ref()))
+            {
+                found = true;
+            }
+        }
+    });
+    found
 }
 
 fn flatten_arm_entries(
