@@ -32,7 +32,6 @@ The crate lives at `vyre-registry-link`. The `registry-link` owner maintains its
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_registry_link` | `vyre-registry-link/src/lib.rs` | None | `./cargo_full test -p vyre-registry-link` |
-| `test` | `registry_link_rules` | `vyre-registry-link/tests/registry_link_rules.rs` | None | `./cargo_full test -p vyre-registry-link --test registry_link_rules` |
 | `test` | `registry_link_rules` | `vyre-registry-link/tests/registry_link_rules.rs` | `operations` | `./cargo_full test -p vyre-registry-link --test registry_link_rules` |
 
 ## Test classes

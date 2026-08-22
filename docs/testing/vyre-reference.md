@@ -55,7 +55,6 @@ The crate lives at `vyre-reference`. The `reference-semantics` owner maintains i
 | `test` | `f32_comparison_property_contracts` | `vyre-reference/tests/f32_comparison_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test f32_comparison_property_contracts` |
 | `test` | `fixed_width_value_property_contracts` | `vyre-reference/tests/fixed_width_value_property_contracts.rs` | None | `./cargo_full test -p vyre-reference --test fixed_width_value_property_contracts` |
 | `test` | `flat_cpu_input_contract` | `vyre-reference/tests/flat_cpu_input_contract.rs` | None | `./cargo_full test -p vyre-reference --test flat_cpu_input_contract` |
-| `test` | `fnv1a32_zero` | `vyre-reference/tests/fnv1a32_zero.rs` | None | `./cargo_full test -p vyre-reference --test fnv1a32_zero` |
 | `test` | `gap_transcendentals_parity` | `vyre-reference/tests/gap_transcendentals_parity.rs` | None | `./cargo_full test -p vyre-reference --test gap_transcendentals_parity` |
 | `test` | `hashmap_async_and_indirect_contracts` | `vyre-reference/tests/hashmap_async_and_indirect_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_async_and_indirect_contracts` |
 | `test` | `hashmap_buffer_size_contracts` | `vyre-reference/tests/hashmap_buffer_size_contracts.rs` | None | `./cargo_full test -p vyre-reference --test hashmap_buffer_size_contracts` |

@@ -36,18 +36,12 @@ The crate lives at `vyre-primitives`. The `primitive-library` owner maintains it
 | `example` | `wire_harness_smoke` | `vyre-primitives/examples/wire_harness_smoke.rs` | None | `./cargo_full test -p vyre-primitives --example wire_harness_smoke` |
 | `lib` | `vyre_primitives` | `vyre-primitives/src/lib.rs` | None | `./cargo_full test -p vyre-primitives` |
 | `test` | `consumer_boundary` | `vyre-primitives/tests/consumer_boundary.rs` | None | `./cargo_full test -p vyre-primitives --test consumer_boundary` |
-| `test` | `generated_hardware_f32_matrix` | `vyre-primitives/tests/generated_hardware_f32_matrix.rs` | None | `./cargo_full test -p vyre-primitives --test generated_hardware_f32_matrix` |
 | `test` | `generated_hardware_f32_matrix` | `vyre-primitives/tests/generated_hardware_f32_matrix.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test generated_hardware_f32_matrix` |
-| `test` | `generated_hardware_registry_matrix` | `vyre-primitives/tests/generated_hardware_registry_matrix.rs` | None | `./cargo_full test -p vyre-primitives --test generated_hardware_registry_matrix` |
 | `test` | `generated_hardware_registry_matrix` | `vyre-primitives/tests/generated_hardware_registry_matrix.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test generated_hardware_registry_matrix` |
-| `test` | `generated_hardware_u32_matrix` | `vyre-primitives/tests/generated_hardware_u32_matrix.rs` | None | `./cargo_full test -p vyre-primitives --test generated_hardware_u32_matrix` |
 | `test` | `generated_hardware_u32_matrix` | `vyre-primitives/tests/generated_hardware_u32_matrix.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test generated_hardware_u32_matrix` |
-| `test` | `hardware_conform` | `vyre-primitives/tests/hardware_conform.rs` | None | `./cargo_full test -p vyre-primitives --test hardware_conform` |
 | `test` | `hardware_conform` | `vyre-primitives/tests/hardware_conform.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test hardware_conform` |
 | `test` | `hardware_registration_safety_rules` | `vyre-primitives/tests/hardware_registration_safety_rules.rs` | None | `./cargo_full test -p vyre-primitives --test hardware_registration_safety_rules` |
-| `test` | `hardware_registry_contract` | `vyre-primitives/tests/hardware_registry_contract.rs` | None | `./cargo_full test -p vyre-primitives --test hardware_registry_contract` |
 | `test` | `hardware_registry_contract` | `vyre-primitives/tests/hardware_registry_contract.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test hardware_registry_contract` |
-| `test` | `integration` | `vyre-primitives/tests/integration.rs` | None | `./cargo_full test -p vyre-primitives --test integration` |
 | `test` | `integration` | `vyre-primitives/tests/integration.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test integration` |
 | `test` | `proptest_wire_roundtrip` | `vyre-primitives/tests/proptest_wire_roundtrip.rs` | None | `./cargo_full test -p vyre-primitives --test proptest_wire_roundtrip` |
 | `test` | `registry_closure` | `vyre-primitives/tests/registry_closure.rs` | None | `./cargo_full test -p vyre-primitives --test registry_closure` |

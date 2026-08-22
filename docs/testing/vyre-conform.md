@@ -48,17 +48,15 @@ The crate lives at `conform/vyre-conform`. The `conformance` owner maintains its
 | `test` | `lens_buffer_state_contracts` | `conform/vyre-conform/tests/lens_buffer_state_contracts.rs` | None | `./cargo_full test -p vyre-conform --test lens_buffer_state_contracts` |
 | `test` | `lens_fixpoint_contracts` | `conform/vyre-conform/tests/lens_fixpoint_contracts.rs` | None | `./cargo_full test -p vyre-conform --test lens_fixpoint_contracts` |
 | `test` | `lens_parity` | `conform/vyre-conform/tests/lens_parity.rs` | None | `./cargo_full test -p vyre-conform --test lens_parity` |
-| `test` | `lens_parity_device` | `conform/vyre-conform/tests/lens_parity_device.rs` | None | `./cargo_full test -p vyre-conform --test lens_parity_device` |
 | `test` | `lens_parity_device` | `conform/vyre-conform/tests/lens_parity_device.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test lens_parity_device` |
 | `test` | `library_contracts` | `conform/vyre-conform/tests/library_contracts/mod.rs` | None | `./cargo_full test -p vyre-conform --test library_contracts` |
 | `test` | `minimizer_contract` | `conform/vyre-conform/tests/minimizer_contract.rs` | None | `./cargo_full test -p vyre-conform --test minimizer_contract` |
 | `test` | `op_matrix_truth` | `conform/vyre-conform/tests/op_matrix_truth/mod.rs` | None | `./cargo_full test -p vyre-conform --test op_matrix_truth` |
-| `test` | `parity_matrix` | `conform/vyre-conform/tests/parity_matrix.rs` | None | `./cargo_full test -p vyre-conform --test parity_matrix` |
+| `test` | `parity_matrix` | `conform/vyre-conform/tests/parity_matrix.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test parity_matrix` |
 | `test` | `production_route` | `conform/vyre-conform/tests/production_route.rs` | None | `./cargo_full test -p vyre-conform --test production_route` |
 | `test` | `reference_parity_classes` | `conform/vyre-conform/tests/reference_parity_classes/mod.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test reference_parity_classes` |
 | `test` | `replay_capsule_contract` | `conform/vyre-conform/tests/replay_capsule_contract.rs` | None | `./cargo_full test -p vyre-conform --test replay_capsule_contract` |
 | `test` | `schema_compatibility` | `conform/vyre-conform/tests/schema_compatibility.rs` | None | `./cargo_full test -p vyre-conform --test schema_compatibility` |
-| `test` | `ulp_audit` | `conform/vyre-conform/tests/ulp_audit.rs` | None | `./cargo_full test -p vyre-conform --test ulp_audit` |
 | `test` | `ulp_audit` | `conform/vyre-conform/tests/ulp_audit.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test ulp_audit` |
 
 ## Test classes

@@ -56,7 +56,6 @@ The crate lives at `vyre-driver`. The `backend-contract` owner maintains its
 | `test` | `bindless_policy_contracts` | `vyre-driver/tests/bindless_policy_contracts.rs` | None | `./cargo_full test -p vyre-driver --test bindless_policy_contracts` |
 | `test` | `cache_eviction_contracts` | `vyre-driver/tests/cache_eviction_contracts.rs` | None | `./cargo_full test -p vyre-driver --test cache_eviction_contracts` |
 | `test` | `cache_eviction_heat_contracts` | `vyre-driver/tests/cache_eviction_heat_contracts.rs` | None | `./cargo_full test -p vyre-driver --test cache_eviction_heat_contracts` |
-| `test` | `cache_invalidation_default` | `vyre-driver/tests/cache_invalidation_default.rs` | None | `./cargo_full test -p vyre-driver --test cache_invalidation_default` |
 | `test` | `cache_invalidation_default` | `vyre-driver/tests/cache_invalidation_default.rs` | `libs-compositions` | `./cargo_full test -p vyre-driver --test cache_invalidation_default` |
 | `test` | `capability_adversarial` | `vyre-driver/tests/capability_adversarial.rs` | None | `./cargo_full test -p vyre-driver --test capability_adversarial` |
 | `test` | `command_execution_boundary` | `vyre-driver/tests/command_execution_boundary.rs` | None | `./cargo_full test -p vyre-driver --test command_execution_boundary` |

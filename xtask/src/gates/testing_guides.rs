@@ -425,6 +425,24 @@ fn autodiscovers(manifest: &toml::Table, field: &str) -> bool {
         != Some(false)
 }
 
+/// The auto-discovered targets whose source no explicit entry already claims.
+///
+/// A `[[test]]` entry claims its source, so cargo builds one target for it and
+/// never a second auto-discovered twin. Dropping the twin by full equality
+/// keeps it whenever the entry declares required features, and the guide then
+/// publishes a second command for the same source that runs nothing because the
+/// features are off.
+fn without_claimed_twins(explicit: &[Target], implicit: Vec<Target>) -> Vec<Target> {
+    let claimed: std::collections::BTreeSet<&str> = explicit
+        .iter()
+        .map(|target| target.source.as_str())
+        .collect();
+    implicit
+        .into_iter()
+        .filter(|target| !claimed.contains(target.source.as_str()))
+        .collect()
+}
+
 /// Every cargo target a testing command can reach in one crate.
 fn cargo_targets(
     tree: &Tree,
@@ -476,14 +494,17 @@ fn cargo_targets(
         ("bench", "benches", "autobenches"),
         ("example", "examples", "autoexamples"),
     ] {
-        targets.extend(explicit_targets(manifest, kind, directory, path, report));
+        let explicit = explicit_targets(manifest, kind, directory, path, report);
         if autodiscovers(manifest, field) {
-            targets.extend(implicit_targets(tree, path, directory, kind));
+            targets.extend(without_claimed_twins(
+                &explicit,
+                implicit_targets(tree, path, directory, kind),
+            ));
         }
+        targets.extend(explicit);
     }
 
-    // An explicit target and its auto-discovered twin are one target, and an
-    // untracked source is not reachable in a clean checkout, so a command
+    // An untracked source is not reachable in a clean checkout, so a command
     // naming it would fail for the reader this guide is written for.
     targets.retain(|target| {
         let source = format!("{path}/{}", target.source);
@@ -717,5 +738,41 @@ mod tests {
         let mut report = Report::clean();
         assert!(metadata.resolve(&record, &mut report).is_none());
         assert_eq!(report.findings.len(), 1);
+    }
+
+    /// WHY: a `[[test]]` entry that declares required features, on a source
+    /// cargo would also auto-discover, produced two guide rows for one target,
+    /// and the second claimed no features. A reader who ran that command got a
+    /// silent no-op, which is the same failure as omitting the target.
+    #[test]
+    fn an_explicit_entry_claims_its_auto_discovered_twin() {
+        let explicit = vec![Target {
+            kind: "test",
+            name: "parity_matrix".to_string(),
+            source: "tests/parity_matrix.rs".to_string(),
+            required_features: vec!["device-tests".to_string()],
+        }];
+        let implicit = vec![
+            Target {
+                kind: "test",
+                name: "parity_matrix".to_string(),
+                source: "tests/parity_matrix.rs".to_string(),
+                required_features: Vec::new(),
+            },
+            Target {
+                kind: "test",
+                name: "invariants".to_string(),
+                source: "tests/invariants.rs".to_string(),
+                required_features: Vec::new(),
+            },
+        ];
+        let kept = without_claimed_twins(&explicit, implicit);
+        assert_eq!(
+            kept.iter()
+                .map(|target| target.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["invariants"],
+            "Fix: an explicit entry claims its source, and only unclaimed sources stay"
+        );
     }
 }

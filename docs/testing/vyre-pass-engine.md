@@ -34,16 +34,11 @@ The crate lives at `vyre-pass-engine`. The `pass-engine` owner maintains its
 | `example` | `vyre_pass_engine_release_surface` | `vyre-pass-engine/examples/vyre_pass_engine_release_surface.rs` | None | `./cargo_full test -p vyre-pass-engine --example vyre_pass_engine_release_surface` |
 | `lib` | `vyre_pass_engine` | `vyre-pass-engine/src/lib.rs` | None | `./cargo_full test -p vyre-pass-engine` |
 | `test` | `consumer_boundary` | `vyre-pass-engine/tests/consumer_boundary.rs` | None | `./cargo_full test -p vyre-pass-engine --test consumer_boundary` |
-| `test` | `cross_scope_cse_still_fires` | `vyre-pass-engine/tests/cross_scope_cse_still_fires.rs` | None | `./cargo_full test -p vyre-pass-engine --test cross_scope_cse_still_fires` |
 | `test` | `cross_scope_cse_still_fires` | `vyre-pass-engine/tests/cross_scope_cse_still_fires.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test cross_scope_cse_still_fires` |
-| `test` | `dce_dispatch_binding_contract` | `vyre-pass-engine/tests/dce_dispatch_binding_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test dce_dispatch_binding_contract` |
 | `test` | `dce_dispatch_binding_contract` | `vyre-pass-engine/tests/dce_dispatch_binding_contract.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test dce_dispatch_binding_contract` |
-| `test` | `dce_program_back_edge_contract` | `vyre-pass-engine/tests/dce_program_back_edge_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test dce_program_back_edge_contract` |
 | `test` | `dce_program_back_edge_contract` | `vyre-pass-engine/tests/dce_program_back_edge_contract.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test dce_program_back_edge_contract` |
-| `test` | `encoded_rewrite_walk_contract` | `vyre-pass-engine/tests/encoded_rewrite_walk_contract.rs` | None | `./cargo_full test -p vyre-pass-engine --test encoded_rewrite_walk_contract` |
 | `test` | `encoded_rewrite_walk_contract` | `vyre-pass-engine/tests/encoded_rewrite_walk_contract.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test encoded_rewrite_walk_contract` |
 | `test` | `feature_boundaries` | `vyre-pass-engine/tests/feature_boundaries.rs` | None | `./cargo_full test -p vyre-pass-engine --test feature_boundaries` |
-| `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | None | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
 | `test` | `optimizer_bfs_and_softmax_parity` | `vyre-pass-engine/tests/optimizer_bfs_and_softmax_parity.rs` | `all-solvers` | `./cargo_full test -p vyre-pass-engine --test optimizer_bfs_and_softmax_parity` |
 
 ## Test classes
